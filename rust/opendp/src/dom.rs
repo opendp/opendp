@@ -160,3 +160,21 @@ impl<D: Domain> Domain for VectorDomain<D> {
         val.iter().all(|e| self.element_domain.member(e))
     }
 }
+
+/// A Domain that specifies the length of the enclosed domain
+#[derive(Clone, PartialEq)]
+pub struct SizedDomain<D: Domain> {
+    pub element_domain: D,
+    pub length: usize
+}
+impl<D: Domain> SizedDomain<D> {
+    pub fn new(member_domain: D, length: usize) -> Self {
+        SizedDomain { element_domain: member_domain, length }
+    }
+}
+impl<D: Domain> Domain for SizedDomain<D> {
+    type Carrier = D::Carrier;
+    fn member(&self, val: &Self::Carrier) -> bool {
+        self.element_domain.member(val)
+    }
+}

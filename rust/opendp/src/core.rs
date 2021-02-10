@@ -8,6 +8,15 @@
 //! * Function
 //! * PrivacyRelation/StabilityRelation
 
+// Generic legend
+// M: Metric and Measure
+// Q: Metric and Measure Carrier/Distance
+// D: Domain
+// T: Domain Carrier
+
+// *I: Input
+// *O: Output
+
 use std::rc::Rc;
 
 use crate::dom::{BoxDomain, PairDomain};
@@ -24,13 +33,13 @@ pub trait Domain: Clone + PartialEq {
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
 #[derive(Clone)]
-pub struct Function<ID: Domain, OD: Domain> {
-    pub function: Rc<dyn Fn(&ID::Carrier) -> Box<OD::Carrier>>
+pub struct Function<DI: Domain, DO: Domain> {
+    pub function: Rc<dyn Fn(&DI::Carrier) -> Box<DO::Carrier>>
 }
 
-impl<ID: Domain, OD: Domain> Function<ID, OD> {
-    pub fn new(function: impl Fn(&ID::Carrier) -> OD::Carrier + 'static) -> Self {
-        let function = move |arg: &ID::Carrier| {
+impl<DI: Domain, DO: Domain> Function<DI, DO> {
+    pub fn new(function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static) -> Self {
+        let function = move |arg: &DI::Carrier| {
             let res = function(arg);
             Box::new(res)
         };
@@ -38,20 +47,20 @@ impl<ID: Domain, OD: Domain> Function<ID, OD> {
         Function { function }
     }
 
-    pub fn eval(&self, arg: &ID::Carrier) -> OD::Carrier {
+    pub fn eval(&self, arg: &DI::Carrier) -> DO::Carrier {
         *(self.function)(arg)
     }
 
-    pub fn eval_ffi(&self, arg: &ID::Carrier) -> Box<OD::Carrier> {
+    pub fn eval_ffi(&self, arg: &DI::Carrier) -> Box<DO::Carrier> {
         (self.function)(arg)
     }
 }
 
-impl<ID: 'static + Domain, OD: 'static + Domain> Function<ID, OD> {
-    pub fn make_chain<XD: 'static + Domain>(function1: &Function<XD, OD>, function0: &Function<ID, XD>) -> Function<ID, OD> {
+impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
+    pub fn make_chain<XD: 'static + Domain>(function1: &Function<XD, DO>, function0: &Function<DI, XD>) -> Function<DI, DO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
-        let function = move |arg: &ID::Carrier| {
+        let function = move |arg: &DI::Carrier| {
             let res0 = function0(arg);
             function1(&res0)
         };
@@ -60,11 +69,11 @@ impl<ID: 'static + Domain, OD: 'static + Domain> Function<ID, OD> {
     }
 }
 
-impl<ID: 'static + Domain, ODA: 'static + Domain, ODB: 'static + Domain> Function<ID, PairDomain<BoxDomain<ODA>, BoxDomain<ODB>>> {
-    pub fn make_composition(function0: &Function<ID, ODA>, function1: &Function<ID, ODB>) -> Self {
+impl<DI: 'static + Domain, DO1: 'static + Domain, DO2: 'static + Domain> Function<DI, PairDomain<BoxDomain<DO1>, BoxDomain<DO2>>> {
+    pub fn make_composition(function0: &Function<DI, DO1>, function1: &Function<DI, DO2>) -> Self {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
-        let function = move |arg: & ID::Carrier| {
+        let function = move |arg: & DI::Carrier| {
             let res0 = function0(arg);
             let res1 = function1(arg);
             Box::new((res0, res1))
@@ -84,20 +93,24 @@ pub trait Measure: Clone {
     type Distance;
 }
 
+/// A indicator trait that is only implemented for dataset distance
+pub trait DatasetMetric: Metric { fn new() -> Self; }
+pub trait SensitivityMetric: Metric { }
+
 /// A boolean relation evaluating the privacy of a [`Measurement`].
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
 #[derive(Clone)]
-pub struct PrivacyRelation<IM: Metric, OM: Measure> {
-    pub relation: Rc<dyn Fn(&IM::Distance, &OM::Distance) -> bool>
+pub struct PrivacyRelation<MI: Metric, MO: Measure> {
+    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> bool>
 }
-impl<IM: Metric, OM: Measure> PrivacyRelation<IM, OM> {
-    pub fn new(relation: impl Fn(&IM::Distance, &OM::Distance) -> bool + 'static) -> Self {
+impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
+    pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
         let relation = Rc::new(relation);
         PrivacyRelation { relation }
     }
-    pub fn eval(&self, input_distance: &IM::Distance, output_distance: &OM::Distance) -> bool {
+    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> bool {
         (self.relation)(input_distance, output_distance)
     }
 }
@@ -107,38 +120,38 @@ impl<IM: Metric, OM: Measure> PrivacyRelation<IM, OM> {
 /// A `StabilityRelation` is implemented as a function that takes an input and output [`Metric::Distance`],
 /// and returns a boolean indicating if the relation holds.
 #[derive(Clone)]
-pub struct StabilityRelation<IM: Metric, OM: Metric> {
-    pub relation: Rc<dyn Fn(&IM::Distance, &OM::Distance) -> bool>
+pub struct StabilityRelation<MI: Metric, MO: Metric> {
+    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> bool>
 }
-impl<IM: Metric, OM: Metric> StabilityRelation<IM, OM> {
-    pub fn new(relation: impl Fn(&IM::Distance, &OM::Distance) -> bool + 'static) -> Self {
+impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
+    pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
         let relation = Rc::new(relation);
         StabilityRelation { relation }
     }
-    pub fn eval(&self, input_distance: &IM::Distance, output_distance: &OM::Distance) -> bool {
+    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> bool {
         (self.relation)(input_distance, output_distance)
     }
 }
 
 
 /// A randomized mechanism with certain privacy characteristics.
-pub struct Measurement<ID: Domain, OD: Domain, IM: Metric, OM: Measure> {
-    pub input_domain: Box<ID>,
-    pub output_domain: Box<OD>,
-    pub function: Function<ID, OD>,
-    pub input_metric: Box<IM>,
-    pub output_measure: Box<OM>,
-    pub privacy_relation: PrivacyRelation<IM, OM>,
+pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+    pub input_domain: Box<DI>,
+    pub output_domain: Box<DO>,
+    pub function: Function<DI, DO>,
+    pub input_metric: Box<MI>,
+    pub output_measure: Box<MO>,
+    pub privacy_relation: PrivacyRelation<MI, MO>,
 }
 
-impl<ID: Domain, OD: Domain, IM: Metric, OM: Measure> Measurement<ID, OD, IM, OM> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
     pub fn new(
-        input_domain: ID,
-        output_domain: OD,
-        function: impl Fn(&ID::Carrier) -> OD::Carrier + 'static,
-        input_metric: IM,
-        output_measure: OM,
-        privacy_relation: impl Fn(&IM::Distance, &OM::Distance) -> bool + 'static,
+        input_domain: DI,
+        output_domain: DO,
+        function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static,
+        input_metric: MI,
+        output_measure: MO,
+        privacy_relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static,
     ) -> Self {
         let input_domain = Box::new(input_domain);
         let output_domain = Box::new(output_domain);
@@ -151,31 +164,32 @@ impl<ID: Domain, OD: Domain, IM: Metric, OM: Measure> Measurement<ID, OD, IM, OM
 }
 
 /// A data transformation with certain stability characteristics.
-pub struct Transformation<ID: Domain, OD: Domain, IM: Metric, OM: Metric> {
-    pub input_domain: Box<ID>,
-    pub output_domain: Box<OD>,
-    pub function: Function<ID, OD>,
-    pub input_metric: Box<IM>,
-    pub output_metric: Box<OM>,
-    pub stability_relation: StabilityRelation<IM, OM>,
+pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
+    pub input_domain: Box<DI>,
+    pub output_domain: Box<DO>,
+    pub function: Function<DI, DO>,
+    pub input_metric: Box<MI>,
+    pub output_metric: Box<MO>,
+    pub stability_relation: StabilityRelation<MI, MO>,
 }
 
-impl<ID: Domain, OD: Domain, IM: Metric, OM: Metric> Transformation<ID, OD, IM, OM> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
     pub fn new(
-        input_domain: ID,
-        output_domain: OD,
-        function: impl Fn(&ID::Carrier) -> OD::Carrier + 'static,
-        input_metric: IM,
-        output_metric: OM,
-        stability_relation: impl Fn(&IM::Distance, &OM::Distance) -> bool + 'static,
+        input_domain: DI,
+        output_domain: DO,
+        function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static,
+        input_metric: MI,
+        output_metric: MO,
+        stability_relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static,
     ) -> Self {
-        let input_domain = Box::new(input_domain);
-        let output_domain = Box::new(output_domain);
-        let function = Function::new(function);
-        let input_metric = Box::new(input_metric);
-        let output_metric = Box::new(output_metric);
-        let stability_relation = StabilityRelation::new(stability_relation);
-        Transformation { input_domain, output_domain, function, input_metric, output_metric, stability_relation }
+        Transformation {
+            input_domain: Box::new(input_domain),
+            output_domain: Box::new(output_domain),
+            function: Function::new(function),
+            input_metric: Box::new(input_metric),
+            output_metric: Box::new(output_metric),
+            stability_relation: StabilityRelation::new(stability_relation)
+        }
     }
 }
 
@@ -225,16 +239,16 @@ impl<D: 'static + Domain, M: 'static + Metric> MetricGlue<D, M> {
 
 
 // CHAINING & COMPOSITION
-pub fn make_chain_mt<ID, XD, OD, IM, XM, OM>(measurement1: &Measurement<XD, OD, XM, OM>, transformation0: &Transformation<ID, XD, IM, XM>) -> Measurement<ID, OD, IM, OM> where
-    ID: 'static + Domain, XD: 'static + Domain, OD: 'static + Domain, IM: 'static + Metric, XM: 'static + Metric, OM: 'static + Measure {
-    let input_glue = MetricGlue::<ID, IM>::new();
-    let x_glue = MetricGlue::<XD, XM>::new();
-    let output_glue = MeasureGlue::<OD, OM>::new();
+pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Measurement<DI, DO, MI, MO> where
+    DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Measure {
+    let input_glue = MetricGlue::<DI, MI>::new();
+    let x_glue = MetricGlue::<DX, MX>::new();
+    let output_glue = MeasureGlue::<DO, MO>::new();
     make_chain_mt_glue(measurement1, transformation0, &input_glue, &x_glue, &output_glue)
 }
 
-pub fn make_chain_mt_glue<ID, XD, OD, IM, XM, OM>(measurement1: &Measurement<XD, OD, XM, OM>, transformation0: &Transformation<ID, XD, IM, XM>, input_glue: &MetricGlue<ID, IM>, x_glue: &MetricGlue<XD, XM>, output_glue: &MeasureGlue<OD, OM>) -> Measurement<ID, OD, IM, OM> where
-    ID: 'static + Domain, XD: 'static + Domain, OD: 'static + Domain, IM: 'static + Metric, XM: 'static + Metric, OM: 'static + Measure {
+pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>, input_glue: &MetricGlue<DI, MI>, x_glue: &MetricGlue<DX, MX>, output_glue: &MeasureGlue<DO, MO>) -> Measurement<DI, DO, MI, MO> where
+    DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Measure {
     assert!((x_glue.domain_eq)(&transformation0.output_domain, &measurement1.input_domain));
     let input_domain = (input_glue.domain_clone)(&transformation0.input_domain);
     let output_domain = (output_glue.domain_clone)(&measurement1.output_domain);
@@ -246,16 +260,16 @@ pub fn make_chain_mt_glue<ID, XD, OD, IM, XM, OM>(measurement1: &Measurement<XD,
     Measurement { input_domain, output_domain, function, input_metric, output_measure, privacy_relation }
 }
 
-pub fn make_chain_tt<ID, XD, OD, IM, XM, OM>(transformation1: &Transformation<XD, OD, XM, OM>, transformation0: &Transformation<ID, XD, IM, XM>) -> Transformation<ID, OD, IM, OM> where
-    ID: 'static + Domain, XD: 'static + Domain, OD: 'static + Domain, IM: 'static + Metric, XM: 'static + Metric, OM: 'static + Metric {
-    let input_glue = MetricGlue::<ID, IM>::new();
-    let x_glue = MetricGlue::<XD, XM>::new();
-    let output_glue = MetricGlue::<OD, OM>::new();
+pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Transformation<DI, DO, MI, MO> where
+    DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Metric {
+    let input_glue = MetricGlue::<DI, MI>::new();
+    let x_glue = MetricGlue::<DX, MX>::new();
+    let output_glue = MetricGlue::<DO, MO>::new();
     make_chain_tt_glue(transformation1, transformation0, &input_glue, &x_glue, &output_glue)
 }
 
-pub fn make_chain_tt_glue<ID, XD, OD, IM, XM, OM>(transformation1: &Transformation<XD, OD, XM, OM>, transformation0: &Transformation<ID, XD, IM, XM>, input_glue: &MetricGlue<ID, IM>, x_glue: &MetricGlue<XD, XM>, output_glue: &MetricGlue<OD, OM>) -> Transformation<ID, OD, IM, OM> where
-    ID: 'static + Domain, XD: 'static + Domain, OD: 'static + Domain, IM: 'static + Metric, XM: 'static + Metric, OM: 'static + Metric {
+pub fn make_chain_tt_glue<DI, DX, DO, MI, MX, MO>(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>, input_glue: &MetricGlue<DI, MI>, x_glue: &MetricGlue<DX, MX>, output_glue: &MetricGlue<DO, MO>) -> Transformation<DI, DO, MI, MO> where
+    DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Metric {
     assert!((x_glue.domain_eq)(&transformation0.output_domain, &transformation1.input_domain));
     let input_domain = (input_glue.domain_clone)(&transformation0.input_domain);
     let output_domain = (output_glue.domain_clone)(&transformation1.output_domain);
@@ -267,16 +281,16 @@ pub fn make_chain_tt_glue<ID, XD, OD, IM, XM, OM>(transformation1: &Transformati
     Transformation { input_domain, output_domain, function, input_metric, output_metric, stability_relation }
 }
 
-pub fn make_composition<ID, OD0, OD1, IM, OM>(measurement0: &Measurement<ID, OD0, IM, OM>, measurement1: &Measurement<ID, OD1, IM, OM>) -> Measurement<ID, PairDomain<BoxDomain<OD0>, BoxDomain<OD1>>, IM, OM> where
-    ID: 'static + Domain, OD0: 'static + Domain, OD1: 'static + Domain, IM: 'static + Metric, OM: 'static + Measure {
-    let input_glue = MetricGlue::<ID, IM>::new();
-    let output_glue0 = MeasureGlue::<OD0, OM>::new();
-    let output_glue1 = MeasureGlue::<OD1, OM>::new();
+pub fn make_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO> where
+    DI: 'static + Domain, DO0: 'static + Domain, DO1: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure {
+    let input_glue = MetricGlue::<DI, MI>::new();
+    let output_glue0 = MeasureGlue::<DO0, MO>::new();
+    let output_glue1 = MeasureGlue::<DO1, MO>::new();
     make_composition_glue(measurement0, measurement1, &input_glue, &output_glue0, &output_glue1)
 }
 
-pub fn make_composition_glue<ID, OD0, OD1, IM, OM>(measurement0: &Measurement<ID, OD0, IM, OM>, measurement1: &Measurement<ID, OD1, IM, OM>, input_glue: &MetricGlue<ID, IM>, output_glue0: &MeasureGlue<OD0, OM>, output_glue1: &MeasureGlue<OD1, OM>) -> Measurement<ID, PairDomain<BoxDomain<OD0>, BoxDomain<OD1>>, IM, OM> where
-    ID: 'static + Domain, OD0: 'static + Domain, OD1: 'static + Domain, IM: 'static + Metric, OM: 'static + Measure {
+pub fn make_composition_glue<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>, input_glue: &MetricGlue<DI, MI>, output_glue0: &MeasureGlue<DO0, MO>, output_glue1: &MeasureGlue<DO1, MO>) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO> where
+    DI: 'static + Domain, DO0: 'static + Domain, DO1: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure {
     assert!((input_glue.domain_eq)(&measurement0.input_domain, &measurement1.input_domain));
     let input_domain = (input_glue.domain_clone)(&measurement0.input_domain);
     let output_domain0 = (output_glue0.domain_clone)(&measurement0.output_domain);

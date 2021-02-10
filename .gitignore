@@ -148,3 +148,5 @@ Cargo.lock
 
 # IDE projects
 .idea
+
+.DS_Store
