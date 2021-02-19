@@ -251,7 +251,7 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
 
 #[cfg(test)]
 mod tests {
-    use crate::core::make_chain_tt;
+    use crate::core::{ChainTT};
 
     use super::*;
     use crate::dist::HammingDistance;
@@ -303,7 +303,7 @@ mod tests {
     fn test_make_parse_columns() {
         let transformation0 = ParseColumn::<HammingDistance, i32>::construct("1", true);
         let transformation1 = ParseColumn::<HammingDistance, f64>::construct("2", true);
-        let transformation = make_chain_tt(&transformation1, &transformation0);
+        let transformation = ChainTT::construct(&transformation1, &transformation0);
         let arg: DataFrame = vec![
             ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Data::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),

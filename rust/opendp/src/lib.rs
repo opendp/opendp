@@ -39,7 +39,9 @@
 //! use opendp::meas;
 //! use opendp::trans;
 //! use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3};
-//! use opendp::dist::HammingDistance;
+//! use opendp::dist::{HammingDistance, L1Sensitivity};
+//! use opendp::core::{ChainTT, ChainMT};
+//! use opendp::meas::{MakeMeasurement2, LaplaceMechanism, MakeMeasurement1};
 //!
 //! pub fn example() {
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
@@ -50,17 +52,17 @@
 //!     // Construct a Transformation to load the numbers.
 //!     let split_lines = trans::SplitLines::<HammingDistance>::construct();
 //!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::construct(true);
-//!     let load_numbers = core::make_chain_tt(&parse_series, &split_lines);
+//!     let load_numbers = ChainTT::construct(&parse_series, &split_lines);
 //!
 //!     // Construct a Measurment to calculate a noisy sum.
 //!     let clamp = trans::Clamp::construct(bounds.0, bounds.1);
-//!     let bounded_sum = trans::BoundedSum::construct(bounds.0, bounds.1);
-//!     let laplace = meas::make_base_laplace(sigma);
-//!     let intermediate = core::make_chain_tt(&bounded_sum, &clamp);
-//!     let noisy_sum = core::make_chain_mt(&laplace, &intermediate);
+//!     let bounded_sum = trans::BoundedSum::construct(bounds.0, bounds.1, L1Sensitivity::new());
+//!     let laplace = LaplaceMechanism::construct(sigma);
+//!     let intermediate = ChainTT::construct(&bounded_sum, &clamp);
+//!     let noisy_sum = ChainMT::construct(&laplace, &intermediate);
 //!
 //!     // Put it all together.
-//!     let pipeline = core::make_chain_mt(&noisy_sum, &load_numbers);
+//!     let pipeline = ChainMT::construct(&noisy_sum, &load_numbers);
 //!     let result = pipeline.function.eval(&data);
 //!     println!("result = {}", result);
 //!  }

@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use std::ops::{Bound, Mul, Sub, Div};
 
 use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, Transformation};
-use crate::dist::{HammingDistance, L1Sensitivity, SymmetricDistance};
+use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain, SizedDomain};
 pub use crate::trans::dataframe::*;
 use num::{Signed, NumCast};
@@ -160,7 +160,7 @@ impl<MI, MO, T> MakeTransformation1<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dist::L2Sensitivity;
+    use crate::dist::{L2Sensitivity, L1Sensitivity};
 
     #[test]
     fn test_identity() {

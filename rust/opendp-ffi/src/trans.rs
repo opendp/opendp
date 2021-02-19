@@ -3,7 +3,7 @@ use std::iter::Sum;
 use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
-use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, Count};
+use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3};
 use opendp::data::{Element, Form};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity};
 use opendp::dom::AllDomain;
