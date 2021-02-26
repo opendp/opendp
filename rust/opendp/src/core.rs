@@ -250,7 +250,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, D
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
-    fn construct(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Measurement<DI, DO, MI, MO> {
+    fn make(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Measurement<DI, DO, MI, MO> {
         let input_glue = MetricGlue::<DI, MI>::new();
         let x_glue = MetricGlue::<DX, MX>::new();
         let output_glue = MeasureGlue::<DO, MO>::new();
@@ -281,7 +281,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeTransformation2<DI, DO, MI, MO, &Transformation
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Metric {
-    fn construct(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Transformation<DI, DO, MI, MO> {
+    fn make(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Transformation<DI, DO, MI, MO> {
         let input_glue = MetricGlue::<DI, MI>::new();
         let x_glue = MetricGlue::<DX, MX>::new();
         let output_glue = MetricGlue::<DO, MO>::new();
@@ -311,7 +311,7 @@ impl<DI, DO0, DO1, MI, MO> MakeMeasurement2<DI, PairDomain<BoxDomain<DO0>, BoxDo
           DO1: 'static + Domain,
           MI: 'static + Metric,
           MO: 'static + Measure {
-    fn construct(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO> {
+    fn make(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO> {
         let input_glue = MetricGlue::<DI, MI>::new();
         let output_glue0 = MeasureGlue::<DO0, MO>::new();
         let output_glue1 = MeasureGlue::<DO1, MO>::new();
@@ -378,7 +378,7 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = |_d_in: &i32, _d_out: &f64| true;
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let chain = ChainMT::construct(&measurement1, &transformation0);
+        let chain = ChainMT::make(&measurement1, &transformation0);
         let arg = 99_u8;
         let ret = chain.function.eval(&arg);
         assert_eq!(ret, 101.0);
@@ -400,7 +400,7 @@ mod tests {
         let output_metric1 = L1Sensitivity::<i32>::new();
         let stability_relation1 = |_d_in: &i32, _d_out: &i32| true;
         let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
-        let chain = ChainTT::construct(&transformation1, &transformation0);
+        let chain = ChainTT::make(&transformation1, &transformation0);
         let arg = 99_u8;
         let ret = chain.function.eval(&arg);
         assert_eq!(ret, 101.0);
@@ -422,7 +422,7 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = |_d_in: &i32, _d_out: &f64| true;
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let composition = Composition::construct(&measurement0, &measurement1);
+        let composition = Composition::make(&measurement0, &measurement1);
         let arg = 99;
         let ret = composition.function.eval(&arg);
         assert_eq!(ret, (Box::new(100_f32), Box::new(98_f64)));

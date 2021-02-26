@@ -13,23 +13,23 @@ use std::marker::PhantomData;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeMeasurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
-    fn construct() -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make() -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement1<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1> {
-    fn construct(param1: P1) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement2<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2> {
-    fn construct(param1: P1, param2: P2) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement3<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2, P3> {
-    fn construct(param1: P1, param2: P2, param3: P3) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2, param3: P3) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement4<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2, P3, P4> {
-    fn construct(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub struct LaplaceMechanism<T> {
@@ -46,7 +46,7 @@ fn laplace(sigma: f64) -> f64 {
 // laplace for scalar-valued query
 impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism<T>
     where T: Copy + NumCast {
-    fn construct(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence> {
+    fn make(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence> {
         let input_domain = AllDomain::new();
         let output_domain = AllDomain::new();
         let function = move |arg: &T| -> T {
@@ -66,7 +66,7 @@ pub struct VectorLaplaceMechanism<T> {
 // laplace for vector-valued query
 impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for VectorLaplaceMechanism<T>
     where T: Copy + NumCast {
-    fn construct(sigma: f64) -> Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence> {
+    fn make(sigma: f64) -> Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence> {
         let input_domain = VectorDomain::new_all();
         let output_domain = VectorDomain::new_all();
         let function = move |arg: &Vec<T>| -> Vec<T> {
@@ -88,7 +88,7 @@ pub struct GaussianMechanism<T> {
 // gaussian for scalar-valued query
 impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence, f64> for GaussianMechanism<T>
     where T: Copy + NumCast {
-    fn construct(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence> {
+    fn make(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence> {
         let input_domain = AllDomain::new();
         let output_domain = AllDomain::new();
         let function = move |arg: &T| -> T {
@@ -112,11 +112,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_base_laplace() {
-        let measurement = LaplaceMechanism::<f64>::construct(1.0);
+    fn test_make_laplace_mechanism() {
+        let measurement = LaplaceMechanism::<f64>::make(1.0);
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg);
-        // TODO: Test for base_laplace
+
+        assert!(measurement.privacy_relation.eval(&1., &1.));
     }
 
+    #[test]
+    fn test_make_vector_laplace_mechanism() {
+        let measurement = VectorLaplaceMechanism::<f64>::make(1.0);
+        let arg = vec![1.0, 2.0, 3.0];
+        let _ret = measurement.function.eval(&arg);
+
+        assert!(measurement.privacy_relation.eval(&1., &1.));
+    }
+
+    #[test]
+    fn test_make_gaussian_mechanism() {
+        let measurement = GaussianMechanism::<f64>::make(1.0);
+        let arg = 0.0;
+        let _ret = measurement.function.eval(&arg);
+
+        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)));
+    }
 }

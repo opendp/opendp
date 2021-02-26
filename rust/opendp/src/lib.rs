@@ -50,19 +50,19 @@
 //!     let sigma = (bounds.1 - bounds.0) / epsilon;
 //!
 //!     // Construct a Transformation to load the numbers.
-//!     let split_lines = trans::SplitLines::<HammingDistance>::construct();
-//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::construct(true);
-//!     let load_numbers = ChainTT::construct(&parse_series, &split_lines);
+//!     let split_lines = trans::SplitLines::<HammingDistance>::make();
+//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true);
+//!     let load_numbers = ChainTT::make(&parse_series, &split_lines);
 //!
 //!     // Construct a Measurment to calculate a noisy sum.
-//!     let clamp = trans::Clamp::construct(bounds.0, bounds.1);
-//!     let bounded_sum = trans::BoundedSum::construct(bounds.0, bounds.1, L1Sensitivity::new());
-//!     let laplace = LaplaceMechanism::construct(sigma);
-//!     let intermediate = ChainTT::construct(&bounded_sum, &clamp);
-//!     let noisy_sum = ChainMT::construct(&laplace, &intermediate);
+//!     let clamp = trans::Clamp::make(bounds.0, bounds.1);
+//!     let bounded_sum = trans::BoundedSum::make(bounds.0, bounds.1, L1Sensitivity::new());
+//!     let laplace = LaplaceMechanism::make(sigma);
+//!     let intermediate = ChainTT::make(&bounded_sum, &clamp);
+//!     let noisy_sum = ChainMT::make(&laplace, &intermediate);
 //!
 //!     // Put it all together.
-//!     let pipeline = ChainMT::construct(&noisy_sum, &load_numbers);
+//!     let pipeline = ChainMT::make(&noisy_sum, &load_numbers);
 //!     let result = pipeline.function.eval(&data);
 //!     println!("result = {}", result);
 //!  }

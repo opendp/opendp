@@ -46,7 +46,7 @@ pub fn create_dataframe_domain() -> MapDomain<AllDomain<Data>> {
 
 impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M, usize> for CreateDataFrame<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn construct(col_count: usize) -> Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make(col_count: usize) -> Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M> {
         Transformation::new(
             VectorDomain::new(VectorDomain::new_all()),
             create_dataframe_domain(),
@@ -74,7 +74,7 @@ fn split_dataframe<'a>(separator: &str, col_count: usize, s: &str) -> DataFrame 
 
 impl<M> MakeTransformation2<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M, Option<&str>, usize> for SplitDataFrame<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn construct(separator: Option<&str>, col_count: usize) -> Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make(separator: Option<&str>, col_count: usize) -> Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M> {
         let separator = separator.unwrap_or(",").to_owned();
         Transformation::new(
             AllDomain::new(),
@@ -112,7 +112,7 @@ impl<M, T> MakeTransformation2<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<D
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: 'static + Element + FromStr + Clone + Default + PartialEq,
           T::Err: Debug {
-    fn construct(key: &str, impute: bool) -> Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make(key: &str, impute: bool) -> Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M> {
         let key = key.to_owned();
         Transformation::new(
             create_dataframe_domain(),
@@ -135,7 +135,7 @@ pub struct SelectColumn<M, T> {
 impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M, &str> for SelectColumn<M, T>
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: 'static + Element + Clone + PartialEq {
-    fn construct(key: &str) -> Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M> {
+    fn make(key: &str) -> Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M> {
         let key = key.to_owned();
         Transformation::new(
             create_dataframe_domain(),
@@ -170,7 +170,7 @@ fn split_lines(s: &str) -> Vec<&str> {
 
 impl<M> MakeTransformation0<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> for SplitLines<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn construct() -> Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> {
+    fn make() -> Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> {
         Transformation::new(
             AllDomain::<String>::new(),
             VectorDomain::new_all(),
@@ -202,7 +202,7 @@ impl<T, M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<All
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: FromStr + Default,
           T::Err: Debug {
-    fn construct(impute: bool) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M> {
+    fn make(impute: bool) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M> {
         Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),
@@ -231,7 +231,7 @@ fn split_records<'a>(separator: &str, lines: &Vec<&'a str>) -> Vec<Vec<&'a str>>
 
 impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M, Option<&str>> for SplitRecords<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn construct(separator: Option<&str>) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M> {
+    fn make(separator: Option<&str>) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M> {
         let separator = separator.unwrap_or(",").to_owned();
         Transformation::new(
             VectorDomain::new_all(),
@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn test_make_create_dataframe() {
-        let transformation = CreateDataFrame::<HammingDistance>::construct(2);
+        let transformation = CreateDataFrame::<HammingDistance>::make(2);
         let arg = vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn test_make_split_dataframe() {
-        let transformation = SplitDataFrame::<HammingDistance>::construct(None, 2);
+        let transformation = SplitDataFrame::<HammingDistance>::make(None, 2);
         let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();
         let ret = transformation.function.eval(&arg);
         let expected: DataFrame = vec![
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_make_parse_column() {
-        let transformation = ParseColumn::<HammingDistance, i32>::construct("1", true);
+        let transformation = ParseColumn::<HammingDistance, i32>::make("1", true);
         let arg: DataFrame = vec![
             ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Data::new(vec!["1".to_owned(), "2".to_owned(), "".to_owned()])),
@@ -301,9 +301,9 @@ mod tests {
 
     #[test]
     fn test_make_parse_columns() {
-        let transformation0 = ParseColumn::<HammingDistance, i32>::construct("1", true);
-        let transformation1 = ParseColumn::<HammingDistance, f64>::construct("2", true);
-        let transformation = ChainTT::construct(&transformation1, &transformation0);
+        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1", true);
+        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2", true);
+        let transformation = ChainTT::make(&transformation1, &transformation0);
         let arg: DataFrame = vec![
             ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Data::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_make_select_column() {
-        let transformation = SelectColumn::<HammingDistance, String>::construct("1");
+        let transformation = SelectColumn::<HammingDistance, String>::make("1");
         let arg: DataFrame = vec![
             ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Data::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
