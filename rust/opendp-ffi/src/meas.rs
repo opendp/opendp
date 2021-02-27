@@ -1,10 +1,14 @@
 use std::os::raw::c_char;
 
+use num::NumCast;
+
+use opendp::meas::{MakeMeasurement1};
+use opendp::meas::gaussian::GaussianMechanism;
+use opendp::meas::laplace::{VectorLaplaceMechanism, LaplaceMechanism};
+
 use crate::core::FfiMeasurement;
 use crate::util;
 use crate::util::TypeArgs;
-use num::NumCast;
-use opendp::meas::{LaplaceMechanism, MakeMeasurement1, GaussianMechanism, VectorLaplaceMechanism};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, sigma: f64) -> *mut FfiMeasurement {
