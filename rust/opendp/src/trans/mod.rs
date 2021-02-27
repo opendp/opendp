@@ -78,21 +78,22 @@ fn clamp<T: Copy + PartialOrd>(lower: T, upper: T, x: &Vec<T>) -> Vec<T> {
     x.into_iter().map(|e| clamp1(lower, upper, *e)).collect()
 }
 
-pub struct BoundedSum<MI, T> {
+pub struct BoundedSum<MI, MO, T> {
     input_metric: PhantomData<MI>,
+    output_metric: PhantomData<MO>,
     data: PhantomData<T>,
 }
 
-impl<MO, T> MakeTransformation3<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T, MO> for BoundedSum<HammingDistance, T>
+impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T> for BoundedSum<HammingDistance, MO, T>
     where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T>,
           MO: SensitivityMetric<Distance=T> {
-    fn make(lower: T, upper: T, output_metric: MO) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
+    fn make(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
         Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             HammingDistance::new(),
-            output_metric,
+            MO::new(),
             move |d_in: &u32, d_out: &T| *d_out >= T::from(*d_in).unwrap() * (upper - lower))
     }
 }
@@ -105,53 +106,54 @@ fn max<T: PartialOrd>(a: T, b: T) -> T {
     }
 }
 
-impl<MO, T> MakeTransformation3<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO, T, T, MO> for BoundedSum<SymmetricDistance, T>
+impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO, T, T> for BoundedSum<SymmetricDistance, MO, T>
     where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + Signed,
           MO: SensitivityMetric<Distance=T> {
     // Question- how to set the associated type for a trait that a concrete type is using
-    fn make(lower: T, upper: T, output_metric: MO) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO> {
+    fn make(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO> {
         Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             SymmetricDistance::new(),
-            output_metric,
+            MO::new(),
             // d_out >= d_in * max(|m|, |M|)
             move |d_in: &u32, d_out: &T| *d_out >= T::from(*d_in).unwrap() * max(num::abs(lower), num::abs(upper)))
     }
 }
 
-impl<MO, T> MakeTransformation4<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO, usize, T, T, MO> for BoundedSum<SymmetricDistance, T>
+impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO, usize, T, T> for BoundedSum<SymmetricDistance, MO, T>
     where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Div<Output=T> + Sum<T>,
           MO: SensitivityMetric<Distance=T>,
           SymmetricDistance: Metric<Distance=u32>  {
-    fn make(length: usize, lower: T, upper: T, output_metric: MO) -> Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO> {
+    fn make(length: usize, lower: T, upper: T) -> Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO> {
         Transformation::new(
             SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             SymmetricDistance::new(),
-            output_metric,
+            MO::new(),
             // d_out >= d_in * (M - m) / 2
             move |d_in: &u32, d_out: &T| *d_out >= T::from(*d_in).unwrap() * (upper - lower) / T::from(2).unwrap())
     }
 }
 
-pub struct Count<MI: Metric, T> {
+pub struct Count<MI, MO, T> {
     input_metric: PhantomData<MI>,
+    output_metric: PhantomData<MO>,
     data: PhantomData<T>
 }
 
-impl<MI, MO, T> MakeTransformation1<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO, MO> for Count<MI, T>
+impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> for Count<MI, MO, T>
     where MI: Metric<Distance=u32> + DatasetMetric,
           MO: Metric<Distance=u32> + SensitivityMetric {
-    fn make(output_space: MO) -> Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> {
+    fn make() -> Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> {
         Transformation::new(
             VectorDomain::new_all(),
             AllDomain::new(),
             move |arg: &Vec<T>| arg.len() as u32,
             MI::new(),
-            output_space,
+            MO::new(),
             |d_in: &u32, d_out: &u32| *d_out >= *d_in)
     }
 }

@@ -97,7 +97,7 @@ pub trait Measure: Clone {
 
 /// A indicator trait that is only implemented for dataset distance
 pub trait DatasetMetric: Metric { fn new() -> Self; }
-pub trait SensitivityMetric: Metric { }
+pub trait SensitivityMetric: Metric { fn new() -> Self; }
 
 /// A boolean relation evaluating the privacy of a [`Measurement`].
 ///

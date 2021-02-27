@@ -56,7 +56,9 @@ pub struct L1Sensitivity<Q> {
     _marker: PhantomData<Q>
 }
 
-impl<Q> SensitivityMetric for L1Sensitivity<Q> {}
+impl<Q> SensitivityMetric for L1Sensitivity<Q> {
+    fn new() -> Self { Self::new() }
+}
 
 impl<Q> L1Sensitivity<Q> {
     pub fn new() -> Self {
@@ -70,7 +72,11 @@ impl<Q> Clone for L1Sensitivity<Q> {
     }
 }
 
-impl<Q> SensitivityMetric for L2Sensitivity<Q> {}
+impl<Q> SensitivityMetric for L2Sensitivity<Q> {
+    fn new() -> Self {
+        Self::new()
+    }
+}
 
 impl<Q> Metric for L1Sensitivity<Q> {
     type Distance = Q;
