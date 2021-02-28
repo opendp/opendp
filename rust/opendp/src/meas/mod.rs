@@ -18,9 +18,11 @@ use crate::core::{Domain, Measure, Metric};
 
 pub mod laplace;
 pub mod gaussian;
+pub mod stability;
+mod simple_geometric;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
-pub trait MakeMeasurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+pub trait MakeMeasurement0<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     fn make() -> crate::core::Measurement<DI, DO, MI, MO> {
         Self::make0()
     }

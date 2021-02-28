@@ -14,22 +14,22 @@ use crate::util::TypeArgs;
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, sigma: f64) -> *mut FfiMeasurement {
     fn monomorphize<T>(sigma: f64) -> *mut FfiMeasurement where
         T: 'static + Copy + NumCast {
-        let measurement = LaplaceMechanism::<T>::make(sigma);
+        let measurement = LaplaceMechanism::make(sigma);
         FfiMeasurement::new_from_types(measurement)
     }
     let type_args = TypeArgs::expect(type_args, 1);
-    dispatch!(monomorphize, [(type_args.0[0], @numbers)], (sigma))
+    dispatch!(monomorphize, [(type_args.0[0], [f64])], (sigma))
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace_vec(type_args: *const c_char, length: usize, sigma: f64) -> *mut FfiMeasurement {
     fn monomorphize<T>(length: usize, sigma: f64) -> *mut FfiMeasurement where
         T: 'static + Copy + NumCast {
-        let measurement = VectorLaplaceMechanism::<T>::make(length, sigma);
+        let measurement = VectorLaplaceMechanism::make(length, sigma);
         FfiMeasurement::new_from_types(measurement)
     }
     let type_args = TypeArgs::expect(type_args, 1);
-    dispatch!(monomorphize, [(type_args.0[0], @numbers)], (length, sigma))
+    dispatch!(monomorphize, [(type_args.0[0], [f64])], (length, sigma))
 }
 
 #[no_mangle]

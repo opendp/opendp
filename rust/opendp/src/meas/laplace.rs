@@ -1,51 +1,39 @@
-use std::marker::PhantomData;
-
-use num::NumCast;
 
 use crate::core::Measurement;
 use crate::dist::{L1Sensitivity, MaxDivergence};
-use crate::dom::{AllDomain, VectorDomain, SizedDomain};
-use crate::meas::{MakeMeasurement1, sample_laplace, MakeMeasurement2};
+use crate::dom::{AllDomain, SizedDomain, VectorDomain};
+use crate::meas::{MakeMeasurement1, MakeMeasurement2, sample_laplace};
 
-pub struct LaplaceMechanism<T> {
-    data: PhantomData<T>
-}
+pub struct LaplaceMechanism;
 
 // laplace for scalar-valued query
-impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism<T>
-    where T: Copy + NumCast {
-    fn make1(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence> {
-        let input_domain = AllDomain::new();
-        let output_domain = AllDomain::new();
-        let function = move |arg: &T| -> T {
-            <f64 as NumCast>::from(*arg).and_then(|v| T::from(v + sample_laplace(sigma).unwrap())).unwrap()
-        };
-        let input_metric = L1Sensitivity::new();
-        let output_measure = MaxDivergence::new();
-        let privacy_relation = move |d_in: &f64, d_out: &f64| *d_out >= *d_in / sigma;
-        Measurement::new(input_domain, output_domain, function, input_metric, output_measure, privacy_relation)
+impl MakeMeasurement1<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism {
+    fn make1(sigma: f64) -> Measurement<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence> {
+        Measurement::new(
+            AllDomain::new(),
+            AllDomain::new(),
+            move |v: &f64| v + sample_laplace(sigma).unwrap(),
+            L1Sensitivity::new(),
+            MaxDivergence::new(),
+            move |&d_in: &f64, &d_out: &f64| d_out >= d_in / sigma
+        )
     }
 }
 
-pub struct VectorLaplaceMechanism<T> {
-    data: PhantomData<T>
-}
+pub struct VectorLaplaceMechanism;
 
 // laplace for vector-valued query
-impl<T> MakeMeasurement2<SizedDomain<VectorDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, usize, f64> for VectorLaplaceMechanism<T>
-    where T: Copy + NumCast {
-    fn make2(length: usize, sigma: f64) -> Measurement<SizedDomain<VectorDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence> {
-        let input_domain = SizedDomain::new(VectorDomain::new_all(), length);
-        let output_domain = VectorDomain::new_all();
-        let function = move |arg: &Vec<T>| -> Vec<T> {
-            arg.iter()
-                .map(|v| <f64 as NumCast>::from(*v).and_then(|v| T::from(v + sample_laplace(sigma).unwrap())))
-                .collect::<Option<_>>().unwrap()
-        };
-        let input_metric = L1Sensitivity::new();
-        let output_measure = MaxDivergence::new();
-        let privacy_relation = move |d_in: &f64, d_out: &f64| *d_out >= *d_in / sigma;
-        Measurement::new(input_domain, output_domain, function, input_metric, output_measure, privacy_relation)
+impl MakeMeasurement2<SizedDomain<VectorDomain<AllDomain<f64>>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence, usize, f64> for VectorLaplaceMechanism {
+    fn make2(length: usize, sigma: f64) -> Measurement<SizedDomain<VectorDomain<AllDomain<f64>>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence> {
+        Measurement::new(
+            SizedDomain::new(VectorDomain::new_all(), length),
+            VectorDomain::new_all(),
+            move |arg: &Vec<f64>| arg.into_iter()
+                .map(|v| v + sample_laplace(sigma).unwrap())
+                .collect(),
+            L1Sensitivity::new(),
+            MaxDivergence::new(),
+            move |&d_in: &f64, &d_out: &f64| d_out >= d_in / sigma)
     }
 }
 
@@ -57,7 +45,7 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() {
-        let measurement = LaplaceMechanism::<f64>::make(1.0);
+        let measurement = LaplaceMechanism::make(1.0);
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg);
 
@@ -66,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_make_vector_laplace_mechanism() {
-        let measurement = VectorLaplaceMechanism::<f64>::make(3, 1.0);
+        let measurement = VectorLaplaceMechanism::make(3, 1.0);
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.function.eval(&arg);
 

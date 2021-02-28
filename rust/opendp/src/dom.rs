@@ -11,6 +11,11 @@ use std::ops::Bound;
 use crate::core::Domain;
 use crate::data::{Data, Form};
 
+impl Domain for () {
+    type Carrier = ();
+    fn member(&self, _val: &Self::Carrier) -> bool { true }
+}
+
 /// A Domain that contains all members of the carrier type.
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
@@ -176,5 +181,18 @@ impl<D: Domain> Domain for SizedDomain<D> {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> bool {
         self.element_domain.member(val)
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub struct HashMapDomain<DK: Domain + Clone, DV: Domain + Clone> {
+    pub key_domain: DK,
+    pub value_domain: DV
+}
+
+impl<DK: Domain + Clone, DV: Domain + Clone> Domain for HashMapDomain<DK, DV> {
+    type Carrier = HashMap<DK::Carrier, DV::Carrier>;
+    fn member(&self, _val: &Self::Carrier) -> bool {
+        true
     }
 }

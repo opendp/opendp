@@ -7,6 +7,8 @@ use crate::dist::{L2Sensitivity, SmoothedMaxDivergence};
 use crate::dom::AllDomain;
 use crate::meas::{sample_gaussian, MakeMeasurement1};
 
+// const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
+const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
 pub struct GaussianMechanism<T> {
     data: PhantomData<T>
@@ -27,7 +29,7 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, Smoothe
         // https://docs.google.com/spreadsheets/d/132rAzbSDVCKqFZWeE-P8oOl9f23PzkvNwsrDV5LPkw4/edit#gid=0
         let privacy_relation = move |d_in: &f64, d_out: &(f64, f64)| {
             let (eps, delta) = d_out.clone();
-            eps.min(1.) >= (*d_in / sigma) * (2. * (1.25 / delta).ln()).sqrt()
+            eps.min(1.) >= (*d_in / sigma) * (ADDITIVE_GAUSS_CONST + 2. * (1. / delta).ln()).sqrt()
         };
         Measurement::new(input_domain, output_domain, function, input_metric, output_measure, privacy_relation)
     }
