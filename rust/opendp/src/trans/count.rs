@@ -1,21 +1,21 @@
 use core::marker::PhantomData;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::f64::consts::SQRT_2;
 use std::hash::Hash;
+use std::ops::AddAssign;
 
-use num::{Integer, One, Zero, NumCast};
+use num::{Integer, NumCast, One, Zero};
 
 use crate::core::{DatasetMetric, Metric, SensitivityMetric, Transformation};
-use crate::dist::{L1Sensitivity, HammingDistance, SymmetricDistance};
-use crate::dom::{AllDomain, VectorDomain, SizedDomain};
+use crate::dist::{HammingDistance, L1Sensitivity, SymmetricDistance, L2Sensitivity};
+use crate::dom::{AllDomain, SizedDomain, VectorDomain, HashMapDomain};
 use crate::trans::{MakeTransformation0, MakeTransformation1};
-use std::ops::{AddAssign};
-use std::f64::consts::SQRT_2;
 
 pub struct Count<MI, MO, T> {
     input_metric: PhantomData<MI>,
     output_metric: PhantomData<MO>,
-    data: PhantomData<T>
+    data: PhantomData<T>,
 }
 
 impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> for Count<MI, MO, T>
@@ -35,7 +35,7 @@ impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
 pub struct CountBy<MI, MO, T> {
     input_metric: PhantomData<MI>,
     output_metric: PhantomData<MO>,
-    data: PhantomData<T>
+    data: PhantomData<T>,
 }
 
 fn count_by_categories<T, QO>(data: &Vec<T>, categories: &Vec<T>) -> Vec<QO>
@@ -61,7 +61,6 @@ impl<TI, TO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<Vector
     where TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign {
     fn make1(categories: Vec<TI>) -> Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, HammingDistance, L1Sensitivity<u32>> {
-
         Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
@@ -76,7 +75,6 @@ impl<TI, TO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<Vector
     where TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign {
     fn make1(categories: Vec<TI>) -> Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, HammingDistance, L1Sensitivity<f64>> {
-
         Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
@@ -93,7 +91,6 @@ impl<TI, TO, MO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomai
           MO: Metric<Distance=QO> + SensitivityMetric,
           QO: NumCast + Clone {
     fn make1(categories: Vec<TI>) -> Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, SymmetricDistance, MO> {
-
         Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
@@ -103,6 +100,70 @@ impl<TI, TO, MO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomai
             |d_in: &u32, d_out: &QO| <u32 as NumCast>::from(d_out.clone()).unwrap() >= *d_in)
     }
 }
+
+
+// count with known n, unknown categories
+fn count_by<TI, TO>(data: &Vec<TI>) -> HashMap<TI, TO>
+    where TI: Eq + Hash + Clone,
+          TO: Integer + Zero + One + AddAssign {
+    let mut counts = HashMap::new();
+
+    data.into_iter().for_each(|v|
+        *counts.entry(v.clone()).or_insert(TO::zero()) += TO::one()
+    );
+
+    counts
+}
+
+// Hamming / L1
+impl<TI, TO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<HashMapDomain<AllDomain<TI>, AllDomain<TO>>>, HammingDistance, L1Sensitivity<f64>, usize> for CountBy<HammingDistance, L1Sensitivity<f64>, TI>
+    where TI: 'static + Eq + Hash + Clone,
+          TO: Integer + Zero + One + AddAssign {
+    fn make1(n: usize) -> Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<HashMapDomain<AllDomain<TI>, AllDomain<TO>>>, HammingDistance, L1Sensitivity<f64>> {
+        Transformation::new(
+            SizedDomain::new(VectorDomain::new_all(), n),
+            SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+            move |data: &Vec<TI>| count_by(data),
+            HammingDistance::new(),
+            L1Sensitivity::new(),
+            move |&d_in: &u32, &d_out: &f64|
+                d_out >= d_in as f64 * 2.)
+    }
+}
+
+// Hamming / L2
+impl<TI, TO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<HashMapDomain<AllDomain<TI>, AllDomain<TO>>>, HammingDistance, L2Sensitivity<f64>, usize> for CountBy<HammingDistance, L2Sensitivity<f64>, TI>
+    where TI: 'static + Eq + Hash + Clone,
+          TO: Integer + Zero + One + AddAssign {
+    fn make1(n: usize) -> Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<HashMapDomain<AllDomain<TI>, AllDomain<TO>>>, HammingDistance, L2Sensitivity<f64>> {
+        Transformation::new(
+            SizedDomain::new(VectorDomain::new_all(), n),
+            SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+            move |data: &Vec<TI>| count_by(data),
+            HammingDistance::new(),
+            L2Sensitivity::new(),
+            move |&d_in: &u32, &d_out: &f64|
+                d_out >= d_in as f64 * SQRT_2)
+    }
+}
+
+// Symmetric / LP
+impl<TI, TO, MO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<HashMapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO, usize> for CountBy<SymmetricDistance, MO, TI>
+    where TI: 'static + Eq + Hash + Clone,
+          TO: Integer + Zero + One + AddAssign,
+          MO: Metric<Distance=f64> + SensitivityMetric {
+    fn make1(n: usize) -> Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<HashMapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO> {
+        Transformation::new(
+            SizedDomain::new(VectorDomain::new_all(), n),
+            SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+            move |data: &Vec<TI>| count_by(data),
+            SymmetricDistance::new(),
+            MO::new(),
+            move |&d_in: &u32, &d_out: &f64|
+                d_out >= d_in as f64)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

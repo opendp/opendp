@@ -1,20 +1,22 @@
 use std::collections::HashMap;
-use std::f64::consts::SQRT_2;
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::ops::AddAssign;
 
-use crate::core::{Measurement};
-use crate::dist::{HammingDistance, L1Sensitivity, SmoothedMaxDivergence, SymmetricDistance, L2Sensitivity};
-use crate::dom::{AllDomain, HashMapDomain, VectorDomain};
-use crate::meas::{MakeMeasurement3, sample_laplace, sample_gaussian};
+use num::{Integer, One, Zero};
 
-fn privacy_relation(d_in: u32, (eps, del): (f64, f64), n: usize, sigma: f64, threshold: f64, sensitivity: f64) -> bool {
+use crate::core::Measurement;
+use crate::dist::{L1Sensitivity, L2Sensitivity, SmoothedMaxDivergence};
+use crate::dom::{AllDomain, HashMapDomain, SizedDomain};
+use crate::meas::{MakeMeasurement3, sample_gaussian, sample_laplace};
+
+fn privacy_relation(d_in: f64, (eps, del): (f64, f64), n: usize, sigma: f64, threshold: f64) -> bool {
     let n = n as f64;
     if eps >= n.ln() || del >= 1. / n {
         return false
     }
     // check that sigma is large enough
-    if sigma < d_in as f64 * sensitivity / (eps * n) {
+    if sigma < d_in / (eps * n) {
         return false
     }
     // check that threshold is large enough
@@ -24,98 +26,62 @@ fn privacy_relation(d_in: u32, (eps, del): (f64, f64), n: usize, sigma: f64, thr
     return true
 }
 
-fn count_by<TI>(data: &Vec<TI>) -> HashMap<TI, u32>
-    where TI: Eq + Hash + Clone {
-    let mut counts = HashMap::new();
-
-    data.into_iter().for_each(|v|
-        *counts.entry(v.clone()).or_insert(0) += 1
-    );
-
-    counts
-}
-
 fn stability_mechanism<TI, TO, F: Fn() -> Result<f64, &'static str>>(
-    mut counts: HashMap<TI, TO>,
+    counts: &HashMap<TI, TO>,
     get_noise: F,
-    threshold: f64
+    threshold: f64,
 ) -> Result<HashMap<TI, f64>, &'static str>
-    where TI: Eq + Hash,
+    where TI: Eq + Hash + Clone,
+          TO: Clone,
           f64: From<TO> {
-
-    Ok(counts.drain()
-        .map(|(k, q_y)| Ok((k, get_noise().map(|noise| f64::from(q_y) + noise)?)))
-        .collect::<Result<Vec<(TI, f64)>, _>>()?.into_iter()
+    Ok(counts.into_iter()
+        .map(|(k, q_y)| Ok((k, get_noise().map(|noise| f64::from(q_y.clone()) + noise)?)))
+        .collect::<Result<Vec<(&TI, f64)>, _>>()?.into_iter()
         .filter(|(_, a_y)| a_y >= &threshold)
+        .map(|(k, v)| (k.clone(), v))
         .collect())
 }
 
-pub struct StabilityCountBy<MI, MX, T> {
+pub struct StabilityMechanism<MI, TIK, TIC> {
     input_metric: PhantomData<MI>,
-    stability_metric: PhantomData<MX>,
-    data: PhantomData<T>,
+    data_key: PhantomData<TIK>,
+    data_count: PhantomData<TIC>,
 }
 
-// Hamming / L1
-impl<TI> MakeMeasurement3<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence, usize, f64, f64> for StabilityCountBy<HammingDistance, L1Sensitivity<f64>, TI>
-    where TI: 'static + Eq + Hash + Clone {
-    fn make3(n: usize, sigma: f64, threshold: f64) -> Measurement<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence> {
+type CountDomain<TIK, TIC> = SizedDomain<HashMapDomain<AllDomain<TIK>, AllDomain<TIC>>>;
+
+// L1
+impl<TIK, TIC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK, f64>, L1Sensitivity<f64>, SmoothedMaxDivergence, usize, f64, f64> for StabilityMechanism<L1Sensitivity<f64>, TIK, TIC>
+    where TIK: 'static + Eq + Hash + Clone,
+          TIC: Integer + Zero + One + AddAssign + Clone,
+          f64: From<TIC> {
+    fn make3(n: usize, sigma: f64, threshold: f64) -> Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, f64>, L1Sensitivity<f64>, SmoothedMaxDivergence> {
         Measurement::new(
-            VectorDomain::new_all(),
-            HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() },
-            move |data: &Vec<TI>|
-                stability_mechanism(count_by(data), || sample_laplace(sigma), threshold).unwrap(),
-            HammingDistance::new(),
+            SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+            SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+            move |data: &HashMap<TIK, TIC>|
+                stability_mechanism(data, || sample_laplace(sigma), threshold).unwrap(),
+            L1Sensitivity::new(),
             SmoothedMaxDivergence::new(),
-            move |&d_in: &u32, &d_out: &(f64, f64)|
-                privacy_relation(d_in, d_out, n, sigma, threshold, 2.))
+            move |&d_in: &f64, &d_out: &(f64, f64)|
+                privacy_relation(d_in, d_out, n, sigma, threshold))
     }
 }
 
-// Hamming / L2
-impl<TI> MakeMeasurement3<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence, usize, f64, f64> for StabilityCountBy<HammingDistance, L2Sensitivity<f64>, TI>
-    where TI: 'static + Eq + Hash + Clone {
-    fn make3(n: usize, sigma: f64, threshold: f64) -> Measurement<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence> {
+// L2
+impl<TIK, TIC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK, f64>, L2Sensitivity<f64>, SmoothedMaxDivergence, usize, f64, f64> for StabilityMechanism<L2Sensitivity<f64>, TIK, TIC>
+    where TIK: 'static + Eq + Hash + Clone,
+          TIC: Integer + Zero + One + AddAssign + Clone,
+          f64: From<TIC> {
+    fn make3(n: usize, sigma: f64, threshold: f64) -> Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, f64>, L2Sensitivity<f64>, SmoothedMaxDivergence> {
         Measurement::new(
-            VectorDomain::new_all(),
-            HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() },
-            move |data: &Vec<TI>|
-                stability_mechanism(count_by(data), || Ok(sample_gaussian(0., sigma, false)), threshold).unwrap(),
-            HammingDistance::new(),
+            SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+            SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+            move |data: &HashMap<TIK, TIC>|
+                stability_mechanism(data, || Ok(sample_gaussian(0., sigma, false)), threshold).unwrap(),
+            L2Sensitivity::new(),
             SmoothedMaxDivergence::new(),
-            move |&d_in: &u32, &d_out: &(f64, f64)|
-                privacy_relation(d_in, d_out, n, sigma, threshold, SQRT_2))
-    }
-}
-
-// Symmetric / L1
-impl<TI> MakeMeasurement3<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence, usize, f64, f64> for StabilityCountBy<SymmetricDistance, L1Sensitivity<f64>, TI>
-    where TI: 'static + Eq + Hash + Clone{
-    fn make3(n: usize, sigma: f64, threshold: f64) -> Measurement<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence> {
-        Measurement::new(
-            VectorDomain::new_all(),
-            HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() },
-            move |data: &Vec<TI>|
-                stability_mechanism(count_by(data), || sample_laplace(sigma), threshold).unwrap(),
-            HammingDistance::new(),
-            SmoothedMaxDivergence::new(),
-            move |&d_in: &u32, &d_out: &(f64, f64)|
-                privacy_relation(d_in, d_out, n, sigma, threshold, 1.))
-    }
-}
-
-// Symmetric / L2
-impl<TI> MakeMeasurement3<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence, usize, f64, f64> for StabilityCountBy<SymmetricDistance, L2Sensitivity<f64>, TI>
-    where TI: 'static + Eq + Hash + Clone{
-    fn make3(n: usize, sigma: f64, threshold: f64) -> Measurement<VectorDomain<AllDomain<TI>>, HashMapDomain<AllDomain<TI>, AllDomain<f64>>, HammingDistance, SmoothedMaxDivergence> {
-        Measurement::new(
-            VectorDomain::new_all(),
-            HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() },
-            move |data: &Vec<TI>|
-                stability_mechanism(count_by(data), || Ok(sample_gaussian(0., sigma, false)), threshold).unwrap(),
-            HammingDistance::new(),
-            SmoothedMaxDivergence::new(),
-            move |&d_in: &u32, &d_out: &(f64, f64)|
-                privacy_relation(d_in, d_out, n, sigma, threshold, 1.))
+            move |&d_in: &f64, &d_out: &(f64, f64)|
+                privacy_relation(d_in, d_out, n, sigma, threshold))
     }
 }
