@@ -8,7 +8,6 @@ use crate::dom::AllDomain;
 use crate::meas::{sample_gaussian, MakeMeasurement1};
 
 
-
 pub struct GaussianMechanism<T> {
     data: PhantomData<T>
 }

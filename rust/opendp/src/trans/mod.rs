@@ -3,18 +3,20 @@
 //! The different [`Transformation`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
+use std::cmp::Ordering;
 use std::iter::Sum;
 use std::marker::PhantomData;
-use std::ops::{Bound, Mul, Sub, Div};
+use std::ops::{Bound, Div, Mul, Sub};
+
+use num::{NumCast, Signed};
 
 use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
-use crate::dom::{AllDomain, IntervalDomain, VectorDomain, SizedDomain};
+use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 pub use crate::trans::dataframe::*;
-use num::{Signed, NumCast};
-use std::cmp::Ordering;
 
 pub mod dataframe;
+pub mod count;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeTransformation0<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
@@ -153,31 +155,12 @@ impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, Al
     }
 }
 
-pub struct Count<MI, MO, T> {
-    input_metric: PhantomData<MI>,
-    output_metric: PhantomData<MO>,
-    data: PhantomData<T>
-}
-
-impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> for Count<MI, MO, T>
-    where MI: Metric<Distance=u32> + DatasetMetric,
-          MO: Metric<Distance=u32> + SensitivityMetric {
-    fn make0() -> Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> {
-        Transformation::new(
-            VectorDomain::new_all(),
-            AllDomain::new(),
-            move |arg: &Vec<T>| arg.len() as u32,
-            MI::new(),
-            MO::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
+    use crate::dist::{L1Sensitivity, L2Sensitivity};
+
     use super::*;
-    use crate::dist::{L2Sensitivity, L1Sensitivity};
 
     #[test]
     fn test_identity() {
@@ -240,24 +223,6 @@ mod tests {
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg);
         let expected = 15;
-        assert_eq!(ret, expected);
-    }
-
-    #[test]
-    fn test_make_count_l1() {
-        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make();
-        let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg);
-        let expected = 5;
-        assert_eq!(ret, expected);
-    }
-
-    #[test]
-    fn test_make_count_l2() {
-        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make();
-        let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg);
-        let expected = 5;
         assert_eq!(ret, expected);
     }
 }

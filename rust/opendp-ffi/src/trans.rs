@@ -139,7 +139,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_l2(type_args: *const c_char, lo
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count_l1(type_args: *const c_char) -> *mut FfiTransformation {
     fn monomorphize<T>() -> *mut FfiTransformation where T: 'static {
-        let transformation = trans::Count::<HammingDistance, L1Sensitivity<_>, T>::make();
+        let transformation = trans::count::Count::<HammingDistance, L1Sensitivity<_>, T>::make();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -149,7 +149,7 @@ pub extern "C" fn opendp_trans__make_count_l1(type_args: *const c_char) -> *mut 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count_l2(type_args: *const c_char) -> *mut FfiTransformation {
     fn monomorphize<T>() -> *mut FfiTransformation where T: 'static {
-        let transformation = trans::Count::<HammingDistance, L2Sensitivity<_>, T>::make();
+        let transformation = trans::count::Count::<HammingDistance, L2Sensitivity<_>, T>::make();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);

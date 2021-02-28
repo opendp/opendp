@@ -4,8 +4,8 @@ use num::NumCast;
 
 use crate::core::Measurement;
 use crate::dist::{L1Sensitivity, MaxDivergence};
-use crate::dom::{AllDomain, VectorDomain};
-use crate::meas::{MakeMeasurement1, sample_laplace};
+use crate::dom::{AllDomain, VectorDomain, SizedDomain};
+use crate::meas::{MakeMeasurement1, sample_laplace, MakeMeasurement2};
 
 pub struct LaplaceMechanism<T> {
     data: PhantomData<T>
@@ -32,10 +32,10 @@ pub struct VectorLaplaceMechanism<T> {
 }
 
 // laplace for vector-valued query
-impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for VectorLaplaceMechanism<T>
+impl<T> MakeMeasurement2<SizedDomain<VectorDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, usize, f64> for VectorLaplaceMechanism<T>
     where T: Copy + NumCast {
-    fn make1(sigma: f64) -> Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence> {
-        let input_domain = VectorDomain::new_all();
+    fn make2(length: usize, sigma: f64) -> Measurement<SizedDomain<VectorDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence> {
+        let input_domain = SizedDomain::new(VectorDomain::new_all(), length);
         let output_domain = VectorDomain::new_all();
         let function = move |arg: &Vec<T>| -> Vec<T> {
             arg.iter()
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_make_vector_laplace_mechanism() {
-        let measurement = VectorLaplaceMechanism::<f64>::make(1.0);
+        let measurement = VectorLaplaceMechanism::<f64>::make(3, 1.0);
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.function.eval(&arg);
 
