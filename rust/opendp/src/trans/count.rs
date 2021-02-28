@@ -38,7 +38,7 @@ pub struct CountBy<MI, MO, T> {
     data: PhantomData<T>
 }
 
-fn count_by<T, QO>(data: &Vec<T>, categories: &Vec<T>) -> Vec<QO>
+fn count_by_categories<T, QO>(data: &Vec<T>, categories: &Vec<T>) -> Vec<QO>
     where T: Eq + Hash,
           QO: Integer + Zero + One + AddAssign<QO> {
     let mut counts = categories.iter()
@@ -65,7 +65,7 @@ impl<TI, TO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<Vector
         Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
-            move |data: &Vec<TI>| count_by(data, &categories),
+            move |data: &Vec<TI>| count_by_categories(data, &categories),
             HammingDistance::new(),
             L1Sensitivity::new(),
             |d_in: &u32, d_out: &u32| *d_out >= d_in * 2)
@@ -80,7 +80,7 @@ impl<TI, TO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<Vector
         Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
-            move |data: &Vec<TI>| count_by(data, &categories),
+            move |data: &Vec<TI>| count_by_categories(data, &categories),
             HammingDistance::new(),
             L1Sensitivity::new(),
             |d_in: &u32, d_out: &f64| *d_out >= *d_in as f64 * SQRT_2)
@@ -97,13 +97,12 @@ impl<TI, TO, MO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomai
         Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
-            move |data: &Vec<TI>| count_by(data, &categories),
+            move |data: &Vec<TI>| count_by_categories(data, &categories),
             SymmetricDistance::new(),
             MO::new(),
             |d_in: &u32, d_out: &QO| <u32 as NumCast>::from(d_out.clone()).unwrap() >= *d_in)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

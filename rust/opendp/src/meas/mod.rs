@@ -355,7 +355,6 @@ pub fn sample_gaussian(shift: f64, scale: f64, enforce_constant_time: bool) -> f
     // generate Gaussian(0,1) according to mpfr standard, then convert to correct scale
     let gauss = Float::with_val(64, Float::random_normal(&mut state));
     gauss.mul_add(&mpfr_scale, &mpfr_shift).to_f64()
-
 }
 
 #[cfg(not(feature = "use-mpfr"))]
