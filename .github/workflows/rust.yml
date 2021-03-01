@@ -1,0 +1,19 @@
+name: Rust
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cd rust; cargo build --verbose;
+    - name: Run tests
+      run: cd rust; cargo test --verbose; 
+      # Note: at this point, still in the "rust" directory 
