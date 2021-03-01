@@ -46,7 +46,7 @@ pub fn create_dataframe_domain() -> MapDomain<AllDomain<Data>> {
 
 impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M, usize> for CreateDataFrame<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make(col_count: usize) -> Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make1(col_count: usize) -> Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M> {
         Transformation::new(
             VectorDomain::new(VectorDomain::new_all()),
             create_dataframe_domain(),
@@ -74,7 +74,7 @@ fn split_dataframe<'a>(separator: &str, col_count: usize, s: &str) -> DataFrame 
 
 impl<M> MakeTransformation2<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M, Option<&str>, usize> for SplitDataFrame<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make(separator: Option<&str>, col_count: usize) -> Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make2(separator: Option<&str>, col_count: usize) -> Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M> {
         let separator = separator.unwrap_or(",").to_owned();
         Transformation::new(
             AllDomain::new(),
@@ -112,7 +112,7 @@ impl<M, T> MakeTransformation2<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<D
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: 'static + Element + FromStr + Clone + Default + PartialEq,
           T::Err: Debug {
-    fn make(key: &str, impute: bool) -> Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make2(key: &str, impute: bool) -> Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M> {
         let key = key.to_owned();
         Transformation::new(
             create_dataframe_domain(),
@@ -135,7 +135,7 @@ pub struct SelectColumn<M, T> {
 impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M, &str> for SelectColumn<M, T>
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: 'static + Element + Clone + PartialEq {
-    fn make(key: &str) -> Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M> {
+    fn make1(key: &str) -> Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M> {
         let key = key.to_owned();
         Transformation::new(
             create_dataframe_domain(),
@@ -170,7 +170,7 @@ fn split_lines(s: &str) -> Vec<&str> {
 
 impl<M> MakeTransformation0<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> for SplitLines<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make() -> Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> {
+    fn make0() -> Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> {
         Transformation::new(
             AllDomain::<String>::new(),
             VectorDomain::new_all(),
@@ -202,7 +202,7 @@ impl<T, M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<All
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: FromStr + Default,
           T::Err: Debug {
-    fn make(impute: bool) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M> {
+    fn make1(impute: bool) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M> {
         Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),
@@ -231,7 +231,7 @@ fn split_records<'a>(separator: &str, lines: &Vec<&'a str>) -> Vec<Vec<&'a str>>
 
 impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M, Option<&str>> for SplitRecords<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make(separator: Option<&str>) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M> {
+    fn make1(separator: Option<&str>) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M> {
         let separator = separator.unwrap_or(",").to_owned();
         Transformation::new(
             VectorDomain::new_all(),

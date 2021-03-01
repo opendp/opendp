@@ -54,9 +54,9 @@
 //!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true);
 //!     let load_numbers = ChainTT::make(&parse_series, &split_lines);
 //!
-//!     // Construct a Measurment to calculate a noisy sum.
+//!     // Construct a Measurement to calculate a noisy sum.
 //!     let clamp = trans::Clamp::make(bounds.0, bounds.1);
-//!     let bounded_sum = trans::BoundedSum::make(bounds.0, bounds.1, L1Sensitivity::new());
+//!     let bounded_sum = trans::BoundedSum::make2(bounds.0, bounds.1);
 //!     let laplace = LaplaceMechanism::make(sigma);
 //!     let intermediate = ChainTT::make(&bounded_sum, &clamp);
 //!     let noisy_sum = ChainMT::make(&laplace, &intermediate);

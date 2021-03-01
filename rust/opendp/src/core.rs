@@ -250,7 +250,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, D
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
-    fn make(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Measurement<DI, DO, MI, MO> {
+    fn make2(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Measurement<DI, DO, MI, MO> {
         let input_glue = MetricGlue::<DI, MI>::new();
         let x_glue = MetricGlue::<DX, MX>::new();
         let output_glue = MeasureGlue::<DO, MO>::new();
@@ -281,7 +281,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeTransformation2<DI, DO, MI, MO, &Transformation
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Metric {
-    fn make(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Transformation<DI, DO, MI, MO> {
+    fn make2(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Transformation<DI, DO, MI, MO> {
         let input_glue = MetricGlue::<DI, MI>::new();
         let x_glue = MetricGlue::<DX, MX>::new();
         let output_glue = MetricGlue::<DO, MO>::new();
@@ -311,7 +311,7 @@ impl<DI, DO0, DO1, MI, MO> MakeMeasurement2<DI, PairDomain<BoxDomain<DO0>, BoxDo
           DO1: 'static + Domain,
           MI: 'static + Metric,
           MO: 'static + Measure {
-    fn make(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO> {
+    fn make2(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO> {
         let input_glue = MetricGlue::<DI, MI>::new();
         let output_glue0 = MeasureGlue::<DO0, MO>::new();
         let output_glue1 = MeasureGlue::<DO1, MO>::new();

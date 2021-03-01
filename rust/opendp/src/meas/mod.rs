@@ -13,23 +13,38 @@ use std::marker::PhantomData;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeMeasurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
-    fn make() -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make() -> crate::core::Measurement<DI, DO, MI, MO> {
+        Self::make0()
+    }
+    fn make0() -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement1<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1> {
-    fn make(param1: P1) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1) -> crate::core::Measurement<DI, DO, MI, MO> {
+        Self::make1(param1)
+    }
+    fn make1(param1: P1) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement2<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2> {
-    fn make(param1: P1, param2: P2) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2) -> crate::core::Measurement<DI, DO, MI, MO> {
+        Self::make2(param1, param2)
+    }
+    fn make2(param1: P1, param2: P2) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement3<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2, P3> {
-    fn make(param1: P1, param2: P2, param3: P3) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2, param3: P3) -> crate::core::Measurement<DI, DO, MI, MO> {
+        Self::make3(param1, param2, param3)
+    }
+    fn make3(param1: P1, param2: P2, param3: P3) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub trait MakeMeasurement4<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2, P3, P4> {
-    fn make(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Measurement<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Measurement<DI, DO, MI, MO> {
+        Self::make4(param1, param2, param3, param4)
+    }
+    fn make4(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Measurement<DI, DO, MI, MO>;
 }
 
 pub struct LaplaceMechanism<T> {
@@ -46,7 +61,7 @@ fn laplace(sigma: f64) -> f64 {
 // laplace for scalar-valued query
 impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism<T>
     where T: Copy + NumCast {
-    fn make(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence> {
+    fn make1(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence> {
         let input_domain = AllDomain::new();
         let output_domain = AllDomain::new();
         let function = move |arg: &T| -> T {
@@ -66,7 +81,7 @@ pub struct VectorLaplaceMechanism<T> {
 // laplace for vector-valued query
 impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for VectorLaplaceMechanism<T>
     where T: Copy + NumCast {
-    fn make(sigma: f64) -> Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence> {
+    fn make1(sigma: f64) -> Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence> {
         let input_domain = VectorDomain::new_all();
         let output_domain = VectorDomain::new_all();
         let function = move |arg: &Vec<T>| -> Vec<T> {
@@ -88,7 +103,7 @@ pub struct GaussianMechanism<T> {
 // gaussian for scalar-valued query
 impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence, f64> for GaussianMechanism<T>
     where T: Copy + NumCast {
-    fn make(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence> {
+    fn make1(sigma: f64) -> Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence> {
         let input_domain = AllDomain::new();
         let output_domain = AllDomain::new();
         let function = move |arg: &T| -> T {

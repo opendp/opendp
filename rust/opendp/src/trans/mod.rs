@@ -18,23 +18,38 @@ pub mod dataframe;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeTransformation0<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
-    fn make() -> crate::core::Transformation<DI, DO, MI, MO>;
+    fn make() -> crate::core::Transformation<DI, DO, MI, MO> {
+        Self::make0()
+    }
+    fn make0() -> crate::core::Transformation<DI, DO, MI, MO>;
 }
 
 pub trait MakeTransformation1<DI: Domain, DO: Domain, MI: Metric, MO: Metric, P1> {
-    fn make(param1: P1) -> crate::core::Transformation<DI, DO, MI, MO>;
+    fn make(param1: P1) -> crate::core::Transformation<DI, DO, MI, MO> {
+        Self::make1(param1)
+    }
+    fn make1(param1: P1) -> crate::core::Transformation<DI, DO, MI, MO>;
 }
 
 pub trait MakeTransformation2<DI: Domain, DO: Domain, MI: Metric, MO: Metric, P1, P2> {
-    fn make(param1: P1, param2: P2) -> crate::core::Transformation<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2) -> crate::core::Transformation<DI, DO, MI, MO> {
+        Self::make2(param1, param2)
+    }
+    fn make2(param1: P1, param2: P2) -> crate::core::Transformation<DI, DO, MI, MO>;
 }
 
 pub trait MakeTransformation3<DI: Domain, DO: Domain, MI: Metric, MO: Metric, P1, P2, P3> {
-    fn make(param1: P1, param2: P2, param3: P3) -> crate::core::Transformation<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2, param3: P3) -> crate::core::Transformation<DI, DO, MI, MO> {
+        Self::make3(param1, param2, param3)
+    }
+    fn make3(param1: P1, param2: P2, param3: P3) -> crate::core::Transformation<DI, DO, MI, MO>;
 }
 
 pub trait MakeTransformation4<DI: Domain, DO: Domain, MI: Metric, MO: Metric, P1, P2, P3, P4> {
-    fn make(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Transformation<DI, DO, MI, MO>;
+    fn make(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Transformation<DI, DO, MI, MO> {
+        Self::make4(param1, param2, param3, param4)
+    }
+    fn make4(param1: P1, param2: P2, param3: P3, param4: P4) -> crate::core::Transformation<DI, DO, MI, MO>;
 }
 
 /// Constructs a [`Transformation`] representing the identity function.
@@ -43,7 +58,7 @@ pub struct Identity;
 impl<D, T, M, Q> MakeTransformation2<D, D, M, M, D, M> for Identity
     where D: Domain<Carrier=T>, T: Clone,
           M: Metric<Distance=Q>, Q: Clone {
-    fn make(domain: D, metric: M) -> Transformation<D, D, M, M> {
+    fn make2(domain: D, metric: M) -> Transformation<D, D, M, M> {
         let function = |arg: &T| arg.clone();
         let stability_relation = |_d_in: &Q, _d_out: &Q| true;
         Transformation::new(domain.clone(), domain, function, metric.clone(), metric, stability_relation)
@@ -58,7 +73,7 @@ pub struct Clamp<M, T> {
 impl<M, T> MakeTransformation2<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M, T, T> for Clamp<M, T>
     where M: Metric<Distance=u32> + DatasetMetric,
           T: 'static + Copy + PartialOrd {
-    fn make(lower: T, upper: T) -> Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M> {
+    fn make2(lower: T, upper: T) -> Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M> {
         Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
@@ -87,7 +102,7 @@ pub struct BoundedSum<MI, MO, T> {
 impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T> for BoundedSum<HammingDistance, MO, T>
     where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T>,
           MO: SensitivityMetric<Distance=T> {
-    fn make(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
+    fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
         Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
@@ -110,7 +125,7 @@ impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, S
     where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + Signed,
           MO: SensitivityMetric<Distance=T> {
     // Question- how to set the associated type for a trait that a concrete type is using
-    fn make(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO> {
+    fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO> {
         Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
@@ -126,7 +141,7 @@ impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, Al
     where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Div<Output=T> + Sum<T>,
           MO: SensitivityMetric<Distance=T>,
           SymmetricDistance: Metric<Distance=u32>  {
-    fn make(length: usize, lower: T, upper: T) -> Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO> {
+    fn make3(length: usize, lower: T, upper: T) -> Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO> {
         Transformation::new(
             SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
             AllDomain::new(),
@@ -147,7 +162,7 @@ pub struct Count<MI, MO, T> {
 impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> for Count<MI, MO, T>
     where MI: Metric<Distance=u32> + DatasetMetric,
           MO: Metric<Distance=u32> + SensitivityMetric {
-    fn make() -> Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> {
+    fn make0() -> Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> {
         Transformation::new(
             VectorDomain::new_all(),
             AllDomain::new(),
@@ -212,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_make_bounded_sum_l1() {
-        let transformation = BoundedSum::<HammingDistance, i32>::make(0, 10, L1Sensitivity::new());
+        let transformation = BoundedSum::<HammingDistance, L1Sensitivity<_>, i32>::make(0, 10);
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg);
         let expected = 15;
@@ -221,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_make_bounded_sum_l2() {
-        let transformation = BoundedSum::<HammingDistance, i32>::make(0, 10, L2Sensitivity::new());
+        let transformation = BoundedSum::<HammingDistance, L2Sensitivity<_>, i32>::make(0, 10);
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg);
         let expected = 15;
@@ -230,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_make_count_l1() {
-        let transformation = Count::<SymmetricDistance, i32>::make(L1Sensitivity::new());
+        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make();
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg);
         let expected = 5;
@@ -239,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_make_count_l2() {
-        let transformation = Count::<SymmetricDistance, i32>::make(L2Sensitivity::new());
+        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make();
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg);
         let expected = 5;
