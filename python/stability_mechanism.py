@@ -23,7 +23,7 @@ def main():
     for corpus_name, word_count, line_count in zip(word_counts, word_counts.values(), line_counts.values()):
         # assuming each line is a different user, a user can influence up to max_words_per_line counts
         d_in = odp.data.distance_hamming(max_words_per_line)
-        d_out = odp.data.distance_smoothed_max_divergence(1., 1e-6)
+        d_out = odp.data.distance_smoothed_max_divergence(.03, 1e-8)
 
         def check_stability(scale, threshold):
             stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, scale, threshold)

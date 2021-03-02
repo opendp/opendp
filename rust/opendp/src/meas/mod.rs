@@ -307,7 +307,7 @@ pub fn sample_laplace(scale: f64) -> Result<f64, &'static str> {
         let mut state = ThreadRandState::new_custom(&mut rng);
         let standard_exponential_sample = rug::Float::random_exp(&mut state);
 
-        to_rug!(standard_exponential_sample) / to_rug!(scale)
+        to_rug!(standard_exponential_sample) * to_rug!(scale)
     };
 
     Ok(to_rug!(rademacher_sample * exponential_sample).to_f64())
