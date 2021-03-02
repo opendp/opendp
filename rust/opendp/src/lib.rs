@@ -38,6 +38,11 @@
 //! use opendp::core;
 //! use opendp::meas;
 //! use opendp::trans;
+//! use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3};
+//! use opendp::dist::{HammingDistance, L1Sensitivity};
+//! use opendp::core::{ChainTT, ChainMT};
+//! use opendp::meas::{MakeMeasurement2, LaplaceMechanism, MakeMeasurement1};
+//!
 //! pub fn example() {
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
@@ -45,19 +50,19 @@
 //!     let sigma = (bounds.1 - bounds.0) / epsilon;
 //!
 //!     // Construct a Transformation to load the numbers.
-//!     let split_lines = trans::make_split_lines();
-//!     let parse_series = trans::make_parse_series::<f64>(true);
-//!     let load_numbers = core::make_chain_tt(&parse_series, &split_lines);
+//!     let split_lines = trans::SplitLines::<HammingDistance>::make();
+//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true);
+//!     let load_numbers = ChainTT::make(&parse_series, &split_lines);
 //!
-//!     // Construct a Measurment to calculate a noisy sum.
-//!     let clamp = trans::make_clamp(bounds.0, bounds.1);
-//!     let bounded_sum = trans::make_bounded_sum_l1(bounds.0, bounds.1);
-//!     let laplace = meas::make_base_laplace(sigma);
-//!     let intermediate = core::make_chain_tt(&bounded_sum, &clamp);
-//!     let noisy_sum = core::make_chain_mt(&laplace, &intermediate);
+//!     // Construct a Measurement to calculate a noisy sum.
+//!     let clamp = trans::Clamp::make(bounds.0, bounds.1);
+//!     let bounded_sum = trans::BoundedSum::make2(bounds.0, bounds.1);
+//!     let laplace = LaplaceMechanism::make(sigma);
+//!     let intermediate = ChainTT::make(&bounded_sum, &clamp);
+//!     let noisy_sum = ChainMT::make(&laplace, &intermediate);
 //!
 //!     // Put it all together.
-//!     let pipeline = core::make_chain_mt(&noisy_sum, &load_numbers);
+//!     let pipeline = ChainMT::make(&noisy_sum, &load_numbers);
 //!     let result = pipeline.function.eval(&data);
 //!     println!("result = {}", result);
 //!  }

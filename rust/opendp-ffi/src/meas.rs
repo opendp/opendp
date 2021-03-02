@@ -1,18 +1,16 @@
 use std::os::raw::c_char;
 
-use opendp::meas;
-use opendp::meas::{AddNoise, OpendpInto};
-
 use crate::core::FfiMeasurement;
 use crate::util;
 use crate::util::TypeArgs;
+use num::NumCast;
+use opendp::meas::{LaplaceMechanism, MakeMeasurement1, GaussianMechanism, VectorLaplaceMechanism};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, sigma: f64) -> *mut FfiMeasurement {
     fn monomorphize<T>(sigma: f64) -> *mut FfiMeasurement where
-        T: 'static + Copy + PartialEq + OpendpInto<f64>,
-        f64: OpendpInto<T> {
-        let measurement = meas::make_base_laplace::<T>(sigma);
+        T: 'static + Copy + NumCast {
+        let measurement = LaplaceMechanism::<T>::make(sigma);
         FfiMeasurement::new_from_types(measurement)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -22,9 +20,8 @@ pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, sigma
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace_vec(type_args: *const c_char, sigma: f64) -> *mut FfiMeasurement {
     fn monomorphize<T>(sigma: f64) -> *mut FfiMeasurement where
-        T: 'static + Copy + PartialEq + OpendpInto<f64>,
-        f64: OpendpInto<T> {
-        let measurement = meas::make_base_laplace_vec::<T>(sigma);
+        T: 'static + Copy + NumCast {
+        let measurement = VectorLaplaceMechanism::<T>::make(sigma);
         FfiMeasurement::new_from_types(measurement)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -34,8 +31,8 @@ pub extern "C" fn opendp_meas__make_base_laplace_vec(type_args: *const c_char, s
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(type_args: *const c_char, sigma: f64) -> *mut FfiMeasurement {
     fn monomorphize<T>(sigma: f64) -> *mut FfiMeasurement where
-        T: 'static + Copy + PartialEq + AddNoise {
-        let measurement = meas::make_base_gaussian::<T>(sigma);
+        T: 'static + Copy + NumCast {
+        let measurement = GaussianMechanism::<T>::make(sigma);
         FfiMeasurement::new_from_types(measurement)
     }
     let type_args = TypeArgs::expect(type_args, 1);

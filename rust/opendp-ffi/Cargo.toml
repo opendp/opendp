@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 opendp = { path = "../opendp" }
 lazy_static = "1.4.0"
+num = "0.3.1"
 
 [lib]
 crate-type = ["rlib", "cdylib"]

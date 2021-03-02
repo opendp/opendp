@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use crate::core::{Measure, Metric};
+use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
 
 /// Measures
 #[derive(Clone)]
@@ -27,7 +27,7 @@ impl SmoothedMaxDivergence {
 #[derive(Clone)]
 pub struct SymmetricDistance;
 impl Metric for SymmetricDistance {
-    type Distance = i32;
+    type Distance = u32;
 }
 impl SymmetricDistance {
     pub fn new() -> Self { SymmetricDistance }
@@ -35,43 +35,66 @@ impl SymmetricDistance {
 
 #[derive(Clone)]
 pub struct HammingDistance;
+
 impl Metric for HammingDistance {
-    type Distance = i32;
+    type Distance = u32;
 }
+
+impl DatasetMetric for HammingDistance {
+    fn new() -> Self { HammingDistance }
+}
+
 impl HammingDistance {
     pub fn new() -> Self { HammingDistance }
 }
 
-pub struct L1Sensitivity<T> {
-    _marker: PhantomData<T>
+impl DatasetMetric for SymmetricDistance {
+    fn new() -> Self { SymmetricDistance }
 }
-impl<T> L1Sensitivity<T> {
+
+pub struct L1Sensitivity<Q> {
+    _marker: PhantomData<Q>
+}
+
+impl<Q> SensitivityMetric for L1Sensitivity<Q> {
+    fn new() -> Self { Self::new() }
+}
+
+impl<Q> L1Sensitivity<Q> {
     pub fn new() -> Self {
         L1Sensitivity { _marker: PhantomData }
     }
 }
-impl <T> Clone for L1Sensitivity<T> {
+
+impl<Q> Clone for L1Sensitivity<Q> {
     fn clone(&self) -> Self {
         Self::new()
     }
 }
-impl<T> Metric for L1Sensitivity<T> {
-    type Distance = T;
+
+impl<Q> SensitivityMetric for L2Sensitivity<Q> {
+    fn new() -> Self {
+        Self::new()
+    }
 }
 
-pub struct L2Sensitivity<T> {
-    _marker: PhantomData<T>
+impl<Q> Metric for L1Sensitivity<Q> {
+    type Distance = Q;
 }
-impl<T> L2Sensitivity<T> {
+
+pub struct L2Sensitivity<Q> {
+    _marker: PhantomData<Q>
+}
+impl<Q> L2Sensitivity<Q> {
     pub fn new() -> Self {
         L2Sensitivity { _marker: PhantomData }
     }
 }
-impl <T> Clone for L2Sensitivity<T> {
+impl <Q> Clone for L2Sensitivity<Q> {
     fn clone(&self) -> Self {
         Self::new()
     }
 }
-impl<T> Metric for L2Sensitivity<T> {
-    type Distance = T;
+impl<Q> Metric for L2Sensitivity<Q> {
+    type Distance = Q;
 }
