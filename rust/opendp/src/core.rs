@@ -444,7 +444,7 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = |_d_in: &i32, _d_out: &f64| true;
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let chain = ChainMT::make(&measurement1, &transformation0);
+        let chain = ChainMT::make2(&measurement1, &transformation0);
         let arg = 99_u8;
         let ret = chain.function.eval(&arg);
         assert_eq!(ret, 101.0);

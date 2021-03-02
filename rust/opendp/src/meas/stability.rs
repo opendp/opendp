@@ -18,23 +18,24 @@ fn privacy_relation(d_in: f64, (eps, del): (f64, f64), n: usize, sigma: f64, thr
     let n = n as f64;
     let ideal_sigma = d_in / (eps * n);
     let ideal_threshold = (2. / del).ln() * ideal_sigma + 1. / n;
+    // println!("ideal: {:?}, {:?}", ideal_sigma, ideal_threshold);
 
     if eps <= 0. || eps >= n.ln() {
-        println!("failed:   eps >= n.ln()");
+        // println!("failed:   eps >= n.ln()");
         return false
     }
     if del <= 0. || del >= 1. / n {
-        println!("failed:   del >= 1. / n");
+        // println!("failed:   del >= 1. / n");
         return false
     }
     // check that sigma is large enough
     if sigma < ideal_sigma {
-        println!("failed:   sigma < d_in / (eps * n)");
+        // println!("failed:   sigma < d_in / (eps * n)");
         return false
     }
     // check that threshold is large enough
     if threshold < ideal_threshold {
-        println!("failed:   threshold < (2. / del).ln() * sigma + 1. / n");
+        // println!("failed:   threshold < (2. / del).ln() * sigma + 1. / n");
         return false
     }
     return true

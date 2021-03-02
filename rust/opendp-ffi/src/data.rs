@@ -17,6 +17,11 @@ pub extern "C" fn opendp_data__distance_smoothed_max_divergence(epsilon: f64, de
 }
 
 #[no_mangle]
+pub extern "C" fn opendp_data__f64(p: f64) -> *mut FfiObject {
+    FfiObject::new(p)
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_data__from_string(p: *const c_char) -> *mut FfiObject {
     let s = util::to_str(p).to_owned();
     FfiObject::new(s)
@@ -56,6 +61,7 @@ r#"{
 "functions": [
     { "name": "distance_hamming", "args": [ ["unsigned int", "d"] ], "ret": "void *" },
     { "name": "distance_smoothed_max_divergence", "args": [ ["double", "epsilon"], ["double", "delta"] ], "ret": "void *" },
+    { "name": "f64", "args": [ ["double", "d"] ], "ret": "void *" },
     { "name": "from_string", "args": [ ["const char *", "s"] ], "ret": "void *" },
     { "name": "to_string", "args": [ ["void *", "this"] ], "ret": "const char *" },
     { "name": "data_free", "args": [ ["void *", "this"] ] }
