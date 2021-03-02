@@ -67,8 +67,14 @@ macro_rules! disp {
 // disp_expand!(func, (rt_type2, [i32, i64]), [(rt_type3, [i32, i64])], (u32), (arg1, arg2))
 // disp_expand!(func, (rt_type3, [f32, f64]), [], (u32, i32), (arg1, arg2))
 macro_rules! disp_expand {
+    ($function:ident, ($rt_type:expr, @hashable),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [u32, u64, i32, i64, bool, String, u8]), $rt_dispatch_types, $type_args, $args)
+    };
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u32, u64, i32, i64, f32, f64, bool, String, u8]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [u32, i32, u8]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u32, u64, i32, i64, f32, f64, u8]), $rt_dispatch_types, $type_args, $args)

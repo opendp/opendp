@@ -153,6 +153,16 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, a
 }
 
 #[no_mangle]
+pub extern "C" fn opendp_core__measurement_check(this: *const FfiMeasurement, distance_in: *const FfiObject, distance_out: *const FfiObject) -> bool {
+    let this = util::as_ref(this);
+    let distance_in = util::as_ref(distance_in);
+    let distance_out = util::as_ref(distance_out);
+    // TODO: not sure how to implement this check at a glance
+    // assert_eq!(distance_in.type_, this.input_glue.);
+    this.value.privacy_relation.eval(&distance_in.value, &distance_out.value)
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_core__measurement_free(this: *mut FfiMeasurement) {
     util::into_owned(this);
 }
@@ -219,6 +229,7 @@ pub extern "C" fn opendp_core__bootstrap() -> *const c_char {
 r#"{
 "functions": [
     { "name": "measurement_invoke", "args": [ ["const void *", "this"], ["void *", "arg"] ], "ret": "void *" },
+    { "name": "measurement_check", "args": [ ["const void *", "this"], ["void *", "arg"], ["void *", "arg"] ], "ret": "bool" },
     { "name": "measurement_free", "args": [ ["void *", "this"] ] },
     { "name": "transformation_invoke", "args": [ ["const void *", "this"], ["void *", "arg"] ], "ret": "void *" },
     { "name": "transformation_free", "args": [ ["void *", "this"] ] },

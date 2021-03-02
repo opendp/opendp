@@ -20,8 +20,8 @@
 use std::rc::Rc;
 
 use crate::dom::{BoxDomain, PairDomain};
+use crate::meas::{MakeMeasurement2, MakeMeasurement3};
 use crate::trans::MakeTransformation2;
-use crate::meas::MakeMeasurement2;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -258,8 +258,20 @@ impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, D
     }
 }
 
-pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>, input_glue: &MetricGlue<DI, MI>, x_glue: &MetricGlue<DX, MX>, output_glue: &MeasureGlue<DO, MO>) -> Measurement<DI, DO, MI, MO> where
-    DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Measure {
+
+pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(
+    measurement1: & Measurement<DX, DO, MX, MO>,
+    transformation0: & Transformation<DI, DX, MI, MX>,
+    input_glue: &MetricGlue<DI, MI>,
+    x_glue: &MetricGlue<DX, MX>,
+    output_glue: &MeasureGlue<DO, MO>
+) -> Measurement<DI, DO, MI, MO> where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    DO: 'static + Domain,
+    MI: 'static + Metric,
+    MX: 'static + Metric,
+    MO: 'static + Measure {
     assert!((x_glue.domain_eq)(&transformation0.output_domain, &measurement1.input_domain));
     let input_domain = (input_glue.domain_clone)(&transformation0.input_domain);
     let output_domain = (output_glue.domain_clone)(&measurement1.output_domain);
@@ -267,7 +279,61 @@ pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(measurement1: &Measurement<DX,
     let input_metric = (input_glue.metric_clone)(&transformation0.input_metric);
     let output_measure = (output_glue.measure_clone)(&measurement1.output_measure);
     // TODO: PrivacyRelation for make_chain_mt
-    let privacy_relation = PrivacyRelation::new(|_i, _o| false);
+    let privacy_relation = PrivacyRelation::new(|_d_in: &MI::Distance, _d_out: &MO::Distance| false);
+    Measurement { input_domain, output_domain, function, input_metric, output_measure, privacy_relation }
+}
+
+impl<DI, DX, DO, MI, MX, MO, F> MakeMeasurement3<DI, DO, MI, MO, & Measurement<DX, DO, MX, MO>, & Transformation<DI, DX, MI, MX>, F> for ChainMT
+    where DI: 'static + Domain,
+          DX: 'static + Domain,
+          DO: 'static + Domain,
+          MI: 'static + Metric,
+          MX: 'static + Metric,
+          MO: 'static + Measure,
+        MI::Distance: Clone,
+    MO::Distance: Clone,
+    MX::Distance: Clone,
+          F: 'static + Fn(&MI::Distance, &MO::Distance) -> MX::Distance {
+    fn make3(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>, hint: F) -> Measurement<DI, DO, MI, MO> {
+        let input_glue = MetricGlue::<DI, MI>::new();
+        let x_glue = MetricGlue::<DX, MX>::new();
+        let output_glue = MeasureGlue::<DO, MO>::new();
+        make_chain_mt_glue_hint(measurement1, transformation0, &input_glue, &x_glue, &output_glue, hint)
+    }
+}
+
+pub fn make_chain_mt_glue_hint<DI, DX, DO, MI, MX, MO, F>(
+    measurement1: &Measurement<DX, DO, MX, MO>,
+    transformation0: &Transformation<DI, DX, MI, MX>,
+    input_glue: &MetricGlue<DI, MI>,
+    x_glue: &MetricGlue<DX, MX>,
+    output_glue: &MeasureGlue<DO, MO>,
+    hint: F
+) -> Measurement<DI, DO, MI, MO> where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    DO: 'static + Domain,
+    MI: 'static + Metric,
+    MX: 'static + Metric,
+    MO: 'static + Measure,
+    MI::Distance: Clone,
+    MO::Distance: Clone,
+    MX::Distance: Clone,
+    F: 'static + Fn(&MI::Distance, &MO::Distance) -> MX::Distance {
+    assert!((x_glue.domain_eq)(&transformation0.output_domain, &measurement1.input_domain));
+    let input_domain = (input_glue.domain_clone)(&transformation0.input_domain);
+    let output_domain = (output_glue.domain_clone)(&measurement1.output_domain);
+    let function = Function::make_chain(&measurement1.function, &transformation0.function);
+    let input_metric = (input_glue.metric_clone)(&transformation0.input_metric);
+    let output_measure = (output_glue.measure_clone)(&measurement1.output_measure);
+
+    let stability_relation = transformation0.stability_relation.clone();
+    let privacy_relation = measurement1.privacy_relation.clone();
+    let privacy_relation = PrivacyRelation::new(move |d_in: &MI::Distance, d_out: &MO::Distance| {
+        let d_mid = hint(d_in, d_out);
+        return stability_relation.eval(d_in, &d_mid)
+            && privacy_relation.eval(&d_mid, d_out)
+    });
     Measurement { input_domain, output_domain, function, input_metric, output_measure, privacy_relation }
 }
 

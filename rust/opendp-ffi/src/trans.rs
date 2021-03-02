@@ -1,20 +1,24 @@
+use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::iter::Sum;
+use std::ops::{Mul, Sub, AddAssign};
 use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
-use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
+use num::{Integer, NumCast, Zero, One};
+
 use opendp::data::{Element, Form};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity};
 use opendp::dom::AllDomain;
+use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
 use opendp::trans;
+use opendp::trans::count::{CountBy};
 
 use crate::core::FfiTransformation;
 use crate::util;
 use crate::util::c_bool;
 use crate::util::TypeArgs;
-use std::ops::{Sub, Mul};
-use num::{NumCast};
+use std::hash::Hash;
 
 // TODO: update dispatch macros to call new trait calling convention
 //       dispatch based on Metric type
@@ -75,7 +79,6 @@ pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key:
     fn monomorphize<T>(key: &str, impute: bool) -> *mut FfiTransformation where
         T: 'static + Element + Clone + PartialEq + FromStr + Default, T::Err: Debug {
         let transformation = trans::ParseColumn::<HammingDistance, T>::make(key, impute);
-        // let transformation = trans::make_parse_column::<T>(key, impute);
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -138,28 +141,47 @@ pub extern "C" fn opendp_trans__make_bounded_sum_l2(type_args: *const c_char, lo
 // TODO: combine l1 and l2 when we update to new dispatch mechanism
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count_l1(type_args: *const c_char) -> *mut FfiTransformation {
-    fn monomorphize<T>() -> *mut FfiTransformation where T: 'static {
-        let transformation = trans::count::Count::<HammingDistance, L1Sensitivity<_>, T>::make();
+    fn monomorphize<TI, TO>() -> *mut FfiTransformation where
+        TI: 'static,
+        TO: 'static + Integer + TryFrom<usize>,
+        <TO as TryFrom<usize>>::Error: Debug {
+        let transformation = trans::count::Count::<HammingDistance, L1Sensitivity<_>, TI, TO>::make();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
-    dispatch!(monomorphize, [(type_args.0[0], @primitives)], ())
+    dispatch!(monomorphize, [(type_args.0[0], @primitives), (type_args.0[1], @integers)], ())
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count_l2(type_args: *const c_char) -> *mut FfiTransformation {
-    fn monomorphize<T>() -> *mut FfiTransformation where T: 'static {
-        let transformation = trans::count::Count::<HammingDistance, L2Sensitivity<_>, T>::make();
+    fn monomorphize<TI, TO>() -> *mut FfiTransformation
+        where TI: 'static,
+              TO: 'static + Integer + TryFrom<usize>,
+              <TO as TryFrom<usize>>::Error: Debug {
+        let transformation = trans::count::Count::<HammingDistance, L2Sensitivity<_>, TI, TO>::make();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
-    dispatch!(monomorphize, [(type_args.0[0], @primitives)], ())
+    dispatch!(monomorphize, [(type_args.0[0], @primitives), (type_args.0[1], @integers)], ())
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_trans__make_count_by_l1(type_args: *const c_char, n: c_uint) -> *mut FfiTransformation {
+    fn monomorphize<TI, TO>(n: usize) -> *mut FfiTransformation
+        where TI: 'static + Eq + Hash + Clone,
+              TO: 'static + Integer + TryFrom<usize> + Zero + One + AddAssign,
+              <TO as TryFrom<usize>>::Error: Debug {
+        let measurement = CountBy::<HammingDistance, L1Sensitivity<f64>, TI, TO>::make(n);
+        FfiTransformation::new_from_types(measurement)
+    }
+    let type_args = TypeArgs::expect(type_args, 2);
+    dispatch!(monomorphize, [(type_args.0[0], [u32]), (type_args.0[1], [u32])], (n as usize))
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__bootstrap() -> *const c_char {
     let spec =
-r#"{
+        r#"{
 "functions": [
     { "name": "make_identity", "ret": "void *" },
     { "name": "make_split_lines", "ret": "void *" },
@@ -173,7 +195,8 @@ r#"{
     { "name": "make_bounded_sum_l1", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },
     { "name": "make_bounded_sum_l2", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },
     { "name": "make_count_l1", "args": [ ["const char *", "selector"] ], "ret": "void *" },
-    { "name": "make_count_l2", "args": [ ["const char *", "selector"] ], "ret": "void *" }
+    { "name": "make_count_l2", "args": [ ["const char *", "selector"] ], "ret": "void *" },
+    { "name": "make_count_by_l1", "args": [ ["const char *", "selector"], ["unsigned int", "n"] ], "ret": "void *" }
 ]
 }"#;
     util::bootstrap(spec)

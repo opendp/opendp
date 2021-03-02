@@ -23,6 +23,7 @@ class Mod:
         "char *": ctypes.c_char_p,
         "const char *": ctypes.c_char_p,
         "bool": ctypes.c_bool,
+        "size_t": ctypes.c_size_t,
     }
 
     @classmethod

@@ -7,6 +7,16 @@ use crate::core::FfiObject;
 use crate::util;
 
 #[no_mangle]
+pub extern "C" fn opendp_data__distance_hamming(d: u32) -> *mut FfiObject {
+    FfiObject::new(d)
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_data__distance_smoothed_max_divergence(epsilon: f64, delta: f64) -> *mut FfiObject {
+    FfiObject::new((epsilon, delta))
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_data__from_string(p: *const c_char) -> *mut FfiObject {
     let s = util::to_str(p).to_owned();
     FfiObject::new(s)
@@ -44,6 +54,8 @@ pub extern "C" fn opendp_data__bootstrap() -> *const c_char {
     let spec =
 r#"{
 "functions": [
+    { "name": "distance_hamming", "args": [ ["unsigned int", "d"] ], "ret": "void *" },
+    { "name": "distance_smoothed_max_divergence", "args": [ ["double", "epsilon"], ["double", "delta"] ], "ret": "void *" },
     { "name": "from_string", "args": [ ["const char *", "s"] ], "ret": "void *" },
     { "name": "to_string", "args": [ ["void *", "this"] ], "ret": "const char *" },
     { "name": "data_free", "args": [ ["void *", "this"] ] }
