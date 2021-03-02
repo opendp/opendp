@@ -298,7 +298,7 @@ pub fn sample_censored_geometric(prob: f64, max_trials: i64, enforce_constant_ti
 
 
 #[cfg(feature = "use-mpfr")]
-pub fn sample_laplace(sigma: f64) -> Result<f64, &'static str> {
+pub fn sample_laplace(scale: f64) -> Result<f64, &'static str> {
     macro_rules! to_rug {($v:expr) => {rug::Float::with_val(53, $v)}}
 
     let rademacher_sample = if sample_standard_bernoulli()? {1.} else {-1.};
@@ -307,7 +307,7 @@ pub fn sample_laplace(sigma: f64) -> Result<f64, &'static str> {
         let mut state = ThreadRandState::new_custom(&mut rng);
         let standard_exponential_sample = rug::Float::random_exp(&mut state);
 
-        to_rug!(standard_exponential_sample) / to_rug!(sigma)
+        to_rug!(standard_exponential_sample) / to_rug!(scale)
     };
 
     Ok(to_rug!(rademacher_sample * exponential_sample).to_f64())

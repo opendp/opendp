@@ -72,16 +72,16 @@ impl<TIK, TIC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK, f64>, L1
           TIC: Integer + Zero + One + AddAssign + Clone,
           f64: TryFrom<TIC>,
           <f64 as TryFrom<TIC>>::Error: Debug {
-    fn make3(n: usize, sigma: f64, threshold: f64) -> Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, f64>, L1Sensitivity<f64>, SmoothedMaxDivergence> {
+    fn make3(n: usize, scale: f64, threshold: f64) -> Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, f64>, L1Sensitivity<f64>, SmoothedMaxDivergence> {
         Measurement::new(
             SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
             SizedDomain::new(HashMapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
             move |data: &HashMap<TIK, TIC>|
-                stability_mechanism(data, || sample_laplace(sigma), threshold).unwrap(),
+                stability_mechanism(data, || sample_laplace(scale), threshold).unwrap(),
             L1Sensitivity::new(),
             SmoothedMaxDivergence::new(),
             move |&d_in: &f64, &d_out: &(f64, f64)|
-                privacy_relation(d_in, d_out, n, sigma, threshold))
+                privacy_relation(d_in, d_out, n, scale, threshold))
     }
 }
 

@@ -23,24 +23,24 @@ def main():
         d_in = odp.data.distance_hamming(1)
         d_out = odp.data.distance_smoothed_max_divergence(0.1, .0000001)
 
-        def check_stability(sigma, threshold):
-            stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", sum(word_count.values()), sigma, threshold)
+        def check_stability(scale, threshold):
+            stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", sum(word_count.values()), scale, threshold)
             check = odp.core.measurement_check(stability_mech, d_in, d_out)
             odp.core.measurement_free(stability_mech)
             return check
 
         threshold = 1000.
-        sigma = binary_search(lambda sigma: check_stability(sigma, threshold), 0., 100.)
-        threshold = binary_search(lambda threshold: check_stability(sigma, threshold), 0., 1000.)
+        scale = binary_search(lambda scale: check_stability(scale, threshold), 0., 100.)
+        threshold = binary_search(lambda threshold: check_stability(scale, threshold), 0., 1000.)
 
-        print("chosen sigma and threshold:")
-        print(sigma, threshold)
-        stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, sigma, threshold)
+        print("chosen scale and threshold:")
+        print(scale, threshold)
+        stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, scale, threshold)
 
-        print("does chosen sigma and threshold pass:")
+        print("does chosen scale and threshold pass:")
         print(odp.core.measurement_check(stability_mech, d_in, d_out))
 
-        laplace_mechanism = odp.meas.make_base_laplace(b"<f64>", sigma)
+        laplace_mechanism = odp.meas.make_base_laplace(b"<f64>", scale)
         word_count = dict(word_count)
 
         vocabulary = set()

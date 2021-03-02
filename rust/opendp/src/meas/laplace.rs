@@ -8,14 +8,14 @@ pub struct LaplaceMechanism;
 
 // laplace for scalar-valued query
 impl MakeMeasurement1<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism {
-    fn make1(sigma: f64) -> Measurement<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence> {
+    fn make1(scale: f64) -> Measurement<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence> {
         Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
-            move |v: &f64| v + sample_laplace(sigma).unwrap(),
+            move |v: &f64| v + sample_laplace(scale).unwrap(),
             L1Sensitivity::new(),
             MaxDivergence::new(),
-            move |&d_in: &f64, &d_out: &f64| d_out >= d_in / sigma
+            move |&d_in: &f64, &d_out: &f64| d_out >= d_in / scale
         )
     }
 }
@@ -24,16 +24,16 @@ pub struct VectorLaplaceMechanism;
 
 // laplace for vector-valued query
 impl MakeMeasurement2<SizedDomain<VectorDomain<AllDomain<f64>>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence, usize, f64> for VectorLaplaceMechanism {
-    fn make2(length: usize, sigma: f64) -> Measurement<SizedDomain<VectorDomain<AllDomain<f64>>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence> {
+    fn make2(length: usize, scale: f64) -> Measurement<SizedDomain<VectorDomain<AllDomain<f64>>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence> {
         Measurement::new(
             SizedDomain::new(VectorDomain::new_all(), length),
             VectorDomain::new_all(),
             move |arg: &Vec<f64>| arg.into_iter()
-                .map(|v| v + sample_laplace(sigma).unwrap())
+                .map(|v| v + sample_laplace(scale).unwrap())
                 .collect(),
             L1Sensitivity::new(),
             MaxDivergence::new(),
-            move |&d_in: &f64, &d_out: &f64| d_out >= d_in / sigma)
+            move |&d_in: &f64, &d_out: &f64| d_out >= d_in / scale)
     }
 }
 
