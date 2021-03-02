@@ -6,6 +6,7 @@ import opendp
 def main():
     lib_path = "../rust/target/debug/libopendp_ffi.dylib"
     odp = opendp.OpenDP(lib_path)
+    max_words_per_line = 20
 
     word_counts = {}
     line_counts = {}
@@ -15,22 +16,22 @@ def main():
         corpus_path = os.path.join(data_dir, corpus_name)
 
         with open(corpus_path, 'r') as corpus_file:
-            word_counts[corpus_name] = Counter(word for line in corpus_file for word in line.split())
+            word_counts[corpus_name] = Counter(word for line in corpus_file for word in line.split()[:max_words_per_line])
 
         line_counts[corpus_name] = sum(1 for _ in open(corpus_path))
 
     for corpus_name, word_count, line_count in zip(word_counts, word_counts.values(), line_counts.values()):
-        d_in = odp.data.distance_hamming(1)
-        d_out = odp.data.distance_smoothed_max_divergence(0.1, .0000001)
+        # assuming each line is a different user, a user can influence up to max_words_per_line counts
+        d_in = odp.data.distance_hamming(max_words_per_line)
+        d_out = odp.data.distance_smoothed_max_divergence(1., 1e-6)
 
         def check_stability(scale, threshold):
-            stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", sum(word_count.values()), scale, threshold)
+            stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, scale, threshold)
             check = odp.core.measurement_check(stability_mech, d_in, d_out)
             odp.core.measurement_free(stability_mech)
             return check
 
-        threshold = 1000.
-        scale = binary_search(lambda scale: check_stability(scale, threshold), 0., 100.)
+        scale = binary_search(lambda scale: check_stability(scale, 1000.), 0., 100.)
         threshold = binary_search(lambda threshold: check_stability(scale, threshold), 0., 1000.)
 
         print("chosen scale and threshold:")
@@ -45,16 +46,11 @@ def main():
 
         vocabulary = set()
         for word in word_count:
-            privatized_count = odp.core.measurement_invoke(laplace_mechanism, odp.data.f64(word_count[word]))
+            privatized_count = odp.data.to_f64(odp.core.measurement_invoke(laplace_mechanism, odp.data.from_f64(word_count[word])))
             if privatized_count >= threshold:
                 vocabulary.add(word)
 
-        print('results:')
-        print(len(word_count))
-        print(len(vocabulary))
-
-
-    # print(word_counts)
+        print(f"from {len(word_count)} words to {len(vocabulary)} words")
 
 
 def binary_search(predicate, start, end):
