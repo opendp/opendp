@@ -115,7 +115,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_l1(type_args: *const c_char, lo
         T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> {
         let lower = util::as_ref(lower as *const T).clone();
         let upper = util::as_ref(upper as *const T).clone();
-        let transformation = trans::BoundedSum::<HammingDistance, L1Sensitivity<_>, T>::make(lower, upper);
+        let transformation = trans::BoundedSum::<HammingDistance, L1Sensitivity<f64>, T>::make(lower, upper);
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);

@@ -17,6 +17,7 @@
 // *I: Input
 // *O: Output
 
+use std::ops::{Div, Mul};
 use std::rc::Rc;
 
 use crate::dom::{BoxDomain, PairDomain};
@@ -99,18 +100,56 @@ pub trait Measure: Clone {
 pub trait DatasetMetric: Metric { fn new() -> Self; }
 pub trait SensitivityMetric: Metric { fn new() -> Self; }
 
+
+// HINTS
+#[derive(Clone)]
+pub struct HintMt<MI: Metric, MX: Metric, MO: Measure> {
+    pub hint: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Box<MX::Distance>>
+}
+impl<MI: Metric, MX: Metric, MO: Measure> HintMt<MI, MX, MO> {
+    pub fn new(hint: impl Fn(&MI::Distance, &MO::Distance) -> Box<MX::Distance> + 'static) -> Self {
+        let hint = Rc::new(hint);
+        HintMt { hint }
+    }
+    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> MX::Distance {
+        *(self.hint)(input_distance, output_distance)
+    }
+}
+
+#[derive(Clone)]
+pub struct HintTt<MI: Metric, MO: Metric, MX: Metric> {
+    pub hint: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Box<MX::Distance>>
+}
+impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
+    pub fn new(hint: impl Fn(&MI::Distance, &MO::Distance) -> Box<MX::Distance> + 'static) -> Self {
+        let hint = Rc::new(hint);
+        HintTt { hint }
+    }
+    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> MX::Distance {
+        *(self.hint)(input_distance, output_distance)
+    }
+}
+
+
 /// A boolean relation evaluating the privacy of a [`Measurement`].
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
 #[derive(Clone)]
 pub struct PrivacyRelation<MI: Metric, MO: Measure> {
-    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> bool>
+    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> bool>,
+    pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Box<MI::Distance>>>,
 }
+
 impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
     pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
-        let relation = Rc::new(relation);
-        PrivacyRelation { relation }
+        PrivacyRelation { relation: Rc::new(relation), backward_map: None }
+    }
+    pub fn new_all(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static, backward_map: Option<impl Fn(&MO::Distance) -> Box<MI::Distance> + 'static>) -> Self {
+        PrivacyRelation {
+            relation: Rc::new(relation),
+            backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
+        }
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> bool {
         (self.relation)(input_distance, output_distance)
@@ -123,15 +162,88 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
 /// and returns a boolean indicating if the relation holds.
 #[derive(Clone)]
 pub struct StabilityRelation<MI: Metric, MO: Metric> {
-    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> bool>
+    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> bool>,
+    pub forward_map: Option<Rc<dyn Fn(&MI::Distance) -> Box<MO::Distance>>>,
+    pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Box<MI::Distance>>>,
 }
 impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
     pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
-        let relation = Rc::new(relation);
-        StabilityRelation { relation }
+        StabilityRelation { relation: Rc::new(relation), forward_map: None, backward_map: None }
+    }
+    pub fn new_all(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static, forward_map: Option<impl Fn(&MI::Distance) -> Box<MO::Distance> + 'static>, backward_map: Option<impl Fn(&MO::Distance) -> Box<MI::Distance> + 'static>) -> Self {
+        StabilityRelation {
+            relation: Rc::new(relation),
+            forward_map: forward_map.map(|h| Rc::new(h) as Rc<_>),
+            backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
+        }
+    }
+    pub fn new_from_constant<C>(c: C) -> StabilityRelation<MI, MO> where
+        MI::Distance: Clone + From<MO::Distance>,
+        MO::Distance: Clone + From<MI::Distance> + From<C> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd,
+        C: 'static + Copy {
+        let relation = move |d_in: &MI::Distance, d_out: &MO::Distance| -> bool {
+            d_out.clone() >= MO::Distance::from(d_in.clone()) * MO::Distance::from(c)
+        };
+        let forward_map = move |d_in: &MI::Distance| -> Box<MO::Distance> {
+            Box::new(MO::Distance::from(d_in.clone()) * MO::Distance::from(c))
+        };
+        let backward_map = move |d_out: &MO::Distance| -> Box<MI::Distance> {
+            Box::new(MI::Distance::from(d_out.clone() / MO::Distance::from(c)))
+        };
+        StabilityRelation::new_all(relation, Some(forward_map), Some(backward_map))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> bool {
         (self.relation)(input_distance, output_distance)
+    }
+}
+
+impl<MI: 'static + Metric, MO: 'static + Metric> StabilityRelation<MI, MO> {
+    pub fn make_chain<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: Option<&HintTt<MI, MO, MX>>) -> Self {
+        if let Some(hint) = hint {
+            Self::make_chain_hint(relation1, relation0, hint)
+        } else {
+            Self::make_chain_no_hint(relation1, relation0)
+        }
+    }
+
+    fn make_chain_no_hint<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>) -> Self {
+        let hint = if let Some(forward_map) = &relation0.forward_map {
+            let forward_map = forward_map.clone();
+            Some(HintTt::new(move |d_in, _d_out| forward_map(d_in)))
+        } else if let Some(backward_map) = &relation1.backward_map {
+            let backward_map = backward_map.clone();
+            Some(HintTt::new(move |_d_in, d_out| backward_map(d_out)))
+        } else {
+            None
+        };
+        if let Some(hint) = hint {
+            Self::make_chain_hint(relation1, relation0, &hint)
+        } else {
+            // TODO: Implement binary search for hints.
+            panic!("Binary search for hints not implemented, must have maps or supply explicit hint.")
+        }
+    }
+
+    fn make_chain_hint<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: &HintTt<MI, MO, MX>) -> Self {
+        fn chain_option_maps<QI, QX, QO>(map1: &Option<Rc<dyn Fn(&QX) -> Box<QO>>>, map0: &Option<Rc<dyn Fn(&QI) -> Box<QX>>>) -> Option<impl Fn(&QI) -> Box<QO>> {
+            if let (Some(map0), Some(map1)) = (map0, map1) {
+                let map0 = map0.clone();
+                let map1 = map1.clone();
+                Some(move |d_in: &QI| map1(&map0(d_in)))
+            } else {
+                None
+            }
+        }
+        let rel0 = relation0.relation.clone();
+        let rel1 = relation1.relation.clone();
+        let h = hint.hint.clone();
+        let relation = move |d_in: &MI::Distance, d_out: &MO::Distance| {
+            let d_mid = h(d_in, d_out);
+            rel0(d_in, &d_mid) && rel1(&d_mid, d_out)
+        };
+        let forward_map = chain_option_maps(&relation1.forward_map, &relation0.forward_map);
+        let backward_map = chain_option_maps(&relation0.backward_map, &relation1.backward_map);
+        StabilityRelation::new_all(relation, forward_map, backward_map)
     }
 }
 
@@ -191,6 +303,26 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
             input_metric: Box::new(input_metric),
             output_metric: Box::new(output_metric),
             stability_relation: StabilityRelation::new(stability_relation)
+        }
+    }
+    pub fn new_constant_stability<C>(
+        input_domain: DI,
+        output_domain: DO,
+        function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static,
+        input_metric: MI,
+        output_metric: MO,
+        stability_constant: C,
+    ) -> Self where
+        MI::Distance: Clone + From<MO::Distance>,
+        MO::Distance: Clone + From<MI::Distance> + From<C> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd,
+        C: 'static + Copy {
+        Transformation {
+            input_domain: Box::new(input_domain),
+            output_domain: Box::new(output_domain),
+            function: Function::new(function),
+            input_metric: Box::new(input_metric),
+            output_metric: Box::new(output_metric),
+            stability_relation: StabilityRelation::new_from_constant(stability_constant),
         }
     }
 }
@@ -274,6 +406,22 @@ pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(measurement1: &Measurement<DX,
 
 pub struct ChainTT;
 
+impl ChainTT {
+    pub fn make_chain_tt_glue<DI, DX, DO, MI, MX, MO>(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>, hint: Option<&HintTt<MI, MO, MX>>, input_glue: &MetricGlue<DI, MI>, x_glue: &MetricGlue<DX, MX>, output_glue: &MetricGlue<DO, MO>) -> Transformation<DI, DO, MI, MO> where
+        DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Metric {
+        assert!((x_glue.domain_eq)(&transformation0.output_domain, &transformation1.input_domain));
+        let input_domain = (input_glue.domain_clone)(&transformation0.input_domain);
+        let output_domain = (output_glue.domain_clone)(&transformation1.output_domain);
+        let function = Function::make_chain(&transformation1.function, &transformation0.function);
+        let input_metric = (input_glue.metric_clone)(&transformation0.input_metric);
+        let output_metric = (output_glue.metric_clone)(&transformation1.output_metric);
+        // TODO: StabilityRelation for make_chain_tt
+        let stability_relation = StabilityRelation::new(|_i, _o| false);
+
+        Transformation { input_domain, output_domain, function, input_metric, output_metric, stability_relation }
+    }
+}
+
 impl<DI, DX, DO, MI, MX, MO> MakeTransformation2<DI, DO, MI, MO, &Transformation<DX, DO, MX, MO>, &Transformation<DI, DX, MI, MX>> for ChainTT
     where DI: 'static + Domain,
           DX: 'static + Domain,
@@ -285,22 +433,8 @@ impl<DI, DX, DO, MI, MX, MO> MakeTransformation2<DI, DO, MI, MO, &Transformation
         let input_glue = MetricGlue::<DI, MI>::new();
         let x_glue = MetricGlue::<DX, MX>::new();
         let output_glue = MetricGlue::<DO, MO>::new();
-        make_chain_tt_glue(transformation1, transformation0, &input_glue, &x_glue, &output_glue)
+        Self::make_chain_tt_glue(transformation1, transformation0, None, &input_glue, &x_glue, &output_glue)
     }
-}
-
-pub fn make_chain_tt_glue<DI, DX, DO, MI, MX, MO>(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>, input_glue: &MetricGlue<DI, MI>, x_glue: &MetricGlue<DX, MX>, output_glue: &MetricGlue<DO, MO>) -> Transformation<DI, DO, MI, MO> where
-    DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Metric {
-    assert!((x_glue.domain_eq)(&transformation0.output_domain, &transformation1.input_domain));
-    let input_domain = (input_glue.domain_clone)(&transformation0.input_domain);
-    let output_domain = (output_glue.domain_clone)(&transformation1.output_domain);
-    let function = Function::make_chain(&transformation1.function, &transformation0.function);
-    let input_metric = (input_glue.metric_clone)(&transformation0.input_metric);
-    let output_metric = (output_glue.metric_clone)(&transformation1.output_metric);
-    // TODO: StabilityRelation for make_chain_tt
-    let stability_relation = StabilityRelation::new(|_i, _o| false);
-
-    Transformation { input_domain, output_domain, function, input_metric, output_metric, stability_relation }
 }
 
 pub struct Composition;
@@ -355,8 +489,8 @@ mod tests {
         let function = |arg: &i32| arg.clone();
         let input_metric = L1Sensitivity::<i32>::new();
         let output_metric = L1Sensitivity::<i32>::new();
-        let stability_relation = |_d_in: &i32, _d_out: &i32| true;
-        let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
+        let stability_constant = 1;
+        let identity = Transformation::new_constant_stability(input_domain, output_domain, function, input_metric, output_metric, stability_constant);
         let arg = 99;
         let ret = identity.function.eval(&arg);
         assert_eq!(ret, 99);
@@ -369,8 +503,8 @@ mod tests {
         let function0 = |a: &u8| (a + 1) as i32;
         let input_metric0 = L1Sensitivity::<i32>::new();
         let output_metric0 = L1Sensitivity::<i32>::new();
-        let stability_relation0 = |_d_in: &i32, _d_out: &i32| true;
-        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
+        let stability_constant0 = 1;
+        let transformation0 = Transformation::new_constant_stability(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_constant0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = |a: &i32| (a + 1) as f64;
@@ -391,15 +525,15 @@ mod tests {
         let function0 = |a: &u8| (a + 1) as i32;
         let input_metric0 = L1Sensitivity::<i32>::new();
         let output_metric0 = L1Sensitivity::<i32>::new();
-        let stability_relation0 = |_d_in: &i32, _d_out: &i32| true;
-        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
+        let stability_constant0 = 1;
+        let transformation0 = Transformation::new_constant_stability(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_constant0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = |a: &i32| (a + 1) as f64;
         let input_metric1 = L1Sensitivity::<i32>::new();
         let output_metric1 = L1Sensitivity::<i32>::new();
-        let stability_relation1 = |_d_in: &i32, _d_out: &i32| true;
-        let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
+        let stability_constant1 = 1;
+        let transformation1 = Transformation::new_constant_stability(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_constant1);
         let chain = ChainTT::make(&transformation1, &transformation0);
         let arg = 99_u8;
         let ret = chain.function.eval(&arg);

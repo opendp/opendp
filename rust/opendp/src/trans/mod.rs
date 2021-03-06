@@ -3,16 +3,17 @@
 //! The different [`Transformation`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
+use std::cmp::Ordering;
 use std::iter::Sum;
 use std::marker::PhantomData;
-use std::ops::{Bound, Mul, Sub, Div};
+use std::ops::{Bound, Div, Mul, Sub};
+
+use num::{NumCast, Signed};
 
 use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
-use crate::dom::{AllDomain, IntervalDomain, VectorDomain, SizedDomain};
+use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 pub use crate::trans::dataframe::*;
-use num::{Signed, NumCast};
-use std::cmp::Ordering;
 
 pub mod dataframe;
 
@@ -74,7 +75,7 @@ impl<M, T> MakeTransformation2<VectorDomain<AllDomain<T>>, VectorDomain<Interval
     where M: Metric<Distance=u32> + DatasetMetric,
           T: 'static + Copy + PartialOrd {
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M> {
-        Transformation::new(
+        Transformation::new_constant_stability(
             VectorDomain::new_all(),
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
             move |arg: &Vec<T>| -> Vec<T> {
@@ -82,7 +83,7 @@ impl<M, T> MakeTransformation2<VectorDomain<AllDomain<T>>, VectorDomain<Interval
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            1_u32)
     }
 }
 
@@ -101,15 +102,17 @@ pub struct BoundedSum<MI, MO, T> {
 
 impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T> for BoundedSum<HammingDistance, MO, T>
     where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T>,
-          MO: SensitivityMetric<Distance=T> {
+          MO: SensitivityMetric<Distance=T>,
+          u32: From<MO::Distance>,
+          MO::Distance: Clone + From<u32> + From<T> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd {
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
-        Transformation::new(
+        Transformation::new_constant_stability(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             HammingDistance::new(),
             MO::new(),
-            move |d_in: &u32, d_out: &T| *d_out >= T::from(*d_in).unwrap() * (upper - lower))
+            upper - lower)
     }
 }
 
@@ -122,18 +125,20 @@ fn max<T: PartialOrd>(a: T, b: T) -> T {
 }
 
 impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO, T, T> for BoundedSum<SymmetricDistance, MO, T>
-    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + Signed,
-          MO: SensitivityMetric<Distance=T> {
+    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + Signed + From<MO::Distance>,
+          MO: SensitivityMetric<Distance=T>,
+          u32: From<MO::Distance>,
+          MO::Distance: Clone + Mul<MO::Distance, Output=MO::Distance> + Div<MO::Distance, Output=MO::Distance> + From<u32> + From<T> + PartialOrd, {
     // Question- how to set the associated type for a trait that a concrete type is using
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO> {
-        Transformation::new(
+        Transformation::new_constant_stability(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             SymmetricDistance::new(),
             MO::new(),
             // d_out >= d_in * max(|m|, |M|)
-            move |d_in: &u32, d_out: &T| *d_out >= T::from(*d_in).unwrap() * max(num::abs(lower), num::abs(upper)))
+            max(num::abs(lower), num::abs(upper)))
     }
 }
 
@@ -163,21 +168,22 @@ impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
     where MI: Metric<Distance=u32> + DatasetMetric,
           MO: Metric<Distance=u32> + SensitivityMetric {
     fn make0() -> Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> {
-        Transformation::new(
+        Transformation::new_constant_stability(
             VectorDomain::new_all(),
             AllDomain::new(),
             move |arg: &Vec<T>| arg.len() as u32,
             MI::new(),
             MO::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            1_u32)
     }
 }
 
 
 #[cfg(test)]
 mod tests {
+    use crate::dist::{L1Sensitivity, L2Sensitivity};
+
     use super::*;
-    use crate::dist::{L2Sensitivity, L1Sensitivity};
 
     #[test]
     fn test_identity() {
