@@ -14,6 +14,7 @@ use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, Transformati
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 pub use crate::trans::dataframe::*;
+use crate::traits::DPDistanceCast;
 
 pub mod dataframe;
 
@@ -101,10 +102,10 @@ pub struct BoundedSum<MI, MO, T> {
 }
 
 impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T> for BoundedSum<HammingDistance, MO, T>
-    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T>,
+    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + DPDistanceCast<u32>,
+          u32: DPDistanceCast<T>,
           MO: SensitivityMetric<Distance=T>,
-          u32: From<MO::Distance>,
-          MO::Distance: Clone + From<u32> + From<T> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd {
+          MO::Distance: Clone + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd {
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
         Transformation::new_constant_stability(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
@@ -125,9 +126,9 @@ fn max<T: PartialOrd>(a: T, b: T) -> T {
 }
 
 impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO, T, T> for BoundedSum<SymmetricDistance, MO, T>
-    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + Signed + From<MO::Distance>,
+    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + Signed + DPDistanceCast<u32>,
+          u32: DPDistanceCast<T>,
           MO: SensitivityMetric<Distance=T>,
-          u32: From<MO::Distance>,
           MO::Distance: Clone + Mul<MO::Distance, Output=MO::Distance> + Div<MO::Distance, Output=MO::Distance> + From<u32> + From<T> + PartialOrd, {
     // Question- how to set the associated type for a trait that a concrete type is using
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO> {

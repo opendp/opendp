@@ -23,6 +23,7 @@ use std::rc::Rc;
 use crate::dom::{BoxDomain, PairDomain};
 use crate::trans::MakeTransformation2;
 use crate::meas::MakeMeasurement2;
+use crate::traits::DPDistanceCast;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -170,26 +171,32 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
     pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
         StabilityRelation { relation: Rc::new(relation), forward_map: None, backward_map: None }
     }
-    pub fn new_all(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static, forward_map: Option<impl Fn(&MI::Distance) -> Box<MO::Distance> + 'static>, backward_map: Option<impl Fn(&MO::Distance) -> Box<MI::Distance> + 'static>) -> Self {
+    fn new_all(
+        relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static,
+        forward_map: Option<impl Fn(&MI::Distance) -> Box<MO::Distance> + 'static>,
+        backward_map: Option<impl Fn(&MO::Distance) -> Box<MI::Distance> + 'static>
+    ) -> Self {
         StabilityRelation {
             relation: Rc::new(relation),
             forward_map: forward_map.map(|h| Rc::new(h) as Rc<_>),
             backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
         }
     }
-    pub fn new_from_constant<C>(c: C) -> StabilityRelation<MI, MO> where
-        MI::Distance: Clone + From<MO::Distance>,
-        MO::Distance: Clone + From<MI::Distance> + From<C> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd,
-        C: 'static + Copy {
+    pub fn new_from_constant(c: MO::Distance) -> StabilityRelation<MI, MO> where
+        MI::Distance: Clone + DPDistanceCast<MO::Distance>,
+        MO::Distance: Clone + DPDistanceCast<MI::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
+
+        // TODO: there has to be a cleaner way
+        let c_1 = c.clone();
+        let c_2 = c.clone();
+
         let relation = move |d_in: &MI::Distance, d_out: &MO::Distance| -> bool {
-            d_out.clone() >= MO::Distance::from(d_in.clone()) * MO::Distance::from(c)
+            d_out.clone() >= MO::Distance::cast(d_in.clone()).unwrap() * c_1.clone()
         };
-        let forward_map = move |d_in: &MI::Distance| -> Box<MO::Distance> {
-            Box::new(MO::Distance::from(d_in.clone()) * MO::Distance::from(c))
-        };
-        let backward_map = move |d_out: &MO::Distance| -> Box<MI::Distance> {
-            Box::new(MI::Distance::from(d_out.clone() / MO::Distance::from(c)))
-        };
+        let forward_map = move |d_in: &MI::Distance|
+            Box::new(MO::Distance::cast(d_in.clone()).unwrap() * c_2.clone());
+        let backward_map = move |d_out: &MO::Distance|
+            Box::new(MI::Distance::cast(d_out.clone() / c.clone()).unwrap());
         StabilityRelation::new_all(relation, Some(forward_map), Some(backward_map))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> bool {
@@ -305,17 +312,16 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
             stability_relation: StabilityRelation::new(stability_relation)
         }
     }
-    pub fn new_constant_stability<C>(
+    pub fn new_constant_stability(
         input_domain: DI,
         output_domain: DO,
         function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static,
         input_metric: MI,
         output_metric: MO,
-        stability_constant: C,
+        stability_constant: MO::Distance,
     ) -> Self where
-        MI::Distance: Clone + From<MO::Distance>,
-        MO::Distance: Clone + From<MI::Distance> + From<C> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd,
-        C: 'static + Copy {
+        MI::Distance: Clone + DPDistanceCast<MO::Distance>,
+        MO::Distance: Clone + DPDistanceCast<MI::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
         Transformation {
             input_domain: Box::new(input_domain),
             output_domain: Box::new(output_domain),

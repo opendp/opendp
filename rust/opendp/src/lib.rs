@@ -126,3 +126,4 @@ pub mod dist;
 pub mod dom;
 pub mod meas;
 pub mod trans;
+pub mod traits;
