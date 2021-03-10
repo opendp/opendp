@@ -183,8 +183,8 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
         }
     }
     pub fn new_from_constant(c: MO::Distance) -> StabilityRelation<MI, MO> where
-        MI::Distance: Clone + DPDistanceCast<MO::Distance>,
-        MO::Distance: Clone + DPDistanceCast<MI::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
+        MI::Distance: Clone + DPDistanceCast,
+        MO::Distance: Clone + DPDistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
 
         // TODO: there has to be a cleaner way
         let c_1 = c.clone();
@@ -320,8 +320,8 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         output_metric: MO,
         stability_constant: MO::Distance,
     ) -> Self where
-        MI::Distance: Clone + DPDistanceCast<MO::Distance>,
-        MO::Distance: Clone + DPDistanceCast<MI::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
+        MI::Distance: Clone + DPDistanceCast,
+        MO::Distance: Clone + DPDistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
         Transformation {
             input_domain: Box::new(input_domain),
             output_domain: Box::new(output_domain),
