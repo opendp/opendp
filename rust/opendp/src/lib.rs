@@ -119,6 +119,15 @@
 //! [`Measurement`]/[`Transformation`] constructors are allowed to be generic! Typically, this means that the type parameter on the
 //! constructor will determine type of the input or output [`Domain::Carrier`] (or the generic type within, for instance the `i32` of `Vec<i32>`).
 
+macro_rules! enclose {
+    ( $x:ident, $y:expr ) => (enclose!(($x), $y));
+    ( ($( $x:ident ),*), $y:expr ) => {
+        {
+            $(let $x = $x.clone();)*
+            $y
+        }
+    };
+}
 
 pub mod core;
 pub mod data;

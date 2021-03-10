@@ -186,17 +186,15 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
         MI::Distance: Clone + DPDistanceCast,
         MO::Distance: Clone + DPDistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
 
-        // TODO: there has to be a cleaner way
-        let c_1 = c.clone();
-        let c_2 = c.clone();
+        let relation = enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
+            d_out.clone() >= MO::Distance::cast(d_in.clone()).unwrap() * c.clone());
 
-        let relation = move |d_in: &MI::Distance, d_out: &MO::Distance| -> bool {
-            d_out.clone() >= MO::Distance::cast(d_in.clone()).unwrap() * c_1.clone()
-        };
-        let forward_map = move |d_in: &MI::Distance|
-            Box::new(MO::Distance::cast(d_in.clone()).unwrap() * c_2.clone());
-        let backward_map = move |d_out: &MO::Distance|
-            Box::new(MI::Distance::cast(d_out.clone() / c.clone()).unwrap());
+        let forward_map = enclose!(c, move |d_in: &MI::Distance|
+            Box::new(MO::Distance::cast(d_in.clone()).unwrap() * c.clone()));
+
+        let backward_map = enclose!(c, move |d_out: &MO::Distance|
+            Box::new(MI::Distance::cast(d_out.clone() / c.clone()).unwrap()));
+
         StabilityRelation::new_all(relation, Some(forward_map), Some(backward_map))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> bool {
@@ -421,8 +419,10 @@ impl ChainTT {
         let function = Function::make_chain(&transformation1.function, &transformation0.function);
         let input_metric = (input_glue.metric_clone)(&transformation0.input_metric);
         let output_metric = (output_glue.metric_clone)(&transformation1.output_metric);
-        // TODO: StabilityRelation for make_chain_tt
-        let stability_relation = StabilityRelation::new(|_i, _o| false);
+
+        let stability_relation = StabilityRelation::make_chain(
+            &transformation1.stability_relation,
+            &transformation0.stability_relation, hint);
 
         Transformation { input_domain, output_domain, function, input_metric, output_metric, stability_relation }
     }
