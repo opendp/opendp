@@ -34,11 +34,11 @@ impl_is_continuous!(f32, f64);
 impl_is_not_continuous!(i8, u8, i16, u16, i32, u32, i64, u64, isize, usize);
 
 // include Ceil on QO to avoid requiring as an additional trait bound in all downstream code
-pub trait DPDistanceCast: NumCast + Ceil + CheckContinuous {
+pub trait DistanceCast: NumCast + Ceil + CheckContinuous {
     fn cast<T: ToPrimitive + Ceil>(n: T) -> Option<Self>;
 }
 
-impl<QO: ToPrimitive + NumCast + CheckContinuous + Ceil> DPDistanceCast for QO {
+impl<QO: ToPrimitive + NumCast + CheckContinuous + Ceil> DistanceCast for QO {
     fn cast<QI: ToPrimitive + Ceil>(v: QI) -> Option<QO> {
         // round away from zero when losing precision
         QO::from(if QO::is_continuous() { v } else { v.ceil() })

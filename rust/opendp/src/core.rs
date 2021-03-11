@@ -22,7 +22,7 @@ use std::rc::Rc;
 
 use crate::dom::{BoxDomain, PairDomain};
 use crate::meas::MakeMeasurement2;
-use crate::traits::DPDistanceCast;
+use crate::traits::DistanceCast;
 use crate::trans::MakeTransformation2;
 
 /// A set which constrains the input or output of a [`Function`].
@@ -156,8 +156,8 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
         }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: Clone + DPDistanceCast,
-        MO::Distance: Clone + DPDistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
+        MI::Distance: Clone + DistanceCast,
+        MO::Distance: Clone + DistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
 
         PrivacyRelation::new_all(
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
@@ -260,8 +260,8 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
         }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: Clone + DPDistanceCast,
-        MO::Distance: Clone + DPDistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
+        MI::Distance: Clone + DistanceCast,
+        MO::Distance: Clone + DistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
 
         StabilityRelation::new_all(
             // relation
@@ -405,8 +405,8 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         output_metric: MO,
         stability_constant: MO::Distance,
     ) -> Self where
-        MI::Distance: Clone + DPDistanceCast,
-        MO::Distance: Clone + DPDistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
+        MI::Distance: Clone + DistanceCast,
+        MO::Distance: Clone + DistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
         Transformation {
             input_domain: Box::new(input_domain),
             output_domain: Box::new(output_domain),
