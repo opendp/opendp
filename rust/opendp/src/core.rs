@@ -21,6 +21,7 @@ use std::ops::{Div, Mul};
 use std::rc::Rc;
 
 use crate::dom::{BoxDomain, PairDomain};
+use crate::Error;
 use crate::meas::MakeMeasurement2;
 use crate::traits::DistanceCast;
 use crate::trans::MakeTransformation2;
@@ -454,7 +455,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, D
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
-    fn make2(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Measurement<DI, DO, MI, MO> {
+    fn make2(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Result<Measurement<DI, DO, MI, MO>, Error> {
         make_chain_mt_glue(
             measurement1, transformation0,
             &MetricGlue::<DI, MI>::new(),
@@ -469,21 +470,24 @@ pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(
     input_glue: &MetricGlue<DI, MI>,
     x_glue: &MetricGlue<DX, MX>,
     output_glue: &MeasureGlue<DO, MO>
-) -> Measurement<DI, DO, MI, MO>
+) -> Result<Measurement<DI, DO, MI, MO>, Error>
     where DI: 'static + Domain,
           DX: 'static + Domain,
           DO: 'static + Domain,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
-    assert!((x_glue.domain_eq)(&transformation0.output_domain, &measurement1.input_domain));
-    Measurement {
-        input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
-        output_domain: (output_glue.domain_clone)(&measurement1.output_domain),
-        function: Function::make_chain(&measurement1.function, &transformation0.function),
-        input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
-        output_measure: (output_glue.measure_clone)(&measurement1.output_measure),
-        privacy_relation: PrivacyRelation::make_chain(&measurement1.privacy_relation, &transformation0.stability_relation, None)
+    if (x_glue.domain_eq)(&transformation0.output_domain, &measurement1.input_domain) {
+        Ok(Measurement {
+            input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
+            output_domain: (output_glue.domain_clone)(&measurement1.output_domain),
+            function: Function::make_chain(&measurement1.function, &transformation0.function),
+            input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
+            output_measure: (output_glue.measure_clone)(&measurement1.output_measure),
+            privacy_relation: PrivacyRelation::make_chain(&measurement1.privacy_relation, &transformation0.stability_relation, None)
+        })
+    } else {
+        Err(Error::DomainMismatch)
     }
 }
 
@@ -498,18 +502,22 @@ impl ChainTT {
         input_glue: &MetricGlue<DI, MI>,
         x_glue: &MetricGlue<DX, MX>,
         output_glue: &MetricGlue<DO, MO>
-    ) -> Transformation<DI, DO, MI, MO>
+    ) -> Result<Transformation<DI, DO, MI, MO>, Error>
         where DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Metric {
-        assert!((x_glue.domain_eq)(&transformation0.output_domain, &transformation1.input_domain));
-        Transformation {
-            input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
-            output_domain: (output_glue.domain_clone)(&transformation1.output_domain),
-            function: Function::make_chain(&transformation1.function, &transformation0.function),
-            input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
-            output_metric: (output_glue.metric_clone)(&transformation1.output_metric),
-            stability_relation: StabilityRelation::make_chain(
-                &transformation1.stability_relation,
-                &transformation0.stability_relation, hint)
+
+        if (x_glue.domain_eq)(&transformation0.output_domain, &transformation1.input_domain) {
+            Ok(Transformation {
+                input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
+                output_domain: (output_glue.domain_clone)(&transformation1.output_domain),
+                function: Function::make_chain(&transformation1.function, &transformation0.function),
+                input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
+                output_metric: (output_glue.metric_clone)(&transformation1.output_metric),
+                stability_relation: StabilityRelation::make_chain(
+                    &transformation1.stability_relation,
+                    &transformation0.stability_relation, hint)
+            })
+        } else {
+            Err(Error::DomainMismatch)
         }
     }
 }
@@ -521,7 +529,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeTransformation2<DI, DO, MI, MO, &Transformation
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Metric {
-    fn make2(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Transformation<DI, DO, MI, MO> {
+    fn make2(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Result<Transformation<DI, DO, MI, MO>, Error> {
         Self::make_chain_tt_glue(
             transformation1, transformation0, None,
             &MetricGlue::<DI, MI>::new(),
@@ -538,7 +546,7 @@ impl<DI, DO0, DO1, MI, MO> MakeMeasurement2<DI, PairDomain<BoxDomain<DO0>, BoxDo
           DO1: 'static + Domain,
           MI: 'static + Metric,
           MO: 'static + Measure {
-    fn make2(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO> {
+    fn make2(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Result<Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO>, Error> {
         make_composition_glue(
             measurement0, measurement1,
             &MetricGlue::<DI, MI>::new(),
@@ -553,25 +561,28 @@ pub fn make_composition_glue<DI, DO0, DO1, MI, MO>(
     input_glue: &MetricGlue<DI, MI>,
     output_glue0: &MeasureGlue<DO0, MO>,
     output_glue1: &MeasureGlue<DO1, MO>
-) -> Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO>
+) -> Result<Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO>, Error>
     where DI: 'static + Domain,
           DO0: 'static + Domain,
           DO1: 'static + Domain,
           MI: 'static + Metric,
           MO: 'static + Measure {
-    assert!((input_glue.domain_eq)(&measurement0.input_domain, &measurement1.input_domain));
-    Measurement {
-        input_domain: (input_glue.domain_clone)(&measurement0.input_domain),
-        output_domain: Box::new(PairDomain::new(
-            BoxDomain::new((output_glue0.domain_clone)(&measurement0.output_domain)),
-            BoxDomain::new((output_glue1.domain_clone)(&measurement1.output_domain)))),
-        function: Function::make_composition(&measurement0.function, &measurement1.function),
-        // TODO: Figure out input_metric for composition.
-        input_metric: (input_glue.metric_clone)(&measurement0.input_metric),
-        // TODO: Figure out output_measure for composition.
-        output_measure: (output_glue0.measure_clone)(&measurement0.output_measure),
-        // TODO: PrivacyRelation for make_composition
-        privacy_relation: PrivacyRelation::new(|_i, _o| false)
+    if (input_glue.domain_eq)(&measurement0.input_domain, &measurement1.input_domain) {
+        Ok(Measurement {
+            input_domain: (input_glue.domain_clone)(&measurement0.input_domain),
+            output_domain: Box::new(PairDomain::new(
+                BoxDomain::new((output_glue0.domain_clone)(&measurement0.output_domain)),
+                BoxDomain::new((output_glue1.domain_clone)(&measurement1.output_domain)))),
+            function: Function::make_composition(&measurement0.function, &measurement1.function),
+            // TODO: Figure out input_metric for composition.
+            input_metric: (input_glue.metric_clone)(&measurement0.input_metric),
+            // TODO: Figure out output_measure for composition.
+            output_measure: (output_glue0.measure_clone)(&measurement0.output_measure),
+            // TODO: PrivacyRelation for make_composition
+            privacy_relation: PrivacyRelation::new(|_i, _o| false)
+        })
+    } else {
+        Err(Error::DomainMismatch)
     }
 }
 
@@ -614,7 +625,7 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let chain = ChainMT::make(&measurement1, &transformation0);
+        let chain = ChainMT::make(&measurement1, &transformation0).unwrap();
         let arg = 99_u8;
         let ret = chain.function.eval(&arg);
         assert_eq!(ret, 101.0);
@@ -636,7 +647,7 @@ mod tests {
         let output_metric1 = L1Sensitivity::<i32>::new();
         let stability_relation1 = StabilityRelation::new_from_constant(1);
         let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
-        let chain = ChainTT::make(&transformation1, &transformation0);
+        let chain = ChainTT::make(&transformation1, &transformation0).unwrap();
         let arg = 99_u8;
         let ret = chain.function.eval(&arg);
         assert_eq!(ret, 101.0);
@@ -658,7 +669,7 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let composition = Composition::make(&measurement0, &measurement1);
+        let composition = Composition::make(&measurement0, &measurement1).unwrap();
         let arg = 99;
         let ret = composition.function.eval(&arg);
         assert_eq!(ret, (Box::new(100_f32), Box::new(98_f64)));

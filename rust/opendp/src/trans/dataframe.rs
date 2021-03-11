@@ -8,6 +8,7 @@ use crate::core::{DatasetMetric, Metric, Transformation, StabilityRelation};
 use crate::data::{Data, Element};
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
+use crate::Error;
 
 pub struct CreateDataFrame<M> {
     metric: PhantomData<M>
@@ -46,8 +47,8 @@ pub fn create_dataframe_domain() -> MapDomain<AllDomain<Data>> {
 
 impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M, usize> for CreateDataFrame<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make1(col_count: usize) -> Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M> {
-        Transformation::new(
+    fn make1(col_count: usize) -> Result<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M>, Error> {
+        Ok(Transformation::new(
             VectorDomain::new(VectorDomain::new_all()),
             create_dataframe_domain(),
             // move is necessary because it captures `col_count`
@@ -57,7 +58,7 @@ impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDo
             },
             M::new(),
             M::new(),
-            StabilityRelation::new_from_constant(1_u32))
+            StabilityRelation::new_from_constant(1_u32)))
     }
 }
 
@@ -74,17 +75,15 @@ fn split_dataframe<'a>(separator: &str, col_count: usize, s: &str) -> DataFrame 
 
 impl<M> MakeTransformation2<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M, Option<&str>, usize> for SplitDataFrame<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make2(separator: Option<&str>, col_count: usize) -> Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make2(separator: Option<&str>, col_count: usize) -> Result<Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M>, Error> {
         let separator = separator.unwrap_or(",").to_owned();
-        Transformation::new(
+        Ok(Transformation::new(
             AllDomain::new(),
             create_dataframe_domain(),
-            move |arg: &String| -> DataFrame {
-                split_dataframe(&separator, col_count, &arg)
-            },
+            move |arg: &String| split_dataframe(&separator, col_count, &arg),
             M::new(),
             M::new(),
-            StabilityRelation::new_from_constant(1_u32))
+            StabilityRelation::new_from_constant(1_u32)))
     }
 }
 
@@ -109,20 +108,18 @@ fn parse_column<T>(key: &str, impute: bool, df: &DataFrame) -> DataFrame where
 }
 
 impl<M, T> MakeTransformation2<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M, &str, bool> for ParseColumn<M, T>
-    where M: Clone + Metric<Distance=u32> + DatasetMetric,
+    where M: Clone + DatasetMetric<Distance=u32>,
           T: 'static + Element + FromStr + Clone + Default + PartialEq,
           T::Err: Debug {
-    fn make2(key: &str, impute: bool) -> Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M> {
+    fn make2(key: &str, impute: bool) -> Result<Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M>, Error> {
         let key = key.to_owned();
-        Transformation::new(
+        Ok(Transformation::new(
             create_dataframe_domain(),
             create_dataframe_domain(),
-            move |arg: &DataFrame| -> DataFrame {
-                parse_column::<T>(&key, impute, arg)
-            },
+            move |arg: &DataFrame| parse_column::<T>(&key, impute, arg),
             M::new(),
             M::new(),
-            StabilityRelation::new_from_constant(1_u32))
+            StabilityRelation::new_from_constant(1_u32)))
     }
 }
 
@@ -135,9 +132,9 @@ pub struct SelectColumn<M, T> {
 impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M, &str> for SelectColumn<M, T>
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: 'static + Element + Clone + PartialEq {
-    fn make1(key: &str) -> Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M> {
+    fn make1(key: &str) -> Result<Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M>, Error> {
         let key = key.to_owned();
-        Transformation::new(
+        Ok(Transformation::new(
             create_dataframe_domain(),
             VectorDomain::new_all(),
             move |arg: &DataFrame| -> Vec<T> {
@@ -147,7 +144,7 @@ impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomai
             },
             M::new(),
             M::new(),
-            StabilityRelation::new_from_constant(1_u32))
+            StabilityRelation::new_from_constant(1_u32)))
     }
 }
 
@@ -170,8 +167,8 @@ fn split_lines(s: &str) -> Vec<&str> {
 
 impl<M> MakeTransformation0<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> for SplitLines<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make0() -> Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> {
-        Transformation::new(
+    fn make0() -> Result<Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M>, Error> {
+        Ok(Transformation::new(
             AllDomain::<String>::new(),
             VectorDomain::new_all(),
             |arg: &String| -> Vec<String> {
@@ -179,7 +176,7 @@ impl<M> MakeTransformation0<AllDomain<String>, VectorDomain<AllDomain<String>>, 
             },
             M::new(),
             M::new(),
-            StabilityRelation::new_from_constant(1_u32))
+            StabilityRelation::new_from_constant(1_u32)))
     }
 }
 
@@ -202,18 +199,17 @@ impl<T, M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<All
     where M: Clone + Metric<Distance=u32> + DatasetMetric,
           T: FromStr + Default,
           T::Err: Debug {
-    fn make1(impute: bool) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M> {
-        Transformation::new(
+    fn make1(impute: bool) -> Result<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M>, Error> {
+        Ok(Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),
-            // move is necessary because it captures `impute`
             move |arg: &Vec<String>| -> Vec<T> {
                 let arg = vec_string_to_str(arg);
                 parse_series(&arg, impute)
             },
             M::new(),
             M::new(),
-            StabilityRelation::new_from_constant(1_u32))
+            StabilityRelation::new_from_constant(1_u32)))
     }
 }
 
@@ -231,9 +227,9 @@ fn split_records<'a>(separator: &str, lines: &Vec<&'a str>) -> Vec<Vec<&'a str>>
 
 impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M, Option<&str>> for SplitRecords<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
-    fn make1(separator: Option<&str>) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M> {
+    fn make1(separator: Option<&str>) -> Result<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M>, Error> {
         let separator = separator.unwrap_or(",").to_owned();
-        Transformation::new(
+        Ok(Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new(VectorDomain::new_all()),
             // move is necessary because it captures `separator`
@@ -244,7 +240,7 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
             },
             M::new(),
             M::new(),
-            StabilityRelation::new_from_constant(1_u32))
+            StabilityRelation::new_from_constant(1_u32)))
     }
 }
 
@@ -258,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_make_create_dataframe() {
-        let transformation = CreateDataFrame::<HammingDistance>::make(2);
+        let transformation = CreateDataFrame::<HammingDistance>::make(2).unwrap();
         let arg = vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
@@ -274,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_make_split_dataframe() {
-        let transformation = SplitDataFrame::<HammingDistance>::make(None, 2);
+        let transformation = SplitDataFrame::<HammingDistance>::make(None, 2).unwrap();
         let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();
         let ret = transformation.function.eval(&arg);
         let expected: DataFrame = vec![
@@ -286,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_make_parse_column() {
-        let transformation = ParseColumn::<HammingDistance, i32>::make("1", true);
+        let transformation = ParseColumn::<HammingDistance, i32>::make("1", true).unwrap();
         let arg: DataFrame = vec![
             ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Data::new(vec!["1".to_owned(), "2".to_owned(), "".to_owned()])),
@@ -301,9 +297,9 @@ mod tests {
 
     #[test]
     fn test_make_parse_columns() {
-        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1", true);
-        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2", true);
-        let transformation = ChainTT::make(&transformation1, &transformation0);
+        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1", true).unwrap();
+        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2", true).unwrap();
+        let transformation = ChainTT::make(&transformation1, &transformation0).unwrap();
         let arg: DataFrame = vec![
             ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Data::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
@@ -320,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_make_select_column() {
-        let transformation = SelectColumn::<HammingDistance, String>::make("1");
+        let transformation = SelectColumn::<HammingDistance, String>::make("1").unwrap();
         let arg: DataFrame = vec![
             ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Data::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),

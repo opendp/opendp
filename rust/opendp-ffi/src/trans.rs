@@ -23,7 +23,7 @@ use opendp::traits::DistanceCast;
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> *mut FfiTransformation {
     fn monomorphize<T: 'static + Form + Clone>() -> *mut FfiTransformation {
-        let transformation = trans::Identity::make(AllDomain::<T>::new(), HammingDistance::new());
+        let transformation = trans::Identity::make(AllDomain::<T>::new(), HammingDistance::new()).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -32,7 +32,7 @@ pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> *mut 
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_split_lines() -> *mut FfiTransformation {
-    let transformation = trans::SplitLines::<HammingDistance>::make();
+    let transformation = trans::SplitLines::<HammingDistance>::make().unwrap();
     FfiTransformation::new_from_types(transformation)
 }
 
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_trans__make_split_lines() -> *mut FfiTransformation {
 pub extern "C" fn opendp_trans__make_parse_series(type_args: *const c_char, impute: c_bool) -> *mut FfiTransformation {
     fn monomorphize<T>(impute: bool) -> *mut FfiTransformation where
         T: 'static + FromStr + Default, T::Err: Debug {
-        let transformation = trans::ParseSeries::<T, HammingDistance>::make(impute);
+        let transformation = trans::ParseSeries::<T, HammingDistance>::make(impute).unwrap();
         // let transformation = trans::make_parse_series::<T>(impute);
         FfiTransformation::new_from_types(transformation)
     }
@@ -52,14 +52,14 @@ pub extern "C" fn opendp_trans__make_parse_series(type_args: *const c_char, impu
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_split_records(separator: *const c_char) -> *mut FfiTransformation {
     let separator = util::to_option_str(separator);
-    let transformation = trans::SplitRecords::<HammingDistance>::make(separator);
+    let transformation = trans::SplitRecords::<HammingDistance>::make(separator).unwrap();
     FfiTransformation::new_from_types(transformation)
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_create_dataframe(col_count: c_uint) -> *mut FfiTransformation {
     let col_count = col_count as usize;
-    let transformation = trans::CreateDataFrame::<HammingDistance>::make(col_count);
+    let transformation = trans::CreateDataFrame::<HammingDistance>::make(col_count).unwrap();
     FfiTransformation::new_from_types(transformation)
 }
 
@@ -67,7 +67,7 @@ pub extern "C" fn opendp_trans__make_create_dataframe(col_count: c_uint) -> *mut
 pub extern "C" fn opendp_trans__make_split_dataframe(separator: *const c_char, col_count: c_uint) -> *mut FfiTransformation {
     let separator = util::to_option_str(separator);
     let col_count = col_count as usize;
-    let transformation = trans::SplitDataFrame::<HammingDistance>::make(separator, col_count);
+    let transformation = trans::SplitDataFrame::<HammingDistance>::make(separator, col_count).unwrap();
     FfiTransformation::new_from_types(transformation)
 }
 
@@ -75,7 +75,7 @@ pub extern "C" fn opendp_trans__make_split_dataframe(separator: *const c_char, c
 pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key: *const c_char, impute: c_bool) -> *mut FfiTransformation {
     fn monomorphize<T>(key: &str, impute: bool) -> *mut FfiTransformation where
         T: 'static + Element + Clone + PartialEq + FromStr + Default, T::Err: Debug {
-        let transformation = trans::ParseColumn::<HammingDistance, T>::make(key, impute);
+        let transformation = trans::ParseColumn::<HammingDistance, T>::make(key, impute).unwrap();
         // let transformation = trans::make_parse_column::<T>(key, impute);
         FfiTransformation::new_from_types(transformation)
     }
@@ -89,7 +89,7 @@ pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key:
 pub extern "C" fn opendp_trans__make_select_column(type_args: *const c_char, key: *const c_char) -> *mut FfiTransformation {
     fn monomorphize<T>(key: &str) -> *mut FfiTransformation where
         T: 'static + Element + Clone + PartialEq {
-        let transformation = trans::SelectColumn::<HammingDistance, T>::make(key);
+        let transformation = trans::SelectColumn::<HammingDistance, T>::make(key).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -103,7 +103,7 @@ pub extern "C" fn opendp_trans__make_clamp(type_args: *const c_char, lower: *con
         T: 'static + Copy + PartialOrd {
         let lower = util::as_ref(lower as *const T).clone();
         let upper = util::as_ref(upper as *const T).clone();
-        let transformation = trans::Clamp::<HammingDistance, T>::make(lower, upper);
+        let transformation = trans::Clamp::<HammingDistance, T>::make(lower, upper).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -116,7 +116,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_l1(type_args: *const c_char, lo
         T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast {
         let lower = util::as_ref(lower as *const T).clone();
         let upper = util::as_ref(upper as *const T).clone();
-        let transformation = trans::BoundedSum::<HammingDistance, L1Sensitivity<T>, T>::make(lower, upper);
+        let transformation = trans::BoundedSum::<HammingDistance, L1Sensitivity<T>, T>::make(lower, upper).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -129,7 +129,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_l2(type_args: *const c_char, lo
         T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast {
         let lower = util::as_ref(lower as *const T).clone();
         let upper = util::as_ref(upper as *const T).clone();
-        let transformation = trans::BoundedSum::<HammingDistance, L2Sensitivity<T>, T>::make(lower, upper);
+        let transformation = trans::BoundedSum::<HammingDistance, L2Sensitivity<T>, T>::make(lower, upper).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -140,7 +140,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_l2(type_args: *const c_char, lo
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count_l1(type_args: *const c_char) -> *mut FfiTransformation {
     fn monomorphize<T>() -> *mut FfiTransformation where T: 'static {
-        let transformation = trans::Count::<HammingDistance, L1Sensitivity<_>, T>::make();
+        let transformation = trans::Count::<HammingDistance, L1Sensitivity<_>, T>::make().unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -150,7 +150,7 @@ pub extern "C" fn opendp_trans__make_count_l1(type_args: *const c_char) -> *mut 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count_l2(type_args: *const c_char) -> *mut FfiTransformation {
     fn monomorphize<T>() -> *mut FfiTransformation where T: 'static {
-        let transformation = trans::Count::<HammingDistance, L2Sensitivity<_>, T>::make();
+        let transformation = trans::Count::<HammingDistance, L2Sensitivity<_>, T>::make().unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
