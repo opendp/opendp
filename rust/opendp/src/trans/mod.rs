@@ -10,7 +10,7 @@ use std::ops::{Bound, Div, Mul, Sub};
 
 use num::{Signed, One};
 
-use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, Transformation};
+use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, Transformation, StabilityRelation};
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 pub use crate::trans::dataframe::*;
@@ -61,11 +61,11 @@ impl<D, T, M, Q> MakeTransformation2<D, D, M, M, D, M> for Identity
     where D: Domain<Carrier=T>, T: Clone,
           M: Metric<Distance=Q>, Q: 'static + Clone + Div<Output=Q> + Mul<Output=Q> + PartialOrd + DistanceCast + One {
     fn make2(domain: D, metric: M) -> Transformation<D, D, M, M> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             domain.clone(), domain,
             |arg: &T| arg.clone(),
             metric.clone(), metric,
-            Q::one())
+            StabilityRelation::new_from_constant(Q::one()))
     }
 }
 
@@ -78,7 +78,7 @@ impl<M, T> MakeTransformation2<VectorDomain<AllDomain<T>>, VectorDomain<Interval
     where M: Metric<Distance=u32> + DatasetMetric,
           T: 'static + Copy + PartialOrd {
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
             move |arg: &Vec<T>| -> Vec<T> {
@@ -86,7 +86,7 @@ impl<M, T> MakeTransformation2<VectorDomain<AllDomain<T>>, VectorDomain<Interval
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -108,13 +108,13 @@ impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, H
           MO: SensitivityMetric<Distance=T>,
           MO::Distance: Clone + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd {
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             HammingDistance::new(),
             MO::new(),
-            upper - lower)
+            StabilityRelation::new_from_constant(upper - lower))
     }
 }
 
@@ -132,14 +132,14 @@ impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, S
           MO::Distance: Clone + Mul<MO::Distance, Output=MO::Distance> + Div<MO::Distance, Output=MO::Distance> + PartialOrd, {
     // Question- how to set the associated type for a trait that a concrete type is using
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             SymmetricDistance::new(),
             MO::new(),
             // d_out >= d_in * max(|m|, |M|)
-            max(num::abs(lower), num::abs(upper)))
+            StabilityRelation::new_from_constant(max(num::abs(lower), num::abs(upper))))
     }
 }
 
@@ -148,14 +148,14 @@ impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, Al
           MO: SensitivityMetric<Distance=T>,
           SymmetricDistance: Metric<Distance=u32>  {
     fn make3(length: usize, lower: T, upper: T) -> Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             SymmetricDistance::new(),
             MO::new(),
             // d_out >= d_in * (M - m) / 2
-            (upper - lower) / T::from(2).unwrap())
+            StabilityRelation::new_from_constant(upper - lower / T::from(2).unwrap()))
     }
 }
 
@@ -169,13 +169,13 @@ impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
     where MI: Metric<Distance=u32> + DatasetMetric,
           MO: Metric<Distance=u32> + SensitivityMetric {
     fn make0() -> Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             VectorDomain::new_all(),
             AllDomain::new(),
             move |arg: &Vec<T>| arg.len() as u32,
             MI::new(),
             MO::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 

@@ -356,7 +356,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
         function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static,
         input_metric: MI,
         output_measure: MO,
-        privacy_relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static,
+        privacy_relation: PrivacyRelation<MI, MO>,
     ) -> Self {
         Measurement {
             input_domain: Box::new(input_domain),
@@ -364,7 +364,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
             function: Function::new(function),
             input_metric: Box::new(input_metric),
             output_measure: Box::new(output_measure),
-            privacy_relation: PrivacyRelation::new(privacy_relation),
+            privacy_relation,
         }
     }
 }
@@ -386,7 +386,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static,
         input_metric: MI,
         output_metric: MO,
-        stability_relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static,
+        stability_relation: StabilityRelation<MI, MO>,
     ) -> Self {
         Transformation {
             input_domain: Box::new(input_domain),
@@ -394,26 +394,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
             function: Function::new(function),
             input_metric: Box::new(input_metric),
             output_metric: Box::new(output_metric),
-            stability_relation: StabilityRelation::new(stability_relation)
-        }
-    }
-    pub fn new_constant_stability(
-        input_domain: DI,
-        output_domain: DO,
-        function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static,
-        input_metric: MI,
-        output_metric: MO,
-        stability_constant: MO::Distance,
-    ) -> Self where
-        MI::Distance: Clone + DistanceCast,
-        MO::Distance: Clone + DistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
-        Transformation {
-            input_domain: Box::new(input_domain),
-            output_domain: Box::new(output_domain),
-            function: Function::new(function),
-            input_metric: Box::new(input_metric),
-            output_metric: Box::new(output_metric),
-            stability_relation: StabilityRelation::new_from_constant(stability_constant),
+            stability_relation
         }
     }
 }
@@ -610,8 +591,8 @@ mod tests {
         let function = |arg: &i32| arg.clone();
         let input_metric = L1Sensitivity::<i32>::new();
         let output_metric = L1Sensitivity::<i32>::new();
-        let stability_constant = 1;
-        let identity = Transformation::new_constant_stability(input_domain, output_domain, function, input_metric, output_metric, stability_constant);
+        let stability_relation = StabilityRelation::new_from_constant(1);
+        let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
         let arg = 99;
         let ret = identity.function.eval(&arg);
         assert_eq!(ret, 99);
@@ -624,14 +605,14 @@ mod tests {
         let function0 = |a: &u8| (a + 1) as i32;
         let input_metric0 = L1Sensitivity::<i32>::new();
         let output_metric0 = L1Sensitivity::<i32>::new();
-        let stability_constant0 = 1;
-        let transformation0 = Transformation::new_constant_stability(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_constant0);
+        let stability_relation0 = StabilityRelation::new_from_constant(1);
+        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = |a: &i32| (a + 1) as f64;
         let input_metric1 = L1Sensitivity::<i32>::new();
         let output_measure1 = MaxDivergence::new();
-        let privacy_relation1 = |_d_in: &i32, _d_out: &f64| true;
+        let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
         let chain = ChainMT::make(&measurement1, &transformation0);
         let arg = 99_u8;
@@ -646,15 +627,15 @@ mod tests {
         let function0 = |a: &u8| (a + 1) as i32;
         let input_metric0 = L1Sensitivity::<i32>::new();
         let output_metric0 = L1Sensitivity::<i32>::new();
-        let stability_constant0 = 1;
-        let transformation0 = Transformation::new_constant_stability(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_constant0);
+        let stability_relation0 = StabilityRelation::new_from_constant(1);
+        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = |a: &i32| (a + 1) as f64;
         let input_metric1 = L1Sensitivity::<i32>::new();
         let output_metric1 = L1Sensitivity::<i32>::new();
-        let stability_constant1 = 1;
-        let transformation1 = Transformation::new_constant_stability(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_constant1);
+        let stability_relation1 = StabilityRelation::new_from_constant(1);
+        let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
         let chain = ChainTT::make(&transformation1, &transformation0);
         let arg = 99_u8;
         let ret = chain.function.eval(&arg);
@@ -668,14 +649,14 @@ mod tests {
         let function0 = |arg: &i32| (arg + 1) as f32;
         let input_metric0 = L1Sensitivity::<i32>::new();
         let output_measure0 = MaxDivergence::new();
-        let privacy_relation0 = |_d_in: &i32, _d_out: &f64| true;
+        let privacy_relation0 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement0 = Measurement::new(input_domain0, output_domain0, function0, input_metric0, output_measure0, privacy_relation0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = |arg: &i32| (arg - 1) as f64;
         let input_metric1 = L1Sensitivity::<i32>::new();
         let output_measure1 = MaxDivergence::new();
-        let privacy_relation1 = |_d_in: &i32, _d_out: &f64| true;
+        let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
         let composition = Composition::make(&measurement0, &measurement1);
         let arg = 99;

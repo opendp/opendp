@@ -4,7 +4,7 @@ use std::iter::repeat;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use crate::core::{DatasetMetric, Metric, Transformation};
+use crate::core::{DatasetMetric, Metric, Transformation, StabilityRelation};
 use crate::data::{Data, Element};
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
@@ -47,7 +47,7 @@ pub fn create_dataframe_domain() -> MapDomain<AllDomain<Data>> {
 impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M, usize> for CreateDataFrame<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
     fn make1(col_count: usize) -> Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             VectorDomain::new(VectorDomain::new_all()),
             create_dataframe_domain(),
             // move is necessary because it captures `col_count`
@@ -57,7 +57,7 @@ impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDo
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -76,7 +76,7 @@ impl<M> MakeTransformation2<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M,
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
     fn make2(separator: Option<&str>, col_count: usize) -> Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M> {
         let separator = separator.unwrap_or(",").to_owned();
-        Transformation::new_constant_stability(
+        Transformation::new(
             AllDomain::new(),
             create_dataframe_domain(),
             move |arg: &String| -> DataFrame {
@@ -84,7 +84,7 @@ impl<M> MakeTransformation2<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M,
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -114,7 +114,7 @@ impl<M, T> MakeTransformation2<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<D
           T::Err: Debug {
     fn make2(key: &str, impute: bool) -> Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M> {
         let key = key.to_owned();
-        Transformation::new_constant_stability(
+        Transformation::new(
             create_dataframe_domain(),
             create_dataframe_domain(),
             move |arg: &DataFrame| -> DataFrame {
@@ -122,7 +122,7 @@ impl<M, T> MakeTransformation2<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<D
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -137,7 +137,7 @@ impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomai
           T: 'static + Element + Clone + PartialEq {
     fn make1(key: &str) -> Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M> {
         let key = key.to_owned();
-        Transformation::new_constant_stability(
+        Transformation::new(
             create_dataframe_domain(),
             VectorDomain::new_all(),
             move |arg: &DataFrame| -> Vec<T> {
@@ -147,7 +147,7 @@ impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomai
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -171,7 +171,7 @@ fn split_lines(s: &str) -> Vec<&str> {
 impl<M> MakeTransformation0<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> for SplitLines<M>
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
     fn make0() -> Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             AllDomain::<String>::new(),
             VectorDomain::new_all(),
             |arg: &String| -> Vec<String> {
@@ -179,7 +179,7 @@ impl<M> MakeTransformation0<AllDomain<String>, VectorDomain<AllDomain<String>>, 
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -203,7 +203,7 @@ impl<T, M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<All
           T: FromStr + Default,
           T::Err: Debug {
     fn make1(impute: bool) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M> {
-        Transformation::new_constant_stability(
+        Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),
             // move is necessary because it captures `impute`
@@ -213,7 +213,7 @@ impl<T, M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<All
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -233,7 +233,7 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
     where M: Clone + Metric<Distance=u32> + DatasetMetric {
     fn make1(separator: Option<&str>) -> Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M> {
         let separator = separator.unwrap_or(",").to_owned();
-        Transformation::new_constant_stability(
+        Transformation::new(
             VectorDomain::new_all(),
             VectorDomain::new(VectorDomain::new_all()),
             // move is necessary because it captures `separator`
@@ -244,7 +244,7 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
             },
             M::new(),
             M::new(),
-            1_u32)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 

@@ -92,7 +92,7 @@
 //!
 //! #### Example Transformation Constructor
 //! ```
-//!# use opendp::core::Transformation;
+//!# use opendp::core::{Transformation, StabilityRelation};
 //!# use opendp::dist::L1Sensitivity;
 //!# use opendp::dom::AllDomain;
 //! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, L1Sensitivity<i32>, L1Sensitivity<i32>> {
@@ -101,7 +101,7 @@
 //!     let function = |arg: &i32| -> i32 { *arg };
 //!     let input_metric = L1Sensitivity::new();
 //!     let output_metric = L1Sensitivity::new();
-//!     let stability_relation = |d_in: &i32, d_out: &i32| *d_out >= *d_in;
+//!     let stability_relation = StabilityRelation::new_from_constant(1);
 //!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
 //! }
 //! ```
