@@ -2,7 +2,7 @@ use std::mem::transmute;
 use std::os::raw::c_char;
 
 use opendp::core;
-use opendp::core::{Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
+use opendp::core::{ChainTT, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
 
 use crate::util;
 use crate::util::Type;
@@ -192,7 +192,8 @@ pub extern "C" fn opendp_core__make_chain_tt(transformation1: *mut FfiTransforma
     let input_glue = transformation0.input_glue.clone();
     let x_glue = transformation0.output_glue.clone();
     let output_glue = transformation1.output_glue.clone();
-    let transformation = core::make_chain_tt_glue(&transformation1.value, &transformation0.value, &input_glue.metric_glue, &x_glue.metric_glue, &output_glue.metric_glue);
+    // TODO: Add plumbing for hints from FFI.
+    let transformation = ChainTT::make_chain_tt_glue(&transformation1.value, &transformation0.value, None, &input_glue.metric_glue, &x_glue.metric_glue, &output_glue.metric_glue);
     FfiTransformation::new(input_glue, output_glue, transformation)
 }
 

@@ -5,7 +5,7 @@
 
 use rand::Rng;
 
-use crate::core::{Measurement, Domain, Measure, Metric};
+use crate::core::{Measurement, Domain, Measure, Metric, PrivacyRelation};
 use crate::dist::{L2Sensitivity, L1Sensitivity, MaxDivergence, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use num::NumCast;
@@ -69,7 +69,7 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDive
         };
         let input_metric = L1Sensitivity::new();
         let output_measure = MaxDivergence::new();
-        let privacy_relation = move |d_in: &f64, d_out: &f64| *d_out >= *d_in / sigma;
+        let privacy_relation = PrivacyRelation::new_from_constant(1. / sigma);
         Measurement::new(input_domain, output_domain, function, input_metric, output_measure, privacy_relation)
     }
 }
@@ -91,7 +91,7 @@ impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>,
         };
         let input_metric = L1Sensitivity::new();
         let output_measure = MaxDivergence::new();
-        let privacy_relation = move |d_in: &f64, d_out: &f64| *d_out >= *d_in / sigma;
+        let privacy_relation = PrivacyRelation::new_from_constant(1. / sigma);
         Measurement::new(input_domain, output_domain, function, input_metric, output_measure, privacy_relation)
     }
 }
@@ -113,10 +113,10 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, Smoothe
         let input_metric = L2Sensitivity::new();
         let output_measure = SmoothedMaxDivergence::new();
         // https://docs.google.com/spreadsheets/d/132rAzbSDVCKqFZWeE-P8oOl9f23PzkvNwsrDV5LPkw4/edit#gid=0
-        let privacy_relation = move |d_in: &f64, d_out: &(f64, f64)| {
+        let privacy_relation = PrivacyRelation::new(move |d_in: &f64, d_out: &(f64, f64)| {
             let (eps, delta) = d_out.clone();
             eps.min(1.) >= (*d_in / sigma) * (2. * (1.25 / delta).ln()).sqrt()
-        };
+        });
         Measurement::new(input_domain, output_domain, function, input_metric, output_measure, privacy_relation)
     }
 }

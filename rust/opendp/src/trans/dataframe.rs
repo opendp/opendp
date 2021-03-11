@@ -4,7 +4,7 @@ use std::iter::repeat;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use crate::core::{DatasetMetric, Metric, Transformation};
+use crate::core::{DatasetMetric, Metric, Transformation, StabilityRelation};
 use crate::data::{Data, Element};
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
@@ -57,7 +57,7 @@ impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDo
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -84,7 +84,7 @@ impl<M> MakeTransformation2<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M,
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -122,7 +122,7 @@ impl<M, T> MakeTransformation2<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<D
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -147,7 +147,7 @@ impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomai
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -179,7 +179,7 @@ impl<M> MakeTransformation0<AllDomain<String>, VectorDomain<AllDomain<String>>, 
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -213,7 +213,7 @@ impl<T, M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<All
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
@@ -244,7 +244,7 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
             },
             M::new(),
             M::new(),
-            |d_in: &u32, d_out: &u32| *d_out >= *d_in)
+            StabilityRelation::new_from_constant(1_u32))
     }
 }
 
