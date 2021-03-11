@@ -8,7 +8,7 @@ use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Bound, Div, Mul, Sub};
 
-use num::{NumCast, Signed};
+use num::{Signed, One};
 
 use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
@@ -59,11 +59,13 @@ pub struct Identity;
 
 impl<D, T, M, Q> MakeTransformation2<D, D, M, M, D, M> for Identity
     where D: Domain<Carrier=T>, T: Clone,
-          M: Metric<Distance=Q>, Q: Clone {
+          M: Metric<Distance=Q>, Q: 'static + Clone + Div<Output=Q> + Mul<Output=Q> + PartialOrd + DPDistanceCast + One {
     fn make2(domain: D, metric: M) -> Transformation<D, D, M, M> {
-        let function = |arg: &T| arg.clone();
-        let stability_relation = |_d_in: &Q, _d_out: &Q| true;
-        Transformation::new(domain.clone(), domain, function, metric.clone(), metric, stability_relation)
+        Transformation::new_constant_stability(
+            domain.clone(), domain,
+            |arg: &T| arg.clone(),
+            metric.clone(), metric,
+            Q::one())
     }
 }
 
@@ -102,7 +104,7 @@ pub struct BoundedSum<MI, MO, T> {
 }
 
 impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T> for BoundedSum<HammingDistance, MO, T>
-    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + DPDistanceCast,
+    where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Sum<T> + DPDistanceCast,
           MO: SensitivityMetric<Distance=T>,
           MO::Distance: Clone + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd {
     fn make2(lower: T, upper: T) -> Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO> {
@@ -125,7 +127,7 @@ fn max<T: PartialOrd>(a: T, b: T) -> T {
 }
 
 impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO, T, T> for BoundedSum<SymmetricDistance, MO, T>
-    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Sum<T> + Signed + DPDistanceCast,
+    where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Sum<T> + Signed + DPDistanceCast,
           MO: SensitivityMetric<Distance=T>,
           MO::Distance: Clone + Mul<MO::Distance, Output=MO::Distance> + Div<MO::Distance, Output=MO::Distance> + PartialOrd, {
     // Question- how to set the associated type for a trait that a concrete type is using
@@ -142,18 +144,18 @@ impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, S
 }
 
 impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO, usize, T, T> for BoundedSum<SymmetricDistance, MO, T>
-    where T: 'static + Copy + PartialOrd + Sub<Output=T> + NumCast + Mul<Output=T> + Div<Output=T> + Sum<T>,
+    where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DPDistanceCast,
           MO: SensitivityMetric<Distance=T>,
           SymmetricDistance: Metric<Distance=u32>  {
     fn make3(length: usize, lower: T, upper: T) -> Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO> {
-        Transformation::new(
+        Transformation::new_constant_stability(
             SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
             AllDomain::new(),
             |arg: &Vec<T>| arg.iter().cloned().sum(),
             SymmetricDistance::new(),
             MO::new(),
             // d_out >= d_in * (M - m) / 2
-            move |d_in: &u32, d_out: &T| *d_out >= T::from(*d_in).unwrap() * (upper - lower) / T::from(2).unwrap())
+            (upper - lower) / T::from(2).unwrap())
     }
 }
 
