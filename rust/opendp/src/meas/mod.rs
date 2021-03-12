@@ -8,51 +8,50 @@ use std::marker::PhantomData;
 use num::NumCast;
 use rand::Rng;
 
-use crate::core::{Domain, Measure, Measurement, Metric, PrivacyRelation};
+use crate::core::{Domain, Measure, Measurement, Metric, PrivacyRelation, Function};
 use crate::dist::{L1Sensitivity, L2Sensitivity, MaxDivergence, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
-use crate::Error;
+use crate::Fallible;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeMeasurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
-    fn make() -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error> {
+    fn make() -> Fallible<crate::core::Measurement<DI, DO, MI, MO>> {
         Self::make0()
     }
-    fn make0() -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error>;
+    fn make0() -> Fallible<crate::core::Measurement<DI, DO, MI, MO>>;
 }
 
 pub trait MakeMeasurement1<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1> {
-    fn make(param1: P1) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error> {
+    fn make(param1: P1) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>> {
         Self::make1(param1)
     }
-    fn make1(param1: P1) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error>;
+    fn make1(param1: P1) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>>;
 }
 
 pub trait MakeMeasurement2<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2> {
-    fn make(param1: P1, param2: P2) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error> {
+    fn make(param1: P1, param2: P2) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>> {
         Self::make2(param1, param2)
     }
-    fn make2(param1: P1, param2: P2) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error>;
+    fn make2(param1: P1, param2: P2) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>>;
 }
 
 pub trait MakeMeasurement3<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2, P3> {
-    fn make(param1: P1, param2: P2, param3: P3) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error> {
+    fn make(param1: P1, param2: P2, param3: P3) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>> {
         Self::make3(param1, param2, param3)
     }
-    fn make3(param1: P1, param2: P2, param3: P3) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error>;
+    fn make3(param1: P1, param2: P2, param3: P3) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>>;
 }
 
 pub trait MakeMeasurement4<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, P2, P3, P4> {
-    fn make(param1: P1, param2: P2, param3: P3, param4: P4) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error> {
+    fn make(param1: P1, param2: P2, param3: P3, param4: P4) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>> {
         Self::make4(param1, param2, param3, param4)
     }
-    fn make4(param1: P1, param2: P2, param3: P3, param4: P4) -> Result<crate::core::Measurement<DI, DO, MI, MO>, Error>;
+    fn make4(param1: P1, param2: P2, param3: P3, param4: P4) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>>;
 }
 
 pub struct LaplaceMechanism<T> {
     data: PhantomData<T>
 }
-
 
 fn laplace(sigma: f64) -> f64 {
     let mut rng = rand::thread_rng();
@@ -62,11 +61,11 @@ fn laplace(sigma: f64) -> f64 {
 
 // laplace for scalar-valued query
 impl MakeMeasurement1<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism<f64> {
-    fn make1(sigma: f64) -> Result<Measurement<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence>, Error> {
+    fn make1(sigma: f64) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence>> {
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
-            move |v: &f64| *v + laplace(sigma),
+            Function::new(move |v: &f64| *v + laplace(sigma)),
             L1Sensitivity::new(),
             MaxDivergence::new(),
             PrivacyRelation::new_from_constant(1. / sigma)
@@ -80,11 +79,11 @@ pub struct VectorLaplaceMechanism<T> {
 
 // laplace for vector-valued query
 impl MakeMeasurement1<VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence, f64> for VectorLaplaceMechanism<f64> {
-    fn make1(sigma: f64) -> Result<Measurement<VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence>, Error> {
+    fn make1(sigma: f64) -> Fallible<Measurement<VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f64>>, L1Sensitivity<f64>, MaxDivergence>> {
         Ok(Measurement::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),
-            move |arg: &Vec<f64>| arg.iter().map(|v| v + laplace(sigma)).collect(),
+            Function::new(move |arg: &Vec<f64>| arg.iter().map(|v| v + laplace(sigma)).collect()),
             L1Sensitivity::new(),
             MaxDivergence::new(),
             PrivacyRelation::new_from_constant(1. / sigma)
@@ -99,12 +98,12 @@ pub struct GaussianMechanism<T> {
 // gaussian for scalar-valued query
 impl MakeMeasurement1<AllDomain<f64>, AllDomain<f64>, L2Sensitivity<f64>, SmoothedMaxDivergence, f64> for GaussianMechanism<f64>
     where f64: Copy + NumCast {
-    fn make1(sigma: f64) -> Result<Measurement<AllDomain<f64>, AllDomain<f64>, L2Sensitivity<f64>, SmoothedMaxDivergence>, Error> {
+    fn make1(sigma: f64) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, L2Sensitivity<f64>, SmoothedMaxDivergence>> {
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
             // TODO: switch to gaussian
-            enclose!(sigma, move |arg: &f64| arg + laplace(sigma)),
+            Function::new(enclose!(sigma, move |arg: &f64| arg + laplace(sigma))),
             L2Sensitivity::new(),
             SmoothedMaxDivergence::new(),
             PrivacyRelation::new(move |d_in: &f64, d_out: &(f64, f64)| {
@@ -126,7 +125,7 @@ mod tests {
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg);
 
-        assert!(measurement.privacy_relation.eval(&1., &1.));
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap());
     }
 
     #[test]
@@ -135,7 +134,7 @@ mod tests {
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.function.eval(&arg);
 
-        assert!(measurement.privacy_relation.eval(&1., &1.));
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap());
     }
 
     #[test]
@@ -144,6 +143,6 @@ mod tests {
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg);
 
-        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)));
+        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap());
     }
 }

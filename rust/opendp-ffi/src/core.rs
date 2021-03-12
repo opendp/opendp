@@ -211,7 +211,14 @@ pub extern "C" fn opendp_core__make_chain_tt(transformation1: *mut FfiTransforma
     let x_glue = transformation0.output_glue.clone();
     let output_glue = transformation1.output_glue.clone();
     // TODO: Add plumbing for hints from FFI.
-    let transformation = ChainTT::make_chain_tt_glue(&transformation1.value, &transformation0.value, None, &input_glue.metric_glue, &x_glue.metric_glue, &output_glue.metric_glue).unwrap();
+    let transformation = ChainTT::make_chain_tt_glue(
+        &transformation1.value,
+        &transformation0.value,
+        None,
+        &input_glue.metric_glue,
+        &x_glue.metric_glue,
+        &output_glue.metric_glue
+    ).expect("tt chain failed. TODO: handle returning error variant");
     FfiTransformation::new(input_glue, output_glue, transformation)
 }
 
@@ -228,7 +235,13 @@ pub extern "C" fn opendp_core__make_composition(measurement0: *mut FfiMeasuremen
     let output_glue_domain_carrier = Type::new_box_pair(&output_glue0.domain_carrier, &output_glue1.domain_carrier);
     let output_glue_measure_glue = output_glue0.measure_glue.clone();
     let output_glue = FfiMeasureGlue::<FfiDomain, FfiMeasure>::new_explicit(output_glue_domain_type, output_glue_domain_carrier, output_glue_measure_glue);
-    let measurement = core::make_composition_glue(&measurement0.value, &measurement1.value, &input_glue.metric_glue, &output_glue0.measure_glue, &output_glue1.measure_glue).unwrap();
+    let measurement = core::make_composition_glue(
+        &measurement0.value,
+        &measurement1.value,
+        &input_glue.metric_glue,
+        &output_glue0.measure_glue,
+        &output_glue1.measure_glue
+    ).expect("compose failed. TODO: handle returning error variant");
     FfiMeasurement::new(input_glue, output_glue, measurement)
 }
 

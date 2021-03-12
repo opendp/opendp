@@ -41,7 +41,6 @@ pub extern "C" fn opendp_trans__make_parse_series(type_args: *const c_char, impu
     fn monomorphize<T>(impute: bool) -> *mut FfiTransformation where
         T: 'static + FromStr + Default, T::Err: Debug {
         let transformation = trans::ParseSeries::<T, HammingDistance>::make(impute).unwrap();
-        // let transformation = trans::make_parse_series::<T>(impute);
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -74,7 +73,8 @@ pub extern "C" fn opendp_trans__make_split_dataframe(separator: *const c_char, c
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key: *const c_char, impute: c_bool) -> *mut FfiTransformation {
     fn monomorphize<T>(key: &str, impute: bool) -> *mut FfiTransformation where
-        T: 'static + Element + Clone + PartialEq + FromStr + Default, T::Err: Debug {
+        T: 'static + Element + Clone + PartialEq + FromStr + Default,
+        T::Err: Debug {
         let transformation = trans::ParseColumn::<HammingDistance, T>::make(key, impute).unwrap();
         // let transformation = trans::make_parse_column::<T>(key, impute);
         FfiTransformation::new_from_types(transformation)
