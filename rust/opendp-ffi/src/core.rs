@@ -1,11 +1,12 @@
 use std::mem::transmute;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_uint};
 
 use opendp::core;
 use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
 
 use crate::util;
 use crate::util::Type;
+
 
 pub struct FfiObject {
     pub type_: Type,
@@ -35,6 +36,41 @@ impl FfiObject {
         let value = self.value.as_ref() as *const () as *const T;
         let value = unsafe { value.as_ref() };
         value.unwrap()
+    }
+}
+
+pub struct FfiError {
+    pub tag: c_uint,
+    pub message: *const c_char,
+}
+
+impl FfiError {
+    pub fn new(error: OdpError) -> *mut Self {
+        let tag = match error {
+            OdpError::Foo(_) => 1,
+            OdpError::Bar(_) => 2,
+        };
+        let message = util::into_c_char_p(format!("{:?}", error));
+        let ffi_error = FfiError { tag, message };
+        util::into_raw(ffi_error)
+    }
+}
+
+pub enum FfiResult {
+    Ok(*mut FfiObject),
+    Err(*mut FfiError)
+}
+
+#[derive(Debug)]
+pub enum OdpError {
+    Foo(String),
+    Bar(String),
+}
+
+impl FfiResult {
+    pub fn new_typed(type_: Type, result: Result<Box<()>, OdpError>) -> *mut Self {
+        let ffi_result = result.map_or_else(|e| Self::Err(FfiError::new(e)), |o| Self::Ok(FfiObject::new_typed(type_, o)));
+        util::into_raw(ffi_result)
     }
 }
 
@@ -149,7 +185,22 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, a
     assert_eq!(arg.type_, this.input_glue.domain_carrier);
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
+    // Pretend this returns a result
+    let res: Result<_, &'static str> = Ok(res);
+    let res = res.unwrap();
     FfiObject::new_typed(res_type, res)
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_invoke_result(this: *const FfiMeasurement, arg: *const FfiObject) -> *mut FfiResult {
+    let this = util::as_ref(this);
+    let arg = util::as_ref(arg);
+    assert_eq!(arg.type_, this.input_glue.domain_carrier);
+    let res_type = this.output_glue.domain_carrier.clone();
+    let res = this.value.function.eval_ffi(&arg.value);
+    // Pretend this returns a result
+    let res: Result<_, OdpError> = Ok(res);
+    FfiResult::new_typed(res_type, res)
 }
 
 #[no_mangle]
