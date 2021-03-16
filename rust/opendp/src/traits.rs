@@ -1,4 +1,5 @@
 use num::{NumCast, ToPrimitive};
+use crate::{Error, Fallible};
 
 pub trait CheckContinuous { fn is_continuous() -> bool; }
 pub trait Ceil : Copy { fn ceil(self) -> Self; }
@@ -35,12 +36,12 @@ impl_is_not_continuous!(i8, u8, i16, u16, i32, u32, i64, u64, isize, usize);
 
 // include Ceil on QO to avoid requiring as an additional trait bound in all downstream code
 pub trait DistanceCast: NumCast + Ceil + CheckContinuous {
-    fn cast<T: ToPrimitive + Ceil>(n: T) -> Option<Self>;
+    fn cast<T: ToPrimitive + Ceil>(n: T) -> Fallible<Self>;
 }
 
 impl<QO: ToPrimitive + NumCast + CheckContinuous + Ceil> DistanceCast for QO {
-    fn cast<QI: ToPrimitive + Ceil>(v: QI) -> Option<QO> {
+    fn cast<QI: ToPrimitive + Ceil>(v: QI) -> Fallible<QO> {
         // round away from zero when losing precision
-        QO::from(if QO::is_continuous() { v } else { v.ceil() })
+        QO::from(if QO::is_continuous() { v } else { v.ceil() }).ok_or(Error::FailedCast)
     }
 }

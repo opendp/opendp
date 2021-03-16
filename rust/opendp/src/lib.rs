@@ -50,20 +50,20 @@
 //!     let sigma = (bounds.1 - bounds.0) / epsilon;
 //!
 //!     // Construct a Transformation to load the numbers.
-//!     let split_lines = trans::SplitLines::<HammingDistance>::make();
-//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true);
-//!     let load_numbers = ChainTT::make(&parse_series, &split_lines);
+//!     let split_lines = trans::SplitLines::<HammingDistance>::make().unwrap();
+//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true).unwrap();
+//!     let load_numbers = ChainTT::make(&parse_series, &split_lines).unwrap();
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = trans::Clamp::make(bounds.0, bounds.1);
-//!     let bounded_sum = trans::BoundedSum::make2(bounds.0, bounds.1);
-//!     let laplace = LaplaceMechanism::make(sigma);
-//!     let intermediate = ChainTT::make(&bounded_sum, &clamp);
-//!     let noisy_sum = ChainMT::make(&laplace, &intermediate);
+//!     let clamp = trans::Clamp::make(bounds.0, bounds.1).unwrap();
+//!     let bounded_sum = trans::BoundedSum::make2(bounds.0, bounds.1).unwrap();
+//!     let laplace = LaplaceMechanism::make(sigma).unwrap();
+//!     let intermediate = ChainTT::make(&bounded_sum, &clamp).unwrap();
+//!     let noisy_sum = ChainMT::make(&laplace, &intermediate).unwrap();
 //!
 //!     // Put it all together.
-//!     let pipeline = ChainMT::make(&noisy_sum, &load_numbers);
-//!     let result = pipeline.function.eval(&data);
+//!     let pipeline = ChainMT::make(&noisy_sum, &load_numbers).unwrap();
+//!     let result = pipeline.function.eval(&data).unwrap();
 //!     println!("result = {}", result);
 //!  }
 //! ```
@@ -92,13 +92,13 @@
 //!
 //! #### Example Transformation Constructor
 //! ```
-//!# use opendp::core::{Transformation, StabilityRelation};
+//!# use opendp::core::{Transformation, StabilityRelation, Function};
 //!# use opendp::dist::L1Sensitivity;
 //!# use opendp::dom::AllDomain;
 //! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, L1Sensitivity<i32>, L1Sensitivity<i32>> {
 //!     let input_domain = AllDomain::new();
 //!     let output_domain = AllDomain::new();
-//!     let function = |arg: &i32| -> i32 { *arg };
+//!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = L1Sensitivity::new();
 //!     let output_metric = L1Sensitivity::new();
 //!     let stability_relation = StabilityRelation::new_from_constant(1);
@@ -119,6 +119,7 @@
 //! [`Measurement`]/[`Transformation`] constructors are allowed to be generic! Typically, this means that the type parameter on the
 //! constructor will determine type of the input or output [`Domain::Carrier`] (or the generic type within, for instance the `i32` of `Vec<i32>`).
 
+use std::fmt::Debug;
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
     ( ($( $x:ident ),*), $y:expr ) => {
@@ -128,6 +129,43 @@ macro_rules! enclose {
         }
     };
 }
+
+#[derive(thiserror::Error, Debug)]
+#[non_exhaustive]
+pub enum Error {
+    #[error("{1}")]
+    Default(#[source] std::io::Error, &'static str),
+
+    #[error("Failed function execution")]
+    FailedFunction,
+
+    #[error("Unable to cast type")]
+    FailedCast,
+
+    #[error("Domain mismatch")]
+    DomainMismatch,
+
+    #[error("Could not make transformation {0}")]
+    MakeTransformation(String),
+
+    #[error("Could not make measurement {0}")]
+    MakeMeasurement(String),
+
+    #[error("Invalid distance {0}")]
+    InvalidDistance(String),
+
+    #[error("{0}")]
+    Raw(String),
+
+    #[error("Not Implemented")]
+    NotImplemented,
+}
+impl Error {
+    fn from_debug<E: Debug>(e: E) -> Self {
+        Self::Raw(format!("{:?}", e))
+    }
+}
+pub type Fallible<T> = Result<T, Error>;
 
 pub mod core;
 pub mod data;
