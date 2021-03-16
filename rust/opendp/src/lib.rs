@@ -151,6 +151,9 @@ pub enum Error {
     #[error("Could not make measurement {0}")]
     MakeMeasurement(String),
 
+    #[error("Invalid distance {0}")]
+    InvalidDistance(String),
+
     #[error("{0}")]
     Raw(String),
 
