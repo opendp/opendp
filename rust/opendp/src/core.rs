@@ -20,8 +20,8 @@
 use std::ops::{Div, Mul};
 use std::rc::Rc;
 
-use crate::dom::{BoxDomain, PairDomain};
 use crate::{Error, Fallible};
+use crate::dom::{BoxDomain, PairDomain};
 use crate::meas::MakeMeasurement2;
 use crate::traits::DistanceCast;
 use crate::trans::MakeTransformation2;
@@ -461,6 +461,38 @@ impl<D: 'static + Domain, M: 'static + Metric> MetricGlue<D, M> {
 // CHAINING & COMPOSITION
 pub struct ChainMT;
 
+impl ChainMT {
+    pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(
+        measurement1: &Measurement<DX, DO, MX, MO>,
+        transformation0: &Transformation<DI, DX, MI, MX>,
+        hint: Option<&HintMt<MI, MO, MX>>,
+        input_glue: &MetricGlue<DI, MI>,
+        x_glue: &MetricGlue<DX, MX>,
+        output_glue: &MeasureGlue<DO, MO>
+    ) -> Fallible<Measurement<DI, DO, MI, MO>>
+        where DI: 'static + Domain,
+              DX: 'static + Domain,
+              DO: 'static + Domain,
+              MI: 'static + Metric,
+              MX: 'static + Metric,
+              MO: 'static + Measure {
+        if (x_glue.domain_eq)(&transformation0.output_domain, &measurement1.input_domain) {
+            Ok(Measurement {
+                input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
+                output_domain: (output_glue.domain_clone)(&measurement1.output_domain),
+                function: Function::make_chain(&measurement1.function, &transformation0.function),
+                input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
+                output_measure: (output_glue.measure_clone)(&measurement1.output_measure),
+                privacy_relation: PrivacyRelation::make_chain(
+                    &measurement1.privacy_relation,
+                    &transformation0.stability_relation, hint)
+            })
+        } else {
+            Err(Error::DomainMismatch)
+        }
+    }
+}
+
 impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, DO, MX, MO>, &Transformation<DI, DX, MI, MX>> for ChainMT
     where DI: 'static + Domain,
           DX: 'static + Domain,
@@ -469,41 +501,13 @@ impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, D
           MX: 'static + Metric,
           MO: 'static + Measure {
     fn make2(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Fallible<Measurement<DI, DO, MI, MO>> {
-        make_chain_mt_glue(
-            measurement1, transformation0,
+        Self::make_chain_mt_glue(
+            measurement1, transformation0, None,
             &MetricGlue::<DI, MI>::new(),
             &MetricGlue::<DX, MX>::new(),
             &MeasureGlue::<DO, MO>::new())
     }
 }
-
-pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(
-    measurement1: &Measurement<DX, DO, MX, MO>,
-    transformation0: &Transformation<DI, DX, MI, MX>,
-    input_glue: &MetricGlue<DI, MI>,
-    x_glue: &MetricGlue<DX, MX>,
-    output_glue: &MeasureGlue<DO, MO>
-) -> Fallible<Measurement<DI, DO, MI, MO>>
-    where DI: 'static + Domain,
-          DX: 'static + Domain,
-          DO: 'static + Domain,
-          MI: 'static + Metric,
-          MX: 'static + Metric,
-          MO: 'static + Measure {
-    if (x_glue.domain_eq)(&transformation0.output_domain, &measurement1.input_domain) {
-        Ok(Measurement {
-            input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
-            output_domain: (output_glue.domain_clone)(&measurement1.output_domain),
-            function: Function::make_chain(&measurement1.function, &transformation0.function),
-            input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
-            output_measure: (output_glue.measure_clone)(&measurement1.output_measure),
-            privacy_relation: PrivacyRelation::make_chain(&measurement1.privacy_relation, &transformation0.stability_relation, None)
-        })
-    } else {
-        Err(Error::DomainMismatch)
-    }
-}
-
 
 pub struct ChainTT;
 
@@ -516,8 +520,12 @@ impl ChainTT {
         x_glue: &MetricGlue<DX, MX>,
         output_glue: &MetricGlue<DO, MO>
     ) -> Fallible<Transformation<DI, DO, MI, MO>>
-        where DI: 'static + Domain, DX: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MX: 'static + Metric, MO: 'static + Metric {
-
+        where DI: 'static + Domain,
+              DX: 'static + Domain,
+              DO: 'static + Domain,
+              MI: 'static + Metric,
+              MX: 'static + Metric,
+              MO: 'static + Metric {
         if (x_glue.domain_eq)(&transformation0.output_domain, &transformation1.input_domain) {
             Ok(Transformation {
                 input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
