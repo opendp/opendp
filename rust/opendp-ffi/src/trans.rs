@@ -4,7 +4,6 @@ use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
 use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
-use opendp::data::{Element, Form};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity};
 use opendp::dom::AllDomain;
 use opendp::trans;
@@ -16,13 +15,14 @@ use crate::util::TypeArgs;
 use std::ops::{Sub, Mul, Div};
 use num::{NumCast};
 use opendp::traits::DistanceCast;
+use std::hash::Hash;
 
 // TODO: update dispatch macros to call new trait calling convention
 //       dispatch based on Metric type
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> *mut FfiTransformation {
-    fn monomorphize<T: 'static + Form + Clone>() -> *mut FfiTransformation {
+    fn monomorphize<T: 'static + Clone>() -> *mut FfiTransformation {
         let transformation = trans::Identity::make(AllDomain::<T>::new(), HammingDistance::new()).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
@@ -58,7 +58,8 @@ pub extern "C" fn opendp_trans__make_split_records(separator: *const c_char) -> 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_create_dataframe(col_count: c_uint) -> *mut FfiTransformation {
     let col_count = col_count as usize;
-    let transformation = trans::CreateDataFrame::<HammingDistance>::make(col_count).unwrap();
+    // TODO: pass Vec<T> over FFI
+    let transformation = trans::CreateDataFrame::<HammingDistance>::make((0..col_count).map(|v| v as i32).collect()).unwrap();
     FfiTransformation::new_from_types(transformation)
 }
 
@@ -66,35 +67,37 @@ pub extern "C" fn opendp_trans__make_create_dataframe(col_count: c_uint) -> *mut
 pub extern "C" fn opendp_trans__make_split_dataframe(separator: *const c_char, col_count: c_uint) -> *mut FfiTransformation {
     let separator = util::to_option_str(separator);
     let col_count = col_count as usize;
-    let transformation = trans::SplitDataFrame::<HammingDistance>::make(separator, col_count).unwrap();
+    // TODO: pass Vec<T> over FFI
+    let transformation = trans::SplitDataFrame::<HammingDistance>::make(separator, (0..col_count).map(|v| v as i32).collect()).unwrap();
     FfiTransformation::new_from_types(transformation)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key: *const c_char, impute: c_bool) -> *mut FfiTransformation {
-    fn monomorphize<T>(key: &str, impute: bool) -> *mut FfiTransformation where
-        T: 'static + Element + Clone + PartialEq + FromStr + Default,
+pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key: *const c_void, impute: c_bool) -> *mut FfiTransformation {
+    fn monomorphize<K, T>(key: *const c_void, impute: bool) -> *mut FfiTransformation where
+        K: 'static + Hash + Eq + Debug + Clone,
+        T: 'static + Debug + Clone + PartialEq + FromStr + Default,
         T::Err: Debug {
+        let key = util::as_ref(key as *const K).clone();
         let transformation = trans::ParseColumn::<HammingDistance, T>::make(key, impute).unwrap();
-        // let transformation = trans::make_parse_column::<T>(key, impute);
         FfiTransformation::new_from_types(transformation)
     }
-    let type_args = TypeArgs::expect(type_args, 1);
-    let key = util::to_str(key);
+    let type_args = TypeArgs::expect(type_args, 2);
     let impute = util::to_bool(impute);
-    dispatch!(monomorphize, [(type_args.0[0], @primitives)], (key, impute))
+    dispatch!(monomorphize, [(type_args.0[0], @hashable), (type_args.0[1], @primitives)], (key, impute))
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_select_column(type_args: *const c_char, key: *const c_char) -> *mut FfiTransformation {
-    fn monomorphize<T>(key: &str) -> *mut FfiTransformation where
-        T: 'static + Element + Clone + PartialEq {
+pub extern "C" fn opendp_trans__make_select_column(type_args: *const c_char, key: *const c_void) -> *mut FfiTransformation {
+    fn monomorphize<K, T>(key: *const c_void) -> *mut FfiTransformation where
+        K: 'static + Hash + Eq + Debug + Clone,
+        T: 'static + Debug + Clone + PartialEq {
+        let key = util::as_ref(key as *const K).clone();
         let transformation = trans::SelectColumn::<HammingDistance, T>::make(key).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
-    let type_args = TypeArgs::expect(type_args, 1);
-    let key = util::to_str(key);
-    dispatch!(monomorphize, [(type_args.0[0], @primitives)], (key))
+    let type_args = TypeArgs::expect(type_args, 2);
+    dispatch!(monomorphize, [(type_args.0[0], @hashable), (type_args.0[1], @primitives)], (key))
 }
 
 #[no_mangle]
@@ -168,8 +171,8 @@ r#"{
     { "name": "make_split_records", "args": [ ["const char *", "separator"] ], "ret": "void *" },
     { "name": "make_create_dataframe", "args": [ ["unsigned int", "col_count"] ], "ret": "void *" },
     { "name": "make_split_dataframe", "args": [ ["const char *", "separator"], ["unsigned int", "col_count"] ], "ret": "void *" },
-    { "name": "make_parse_column", "args": [ ["const char *", "selector"], ["const char *", "key"], ["bool", "impute"] ], "ret": "void *" },
-    { "name": "make_select_column", "args": [ ["const char *", "selector"], ["const char *", "key"] ], "ret": "void *" },
+    { "name": "make_parse_column", "args": [ ["const char *", "selector"], ["void *", "key"], ["bool", "impute"] ], "ret": "void *" },
+    { "name": "make_select_column", "args": [ ["const char *", "selector"], ["void *", "key"] ], "ret": "void *" },
     { "name": "make_clamp", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },
     { "name": "make_bounded_sum_l1", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },
     { "name": "make_bounded_sum_l2", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },

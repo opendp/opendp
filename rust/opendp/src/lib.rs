@@ -136,8 +136,8 @@ pub enum Error {
     #[error("{1}")]
     Default(#[source] std::io::Error, &'static str),
 
-    #[error("Failed function execution")]
-    FailedFunction,
+    #[error("Failed function execution: {0}")]
+    FailedFunction(String),
 
     #[error("Unable to cast type")]
     FailedCast,
@@ -145,13 +145,13 @@ pub enum Error {
     #[error("Domain mismatch")]
     DomainMismatch,
 
-    #[error("Could not make transformation {0}")]
+    #[error("Failed to make transformation: {0}")]
     MakeTransformation(String),
 
-    #[error("Could not make measurement {0}")]
+    #[error("Failed to make measurement: {0}")]
     MakeMeasurement(String),
 
-    #[error("Invalid distance {0}")]
+    #[error("Invalid distance: {0}")]
     InvalidDistance(String),
 
     #[error("{0}")]
