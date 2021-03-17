@@ -35,7 +35,7 @@ def main():
 
     # Compose & chain
     composition = odp.core.make_composition(noisy_sum_1, noisy_count_2)
-    everything = odp.core.make_chain_tt(composition, parse_dataframe)
+    everything = odp.core.make_chain_mt(composition, parse_dataframe)
 
     # Do it!!!
     arg = odp.data.from_string(b"ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3")

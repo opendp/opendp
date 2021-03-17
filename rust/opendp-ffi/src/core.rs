@@ -2,7 +2,7 @@ use std::mem::transmute;
 use std::os::raw::c_char;
 
 use opendp::core;
-use opendp::core::{ChainTT, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
+use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
 
 use crate::util;
 use crate::util::Type;
@@ -192,9 +192,10 @@ pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, 
     // TODO: handle returning error variant in *mut FfiMeasurement
     assert_eq!(output_glue0.domain_type, input_glue1.domain_type);
 
-    let measurement = core::make_chain_mt_glue(
+    let measurement = ChainMT::make_chain_mt_glue(
         value1,
         value0,
+        None,
         &input_glue0.metric_glue,
         &output_glue0.metric_glue,
         &output_glue1.measure_glue)
