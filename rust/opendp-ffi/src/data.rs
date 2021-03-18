@@ -7,6 +7,27 @@ use crate::core::FfiObject;
 use crate::util;
 
 #[no_mangle]
+pub extern "C" fn opendp_data__from_f64(p: f64) -> *mut FfiObject {
+    FfiObject::new(p)
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_data__to_f64(this: *mut FfiObject) -> f64 {
+    let this = util::as_ref(this);
+    *this.as_ref()
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_data__distance_hamming(d: u32) -> *mut FfiObject {
+    FfiObject::new(d)
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_data__distance_smoothed_max_divergence(epsilon: f64, delta: f64) -> *mut FfiObject {
+    FfiObject::new((epsilon, delta))
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_data__from_string(p: *const c_char) -> *mut FfiObject {
     let s = util::to_str(p).to_owned();
     FfiObject::new(s)
