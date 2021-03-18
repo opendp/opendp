@@ -54,8 +54,8 @@ impl<DI: Domain, DO: Domain> Function<DI, DO> {
         (self.function)(arg).map(|v| *v)
     }
 
-    pub fn eval_ffi(&self, arg: &DI::Carrier) -> Box<DO::Carrier> {
-        (self.function)(arg).unwrap()
+    pub fn eval_ffi(&self, arg: &DI::Carrier) -> Fallible<Box<DO::Carrier>> {
+        (self.function)(arg)
     }
 }
 

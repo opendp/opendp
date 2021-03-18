@@ -44,9 +44,9 @@ pub extern "C" fn opendp_meas__bootstrap() -> *const c_char {
     let spec =
 r#"{
 "functions": [
-    { "name": "make_base_laplace", "args": [ ["const char *", "selector"], ["double", "sigma"] ], "ret": "void *" },
-    { "name": "make_base_laplace_vec", "args": [ ["const char *", "selector"], ["double", "sigma"] ], "ret": "void *" },
-    { "name": "make_base_gaussian", "args": [ ["const char *", "selector"], ["double", "sigma"] ], "ret": "void *" }
+    { "name": "make_base_laplace", "args": [ ["const char *", "selector"], ["double", "sigma"] ], "ret": "FfiMeasurement *" },
+    { "name": "make_base_laplace_vec", "args": [ ["const char *", "selector"], ["double", "sigma"] ], "ret": "FfiMeasurement *" },
+    { "name": "make_base_gaussian", "args": [ ["const char *", "selector"], ["double", "sigma"] ], "ret": "FfiMeasurement *" }
 ]
 }"#;
     util::bootstrap(spec)

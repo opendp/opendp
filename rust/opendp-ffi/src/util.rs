@@ -130,11 +130,11 @@ pub fn into_c_char_p(s: String) -> *mut c_char {
     CString::new(s).unwrap().into_raw()
 }
 
-// pub fn into_string(p: *mut c_char) -> String {
-//     assert!(!p.is_null());
-//     let s = unsafe { CString::from_raw(p) };
-//     s.into_string().expect("Bad C string")
-// }
+pub fn into_string(p: *mut c_char) -> String {
+    assert!(!p.is_null());
+    let s = unsafe { CString::from_raw(p) };
+    s.into_string().expect("Bad C string")
+}
 
 pub fn to_str<'a>(p: *const c_char) -> &'a str {
     assert!(!p.is_null());
