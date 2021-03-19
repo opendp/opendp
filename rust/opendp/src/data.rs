@@ -4,19 +4,19 @@ use std::any::Any;
 use std::fmt::Debug;
 use crate::{Error, Fallible};
 
-pub trait Form: Debug {
+pub trait IsVec: Debug {
     // Not sure if we need into_any() (which consumes the Form), keeping it for now.
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
     fn as_any(&self) -> &dyn Any;
-    fn box_clone(&self) -> Box<dyn Form>;
+    fn box_clone(&self) -> Box<dyn IsVec>;
     fn eq(&self, other: &dyn Any) -> bool;
 }
 
-impl<T> Form for Vec<T> where
+impl<T> IsVec for Vec<T> where
     T: 'static + Debug + Clone + PartialEq {
     fn into_any(self: Box<Self>) -> Box<dyn Any> { self }
     fn as_any(&self) -> &dyn Any { self }
-    fn box_clone(&self) -> Box<dyn Form> { Box::new(self.clone()) }
+    fn box_clone(&self) -> Box<dyn IsVec> { Box::new(self.clone()) }
     fn eq(&self, other: &dyn Any) -> bool { other.downcast_ref::<Self>().map_or(false, |o| o == self) }
 }
 
@@ -29,17 +29,17 @@ impl<T> From<Vec<T>> for Column
 
 
 #[derive(Debug)]
-pub struct Column(Box<dyn Form>);
+pub struct Column(Box<dyn IsVec>);
 
 impl Column {
-    pub fn new<T: 'static + Debug>(form: Vec<T>) -> Column where Vec<T>: Form {
+    pub fn new<T: 'static + Debug>(form: Vec<T>) -> Column where Vec<T>: IsVec {
         Column(Box::new(form))
     }
-    pub fn as_form<T: 'static + Form>(&self) -> Fallible<&T> {
+    pub fn as_form<T: 'static + IsVec>(&self) -> Fallible<&T> {
         self.0.as_any().downcast_ref::<T>()
             .ok_or(Error::FailedCast)
     }
-    pub fn into_form<T: 'static + Form>(self) -> Fallible<T> {
+    pub fn into_form<T: 'static + IsVec>(self) -> Fallible<T> {
         self.0.into_any().downcast::<T>()
             .map_err(|_e| Error::FailedCast)
             .map(|v| *v)
@@ -78,7 +78,7 @@ mod tests {
     //     let _retrieved: Vec<String> = data.into_form();
     // }
 
-    fn test_round_trip<T: 'static + Form + PartialEq>(form: T) {
+    fn test_round_trip<T: 'static + IsVec + PartialEq>(form: T) {
         let data = Column(form.box_clone());
         assert_eq!(&form, data.as_form().unwrap());
         assert_eq!(form, data.into_form().unwrap())

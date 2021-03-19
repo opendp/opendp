@@ -9,8 +9,8 @@ use std::marker::PhantomData;
 use std::ops::Bound;
 
 use crate::core::Domain;
-use crate::data::{Column, Form};
 use std::hash::Hash;
+use std::any::Any;
 
 /// A Domain that contains all members of the carrier type.
 pub struct AllDomain<T> {
@@ -64,14 +64,12 @@ impl<D: Domain> DataDomain<D> {
     }
 }
 impl<D: Domain> Domain for DataDomain<D> where
-    D::Carrier: 'static + Form {
-    type Carrier = Column;
+    D::Carrier: 'static + Any {
+    type Carrier = Box<dyn Any>;
     fn member(&self, val: &Self::Carrier) -> bool {
-        if let Ok(val) = val.as_form() {
-            self.form_domain.member(val)
-        } else {
-            false
-        }
+        val.downcast_ref::<D::Carrier>()
+            .map(|v| self.form_domain.member(v))
+            .unwrap_or(false)
     }
 }
 
@@ -139,7 +137,8 @@ impl<K, T> MapDomain<AllDomain<K>, AllDomain<T>> where K: Eq + Hash {
 impl<DK: Domain, DT: Domain> Domain for MapDomain<DK, DT> where DK::Carrier: Eq + Hash {
     type Carrier = HashMap<DK::Carrier, DT::Carrier>;
     fn member(&self, val: &Self::Carrier) -> bool {
-        val.iter().all(|e| self.element_domain.member(e.1))
+        val.iter().all(|(k, v)|
+            self.key_domain.member( k) && self.element_domain.member(v))
     }
 }
 
