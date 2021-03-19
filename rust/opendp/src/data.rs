@@ -37,11 +37,11 @@ impl Column {
     }
     pub fn as_form<T: 'static + IsVec>(&self) -> Fallible<&T> {
         self.0.as_any().downcast_ref::<T>()
-            .ok_or(Error::FailedCast)
+            .ok_or_else(|| Error::FailedCast.into())
     }
     pub fn into_form<T: 'static + IsVec>(self) -> Fallible<T> {
         self.0.into_any().downcast::<T>()
-            .map_err(|_e| Error::FailedCast)
+            .map_err(|_e| Error::FailedCast.into())
             .map(|v| *v)
     }
 }

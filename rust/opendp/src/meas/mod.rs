@@ -67,7 +67,7 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDive
             AllDomain::new(),
             AllDomain::new(),
             Function::new_fallible(move |arg: &T| -> Fallible<T> {
-                <f64 as NumCast>::from(*arg).and_then(|v| T::from(v + laplace(sigma))).ok_or(Error::FailedCast)
+                <f64 as NumCast>::from(*arg).and_then(|v| T::from(v + laplace(sigma))).ok_or_else(|| Error::FailedCast.into())
             }),
             L1Sensitivity::new(),
             MaxDivergence::new(),
@@ -89,7 +89,7 @@ impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>,
             Function::new_fallible(move |arg: &Vec<T>| -> Fallible<Vec<T>> {
                 arg.iter()
                     .map(|v| <f64 as NumCast>::from(*v).and_then(|v| T::from(v + laplace(sigma))))
-                    .collect::<Option<_>>().ok_or(Error::FailedCast)
+                    .collect::<Option<_>>().ok_or_else(|| Error::FailedCast.into())
             }),
             L1Sensitivity::new(),
             MaxDivergence::new(),
@@ -109,19 +109,19 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, Smoothe
             AllDomain::new(),
             AllDomain::new(),
             Function::new_fallible(move |arg: &T| -> Fallible<T> {
-                <f64 as NumCast>::from(*arg).and_then(|v| T::from(v + laplace(sigma))).ok_or(Error::FailedCast)
+                <f64 as NumCast>::from(*arg).and_then(|v| T::from(v + laplace(sigma))).ok_or_else(|| Error::FailedCast.into())
             }),
             L2Sensitivity::new(),
             SmoothedMaxDivergence::new(),
             PrivacyRelation::new_fallible(move |&d_in: &f64, &(eps, del): &(f64, f64)| {
                 if d_in < 0. {
-                    return Err(Error::InvalidDistance("gaussian mechanism: input sensitivity must be non-negative".to_string()))
+                    return Err(Error::InvalidDistance("gaussian mechanism: input sensitivity must be non-negative".to_string()).into())
                 }
                 if eps <= 0. {
-                    return Err(Error::InvalidDistance("gaussian mechanism: epsilon must be positive".to_string()))
+                    return Err(Error::InvalidDistance("gaussian mechanism: epsilon must be positive".to_string()).into())
                 }
                 if del <= 0. {
-                    return Err(Error::InvalidDistance("gaussian mechanism: delta must be positive".to_string()))
+                    return Err(Error::InvalidDistance("gaussian mechanism: delta must be positive".to_string()).into())
                 }
                 // TODO: should we error if epsilon > 1., or just waste the budget?
                 Ok(eps.min(1.) >= (d_in / sigma) * (2. * (1.25 / del).ln()).sqrt())
@@ -159,5 +159,12 @@ mod tests {
         let _ret = measurement.function.eval(&arg);
 
         assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap());
+    }
+
+    #[test]
+    fn test_error() {
+        let measurement = GaussianMechanism::<f64>::make(1.0).unwrap();
+        let error = measurement.privacy_relation.eval(&-0.1, &(0.5, 0.00001)).unwrap_err();
+        let _backtrace = format!("{:?}", error.backtrace);
     }
 }

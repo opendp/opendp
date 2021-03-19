@@ -488,7 +488,7 @@ impl ChainMT {
                     &transformation0.stability_relation, hint)
             })
         } else {
-            Err(Error::DomainMismatch)
+            Err(Error::DomainMismatch.into())
         }
     }
 }
@@ -538,7 +538,7 @@ impl ChainTT {
                     &transformation0.stability_relation, hint)
             })
         } else {
-            Err(Error::DomainMismatch)
+            Err(Error::DomainMismatch.into())
         }
     }
 }
@@ -603,7 +603,7 @@ pub fn make_composition_glue<DI, DO0, DO1, MI, MO>(
             privacy_relation: PrivacyRelation::new(|_i, _o| false)
         })
     } else {
-        Err(Error::DomainMismatch)
+        Err(Error::DomainMismatch.into())
     }
 }
 

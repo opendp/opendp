@@ -42,6 +42,6 @@ pub trait DistanceCast: NumCast + Ceil + CheckContinuous {
 impl<QO: ToPrimitive + NumCast + CheckContinuous + Ceil> DistanceCast for QO {
     fn cast<QI: ToPrimitive + Ceil>(v: QI) -> Fallible<QO> {
         // round away from zero when losing precision
-        QO::from(if QO::is_continuous() { v } else { v.ceil() }).ok_or(Error::FailedCast)
+        QO::from(if QO::is_continuous() { v } else { v.ceil() }).ok_or_else(|| Error::FailedCast.into())
     }
 }

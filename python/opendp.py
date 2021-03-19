@@ -34,6 +34,7 @@ class FfiError(ctypes.Structure):
     _fields_ = [
         ("variant", ctypes.c_char_p),
         ("message", ctypes.c_char_p),
+        ("backtrace", ctypes.c_char_p),
     ]
 
 class FfiResultPayload(ctypes.Union):
@@ -149,8 +150,9 @@ class Mod:
                 err_contents = err.contents
                 variant = c_char_p_to_str(err_contents.variant)
                 message = c_char_p_to_str(err_contents.message)
+                backtace = c_char_p_to_str(err_contents.backtrace)
                 self.error_free(err)
-                raise OdpException(variant, message)
+                raise OdpException(variant, message, backtace)
         return unwrap
 
 class OpenDP:

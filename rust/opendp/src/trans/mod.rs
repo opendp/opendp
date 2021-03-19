@@ -104,28 +104,28 @@ pub struct BoundedSum<MI, MO, T> {
     data: PhantomData<T>,
 }
 
-impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T> for BoundedSum<HammingDistance, MO, T>
-    where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Sum<T> + DistanceCast,
-          MO: SensitivityMetric<Distance=T>,
-          MO::Distance: Clone + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd {
-    fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO>> {
-        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string())) }
-
-Ok(Transformation::new(
-    VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
-    AllDomain::new(),
-    Function::new(|arg: &Vec<T>| arg.iter().cloned().sum()),
-    HammingDistance::new(),
-    MO::new(),
-    StabilityRelation::new_from_constant(upper - lower)))
-    }
-}
-
 // TODO: this is kind of ugly and should bubble results
 fn max<T: PartialOrd>(a: T, b: T) -> T {
     match a.partial_cmp(&b) {
         Some(Ordering::Less) => b,
         _ => a
+    }
+}
+
+impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO, T, T> for BoundedSum<HammingDistance, MO, T>
+    where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
+          HammingDistance: Metric<Distance=u32>,
+          MO: SensitivityMetric<Distance=T> {
+    fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO>> {
+        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string()).into()) }
+
+        Ok(Transformation::new(
+            VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
+            AllDomain::new(),
+            Function::new(|arg: &Vec<T>| arg.iter().cloned().sum()),
+            HammingDistance::new(),
+            MO::new(),
+            StabilityRelation::new_from_constant(upper - lower)))
     }
 }
 
@@ -135,7 +135,7 @@ impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, S
           MO::Distance: Clone + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd, {
     // Question- how to set the associated type for a trait that a concrete type is using
     fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO>> {
-        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string())) }
+        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string()).into()) }
 
         Ok(Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
@@ -153,7 +153,7 @@ impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, Al
           MO: SensitivityMetric<Distance=T>,
           SymmetricDistance: Metric<Distance=u32> {
     fn make3(length: usize, lower: T, upper: T) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO>> {
-        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string())) }
+        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string()).into()) }
 
         Ok(Transformation::new(
             SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),

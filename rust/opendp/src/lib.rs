@@ -120,6 +120,10 @@
 //! constructor will determine type of the input or output [`Domain::Carrier`] (or the generic type within, for instance the `i32` of `Vec<i32>`).
 
 use std::fmt::Debug;
+use std::fmt;
+
+use backtrace::Backtrace as _Backtrace;
+
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
     ( ($( $x:ident ),*), $y:expr ) => {
@@ -131,16 +135,31 @@ macro_rules! enclose {
 }
 
 #[derive(thiserror::Error, Debug)]
+pub struct ErrorBase {
+    pub error: Error,
+    pub backtrace: _Backtrace
+}
+impl fmt::Display for ErrorBase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.error)
+    }
+}
+
+
+#[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum Error {
-    #[error("{1}")]
-    Default(#[source] std::io::Error, &'static str),
+    #[error("{0}")]
+    Raw(#[source] Box<dyn std::error::Error>),
 
     #[error("Failed function execution: {0}")]
     FailedFunction(String),
 
     #[error("Unable to cast type")]
     FailedCast,
+
+    #[error("Unable to cast type: {0}")]
+    FailedCastTo(String),
 
     #[error("Domain mismatch")]
     DomainMismatch,
@@ -154,18 +173,15 @@ pub enum Error {
     #[error("Invalid distance: {0}")]
     InvalidDistance(String),
 
-    #[error("{0}")]
-    Raw(String),
-
     #[error("Not Implemented")]
     NotImplemented,
 }
-impl Error {
-    fn from_debug<E: Debug>(e: E) -> Self {
-        Self::Raw(format!("{:?}", e))
+impl From<Error> for ErrorBase {
+    fn from(error: Error) -> Self {
+        Self { error, backtrace: _Backtrace::new() }
     }
 }
-pub type Fallible<T> = Result<T, Error>;
+pub type Fallible<T> = Result<T, ErrorBase>;
 
 pub mod core;
 pub mod data;

@@ -200,7 +200,7 @@ fn parse_series<T>(col: &Vec<&str>, default_on_error: bool) -> Fallible<Vec<T>> 
     if default_on_error {
         Ok(col.into_iter().map(|v| v.parse().unwrap_or_default()).collect())
     } else {
-        col.into_iter().map(|v| v.parse().map_err(Error::from_debug)).collect()
+        col.into_iter().map(|v| v.parse().map_err(|e| Error::FailedCastTo(format!("{:?}", e)).into())).collect()
     }
 }
 
