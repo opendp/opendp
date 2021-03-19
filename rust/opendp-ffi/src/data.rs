@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::os::raw::c_char;
 
-use opendp::data::Data;
+use opendp::data::Column;
 
 use crate::core::FfiObject;
 use crate::util;
@@ -24,9 +24,9 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *const c_cha
     let this = util::as_ref(this);
     let type_arg = &this.type_;
     dispatch!(monomorphize, [(type_arg, [
-        u32, u64, i32, i64, f32, f64, bool, String, u8, Data,
-        Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Data>, Vec<Vec<String>>,
-        HashMap<String, Data>,
+        u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
+        Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Column>, Vec<Vec<String>>,
+        HashMap<String, Column>,
         // FIXME: The following are for Python demo use of compositions. Need to figure this out!!!
         (Box<i32>, Box<f64>),
         (Box<i32>, Box<u32>),

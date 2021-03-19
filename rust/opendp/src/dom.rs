@@ -9,7 +9,8 @@ use std::marker::PhantomData;
 use std::ops::Bound;
 
 use crate::core::Domain;
-use crate::data::{Data, Form};
+use std::hash::Hash;
+use std::any::Any;
 
 /// A Domain that contains all members of the carrier type.
 pub struct AllDomain<T> {
@@ -63,11 +64,12 @@ impl<D: Domain> DataDomain<D> {
     }
 }
 impl<D: Domain> Domain for DataDomain<D> where
-    D::Carrier: 'static + Form {
-    type Carrier = Data;
+    D::Carrier: 'static + Any {
+    type Carrier = Box<dyn Any>;
     fn member(&self, val: &Self::Carrier) -> bool {
-        let val = val.as_form();
-        self.form_domain.member(val)
+        val.downcast_ref::<D::Carrier>()
+            .map(|v| self.form_domain.member(v))
+            .unwrap_or(false)
     }
 }
 
@@ -118,23 +120,25 @@ impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1> {
 
 /// A Domain that contains maps of (homogeneous) values.
 #[derive(Clone, PartialEq)]
-pub struct MapDomain<D: Domain> {
-    pub element_domain: D
+pub struct MapDomain<DK: Domain, DT: Domain> where DK::Carrier: Eq + Hash {
+    pub key_domain: DK,
+    pub element_domain: DT
 }
-impl<D: Domain> MapDomain<D> {
-    pub fn new(element_domain: D) -> Self {
-        MapDomain { element_domain }
+impl<DK: Domain, DT: Domain> MapDomain<DK, DT> where DK::Carrier: Eq + Hash {
+    pub fn new(key_domain: DK, element_domain: DT) -> Self {
+        MapDomain { key_domain, element_domain }
     }
 }
-impl<T> MapDomain<AllDomain<T>> {
+impl<K, T> MapDomain<AllDomain<K>, AllDomain<T>> where K: Eq + Hash {
     pub fn new_all() -> Self {
-        Self::new(AllDomain::<T>::new())
+        Self::new(AllDomain::<K>::new(), AllDomain::<T>::new())
     }
 }
-impl<D: Domain> Domain for MapDomain<D> {
-    type Carrier = HashMap<String, D::Carrier>;
+impl<DK: Domain, DT: Domain> Domain for MapDomain<DK, DT> where DK::Carrier: Eq + Hash {
+    type Carrier = HashMap<DK::Carrier, DT::Carrier>;
     fn member(&self, val: &Self::Carrier) -> bool {
-        val.iter().all(|e| self.element_domain.member(e.1))
+        val.iter().all(|(k, v)|
+            self.key_domain.member( k) && self.element_domain.member(v))
     }
 }
 

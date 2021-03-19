@@ -1,60 +1,63 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::repeat;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use crate::core::{DatasetMetric, Transformation, StabilityRelation, Function};
-use crate::data::{Data, Element};
+use crate::{Error, Fallible};
+use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation};
+use crate::data::Column;
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
-use crate::{Error, Fallible};
+use std::hash::Hash;
+
+pub type DataFrame<K> = HashMap<K, Column>;
+pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 
 pub struct CreateDataFrame<M> {
     metric: PhantomData<M>
 }
 
+/// ensure all rows have `len` number of cells
 fn conform_records<'a>(len: usize, records: &Vec<Vec<&'a str>>) -> Vec<Vec<&'a str>> {
-    fn conform<'a>(record: &Vec<&'a str>, len: usize) -> Vec<&'a str> {
-        if record.len() > len {
+    records.into_iter().map(|record| match record.len().cmp(&len) {
+        Ordering::Less => // record is too short; pad with empty strings
+            record.clone().into_iter().chain(repeat("").take(len - record.len())).collect(),
+        Ordering::Equal => // record is just right
+            record.clone(),
+        Ordering::Greater => // record is too long; slice down
             record[0..len].to_vec().clone()
-        } else if record.len() < len {
-            record.clone().into_iter().chain(repeat("").take(len - record.len())).collect()
-        } else {
-            record.clone()
-        }
-    }
-    records.into_iter().map(|e| conform(e, len)).collect()
+    }).collect()
 }
 
-pub type DataFrame = HashMap<String, Data>;
+fn create_dataframe<K: Eq + Hash>(col_names: Vec<K>, records: &Vec<Vec<&str>>) -> DataFrame<K> {
+    // make data rectangular
+    let records = conform_records(col_names.len(), &records);
 
-fn create_dataframe(col_count: usize, records: &Vec<Vec<&str>>) -> DataFrame {
-    let records = conform_records(col_count, &records);
-    let mut cols = vec![Vec::new(); col_count];
-    for record in records.into_iter() {
-        for i in 0..col_count {
-            cols[i].push(record[i])
-        }
-    }
-    cols.into_iter().enumerate().map(|(k, v)| (k.to_string(), Data::new(vec_str_to_string(v)))).collect()
+    // transpose and collect into dataframe
+    col_names.into_iter().enumerate()
+        .map(|(i, col_name)| (
+            col_name,
+            Column::new(records.iter().map(|record| record[i].to_string()).collect())))
+        .collect()
 }
 
-pub fn create_dataframe_domain() -> MapDomain<AllDomain<Data>> {
-    MapDomain::new(AllDomain::new())
+pub fn create_dataframe_domain<K: Eq + Hash>() -> DataFrameDomain<K> {
+    MapDomain::new(AllDomain::new(), AllDomain::new())
 }
 
 
-impl<M> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M, usize> for CreateDataFrame<M>
-    where M: Clone + DatasetMetric<Distance=u32> {
-    fn make1(col_count: usize) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, MapDomain<AllDomain<Data>>, M, M>> {
+impl<M, K> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M, Vec<K>> for CreateDataFrame<M>
+    where M: Clone + DatasetMetric<Distance=u32>,
+          K: 'static + Eq + Hash + Debug + Clone {
+    fn make1(col_names: Vec<K>) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M>> {
         Ok(Transformation::new(
             VectorDomain::new(VectorDomain::new_all()),
             create_dataframe_domain(),
-            // move is necessary because it captures `col_count`
-            Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame {
+            Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
                 let arg = arg.into_iter().map(|e| vec_string_to_str(e)).collect();
-                create_dataframe(col_count, &arg)
+                create_dataframe(col_names.clone(), &arg)
             }),
             M::new(),
             M::new(),
@@ -66,21 +69,22 @@ pub struct SplitDataFrame<M> {
     metric: PhantomData<M>
 }
 
-fn split_dataframe<'a>(separator: &str, col_count: usize, s: &str) -> DataFrame {
+fn split_dataframe<'a, K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str) -> DataFrame<K> {
     let lines = split_lines(s);
     let records = split_records(separator, &lines);
-    let records = conform_records(col_count, &records);
-    create_dataframe(col_count, &records)
+    let records = conform_records(col_names.len(), &records);
+    create_dataframe(col_names, &records)
 }
 
-impl<M> MakeTransformation2<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M, Option<&str>, usize> for SplitDataFrame<M>
-    where M: Clone + DatasetMetric<Distance=u32> {
-    fn make2(separator: Option<&str>, col_count: usize) -> Fallible<Transformation<AllDomain<String>, MapDomain<AllDomain<Data>>, M, M>> {
+impl<M, K> MakeTransformation2<AllDomain<String>, DataFrameDomain<K>, M, M, Option<&str>, Vec<K>> for SplitDataFrame<M>
+    where K: 'static + Hash + Eq + Clone,
+          M: Clone + DatasetMetric<Distance=u32> {
+    fn make2(separator: Option<&str>, col_names: Vec<K>) -> Fallible<Transformation<AllDomain<String>, DataFrameDomain<K>, M, M>> {
         let separator = separator.unwrap_or(",").to_owned();
         Ok(Transformation::new(
             AllDomain::new(),
             create_dataframe_domain(),
-            Function::new(move |arg: &String| split_dataframe(&separator, col_count, &arg)),
+            Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
             M::new(),
             M::new(),
             StabilityRelation::new_from_constant(1_u32)))
@@ -92,32 +96,35 @@ pub struct ParseColumn<M, T> {
     data: PhantomData<T>,
 }
 
-fn replace_col(key: &str, df: &DataFrame, col: &Data) -> Fallible<DataFrame> {
+fn replace_col<K: Eq + Hash + Debug + Clone>(key: &K, df: &DataFrame<K>, col: Column) -> Fallible<DataFrame<K>> {
     let mut df = df.clone();
-    *df.get_mut(key).ok_or(Error::FailedFunction)? = col.clone();
+    *df.get_mut(key)
+        .ok_or_else(|| Error::FailedFunction(format!("column does not exist: {:?}", key)))? = col;
     Ok(df)
 }
 
-fn parse_column<T>(key: &str, impute: bool, df: &DataFrame) -> Fallible<DataFrame> where
-    T: 'static + Element + Clone + PartialEq + FromStr + Default,
-    T::Err: Debug {
-    let col = df.get(key).ok_or(Error::FailedFunction)?;
-    let col = col.as_form();
+fn parse_column<K, T>(key: &K, impute: bool, df: &DataFrame<K>) -> Fallible<DataFrame<K>>
+    where T: 'static + Debug + Clone + PartialEq + FromStr + Default,
+          K: Eq + Hash + Clone + Debug,
+          T::Err: Debug {
+    let col = df.get(key)
+        .ok_or_else(|| Error::FailedFunction(format!("column does not exist: {:?}", key)))?
+        .as_form()?;
     let col = vec_string_to_str(col);
     let col = parse_series::<T>(&col, impute)?;
-    replace_col(key, &df, &col.into())
+    replace_col(key, &df, col.into())
 }
 
-impl<M, T> MakeTransformation2<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M, &str, bool> for ParseColumn<M, T>
+impl<M, K, T> MakeTransformation2<DataFrameDomain<K>, DataFrameDomain<K>, M, M, K, bool> for ParseColumn<M, T>
     where M: Clone + DatasetMetric<Distance=u32>,
-          T: 'static + Element + FromStr + Clone + Default + PartialEq,
+          K: 'static + Hash + Eq + Debug + Clone,
+          T: 'static + Debug + FromStr + Clone + Default + PartialEq,
           T::Err: Debug {
-    fn make2(key: &str, impute: bool) -> Fallible<Transformation<MapDomain<AllDomain<Data>>, MapDomain<AllDomain<Data>>, M, M>> {
-        let key = key.to_owned();
+    fn make2(key: K, impute: bool) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, M, M>> {
         Ok(Transformation::new(
             create_dataframe_domain(),
             create_dataframe_domain(),
-            Function::new_fallible(move |arg: &DataFrame| parse_column::<T>(&key, impute, arg)),
+            Function::new_fallible(move |arg: &DataFrame<K>| parse_column::<K, T>(&key, impute, arg)),
             M::new(),
             M::new(),
             StabilityRelation::new_from_constant(1_u32)))
@@ -130,18 +137,19 @@ pub struct SelectColumn<M, T> {
 }
 
 
-impl<M, T> MakeTransformation1<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M, &str> for SelectColumn<M, T>
+impl<M, K, T> MakeTransformation1<DataFrameDomain<K>, VectorDomain<AllDomain<T>>, M, M, K> for SelectColumn<M, T>
     where M: Clone + DatasetMetric<Distance=u32>,
-          T: 'static + Element + Clone + PartialEq {
-    fn make1(key: &str) -> Fallible<Transformation<MapDomain<AllDomain<Data>>, VectorDomain<AllDomain<T>>, M, M>> {
-        let key = key.to_owned();
+          K: 'static + Eq + Hash + Debug,
+          T: 'static + Debug + Clone + PartialEq {
+    fn make1(key: K) -> Fallible<Transformation<DataFrameDomain<K>, VectorDomain<AllDomain<T>>, M, M>> {
         Ok(Transformation::new(
             create_dataframe_domain(),
             VectorDomain::new_all(),
-            Function::new(move |arg: &DataFrame| -> Vec<T> {
-                let ret = arg.get(&key).expect("Missing dataframe column");
-                let ret: &Vec<T> = ret.as_form();
-                ret.clone()
+            Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<T>> {
+                // retrieve column from dataframe and handle error
+                arg.get(&key).ok_or_else(|| Error::FailedFunction(format!("column does not exist: {:?}", key)))?
+                    // cast down to &Vec<T>
+                    .as_form::<Vec<T>>().map(|c| c.clone())
             }),
             M::new(),
             M::new(),
@@ -248,79 +256,79 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{ChainTT};
+    use crate::core::ChainTT;
+    use crate::dist::HammingDistance;
 
     use super::*;
-    use crate::dist::HammingDistance;
 
     #[test]
     fn test_make_create_dataframe() {
-        let transformation = CreateDataFrame::<HammingDistance>::make(2).unwrap();
+        let transformation = CreateDataFrame::<HammingDistance>::make(vec!["0".to_string(), "1".to_string()]).unwrap();
         let arg = vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
             vec!["cat".to_owned(), "baz".to_owned()],
         ];
         let ret = transformation.function.eval(&arg).unwrap();
-        let expected: DataFrame = vec![
-            ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Data::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
+        let expected: DataFrame<String> = vec![
+            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
         ].into_iter().collect();
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_split_dataframe() {
-        let transformation = SplitDataFrame::<HammingDistance>::make(None, 2).unwrap();
+        let transformation = SplitDataFrame::<HammingDistance>::make(None, vec!["0".to_string(), "1".to_string()]).unwrap();
         let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();
         let ret = transformation.function.eval(&arg).unwrap();
-        let expected: DataFrame = vec![
-            ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Data::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
+        let expected: DataFrame<String> = vec![
+            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
         ].into_iter().collect();
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_parse_column() {
-        let transformation = ParseColumn::<HammingDistance, i32>::make("1", true).unwrap();
-        let arg: DataFrame = vec![
-            ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Data::new(vec!["1".to_owned(), "2".to_owned(), "".to_owned()])),
+        let transformation = ParseColumn::<HammingDistance, i32>::make(1, true).unwrap();
+        let arg: DataFrame<usize> = vec![
+            (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            (1, Column::new(vec!["1".to_owned(), "2".to_owned(), "".to_owned()])),
         ].into_iter().collect();
         let ret = transformation.function.eval(&arg).unwrap();
-        let expected: DataFrame = vec![
-            ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Data::new(vec![1, 2, 0])),
+        let expected: DataFrame<usize> = vec![
+            (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            (1, Column::new(vec![1, 2, 0])),
         ].into_iter().collect();
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_parse_columns() {
-        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1", true).unwrap();
-        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2", true).unwrap();
+        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1".to_string(), true).unwrap();
+        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2".to_string(), true).unwrap();
         let transformation = ChainTT::make(&transformation1, &transformation0).unwrap();
-        let arg: DataFrame = vec![
-            ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Data::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
-            ("2".to_owned(), Data::new(vec!["1.1".to_owned(), "2.2".to_owned(), "3.3".to_owned()])),
+        let arg: DataFrame<String> = vec![
+            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            ("1".to_owned(), Column::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
+            ("2".to_owned(), Column::new(vec!["1.1".to_owned(), "2.2".to_owned(), "3.3".to_owned()])),
         ].into_iter().collect();
         let ret = transformation.function.eval(&arg).unwrap();
-        let expected: DataFrame = vec![
-            ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Data::new(vec![1, 2, 3])),
-            ("2".to_owned(), Data::new(vec![1.1, 2.2, 3.3])),
+        let expected: DataFrame<String> = vec![
+            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            ("1".to_owned(), Column::new(vec![1, 2, 3])),
+            ("2".to_owned(), Column::new(vec![1.1, 2.2, 3.3])),
         ].into_iter().collect();
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_select_column() {
-        let transformation = SelectColumn::<HammingDistance, String>::make("1").unwrap();
-        let arg: DataFrame = vec![
-            ("0".to_owned(), Data::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Data::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
+        let transformation = SelectColumn::<HammingDistance, String>::make("1".to_owned()).unwrap();
+        let arg: DataFrame<String> = vec![
+            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
         ].into_iter().collect();
         let ret = transformation.function.eval(&arg).unwrap();
         let expected = vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()];

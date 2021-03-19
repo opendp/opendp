@@ -73,6 +73,9 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u32, u64, i32, i64, f32, f64, u8]), $rt_dispatch_types, $type_args, $args)
     };
+    ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [u32, u64, i32, i64, bool, String, u8, i8]), $rt_dispatch_types, $type_args, $args)
+    };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
