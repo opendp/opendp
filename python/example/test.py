@@ -1,8 +1,7 @@
 import opendp
 
 def main():
-    lib_path = "../rust/target/debug/libopendp_ffi.dylib"
-    odp = opendp.OpenDP(lib_path)
+    odp = opendp.OpenDP()
 
     ### HELLO WORLD
     identity = odp.trans.make_identity(b"<String>")

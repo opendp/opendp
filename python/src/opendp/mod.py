@@ -1,5 +1,6 @@
 import ctypes
 import json
+import os
 import re
 
 
@@ -160,7 +161,16 @@ class Mod:
 
 class OpenDP:
 
-    def __init__(self, lib_path):
+    @classmethod
+    def _get_lib_path(cls):
+        # TODO: Get the lib path in a way that works when installed via pip/conda (pkg_resources?).
+        # For now, we grab the path directly from the expected relative path in the Rust target dir.
+        package_dir = os.path.dirname(__file__)
+        return os.path.join(package_dir, "../../rust/target/debug/libopendp_ffi.dylib")
+
+    def __init__(self, lib_path=None):
+        lib_path = lib_path or self._get_lib_path()
+        print(lib_path)
         lib = ctypes.cdll.LoadLibrary(lib_path)
         Mod.initialize(lib, "opendp_core__")
         self.core = Mod(lib, "opendp_core__")
