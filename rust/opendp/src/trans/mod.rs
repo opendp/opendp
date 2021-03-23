@@ -16,6 +16,7 @@ use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::DistanceCast;
 pub use crate::trans::dataframe::*;
+use std::convert::TryFrom;
 
 pub mod dataframe;
 
@@ -178,7 +179,8 @@ impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
         Ok(Transformation::new(
             VectorDomain::new_all(),
             AllDomain::new(),
-            Function::new(move |arg: &Vec<T>| arg.len() as u32),
+            // min(arg.len(), u32::MAX)
+            Function::new(move |arg: &Vec<T>| u32::try_from(arg.len()).unwrap_or(u32::MAX)),
             MI::new(),
             MO::new(),
             StabilityRelation::new_from_constant(1_u32)))
