@@ -119,7 +119,6 @@
 //! [`Measurement`]/[`Transformation`] constructors are allowed to be generic! Typically, this means that the type parameter on the
 //! constructor will determine type of the input or output [`Domain::Carrier`] (or the generic type within, for instance the `i32` of `Vec<i32>`).
 
-use std::fmt::Debug;
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
     ( ($( $x:ident ),*), $y:expr ) => {
@@ -130,42 +129,8 @@ macro_rules! enclose {
     };
 }
 
-#[derive(thiserror::Error, Debug)]
-#[non_exhaustive]
-pub enum Error {
-    #[error("{1}")]
-    Default(#[source] std::io::Error, &'static str),
-
-    #[error("Failed function execution: {0}")]
-    FailedFunction(String),
-
-    #[error("Unable to cast type")]
-    FailedCast,
-
-    #[error("Domain mismatch")]
-    DomainMismatch,
-
-    #[error("Failed to make transformation: {0}")]
-    MakeTransformation(String),
-
-    #[error("Failed to make measurement: {0}")]
-    MakeMeasurement(String),
-
-    #[error("Invalid distance: {0}")]
-    InvalidDistance(String),
-
-    #[error("{0}")]
-    Raw(String),
-
-    #[error("Not Implemented")]
-    NotImplemented,
-}
-impl Error {
-    fn from_debug<E: Debug>(e: E) -> Self {
-        Self::Raw(format!("{:?}", e))
-    }
-}
-pub type Fallible<T> = Result<T, Error>;
+#[macro_use]
+pub mod error;
 
 pub mod core;
 pub mod data;

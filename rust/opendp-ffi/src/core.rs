@@ -1,8 +1,13 @@
+use std::{fmt, ptr};
+use std::ffi::CStr;
+use std::fmt::{Debug, Formatter};
 use std::mem::transmute;
 use std::os::raw::c_char;
 
+use opendp::{err, fallible};
 use opendp::core;
 use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
+use opendp::error::Error;
 
 use crate::util;
 use crate::util::Type;
@@ -24,17 +29,73 @@ impl FfiObject {
         Self::new_typed(type_, value)
     }
 
-    // pub fn into_owned<T>(self) -> T {
-    //     // TODO: Check T against self.type_.
-    //     let value = Box::into_raw(self.value) as *mut T;
-    //     ffi_utils::into_owned(value)
-    // }
-
     pub fn as_ref<T>(&self) -> &T {
         // TODO: Check type.
         let value = self.value.as_ref() as *const () as *const T;
         let value = unsafe { value.as_ref() };
         value.unwrap()
+    }
+}
+
+#[repr(C)]
+pub struct FfiError {
+    pub variant: *mut c_char,
+    pub message: *mut c_char, // MAY BE NULL!
+    pub backtrace: *mut c_char,
+}
+
+impl FfiError {
+    pub fn new(error: Error) -> *mut Self {
+        let ffi_error = FfiError {
+            variant: util::into_c_char_p(format!("{:?}", error.variant)),
+            message: error.message.map_or(ptr::null::<c_char>() as *mut c_char, util::into_c_char_p),
+            backtrace: util::into_c_char_p(format!("{:?}", error.backtrace))
+        };
+        util::into_raw(ffi_error)
+    }
+
+    fn variant_str(&self) -> &str {
+        unsafe { CStr::from_ptr(self.variant).to_str().unwrap_or("Couldn't get variant!") }
+    }
+
+    fn message_str(&self) -> Option<&str> {
+        unsafe { self.message.as_ref().map(|s| CStr::from_ptr(s).to_str().unwrap_or("Couldn't get message!")) }
+    }
+}
+
+impl Drop for FfiError {
+    fn drop(&mut self) {
+        let _variant = util::into_string(self.variant);
+        let _message = unsafe { self.message.as_mut() }.map(|p| util::into_string(p));
+        let _backtrace = util::into_string(self.backtrace);
+    }
+}
+
+// Handy stuff for tests and debugging.
+impl PartialEq for FfiError {
+    fn eq(&self, other: &Self) -> bool {
+        self.variant_str() == other.variant_str() && self.message_str() == other.message_str()
+    }
+}
+
+impl Debug for FfiError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "FfiError: {{ type: {}, message: {:?} }}", self.variant_str(), self.message_str())
+    }
+}
+
+// Using this repr means we'll get a tagged union in C.
+// Because this is a generic, we need to be careful about sizes. Currently, everything that goes in here
+// is a pointer, so we're OK, but we may need to revisit this.
+#[repr(C, u32)]
+pub enum FfiResult<T> {
+    Ok(T),
+    Err(*mut FfiError)
+}
+
+impl<T> FfiResult<T> {
+    pub fn new(result: Result<T, Error>) -> Self {
+        result.map_or_else(|e| Self::Err(FfiError::new(e)), |o| Self::Ok(o))
     }
 }
 
@@ -143,13 +204,21 @@ impl FfiTransformation {
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, arg: *const FfiObject) -> *mut FfiObject {
+pub extern "C" fn opendp_core__error_free(this: *mut FfiError) {
+    util::into_owned(this);
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, arg: *const FfiObject) -> FfiResult<*mut FfiObject> {
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
-    assert_eq!(arg.type_, this.input_glue.domain_carrier);
+    if arg.type_ != this.input_glue.domain_carrier {
+        return FfiResult::new(fallible!(DomainMismatch))
+    }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
-    FfiObject::new_typed(res_type, res)
+    let res = res.map(|o| FfiObject::new_typed(res_type, o));
+    FfiResult::new(res)
 }
 
 #[no_mangle]
@@ -158,13 +227,16 @@ pub extern "C" fn opendp_core__measurement_free(this: *mut FfiMeasurement) {
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformation, arg: *const FfiObject) -> *mut FfiObject {
+pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformation, arg: *const FfiObject) -> FfiResult<*mut FfiObject> {
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
-    assert_eq!(arg.type_, this.input_glue.domain_carrier);
+    if arg.type_ != this.input_glue.domain_carrier {
+        return FfiResult::new(fallible!(DomainMismatch))
+    }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
-    FfiObject::new_typed(res_type, res)
+    let res = res.map(|o| FfiObject::new_typed(res_type, o));
+    FfiResult::new(res)
 }
 
 #[no_mangle]
@@ -173,7 +245,7 @@ pub extern "C" fn opendp_core__transformation_free(this: *mut FfiTransformation)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, transformation0: *mut FfiTransformation) -> *mut FfiMeasurement {
+pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, transformation0: *mut FfiTransformation) -> FfiResult<*mut FfiMeasurement> {
     let transformation0 = util::as_ref(transformation0);
     let measurement1 = util::as_ref(measurement1);
 
@@ -189,8 +261,9 @@ pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, 
         value: value1
     } = measurement1;
 
-    // TODO: handle returning error variant in *mut FfiMeasurement
-    assert_eq!(output_glue0.domain_type, input_glue1.domain_type);
+    if output_glue0.domain_type != input_glue1.domain_type {
+        return FfiResult::new(fallible!(DomainMismatch))
+    }
 
     let measurement = ChainMT::make_chain_mt_glue(
         value1,
@@ -198,36 +271,51 @@ pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, 
         None,
         &input_glue0.metric_glue,
         &output_glue0.metric_glue,
-        &output_glue1.measure_glue)
-        .expect("mt chain failed. TODO: handle returning error variant");
-    FfiMeasurement::new(input_glue0.clone(), output_glue1.clone(), measurement)
+        &output_glue1.measure_glue);
+    let measurement = measurement.map(|o| FfiMeasurement::new(input_glue0.clone(), output_glue1.clone(), o));
+    FfiResult::new(measurement)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_tt(transformation1: *mut FfiTransformation, transformation0: *mut FfiTransformation) -> *mut FfiTransformation {
+pub extern "C" fn opendp_core__make_chain_tt(transformation1: *mut FfiTransformation, transformation0: *mut FfiTransformation) -> FfiResult<*mut FfiTransformation> {
     let transformation0 = util::as_ref(transformation0);
     let transformation1 = util::as_ref(transformation1);
-    assert_eq!(transformation0.output_glue.domain_type, transformation1.input_glue.domain_type);
-    let input_glue = transformation0.input_glue.clone();
-    let x_glue = transformation0.output_glue.clone();
-    let output_glue = transformation1.output_glue.clone();
-    // TODO: Add plumbing for hints from FFI.
+
+    let FfiTransformation {
+        input_glue: input_glue0,
+        output_glue: output_glue0,
+        value: value0
+    } = transformation0;
+
+    let FfiTransformation {
+        input_glue: input_glue1,
+        output_glue: output_glue1,
+        value: value1
+    } = transformation1;
+
+    if output_glue0.domain_type != input_glue1.domain_type {
+        return FfiResult::new(fallible!(DomainMismatch))
+    }
+
     let transformation = ChainTT::make_chain_tt_glue(
-        &transformation1.value,
-        &transformation0.value,
+        value1,
+        value0,
         None,
-        &input_glue.metric_glue,
-        &x_glue.metric_glue,
-        &output_glue.metric_glue
-    ).expect("tt chain failed. TODO: handle returning error variant");
-    FfiTransformation::new(input_glue, output_glue, transformation)
+        &input_glue0.metric_glue,
+        &output_glue0.metric_glue,
+        &output_glue1.metric_glue);
+    let transformation = transformation.map(|o| FfiTransformation::new(input_glue0.clone(), output_glue1.clone(), o));
+    FfiResult::new(transformation)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_composition(measurement0: *mut FfiMeasurement, measurement1: *mut FfiMeasurement) -> *mut FfiMeasurement {
+pub extern "C" fn opendp_core__make_composition(measurement0: *mut FfiMeasurement, measurement1: *mut FfiMeasurement) -> FfiResult<*mut FfiMeasurement> {
+    // TODO: This could stand to be restructured the way make_chain_xx was, but there's other cleanup needed here, can do it then.
     let measurement0 = util::as_ref(measurement0);
     let measurement1 = util::as_ref(measurement1);
-    assert_eq!(measurement0.input_glue.domain_type, measurement1.input_glue.domain_type);
+    if measurement0.input_glue.domain_type != measurement1.input_glue.domain_type {
+        return FfiResult::new(fallible!(DomainMismatch))
+    }
     let input_glue = measurement0.input_glue.clone();
     let output_glue0 = measurement0.output_glue.clone();
     let output_glue1 = measurement1.output_glue.clone();
@@ -242,8 +330,9 @@ pub extern "C" fn opendp_core__make_composition(measurement0: *mut FfiMeasuremen
         &input_glue.metric_glue,
         &output_glue0.measure_glue,
         &output_glue1.measure_glue
-    ).expect("compose failed. TODO: handle returning error variant");
-    FfiMeasurement::new(input_glue, output_glue, measurement)
+    );
+    let measurement = measurement.map(|o| FfiMeasurement::new(input_glue, output_glue, o));
+    FfiResult::new(measurement)
 }
 
 #[no_mangle]
@@ -251,14 +340,50 @@ pub extern "C" fn opendp_core__bootstrap() -> *const c_char {
     let spec =
 r#"{
 "functions": [
-    { "name": "measurement_invoke", "args": [ ["const void *", "this"], ["void *", "arg"] ], "ret": "void *" },
-    { "name": "measurement_free", "args": [ ["void *", "this"] ] },
-    { "name": "transformation_invoke", "args": [ ["const void *", "this"], ["void *", "arg"] ], "ret": "void *" },
-    { "name": "transformation_free", "args": [ ["void *", "this"] ] },
-    { "name": "make_chain_mt", "args": [ ["void *", "measurement"], ["void *", "transformation"] ], "ret": "void *" },
-    { "name": "make_chain_tt", "args": [ ["void *", "transformation1"], ["void *", "transformation0"] ], "ret": "void *" },
-    { "name": "make_composition", "args": [ ["void *", "transformation0"], ["void *", "transformation1"] ], "ret": "void *" }
+    { "name": "error_free", "args": [ ["const FfiError *", "this"] ] },
+    { "name": "measurement_invoke", "args": [ ["const FfiMeasurement *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
+    { "name": "measurement_free", "args": [ ["FfiMeasurement *", "this"] ] },
+    { "name": "transformation_invoke", "args": [ ["const FfiTransformation *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
+    { "name": "transformation_free", "args": [ ["FfiTransformation *", "this"] ] },
+    { "name": "make_chain_mt", "args": [ ["const FfiMeasurement *", "measurement"], ["const FfiTransformation *", "transformation"] ], "ret": "FfiResult<FfiMeasurement *>" },
+    { "name": "make_chain_tt", "args": [ ["const FfiTransformation *", "transformation1"], ["const FfiTransformation *", "transformation0"] ], "ret": "FfiResult<FfiTransformation *>" },
+    { "name": "make_composition", "args": [ ["const FfiMeasurement *", "transformation0"], ["const FfiMeasurement *", "transformation1"] ], "ret": "FfiResult<FfiMeasurement *>" }
 ]
 }"#;
     util::bootstrap(spec)
+}
+
+// UNIT TESTS
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ffi_result_ok() {
+        let res = 999;
+        let res = Ok(res);
+        let ffi_res = FfiResult::new(res);
+        match ffi_res {
+            FfiResult::Ok(ok) => assert_eq!(999, ok),
+            FfiResult::Err(_) => assert!(false, "Got Err!"),
+        }
+    }
+
+    #[test]
+    fn test_ffi_result_err() {
+        let res: Result<(), _> = fallible!(FailedFunction, "Eat my shorts!");
+        let ffi_res = FfiResult::new(res);
+        match ffi_res {
+            FfiResult::Ok(_) => assert!(false, "Got Ok!"),
+            FfiResult::Err(err) => assert_eq!(
+                FfiError {
+                    variant: util::into_c_char_p("FailedFunction".to_owned()),
+                    message: util::into_c_char_p("Eat my shorts!".to_owned()),
+                    backtrace: util::into_c_char_p("".to_owned()),
+                },
+                util::into_owned(err)
+            )
+        }
+    }
+
 }

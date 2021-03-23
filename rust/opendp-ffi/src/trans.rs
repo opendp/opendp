@@ -165,19 +165,19 @@ pub extern "C" fn opendp_trans__bootstrap() -> *const c_char {
     let spec =
 r#"{
 "functions": [
-    { "name": "make_identity", "ret": "void *" },
-    { "name": "make_split_lines", "ret": "void *" },
-    { "name": "make_parse_series", "args": [ ["const char *", "selector"], ["bool", "impute"] ], "ret": "void *" },
-    { "name": "make_split_records", "args": [ ["const char *", "separator"] ], "ret": "void *" },
-    { "name": "make_create_dataframe", "args": [ ["unsigned int", "col_count"] ], "ret": "void *" },
-    { "name": "make_split_dataframe", "args": [ ["const char *", "separator"], ["unsigned int", "col_count"] ], "ret": "void *" },
-    { "name": "make_parse_column", "args": [ ["const char *", "selector"], ["void *", "key"], ["bool", "impute"] ], "ret": "void *" },
-    { "name": "make_select_column", "args": [ ["const char *", "selector"], ["void *", "key"] ], "ret": "void *" },
-    { "name": "make_clamp", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },
-    { "name": "make_bounded_sum_l1", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },
-    { "name": "make_bounded_sum_l2", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "void *" },
-    { "name": "make_count_l1", "args": [ ["const char *", "selector"] ], "ret": "void *" },
-    { "name": "make_count_l2", "args": [ ["const char *", "selector"] ], "ret": "void *" }
+    { "name": "make_identity", "ret": "FfiTransformation *" },
+    { "name": "make_split_lines", "ret": "FfiTransformation *" },
+    { "name": "make_parse_series", "args": [ ["const char *", "selector"], ["bool", "impute"] ], "ret": "FfiTransformation *" },
+    { "name": "make_split_records", "args": [ ["const char *", "separator"] ], "ret": "FfiTransformation *" },
+    { "name": "make_create_dataframe", "args": [ ["unsigned int", "col_count"] ], "ret": "FfiTransformation *" },
+    { "name": "make_split_dataframe", "args": [ ["const char *", "separator"], ["unsigned int", "col_count"] ], "ret": "FfiTransformation *" },
+    { "name": "make_parse_column", "args": [ ["const char *", "selector"], ["void *", "key"], ["bool", "impute"] ], "ret": "FfiTransformation *" },
+    { "name": "make_select_column", "args": [ ["const char *", "selector"], ["void *", "key"] ], "ret": "FfiTransformation *" },
+    { "name": "make_clamp", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiTransformation *" },
+    { "name": "make_bounded_sum_l1", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiTransformation *" },
+    { "name": "make_bounded_sum_l2", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count_l1", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count_l2", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" }
 ]
 }"#;
     util::bootstrap(spec)

@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use std::fmt::Debug;
-use crate::{Error, Fallible};
+use crate::error::Fallible;
 
 pub trait IsVec: Debug {
     // Not sure if we need into_any() (which consumes the Form), keeping it for now.
@@ -37,11 +37,11 @@ impl Column {
     }
     pub fn as_form<T: 'static + IsVec>(&self) -> Fallible<&T> {
         self.0.as_any().downcast_ref::<T>()
-            .ok_or(Error::FailedCast)
+            .ok_or_else(|| err!(FailedCast))
     }
     pub fn into_form<T: 'static + IsVec>(self) -> Fallible<T> {
         self.0.into_any().downcast::<T>()
-            .map_err(|_e| Error::FailedCast)
+            .map_err(|_e| err!(FailedCast))
             .map(|v| *v)
     }
 }

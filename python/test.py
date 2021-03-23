@@ -16,19 +16,19 @@ def main():
     ### SUMMARY STATS
     # Parse dataframe
     split_dataframe = odp.trans.make_split_dataframe(b",", 3)
-    parse_column_1 = odp.trans.make_parse_column(b"<i32, i32>", odp.i32_p(1), True)
-    parse_column_2 = odp.trans.make_parse_column(b"<i32, f64>", odp.i32_p(2), True)
+    parse_column_1 = odp.trans.make_parse_column(b"<i32, i32>", opendp.i32_p(1), True)
+    parse_column_2 = odp.trans.make_parse_column(b"<i32, f64>", opendp.i32_p(2), True)
     parse_dataframe = odp.make_chain_tt_multi(parse_column_2, parse_column_1, split_dataframe)
 
     # Noisy sum, col 1
-    select_1 = odp.trans.make_select_column(b"<i32, i32>", odp.i32_p(1))
-    clamp_1 = odp.trans.make_clamp(b"<i32>", odp.i32_p(0), odp.i32_p(10))
-    bounded_sum_1 = odp.trans.make_bounded_sum_l1(b"<i32>", odp.i32_p(0), odp.i32_p(10))
+    select_1 = odp.trans.make_select_column(b"<i32, i32>", opendp.i32_p(1))
+    clamp_1 = odp.trans.make_clamp(b"<i32>", opendp.i32_p(0), opendp.i32_p(10))
+    bounded_sum_1 = odp.trans.make_bounded_sum_l1(b"<i32>", opendp.i32_p(0), opendp.i32_p(10))
     base_laplace_1 = odp.meas.make_base_laplace(b"<i32>", 1.0)
     noisy_sum_1 = odp.core.make_chain_mt(base_laplace_1, odp.make_chain_tt_multi(bounded_sum_1, clamp_1, select_1))
 
     # Count, col 1
-    select_2 = odp.trans.make_select_column(b"<i32, f64>", odp.i32_p(2))
+    select_2 = odp.trans.make_select_column(b"<i32, f64>", opendp.i32_p(2))
     count_2 = odp.trans.make_count_l2(b"<f64>")
     base_laplace_2 = odp.meas.make_base_laplace(b"<u32>", 1.0)
     noisy_count_2 = odp.core.make_chain_mt(base_laplace_2, odp.make_chain_tt_multi(count_2, select_2))

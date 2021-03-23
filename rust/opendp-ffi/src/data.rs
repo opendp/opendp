@@ -44,9 +44,9 @@ pub extern "C" fn opendp_data__bootstrap() -> *const c_char {
     let spec =
 r#"{
 "functions": [
-    { "name": "from_string", "args": [ ["const char *", "s"] ], "ret": "void *" },
-    { "name": "to_string", "args": [ ["void *", "this"] ], "ret": "const char *" },
-    { "name": "data_free", "args": [ ["void *", "this"] ] }
+    { "name": "from_string", "args": [ ["const char *", "s"] ], "ret": "FfiObject *" },
+    { "name": "to_string", "args": [ ["const FfiObject *", "this"] ], "ret": "const char *" },
+    { "name": "data_free", "args": [ ["FfiObject *", "this"] ] }
 ]
 }"#;
     util::bootstrap(spec)

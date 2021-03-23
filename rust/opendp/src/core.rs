@@ -20,7 +20,7 @@
 use std::ops::{Div, Mul};
 use std::rc::Rc;
 
-use crate::{Error, Fallible};
+use crate::error::Fallible;
 use crate::dom::{BoxDomain, PairDomain};
 use crate::meas::MakeMeasurement2;
 use crate::traits::DistanceCast;
@@ -54,8 +54,8 @@ impl<DI: Domain, DO: Domain> Function<DI, DO> {
         (self.function)(arg).map(|v| *v)
     }
 
-    pub fn eval_ffi(&self, arg: &DI::Carrier) -> Box<DO::Carrier> {
-        (self.function)(arg).unwrap()
+    pub fn eval_ffi(&self, arg: &DI::Carrier) -> Fallible<Box<DO::Carrier>> {
+        (self.function)(arg)
     }
 }
 
@@ -488,7 +488,7 @@ impl ChainMT {
                     &transformation0.stability_relation, hint)
             })
         } else {
-            Err(Error::DomainMismatch)
+            fallible!(DomainMismatch)
         }
     }
 }
@@ -538,7 +538,7 @@ impl ChainTT {
                     &transformation0.stability_relation, hint)
             })
         } else {
-            Err(Error::DomainMismatch)
+            fallible!(DomainMismatch)
         }
     }
 }
@@ -603,7 +603,7 @@ pub fn make_composition_glue<DI, DO0, DO1, MI, MO>(
             privacy_relation: PrivacyRelation::new(|_i, _o| false)
         })
     } else {
-        Err(Error::DomainMismatch)
+        fallible!(DomainMismatch)
     }
 }
 

@@ -5,7 +5,7 @@ use std::iter::repeat;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use crate::{Error, Fallible};
+use crate::error::Fallible;
 use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation};
 use crate::data::Column;
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
@@ -99,7 +99,7 @@ pub struct ParseColumn<M, T> {
 fn replace_col<K: Eq + Hash + Debug + Clone>(key: &K, df: &DataFrame<K>, col: Column) -> Fallible<DataFrame<K>> {
     let mut df = df.clone();
     *df.get_mut(key)
-        .ok_or_else(|| Error::FailedFunction(format!("column does not exist: {:?}", key)))? = col;
+        .ok_or_else(|| err!(FailedFunction, "column does not exist: {:?}", key))? = col;
     Ok(df)
 }
 
@@ -108,7 +108,7 @@ fn parse_column<K, T>(key: &K, impute: bool, df: &DataFrame<K>) -> Fallible<Data
           K: Eq + Hash + Clone + Debug,
           T::Err: Debug {
     let col = df.get(key)
-        .ok_or_else(|| Error::FailedFunction(format!("column does not exist: {:?}", key)))?
+        .ok_or_else(|| err!(FailedFunction, "column does not exist: {:?}", key))?
         .as_form()?;
     let col = vec_string_to_str(col);
     let col = parse_series::<T>(&col, impute)?;
@@ -147,7 +147,7 @@ impl<M, K, T> MakeTransformation1<DataFrameDomain<K>, VectorDomain<AllDomain<T>>
             VectorDomain::new_all(),
             Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<T>> {
                 // retrieve column from dataframe and handle error
-                arg.get(&key).ok_or_else(|| Error::FailedFunction(format!("column does not exist: {:?}", key)))?
+                arg.get(&key).ok_or_else(|| err!(FailedFunction, "column does not exist: {:?}", key))?
                     // cast down to &Vec<T>
                     .as_form::<Vec<T>>().map(|c| c.clone())
             }),
@@ -200,7 +200,7 @@ fn parse_series<T>(col: &Vec<&str>, default_on_error: bool) -> Fallible<Vec<T>> 
     if default_on_error {
         Ok(col.into_iter().map(|v| v.parse().unwrap_or_default()).collect())
     } else {
-        col.into_iter().map(|v| v.parse().map_err(Error::from_debug)).collect()
+        col.into_iter().map(|v| v.parse().map_err(|e| err!(FailedCast, "{:?}", e))).collect()
     }
 }
 
