@@ -10,7 +10,6 @@ use std::ops::{Bound, Div, Mul, Sub};
 
 use num::{One, Signed};
 
-use crate::{Error, Fallible};
 use crate::core::{DatasetMetric, Domain, Function, Metric, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
@@ -105,30 +104,28 @@ pub struct BoundedSum<MI, MO, T> {
     data: PhantomData<T>,
 }
 
-// TODO: this is kind of ugly and should bubble results
-fn max<T: PartialOrd>(a: T, b: T) -> T {
-    match a.partial_cmp(&b) {
-        Some(Ordering::Less) => b,
-        _ => a
-    }
+fn max<T: PartialOrd>(a: T, b: T) -> Option<T> {
+    a.partial_cmp(&b).map(|o| if let Ordering::Less = o {b} else {a})
 }
 
 pub trait BoundedSumStability<MI: Metric, MO: Metric, T> {
-    fn get_stability(lower: MO::Distance, upper: MO::Distance) -> StabilityRelation<MI, MO>;
+    fn get_stability(lower: MO::Distance, upper: MO::Distance) -> Fallible<StabilityRelation<MI, MO>>;
 }
 
 impl<MO, T> BoundedSumStability<HammingDistance, MO, T> for BoundedSum<HammingDistance, MO, T>
     where MO: Metric<Distance=T>,
           T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast {
-    fn get_stability(lower: T, upper: T) -> StabilityRelation<HammingDistance, MO> {
-        StabilityRelation::new_from_constant(upper - lower)
+    fn get_stability(lower: T, upper: T) -> Fallible<StabilityRelation<HammingDistance, MO>> {
+        Ok(StabilityRelation::new_from_constant(upper - lower))
     }
 }
 impl<MO, T> BoundedSumStability<SymmetricDistance, MO, T> for BoundedSum<SymmetricDistance, MO, T>
     where MO: Metric<Distance=T>,
           T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Signed {
-    fn get_stability(lower: T, upper: T) -> StabilityRelation<SymmetricDistance, MO> {
-        StabilityRelation::new_from_constant(max(num::abs(lower), num::abs(upper)))
+    fn get_stability(lower: T, upper: T) -> Fallible<StabilityRelation<SymmetricDistance, MO>> {
+        max(num::abs(lower), num::abs(upper))
+            .ok_or_else(|| err!(InvalidDistance, "lower and upper must be comparable"))
+            .map(StabilityRelation::new_from_constant)
     }
 }
 
@@ -146,15 +143,15 @@ impl<MI, MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T
             Function::new(|arg: &Vec<T>| arg.iter().cloned().sum()),
             MI::new(),
             MO::new(),
-            Self::get_stability(lower, upper)))
+            Self::get_stability(lower, upper)?))
     }
 }
 
-impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO, usize, T, T> for BoundedSum<SymmetricDistance, MO, T>
+impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO, T, T, usize> for BoundedSum<SymmetricDistance, MO, T>
     where MO: SensitivityMetric<Distance=T>,
           T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
           SymmetricDistance: Metric<Distance=u32> {
-    fn make3(length: usize, lower: T, upper: T) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO>> {
+    fn make3(lower: T, upper: T, length: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO>> {
         if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
         Ok(Transformation::new(
