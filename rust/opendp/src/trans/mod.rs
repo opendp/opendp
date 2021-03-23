@@ -8,13 +8,13 @@ use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Bound, Div, Mul, Sub};
 
-use num::{One, Signed};
+use num::One;
 
 use crate::core::{DatasetMetric, Domain, Function, Metric, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::DistanceCast;
+use crate::traits::{DistanceCast, Abs};
 pub use crate::trans::dataframe::*;
 use std::convert::TryFrom;
 
@@ -122,9 +122,9 @@ impl<MO, T> BoundedSumStability<HammingDistance, MO, T> for BoundedSum<HammingDi
 }
 impl<MO, T> BoundedSumStability<SymmetricDistance, MO, T> for BoundedSum<SymmetricDistance, MO, T>
     where MO: Metric<Distance=T>,
-          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Signed {
+          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Abs {
     fn get_stability(lower: T, upper: T) -> Fallible<StabilityRelation<SymmetricDistance, MO>> {
-        max(num::abs(lower), num::abs(upper))
+        max(lower.abs(), upper.abs())
             .ok_or_else(|| err!(InvalidDistance, "lower and upper must be comparable"))
             .map(StabilityRelation::new_from_constant)
     }

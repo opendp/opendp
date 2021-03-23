@@ -13,10 +13,9 @@ use crate::util;
 use crate::util::{c_bool};
 use crate::util::TypeArgs;
 use std::ops::{Sub, Mul, Div};
-use opendp::traits::DistanceCast;
+use opendp::traits::{DistanceCast, Abs};
 use std::hash::Hash;
 use opendp::core::{DatasetMetric, SensitivityMetric};
-use num::Signed;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> *mut FfiTransformation {
@@ -137,7 +136,7 @@ pub extern "C" fn opendp_trans__make_clamp(type_args: *const c_char, lower: *con
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> *mut FfiTransformation {
     fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void) -> *mut FfiTransformation
-        where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Signed {
+        where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Abs {
 
         fn monomorphize2<MI, MO, T>(lower: T, upper: T) -> *mut FfiTransformation
             where MI: 'static + DatasetMetric<Distance=u32>,
@@ -156,14 +155,14 @@ pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower
         ], (lower, upper))
     }
     let type_args = TypeArgs::expect(type_args, 3);
-    dispatch!(monomorphize, [(type_args.0[2], @signed_numbers)], (type_args, lower, upper))
+    dispatch!(monomorphize, [(type_args.0[2], @numbers)], (type_args, lower, upper))
 }
 
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, lower: *const c_void, upper: *const c_void, n: c_uint) -> *mut FfiTransformation {
     fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void, n: usize) -> *mut FfiTransformation
-        where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Signed {
+        where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Abs {
 
         fn monomorphize2<MO, T>(lower: T, upper: T, n: usize) -> *mut FfiTransformation
             where MO: 'static + SensitivityMetric<Distance=T>,
@@ -180,7 +179,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, low
     }
     let n = n as usize;
     let type_args = TypeArgs::expect(type_args, 2);
-    dispatch!(monomorphize, [(type_args.0[1], @signed_numbers)], (type_args, lower, upper, n))
+    dispatch!(monomorphize, [(type_args.0[1], @numbers)], (type_args, lower, upper, n))
 }
 
 
