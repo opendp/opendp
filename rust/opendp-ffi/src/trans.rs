@@ -3,7 +3,7 @@ use std::iter::Sum;
 use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
-use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2};
+use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, BoundedSum, BoundedSumStability};
 use opendp::dist::{HammingDistance, SymmetricDistance, L1Sensitivity, L2Sensitivity};
 use opendp::dom::AllDomain;
 use opendp::trans;
@@ -137,51 +137,25 @@ pub extern "C" fn opendp_trans__make_clamp(type_args: *const c_char, lower: *con
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_bounded_sum_borked(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> *mut FfiTransformation {
-
+pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> *mut FfiTransformation {
     fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void) -> *mut FfiTransformation
         where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Signed {
-        fn monomorphize2<T2, MI, MO>(lower: T2, upper: T2) -> *mut FfiTransformation
-            where T2: 'static + Copy + PartialOrd + Sub<Output=T2> + Mul<Output=T2> + Div<Output=T2> + Sum<T2> + DistanceCast + Signed,
-                  MI: 'static + DatasetMetric<Distance=u32> + Clone,
-                  MO: 'static + SensitivityMetric<Distance=T2> + Clone {
-            let transformation = trans::BoundedSum::<MI, MO, T2>::make2(lower, upper).unwrap();
+
+        fn monomorphize2<MI, MO, T>(lower: T, upper: T) -> *mut FfiTransformation
+            where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
+                  MI: 'static + DatasetMetric<Distance=u32>,
+                  MO: 'static + SensitivityMetric<Distance=T>,
+                  BoundedSum<MI, MO, T>: BoundedSumStability<MI, MO, T> {
+            let transformation = trans::BoundedSum::<MI, MO, T>::make(lower, upper).unwrap();
             FfiTransformation::new_from_types(transformation)
         }
         let lower = util::as_ref(lower as *const T).clone();
         let upper = util::as_ref(upper as *const T).clone();
-        dispatch!(monomorphize2, [(type_args.0[0], [T]), (type_args.0[1], [SymmetricDistance, HammingDistance]), (type_args.0[2], [L1Sensitivity<T>, L2Sensitivity<T>])], (lower, upper))
-    }
-    let type_args = TypeArgs::expect(type_args, 3);
-    dispatch!(monomorphize, [(type_args.0[0], @signed_numbers)], (type_args, lower, upper))
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> *mut FfiTransformation {
-
-    fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void) -> *mut FfiTransformation
-        where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Signed {
-
-        let lower = util::as_ref(lower as *const T).clone();
-        let upper = util::as_ref(upper as *const T).clone();
-
-        match (type_args.0[1]).id {
-            x   if x == std::any::TypeId::of::<SymmetricDistance>() => match (type_args.0[2]).id {
-                x   if x == std::any::TypeId::of::<L1Sensitivity<T>>() =>
-                    FfiTransformation::new_from_types(trans::BoundedSum::<SymmetricDistance, L1Sensitivity<T>, T>::make2(lower, upper).unwrap()),
-                x   if x == std::any::TypeId::of::<L2Sensitivity<T>>() =>
-                    FfiTransformation::new_from_types(trans::BoundedSum::<SymmetricDistance, L2Sensitivity<T>, T>::make2(lower, upper).unwrap()),
-                _ => unreachable!()
-            },
-            x   if x == std::any::TypeId::of::<HammingDistance>() => match (type_args.0[2]).id {
-                x   if x == std::any::TypeId::of::<L1Sensitivity<T>>() =>
-                    FfiTransformation::new_from_types(trans::BoundedSum::<HammingDistance, L1Sensitivity<T>, T>::make2(lower, upper).unwrap()),
-                x   if x == std::any::TypeId::of::<L2Sensitivity<T>>() =>
-                    FfiTransformation::new_from_types(trans::BoundedSum::<HammingDistance, L2Sensitivity<T>, T>::make2(lower, upper).unwrap()),
-                _ => unreachable!()
-            },
-            _ => unreachable!()
-        }
+        dispatch!(monomorphize2, [
+            (type_args.0[1], [HammingDistance, SymmetricDistance]),
+            (type_args.0[2], [L1Sensitivity<T>, L2Sensitivity<T>]),
+            (type_args.0[0], [T])
+        ], (lower, upper))
     }
     let type_args = TypeArgs::expect(type_args, 3);
     dispatch!(monomorphize, [(type_args.0[0], @signed_numbers)], (type_args, lower, upper))
