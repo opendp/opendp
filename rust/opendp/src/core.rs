@@ -20,7 +20,7 @@
 use std::ops::{Div, Mul};
 use std::rc::Rc;
 
-use crate::{Error, Fallible};
+use crate::error::Fallible;
 use crate::dom::{BoxDomain, PairDomain};
 use crate::meas::MakeMeasurement2;
 use crate::traits::DistanceCast;
@@ -488,7 +488,7 @@ impl ChainMT {
                     &transformation0.stability_relation, hint)
             })
         } else {
-            Err(Error::DomainMismatch.into())
+            fallible!(DomainMismatch)
         }
     }
 }
@@ -538,7 +538,7 @@ impl ChainTT {
                     &transformation0.stability_relation, hint)
             })
         } else {
-            Err(Error::DomainMismatch.into())
+            fallible!(DomainMismatch)
         }
     }
 }
@@ -603,7 +603,7 @@ pub fn make_composition_glue<DI, DO0, DO1, MI, MO>(
             privacy_relation: PrivacyRelation::new(|_i, _o| false)
         })
     } else {
-        Err(Error::DomainMismatch.into())
+        fallible!(DomainMismatch)
     }
 }
 

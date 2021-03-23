@@ -13,7 +13,7 @@ use num::{One, Signed};
 use crate::core::{DatasetMetric, Domain, Metric, SensitivityMetric, StabilityRelation, Transformation, Function};
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
-use crate::{Error, Fallible};
+use crate::error::Fallible;
 use crate::traits::DistanceCast;
 pub use crate::trans::dataframe::*;
 
@@ -117,7 +117,7 @@ impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, H
           HammingDistance: Metric<Distance=u32>,
           MO: SensitivityMetric<Distance=T> {
     fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, HammingDistance, MO>> {
-        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string()).into()) }
+        if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
         Ok(Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
@@ -135,7 +135,7 @@ impl<MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, S
           MO::Distance: Clone + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd, {
     // Question- how to set the associated type for a trait that a concrete type is using
     fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, MO>> {
-        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string()).into()) }
+        if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
         Ok(Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
@@ -153,7 +153,7 @@ impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, Al
           MO: SensitivityMetric<Distance=T>,
           SymmetricDistance: Metric<Distance=u32> {
     fn make3(length: usize, lower: T, upper: T) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO>> {
-        if lower > upper { return Err(Error::MakeTransformation("lower bound may not be greater than upper bound".to_string()).into()) }
+        if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
         Ok(Transformation::new(
             SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),

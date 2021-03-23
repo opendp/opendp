@@ -4,8 +4,10 @@ use std::fmt::{Debug, Formatter};
 use std::mem::transmute;
 use std::os::raw::c_char;
 
-use opendp::{core, Error, ErrorBase};
+use opendp::{err, fallible};
+use opendp::core;
 use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
+use opendp::error::Error;
 
 use crate::util;
 use crate::util::Type;
@@ -43,22 +45,11 @@ pub struct FfiError {
 }
 
 impl FfiError {
-    pub fn new(error: ErrorBase) -> *mut Self {
-        fn substring(s: &str, start: usize, end: usize) -> String {
-            assert!(end >= start);
-            let len = end - start;
-            s.chars().skip(start).take(len).collect()
-        }
-        let error_string = format!("{:?}", error.error);
-        let type_message = error_string.find("(").map_or_else(
-            || (error_string.clone(), None),
-            |i| (substring(&error_string, 0, i), Some(substring(&error_string, i + 2, error_string.len() - 2)))
-        );
-        let backtrace = format!("{:?}", error.backtrace);
+    pub fn new(error: Error) -> *mut Self {
         let ffi_error = FfiError {
-            variant: util::into_c_char_p(type_message.0),
-            message: type_message.1.map_or(ptr::null::<c_char>() as *mut c_char, util::into_c_char_p),
-            backtrace: util::into_c_char_p(backtrace)
+            variant: util::into_c_char_p(format!("{:?}", error.variant)),
+            message: error.message.map_or(ptr::null::<c_char>() as *mut c_char, util::into_c_char_p),
+            backtrace: util::into_c_char_p(format!("{:?}", error.backtrace))
         };
         util::into_raw(ffi_error)
     }
@@ -103,7 +94,7 @@ pub enum FfiResult<T> {
 }
 
 impl<T> FfiResult<T> {
-    pub fn new(result: Result<T, ErrorBase>) -> Self {
+    pub fn new(result: Result<T, Error>) -> Self {
         result.map_or_else(|e| Self::Err(FfiError::new(e)), |o| Self::Ok(o))
     }
 }
@@ -222,7 +213,7 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, a
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
     if arg.type_ != this.input_glue.domain_carrier {
-        return FfiResult::new(Err(Error::DomainMismatch.into()))
+        return FfiResult::new(fallible!(DomainMismatch))
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
@@ -240,7 +231,7 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformat
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
     if arg.type_ != this.input_glue.domain_carrier {
-        return FfiResult::new(Err(Error::DomainMismatch.into()))
+        return FfiResult::new(fallible!(DomainMismatch))
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
@@ -271,7 +262,7 @@ pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, 
     } = measurement1;
 
     if output_glue0.domain_type != input_glue1.domain_type {
-        return FfiResult::new(Err(Error::DomainMismatch.into()))
+        return FfiResult::new(fallible!(DomainMismatch))
     }
 
     let measurement = ChainMT::make_chain_mt_glue(
@@ -303,7 +294,7 @@ pub extern "C" fn opendp_core__make_chain_tt(transformation1: *mut FfiTransforma
     } = transformation1;
 
     if output_glue0.domain_type != input_glue1.domain_type {
-        return FfiResult::new(Err(Error::DomainMismatch.into()))
+        return FfiResult::new(fallible!(DomainMismatch))
     }
 
     let transformation = ChainTT::make_chain_tt_glue(
@@ -323,7 +314,7 @@ pub extern "C" fn opendp_core__make_composition(measurement0: *mut FfiMeasuremen
     let measurement0 = util::as_ref(measurement0);
     let measurement1 = util::as_ref(measurement1);
     if measurement0.input_glue.domain_type != measurement1.input_glue.domain_type {
-        return FfiResult::new(Err(Error::DomainMismatch.into()))
+        return FfiResult::new(fallible!(DomainMismatch))
     }
     let input_glue = measurement0.input_glue.clone();
     let output_glue0 = measurement0.output_glue.clone();
@@ -380,8 +371,7 @@ mod tests {
 
     #[test]
     fn test_ffi_result_err() {
-        let error = Error::FailedFunction("Eat my shorts!".to_owned());
-        let res: Result<(), _> = Err(error.into());
+        let res: Result<(), _> = fallible!(FailedFunction, "Eat my shorts!");
         let ffi_res = FfiResult::new(res);
         match ffi_res {
             FfiResult::Ok(_) => assert!(false, "Got Ok!"),

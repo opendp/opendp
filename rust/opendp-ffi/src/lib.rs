@@ -87,6 +87,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+// internal module for err! macro resolution
+mod error { pub use opendp::error::{Error, ErrorVariant}; }
+
 #[macro_use]
 mod dispatch;
 
