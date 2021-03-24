@@ -8,12 +8,14 @@ use crate::dom::{AllDomain, VectorDomain};
 use crate::meas::{MakeMeasurement1, sample_laplace};
 use crate::{Fallible, Error};
 
-pub struct LaplaceMechanism<T> {
+/// Univariate noise addition for the Laplace Mechanism
+/// [Accompanying Proof](https://www.overleaf.com/read/brvrprjhrhwb)
+pub struct BaseLaplace<T> {
     data: PhantomData<T>
 }
 
 // laplace for scalar-valued query
-impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism<T>
+impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for BaseLaplace<T>
     where T: Copy + NumCast {
     fn make1(sigma: f64) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence>> {
         Ok(Measurement::new(
@@ -29,12 +31,14 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDive
     }
 }
 
-pub struct VectorLaplaceMechanism<T> {
+/// Multivariate noise addition for the Laplace Mechanism.
+/// [Accompanying Proof](https://www.overleaf.com/read/brvrprjhrhwb)
+pub struct BaseVectorLaplace<T> {
     data: PhantomData<T>
 }
 
 // laplace for vector-valued query
-impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for VectorLaplaceMechanism<T>
+impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for BaseVectorLaplace<T>
     where T: Copy + NumCast {
     fn make1(sigma: f64) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence>> {
         Ok(Measurement::new(
@@ -60,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() {
-        let measurement = LaplaceMechanism::<f64>::make(1.0);
+        let measurement = BaseLaplace::<f64>::make(1.0);
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg);
 
@@ -69,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_make_vector_laplace_mechanism() {
-        let measurement = VectorLaplaceMechanism::<f64>::make(1.0);
+        let measurement = BaseVectorLaplace::<f64>::make(1.0);
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.function.eval(&arg);
 

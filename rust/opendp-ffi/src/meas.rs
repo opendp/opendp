@@ -4,7 +4,7 @@ use num::NumCast;
 
 use opendp::meas::{MakeMeasurement1};
 use opendp::meas::gaussian::GaussianMechanism;
-use opendp::meas::laplace::{VectorLaplaceMechanism, LaplaceMechanism};
+use opendp::meas::laplace::{BaseVectorLaplace, BaseLaplace};
 
 use crate::core::FfiMeasurement;
 use crate::util;
@@ -14,7 +14,7 @@ use crate::util::TypeArgs;
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, sigma: f64) -> *mut FfiMeasurement {
     fn monomorphize<T>(sigma: f64) -> *mut FfiMeasurement where
         T: 'static + Copy + NumCast {
-        let measurement = LaplaceMechanism::<T>::make(sigma).unwrap();
+        let measurement = BaseLaplace::<T>::make(sigma).unwrap();
         FfiMeasurement::new_from_types(measurement)
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -25,7 +25,7 @@ pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, sigma
 pub extern "C" fn opendp_meas__make_base_laplace_vec(type_args: *const c_char, sigma: f64) -> *mut FfiMeasurement {
     fn monomorphize<T>(sigma: f64) -> *mut FfiMeasurement where
         T: 'static + Copy + NumCast {
-        let measurement = VectorLaplaceMechanism::<T>::make(sigma).unwrap();
+        let measurement = BaseVectorLaplace::<T>::make(sigma).unwrap();
         FfiMeasurement::new_from_types(measurement)
     }
     let type_args = TypeArgs::expect(type_args, 1);
