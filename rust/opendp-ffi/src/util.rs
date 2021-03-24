@@ -5,6 +5,7 @@ use std::convert::{TryFrom, TryInto};
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::c_char;
+use opendp::dist::{SymmetricDistance, HammingDistance, L1Sensitivity, L2Sensitivity};
 
 #[derive(Debug)]
 pub struct TypeError;
@@ -51,7 +52,9 @@ macro_rules! descriptor_types {
 lazy_static! {
     static ref DESCRIPTOR_TO_TYPE: HashMap<String, Type> = {
         descriptor_types![
-            bool, char, u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, String
+            bool, char, u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, String, HammingDistance, SymmetricDistance,
+            L1Sensitivity<u8>, L1Sensitivity<u16>, L1Sensitivity<u32>, L1Sensitivity<u64>, L1Sensitivity<f32>, L1Sensitivity<f64>, L1Sensitivity<i32>, L1Sensitivity<i64>,
+            L2Sensitivity<u8>, L2Sensitivity<u16>, L2Sensitivity<u32>, L2Sensitivity<u64>, L2Sensitivity<f32>, L2Sensitivity<f64>, L2Sensitivity<i32>, L2Sensitivity<i64>
         ].into_iter().map(|e| (e.descriptor.to_owned(), e)).collect()
     };
 }

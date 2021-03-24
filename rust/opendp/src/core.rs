@@ -17,6 +17,9 @@
 // *I: Input
 // *O: Output
 
+// Ordering of generic arguments
+// DI, DO, MI, MO, TI, TO, QI, QO
+
 use std::ops::{Div, Mul};
 use std::rc::Rc;
 
