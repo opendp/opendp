@@ -49,7 +49,10 @@ pub trait MakeMeasurement4<DI: Domain, DO: Domain, MI: Metric, MO: Measure, P1, 
     fn make4(param1: P1, param2: P2, param3: P3, param4: P4) -> Fallible<crate::core::Measurement<DI, DO, MI, MO>>;
 }
 
-pub struct LaplaceMechanism<T> {
+
+/// Univariate noise addition for the Laplace Mechanism
+/// [Accompanying Proof](https://www.overleaf.com/read/brvrprjhrhwb)
+pub struct BaseLaplace<T> {
     data: PhantomData<T>
 }
 
@@ -60,7 +63,7 @@ fn laplace(sigma: f64) -> f64 {
 }
 
 // laplace for scalar-valued query
-impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism<T>
+impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for BaseLaplace<T>
     where T: Copy + NumCast {
     fn make1(sigma: f64) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence>> {
         Ok(Measurement::new(
@@ -75,12 +78,14 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDive
     }
 }
 
-pub struct VectorLaplaceMechanism<T> {
+/// Univariate noise addition for the Laplace Mechanism
+/// [Accompanying Proof](https://www.overleaf.com/read/brvrprjhrhwb)
+pub struct BaseVectorLaplace<T> {
     data: PhantomData<T>
 }
 
 // laplace for vector-valued query
-impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for VectorLaplaceMechanism<T>
+impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for BaseVectorLaplace<T>
     where T: Copy + NumCast {
     fn make1(sigma: f64) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence>> {
         Ok(Measurement::new(
@@ -97,12 +102,12 @@ impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>,
     }
 }
 
-pub struct GaussianMechanism<T> {
+pub struct BaseGaussian<T> {
     data: PhantomData<T>
 }
 
 // gaussian for scalar-valued query
-impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence, f64> for GaussianMechanism<T>
+impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence, f64> for BaseGaussian<T>
     where T: Copy + NumCast {
     fn make1(sigma: f64) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<f64>, SmoothedMaxDivergence>> {
         Ok(Measurement::new(
@@ -136,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() {
-        let measurement = LaplaceMechanism::<f64>::make(1.0).unwrap();
+        let measurement = BaseLaplace::<f64>::make(1.0).unwrap();
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg);
 
@@ -145,7 +150,7 @@ mod tests {
 
     #[test]
     fn test_make_vector_laplace_mechanism() {
-        let measurement = VectorLaplaceMechanism::<f64>::make(1.0).unwrap();
+        let measurement = BaseVectorLaplace::<f64>::make(1.0).unwrap();
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.function.eval(&arg);
 
@@ -154,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_mechanism() {
-        let measurement = GaussianMechanism::<f64>::make(1.0).unwrap();
+        let measurement = BaseGaussian::<f64>::make(1.0).unwrap();
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg);
 
@@ -163,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_error() {
-        let measurement = GaussianMechanism::<f64>::make(1.0).unwrap();
+        let measurement = BaseGaussian::<f64>::make(1.0).unwrap();
         let error = measurement.privacy_relation.eval(&-0.1, &(0.5, 0.00001)).unwrap_err();
         let _backtrace = format!("{:?}", error.backtrace);
     }
