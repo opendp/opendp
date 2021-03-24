@@ -41,7 +41,7 @@
 //! use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3};
 //! use opendp::dist::{HammingDistance, L1Sensitivity};
 //! use opendp::core::{ChainTT, ChainMT};
-//! use opendp::meas::{MakeMeasurement2, LaplaceMechanism, MakeMeasurement1};
+//! use opendp::meas::{MakeMeasurement2, BaseLaplace, MakeMeasurement1};
 //!
 //! pub fn example() {
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
@@ -57,7 +57,7 @@
 //!     // Construct a Measurement to calculate a noisy sum.
 //!     let clamp = trans::Clamp::make(bounds.0, bounds.1).unwrap();
 //!     let bounded_sum = trans::BoundedSum::make2(bounds.0, bounds.1).unwrap();
-//!     let laplace = LaplaceMechanism::make(sigma).unwrap();
+//!     let laplace = BaseLaplace::make(sigma).unwrap();
 //!     let intermediate = ChainTT::make(&bounded_sum, &clamp).unwrap();
 //!     let noisy_sum = ChainMT::make(&laplace, &intermediate).unwrap();
 //!
