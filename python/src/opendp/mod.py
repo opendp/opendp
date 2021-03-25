@@ -2,6 +2,7 @@ import ctypes
 import json
 import os
 import re
+import sys
 
 
 def str_to_c_char_p(s):
@@ -162,15 +163,34 @@ class Mod:
 class OpenDP:
 
     @classmethod
+    def _get_lib_dir(cls):
+        # Use environment variable to allow running without installation.
+        dir = os.environ.get("OPENDP_LIB_DIR")
+        if not dir:
+            package_dir = os.path.dirname(os.path.abspath(__file__))
+            # TODO: Have separate sub-dirs under lib for each platform to avoid name collisions?
+            dir = os.path.join(package_dir, "lib")
+        return dir
+
+    @classmethod
+    def _get_lib_name(cls):
+        platform_to_name = {
+            "darwin": "libopendp_ffi.dylib",
+            "linux": "libopendp_ffi.so",
+            "win32": "opendp_ffi.dll",
+        }
+        if sys.platform not in platform_to_name:
+            raise Exception("Platform not supported", sys.platform)
+        return platform_to_name[sys.platform]
+
+    @classmethod
     def _get_lib_path(cls):
-        # TODO: Get the lib path in a way that works when installed via pip/conda (pkg_resources?).
-        # For now, we grab the path directly from the expected relative path in the Rust target dir.
-        package_dir = os.path.dirname(__file__)
-        return os.path.join(package_dir, "../../rust/target/debug/libopendp_ffi.dylib")
+        dir = cls._get_lib_dir()
+        name = cls._get_lib_name()
+        return os.path.join(dir, name)
 
     def __init__(self, lib_path=None):
         lib_path = lib_path or self._get_lib_path()
-        print(lib_path)
         lib = ctypes.cdll.LoadLibrary(lib_path)
         Mod.initialize(lib, "opendp_core__")
         self.core = Mod(lib, "opendp_core__")
