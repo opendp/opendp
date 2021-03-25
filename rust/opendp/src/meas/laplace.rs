@@ -1,57 +1,53 @@
 use std::marker::PhantomData;
 
-use num::NumCast;
+use num::Float;
 
 use crate::core::{Measurement, Function, PrivacyRelation};
 use crate::dist::{L1Sensitivity, MaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
-use crate::meas::{MakeMeasurement1, sample_laplace};
+use crate::meas::{MakeMeasurement1, SampleLaplace};
 use crate::error::Fallible;
+use crate::traits::DistanceCast;
 
-pub struct LaplaceMechanism<T> {
+pub struct BaseLaplace<T> {
     data: PhantomData<T>
 }
 
 // laplace for scalar-valued query
-impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence, f64> for LaplaceMechanism<T>
-    where T: Copy + NumCast {
-    fn make1(sigma: f64) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<f64>, MaxDivergence>> {
+impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<T>, T> for BaseLaplace<T>
+    where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
+    fn make1(scale: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<T>>> {
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
             Function::new_fallible(move |arg: &T| -> Fallible<T> {
-                <f64 as NumCast>::from(*arg).ok_or_else(|| err!(FailedCast))
-                    .and_then(|v| sample_laplace(sigma).and_then(|noise| T::from(v + noise)
-                        .ok_or_else(|| err!(FailedCast))))
+                T::sample_laplace(arg.clone(), scale.clone(), false)
             }),
             L1Sensitivity::new(),
             MaxDivergence::new(),
-            PrivacyRelation::new_from_constant(1. / sigma)))
+            PrivacyRelation::new_from_constant(scale.recip())))
     }
 }
 
-pub struct VectorLaplaceMechanism<T> {
+pub struct BaseVectorLaplace<T> {
     data: PhantomData<T>
 }
 
 // laplace for vector-valued query
-impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence, f64> for VectorLaplaceMechanism<T>
-    where T: Copy + NumCast {
-    fn make1(sigma: f64) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<f64>, MaxDivergence>> {
+impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<T>, MaxDivergence<T>, T> for BaseVectorLaplace<T>
+    where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
+    fn make1(scale: T) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<T>, MaxDivergence<T>>> {
         Ok(Measurement::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),
             Function::new_fallible(move |arg: &Vec<T>| -> Fallible<Vec<T>> {
                 arg.iter()
-                    .map(|v| <f64 as NumCast>::from(*v).ok_or_else(|| err!(FailedCast))
-                        .and_then(|v| sample_laplace(sigma)
-                            .and_then(|noise| T::from(v + noise)
-                                .ok_or_else(|| err!(FailedCast)))))
-                    .collect::<Fallible<_>>()
+                    .map(|v| T::sample_laplace(v.clone(), scale, false))
+                    .collect()
             }),
             L1Sensitivity::new(),
             MaxDivergence::new(),
-            PrivacyRelation::new_from_constant(1. / sigma)))
+            PrivacyRelation::new_from_constant(scale.recip())))
     }
 }
 
@@ -62,20 +58,20 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() {
-        let measurement = LaplaceMechanism::<f64>::make(1.0);
+        let measurement = BaseLaplace::<f64>::make(1.0).unwrap();
         let arg = 0.0;
-        let _ret = measurement.function.eval(&arg);
+        let _ret = measurement.function.eval(&arg).unwrap();
 
-        assert!(measurement.privacy_relation.eval(&1., &1.));
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap());
     }
 
     #[test]
     fn test_make_vector_laplace_mechanism() {
-        let measurement = VectorLaplaceMechanism::<f64>::make(1.0);
+        let measurement = BaseVectorLaplace::<f64>::make(1.0).unwrap();
         let arg = vec![1.0, 2.0, 3.0];
-        let _ret = measurement.function.eval(&arg);
+        let _ret = measurement.function.eval(&arg).unwrap();
 
-        assert!(measurement.privacy_relation.eval(&1., &1.));
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap());
     }
 }
 
