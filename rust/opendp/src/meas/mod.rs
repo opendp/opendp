@@ -364,14 +364,17 @@ pub trait MantissaDigits { const MANTISSA_DIGITS: u32; }
 impl MantissaDigits for f32 { const MANTISSA_DIGITS: u32 = f32::MANTISSA_DIGITS; }
 impl MantissaDigits for f64 { const MANTISSA_DIGITS: u32 = f64::MANTISSA_DIGITS; }
 
+#[cfg(feature = "use-mpfr")]
 pub trait CastRug: MantissaDigits + Sized {
     fn from_rug(v: Float) -> Self;
     fn into_rug(self) -> Float;
 }
+#[cfg(feature = "use-mpfr")]
 impl CastRug for f64 {
     fn from_rug(v: Float) -> Self { v.to_f64() }
     fn into_rug(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
 }
+#[cfg(feature = "use-mpfr")]
 impl CastRug for f32 {
     fn from_rug(v: Float) -> Self { v.to_f32() }
     fn into_rug(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
@@ -396,11 +399,13 @@ impl<T: CastRug + SampleRademacher> SampleLaplace for T {
     }
 }
 #[cfg(not(feature = "use-mpfr"))]
-impl<T: Float + rand::distributions::uniform::SampleUniform> SampleLaplace for T {
+impl<T: num::Float + rand::distributions::uniform::SampleUniform> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, _enforce_constant_time: bool) -> Fallible<Self> {
         let mut rng = rand::thread_rng();
-        let u: T = rng.gen_range(-0.5..0.5);
-        Ok(shift - u.signum() * (1.0 - 2.0 * u.abs()).ln() * scale)
+        let _1_ = T::from(1.0).unwrap();
+        let _2_ = T::from(2.0).unwrap();
+        let u: T = rng.gen_range(T::from(-0.5).unwrap(), T::from(0.5).unwrap());
+        Ok(shift - u.signum() * (_1_ - _2_ * u.abs()).ln() * scale)
     }
 }
 
@@ -438,7 +443,7 @@ impl SampleGaussian for f64 {
 #[cfg(not(feature = "use-mpfr"))]
 impl SampleGaussian for f32 {
     fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
-        let uniform_sample = f32::sample_standard_uniform(enforce_constant_time)?;
+        let uniform_sample = f64::sample_standard_uniform(enforce_constant_time)?;
         Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
     }
 }
