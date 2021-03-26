@@ -32,7 +32,7 @@ macro_rules! impl_is_not_continuous {
     }
 }
 impl_is_continuous!(f32, f64);
-impl_is_not_continuous!(u8, u32, u64, u128, i8, i16, i32, i64, i128, isize, usize);
+impl_is_not_continuous!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, isize, usize);
 
 // include Ceil on QO to avoid requiring as an additional trait bound in all downstream code
 pub trait DistanceCast: NumCast + Ceil + CheckContinuous {

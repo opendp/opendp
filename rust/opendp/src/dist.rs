@@ -6,21 +6,21 @@ use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
 
 /// Measures
 #[derive(Clone)]
-pub struct MaxDivergence;
-impl Measure for MaxDivergence {
-    type Distance = f64;
+pub struct MaxDivergence<Q>(PhantomData<Q>);
+impl<Q: Clone> Measure for MaxDivergence<Q> {
+    type Distance = Q;
 }
-impl MaxDivergence {
-    pub fn new() -> Self { MaxDivergence }
+impl<Q> MaxDivergence<Q> {
+    pub fn new() -> Self { MaxDivergence(PhantomData) }
 }
 
 #[derive(Clone)]
-pub struct SmoothedMaxDivergence;
-impl Measure for SmoothedMaxDivergence {
-    type Distance = (f64, f64);
+pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
+impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
+    type Distance = (Q, Q);
 }
-impl SmoothedMaxDivergence {
-    pub fn new() -> Self { SmoothedMaxDivergence }
+impl<Q> SmoothedMaxDivergence<Q> {
+    pub fn new() -> Self { SmoothedMaxDivergence(PhantomData) }
 }
 
 /// Metrics

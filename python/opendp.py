@@ -9,6 +9,9 @@ def str_to_c_char_p(s):
 def c_char_p_to_str(s):
     return s.decode("utf-8") if s is not None else None
 
+def u32_p(i):
+    return ctypes.byref(ctypes.c_uint32(i))
+
 def i32_p(i):
     return ctypes.byref(ctypes.c_int32(i))
 
