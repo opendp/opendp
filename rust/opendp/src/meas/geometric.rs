@@ -13,7 +13,7 @@ pub struct BaseSimpleGeometric<T> {
     data: PhantomData<T>
 }
 
-// gaussian for scalar-valued query
+// geometric for scalar-valued query
 impl<T> MakeMeasurement3<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<f64>, f64, T, T> for BaseSimpleGeometric<T>
     where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast {
     fn make3(scale: f64, min: T, max: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<f64>>> {
