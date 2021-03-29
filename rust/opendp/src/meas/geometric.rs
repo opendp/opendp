@@ -51,7 +51,7 @@ mod tests {
 
     #[test]
     fn test_make_geometric_mechanism() {
-        let measurement = BaseSimpleGeometric::<i32>::make(10.0, 200, 210).unwrap();
+        let measurement = BaseSimpleGeometric::<i32, f64>::make(10.0, 200, 210).unwrap();
         let arg = 205;
         let _ret = measurement.function.eval(&arg).unwrap();
 

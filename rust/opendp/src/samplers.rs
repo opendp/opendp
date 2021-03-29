@@ -56,19 +56,19 @@ pub trait SampleBernoulli: Sized {
     ///
     /// ```
     /// // returns a bit with Pr(bit = 1) = 0.7
-    /// use opendp::meas::SampleBernoulli;
+    /// use opendp::samplers::SampleBernoulli;
     /// let n = bool::sample_bernoulli(0.7, false);
     /// # n.unwrap();
     /// ```
     /// ```should_panic
     /// // fails because 1.3 not a valid probability
-    /// use opendp::meas::SampleBernoulli;
+    /// use opendp::samplers::SampleBernoulli;
     /// let n = bool::sample_bernoulli(1.3, false);
     /// # n.unwrap();
     /// ```
     /// ```should_panic
     /// // fails because -0.3 is not a valid probability
-    /// use opendp::meas::SampleBernoulli;
+    /// use opendp::samplers::SampleBernoulli;
     /// let n = bool::sample_bernoulli(-0.3, false);
     /// # n.unwrap();
     /// ```
@@ -158,7 +158,7 @@ pub trait SampleUniform: Sized {
     /// # Example
     /// ```
     /// // valid draw from Unif[0,1)
-    /// use opendp::meas::SampleUniform;
+    /// use opendp::samplers::SampleUniform;
     /// let unif = f64::sample_standard_uniform(false);
     /// # unif.unwrap();
     /// ```
@@ -249,7 +249,7 @@ pub trait SampleGeometric: Sized {
     ///
     /// # Example
     /// ```
-    /// use opendp::meas::SampleGeometric;
+    /// use opendp::samplers::SampleGeometric;
     /// let geom = u8::sample_geometric(0.1, 20, false);
     /// # geom.unwrap();
     /// ```
@@ -313,7 +313,7 @@ pub trait SampleGaussian: Sized {
     ///
     /// # Example
     /// ```
-    /// use opendp::meas::SampleGaussian;
+    /// use opendp::samplers::SampleGaussian;
     /// let gaussian = f64::sample_gaussian(0.0, 1.0, false);
     /// ```
     fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self>;
@@ -364,7 +364,7 @@ impl<T: CastRug + SampleRademacher> SampleLaplace for T {
 }
 
 #[cfg(not(feature = "use-mpfr"))]
-impl<T: num::Float + rand::distributions::uniform::SampleUniform> SampleLaplace for T {
+impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademacher> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, _enforce_constant_time: bool) -> Fallible<Self> {
         let mut rng = rand::thread_rng();
         let _1_ = T::from(1.0).unwrap();
