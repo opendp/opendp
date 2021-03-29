@@ -6,22 +6,27 @@ use crate::core::{Function, Measurement, PrivacyRelation};
 use crate::dist::{L2Sensitivity, MaxDivergence};
 use crate::dom::AllDomain;
 use crate::error::Fallible;
-use crate::meas::{MakeMeasurement3, SampleBernoulli, SampleGeometric, SampleUniform};
+use crate::samplers::{SampleBernoulli, SampleGeometric, SampleUniform};
+use crate::meas::MakeMeasurement3;
 use crate::traits::DistanceCast;
+use num::Float;
 
-pub struct BaseSimpleGeometric<T> {
-    data: PhantomData<T>
+pub struct BaseSimpleGeometric<T, QO> {
+    data: PhantomData<T>,
+    output_distance: PhantomData<QO>
 }
 
 // geometric for scalar-valued query
-impl<T> MakeMeasurement3<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<f64>, f64, T, T> for BaseSimpleGeometric<T>
-    where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast {
-    fn make3(scale: f64, min: T, max: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<f64>>> {
+impl<T, QO> MakeMeasurement3<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<QO>, QO, T, T> for BaseSimpleGeometric<T, QO>
+    where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast,
+          QO: 'static + Float + DistanceCast, f64: From<QO> {
+    fn make3(scale: QO, min: T, max: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<QO>>> {
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
             Function::new_fallible(move |arg: &T| -> Fallible<T> {
-                let alpha: f64 = std::f64::consts::E.powf(-1. / scale);
+                // cast up to f64
+                let alpha: f64 = std::f64::consts::E.powf(-1. / f64::from(scale));
                 let max_trials: T = max - min;
 
                 // return 0 noise with probability (1-alpha) / (1+alpha), otherwise sample from geometric
