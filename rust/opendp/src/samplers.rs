@@ -43,7 +43,7 @@ pub trait SampleBernoulli: Sized {
     /// Sample a single bit with arbitrary probability of success
     ///
     /// Uses only an unbiased source of coin flips.
-    /// The strategy for doing this with 2 flips in expectation is described [here](https://amakelov.wordpress.com/2013/10/10/arbitrarily-biasing-a-coin-in-2-expected-tosses/).
+    /// The strategy for doing this with 2 flips in expectation is described [here](https://web.archive.org/web/20160418185834/https://amakelov.wordpress.com/2013/10/10/arbitrarily-biasing-a-coin-in-2-expected-tosses/).
     ///
     /// # Arguments
     /// * `prob`- The desired probability of success (bit = 1).
