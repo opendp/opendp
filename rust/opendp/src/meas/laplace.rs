@@ -5,7 +5,8 @@ use num::Float;
 use crate::core::{Measurement, Function, PrivacyRelation};
 use crate::dist::{L1Sensitivity, MaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
-use crate::meas::{MakeMeasurement1, SampleLaplace};
+use crate::samplers::{SampleLaplace};
+use crate::meas::{MakeMeasurement1};
 use crate::error::Fallible;
 use crate::traits::DistanceCast;
 

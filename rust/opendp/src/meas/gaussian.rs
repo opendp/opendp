@@ -2,12 +2,12 @@ use std::marker::PhantomData;
 
 use num::Float;
 
-use crate::core::{Measurement, Function, PrivacyRelation};
+use crate::core::{Function, Measurement, PrivacyRelation};
 use crate::dist::{L2Sensitivity, SmoothedMaxDivergence};
 use crate::dom::AllDomain;
-use crate::meas::{MakeMeasurement1, SampleGaussian};
 use crate::error::Fallible;
-
+use crate::meas::MakeMeasurement1;
+use crate::samplers::SampleGaussian;
 
 pub struct BaseGaussian<T> {
     data: PhantomData<T>
