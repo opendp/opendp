@@ -9,24 +9,30 @@ use num::One;
 
 use opendp::core::{DatasetMetric, Metric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
-use opendp::dom::AllDomain;
+use opendp::dom::{AllDomain, VectorDomain};
 use opendp::traits::{Abs, CastFrom, DistanceCast};
 use opendp::trans::{BoundedSum, BoundedSumStability, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation};
 use opendp::trans;
 
 use crate::core::FfiTransformation;
 use crate::util;
-use crate::util::c_bool;
-use crate::util::TypeArgs;
+use crate::util::{c_bool, Type, TypeArgs, TypeContents};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> *mut FfiTransformation {
-    fn monomorphize<T: 'static + Clone>() -> *mut FfiTransformation {
+    fn monomorphize_scalar<T: 'static + Clone>() -> *mut FfiTransformation {
         let transformation = manipulation::Identity::make(AllDomain::<T>::new(), HammingDistance::new()).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
+    fn monomorphize_vec<T: 'static + Clone>() -> *mut FfiTransformation {
+        let transformation = manipulation::Identity::make(VectorDomain::new(AllDomain::<T>::new()), HammingDistance::new()).unwrap();
+        FfiTransformation::new_from_types(transformation)
+    }
     let type_args = TypeArgs::expect(type_args, 1);
-    dispatch!(monomorphize, [(type_args.0[0], @primitives)], ())
+    match &type_args.0[0].contents {
+        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [(Type::of_id(*element_id), @primitives)], ()),
+        _ => dispatch!(monomorphize_scalar, [(&type_args.0[0], @primitives)], ())
+    }
 }
 
 #[no_mangle]

@@ -5,11 +5,9 @@ def main():
 
     ### HELLO WORLD
     identity = odp.trans.make_identity(b"<String>")
-    arg = odp.data.from_string(b"hello, world!")
-    ret = odp.core.transformation_invoke(identity, arg)
-    print(odp.to_str(ret))
-    odp.data.data_free(arg)
-    odp.data.data_free(ret)
+    arg = "hello, world!"
+    res = odp.transformation_invoke(identity, arg)
+    print(res)
     odp.core.transformation_free(identity)
 
     ### SUMMARY STATS
@@ -38,13 +36,11 @@ def main():
     everything = odp.core.make_chain_mt(composition, parse_dataframe)
 
     # Do it!!!
-    arg = odp.data.from_string(b"ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3")
-    ret = odp.core.measurement_invoke(everything, arg)
-    print(odp.to_str(ret))
+    arg = "ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3"
+    res = odp.measurement_invoke(everything, arg)
+    print(res)
 
     # Clean up
-    odp.data.data_free(arg)
-    odp.data.data_free(ret)
     odp.core.measurement_free(everything)
 
 if __name__ == "__main__":
