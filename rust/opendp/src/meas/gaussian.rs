@@ -13,12 +13,16 @@ pub struct BaseGaussian<T> {
     data: PhantomData<T>
 }
 
+
+// const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
+const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
+
 // gaussian for scalar-valued query
 impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, SmoothedMaxDivergence<T>, T> for BaseGaussian<T>
     where T: 'static + Clone + SampleGaussian + Float {
     fn make1(scale: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, SmoothedMaxDivergence<T>>> {
         let _2_ = T::from(2.).ok_or_else(|| err!(FailedCast))?;
-        let _1_25 = T::from(1.25).ok_or_else(|| err!(FailedCast))?;
+        let additive_gauss_const = T::from(ADDITIVE_GAUSS_CONST).ok_or_else(|| err!(FailedCast))?;
 
         Ok(Measurement::new(
             AllDomain::new(),
@@ -40,7 +44,7 @@ impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, SmoothedM
                 }
 
                 // TODO: should we error if epsilon > 1., or just waste the budget?
-                Ok(eps.min(T::one()) >= (d_in / scale) * (_2_ * (_1_25 / del).ln()).sqrt())
+                Ok(eps.min(T::one()) >= (d_in / scale) * (additive_gauss_const + _2_ * del.recip().ln()).sqrt())
             })))
     }
 }
