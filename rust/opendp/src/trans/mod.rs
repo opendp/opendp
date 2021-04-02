@@ -4,21 +4,20 @@
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
 use std::cmp::Ordering;
+use std::convert::TryFrom;
 use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Bound, Div, Mul, Sub};
-
-use num::One;
 
 use crate::core::{DatasetMetric, Domain, Function, Metric, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{DistanceCast, Abs};
+use crate::traits::{Abs, DistanceCast};
 pub use crate::trans::dataframe::*;
-use std::convert::TryFrom;
 
 pub mod dataframe;
+pub mod manipulation;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeTransformation0<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
@@ -54,49 +53,6 @@ pub trait MakeTransformation4<DI: Domain, DO: Domain, MI: Metric, MO: Metric, P1
         Self::make4(param1, param2, param3, param4)
     }
     fn make4(param1: P1, param2: P2, param3: P3, param4: P4) -> Fallible<crate::core::Transformation<DI, DO, MI, MO>>;
-}
-
-/// Constructs a [`Transformation`] representing the identity function.
-pub struct Identity;
-
-impl<D, T, M, Q> MakeTransformation2<D, D, M, M, D, M> for Identity
-    where D: Domain<Carrier=T>, T: Clone,
-          M: Metric<Distance=Q>, Q: 'static + Clone + Div<Output=Q> + Mul<Output=Q> + PartialOrd + DistanceCast + One {
-    fn make2(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>> {
-        Ok(Transformation::new(
-            domain.clone(),
-            domain,
-            Function::new(|arg: &T| arg.clone()),
-            metric.clone(),
-            metric,
-            StabilityRelation::new_from_constant(Q::one())))
-    }
-}
-
-pub struct Clamp<M, T> {
-    metric: PhantomData<M>,
-    data: PhantomData<T>,
-}
-
-impl<M, T> MakeTransformation2<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M, T, T> for Clamp<M, T>
-    where M: DatasetMetric<Distance=u32>,
-          T: 'static + Copy + PartialOrd {
-    fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M>> {
-        Ok(Transformation::new(
-            VectorDomain::new_all(),
-            VectorDomain::new(IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
-            Function::new(move |arg: &Vec<T>| clamp(lower, upper, arg)),
-            M::new(),
-            M::new(),
-            StabilityRelation::new_from_constant(1_u32)))
-    }
-}
-
-fn clamp<T: Copy + PartialOrd>(lower: T, upper: T, x: &Vec<T>) -> Vec<T> {
-    fn clamp1<T: Copy + PartialOrd>(lower: T, upper: T, x: T) -> T {
-        if x < lower { lower } else if x > upper { upper } else { x }
-    }
-    x.into_iter().map(|e| clamp1(lower, upper, *e)).collect()
 }
 
 pub struct BoundedSum<MI, MO, T> {
@@ -162,7 +118,7 @@ impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, Al
             SymmetricDistance::new(),
             MO::new(),
             // d_out >= d_in * (M - m) / 2
-            StabilityRelation::new_from_constant((upper - lower) / T::cast(2)?)))
+            StabilityRelation::new_from_constant((upper - lower) / T::distance_cast(2)?)))
     }
 }
 
@@ -191,6 +147,7 @@ impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
 #[cfg(test)]
 mod tests {
     use crate::dist::{L1Sensitivity, L2Sensitivity};
+    use crate::trans::manipulation::{Clamp, Identity};
 
     use super::*;
 
@@ -233,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_make_clamp() {
-        let transformation = Clamp::<HammingDistance, i32>::make(0, 10).unwrap();
+        let transformation = Clamp::<HammingDistance, Vec<i32>, u32>::make(0, 10).unwrap();
         let arg = vec![-10, -5, 0, 5, 10, 20];
         let ret = transformation.function.eval(&arg).unwrap();
         let expected = vec![0, 0, 0, 5, 10, 10];

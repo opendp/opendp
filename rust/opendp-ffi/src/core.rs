@@ -157,6 +157,7 @@ impl Measure for FfiMeasure {
 pub struct FfiMetric;
 impl Metric for FfiMetric {
     type Distance = ();
+    fn new() -> Self { unreachable!() }
 }
 
 pub struct FfiMeasurement {
