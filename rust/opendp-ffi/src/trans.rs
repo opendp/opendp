@@ -11,8 +11,9 @@ use opendp::core::{DatasetMetric, Metric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::traits::{Abs, CastFrom, DistanceCast};
-use opendp::trans::{BoundedSum, BoundedSumStability, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation};
+use opendp::trans::{count, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation, sum};
 use opendp::trans;
+use opendp::trans::sum::{BoundedSum, BoundedSumStability};
 
 use crate::core::FfiTransformation;
 use crate::util;
@@ -212,7 +213,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower
                   MO: 'static + SensitivityMetric<Distance=T>,
                   T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
                   BoundedSum<MI, MO, T>: BoundedSumStability<MI, MO, T> {
-            let transformation = trans::BoundedSum::<MI, MO, T>::make(lower, upper).unwrap();
+            let transformation = sum::BoundedSum::<MI, MO, T>::make(lower, upper).unwrap();
             FfiTransformation::new_from_types(transformation)
         }
         let lower = util::as_ref(lower as *const T).clone();
@@ -236,7 +237,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, low
         fn monomorphize2<MO, T>(lower: T, upper: T, n: usize) -> *mut FfiTransformation
             where MO: 'static + SensitivityMetric<Distance=T>,
                   T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast {
-            let transformation = trans::BoundedSum::<SymmetricDistance, MO, T>::make3(lower, upper, n).unwrap();
+            let transformation = sum::BoundedSum::<SymmetricDistance, MO, T>::make3(lower, upper, n).unwrap();
             FfiTransformation::new_from_types(transformation)
         }
         let lower = util::as_ref(lower as *const T).clone();
@@ -258,7 +259,7 @@ pub extern "C" fn opendp_trans__make_count(type_args: *const c_char) -> *mut Ffi
     fn monomorphize<MI, MO, T: 'static>() -> *mut FfiTransformation
         where MI: 'static + DatasetMetric<Distance=u32> + Clone,
               MO: 'static + SensitivityMetric<Distance=u32> + Clone {
-        let transformation = trans::Count::<MI, MO, T>::make().unwrap();
+        let transformation = count::Count::<MI, MO, T>::make().unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 3);

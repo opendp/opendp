@@ -1,6 +1,6 @@
 use std::os::raw::{c_char, c_void};
 
-use num::Float;
+use num::{Float, Integer, Zero, One, NumCast};
 
 use opendp::meas::{MakeMeasurement1, MakeMeasurement3};
 use opendp::meas::gaussian::BaseGaussian;
@@ -11,8 +11,12 @@ use crate::util;
 use crate::util::TypeArgs;
 use opendp::traits::DistanceCast;
 use opendp::meas::geometric::BaseSimpleGeometric;
-use std::ops::{Sub, Add};
-use opendp::samplers::{SampleLaplace, SampleGaussian, SampleGeometric};
+use std::ops::{Sub, Add, AddAssign};
+use opendp::samplers::{SampleLaplace, SampleGaussian, SampleGeometric, CastRug};
+use opendp::meas::stability::{BaseStability, CountDomain};
+use std::hash::Hash;
+use opendp::dist::{L2Sensitivity, SmoothedMaxDivergence, L1Sensitivity};
+use opendp::core::SensitivityMetric;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, scale: *const c_void) -> *mut FfiMeasurement {
@@ -76,6 +80,37 @@ pub extern "C" fn opendp_meas__make_base_simple_geometric(type_args: *const c_ch
     }
     let type_args = TypeArgs::expect(type_args, 2);
     dispatch!(monomorphize, [(type_args.0[0], @integers), (type_args.0[1], @floats)], (scale, min, max))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_meas__make_base_stability(type_args: *const c_char, n: usize, scale: *const c_void, threshold: *const c_void) -> *mut FfiMeasurement {
+    fn monomorphize<TIC, TOC>(type_args: TypeArgs, n: usize, scale: *const c_void, threshold: *const c_void) -> *mut FfiMeasurement
+        where TIC: 'static + Integer + Zero + One + AddAssign + Clone + NumCast,
+              TOC: 'static + PartialOrd + Clone + NumCast + Float + CastRug {
+
+        fn monomorphize2<MI, TIK, TIC, TOC>(n: usize, scale: TOC, threshold: TOC) -> *mut FfiMeasurement
+            where MI: 'static + SensitivityMetric<Distance=TOC>,
+                  TIK: 'static + Eq + Hash + Clone,
+                  TIC: 'static + Integer + Zero + One + AddAssign + Clone + NumCast,
+                  TOC: 'static + Clone + NumCast + PartialOrd + Float + CastRug,
+                  BaseStability<MI, TIK, TIC, TOC>: MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK, TOC>, MI, SmoothedMaxDivergence<TOC>, usize, TOC, TOC> {
+            let measurement = BaseStability::<MI, TIK, TIC, TOC>::make(n, scale, threshold).unwrap();
+            FfiMeasurement::new_from_types(measurement)
+        }
+        let scale = util::as_ref(scale as *const TOC).clone();
+        let threshold = util::as_ref(threshold as *const TOC).clone();
+        dispatch!(monomorphize2, [
+            (type_args.0[0], [L1Sensitivity<TOC>, L2Sensitivity<TOC>]),
+            (type_args.0[1], @hashable),
+            (type_args.0[2], [TIC]),
+            (type_args.0[3], [TOC])
+        ], (n, scale, threshold))
+    }
+    let type_args = TypeArgs::expect(type_args, 4);
+    dispatch!(monomorphize, [
+        (type_args.0[2], @integers),
+        (type_args.0[3], @floats)
+    ], (type_args, n, scale, threshold))
 }
 
 #[no_mangle]

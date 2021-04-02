@@ -228,4 +228,23 @@ mod test_manipulations {
         let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
         assert!(caster.function.eval(&data).unwrap().into_iter().all(|v| v == 100.));
     }
+
+    #[test]
+    fn test_identity() {
+        let identity = Identity::make(AllDomain::new(), HammingDistance).unwrap();
+        let arg = 99;
+        let ret = identity.function.eval(&arg).unwrap();
+        assert_eq!(ret, 99);
+    }
+
+
+    #[test]
+    fn test_make_clamp() {
+        let transformation = Clamp::<HammingDistance, Vec<i32>, u32>::make(0, 10).unwrap();
+        let arg = vec![-10, -5, 0, 5, 10, 20];
+        let ret = transformation.function.eval(&arg).unwrap();
+        let expected = vec![0, 0, 0, 5, 10, 10];
+        assert_eq!(ret, expected);
+    }
+
 }
