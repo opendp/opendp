@@ -84,7 +84,7 @@ impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, Al
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dist::L1Sensitivity;
+    use crate::dist::{L1Sensitivity, L2Sensitivity};
 
     #[test]
     fn test_make_bounded_sum_l1() {
