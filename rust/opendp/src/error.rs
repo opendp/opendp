@@ -51,6 +51,9 @@ pub enum ErrorVariant {
     #[error("Failed function execution")]
     FailedFunction,
 
+    #[error("Failed relation")]
+    FailedRelation,
+
     #[error("Unable to cast type")]
     FailedCast,
 

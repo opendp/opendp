@@ -13,9 +13,9 @@ use opendp::traits::DistanceCast;
 use opendp::meas::geometric::BaseSimpleGeometric;
 use std::ops::{Sub, Add, AddAssign};
 use opendp::samplers::{SampleLaplace, SampleGaussian, SampleGeometric, CastRug};
-use opendp::meas::stability::{BaseStability, CountDomain};
+use opendp::meas::stability::{BaseStability, BaseStabilityNoise};
 use std::hash::Hash;
-use opendp::dist::{L2Sensitivity, SmoothedMaxDivergence, L1Sensitivity};
+use opendp::dist::{L2Sensitivity, L1Sensitivity};
 use opendp::core::SensitivityMetric;
 
 #[no_mangle]
@@ -89,11 +89,10 @@ pub extern "C" fn opendp_meas__make_base_stability(type_args: *const c_char, n: 
               TOC: 'static + PartialOrd + Clone + NumCast + Float + CastRug {
 
         fn monomorphize2<MI, TIK, TIC, TOC>(n: usize, scale: TOC, threshold: TOC) -> *mut FfiMeasurement
-            where MI: 'static + SensitivityMetric<Distance=TOC>,
+            where MI: 'static + SensitivityMetric<Distance=TOC> + BaseStabilityNoise<TOC>,
                   TIK: 'static + Eq + Hash + Clone,
                   TIC: 'static + Integer + Zero + One + AddAssign + Clone + NumCast,
-                  TOC: 'static + Clone + NumCast + PartialOrd + Float + CastRug,
-                  BaseStability<MI, TIK, TIC, TOC>: MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK, TOC>, MI, SmoothedMaxDivergence<TOC>, usize, TOC, TOC> {
+                  TOC: 'static + Clone + NumCast + PartialOrd + Float + CastRug {
             let measurement = BaseStability::<MI, TIK, TIC, TOC>::make(n, scale, threshold).unwrap();
             FfiMeasurement::new_from_types(measurement)
         }
