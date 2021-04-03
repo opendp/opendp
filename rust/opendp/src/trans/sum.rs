@@ -47,7 +47,7 @@ impl<MI, MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=T>,
           T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
-          BoundedSum<MI, MO, T>: BoundedSumStability<MI, MO, T> {
+          Self: BoundedSumStability<MI, MO, T> {
     fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, MI, MO>> {
         if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
