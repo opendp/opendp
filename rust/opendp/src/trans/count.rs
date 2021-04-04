@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, Div, Mul};
 
-use num::{Integer, One, Zero};
+use num::{Integer, One, Zero, NumCast};
 use num::traits::FloatConst;
 
 use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
@@ -36,47 +36,44 @@ impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
     }
 }
 
-
-pub trait CountByStability<MI: DatasetMetric, MO: SensitivityMetric> {
-    fn get_stability() -> MO::Distance;
-}
-
-impl<TI, TO, QI, QO: From<u32>> CountByStability<HammingDistance, L1Sensitivity<QO>> for CountByCategories<HammingDistance, L1Sensitivity<QO>, TI, TO, QI, QO> {
-    fn get_stability() -> QO {
-        <QO as From<u32>>::from(2_u32)
-    }
-}
-
-impl<TI, TO, QI, QO: FloatConst> CountByStability<HammingDistance, L2Sensitivity<QO>> for CountByCategories<HammingDistance, L2Sensitivity<QO>, TI, TO, QI, QO> {
-    fn get_stability() -> QO {
-        QO::SQRT_2()
-    }
-}
-
-impl<MO: SensitivityMetric<Distance=QO>, TI, TO, QI, QO: One> CountByStability<SymmetricDistance, MO> for CountByCategories<HammingDistance, MO, TI, TO, QI, QO> {
-    fn get_stability() -> QO {
-        QO::one()
-    }
-}
-
 // count with unknown n, known categories
-pub struct CountByCategories<MI, MO, TI, TO, QI, QO> {
+pub struct CountByCategories<MI, MO, TI, TO, QO> {
     input_metric: PhantomData<MI>,
     output_metric: PhantomData<MO>,
     input_data: PhantomData<TI>,
     output_data: PhantomData<TO>,
-    input_distance: PhantomData<QI>,
-    output_distance: PhantomData<QO>,
+    output_distance: PhantomData<QO>
 }
 
-impl<MI, MO, TI, TO, QI, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO, Vec<TI>> for CountByCategories<MI, MO, TI, TO, QI, QO>
-    where MI: DatasetMetric<Distance=QI>,
+pub trait CountByCategoriesConstant<MI: DatasetMetric, MO: SensitivityMetric> {
+    fn get_stability_constant() -> MO::Distance;
+}
+
+impl<TI, TO, QO: NumCast> CountByCategoriesConstant<HammingDistance, L1Sensitivity<QO>> for CountByCategories<HammingDistance, L1Sensitivity<QO>, TI, TO, QO> {
+    fn get_stability_constant() -> QO {
+        QO::from(2.).unwrap()
+    }
+}
+
+impl<TI, TO, QO: FloatConst> CountByCategoriesConstant<HammingDistance, L2Sensitivity<QO>> for CountByCategories<HammingDistance, L2Sensitivity<QO>, TI, TO, QO> {
+    fn get_stability_constant() -> QO {
+        QO::SQRT_2()
+    }
+}
+
+impl<MO: SensitivityMetric<Distance=QO>, TI, TO, QO: One> CountByCategoriesConstant<SymmetricDistance, MO> for CountByCategories<SymmetricDistance, MO, TI, TO, QO> {
+    fn get_stability_constant() -> QO {
+        QO::one()
+    }
+}
+
+impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO, Vec<TI>> for CountByCategories<MI, MO, TI, TO, QO>
+    where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=QO>,
           TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign,
-          QI: DistanceCast,
           QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd,
-          Self: CountByStability<MI, MO> {
+          Self: CountByCategoriesConstant<MI, MO> {
     fn make1(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO>> {
         Ok(Transformation::new(
             VectorDomain::new_all(),
@@ -99,28 +96,49 @@ impl<MI, MO, TI, TO, QI, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, Si
             }),
             MI::new(),
             MO::new(),
-            StabilityRelation::new_from_constant(Self::get_stability())))
+            StabilityRelation::new_from_constant(Self::get_stability_constant())))
     }
 }
 
 // count with known n, unknown categories
-pub struct CountBy<MI, MO, TI, TO, QI, QO> {
+pub struct CountBy<MI, MO, TI, TO, QO> {
     input_metric: PhantomData<MI>,
     output_metric: PhantomData<MO>,
     input_data: PhantomData<TI>,
     output_data: PhantomData<TO>,
-    input_distance: PhantomData<QI>,
     output_distance: PhantomData<QO>,
 }
 
-impl<MI, MO, TI, TO, QI, QO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, MI, MO, usize> for CountBy<MI, MO, TI, TO, QI, QO>
-    where MI: DatasetMetric<Distance=QI>,
+// this entire trait is duplicated code (only changed the struct it is impl'ed for)
+pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
+    fn get_stability_constant() -> MO::Distance;
+}
+
+impl<TI, TO, QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for CountBy<HammingDistance, L1Sensitivity<QO>, TI, TO, QO> {
+    fn get_stability_constant() -> QO {
+        QO::from(2.).unwrap()
+    }
+}
+
+impl<TI, TO, QO: FloatConst> CountByConstant<HammingDistance, L2Sensitivity<QO>> for CountBy<HammingDistance, L2Sensitivity<QO>, TI, TO, QO> {
+    fn get_stability_constant() -> QO {
+        QO::SQRT_2()
+    }
+}
+
+impl<MO: SensitivityMetric<Distance=QO>, TI, TO, QO: One> CountByConstant<SymmetricDistance, MO> for CountBy<SymmetricDistance, MO, TI, TO, QO> {
+    fn get_stability_constant() -> QO {
+        QO::one()
+    }
+}
+
+impl<MI, MO, TI, TO, QO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, MI, MO, usize> for CountBy<MI, MO, TI, TO, QO>
+    where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=QO>,
           TI: 'static + Eq + Hash + Clone,
           TO: Integer + Zero + One + AddAssign,
-          QI: DistanceCast,
           QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd,
-          Self: CountByStability<MI, MO> {
+          Self: CountByConstant<MI, MO> {
     fn make1(n: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, MI, MO>> {
         Ok(Transformation::new(
             SizedDomain::new(VectorDomain::new_all(), n),
@@ -134,7 +152,7 @@ impl<MI, MO, TI, TO, QI, QO> MakeTransformation1<SizedDomain<VectorDomain<AllDom
             }),
             MI::new(),
             MO::new(),
-            StabilityRelation::new_from_constant(Self::get_stability())))
+            StabilityRelation::new_from_constant(Self::get_stability_constant())))
     }
 }
 
