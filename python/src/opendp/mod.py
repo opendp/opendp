@@ -244,7 +244,7 @@ class Mod:
     @classmethod
     def get_type(cls, name, allow_generic=False):
         def lookup_type(n):
-            if not n in cls.name_to_type:
+            if n not in cls.name_to_type:
                 raise Exception("Unknown type", n)
             return cls.name_to_type[n]
         if allow_generic:

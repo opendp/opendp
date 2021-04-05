@@ -43,30 +43,33 @@
 //! use opendp::core::{ChainTT, ChainMT};
 //! use opendp::meas::{MakeMeasurement2,  MakeMeasurement1};
 //! use opendp::meas::laplace::BaseLaplace;
+//! use opendp::error::*;
 //!
-//! pub fn example() {
+//! pub fn example() -> Fallible<()> {
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
 //!     let epsilon = 1.0;
 //!     let sigma = (bounds.1 - bounds.0) / epsilon;
 //!
 //!     // Construct a Transformation to load the numbers.
-//!     let split_lines = trans::SplitLines::<HammingDistance>::make().unwrap();
-//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true).unwrap();
-//!     let load_numbers = ChainTT::make(&parse_series, &split_lines).unwrap();
+//!     let split_lines = trans::SplitLines::<HammingDistance>::make()?;
+//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true)?;
+//!     let load_numbers = ChainTT::make(&parse_series, &split_lines)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = manipulation::Clamp::make(bounds.0, bounds.1).unwrap();
-//!     let bounded_sum = sum::BoundedSum::make2(bounds.0, bounds.1).unwrap();
-//!     let laplace = BaseLaplace::make(sigma).unwrap();
-//!     let intermediate = ChainTT::make(&bounded_sum, &clamp).unwrap();
-//!     let noisy_sum = ChainMT::make(&laplace, &intermediate).unwrap();
+//!     let clamp = manipulation::Clamp::make(bounds.0, bounds.1)?;
+//!     let bounded_sum = sum::BoundedSum::make2(bounds.0, bounds.1)?;
+//!     let laplace = BaseLaplace::make(sigma)?;
+//!     let intermediate = ChainTT::make(&bounded_sum, &clamp)?;
+//!     let noisy_sum = ChainMT::make(&laplace, &intermediate)?;
 //!
 //!     // Put it all together.
-//!     let pipeline = ChainMT::make(&noisy_sum, &load_numbers).unwrap();
-//!     let result = pipeline.function.eval(&data).unwrap();
+//!     let pipeline = ChainMT::make(&noisy_sum, &load_numbers)?;
+//!     let result = pipeline.function.eval(&data)?;
 //!     println!("result = {}", result);
-//!  }
+//!     Ok(())
+//! }
+//! example().unwrap_assert();
 //! ```
 //!
 //! # Contributor Guide
@@ -105,6 +108,7 @@
 //!     let stability_relation = StabilityRelation::new_from_constant(1);
 //!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
 //! }
+//! make_i32_identity();
 //! ```
 //!
 //! #### Input and Output Types

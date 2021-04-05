@@ -6,12 +6,9 @@ use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::c_char;
 
-use opendp::dist::{L1Sensitivity, L2Sensitivity, HammingDistance, SymmetricDistance};
+use opendp::dist::{SymmetricDistance, HammingDistance, L1Sensitivity, L2Sensitivity};
 use opendp::error::*;
-use opendp::{err};
-
-#[derive(Debug)]
-pub struct TypeError;
+use opendp::{err, fallible};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -48,7 +45,7 @@ impl Type {
     }
 
     pub fn of_id(id: TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(&id).cloned().ok_or_else(|| err!(UnknownType))
+        TYPE_ID_TO_TYPE.get(&id).cloned().ok_or_else(|| err!(TypeParse))
     }
 
     // Hacky special entry point for composition.
@@ -161,10 +158,10 @@ lazy_static! {
 }
 
 impl TryFrom<&str> for Type {
-    type Error = TypeError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    type Error = Error;
+    fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.map(|e| e.clone()).ok_or(TypeError)
+        type_.map(|e| e.clone()).ok_or_else(|| err!(TypeParse, "failed to parse type: {:?}", value))
     }
 }
 
@@ -172,11 +169,13 @@ impl TryFrom<&str> for Type {
 pub struct TypeArgs(pub(crate) Vec<Type>);
 
 impl TypeArgs {
-    pub fn expect(descriptor: *const c_char, count: usize) -> TypeArgs {
+    pub fn parse(descriptor: *const c_char, count: usize) -> Fallible<TypeArgs> {
         let descriptor = to_str(descriptor);
-        let type_args: TypeArgs = descriptor.try_into().expect("Bogus type args");
-        assert!(type_args.0.len() == count);
-        type_args
+        let type_args: TypeArgs = descriptor.try_into()?;
+        if type_args.0.len() != count {
+            return fallible!(TypeParse, "expected {:?} arguments, received {:?} arguments", count, type_args.0.len())
+        }
+        Ok(type_args)
     }
     // pub fn new(args: Vec<Type>) -> TypeArgs {
     //     TypeArgs(args)
@@ -188,8 +187,8 @@ impl TypeArgs {
 }
 
 impl TryFrom<&str> for TypeArgs {
-    type Error = TypeError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    type Error = Error;
+    fn try_from(value: &str) -> Fallible<Self> {
         if value.starts_with("<") && value.ends_with(">") {
             let value = &value[1..value.len()-1];
             let mut types = Vec::new();
@@ -206,14 +205,13 @@ impl TryFrom<&str> for TypeArgs {
                 }
                 if !is_parenthesized {
                     let descriptor: String = token_buffer.join(", ");
-                    types.push(Type::try_from(descriptor.as_str()).unwrap());
+                    types.push(descriptor.as_str().try_into()?);
                     token_buffer.clear();
                 }
             }
-            // let types: Result<Vec<_>, _> = split.into_iter().map(|e| e.trim().try_into()).collect();
             Ok(TypeArgs(types))
         } else {
-            Err(TypeError)
+            fallible!(TypeParse, "failed to parse type: type ascription must start with '<' and end with '>'")
         }
     }
 }
@@ -238,8 +236,16 @@ pub fn as_ref<'a, T>(p: *const T) -> &'a T {
     unsafe { &*p }
 }
 
-pub fn into_c_char_p(s: String) -> *mut c_char {
-    CString::new(s).unwrap().into_raw()
+
+// pub fn as_mut<'a, T>(ptr: *mut T) -> &'a mut T {
+//     assert!(!ptr.is_null());
+//     unsafe { &mut *ptr }
+// }
+
+pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
+    CString::new(s)
+        .map(CString::into_raw)
+        .map_err(|_| err!(FailedCast, "Nul byte detected when casting to C string"))
 }
 
 pub fn into_string(p: *mut c_char) -> String {
@@ -264,7 +270,8 @@ pub fn to_option_str<'a>(p: *const c_char) -> Option<&'a str> {
 
 pub fn bootstrap(spec: &str) -> *const c_char {
     // FIXME: Leaks string.
-    into_c_char_p(spec.to_owned())
+    // unwrap is ok because our json strings won't contain null bytes
+    into_c_char_p(spec.to_owned()).unwrap_assert()
 }
 
 #[allow(non_camel_case_types)]

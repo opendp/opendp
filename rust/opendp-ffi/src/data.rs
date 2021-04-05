@@ -42,7 +42,7 @@ pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *c
         // println!("rust: {:?}", tuple);
         util::into_raw(tuple) as *const c_void
     }
-    let type_args = TypeArgs::expect(type_args, 1);
+    let type_args = try_!(TypeArgs::parse(type_args, 1));
     let type_ = type_args.0[0].clone();
     let raw = util::as_ref(raw);
     let val = match type_.contents {
@@ -70,44 +70,48 @@ pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *c
         _ => { dispatch!(raw_to_plain, [(type_, @primitives)], (raw)) }
     };
     let val = unsafe { Box::from_raw(val as *mut ()) };
-    FfiResult::Ok(FfiObject::new(type_, val, FfiOwnership::LIBRARY))
+    FfiResult::Ok(util::into_raw(FfiObject::new(type_, val, FfiOwnership::LIBRARY)))
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_data__object_type(this: *mut FfiObject) -> FfiResult<*mut c_char> {
     let obj = util::as_ref(this);
-    FfiResult::Ok(util::into_c_char_p(obj.type_.descriptor.to_string()))
+
+    match util::into_c_char_p(obj.type_.descriptor.to_string()) {
+        Ok(v) => FfiResult::Ok(v),
+        Err(e) => e.into()
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_data__object_as_slice(obj: *const FfiObject) -> FfiResult<*mut FfiSlice> {
-    fn plain_to_raw(obj: &FfiObject) -> *mut FfiSlice {
+    fn plain_to_raw(obj: &FfiObject) -> FfiResult<*mut FfiSlice> {
         let plain: &c_void = obj.as_ref();
-        FfiSlice::new(plain as *const c_void as *mut c_void, 1)
+        FfiResult::Ok(FfiSlice::new_raw(plain as *const c_void as *mut c_void, 1))
     }
-    fn string_to_raw(obj: &FfiObject) -> *mut FfiSlice {
+    fn string_to_raw(obj: &FfiObject) -> FfiResult<*mut FfiSlice> {
         // // FIXME: There's no way to get a CString without copying, so this leaks.
         let string: &String = obj.as_ref();
-        let char_p = util::into_c_char_p(string.clone());
-        FfiSlice::new(char_p as *mut c_void, string.len() + 1)
+        FfiResult::Ok(try_!(util::into_c_char_p(string.clone())
+            .map(|char_p| FfiSlice::new_raw(char_p as *mut c_void, string.len() + 1))))
     }
-    fn slice_to_raw<T>(_obj: &FfiObject) -> *mut FfiSlice {
+    fn slice_to_raw<T>(_obj: &FfiObject) -> FfiResult<*mut FfiSlice> {
         // TODO: Need to get a reference to the slice here.
         unimplemented!()
     }
-    fn vec_to_raw<T: 'static>(obj: &FfiObject) -> *mut FfiSlice {
+    fn vec_to_raw<T: 'static>(obj: &FfiObject) -> FfiResult<*mut FfiSlice> {
         let vec: &Vec<T> = obj.as_ref();
-        FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len())
+        FfiResult::Ok(FfiSlice::new_raw(vec.as_ptr() as *mut c_void, vec.len()))
     }
-    fn tuple_to_raw<T0: 'static + Clone + Debug, T1: 'static + Clone + Debug>(obj: &FfiObject) -> *mut FfiSlice {
+    fn tuple_to_raw<T0: 'static + Clone + Debug, T1: 'static + Clone + Debug>(obj: &FfiObject) -> FfiResult<*mut FfiSlice> {
         let tuple: &(T0, T1) = obj.as_ref();
-        FfiSlice::new(util::into_raw([
+        FfiResult::Ok(FfiSlice::new_raw(util::into_raw([
             &tuple.0 as *const T0 as *const c_void,
             &tuple.1 as *const T1 as *const c_void
-        ]) as *mut c_void, 2)
+        ]) as *mut c_void, 2))
     }
     let obj = util::as_ref(obj);
-    let raw = match obj.type_.contents {
+    match obj.type_.contents {
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
         },
@@ -130,8 +134,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const FfiObject) -> FfiResu
             }
         }
         _ => { plain_to_raw(obj) }
-    };
-    FfiResult::Ok(raw)
+    }
 }
 
 #[no_mangle]
@@ -163,7 +166,7 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *const c_cha
         // FIXME: Figure out how to implement general to_string().
         let string = format!("{:?}", this);
         // FIXME: Leaks string.
-        util::into_c_char_p(string)
+        util::into_c_char_p(string).unwrap()
     }
     let this = util::as_ref(this);
     let type_arg = &this.type_;
@@ -207,8 +210,8 @@ mod tests {
         let val_in = 999;
         let raw_ptr = util::into_raw(val_in) as *mut c_void;
         let raw_len = 1;
-        let raw = FfiSlice::new(raw_ptr, raw_len);
-        let res = opendp_data__slice_as_object(util::into_c_char_p("<i32>".to_owned()), raw);
+        let raw = FfiSlice::new_raw(raw_ptr, raw_len);
+        let res = opendp_data__slice_as_object(util::into_c_char_p("<i32>".to_owned()).unwrap_test(), raw);
         match res {
             FfiResult::Ok(obj) => {
                 let obj = util::as_ref(obj);
@@ -225,8 +228,8 @@ mod tests {
         let val_in = "Hello".to_owned();
         let raw_ptr = util::into_c_char_p(val_in.clone()) as *mut c_void;
         let raw_len = val_in.len() + 1;
-        let raw = FfiSlice::new(raw_ptr, raw_len);
-        let res = opendp_data__slice_as_object(util::into_c_char_p("<String>".to_owned()), raw);
+        let raw = FfiSlice::new_raw(raw_ptr, raw_len);
+        let res = opendp_data__slice_as_object(util::into_c_char_p("<String>".to_owned()).unwrap_test(), raw);
         match res {
             FfiResult::Ok(obj) => {
                 let obj = util::as_ref(obj);
@@ -243,8 +246,8 @@ mod tests {
         let val_in = vec![1, 2, 3];
         let raw_ptr = val_in.as_ptr() as *mut c_void;
         let raw_len = val_in.len();
-        let raw = FfiSlice::new(raw_ptr, raw_len);
-        let res = opendp_data__slice_as_object(util::into_c_char_p("<Vec<i32>>".to_owned()), raw);
+        let raw = FfiSlice::new_raw(raw_ptr, raw_len);
+        let res = opendp_data__slice_as_object(util::into_c_char_p("<Vec<i32>>".to_owned()).unwrap_test(), raw);
         match res {
             FfiResult::Ok(obj) => {
                 let obj = util::as_ref(obj);
@@ -259,7 +262,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_number() {
         let val_in = 999;
-        let obj = FfiObject::new_from_type(val_in);
+        let obj = FfiObject::new_raw_from_type(val_in).into_raw();
         let res = opendp_data__object_as_slice(obj);
         match res {
             FfiResult::Ok(obj) => {
@@ -277,7 +280,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_string() {
         let val_in = "Hello".to_owned();
-        let obj = FfiObject::new_from_type(val_in.clone());
+        let obj = FfiObject::new_raw_from_type(val_in.clone());
         let res = opendp_data__object_as_slice(obj);
         match res {
             FfiResult::Ok(obj) => {
@@ -295,7 +298,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_vec() {
         let val_in = vec![1, 2, 3];
-        let obj = FfiObject::new_from_type(val_in.clone());
+        let obj = FfiObject::new_raw_from_type(val_in.clone());
         let res = opendp_data__object_as_slice(obj);
         match res {
             FfiResult::Ok(obj) => {

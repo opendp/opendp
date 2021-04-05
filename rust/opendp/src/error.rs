@@ -35,21 +35,14 @@ pub struct Error {
     pub backtrace: _Backtrace
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.variant)
-    }
-}
-
-
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum ErrorVariant {
     #[error("{0}")]
     Raw(Box<dyn std::error::Error>),
 
-    #[error("UnknownType")]
-    UnknownType,
+    #[error("TypeParse")]
+    TypeParse,
 
     #[error("Failed function execution")]
     FailedFunction,
@@ -79,6 +72,12 @@ pub enum ErrorVariant {
     NotImplemented,
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.variant)
+    }
+}
+
 impl From<ErrorVariant> for Error {
     fn from(variant: ErrorVariant) -> Self {
         Self { variant, message: None, backtrace: _Backtrace::new() }
@@ -86,3 +85,24 @@ impl From<ErrorVariant> for Error {
 }
 
 pub type Fallible<T> = Result<T, Error>;
+
+/// A trait for calling unwrap. Differs from unwrap in that the developer has made the assertion that failure should be unreachable
+/// This is ok to use in two scenarios:
+/// - Tests
+/// - Code with unreachable None or Err variants
+pub trait UnwrapAssert {
+    type Inner;
+    fn unwrap_assert(self) -> Self::Inner;
+}
+impl<T> UnwrapAssert for Option<T> {
+    type Inner = T;
+    fn unwrap_assert(self) -> T {
+        self.unwrap()
+    }
+}
+impl<T> UnwrapAssert for Fallible<T> {
+    type Inner = T;
+    fn unwrap_assert(self) -> T {
+        self.unwrap()
+    }
+}

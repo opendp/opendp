@@ -5,7 +5,7 @@ use std::iter::repeat;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use crate::error::Fallible;
+use crate::error::*;
 use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation};
 use crate::data::Column;
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
@@ -15,8 +15,9 @@ use std::hash::Hash;
 pub type DataFrame<K> = HashMap<K, Column>;
 pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 
-pub struct CreateDataFrame<M> {
-    metric: PhantomData<M>
+pub struct CreateDataFrame<M, K> {
+    metric: PhantomData<M>,
+    keys: PhantomData<K>
 }
 
 /// ensure all rows have `len` number of cells
@@ -48,7 +49,7 @@ pub fn create_dataframe_domain<K: Eq + Hash>() -> DataFrameDomain<K> {
 }
 
 
-impl<M, K> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M, Vec<K>> for CreateDataFrame<M>
+impl<M, K> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M, Vec<K>> for CreateDataFrame<M, K>
     where M: Clone + DatasetMetric<Distance=u32>,
           K: 'static + Eq + Hash + Debug + Clone {
     fn make1(col_names: Vec<K>) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M>> {
@@ -65,8 +66,9 @@ impl<M, K> MakeTransformation1<VectorDomain<VectorDomain<AllDomain<String>>>, Da
     }
 }
 
-pub struct SplitDataFrame<M> {
-    metric: PhantomData<M>
+pub struct SplitDataFrame<M, K> {
+    metric: PhantomData<M>,
+    keys: PhantomData<K>
 }
 
 fn split_dataframe<'a, K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str) -> DataFrame<K> {
@@ -76,7 +78,7 @@ fn split_dataframe<'a, K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str
     create_dataframe(col_names, &records)
 }
 
-impl<M, K> MakeTransformation2<AllDomain<String>, DataFrameDomain<K>, M, M, Option<&str>, Vec<K>> for SplitDataFrame<M>
+impl<M, K> MakeTransformation2<AllDomain<String>, DataFrameDomain<K>, M, M, Option<&str>, Vec<K>> for SplitDataFrame<M, K>
     where K: 'static + Hash + Eq + Clone,
           M: Clone + DatasetMetric<Distance=u32> {
     fn make2(separator: Option<&str>, col_names: Vec<K>) -> Fallible<Transformation<AllDomain<String>, DataFrameDomain<K>, M, M>> {
@@ -258,31 +260,32 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
 mod tests {
     use crate::core::ChainTT;
     use crate::dist::HammingDistance;
+    use crate::error::UnwrapAssert;
 
     use super::*;
 
     #[test]
     fn test_make_split_lines() {
-        let transformation = SplitLines::<HammingDistance>::make().unwrap();
+        let transformation = SplitLines::<HammingDistance>::make().unwrap_assert();
         let arg = "ant\nbat\ncat\n".to_owned();
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         assert_eq!(ret, vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()]);
     }
 
     #[test]
     fn test_make_parse_series() {
-        let transformation = ParseSeries::<i32, HammingDistance>::make(true).unwrap();
+        let transformation = ParseSeries::<i32, HammingDistance>::make(true).unwrap_assert();
         let arg = vec!["1".to_owned(), "2".to_owned(), "3".to_owned(), "foo".to_owned()];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected = vec![1, 2, 3, 0];
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_split_records() {
-        let transformation = SplitRecords::<HammingDistance>::make(None).unwrap();
+        let transformation = SplitRecords::<HammingDistance>::make(None).unwrap_assert();
         let arg = vec!["ant, foo".to_owned(), "bat, bar".to_owned(), "cat, baz".to_owned()];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         assert_eq!(ret, vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
@@ -292,25 +295,25 @@ mod tests {
 
     #[test]
     fn test_make_create_dataframe() {
-        let transformation = CreateDataFrame::<HammingDistance>::make(vec!["0".to_string(), "1".to_string()]).unwrap();
+        let transformation = CreateDataFrame::<HammingDistance, u32>::make(vec![0, 1]).unwrap_assert();
         let arg = vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
             vec!["cat".to_owned(), "baz".to_owned()],
         ];
-        let ret = transformation.function.eval(&arg).unwrap();
-        let expected: DataFrame<String> = vec![
-            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
+        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let expected: DataFrame<u32> = vec![
+            (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
+            (1, Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
         ].into_iter().collect();
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_split_dataframe() {
-        let transformation = SplitDataFrame::<HammingDistance>::make(None, vec!["0".to_string(), "1".to_string()]).unwrap();
+        let transformation = SplitDataFrame::<HammingDistance, String>::make(None, vec!["0".to_string(), "1".to_string()]).unwrap_assert();
         let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
@@ -320,12 +323,12 @@ mod tests {
 
     #[test]
     fn test_make_parse_column() {
-        let transformation = ParseColumn::<HammingDistance, i32>::make(1, true).unwrap();
+        let transformation = ParseColumn::<HammingDistance, i32>::make(1, true).unwrap_assert();
         let arg: DataFrame<usize> = vec![
             (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             (1, Column::new(vec!["1".to_owned(), "2".to_owned(), "".to_owned()])),
         ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected: DataFrame<usize> = vec![
             (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             (1, Column::new(vec![1, 2, 0])),
@@ -335,15 +338,15 @@ mod tests {
 
     #[test]
     fn test_make_parse_columns() {
-        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1".to_string(), true).unwrap();
-        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2".to_string(), true).unwrap();
-        let transformation = ChainTT::make(&transformation1, &transformation0).unwrap();
+        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1".to_string(), true).unwrap_assert();
+        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2".to_string(), true).unwrap_assert();
+        let transformation = ChainTT::make(&transformation1, &transformation0).unwrap_assert();
         let arg: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
             ("2".to_owned(), Column::new(vec!["1.1".to_owned(), "2.2".to_owned(), "3.3".to_owned()])),
         ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec![1, 2, 3])),
@@ -354,12 +357,12 @@ mod tests {
 
     #[test]
     fn test_make_select_column() {
-        let transformation = SelectColumn::<HammingDistance, String>::make("1".to_owned()).unwrap();
+        let transformation = SelectColumn::<HammingDistance, String>::make("1".to_owned()).unwrap_assert();
         let arg: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
         ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected = vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()];
         assert_eq!(ret, expected);
     }

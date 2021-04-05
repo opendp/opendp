@@ -6,7 +6,7 @@ use num::One;
 
 use crate::core::{DatasetMetric, Domain, Function, Metric, StabilityRelation, Transformation};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
-use crate::error::Fallible;
+use crate::error::*;
 use crate::traits::{CastFrom, DistanceCast};
 use crate::trans::{MakeTransformation0, MakeTransformation2};
 
@@ -230,18 +230,18 @@ mod test_manipulations {
 
     #[test]
     fn test_identity() {
-        let identity = Identity::make(AllDomain::new(), HammingDistance).unwrap();
+        let identity = Identity::make(AllDomain::new(), HammingDistance).unwrap_assert();
         let arg = 99;
-        let ret = identity.function.eval(&arg).unwrap();
+        let ret = identity.function.eval(&arg).unwrap_assert();
         assert_eq!(ret, 99);
     }
 
 
     #[test]
     fn test_make_clamp() {
-        let transformation = Clamp::<HammingDistance, Vec<i32>>::make(0, 10).unwrap();
+        let transformation = Clamp::<HammingDistance, Vec<i32>>::make(0, 10).unwrap_assert();
         let arg = vec![-10, -5, 0, 5, 10, 20];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected = vec![0, 0, 0, 5, 10, 10];
         assert_eq!(ret, expected);
     }

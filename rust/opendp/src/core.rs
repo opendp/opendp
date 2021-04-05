@@ -23,7 +23,7 @@
 use std::ops::{Div, Mul};
 use std::rc::Rc;
 
-use crate::error::Fallible;
+use crate::error::*;
 use crate::dom::{BoxDomain, PairDomain};
 use crate::meas::MakeMeasurement2;
 use crate::traits::DistanceCast;
@@ -631,7 +631,7 @@ mod tests {
         let stability_relation = StabilityRelation::new_from_constant(1);
         let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
         let arg = 99;
-        let ret = identity.function.eval(&arg).unwrap();
+        let ret = identity.function.eval(&arg).unwrap_assert();
         assert_eq!(ret, 99);
     }
 
@@ -651,9 +651,9 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let chain = ChainMT::make(&measurement1, &transformation0).unwrap();
+        let chain = ChainMT::make(&measurement1, &transformation0).unwrap_assert();
         let arg = 99_u8;
-        let ret = chain.function.eval(&arg).unwrap();
+        let ret = chain.function.eval(&arg).unwrap_assert();
         assert_eq!(ret, 101.0);
     }
 
@@ -673,9 +673,9 @@ mod tests {
         let output_metric1 = L1Sensitivity::<i32>::new();
         let stability_relation1 = StabilityRelation::new_from_constant(1);
         let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
-        let chain = ChainTT::make(&transformation1, &transformation0).unwrap();
+        let chain = ChainTT::make(&transformation1, &transformation0).unwrap_assert();
         let arg = 99_u8;
-        let ret = chain.function.eval(&arg).unwrap();
+        let ret = chain.function.eval(&arg).unwrap_assert();
         assert_eq!(ret, 101.0);
     }
 
@@ -695,9 +695,9 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let composition = Composition::make(&measurement0, &measurement1).unwrap();
+        let composition = Composition::make(&measurement0, &measurement1).unwrap_assert();
         let arg = 99;
-        let ret = composition.function.eval(&arg).unwrap();
+        let ret = composition.function.eval(&arg).unwrap_assert();
         assert_eq!(ret, (Box::new(100_f32), Box::new(98_f64)));
     }
 }

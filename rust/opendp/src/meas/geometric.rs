@@ -5,7 +5,7 @@ use std::ops::{Sub, Add};
 use crate::core::{Function, Measurement, PrivacyRelation};
 use crate::dist::{MaxDivergence, L1Sensitivity};
 use crate::dom::AllDomain;
-use crate::error::Fallible;
+use crate::error::*;
 use crate::samplers::{SampleBernoulli, SampleGeometric, SampleUniform};
 use crate::meas::MakeMeasurement3;
 use crate::traits::DistanceCast;
@@ -51,10 +51,10 @@ mod tests {
 
     #[test]
     fn test_make_geometric_mechanism() {
-        let measurement = BaseSimpleGeometric::<i32, f64>::make(10.0, 200, 210).unwrap();
+        let measurement = BaseSimpleGeometric::<i32, f64>::make(10.0, 200, 210).unwrap_assert();
         let arg = 205;
-        let _ret = measurement.function.eval(&arg).unwrap();
+        let _ret = measurement.function.eval(&arg).unwrap_assert();
 
-        assert!(measurement.privacy_relation.eval(&1, &0.5).unwrap());
+        assert!(measurement.privacy_relation.eval(&1, &0.5).unwrap_assert());
     }
 }

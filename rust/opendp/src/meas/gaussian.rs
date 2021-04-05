@@ -5,7 +5,7 @@ use num::Float;
 use crate::core::{Function, Measurement, PrivacyRelation};
 use crate::dist::{L2Sensitivity, SmoothedMaxDivergence};
 use crate::dom::AllDomain;
-use crate::error::Fallible;
+use crate::error::*;
 use crate::meas::MakeMeasurement1;
 use crate::samplers::SampleGaussian;
 
@@ -57,10 +57,10 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_mechanism() {
-        let measurement = BaseGaussian::<f64>::make(1.0).unwrap();
+        let measurement = BaseGaussian::<f64>::make(1.0).unwrap_assert();
         let arg = 0.0;
-        let _ret = measurement.function.eval(&arg).unwrap();
+        let _ret = measurement.function.eval(&arg).unwrap_assert();
 
-        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap());
+        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap_assert());
     }
 }

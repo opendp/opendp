@@ -89,6 +89,14 @@ extern crate lazy_static;
 
 // internal module for err! macro resolution
 mod error { pub use opendp::error::{Error, ErrorVariant}; }
+macro_rules! try_ {
+    ($value:expr) => {
+        match $value {
+            Ok(x) => x,
+            Err(e) => return e.into(),
+        }
+    }
+}
 
 #[macro_use]
 mod dispatch;

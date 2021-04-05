@@ -4,10 +4,10 @@ use std::fmt::{Debug, Formatter};
 use std::mem::{ManuallyDrop, transmute};
 use std::os::raw::c_char;
 
-use opendp::{err, fallible};
+use opendp::{err};
 use opendp::core;
 use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
-use opendp::error::Error;
+use opendp::error::*;
 
 use crate::util;
 use crate::util::{c_bool, Type};
@@ -26,16 +26,15 @@ pub struct FfiObject {
 }
 
 impl FfiObject {
-    pub fn new(type_: Type, value: Box<()>, ownership: FfiOwnership) -> *mut FfiObject {
-        let object = FfiObject { type_, value: ManuallyDrop::new(value), ownership };
-        util::into_raw(object)
+    pub fn new(type_: Type, value: Box<()>, ownership: FfiOwnership) -> Self {
+        FfiObject { type_, value: ManuallyDrop::new(value), ownership }
     }
 
     #[cfg(test)]
-    pub fn new_from_type<T: 'static>(value: T) -> *mut FfiObject {
+    pub fn new_raw_from_type<T: 'static>(value: T) -> *mut Self {
         let type_ = Type::of::<T>();
         let value = util::into_box(value);
-        Self::new(type_, value, FfiOwnership::LIBRARY)
+        util::into_raw(Self::new(type_, value, FfiOwnership::LIBRARY))
     }
 
     pub fn as_ref<T>(&self) -> &T {
@@ -61,7 +60,7 @@ pub struct FfiSlice {
 }
 
 impl FfiSlice {
-    pub fn new(ptr: *mut c_void, len: usize) -> *mut Self {
+    pub fn new_raw(ptr: *mut c_void, len: usize) -> *mut Self {
         util::into_raw(FfiSlice { ptr, len })
     }
 }
@@ -74,13 +73,8 @@ pub struct FfiError {
 }
 
 impl FfiError {
-    pub fn new(error: Error) -> *mut Self {
-        let ffi_error = FfiError {
-            variant: util::into_c_char_p(format!("{:?}", error.variant)),
-            message: error.message.map_or(ptr::null::<c_char>() as *mut c_char, util::into_c_char_p),
-            backtrace: util::into_c_char_p(format!("{:?}", error.backtrace))
-        };
-        util::into_raw(ffi_error)
+    pub fn new_raw(error: Error) -> *mut Self {
+        util::into_raw(Self::from(error))
     }
 
     fn variant_str(&self) -> &str {
@@ -113,6 +107,16 @@ impl Debug for FfiError {
     }
 }
 
+impl From<Error> for FfiError {
+    fn from(error: Error) -> Self {
+        Self {
+            variant: try_!(util::into_c_char_p(format!("{:?}", error.variant))),
+            message: try_!(error.message.map_or(Ok(ptr::null::<c_char>() as *mut c_char), util::into_c_char_p)),
+            backtrace: try_!(util::into_c_char_p(format!("{:?}", error.backtrace)))
+        }
+    }
+}
+
 // Using this repr means we'll get a tagged union in C.
 // Because this is a generic, we need to be careful about sizes. Currently, everything that goes in here
 // is a pointer, so we're OK, but we may need to revisit this.
@@ -123,8 +127,22 @@ pub enum FfiResult<T> {
 }
 
 impl<T> FfiResult<T> {
-    pub fn new(result: Result<T, Error>) -> Self {
-        result.map_or_else(|e| Self::Err(FfiError::new(e)), |o| Self::Ok(o))
+    pub fn new(result: Fallible<T>) -> Self {
+        result.map_or_else(|e| Self::Err(FfiError::new_raw(e)), Self::Ok)
+    }
+}
+
+impl<TI, TO: From<TI>> From<Fallible<TI>> for FfiResult<*mut TO> {
+    fn from(result: Fallible<TI>) -> Self {
+        result.map_or_else(
+            |e| Self::Err(util::into_raw(FfiError::from(e))),
+            |v| Self::Ok(util::into_raw(TO::from(v))))
+    }
+}
+
+impl<T> From<Error> for FfiResult<T> {
+    fn from(e: Error) -> Self {
+        Self::Err(FfiError::new_raw(e))
     }
 }
 
@@ -180,7 +198,6 @@ impl Domain for FfiDomain {
 pub struct FfiMeasure;
 impl Measure for FfiMeasure {
     type Distance = ();
-
     fn new() -> Self { unreachable!() }
 }
 
@@ -198,18 +215,19 @@ pub struct FfiMeasurement {
 }
 
 impl FfiMeasurement {
-    pub fn new_from_types<ID: 'static + Domain, OD: 'static + Domain, IM: 'static + Metric, OM: 'static + Measure>(value: Measurement<ID, OD, IM, OM>) -> *mut FfiMeasurement {
-        let input_glue = FfiMetricGlue::<ID, IM>::new();
-        let input_glue = unsafe { transmute(input_glue) };
-        let output_glue = FfiMeasureGlue::<OD, OM>::new();
-        let output_glue = unsafe { transmute(output_glue) };
-        Self::new(input_glue, output_glue, value)
-    }
-
-    pub fn new<ID: 'static + Domain, OD: 'static + Domain, IM: Metric, OM: Measure>(input_glue: FfiMetricGlue<FfiDomain, FfiMetric>, output_glue: FfiMeasureGlue<FfiDomain, FfiMeasure>, value: Measurement<ID, OD, IM, OM>) -> *mut FfiMeasurement {
+    pub fn new<ID: 'static + Domain, OD: 'static + Domain, IM: Metric, OM: Measure>(input_glue: FfiMetricGlue<FfiDomain, FfiMetric>, output_glue: FfiMeasureGlue<FfiDomain, FfiMeasure>, value: Measurement<ID, OD, IM, OM>) -> Self {
         let value = util::into_box(value);
-        let ffi_measurement = FfiMeasurement { input_glue, output_glue, value };
-        util::into_raw(ffi_measurement)
+        FfiMeasurement { input_glue, output_glue, value }
+    }
+}
+
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> From<Measurement<DI, DO, MI, MO>> for FfiMeasurement {
+    fn from(value: Measurement<DI, DO, MI, MO>) -> Self {
+        let input_glue = FfiMetricGlue::<DI, MI>::new();
+        let input_glue = unsafe { transmute(input_glue) };
+        let output_glue = FfiMeasureGlue::<DO, MO>::new();
+        let output_glue = unsafe { transmute(output_glue) };
+        FfiMeasurement::new(input_glue, output_glue, value)
     }
 }
 
@@ -220,18 +238,19 @@ pub struct FfiTransformation {
 }
 
 impl FfiTransformation {
-    pub fn new_from_types<ID: 'static + Domain, OD: 'static + Domain, IM: 'static + Metric, OM: 'static + Metric>(value: Transformation<ID, OD, IM, OM>) -> *mut FfiTransformation {
-        let input_glue = FfiMetricGlue::<ID, IM>::new();
-        let input_glue = unsafe { transmute(input_glue) };
-        let output_glue = FfiMetricGlue::<OD, OM>::new();
-        let output_glue = unsafe { transmute(output_glue) };
-        Self::new(input_glue, output_glue, value)
-    }
-
-    pub fn new<ID: 'static + Domain, OD: 'static + Domain, IM: Metric, OM: Metric>(input_glue: FfiMetricGlue<FfiDomain, FfiMetric>, output_glue: FfiMetricGlue<FfiDomain, FfiMetric>, value: Transformation<ID, OD, IM, OM>) -> *mut FfiTransformation {
+    pub fn new<ID: 'static + Domain, OD: 'static + Domain, IM: Metric, OM: Metric>(input_glue: FfiMetricGlue<FfiDomain, FfiMetric>, output_glue: FfiMetricGlue<FfiDomain, FfiMetric>, value: Transformation<ID, OD, IM, OM>) -> Self {
         let value = util::into_box(value);
-        let ffi_transformation = FfiTransformation { input_glue, output_glue, value };
-        util::into_raw(ffi_transformation)
+        FfiTransformation { input_glue, output_glue, value }
+    }
+}
+
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric> From<Transformation<DI, DO, MI, MO>> for FfiTransformation {
+    fn from(value: Transformation<DI, DO, MI, MO>) -> Self {
+        let input_glue = FfiMetricGlue::<DI, MI>::new();
+        let input_glue = unsafe { transmute(input_glue) };
+        let output_glue = FfiMetricGlue::<DO, MO>::new();
+        let output_glue = unsafe { transmute(output_glue) };
+        FfiTransformation::new(input_glue, output_glue, value)
     }
 }
 
@@ -255,12 +274,12 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, a
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
     if arg.type_ != this.input_glue.domain_carrier {
-        return FfiResult::new(fallible!(DomainMismatch, "arg type does not match input domain"))
+        return err!(DomainMismatch, "arg type does not match input domain").into()
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
-    let res = res.map(|o| FfiObject::new(res_type, o, FfiOwnership::LIBRARY));
-    FfiResult::new(res)
+
+    res.map(|o| FfiObject::new(res_type, o, FfiOwnership::LIBRARY)).into()
 }
 
 #[no_mangle]
@@ -273,12 +292,11 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformat
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
     if arg.type_ != this.input_glue.domain_carrier {
-        return FfiResult::new(fallible!(DomainMismatch, "arg type does not match input domain"))
+        return err!(DomainMismatch, "arg type does not match input domain").into()
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
-    let res = res.map(|o| FfiObject::new(res_type, o, FfiOwnership::LIBRARY));
-    FfiResult::new(res)
+    res.map(|o| FfiObject::new(res_type, o, FfiOwnership::LIBRARY)).into()
 }
 
 #[no_mangle]
@@ -304,18 +322,17 @@ pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const FfiMeasurement
     } = measurement1;
 
     if output_glue0.domain_type != input_glue1.domain_type {
-        return FfiResult::new(fallible!(DomainMismatch, "chained domain types do not match"))
+        return err!(DomainMismatch, "chained domain types do not match").into()
     }
 
-    let measurement = ChainMT::make_chain_mt_glue(
-        value1,
-        value0,
-        None,
+    let measurement = try_!(ChainMT::make_chain_mt_glue(
+        value1, value0, None,
         &input_glue0.metric_glue,
         &output_glue0.metric_glue,
-        &output_glue1.measure_glue);
-    let measurement = measurement.map(|o| FfiMeasurement::new(input_glue0.clone(), output_glue1.clone(), o));
-    FfiResult::new(measurement)
+        &output_glue1.measure_glue));
+
+    FfiResult::Ok(util::into_raw(
+        FfiMeasurement::new(input_glue0.clone(), output_glue1.clone(), measurement)))
 }
 
 #[no_mangle]
@@ -336,7 +353,7 @@ pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const FfiTransfor
     } = transformation1;
 
     if output_glue0.domain_type != input_glue1.domain_type {
-        return FfiResult::new(fallible!(DomainMismatch, "chained domain types do not match"))
+        return err!(DomainMismatch, "chained domain types do not match").into()
     }
 
     let transformation = ChainTT::make_chain_tt_glue(
@@ -346,8 +363,11 @@ pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const FfiTransfor
         &input_glue0.metric_glue,
         &output_glue0.metric_glue,
         &output_glue1.metric_glue);
-    let transformation = transformation.map(|o| FfiTransformation::new(input_glue0.clone(), output_glue1.clone(), o));
-    FfiResult::new(transformation)
+
+    match transformation {
+        Ok(trans) => FfiResult::Ok(util::into_raw(FfiTransformation::new(input_glue0.clone(), output_glue1.clone(), trans))),
+        Err(e) => e.into()
+    }
 }
 
 #[no_mangle]
@@ -356,7 +376,7 @@ pub extern "C" fn opendp_core__make_composition(measurement0: *const FfiMeasurem
     let measurement0 = util::as_ref(measurement0);
     let measurement1 = util::as_ref(measurement1);
     if measurement0.input_glue.domain_type != measurement1.input_glue.domain_type {
-        return FfiResult::new(fallible!(DomainMismatch, "chained domain types do not match"))
+        return err!(DomainMismatch, "chained domain types do not match").into()
     }
     let input_glue = measurement0.input_glue.clone();
     let output_glue0 = measurement0.output_glue.clone();
@@ -366,15 +386,15 @@ pub extern "C" fn opendp_core__make_composition(measurement0: *const FfiMeasurem
     let output_glue_domain_carrier = Type::new_box_pair(&output_glue0.domain_carrier, &output_glue1.domain_carrier);
     let output_glue_measure_glue = output_glue0.measure_glue.clone();
     let output_glue = FfiMeasureGlue::<FfiDomain, FfiMeasure>::new_explicit(output_glue_domain_type, output_glue_domain_carrier, output_glue_measure_glue);
-    let measurement = core::make_composition_glue(
+    let measurement = try_!(core::make_composition_glue(
         &measurement0.value,
         &measurement1.value,
         &input_glue.metric_glue,
         &output_glue0.measure_glue,
         &output_glue1.measure_glue
-    );
-    let measurement = measurement.map(|o| FfiMeasurement::new(input_glue, output_glue, o));
-    FfiResult::new(measurement)
+    ));
+
+    FfiResult::Ok(util::into_raw(FfiMeasurement::new(input_glue, output_glue, measurement)))
 }
 
 #[no_mangle]
@@ -420,9 +440,9 @@ mod tests {
             FfiResult::Ok(_) => assert!(false, "Got Ok!"),
             FfiResult::Err(err) => assert_eq!(
                 FfiError {
-                    variant: util::into_c_char_p("FailedFunction".to_owned()),
-                    message: util::into_c_char_p("Eat my shorts!".to_owned()),
-                    backtrace: util::into_c_char_p("".to_owned()),
+                    variant: util::into_c_char_p("FailedFunction".to_owned()).unwrap_assert(),
+                    message: util::into_c_char_p("Eat my shorts!".to_owned()).unwrap_assert(),
+                    backtrace: util::into_c_char_p("".to_owned()).unwrap_assert(),
                 },
                 util::into_owned(err)
             )

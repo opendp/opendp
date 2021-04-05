@@ -11,7 +11,7 @@ use num::traits::FloatConst;
 use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
-use crate::error::Fallible;
+use crate::error::*;
 use crate::traits::DistanceCast;
 use crate::trans::{MakeTransformation0, MakeTransformation1};
 
@@ -90,8 +90,7 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedD
 
                 categories.iter().map(|cat| counts.remove(cat))
                     .chain(vec![Some(null_count)])
-                    // this is a "safe" unwrap
-                    .collect::<Option<_>>().unwrap()
+                    .collect::<Option<_>>().unwrap_assert()
             }),
             MI::new(),
             MO::new(),
@@ -111,7 +110,6 @@ pub struct CountBy<MI, MO, TI, TO> {
 pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
     fn get_stability_constant() -> Fallible<MO::Distance>;
 }
-
 
 impl<TI, TO, QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for CountBy<HammingDistance, L1Sensitivity<QO>, TI, TO> {
     fn get_stability_constant() -> Fallible<QO> {
@@ -164,18 +162,18 @@ mod tests {
 
     #[test]
     fn test_make_count_l1() {
-        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make().unwrap();
+        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make().unwrap_assert();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected = 5;
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_count_l2() {
-        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make().unwrap();
+        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make().unwrap_assert();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_assert();
         let expected = 5;
         assert_eq!(ret, expected);
     }
