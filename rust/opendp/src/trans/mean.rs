@@ -87,14 +87,4 @@ mod tests {
         assert_eq!(ret, expected);
         assert!(transformation.stability_relation.eval(&1, &1.).unwrap_test())
     }
-
-    #[test]
-    fn test_make_bounded_mean_int() {
-        let transformation = BoundedMean::<SymmetricDistance, L2Sensitivity<f64>>::make(0., 10., 5).unwrap_test();
-        let arg = vec![1., 2., 3., 4., 5.];
-        let ret = transformation.function.eval(&arg).unwrap_test();
-        let expected = 3.;
-        assert_eq!(ret, expected);
-        assert!(transformation.stability_relation.eval(&1, &1.).unwrap_test())
-    }
 }
