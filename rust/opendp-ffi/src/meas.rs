@@ -2,7 +2,7 @@ use std::os::raw::{c_char, c_void};
 
 use num::Float;
 
-use opendp::meas::{MakeMeasurement1, SampleGaussian, SampleLaplace, MakeMeasurement3, SampleGeometric};
+use opendp::meas::{MakeMeasurement1, MakeMeasurement3};
 use opendp::meas::gaussian::BaseGaussian;
 use opendp::meas::laplace::{BaseVectorLaplace, BaseLaplace};
 
@@ -12,6 +12,7 @@ use crate::util::TypeArgs;
 use opendp::traits::DistanceCast;
 use opendp::meas::geometric::BaseSimpleGeometric;
 use std::ops::{Sub, Add};
+use opendp::samplers::{SampleLaplace, SampleGaussian, SampleGeometric};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, scale: *const c_void) -> *mut FfiMeasurement {
@@ -63,16 +64,18 @@ pub extern "C" fn opendp_meas__make_base_gaussian_vec(type_args: *const c_char, 
 
 
 #[no_mangle]
-pub extern "C" fn opendp_meas__make_base_simple_geometric(type_args: *const c_char, scale: f64, min: *const c_void, max: *const c_void) -> *mut FfiMeasurement {
-    fn monomorphize<T>(scale: f64, min: *const c_void, max: *const c_void) -> *mut FfiMeasurement
-        where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast {
+pub extern "C" fn opendp_meas__make_base_simple_geometric(type_args: *const c_char, scale: *const c_void, min: *const c_void, max: *const c_void) -> *mut FfiMeasurement {
+    fn monomorphize<T, QO>(scale: *const c_void, min: *const c_void, max: *const c_void) -> *mut FfiMeasurement
+        where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast,
+              QO: 'static + Float + DistanceCast, f64: From<QO> {
+        let scale = util::as_ref(scale as *const QO).clone();
         let min = util::as_ref(min as *const T).clone();
         let max = util::as_ref(max as *const T).clone();
-        let measurement = BaseSimpleGeometric::<T>::make(scale, min, max).unwrap();
+        let measurement = BaseSimpleGeometric::<T, QO>::make(scale, min, max).unwrap();
         FfiMeasurement::new_from_types(measurement)
     }
-    let type_args = TypeArgs::expect(type_args, 1);
-    dispatch!(monomorphize, [(type_args.0[0], @integers)], (scale, min, max))
+    let type_args = TypeArgs::expect(type_args, 2);
+    dispatch!(monomorphize, [(type_args.0[0], @integers), (type_args.0[1], @floats)], (scale, min, max))
 }
 
 #[no_mangle]
@@ -83,7 +86,7 @@ r#"{
     { "name": "make_base_laplace", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiMeasurement *" },
     { "name": "make_base_laplace_vec", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiMeasurement *" },
     { "name": "make_base_gaussian", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiMeasurement *" },
-    { "name": "make_base_simple_geometric", "args": [ ["const char *", "selector"], ["double", "scale"], ["void *", "min"], ["void *", "max"] ], "ret": "FfiMeasurement *" }
+    { "name": "make_base_simple_geometric", "args": [ ["const char *", "selector"], ["void *", "scale"], ["void *", "min"], ["void *", "max"] ], "ret": "FfiMeasurement *" }
 ]
 }"#;
     util::bootstrap(spec)
