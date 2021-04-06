@@ -37,37 +37,36 @@ impl<MI, MO, T> MakeTransformation0<VectorDomain<AllDomain<T>>, AllDomain<u32>, 
 }
 
 // count with unknown n, known categories
-pub struct CountByCategories<MI, MO, TI, TO, QO> {
+pub struct CountByCategories<MI, MO, TI, TO> {
     input_metric: PhantomData<MI>,
     output_metric: PhantomData<MO>,
     input_data: PhantomData<TI>,
     output_data: PhantomData<TO>,
-    output_distance: PhantomData<QO>
 }
 
 pub trait CountByCategoriesConstant<MI: DatasetMetric, MO: SensitivityMetric> {
-    fn get_stability_constant() -> MO::Distance;
+    fn get_stability_constant() -> Fallible<MO::Distance>;
 }
 
-impl<TI, TO, QO: NumCast> CountByCategoriesConstant<HammingDistance, L1Sensitivity<QO>> for CountByCategories<HammingDistance, L1Sensitivity<QO>, TI, TO, QO> {
-    fn get_stability_constant() -> QO {
-        QO::from(2.).unwrap()
+impl<TI, TO, QO: NumCast> CountByCategoriesConstant<HammingDistance, L1Sensitivity<QO>> for CountByCategories<HammingDistance, L1Sensitivity<QO>, TI, TO> {
+    fn get_stability_constant() -> Fallible<QO> {
+        QO::from(2.).ok_or_else(|| err!(FailedCast))
     }
 }
 
-impl<TI, TO, QO: FloatConst> CountByCategoriesConstant<HammingDistance, L2Sensitivity<QO>> for CountByCategories<HammingDistance, L2Sensitivity<QO>, TI, TO, QO> {
-    fn get_stability_constant() -> QO {
-        QO::SQRT_2()
+impl<TI, TO, QO: FloatConst> CountByCategoriesConstant<HammingDistance, L2Sensitivity<QO>> for CountByCategories<HammingDistance, L2Sensitivity<QO>, TI, TO> {
+    fn get_stability_constant() -> Fallible<QO> {
+        Ok(QO::SQRT_2())
     }
 }
 
-impl<MO: SensitivityMetric<Distance=QO>, TI, TO, QO: One> CountByCategoriesConstant<SymmetricDistance, MO> for CountByCategories<SymmetricDistance, MO, TI, TO, QO> {
-    fn get_stability_constant() -> QO {
-        QO::one()
+impl<MO: SensitivityMetric<Distance=QO>, TI, TO, QO: One> CountByCategoriesConstant<SymmetricDistance, MO> for CountByCategories<SymmetricDistance, MO, TI, TO> {
+    fn get_stability_constant() -> Fallible<QO> {
+        Ok(QO::one())
     }
 }
 
-impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO, Vec<TI>> for CountByCategories<MI, MO, TI, TO, QO>
+impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO, Vec<TI>> for CountByCategories<MI, MO, TI, TO>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=QO>,
           TI: 'static + Eq + Hash,
@@ -96,43 +95,43 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedD
             }),
             MI::new(),
             MO::new(),
-            StabilityRelation::new_from_constant(Self::get_stability_constant())))
+            StabilityRelation::new_from_constant(Self::get_stability_constant()?)))
     }
 }
 
 // count with known n, unknown categories
-pub struct CountBy<MI, MO, TI, TO, QO> {
+pub struct CountBy<MI, MO, TI, TO> {
     input_metric: PhantomData<MI>,
     output_metric: PhantomData<MO>,
     input_data: PhantomData<TI>,
     output_data: PhantomData<TO>,
-    output_distance: PhantomData<QO>,
 }
 
 // this entire trait is duplicated code (only changed the struct it is impl'ed for)
 pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
-    fn get_stability_constant() -> MO::Distance;
+    fn get_stability_constant() -> Fallible<MO::Distance>;
 }
 
-impl<TI, TO, QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for CountBy<HammingDistance, L1Sensitivity<QO>, TI, TO, QO> {
-    fn get_stability_constant() -> QO {
-        QO::from(2.).unwrap()
+
+impl<TI, TO, QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for CountBy<HammingDistance, L1Sensitivity<QO>, TI, TO> {
+    fn get_stability_constant() -> Fallible<QO> {
+        QO::from(2.).ok_or_else(|| err!(FailedCast))
     }
 }
 
-impl<TI, TO, QO: FloatConst> CountByConstant<HammingDistance, L2Sensitivity<QO>> for CountBy<HammingDistance, L2Sensitivity<QO>, TI, TO, QO> {
-    fn get_stability_constant() -> QO {
-        QO::SQRT_2()
+impl<TI, TO, QO: FloatConst> CountByConstant<HammingDistance, L2Sensitivity<QO>> for CountBy<HammingDistance, L2Sensitivity<QO>, TI, TO> {
+    fn get_stability_constant() -> Fallible<QO> {
+        Ok(QO::SQRT_2())
     }
 }
 
-impl<MO: SensitivityMetric<Distance=QO>, TI, TO, QO: One> CountByConstant<SymmetricDistance, MO> for CountBy<SymmetricDistance, MO, TI, TO, QO> {
-    fn get_stability_constant() -> QO {
-        QO::one()
+impl<MO: SensitivityMetric<Distance=QO>, TI, TO, QO: One> CountByConstant<SymmetricDistance, MO> for CountBy<SymmetricDistance, MO, TI, TO> {
+    fn get_stability_constant() -> Fallible<QO> {
+        Ok(QO::one())
     }
 }
 
-impl<MI, MO, TI, TO, QO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, MI, MO, usize> for CountBy<MI, MO, TI, TO, QO>
+impl<MI, MO, TI, TO, QO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, MI, MO, usize> for CountBy<MI, MO, TI, TO>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=QO>,
           TI: 'static + Eq + Hash + Clone,
@@ -152,7 +151,7 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<SizedDomain<VectorDomain<AllDomain<
             }),
             MI::new(),
             MO::new(),
-            StabilityRelation::new_from_constant(Self::get_stability_constant())))
+            StabilityRelation::new_from_constant(Self::get_stability_constant()?)))
     }
 }
 
