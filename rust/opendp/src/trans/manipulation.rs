@@ -239,7 +239,7 @@ mod test_manipulations {
 
     #[test]
     fn test_make_clamp() {
-        let transformation = Clamp::<HammingDistance, Vec<i32>>::make(0, 10).unwrap_assert();
+        let transformation = Clamp::<HammingDistance, Vec<i32>>::make(0, 10).unwrap();
         let arg = vec![-10, -5, 0, 5, 10, 20];
         let ret = transformation.function.eval(&arg).unwrap();
         let expected = vec![0, 0, 0, 5, 10, 10];
