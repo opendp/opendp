@@ -2,24 +2,22 @@ use std::cmp;
 use std::ops::{AddAssign, Neg};
 
 use ieee754::Ieee754;
-
 use num::{One, Zero};
 use openssl::rand::rand_bytes;
+#[cfg(not(feature="use-mpfr"))]
+use rand::Rng;
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
+#[cfg(not(feature="use-mpfr"))]
+use statrs::function::erf;
 
+use crate::error::Fallible;
 
 pub fn fill_bytes(mut buffer: &mut [u8]) -> Fallible<()> {
     if let Err(e) = rand_bytes(&mut buffer) {
         fallible!(FailedFunction, "OpenSSL error: {:?}", e)
     } else { Ok(()) }
 }
-
-use crate::error::Fallible;
-#[cfg(not(feature="use-mpfr"))]
-use statrs::function::erf;
-#[cfg(not(feature="use-mpfr"))]
-use rand::Rng;
 
 #[cfg(feature="use-mpfr")]
 struct GeneratorOpenSSL;
@@ -410,5 +408,148 @@ impl SampleGaussian for f32 {
     fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
         let uniform_sample = f64::sample_standard_uniform(enforce_constant_time)?;
         Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
+    }
+}
+
+#[cfg(test)]
+mod test_samplers {
+    use std::fmt::Debug;
+    use std::iter::Sum;
+    use std::ops::{Div, Sub};
+
+    use num::traits::real::Real;
+    use statrs::function::erf;
+
+    use super::*;
+    use num::NumCast;
+
+    /// returns z-statistic that satisfies p == ∫P(x)dx over (-∞, z),
+    ///     where P is the standard normal distribution
+    fn normal_cdf_inverse(p: f64) -> f64 {
+        std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * p)
+    }
+    fn normal_cdf(x: f64) -> f64 {
+        erf::erfc(x / std::f64::consts::SQRT_2) / 2.
+    }
+    // integrate the region (z, ∞)
+    // fn normal_cdf_inverse_alpha(alpha: f64) -> f64 {
+    //     normal_cdf_inverse(1. - alpha)
+    // }
+
+    #[test]
+    fn sample() {
+        println!("{:?}", normal_cdf_inverse(0.975))
+    }
+
+    macro_rules! c {($expr:expr; $ty:ty) => ({let t: $ty = NumCast::from($expr).unwrap(); t})}
+
+    // fn multi_test<T, FS: Fn() -> T, FP: Fn(Vec<T>) -> bool>(sampler: FS, predicate: FP) -> bool {
+    //     [4, 8, 16].iter().cloned().any(|pow: u32|
+    //         predicate((0..2u32.pow(pow)).map(|_| sampler()).collect()))
+    // }
+    fn test_proportion_parameters<T, FS: Fn() -> T>(sampler: FS, p_pop: T, alpha: f64, err_margin: T) -> bool
+        where T: Sum<T> + Sub<Output=T> + Div<Output=T> + Real + Debug + One {
+
+        // |z_{alpha/2}|
+        let z_stat = c!(normal_cdf_inverse(alpha / 2.).abs(); T);
+
+        // derived sample size necessary to conduct the test
+        let n: T = (p_pop * (T::one() - p_pop) * (z_stat / err_margin).powi(2)).ceil();
+
+        // confidence interval for the mean and variance
+        let abs_p_tol = z_stat * (p_pop * (T::one() - p_pop) / n).sqrt(); // almost the same as err_margin
+
+        println!("sampling {:?} observations to detect a change in mean with {:.4?}% confidence",
+                 c!(n; u32), (1. - alpha) * 100.);
+
+        // take n samples from the distribution
+        let samples: Vec<T> = (0..c!(n; u32)).map(|_| sampler()).collect();
+
+        let p_emp: T = samples.iter().cloned().sum::<T>() / n;
+
+        let mean_passes = (p_emp - p_pop).abs() < abs_p_tol;
+
+        println!("stat: (tolerance, pop, emp, passed)");
+        println!("    mean:     {:?}, {:?}, {:?}, {:?}", abs_p_tol, p_pop, p_emp, mean_passes);
+        println!();
+
+        mean_passes
+    }
+
+    fn test_real_parameters<T, FS: Fn() -> T>(sampler: FS, mean_pop: T, var_pop: T, alpha: f64, err_margin: T) -> bool
+        where T: Sum<T> + Sub<Output=T> + Div<Output=T> + Real + Debug + One {
+
+        // |z_{alpha/2}|
+        let z_stat = c!(normal_cdf_inverse(alpha / 2.).abs(); T);
+
+        // derived sample size necessary to conduct the test
+        let n: T = (var_pop * (z_stat / err_margin).powi(2)).ceil();
+
+        // confidence interval for the mean and variance
+        let abs_mean_tol = z_stat * (var_pop / n).sqrt(); // almost the same as err_margin
+        let abs_var_tol = z_stat * (c!(2.0; T) / n).sqrt() * var_pop;
+
+        println!("sampling {:?} observations to detect a change in mean with {:.4?}% confidence",
+                 c!(n; u32), (1. - alpha) * 100.);
+
+        // take n samples from the distribution
+        let samples: Vec<T> = (0..c!(n; u32)).map(|_| sampler()).collect();
+
+        let mean_emp: T = samples.iter().cloned().sum::<T>() / n;
+        let var_emp: T = samples.into_iter().map(|s| (s - mean_emp).powi(2)).sum::<T>() / (n - T::one());
+
+        let mean_passes = (mean_emp - mean_pop).abs() < abs_mean_tol;
+        let var_passes = (var_emp - var_pop).abs() < abs_var_tol;
+
+        println!("stat: (tolerance, pop, emp, passed)");
+        println!("    mean:     {:?}, {:?}, {:?}, {:?}", abs_mean_tol, mean_pop, mean_emp, mean_passes);
+        println!("    variance: {:?}, {:?}, {:?}, {:?}", abs_var_tol, var_pop, var_emp, var_passes);
+        println!();
+
+        mean_passes && var_passes
+    }
+
+    #[test]
+    fn test_laplace() {
+        let shifts = [-1000., -10., 0.1, 10., 1000.];
+        let scales = [0.5, 1., 10.0];
+        shifts.iter().for_each(|shift| scales.iter().for_each(|scale|
+            assert!(test_real_parameters(
+                || f64::sample_laplace(*shift, *scale, false).unwrap(),
+                 *shift, 2. * scale.powi(2), 0.00001, *scale / 100.),
+                    "empirical evaluation of the laplace({:?}, {:?}) distribution failed", shift, scale))
+        )
+    }
+
+    #[test]
+    fn test_gaussian() {
+        let shifts = [-1000., -10., 0.1, 10., 1000.];
+        let scales = [0.5, 1., 10.0];
+        shifts.iter().for_each(|shift| scales.iter().for_each(|scale|
+            assert!(test_real_parameters(
+                || f64::sample_gaussian(*shift, *scale, false).unwrap(),
+                *shift, (*scale).powi(2), 0.00001, *scale / 100.),
+                    "empirical evaluation of the gaussian({:?}, {:?}) distribution failed", shift, scale))
+        )
+    }
+
+    #[test]
+    fn test_bernoulli() {
+        [0.2, 0.5, 0.7, 0.9].iter().for_each(|p|
+            assert!(test_proportion_parameters(
+                || if bool::sample_bernoulli(*p, false).unwrap() {1.} else {0.},
+                 *p, 0.00001, *p / 100.),
+                    "empirical evaluation of the bernoulli({:?}) distribution failed", p)
+        )
+    }
+
+    #[test]
+    fn plot_dist() {
+        let shifts = [-1000., -10., 0.1, 10., 1000.];
+        let scales = [0.5, 1., 10.0];
+        println!("{{{}}}", shifts.iter().map(|shift| scales.iter().map(move |scale|
+
+            format!("{:?}: {:?}", (shift, scale), (0..1000).map(|_| f64::sample_gaussian(*shift, *scale, false).unwrap()).collect::<Vec<_>>()
+            ))).flatten().collect::<Vec<String>>().join(",\n"));
     }
 }
