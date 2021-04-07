@@ -222,5 +222,10 @@ mod test_manipulations {
         assert_eq!(
             caster.function.eval(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY]).unwrap(),
             vec![u8::default(), u8::default(), u8::default()]);
+
+        let data = vec!["1e+2", "1e2", "1e+02", "1.e+02", "1.0E+02", "1.0E+00002", "01.E+02", "1.0E2"]
+            .into_iter().map(|v| v.to_string()).collect();
+        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
+        assert!(caster.function.eval(&data).unwrap().into_iter().all(|v| v == 100.));
     }
 }
