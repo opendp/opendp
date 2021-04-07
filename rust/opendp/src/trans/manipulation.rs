@@ -147,3 +147,50 @@ impl<M, TI, TO> MakeTransformation0<VectorDomain<AllDomain<TI>>, VectorDomain<Al
 //             StabilityRelation::new_from_constant(TO::one())))
 //     }
 // }
+
+#[cfg(test)]
+mod test_manipulations {
+
+    use super::*;
+    use crate::dist::{SymmetricDistance, HammingDistance};
+    use crate::core::ChainTT;
+
+    #[test]
+    fn test_unclamp() {
+        let clamp = Clamp::<SymmetricDistance, Vec<u8>, u32>::make2(2, 3).unwrap();
+        let unclamp = Unclamp::<SymmetricDistance, Vec<u8>, u32>::make2(2, 3).unwrap();
+        ChainTT::make(&clamp, &unclamp).unwrap();
+    }
+
+    #[test]
+    fn test_cast() {
+        macro_rules! test_pair {
+            ($from:ty, $to:ty) => {
+                let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<$from>, Vec<$to>>::make().unwrap();
+                caster.function.eval(&vec!(<$from>::default())).unwrap();
+                let caster = Cast::<HammingDistance, HammingDistance, Vec<$from>, Vec<$to>>::make().unwrap();
+                caster.function.eval(&vec!(<$from>::default())).unwrap();
+            }
+        }
+        macro_rules! test_cartesian {
+            ([];[$first:ty, $($end:ty),*]) => {
+                test_pair!($first, $first);
+                $(test_pair!($first, $end);)*
+
+                test_cartesian!{[$first];[$($end),*]}
+            };
+            ([$($start:ty),*];[$mid:ty, $($end:ty),*]) => {
+                $(test_pair!($mid, $start);)*
+                test_pair!($mid, $mid);
+                $(test_pair!($mid, $end);)*
+
+                test_cartesian!{[$($start),*, $mid];[$($end),*]}
+            };
+            ([$($start:ty),*];[$last:ty]) => {
+                test_pair!($last, $last);
+                $(test_pair!($last, $start);)*
+            };
+        }
+        test_cartesian!{[];[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, bool]}
+    }
+}
