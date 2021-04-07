@@ -9,6 +9,7 @@ use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
 pub struct MaxDivergence<Q>(PhantomData<Q>);
 impl<Q: Clone> Measure for MaxDivergence<Q> {
     type Distance = Q;
+    fn new() -> Self { Self::new() }
 }
 impl<Q> MaxDivergence<Q> {
     pub fn new() -> Self { MaxDivergence(PhantomData) }
@@ -18,6 +19,7 @@ impl<Q> MaxDivergence<Q> {
 pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
 impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
+    fn new() -> Self { Self::new() }
 }
 impl<Q> SmoothedMaxDivergence<Q> {
     pub fn new() -> Self { SmoothedMaxDivergence(PhantomData) }

@@ -95,6 +95,7 @@ pub trait Metric: Clone {
 /// A representation of the distance between two distributions.
 pub trait Measure: Clone {
     type Distance;
+    fn new() -> Self;
 }
 
 /// A indicator trait that is only implemented for dataset distance
