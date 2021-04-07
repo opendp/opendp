@@ -193,4 +193,20 @@ mod test_manipulations {
         }
         test_cartesian!{[];[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, bool]}
     }
+
+    #[test]
+    fn test_cast_unsigned() {
+        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<f64>, Vec<u8>>::make().unwrap();
+        assert_eq!(caster.function.eval(&vec![-1.]).unwrap(), vec![u8::default()]);
+    }
+    #[test]
+    fn test_cast_parse() {
+        let data = vec!["2".to_string(), "3".to_string(), "a".to_string(), "".to_string()];
+
+        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<u8>>::make().unwrap();
+        assert_eq!(caster.function.eval(&data).unwrap(), vec![2, 3, u8::default(), u8::default()]);
+
+        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
+        assert_eq!(caster.function.eval(&data).unwrap(), vec![2., 3., f64::default(), f64::default()]);
+    }
 }
