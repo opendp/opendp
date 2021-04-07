@@ -209,4 +209,18 @@ mod test_manipulations {
         let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
         assert_eq!(caster.function.eval(&data).unwrap(), vec![2., 3., f64::default(), f64::default()]);
     }
+
+    #[test]
+    fn test_cast_floats() {
+        let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
+        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<f64>, Vec<String>>::make().unwrap();
+        assert_eq!(
+            caster.function.eval(&data).unwrap(),
+            vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]);
+
+        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<f64>, Vec<u8>>::make().unwrap();
+        assert_eq!(
+            caster.function.eval(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY]).unwrap(),
+            vec![u8::default(), u8::default(), u8::default()]);
+    }
 }
