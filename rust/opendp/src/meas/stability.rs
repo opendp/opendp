@@ -45,8 +45,8 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
           TIC: Integer + Clone + NumCast,
           TOC: 'static + Float + Clone + PartialOrd + SampleLaplace + NumCast {
     fn make3(n: usize, scale: TOC, threshold: TOC) -> Fallible<Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, TOC>, MI, SmoothedMaxDivergence<TOC>>> {
-        let _n_: TOC = TOC::from(n).ok_or_else(|| err!(FailedCast))?;
-        let _2_: TOC = TOC::from(2).ok_or_else(|| err!(FailedCast))?;
+        let _n: TOC = TOC::from(n).ok_or_else(|| err!(FailedCast))?;
+        let _2: TOC = TOC::from(2).ok_or_else(|| err!(FailedCast))?;
 
         Ok(Measurement::new(
             SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
@@ -67,20 +67,20 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
             MI::new(),
             SmoothedMaxDivergence::new(),
             PrivacyRelation::new_fallible(move |&d_in: &TOC, &(eps, del): &(TOC, TOC)|{
-                let ideal_scale = d_in / (eps * _n_);
-                let ideal_threshold = (_2_ / del).ln() * ideal_scale + _n_.recip();
+                let ideal_scale = d_in / (eps * _n);
+                let ideal_threshold = (_2 / del).ln() * ideal_scale + _n.recip();
                 // println!("ideal: {:?}, {:?}", ideal_sigma, ideal_threshold);
 
                 if eps.is_sign_negative() || eps.is_zero() {
                     return fallible!(FailedRelation, "cause: epsilon <= 0")
                 }
-                if eps >= _n_.ln() {
+                if eps >= _n.ln() {
                     return fallible!(FailedRelation, "cause: epsilon >= n.ln()");
                 }
                 if del.is_sign_negative() || del.is_zero() {
                     return fallible!(FailedRelation, "cause: delta <= 0")
                 }
-                if del >= _n_.recip() {
+                if del >= _n.recip() {
                     return fallible!(FailedRelation, "cause: del >= n.ln()");
                 }
                 if scale < ideal_scale {

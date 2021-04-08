@@ -120,7 +120,8 @@ r#"{
     { "name": "make_base_laplace", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiMeasurement *" },
     { "name": "make_base_laplace_vec", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiMeasurement *" },
     { "name": "make_base_gaussian", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiMeasurement *" },
-    { "name": "make_base_simple_geometric", "args": [ ["const char *", "selector"], ["void *", "scale"], ["void *", "min"], ["void *", "max"] ], "ret": "FfiMeasurement *" }
+    { "name": "make_base_simple_geometric", "args": [ ["const char *", "selector"], ["void *", "scale"], ["void *", "min"], ["void *", "max"] ], "ret": "FfiMeasurement *" },
+    { "name": "make_base_stability", "args": [ ["const char *", "selector"], ["unsigned int", "n"], ["void *", "scale"], ["void *", "threshold"] ], "ret": "FfiMeasurement *" }
 ]
 }"#;
     util::bootstrap(spec)

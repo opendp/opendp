@@ -8,16 +8,27 @@ import matplotlib.pyplot as plt
 odp = opendp.OpenDP()
 max_word_count_per_individual = 20
 
+data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data'))
+censored_data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data_censored'))
+
 
 def privatize_vocabulary(word_count, line_count, budget):
-    # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts
-    d_in = odp.data.distance_hamming(max_word_count_per_individual)
-    d_out = odp.data.distance_smoothed_max_divergence(*budget)
 
     def check_stability(scale, threshold):
-        stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, scale, threshold)
-        check = odp.core.measurement_check(stability_mech, d_in, d_out)
+        count_by = odp.trans.make_count_by(b"<SymmetricDistance, L2Sensitivity<f64>, String, u32, f64>", line_count)
+        base_stability = odp.meas.make_base_stability(b"<L2Sensitivity<f64>, String, u32, f64>", line_count, opendp.f64_p(scale), opendp.f64_p(threshold))
+        stability_mech = odp.core.make_chain_mt(base_stability, count_by)
+
+        # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts
+        d_in = odp.data.distance_hamming(max_word_count_per_individual)
+        d_out = odp.data.distance_smoothed_max_divergence(*budget)
+        try:
+            check = odp.core.measurement_check(stability_mech, d_in, d_out)
+        except opendp.mod.OdpException:
+            check = False
         odp.core.measurement_free(stability_mech)
+        odp.data.data_free(d_in)
+        odp.data.data_free(d_out)
         return check
 
     scale = binary_search(lambda scale: check_stability(scale, 1000.), 0., 100.)
@@ -27,12 +38,16 @@ def privatize_vocabulary(word_count, line_count, budget):
     # stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, scale, threshold)
     # print("does chosen scale and threshold pass:", odp.core.measurement_check(stability_mech, d_in, d_out))
 
-    laplace_mechanism = odp.meas.make_base_laplace(b"<f64>", scale)
+    laplace_mechanism = odp.meas.make_base_laplace(b"<f64>", opendp.f64_p(scale))
     word_count = dict(word_count)
 
     vocabulary = set()
     for word in word_count:
-        privatized_count = odp.data.to_f64(odp.core.measurement_invoke(laplace_mechanism, odp.data.from_f64(word_count[word])))
+        c_obj = odp.data.from_f64(word_count[word])
+        a_obj = odp.core.measurement_invoke(laplace_mechanism, c_obj)
+        privatized_count = odp.data.to_f64(a_obj)
+        odp.data.data_free(c_obj)
+        odp.data.data_free(a_obj)
         if privatized_count >= threshold:
             vocabulary.add(word)
 
@@ -44,8 +59,6 @@ def main():
     word_counts = {}
     line_counts = {}
 
-    data_dir = os.path.abspath(os.path.join(__file__, '..', '..', 'data'))
-    censored_data_dir = os.path.abspath(os.path.join(__file__, '..', '..', 'data_censored'))
     for corpus_name in os.listdir(data_dir):
         corpus_path = os.path.join(data_dir, corpus_name)
 

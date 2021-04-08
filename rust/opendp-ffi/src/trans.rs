@@ -324,6 +324,7 @@ pub extern "C" fn opendp_trans__make_count_by(type_args: *const c_char, n: c_uin
             (type_args.0[4], [QO])
         ], (n))
     }
+    // TODO: drop type_args.0[4] by parsing inner type from type_args.0[1], once data loading PR is merged
     let n = n as usize;
     let type_args = TypeArgs::expect(type_args, 5);
     dispatch!(monomorphize, [(type_args.0[4], @floats)], (type_args, n))
@@ -346,7 +347,10 @@ r#"{
     { "name": "make_clamp_scalar", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiTransformation *" },
     { "name": "make_cast_vec", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" },
     { "name": "make_bounded_sum", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiTransformation *" },
-    { "name": "make_count", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" }
+    { "name": "make_bounded_sum_n", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["unsigned int", "n"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count_by", "args": [ ["const char *", "selector"], ["unsigned int", "n"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count_by_categories", "args": [ ["const char *", "selector"], ["FfiObject *", "categories"] ], "ret": "FfiTransformation *" }
 ]
 }"#;
     util::bootstrap(spec)
