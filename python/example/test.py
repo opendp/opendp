@@ -21,7 +21,7 @@ def main():
 
     # Noisy sum, col 1
     select_1 = odp.trans.make_select_column(b"<HammingDistance, i32, i32>", opendp.i32_p(1))
-    clamp_1 = odp.trans.make_clamp(b"<HammingDistance, i32>", opendp.i32_p(0), opendp.i32_p(10))
+    clamp_1 = odp.trans.make_clamp_vec(b"<HammingDistance, i32>", opendp.i32_p(0), opendp.i32_p(10))
     bounded_sum_1 = odp.trans.make_bounded_sum(b"<HammingDistance, L1Sensitivity<i32>, i32>", opendp.i32_p(0), opendp.i32_p(10))
     base_geometric_1 = odp.meas.make_base_simple_geometric(b"<i32, f64>", opendp.f64_p(1.0), opendp.u32_p(0), opendp.u32_p(1000))
     # base_laplace_1 = odp.meas.make_base_laplace(b"<i32>", opendp.f64_p(1.0))

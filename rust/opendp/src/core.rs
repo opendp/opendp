@@ -89,16 +89,18 @@ impl<DI: 'static + Domain, DO1: 'static + Domain, DO2: 'static + Domain> Functio
 /// A representation of the distance between two elements in a set.
 pub trait Metric: Clone {
     type Distance;
+    fn new() -> Self;
 }
 
 /// A representation of the distance between two distributions.
 pub trait Measure: Clone {
     type Distance;
+    fn new() -> Self;
 }
 
 /// A indicator trait that is only implemented for dataset distance
-pub trait DatasetMetric: Metric { fn new() -> Self; }
-pub trait SensitivityMetric: Metric { fn new() -> Self; }
+pub trait DatasetMetric: Metric {}
+pub trait SensitivityMetric: Metric {}
 
 
 // HINTS
@@ -167,9 +169,9 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
 
         PrivacyRelation::new_all(
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::distance_cast(d_in.clone())? * c.clone())),
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(Box::new(MI::Distance::cast(d_out.clone() / c.clone())?)))))
+                Ok(Box::new(MI::Distance::distance_cast(d_out.clone() / c.clone())?)))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)
@@ -280,13 +282,13 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
         StabilityRelation::new_all(
             // relation
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::distance_cast(d_in.clone())? * c.clone())),
             // forward map
             Some(enclose!(c, move |d_in: &MI::Distance|
-                Ok(Box::new(MO::Distance::cast(d_in.clone())? * c.clone())))),
+                Ok(Box::new(MO::Distance::distance_cast(d_in.clone())? * c.clone())))),
             // backward map
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(Box::new(MI::Distance::cast(d_out.clone() / c.clone())?)))))
+                Ok(Box::new(MI::Distance::distance_cast(d_out.clone() / c.clone())?)))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)

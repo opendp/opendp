@@ -151,12 +151,15 @@ impl Domain for FfiDomain {
 pub struct FfiMeasure;
 impl Measure for FfiMeasure {
     type Distance = ();
+
+    fn new() -> Self { unreachable!() }
 }
 
 #[derive(Clone)]
 pub struct FfiMetric;
 impl Metric for FfiMetric {
     type Distance = ();
+    fn new() -> Self { unreachable!() }
 }
 
 pub struct FfiMeasurement {
