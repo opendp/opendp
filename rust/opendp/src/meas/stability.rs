@@ -93,3 +93,21 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
             })))
     }
 }
+
+
+#[cfg(test)]
+mod test_stability {
+    use super::*;
+
+    #[test]
+    fn test_base_stability() {
+        let mut arg = HashMap::new();
+        arg.insert(true, 6);
+        arg.insert(false, 4);
+        let measurement = BaseStability::<L2Sensitivity<f64>, bool, i8, f64>::make(10, 0.5, 1.).unwrap();
+        let ret = measurement.function.eval(&arg).unwrap();
+        println!("stability eval: {:?}", ret);
+
+        assert!(measurement.privacy_relation.eval(&1., &(2.3, 1e-5)).unwrap());
+    }
+}

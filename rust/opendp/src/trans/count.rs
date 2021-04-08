@@ -179,4 +179,31 @@ mod tests {
         let expected = 5;
         assert_eq!(ret, expected);
     }
+
+    #[test]
+    fn test_make_count_by_categories() {
+        let transformation = CountByCategories::<SymmetricDistance, L2Sensitivity<f64>, i64, i8>::make(
+            vec![2, 1, 3]
+        ).unwrap();
+        let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
+        let ret = transformation.function.eval(&arg).unwrap();
+        let expected = vec![2, 4, 1, 2];
+        assert_eq!(ret, expected);
+
+        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap());
+        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap());
+    }
+
+    #[test]
+    fn test_make_count_by() {
+        let arg = vec![true, true, true, false, true, false, false, false, true, true];
+        let transformation = CountBy::<SymmetricDistance, L2Sensitivity<f64>, bool, i8>::make(arg.len()).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap();
+        let mut expected = HashMap::new();
+        expected.insert(true, 6);
+        expected.insert(false, 4);
+        assert_eq!(ret, expected);
+        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap());
+        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap());
+    }
 }

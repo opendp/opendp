@@ -156,8 +156,8 @@ mod test_manipulations {
 
     #[test]
     fn test_unclamp() {
-        let clamp = Clamp::<SymmetricDistance, Vec<u8>, u32>::make2(2, 3).unwrap();
-        let unclamp = Unclamp::<SymmetricDistance, Vec<u8>, u32>::make2(2, 3).unwrap();
+        let clamp = Clamp::<SymmetricDistance, Vec<u8>>::make2(2, 3).unwrap();
+        let unclamp = Unclamp::<SymmetricDistance, Vec<u8>>::make2(2, 3).unwrap();
         ChainTT::make(&clamp, &unclamp).unwrap();
     }
 
@@ -165,9 +165,9 @@ mod test_manipulations {
     fn test_cast() {
         macro_rules! test_pair {
             ($from:ty, $to:ty) => {
-                let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<$from>, Vec<$to>>::make().unwrap();
+                let caster = Cast::<SymmetricDistance, Vec<$from>, Vec<$to>>::make().unwrap();
                 caster.function.eval(&vec!(<$from>::default())).unwrap();
-                let caster = Cast::<HammingDistance, HammingDistance, Vec<$from>, Vec<$to>>::make().unwrap();
+                let caster = Cast::<HammingDistance, Vec<$from>, Vec<$to>>::make().unwrap();
                 caster.function.eval(&vec!(<$from>::default())).unwrap();
             }
         }
@@ -195,36 +195,36 @@ mod test_manipulations {
 
     #[test]
     fn test_cast_unsigned() {
-        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<f64>, Vec<u8>>::make().unwrap();
+        let caster = Cast::<SymmetricDistance, Vec<f64>, Vec<u8>>::make().unwrap();
         assert_eq!(caster.function.eval(&vec![-1.]).unwrap(), vec![u8::default()]);
     }
     #[test]
     fn test_cast_parse() {
         let data = vec!["2".to_string(), "3".to_string(), "a".to_string(), "".to_string()];
 
-        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<u8>>::make().unwrap();
+        let caster = Cast::<SymmetricDistance, Vec<String>, Vec<u8>>::make().unwrap();
         assert_eq!(caster.function.eval(&data).unwrap(), vec![2, 3, u8::default(), u8::default()]);
 
-        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
+        let caster = Cast::<SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
         assert_eq!(caster.function.eval(&data).unwrap(), vec![2., 3., f64::default(), f64::default()]);
     }
 
     #[test]
     fn test_cast_floats() {
         let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
-        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<f64>, Vec<String>>::make().unwrap();
+        let caster = Cast::<SymmetricDistance, Vec<f64>, Vec<String>>::make().unwrap();
         assert_eq!(
             caster.function.eval(&data).unwrap(),
             vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]);
 
-        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<f64>, Vec<u8>>::make().unwrap();
+        let caster = Cast::<SymmetricDistance, Vec<f64>, Vec<u8>>::make().unwrap();
         assert_eq!(
             caster.function.eval(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY]).unwrap(),
             vec![u8::default(), u8::default(), u8::default()]);
 
         let data = vec!["1e+2", "1e2", "1e+02", "1.e+02", "1.0E+02", "1.0E+00002", "01.E+02", "1.0E2"]
             .into_iter().map(|v| v.to_string()).collect();
-        let caster = Cast::<SymmetricDistance, SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
+        let caster = Cast::<SymmetricDistance, Vec<String>, Vec<f64>>::make().unwrap();
         assert!(caster.function.eval(&data).unwrap().into_iter().all(|v| v == 100.));
     }
 
