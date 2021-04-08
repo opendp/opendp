@@ -26,6 +26,12 @@ def f32_p(f):
 def f64_p(f):
     return ctypes.byref(ctypes.c_double(f))
 
+class FfiSlice(ctypes.Structure):
+    _fields_ = [
+        ("ptr", ctypes.c_void_p),
+        ("len", ctypes.c_size_t),
+    ]
+
 class FfiObject(ctypes.Structure):
     pass # Opaque struct
 
@@ -78,6 +84,8 @@ class Mod:
         "char *": ctypes.c_char_p,
         "const char *": ctypes.c_char_p,
         "bool": ctypes.c_bool,
+        "FfiSlice *": ctypes.POINTER(FfiSlice),
+        "const FfiSlice *": ctypes.POINTER(FfiSlice),
         "FfiObject *": ctypes.POINTER(FfiObject),
         "const FfiObject *": ctypes.POINTER(FfiObject),
         "FfiMeasurement *": ctypes.POINTER(FfiMeasurement),
@@ -197,7 +205,7 @@ class OpenDP:
         self.data = Mod(lib, "opendp_data__")
         self.meas = Mod(lib, "opendp_meas__")
         self.trans = Mod(lib, "opendp_trans__")
-        print("Initialized OpenDP Library")
+        # print("Initialized OpenDP Library")
 
     def make_chain_tt_multi(self, *transformations):
         if not transformations:
@@ -210,3 +218,84 @@ class OpenDP:
     def to_str(self, data):
         string = self.data.to_string(data)
         return c_char_p_to_str(string)
+
+    def get_first(self, list):
+        return list[0] if list else 0
+
+    def get_ffi_type_name(self, val):
+        if isinstance(val, int):
+            return "i32"
+        elif isinstance(val, float):
+            return "f64"
+        elif isinstance(val, str):
+            return "String"
+        elif isinstance(val, list):
+            element_type_name = self.get_ffi_type_name(self.get_first(val))
+            return f"Vec<{element_type_name}>"
+        else:
+            raise Exception("Unknown type", type(val))
+
+    def to_raw(self, val):
+        if isinstance(val, int):
+            ptr, len_ = ctypes.byref(ctypes.c_int32(val)), 1
+        elif isinstance(val, float):
+            ptr, len_ = ctypes.byref(ctypes.c_double(val)), 1
+        elif isinstance(val, str):
+            ptr, len_ = ctypes.c_char_p(val.encode()), len(val) + 1
+        elif isinstance(val, list):
+            first = self.get_first(val)
+            if isinstance(first, int):
+                element_type = ctypes.c_int32
+            elif isinstance(first, float):
+                element_type = ctypes.c_double
+            else:
+                raise Exception("Unknown element type", type(first))
+            array = (element_type * len(val))(*val)
+            ptr, len_ = array, len(val)
+        else:
+            raise Exception("Unknown type", type(val))
+        return ctypes.byref(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
+
+    def py_to_obj(self, val):
+        type_name = self.get_ffi_type_name(val)
+        type_args = f"<{type_name}>".encode()
+        raw = self.to_raw(val)
+        return self.data.object_new(type_args, raw)
+
+    def from_raw(self, type_name, raw):
+        if type_name == "i32":
+            return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_int32)).contents.value
+        elif type_name == "f64":
+            return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_double)).contents.value
+        elif type_name == "String":
+            return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode()
+        elif type_name.startswith("Vec<"):
+            if type_name == "Vec<i32>":
+                array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_int32))
+            elif type_name == "alloc::vec::Vec<f64>":
+                array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_double))
+            else:
+                raise Exception("Unknown type", type_name)
+            return array[0:raw.contents.len]
+        else:
+            raise Exception("Unknown type", type_name)
+
+    def obj_to_py(self, obj):
+        type_name = self.data.object_type(obj).value.decode()
+        raw = self.data.object_as_raw(obj)
+        try:
+            return self.from_raw(type_name, raw)
+        except:
+            # If we fail, resort to string representation.
+            #TODO: Remove this fallback once we have composition and/or tuples sorted out.
+            return self.data.to_string(obj).decode()
+
+    def measurement_invoke(self, measurement, arg):
+        arg = self.py_to_obj(arg)
+        res = self.core.measurement_invoke(measurement, arg)
+        return self.obj_to_py(res)
+
+    def transformation_invoke(self, transformation, arg):
+        arg = self.py_to_obj(arg)
+        res = self.core.transformation_invoke(transformation, arg)
+        return self.obj_to_py(res)

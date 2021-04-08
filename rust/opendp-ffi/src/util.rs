@@ -1,61 +1,160 @@
 use std::any;
 use std::any::TypeId;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::c_char;
-use opendp::dist::{SymmetricDistance, HammingDistance, L1Sensitivity, L2Sensitivity};
+
+use opendp::dist::{L1Sensitivity, L2Sensitivity, HammingDistance, SymmetricDistance};
 
 #[derive(Debug)]
 pub struct TypeError;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, PartialEq, Clone)]
+pub enum TypeContents {
+    PLAIN(&'static str),
+    TUPLE(Vec<TypeId>),
+    ARRAY { element_id: TypeId, len: usize },
+    SLICE(TypeId),
+    GENERIC { name: &'static str, args: Vec<TypeId> },
+    VEC(TypeId),  // This is a convenience specialization of GENERIC, used until we switch to slices.
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Type {
     pub id: TypeId,
-    pub name: &'static str,
     pub descriptor: &'static str,
+    pub contents: TypeContents,
 }
 
 impl Type {
-    pub fn new<T: 'static>() -> Type {
-        let descriptor = any::type_name::<T>();
-        Self::new_descriptor::<T>(descriptor)
+    pub fn new(id: TypeId, descriptor: &'static str, contents: TypeContents) -> Self {
+        Self { id, descriptor, contents }
     }
 
-    pub fn new_descriptor<T: 'static>(descriptor: &'static str) -> Type {
+    pub fn of<T: 'static + ?Sized>() -> Self {
         let id = TypeId::of::<T>();
-        let name = any::type_name::<T>();
-        Type { id, name, descriptor }
+        // First try to find a registered type (which will have the nice descriptor). In lieu of that, create one on the fly.
+        let type_ = TYPE_ID_TO_TYPE.get(&id);
+        type_.map_or_else(|| Self::of_unregistered::<T>(), Clone::clone)
+    }
+
+    fn of_unregistered<T: 'static + ?Sized>() -> Self {
+        let descriptor = any::type_name::<T>();
+        Self::new(TypeId::of::<T>(), descriptor, TypeContents::PLAIN(descriptor))
+    }
+
+    pub fn of_id(id: TypeId) -> Self {
+        TYPE_ID_TO_TYPE.get(&id).unwrap().clone()
     }
 
     // Hacky special entry point for composition.
-    pub fn new_box_pair(type0: &Type, type1: &Type) -> Type {
+    pub fn new_box_pair(type0: &Type, type1: &Type) -> Self {
         fn monomorphize<T0: 'static, T1: 'static>(type0: &Type, type1: &Type) -> Type {
+            let id = TypeId::of::<(Box<T0>, Box<T1>)>();
             let descriptor = format!("(Box<{}>, Box<{}>)", type0.descriptor, type1.descriptor);
             // Hacky way to get &'static str from String.
             let descriptor = Box::leak(descriptor.into_boxed_str());
-            Type::new_descriptor::<(Box<T0>, Box<T1>)>(descriptor)
+            let contents = TypeContents::TUPLE(vec![TypeId::of::<Box<T0>>(), TypeId::of::<Box<T1>>()]);
+            Type::new(id, descriptor, contents)
         }
         dispatch!(
             monomorphize,
             // FIXME: The Box<f64> entries are here for demo use.
-            [(type0, [u32, u64, i32, i64, f32, f64, bool, String, u8, (Box<f64>, Box<f64>)]), (type1, [u32, u64, i32, i64, f32, f64, bool, String, u8, (Box<f64>, Box<f64>)])],
+            [
+                (type0, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)]),
+                (type1, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)])
+            ],
             (type0, type1)
         )
     }
 }
 
-macro_rules! descriptor_types {
-    ($($type:ty),*) => { vec![$(Type::new_descriptor::<$type>(stringify!($type))),*] }
+/// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].
+/// * `t!(Foo)` => `TypeContents::PLAIN`
+/// * `t!((Foo, Bar))` => `TypeContents::TUPLE`
+/// * `t!([Foo; 10])` => `TypeContents::ARRAY`
+/// * `t!([Foo])` => `TypeContents::SLICE`
+/// * `t!(Foo<Bar>)` => `TypeContents::GENERIC`
+/// * `t!(Vec<primitive>)` => `TypeContents::VEC`
+macro_rules! t {
+    (Vec<$arg:ty>) => {
+        Type::new(
+            TypeId::of::<Vec<$arg>>(),
+            concat!("Vec<", stringify!($arg), ">"),
+            TypeContents::VEC(TypeId::of::<$arg>())
+        )
+    };
+    ($name:ident<$($args:ty),+>) => {
+        Type::new(
+            TypeId::of::<$name<$($args),+>>(),
+            concat!(stringify!($name), "<", stringify!($($args),+), ">"),
+            TypeContents::GENERIC { name: stringify!($name), args: vec![$(TypeId::of::<$args>()),+]}
+        )
+    };
+    ([$element:ty]) => {
+        Type::new(
+            TypeId::of::<[$element]>(),
+            concat!("[", stringify!($element), "]"),
+            TypeContents::SLICE(TypeId::of::<$element>())
+        )
+    };
+    ([$element:ty; $len:expr]) => {
+        Type::new(
+            TypeId::of::<[$element;$len]>(),
+            concat!("[", stringify!($element), "; ", stringify!($len), "]"),
+            TypeContents::ARRAY { element_id: TypeId::of::<$element>(), len: $len }
+        )
+    };
+    (($($elements:ty),+)) => {
+        Type::new(
+            TypeId::of::<($($elements),+)>(),
+            concat!("(", stringify!($($elements),+), ")"),
+            TypeContents::TUPLE(vec![$(TypeId::of::<$elements>()),+])
+        )
+    };
+    ($name:ty) => {
+        Type::new(TypeId::of::<$name>(), stringify!($name), TypeContents::PLAIN(stringify!($name)))
+    };
+}
+/// Builds a vec of [`Type`] from a compact invocation, dispatching to the appropriate flavor of [`t!`].
+macro_rules! type_vec {
+    ($name:ident, <$($args:ty),*>) => { vec![$(t!($name<$args>)),*] };
+    ([$($elements:ty),*]) => { vec![$(t!([$elements])),*] };
+    ([$($elements:ty),*]; $len:expr) => { vec![$(t!([$elements; $len])),*] };
+    (($($elements:ty),*)) => { vec![$(t!(($elements, $elements))),*] };
+    ($($names:ty),*) => { vec![$(t!($names)),*] };
+}
+
+lazy_static! {
+    /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
+    /// (i.e., the ones that appear in FFI function generic args).
+    static ref TYPES: Vec<Type> = {
+        let types: Vec<Type> = vec![
+            vec![t!(())],
+            type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String],
+            type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String)],
+            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
+            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String]],
+            type_vec![HammingDistance, SymmetricDistance],
+            type_vec![L1Sensitivity, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![L2Sensitivity, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+        ].into_iter().flatten().collect();
+        let descriptors: HashSet<_> = types.iter().map(|e| e.descriptor).collect();
+        assert_eq!(descriptors.len(), types.len());
+        types
+    };
 }
 lazy_static! {
-    static ref DESCRIPTOR_TO_TYPE: HashMap<String, Type> = {
-        descriptor_types![
-            bool, char, u8, u16, u32, u64, i8, i16, i32, i64, f32, f64, String, HammingDistance, SymmetricDistance,
-            L1Sensitivity<u8>, L1Sensitivity<u16>, L1Sensitivity<u32>, L1Sensitivity<u64>, L1Sensitivity<f32>, L1Sensitivity<f64>, L1Sensitivity<i32>, L1Sensitivity<i64>,
-            L2Sensitivity<u8>, L2Sensitivity<u16>, L2Sensitivity<u32>, L2Sensitivity<u64>, L2Sensitivity<f32>, L2Sensitivity<f64>, L2Sensitivity<i32>, L2Sensitivity<i64>
-        ].into_iter().map(|e| (e.descriptor.to_owned(), e)).collect()
+    static ref TYPE_ID_TO_TYPE: HashMap<TypeId, Type> = {
+        TYPES.iter().map(|e| (e.id, e.clone())).collect()
+    };
+}
+lazy_static! {
+    static ref DESCRIPTOR_TO_TYPE: HashMap<&'static str, Type> = {
+        TYPES.iter().map(|e| (e.descriptor, e.clone())).collect()
     };
 }
 
@@ -67,7 +166,7 @@ impl TryFrom<&str> for Type {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, PartialEq)]
 pub struct TypeArgs(pub(crate) Vec<Type>);
 
 impl TypeArgs {
@@ -110,10 +209,6 @@ pub fn into_box<T, U>(o: T) -> Box<U> {
     unsafe { Box::from_raw(p) }
 }
 
-// pub fn as_raw<T>(o: &T) -> *mut T {
-//     o as *mut T
-// }
-
 pub fn into_owned<T>(p: *mut T) -> T {
     assert!(!p.is_null());
     *unsafe { Box::<T>::from_raw(p) }
@@ -123,11 +218,6 @@ pub fn as_ref<'a, T>(p: *const T) -> &'a T {
     assert!(!p.is_null());
     unsafe { &*p }
 }
-
-// pub fn as_mut<'a, T>(ptr: *mut T) -> &'a mut T {
-//     assert!(!ptr.is_null());
-//     unsafe { &mut *ptr }
-// }
 
 pub fn into_c_char_p(s: String) -> *mut c_char {
     CString::new(s).unwrap().into_raw()
@@ -168,19 +258,54 @@ pub fn to_bool(b: c_bool) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use opendp::dist::L1Sensitivity;
+
     use super::*;
 
     #[test]
-    fn test_type() {
-        let parsed: Type = "i32".try_into().unwrap();
-        let explicit = Type::new::<i32>();
+    fn test_type_of() {
+        let i32_t = TypeId::of::<i32>();
+        assert_eq!(Type::of::<()>(), Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
+        assert_eq!(Type::of::<i32>(), Type::new(i32_t, "i32", TypeContents::PLAIN("i32")));
+        assert_eq!(Type::of::<String>(), Type::new(TypeId::of::<String>(), "String", TypeContents::PLAIN("String")));
+        assert_eq!(Type::of::<(i32, i32)>(), Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
+        assert_eq!(Type::of::<[i32; 1]>(), Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
+        assert_eq!(Type::of::<[i32]>(), Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
+        assert_eq!(Type::of::<L1Sensitivity<i32>>(), Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
+        assert_eq!(Type::of::<Vec<i32>>(), Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
+    }
+
+    #[test]
+    fn test_type_try_from() {
+        let i32_t = TypeId::of::<i32>();
+        assert_eq!(TryInto::<Type>::try_into("()").unwrap(), Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
+        assert_eq!(TryInto::<Type>::try_into("i32").unwrap(), Type::new(i32_t, "i32", TypeContents::PLAIN("i32")));
+        assert_eq!(TryInto::<Type>::try_into("String").unwrap(), Type::new(TypeId::of::<String>(), "String", TypeContents::PLAIN("String")));
+        assert_eq!(TryInto::<Type>::try_into("(i32, i32)").unwrap(), Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
+        assert_eq!(TryInto::<Type>::try_into("[i32; 1]").unwrap(), Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
+        assert_eq!(TryInto::<Type>::try_into("[i32]").unwrap(), Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
+        assert_eq!(TryInto::<Type>::try_into("L1Sensitivity<i32>").unwrap(), Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
+        assert_eq!(TryInto::<Type>::try_into("Vec<i32>").unwrap(), Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
+    }
+
+    #[test]
+    fn test_type_args_try_from_vec() {
+        let parsed: TypeArgs = "<Vec<i32>>".try_into().unwrap();
+        let explicit = TypeArgs(vec![Type::of::<Vec<i32>>()]);
+        assert_eq!(parsed, explicit);
+    }
+
+    #[test]
+    fn test_type_args_try_from_numbers() {
+        let parsed: TypeArgs = "<i32, f64>".try_into().unwrap();
+        let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f64>()]);
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args() {
         let parsed: TypeArgs = "<i32, f32>".try_into().unwrap();
-        let explicit = TypeArgs(vec![Type::new::<i32>(), Type::new::<f32>()]);
+        let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f32>()]);
         assert_eq!(parsed, explicit);
     }
 }

@@ -1,7 +1,7 @@
 use std::{fmt, ptr};
-use std::ffi::CStr;
+use std::ffi::{CStr, c_void};
 use std::fmt::{Debug, Formatter};
-use std::mem::transmute;
+use std::mem::{transmute, ManuallyDrop};
 use std::os::raw::c_char;
 
 use opendp::{err, fallible};
@@ -12,21 +12,31 @@ use opendp::error::Error;
 use crate::util;
 use crate::util::Type;
 
+
+#[derive(PartialEq)]
+pub enum FfiOwnership {
+    LIBRARY,
+    #[allow(dead_code)]
+    CLIENT,
+}
+
 pub struct FfiObject {
     pub type_: Type,
-    pub value: Box<()>,
+    pub value: ManuallyDrop<Box<()>>,
+    pub ownership: FfiOwnership,
 }
 
 impl FfiObject {
-    pub fn new_typed(type_: Type, value: Box<()>) -> *mut FfiObject {
-        let object = FfiObject { type_, value };
+    pub fn new(type_: Type, value: Box<()>, ownership: FfiOwnership) -> *mut FfiObject {
+        let object = FfiObject { type_, value: ManuallyDrop::new(value), ownership };
         util::into_raw(object)
     }
 
-    pub fn new<T: 'static>(value: T) -> *mut FfiObject {
-        let type_ = Type::new::<T>();
+    #[cfg(test)]
+    pub fn new_from_type<T: 'static>(value: T) -> *mut FfiObject {
+        let type_ = Type::of::<T>();
         let value = util::into_box(value);
-        Self::new_typed(type_, value)
+        Self::new(type_, value, FfiOwnership::LIBRARY)
     }
 
     pub fn as_ref<T>(&self) -> &T {
@@ -34,6 +44,26 @@ impl FfiObject {
         let value = self.value.as_ref() as *const () as *const T;
         let value = unsafe { value.as_ref() };
         value.unwrap()
+    }
+}
+
+impl Drop for FfiObject {
+    fn drop(&mut self) {
+        if &FfiOwnership::LIBRARY == &self.ownership {
+            unsafe { ManuallyDrop::drop(&mut self.value) };
+        }
+    }
+}
+
+#[repr(C)]
+pub struct FfiSlice {
+    pub ptr: *const c_void,
+    pub len: usize,
+}
+
+impl FfiSlice {
+    pub fn new(ptr: *mut c_void, len: usize) -> *mut Self {
+        util::into_raw(FfiSlice { ptr, len })
     }
 }
 
@@ -100,8 +130,8 @@ impl<T> FfiResult<T> {
 }
 
 fn new_domain_types<D: 'static + Domain>() -> (Type, Type) {
-    let domain_type = Type::new::<D>();
-    let domain_carrier = Type::new::<D::Carrier>();
+    let domain_type = Type::of::<D>();
+    let domain_carrier = Type::of::<D::Carrier>();
     (domain_type, domain_carrier)
 }
 
@@ -220,7 +250,7 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, a
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
-    let res = res.map(|o| FfiObject::new_typed(res_type, o));
+    let res = res.map(|o| FfiObject::new(res_type, o, FfiOwnership::LIBRARY));
     FfiResult::new(res)
 }
 
@@ -238,7 +268,7 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformat
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
-    let res = res.map(|o| FfiObject::new_typed(res_type, o));
+    let res = res.map(|o| FfiObject::new(res_type, o, FfiOwnership::LIBRARY));
     FfiResult::new(res)
 }
 
@@ -248,7 +278,7 @@ pub extern "C" fn opendp_core__transformation_free(this: *mut FfiTransformation)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, transformation0: *mut FfiTransformation) -> FfiResult<*mut FfiMeasurement> {
+pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const FfiMeasurement, transformation0: *const FfiTransformation) -> FfiResult<*mut FfiMeasurement> {
     let transformation0 = util::as_ref(transformation0);
     let measurement1 = util::as_ref(measurement1);
 
@@ -280,7 +310,7 @@ pub extern "C" fn opendp_core__make_chain_mt(measurement1: *mut FfiMeasurement, 
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_tt(transformation1: *mut FfiTransformation, transformation0: *mut FfiTransformation) -> FfiResult<*mut FfiTransformation> {
+pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const FfiTransformation, transformation0: *const FfiTransformation) -> FfiResult<*mut FfiTransformation> {
     let transformation0 = util::as_ref(transformation0);
     let transformation1 = util::as_ref(transformation1);
 
@@ -312,7 +342,7 @@ pub extern "C" fn opendp_core__make_chain_tt(transformation1: *mut FfiTransforma
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_composition(measurement0: *mut FfiMeasurement, measurement1: *mut FfiMeasurement) -> FfiResult<*mut FfiMeasurement> {
+pub extern "C" fn opendp_core__make_composition(measurement0: *const FfiMeasurement, measurement1: *const FfiMeasurement) -> FfiResult<*mut FfiMeasurement> {
     // TODO: This could stand to be restructured the way make_chain_xx was, but there's other cleanup needed here, can do it then.
     let measurement0 = util::as_ref(measurement0);
     let measurement1 = util::as_ref(measurement1);
@@ -323,7 +353,7 @@ pub extern "C" fn opendp_core__make_composition(measurement0: *mut FfiMeasuremen
     let output_glue0 = measurement0.output_glue.clone();
     let output_glue1 = measurement1.output_glue.clone();
     // TODO: output_glue for composition.
-    let output_glue_domain_type = Type::new::<FfiDomain>();
+    let output_glue_domain_type = Type::of::<FfiDomain>();
     let output_glue_domain_carrier = Type::new_box_pair(&output_glue0.domain_carrier, &output_glue1.domain_carrier);
     let output_glue_measure_glue = output_glue0.measure_glue.clone();
     let output_glue = FfiMeasureGlue::<FfiDomain, FfiMeasure>::new_explicit(output_glue_domain_type, output_glue_domain_carrier, output_glue_measure_glue);
