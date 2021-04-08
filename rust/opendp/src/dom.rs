@@ -120,25 +120,25 @@ impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1> {
 
 /// A Domain that contains maps of (homogeneous) values.
 #[derive(Clone, PartialEq)]
-pub struct MapDomain<DK: Domain, DT: Domain> where DK::Carrier: Eq + Hash {
+pub struct MapDomain<DK: Domain, DV: Domain> where DK::Carrier: Eq + Hash {
     pub key_domain: DK,
-    pub element_domain: DT
+    pub value_domain: DV
 }
-impl<DK: Domain, DT: Domain> MapDomain<DK, DT> where DK::Carrier: Eq + Hash {
-    pub fn new(key_domain: DK, element_domain: DT) -> Self {
-        MapDomain { key_domain, element_domain }
+impl<DK: Domain, DV: Domain> MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
+    pub fn new(key_domain: DK, element_domain: DV) -> Self {
+        MapDomain { key_domain, value_domain: element_domain }
     }
 }
-impl<K, T> MapDomain<AllDomain<K>, AllDomain<T>> where K: Eq + Hash {
+impl<K, V> MapDomain<AllDomain<K>, AllDomain<V>> where K: Eq + Hash {
     pub fn new_all() -> Self {
-        Self::new(AllDomain::<K>::new(), AllDomain::<T>::new())
+        Self::new(AllDomain::<K>::new(), AllDomain::<V>::new())
     }
 }
-impl<DK: Domain, DT: Domain> Domain for MapDomain<DK, DT> where DK::Carrier: Eq + Hash {
-    type Carrier = HashMap<DK::Carrier, DT::Carrier>;
+impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
+    type Carrier = HashMap<DK::Carrier, DV::Carrier>;
     fn member(&self, val: &Self::Carrier) -> bool {
         val.iter().all(|(k, v)|
-            self.key_domain.member( k) && self.element_domain.member(v))
+            self.key_domain.member( k) && self.value_domain.member(v))
     }
 }
 
