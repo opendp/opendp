@@ -1,7 +1,7 @@
 use std::{fmt, ptr};
-use std::ffi::{CStr, c_void};
+use std::ffi::{c_void, CStr};
 use std::fmt::{Debug, Formatter};
-use std::mem::{transmute, ManuallyDrop};
+use std::mem::{ManuallyDrop, transmute};
 use std::os::raw::c_char;
 
 use opendp::{err, fallible};
@@ -10,8 +10,7 @@ use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, 
 use opendp::error::Error;
 
 use crate::util;
-use crate::util::{Type, c_bool};
-
+use crate::util::{c_bool, Type};
 
 #[derive(PartialEq)]
 pub enum FfiOwnership {
@@ -53,6 +52,12 @@ impl Drop for FfiObject {
             unsafe { ManuallyDrop::drop(&mut self.value) };
         }
     }
+}
+
+#[repr(C)]
+pub struct FfiTuple2 {
+    pub _0: *const c_void,
+    pub _1: *const c_void,
 }
 
 #[repr(C)]
@@ -248,7 +253,7 @@ pub extern "C" fn opendp_core__measurement_check(this: *const FfiMeasurement, di
     let distance_out = util::as_ref(distance_out);
     let res = this.value.privacy_relation.eval(&distance_in.value, &distance_out.value);
 
-    FfiResult::new(res.map(|v| util::into_raw(if v {1} else {0})))
+    FfiResult::new(res.map(util::from_bool).map(util::into_raw))
 }
 
 #[no_mangle]

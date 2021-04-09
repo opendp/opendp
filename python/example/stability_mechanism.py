@@ -1,9 +1,9 @@
-import opendp
-from collections import Counter
 import os
+from collections import Counter
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import opendp
 
 odp = opendp.OpenDP()
 max_word_count_per_individual = 20
@@ -12,27 +12,22 @@ data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data'))
 censored_data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data_censored'))
 
 
+def check_stability(scale, threshold, line_count, budget):
+    count_by = odp.trans.make_count_by(b"<SymmetricDistance, L2Sensitivity<f64>, String, u32, f64>", line_count)
+    base_stability = odp.meas.make_base_stability(b"<L2Sensitivity<f64>, String, u32, f64>",
+                                                  line_count, opendp.f64_p(scale), opendp.f64_p(threshold))
+    stability_mech = odp.core.make_chain_mt(base_stability, count_by)
+
+    # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts
+    check = odp.measurement_check(stability_mech, max_word_count_per_individual, budget)
+    odp.core.measurement_free(stability_mech)
+    return check
+
+
 def privatize_vocabulary(word_count, line_count, budget):
 
-    def check_stability(scale, threshold):
-        count_by = odp.trans.make_count_by(b"<SymmetricDistance, L2Sensitivity<f64>, String, u32, f64>", line_count)
-        base_stability = odp.meas.make_base_stability(b"<L2Sensitivity<f64>, String, u32, f64>", line_count, opendp.f64_p(scale), opendp.f64_p(threshold))
-        stability_mech = odp.core.make_chain_mt(base_stability, count_by)
-
-        # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts
-        d_in = odp.data.distance_hamming(max_word_count_per_individual)
-        d_out = odp.data.distance_smoothed_max_divergence(*budget)
-        try:
-            check = odp.core.measurement_check(stability_mech, d_in, d_out)
-        except opendp.mod.OdpException:
-            check = False
-        odp.core.measurement_free(stability_mech)
-        odp.data.data_free(d_in)
-        odp.data.data_free(d_out)
-        return check
-
-    scale = binary_search(lambda scale: check_stability(scale, 1000.), 0., 100.)
-    threshold = binary_search(lambda threshold: check_stability(scale, threshold), 0., 1000.)
+    scale = binary_search(lambda s: check_stability(s, 1000., line_count, budget), 0., 100.)
+    threshold = binary_search(lambda thresh: check_stability(scale, thresh, line_count, budget), 0., 1000.)
 
     print("chosen scale and threshold:", scale, threshold)
     # stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, scale, threshold)
@@ -43,11 +38,7 @@ def privatize_vocabulary(word_count, line_count, budget):
 
     vocabulary = set()
     for word in word_count:
-        c_obj = odp.data.from_f64(word_count[word])
-        a_obj = odp.core.measurement_invoke(laplace_mechanism, c_obj)
-        privatized_count = odp.data.to_f64(a_obj)
-        odp.data.data_free(c_obj)
-        odp.data.data_free(a_obj)
+        privatized_count = odp.measurement_invoke(laplace_mechanism, word_count[word])
         if privatized_count >= threshold:
             vocabulary.add(word)
 
@@ -59,7 +50,7 @@ def main():
     word_counts = {}
     line_counts = {}
 
-    for corpus_name in os.listdir(data_dir):
+    for corpus_name in os.listdir(data_dir)[:1]:
         corpus_path = os.path.join(data_dir, corpus_name)
 
         with open(corpus_path, 'r') as corpus_file:
@@ -87,7 +78,7 @@ def main():
                 vocabulary_counts[i, j] = len(vocabulary)
 
         fig, ax = plt.subplots()
-        im = ax.imshow(vocabulary_counts, aspect='auto')
+        _im = ax.imshow(vocabulary_counts, aspect='auto')
 
         # We want to show all ticks...
         ax.set_xticks(np.arange(len(epsilons)))
@@ -104,9 +95,9 @@ def main():
         mean_count = np.mean(vocabulary_counts)
         for i in range(len(epsilons)):
             for j in range(len(deltas)):
-                text = ax.text(j, i, vocabulary_counts[i, j],
-                               ha="center", va="center",
-                               color="w" if vocabulary_counts[i, j] < mean_count * 1.2 else 'black')
+                _text = ax.text(j, i, vocabulary_counts[i, j],
+                                ha="center", va="center",
+                                color="w" if vocabulary_counts[i, j] < mean_count * 1.2 else 'black')
 
         ax.set_title("Vocabulary Count Across Budget Constraints")
         fig.tight_layout()

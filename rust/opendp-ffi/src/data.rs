@@ -5,9 +5,9 @@ use std::slice;
 
 use opendp::data::Column;
 
-use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice};
+use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice, FfiTuple2};
 use crate::util;
-use crate::util::{TypeArgs, TypeContents, Type};
+use crate::util::{Type, TypeArgs, TypeContents};
 
 #[no_mangle]
 pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const FfiSlice) -> FfiResult<*mut FfiObject> {
@@ -29,6 +29,15 @@ pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const 
         let vec = slice.to_vec();
         util::into_raw(vec) as *const c_void
     }
+    fn raw_to_tuple<T0: Clone, T1: Clone>(raw: &FfiSlice) -> *const c_void {
+        assert_eq!(raw.len, 1);
+        let tuple_struct = util::as_ref(raw.ptr as *const FfiTuple2);
+        let tuple = (
+            util::as_ref(tuple_struct._0 as *const T0).clone(),
+            util::as_ref(tuple_struct._1 as *const T1).clone()
+        );
+        util::into_raw(tuple) as *const c_void
+    }
     let type_args = TypeArgs::expect(type_args, 1);
     let type_ = type_args.0[0].clone();
     let raw = util::as_ref(raw);
@@ -44,6 +53,12 @@ pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const 
             let element = Type::of_id(element_id);
             dispatch!(raw_to_vec, [(element, @primitives)], (raw))
         },
+        TypeContents::TUPLE(ref element_ids) => {
+            assert_eq!(element_ids.len(), 2);
+            let element_0 = Type::of_id(element_ids[0]);
+            let element_1 = Type::of_id(element_ids[1]);
+            dispatch!(raw_to_tuple, [(element_0, @primitives), (element_1, @primitives)], (raw))
+        }
         _ => { dispatch!(raw_to_plain, [(type_, @primitives)], (raw)) }
     };
     let val = unsafe { Box::from_raw(val as *mut ()) };
@@ -58,40 +73,54 @@ pub extern "C" fn opendp_data__object_type(this: *mut FfiObject) -> FfiResult<*m
 
 #[no_mangle]
 pub extern "C" fn opendp_data__object_as_raw(obj: *const FfiObject) -> FfiResult<*mut FfiSlice> {
-        fn plain_to_raw(obj: &FfiObject) -> *mut FfiSlice {
-            let plain: &c_void = obj.as_ref();
-            FfiSlice::new(plain as *const c_void as *mut c_void, 1)
-        }
-        fn string_to_raw(obj: &FfiObject) -> *mut FfiSlice {
-            // // FIXME: There's no way to get a CString without copying, so this leaks.
-            let string: &String = obj.as_ref();
-            let char_p = util::into_c_char_p(string.clone());
-            FfiSlice::new(char_p as *mut c_void, string.len() + 1)
-        }
-        fn slice_to_raw<T>(_obj: &FfiObject) -> *mut FfiSlice {
-            // TODO: Need to get a reference to the slice here.
-            unimplemented!()
-        }
-        fn vec_to_raw<T: 'static>(obj: &FfiObject) -> *mut FfiSlice {
-            let vec: &Vec<T> = obj.as_ref();
-            FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len())
-        }
-        let obj = util::as_ref(obj);
-        let raw = match obj.type_.contents {
-            TypeContents::PLAIN("String") => {
-                string_to_raw(obj)
-            },
-            TypeContents::SLICE(element_id) => {
-                let element = Type::of_id(element_id);
-                dispatch!(slice_to_raw, [(element, @primitives)], (obj))
-            },
-            TypeContents::VEC(element_id) => {
-                let element = Type::of_id(element_id);
-                dispatch!(vec_to_raw, [(element, @primitives)], (obj))
-            },
-            _ => { plain_to_raw(obj) }
+    fn plain_to_raw(obj: &FfiObject) -> *mut FfiSlice {
+        let plain: &c_void = obj.as_ref();
+        FfiSlice::new(plain as *const c_void as *mut c_void, 1)
+    }
+    fn string_to_raw(obj: &FfiObject) -> *mut FfiSlice {
+        // // FIXME: There's no way to get a CString without copying, so this leaks.
+        let string: &String = obj.as_ref();
+        let char_p = util::into_c_char_p(string.clone());
+        FfiSlice::new(char_p as *mut c_void, string.len() + 1)
+    }
+    fn slice_to_raw<T>(_obj: &FfiObject) -> *mut FfiSlice {
+        // TODO: Need to get a reference to the slice here.
+        unimplemented!()
+    }
+    fn vec_to_raw<T: 'static>(obj: &FfiObject) -> *mut FfiSlice {
+        let vec: &Vec<T> = obj.as_ref();
+        FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len())
+    }
+    fn tuple_to_raw<T0: 'static + Clone, T1: 'static + Clone>(obj: &FfiObject) -> *mut FfiSlice {
+        let tuple: &(T0, T1) = obj.as_ref();
+        let tuple_struct = FfiTuple2 {
+            _0: util::into_raw(tuple.0.clone()) as *const c_void,
+            _1: util::into_raw(tuple.1.clone()) as *const c_void
         };
-        FfiResult::Ok(raw)
+        FfiSlice::new(util::into_raw(tuple_struct) as *mut c_void, 1)
+    }
+    let obj = util::as_ref(obj);
+    let raw = match obj.type_.contents {
+        TypeContents::PLAIN("String") => {
+            string_to_raw(obj)
+        },
+        TypeContents::SLICE(element_id) => {
+            let element = Type::of_id(element_id);
+            dispatch!(slice_to_raw, [(element, @primitives)], (obj))
+        },
+        TypeContents::VEC(element_id) => {
+            let element = Type::of_id(element_id);
+            dispatch!(vec_to_raw, [(element, @primitives)], (obj))
+        },
+        // TypeContents::TUPLE(ref element_ids) => {
+        //     assert_eq!(element_ids.len(), 2);
+        //     let element_0 = Type::of_id(element_ids[0]);
+        //     let element_1 = Type::of_id(element_ids[1]);
+        //     dispatch!(tuple_to_raw, [(element_0, @primitives), (element_1, @primitives)], (obj))
+        // }
+        _ => { plain_to_raw(obj) }
+    };
+    FfiResult::Ok(raw)
 }
 
 #[no_mangle]

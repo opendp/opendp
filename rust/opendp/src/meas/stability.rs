@@ -67,6 +67,9 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
             MI::new(),
             SmoothedMaxDivergence::new(),
             PrivacyRelation::new_fallible(move |&d_in: &TOC, &(eps, del): &(TOC, TOC)|{
+                let _eps: f64 = NumCast::from(eps).unwrap();
+                let _del: f64 = NumCast::from(del).unwrap();
+                println!("eps, del: {:?}, {:?}", _eps, _del);
                 let ideal_scale = d_in / (eps * _n);
                 let ideal_threshold = (_2 / del).ln() * ideal_scale + _n.recip();
                 // println!("ideal: {:?}, {:?}", ideal_sigma, ideal_threshold);
@@ -75,19 +78,19 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
                     return fallible!(FailedRelation, "cause: epsilon <= 0")
                 }
                 if eps >= _n.ln() {
-                    return fallible!(FailedRelation, "cause: epsilon >= n.ln()");
+                    return fallible!(RelationDebug, "cause: epsilon >= n.ln()");
                 }
                 if del.is_sign_negative() || del.is_zero() {
                     return fallible!(FailedRelation, "cause: delta <= 0")
                 }
                 if del >= _n.recip() {
-                    return fallible!(FailedRelation, "cause: del >= n.ln()");
+                    return fallible!(RelationDebug, "cause: del >= n.ln()");
                 }
                 if scale < ideal_scale {
-                    return fallible!(FailedRelation, "cause: scale < d_in / (epsilon * n)")
+                    return fallible!(RelationDebug, "cause: scale < d_in / (epsilon * n)")
                 }
                 if threshold < ideal_threshold {
-                    return fallible!(FailedRelation, "cause: threshold < (2. / delta).ln() * d_in / (epsilon * n) + 1. / n");
+                    return fallible!(RelationDebug, "cause: threshold < (2. / delta).ln() * d_in / (epsilon * n) + 1. / n");
                 }
                 return Ok(true)
             })))
