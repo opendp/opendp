@@ -31,16 +31,15 @@ pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const 
         let vec = slice.to_vec();
         util::into_raw(vec) as *const c_void
     }
-    fn raw_to_tuple<T0: Clone + Debug, T1: Clone>(raw: &FfiSlice) -> *const c_void {
+    fn raw_to_tuple<T0: Clone + Debug, T1: Clone + Debug>(raw: &FfiSlice) -> *const c_void {
         assert_eq!(raw.len, 2);
+        let slice = unsafe {slice::from_raw_parts(raw.ptr as *const *const c_void, 2)};
+
         let tuple = (
-            // offset the c_void pointer by the size of a c_void pointer
-            // cast inner c_void to a pointer to c_void
-            // dereference twice, place behind a direct reference
-            // clone the data behind the direct reference
-            unsafe {&**(raw.ptr.offset(0) as *const *const T0)}.clone(),
-            unsafe {&**(raw.ptr.offset(1) as *const *const T1)}.clone(),
+            util::as_ref(slice[0] as *const T0).clone(),
+            util::as_ref(slice[1] as *const T1).clone(),
         );
+        // println!("rust: {:?}", tuple);
         util::into_raw(tuple) as *const c_void
     }
     let type_args = TypeArgs::expect(type_args, 1);
@@ -100,13 +99,12 @@ pub extern "C" fn opendp_data__object_as_raw(obj: *const FfiObject) -> FfiResult
         let vec: &Vec<T> = obj.as_ref();
         FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len())
     }
-    fn tuple_to_raw<T0: 'static + Clone, T1: 'static + Clone>(obj: &FfiObject) -> *mut FfiSlice {
+    fn tuple_to_raw<T0: 'static + Clone + Debug, T1: 'static + Clone + Debug>(obj: &FfiObject) -> *mut FfiSlice {
         let tuple: &(T0, T1) = obj.as_ref();
-        let arr = [
-            util::into_raw(tuple.0.clone()) as *const T0 as *const c_void,
-            util::into_raw(tuple.1.clone()) as *const T1 as *const c_void
-        ];
-        FfiSlice::new(arr.as_ptr() as *mut c_void, 2)
+        FfiSlice::new(util::into_raw([
+            &tuple.0 as *const T0 as *const c_void,
+            &tuple.1 as *const T1 as *const c_void
+        ]) as *mut c_void, 2)
     }
     let obj = util::as_ref(obj);
     let raw = match obj.type_.contents {

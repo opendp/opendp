@@ -145,14 +145,19 @@ def tuple_to_raw(val, type_name):
             raise OdpException("Data cannot be represented by the suggested type_name")
 
     ptr_data = (ctypes.cast(ctypes.pointer(OpenDP.ATOM_MAP[name](v)), ctypes.c_void_p) for v, name in zip(val, inner_type_names))
-    ptr = (ctypes.c_void_p * len(val))(*ptr_data)
-    return wrap_in_ffislice(ctypes.pointer(ptr), len(val))
+    array = (ctypes.c_void_p * len(val))(*ptr_data)
+    return wrap_in_ffislice(ctypes.byref(array), len(val))
 
 
-def raw_to_tuple(raw, type_name):
+def raw_to_tuple(raw: FfiSlice, type_name: str):
     inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
-    ptr_data = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))[0:raw.contents.len]
-    return tuple(ctypes.cast(void_p, ctypes.POINTER(OpenDP.ATOM_MAP[name])).contents.value for void_p, name in zip(ptr_data, inner_type_names))
+    # typed pointer
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    # list of void*
+    ptr_data = void_array_ptr[0:raw.contents.len]
+    # tuple of instances of python types
+    return tuple(ctypes.cast(void_p, ctypes.POINTER(OpenDP.ATOM_MAP[name])).contents.value
+                 for void_p, name in zip(ptr_data, inner_type_names))
 
 
 class Mod:
@@ -400,9 +405,9 @@ class OpenDP:
         try:
             return self.from_raw(raw, type_name)
         except Exception as err:
-            print("MASKED ERROR:", err)
-            print("using string fallback")
-            # raise err
+            # print("MASKED ERROR:", err)
+            # print("using string fallback")
+            raise err
             # If we fail, resort to string representation.
             #TODO: Remove this fallback once we have composition and/or tuples sorted out.
             return self.data.to_string(obj).decode()
