@@ -34,12 +34,12 @@ pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const 
     fn raw_to_tuple<T0: Clone + Debug, T1: Clone>(raw: &FfiSlice) -> *const c_void {
         assert_eq!(raw.len, 2);
         let tuple = (
+            // offset the c_void pointer by the size of a c_void pointer
             // cast inner c_void to a pointer to c_void
-            // offset the outer pointer by the size of a c_void pointer
             // dereference twice, place behind a direct reference
             // clone the data behind the direct reference
-            unsafe {&**(raw.ptr as *const *const T0).offset(0)}.clone(),
-            unsafe {&**(raw.ptr as *const *const T1).offset(1)}.clone(),
+            unsafe {&**(raw.ptr.offset(0) as *const *const T0)}.clone(),
+            unsafe {&**(raw.ptr.offset(1) as *const *const T1)}.clone(),
         );
         util::into_raw(tuple) as *const c_void
     }
