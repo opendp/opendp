@@ -48,6 +48,9 @@ pub enum ErrorVariant {
     #[error("{0}")]
     Raw(Box<dyn std::error::Error>),
 
+    #[error("UnknownType")]
+    UnknownType,
+
     #[error("Failed function execution")]
     FailedFunction,
 

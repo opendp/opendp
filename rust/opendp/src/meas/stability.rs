@@ -67,9 +67,9 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
             MI::new(),
             SmoothedMaxDivergence::new(),
             PrivacyRelation::new_fallible(move |&d_in: &TOC, &(eps, del): &(TOC, TOC)|{
-                let _eps: f64 = NumCast::from(eps).unwrap();
-                let _del: f64 = NumCast::from(del).unwrap();
-                println!("eps, del: {:?}, {:?}", _eps, _del);
+                // let _eps: f64 = NumCast::from(eps).unwrap();
+                // let _del: f64 = NumCast::from(del).unwrap();
+                // println!("eps, del: {:?}, {:?}", _eps, _del);
                 let ideal_scale = d_in / (eps * _n);
                 let ideal_threshold = (_2 / del).ln() * ideal_scale + _n.recip();
                 // println!("ideal: {:?}, {:?}", ideal_sigma, ideal_threshold);

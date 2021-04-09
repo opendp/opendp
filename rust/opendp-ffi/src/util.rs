@@ -7,6 +7,8 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 
 use opendp::dist::{L1Sensitivity, L2Sensitivity, HammingDistance, SymmetricDistance};
+use opendp::error::*;
+use opendp::{err};
 
 #[derive(Debug)]
 pub struct TypeError;
@@ -45,8 +47,8 @@ impl Type {
         Self::new(TypeId::of::<T>(), descriptor, TypeContents::PLAIN(descriptor))
     }
 
-    pub fn of_id(id: TypeId) -> Self {
-        TYPE_ID_TO_TYPE.get(&id).unwrap().clone()
+    pub fn of_id(id: TypeId) -> Fallible<Self> {
+        TYPE_ID_TO_TYPE.get(&id).cloned().ok_or_else(|| err!(UnknownType))
     }
 
     // Hacky special entry point for composition.

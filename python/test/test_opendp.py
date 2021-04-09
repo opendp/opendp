@@ -38,8 +38,8 @@ def test_data_object_tuple():
     val_in = (1., 1e-7)
     obj = odp.py_to_obj(val_in)
     val_out = odp.obj_to_py(obj)
-    print(val_out)
-test_data_object_tuple()
+    assert val_out == val_in
+
 def test_identity_int():
     odp = opendp.OpenDP()
     transformation = odp.trans.make_identity(b"<i32>")

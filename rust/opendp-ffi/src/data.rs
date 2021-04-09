@@ -5,9 +5,11 @@ use std::slice;
 
 use opendp::data::Column;
 
-use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice, FfiTuple2};
+use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice};
 use crate::util;
 use crate::util::{Type, TypeArgs, TypeContents};
+use std::fmt::Debug;
+use opendp::error::Fallible;
 
 #[no_mangle]
 pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const FfiSlice) -> FfiResult<*mut FfiObject> {
@@ -29,12 +31,15 @@ pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const 
         let vec = slice.to_vec();
         util::into_raw(vec) as *const c_void
     }
-    fn raw_to_tuple<T0: Clone, T1: Clone>(raw: &FfiSlice) -> *const c_void {
-        assert_eq!(raw.len, 1);
-        let tuple_struct = util::as_ref(raw.ptr as *const FfiTuple2);
+    fn raw_to_tuple<T0: Clone + Debug, T1: Clone>(raw: &FfiSlice) -> *const c_void {
+        assert_eq!(raw.len, 2);
         let tuple = (
-            util::as_ref(tuple_struct._0 as *const T0).clone(),
-            util::as_ref(tuple_struct._1 as *const T1).clone()
+            // cast inner c_void to a pointer to c_void
+            // offset the outer pointer by the size of a c_void pointer
+            // dereference twice, place behind a direct reference
+            // clone the data behind the direct reference
+            unsafe {&**(raw.ptr as *const *const T0).offset(0)}.clone(),
+            unsafe {&**(raw.ptr as *const *const T1).offset(1)}.clone(),
         );
         util::into_raw(tuple) as *const c_void
     }
@@ -46,18 +51,22 @@ pub extern "C" fn opendp_data__object_new(type_args: *const c_char, raw: *const 
             raw_to_string(raw)
         },
         TypeContents::SLICE(element_id) => {
-            let element = Type::of_id(element_id);
+            let element = Type::of_id(element_id).unwrap();
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
         },
         TypeContents::VEC(element_id) => {
-            let element = Type::of_id(element_id);
+            let element = Type::of_id(element_id).unwrap();
             dispatch!(raw_to_vec, [(element, @primitives)], (raw))
         },
         TypeContents::TUPLE(ref element_ids) => {
             assert_eq!(element_ids.len(), 2);
-            let element_0 = Type::of_id(element_ids[0]);
-            let element_1 = Type::of_id(element_ids[1]);
-            dispatch!(raw_to_tuple, [(element_0, @primitives), (element_1, @primitives)], (raw))
+            if let Ok(types) = element_ids.iter().cloned().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
+                // primitively typed tuples
+                dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
+            } else {
+                // boxy tuples
+                dispatch!(raw_to_plain, [(type_, @primitives)], (raw))
+            }
         }
         _ => { dispatch!(raw_to_plain, [(type_, @primitives)], (raw)) }
     };
@@ -93,11 +102,11 @@ pub extern "C" fn opendp_data__object_as_raw(obj: *const FfiObject) -> FfiResult
     }
     fn tuple_to_raw<T0: 'static + Clone, T1: 'static + Clone>(obj: &FfiObject) -> *mut FfiSlice {
         let tuple: &(T0, T1) = obj.as_ref();
-        let tuple_struct = FfiTuple2 {
-            _0: util::into_raw(tuple.0.clone()) as *const c_void,
-            _1: util::into_raw(tuple.1.clone()) as *const c_void
-        };
-        FfiSlice::new(util::into_raw(tuple_struct) as *mut c_void, 1)
+        let arr = vec![
+            util::into_raw(tuple.0.clone()) as *const T0 as *const c_void,
+            util::into_raw(tuple.1.clone()) as *const T1 as *const c_void
+        ];
+        FfiSlice::new(arr.as_ptr() as *mut c_void, 2)
     }
     let obj = util::as_ref(obj);
     let raw = match obj.type_.contents {
@@ -105,19 +114,23 @@ pub extern "C" fn opendp_data__object_as_raw(obj: *const FfiObject) -> FfiResult
             string_to_raw(obj)
         },
         TypeContents::SLICE(element_id) => {
-            let element = Type::of_id(element_id);
+            let element = Type::of_id(element_id).unwrap();
             dispatch!(slice_to_raw, [(element, @primitives)], (obj))
         },
         TypeContents::VEC(element_id) => {
-            let element = Type::of_id(element_id);
+            let element = Type::of_id(element_id).unwrap();
             dispatch!(vec_to_raw, [(element, @primitives)], (obj))
         },
-        // TypeContents::TUPLE(ref element_ids) => {
-        //     assert_eq!(element_ids.len(), 2);
-        //     let element_0 = Type::of_id(element_ids[0]);
-        //     let element_1 = Type::of_id(element_ids[1]);
-        //     dispatch!(tuple_to_raw, [(element_0, @primitives), (element_1, @primitives)], (obj))
-        // }
+        TypeContents::TUPLE(ref element_ids) => {
+            assert_eq!(element_ids.len(), 2);
+            if let Ok(types) = element_ids.iter().cloned().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
+                // primitively typed tuples
+                dispatch!(tuple_to_raw, [(types[0], @primitives), (types[1], @primitives)], (obj))
+            } else {
+                // boxy tuples
+                plain_to_raw(obj)
+            }
+        }
         _ => { plain_to_raw(obj) }
     };
     FfiResult::Ok(raw)

@@ -38,7 +38,7 @@ def privatize_vocabulary(word_count, line_count, budget):
 
     vocabulary = set()
     for word in word_count:
-        privatized_count = odp.measurement_invoke(laplace_mechanism, word_count[word])
+        privatized_count = odp.measurement_invoke(laplace_mechanism, word_count[word], type_name="<f64>")
         if privatized_count >= threshold:
             vocabulary.add(word)
 

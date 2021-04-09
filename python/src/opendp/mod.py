@@ -37,17 +37,6 @@ class FfiSlice(ctypes.Structure):
 class FfiObject(ctypes.Structure):
     pass # Opaque struct
 
-
-def define_FfiTuple(k):
-    class FfiTupleK(ctypes.Structure):
-        _fields_ = [(f'_{i}', ctypes.c_void_p) for i in range(k)]
-    return FfiTupleK
-
-
-def FfiTuple(*pointers):
-    return define_FfiTuple(len(pointers))(*pointers)
-
-
 class FfiMeasurement(ctypes.Structure):
     pass # Opaque struct
 
@@ -94,11 +83,11 @@ def wrap_in_ffislice(ptr, len_):
 
 
 def scalar_to_raw(val, type_name):
-    return wrap_in_ffislice(ctypes.byref(OpenDP.ELEMENT_MAP[type_name](val)), 1)
+    return wrap_in_ffislice(ctypes.byref(OpenDP.ATOM_MAP[type_name](val)), 1)
 
 
 def raw_to_scalar(raw, type_name):
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(OpenDP.ELEMENT_MAP[type_name])).contents.value
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(OpenDP.ATOM_MAP[type_name])).contents.value
 
 
 def string_to_raw(val):
@@ -110,30 +99,30 @@ def raw_to_string(raw):
 
 
 def vector_to_raw(val, type_name):
-    inner_type_name = type_name[4:len(type_name) - 1]
+    inner_type_name = type_name[4:-1]
     if not isinstance(val, list):
         raise OdpException(f"Cannot cast a non-list type to a vector")
 
-    if inner_type_name not in OpenDP.ELEMENT_MAP:
-        raise OdpException(f"Members must be one of {OpenDP.ELEMENT_MAP.keys()}")
+    if inner_type_name not in OpenDP.ATOM_MAP:
+        raise OdpException(f"Members must be one of {OpenDP.ATOM_MAP.keys()}")
 
     if val:
         # check that actual type can be represented by the inner_type_name
-        equivalence_class = OpenDP.ELEMENT_EQUIVALENCE_CLASSES[OpenDP.infer_ffi_type_name(val[0])]
+        equivalence_class = OpenDP.ATOM_EQUIVALENCE_CLASSES[OpenDP.infer_ffi_type_name(val[0])]
         if inner_type_name not in equivalence_class:
             raise OdpException("Data cannot be represented by the suggested type_name")
 
-    array = (OpenDP.ELEMENT_MAP[inner_type_name] * len(val))(*val)
+    array = (OpenDP.ATOM_MAP[inner_type_name] * len(val))(*val)
     return wrap_in_ffislice(array, len(val))
 
 
 def raw_to_vector(raw, type_name):
-    inner_type_name = type_name[4:len(type_name) - 1]
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(OpenDP.ELEMENT_MAP[inner_type_name]))[0:raw.contents.len]
+    inner_type_name = type_name[4:-1]
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(OpenDP.ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
 def tuple_to_raw(val, type_name):
-    inner_type_names = type_name[1:len(type_name) - 1].split(",")
+    inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
     if not isinstance(val, tuple):
         raise OdpException("Cannot cast a non-tuple type to a tuple")
     # TODO: temporary check
@@ -146,25 +135,24 @@ def tuple_to_raw(val, type_name):
     if len(inner_type_names) != len(val):
         return OdpException("type_name members must have same length as tuple")
 
-    if any(t not in OpenDP.ELEMENT_MAP for t in inner_type_names):
-        return OdpException(f"Tuple members must be one of {OpenDP.ELEMENT_MAP.keys()}")
+    if any(t not in OpenDP.ATOM_MAP for t in inner_type_names):
+        return OdpException(f"Tuple members must be one of {OpenDP.ATOM_MAP.keys()}")
 
     # check that actual type can be represented by the inner_type_name
     for v, inner_type_name in zip(val, inner_type_names):
-        equivalence_class = OpenDP.ELEMENT_EQUIVALENCE_CLASSES[OpenDP.infer_ffi_type_name(v)]
+        equivalence_class = OpenDP.ATOM_EQUIVALENCE_CLASSES[OpenDP.infer_ffi_type_name(v)]
         if inner_type_name not in equivalence_class:
             raise OdpException("Data cannot be represented by the suggested type_name")
 
-    pointers = (ctypes.cast(ctypes.byref(OpenDP.ELEMENT_MAP[name](v)), ctypes.c_void_p)
-                for v, name in zip(val, inner_type_names))
-    return wrap_in_ffislice(ctypes.byref(FfiTuple(*pointers)), 1)
+    ptr_data = (ctypes.cast(ctypes.pointer(OpenDP.ATOM_MAP[name](v)), ctypes.c_void_p) for v, name in zip(val, inner_type_names))
+    ptr = (ctypes.c_void_p * len(val))(*ptr_data)
+    return wrap_in_ffislice(ctypes.pointer(ptr), len(val))
 
 
 def raw_to_tuple(raw, type_name):
-    inner_type_names = type_name[1:len(type_name) - 1].split(",")
-    tuple_struct = ctypes.cast(raw.contents.ptr, ctypes.POINTER(define_FfiTuple(len(inner_type_names))))
-
-    return tuple(raw_to_scalar(getattr(tuple_struct, f"_{i}"), name) for i, name in enumerate(inner_type_names))
+    inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
+    ptr_data = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))[0:raw.contents.len]
+    return tuple(ctypes.cast(void_p, ctypes.POINTER(OpenDP.ATOM_MAP[name])).contents.value for void_p, name in zip(ptr_data, inner_type_names))
 
 
 class Mod:
@@ -329,7 +317,7 @@ class OpenDP:
     def get_first(arr):
         return arr[0] if arr else 0
 
-    ELEMENT_MAP = {
+    ATOM_MAP = {
         'f32': ctypes.c_float,
         'f64': ctypes.c_double,
         'u8': ctypes.c_uint8,
@@ -344,7 +332,7 @@ class OpenDP:
     }
 
     # list all acceptable alternative types for each default type
-    ELEMENT_EQUIVALENCE_CLASSES = {
+    ATOM_EQUIVALENCE_CLASSES = {
         'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64'],
         'f64': ['f32', 'f64'],
         'bool': ['bool']
@@ -368,7 +356,7 @@ class OpenDP:
         raise Exception("Unknown type", type(val))
 
     def to_raw(self, val, type_name):
-        if type_name in self.ELEMENT_MAP:
+        if type_name in self.ATOM_MAP:
             return scalar_to_raw(val, type_name)
 
         if type_name.startswith("Vec<") and type_name.endswith('>'):
@@ -382,15 +370,17 @@ class OpenDP:
 
         raise Exception("Unknown type name", type_name)
 
-    def py_to_obj(self, val, type_name=None):
-        if not type_name:
+    def py_to_obj(self, val, type_arg=None):
+        if type_arg:
+            type_name = type_arg[1:-1]
+        else:
             type_name = self.infer_ffi_type_name(val)
-        type_args = f"<{type_name}>".encode()
+
         raw = self.to_raw(val, type_name)
-        return self.data.object_new(type_args, raw)
+        return self.data.object_new(f"<{type_name}>".encode(), raw)
 
     def from_raw(self, raw, type_name):
-        if type_name in self.ELEMENT_MAP:
+        if type_name in self.ATOM_MAP:
             return raw_to_scalar(raw, type_name)
 
         if type_name.startswith("Vec<") and type_name.endswith('>'):
@@ -409,7 +399,10 @@ class OpenDP:
         raw = self.data.object_as_raw(obj)
         try:
             return self.from_raw(raw, type_name)
-        except:
+        except Exception as err:
+            print("MASKED ERROR:", err)
+            print("using string fallback")
+            # raise err
             # If we fail, resort to string representation.
             #TODO: Remove this fallback once we have composition and/or tuples sorted out.
             return self.data.to_string(obj).decode()
@@ -424,9 +417,9 @@ class OpenDP:
         res = self.core.transformation_invoke(transformation, arg)
         return self.obj_to_py(res)
 
-    def measurement_check(self, measurement, d_in, d_out, *, d_in_type_name=None, d_out_type_name=None, debug=False):
-        d_in = self.py_to_obj(d_in, d_in_type_name)
-        d_out = self.py_to_obj(d_out, d_out_type_name)
+    def measurement_check(self, measurement, d_in, d_out, *, d_in_type_arg=None, d_out_type_arg=None, debug=False):
+        d_in = self.py_to_obj(d_in, d_in_type_arg and d_in_type_arg[1:-1])
+        d_out = self.py_to_obj(d_out, d_out_type_arg and d_out_type_arg[1:-1])
         if debug:
             return self.core.measurement_check(measurement, d_in, d_out)
         else:
