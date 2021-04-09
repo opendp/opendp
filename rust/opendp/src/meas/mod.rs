@@ -9,6 +9,7 @@ use crate::error::Fallible;
 pub mod laplace;
 pub mod gaussian;
 pub mod geometric;
+pub mod stability;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeMeasurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {

@@ -262,6 +262,35 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_make_split_lines() {
+        let transformation = SplitLines::<HammingDistance>::make().unwrap();
+        let arg = "ant\nbat\ncat\n".to_owned();
+        let ret = transformation.function.eval(&arg).unwrap();
+        assert_eq!(ret, vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()]);
+    }
+
+    #[test]
+    fn test_make_parse_series() {
+        let transformation = ParseSeries::<i32, HammingDistance>::make(true).unwrap();
+        let arg = vec!["1".to_owned(), "2".to_owned(), "3".to_owned(), "foo".to_owned()];
+        let ret = transformation.function.eval(&arg).unwrap();
+        let expected = vec![1, 2, 3, 0];
+        assert_eq!(ret, expected);
+    }
+
+    #[test]
+    fn test_make_split_records() {
+        let transformation = SplitRecords::<HammingDistance>::make(None).unwrap();
+        let arg = vec!["ant, foo".to_owned(), "bat, bar".to_owned(), "cat, baz".to_owned()];
+        let ret = transformation.function.eval(&arg).unwrap();
+        assert_eq!(ret, vec![
+            vec!["ant".to_owned(), "foo".to_owned()],
+            vec!["bat".to_owned(), "bar".to_owned()],
+            vec!["cat".to_owned(), "baz".to_owned()],
+        ]);
+    }
+
+    #[test]
     fn test_make_create_dataframe() {
         let transformation = CreateDataFrame::<HammingDistance>::make(vec!["0".to_string(), "1".to_string()]).unwrap();
         let arg = vec![

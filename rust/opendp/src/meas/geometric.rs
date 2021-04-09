@@ -3,7 +3,7 @@ use std::ops::{Sub, Add};
 
 
 use crate::core::{Function, Measurement, PrivacyRelation};
-use crate::dist::{L2Sensitivity, MaxDivergence};
+use crate::dist::{MaxDivergence, L1Sensitivity};
 use crate::dom::AllDomain;
 use crate::error::Fallible;
 use crate::samplers::{SampleBernoulli, SampleGeometric, SampleUniform};
@@ -17,10 +17,10 @@ pub struct BaseSimpleGeometric<T, QO> {
 }
 
 // geometric for scalar-valued query
-impl<T, QO> MakeMeasurement3<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<QO>, QO, T, T> for BaseSimpleGeometric<T, QO>
+impl<T, QO> MakeMeasurement3<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<QO>, QO, T, T> for BaseSimpleGeometric<T, QO>
     where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast,
           QO: 'static + Float + DistanceCast, f64: From<QO> {
-    fn make3(scale: QO, min: T, max: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDivergence<QO>>> {
+    fn make3(scale: QO, min: T, max: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<QO>>> {
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
@@ -38,7 +38,7 @@ impl<T, QO> MakeMeasurement3<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, MaxDi
                     arg.clone() - T::sample_geometric(1. - alpha, max_trials, false)?
                 })
             }),
-            L2Sensitivity::new(),
+            L1Sensitivity::new(),
             MaxDivergence::new(),
             PrivacyRelation::new_from_constant(scale.recip())))
     }

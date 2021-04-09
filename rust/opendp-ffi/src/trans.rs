@@ -1,22 +1,25 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::Sum;
-use std::ops::{Div, Mul, Sub};
+use std::ops::{Div, Mul, Sub, AddAssign};
 use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
-use num::One;
+use num::{One, Integer, Zero, NumCast};
 
 use opendp::core::{DatasetMetric, Metric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::traits::{Abs, CastFrom, DistanceCast};
-use opendp::trans::{BoundedSum, BoundedSumStability, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation};
+use opendp::trans::{count, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation, sum};
 use opendp::trans;
+use opendp::trans::sum::{BoundedSum, BoundedSumConstant};
 
-use crate::core::FfiTransformation;
+use crate::core::{FfiTransformation, FfiObject};
 use crate::util;
 use crate::util::{c_bool, Type, TypeArgs, TypeContents};
+use opendp::trans::count::{CountByCategoriesConstant, CountByCategories, CountBy, CountByConstant};
+use num::traits::FloatConst;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> *mut FfiTransformation {
@@ -134,7 +137,7 @@ pub extern "C" fn opendp_trans__make_clamp_vec(type_args: *const c_char, lower: 
               T: 'static + Copy + PartialOrd {
         let lower = util::as_ref(lower as *const T).clone();
         let upper = util::as_ref(upper as *const T).clone();
-        let transformation = manipulation::Clamp::<M, Vec<T>, u32>::make(lower, upper).unwrap();
+        let transformation = manipulation::Clamp::<M, Vec<T>>::make(lower, upper).unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 2);
@@ -154,7 +157,7 @@ pub extern "C" fn opendp_trans__make_clamp_scalar(type_args: *const c_char, lowe
             where M: 'static + SensitivityMetric<Distance=Q>,
                   T: 'static + Clone + PartialOrd,
                   Q: 'static + One + Mul<Output=Q> + Div<Output=Q> + PartialOrd + DistanceCast {
-            let transformation = trans::manipulation::Clamp::<M, T, Q>::make(lower, upper).unwrap();
+            let transformation = trans::manipulation::Clamp::<M, T>::make(lower, upper).unwrap();
             FfiTransformation::new_from_types(transformation)
         }
         dispatch!(monomorphize2, [
@@ -171,7 +174,7 @@ pub extern "C" fn opendp_trans__make_clamp_scalar(type_args: *const c_char, lowe
 pub extern "C" fn opendp_trans__make_cast_vec(type_args: *const c_char) -> *mut FfiTransformation {
     fn monomorphize<M, TI, TO>() -> *mut FfiTransformation where
         M: 'static + DatasetMetric<Distance=u32>, TI: 'static + Clone, TO: 'static + CastFrom<TI> + Default {
-        let transformation = trans::manipulation::Cast::<M, M, Vec<TI>, Vec<TO>>::make().unwrap();
+        let transformation = trans::manipulation::Cast::<M, Vec<TI>, Vec<TO>>::make().unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 3);
@@ -211,8 +214,8 @@ pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower
             where MI: 'static + DatasetMetric<Distance=u32>,
                   MO: 'static + SensitivityMetric<Distance=T>,
                   T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
-                  BoundedSum<MI, MO, T>: BoundedSumStability<MI, MO, T> {
-            let transformation = trans::BoundedSum::<MI, MO, T>::make(lower, upper).unwrap();
+                  BoundedSum<MI, MO, T>: BoundedSumConstant<MI, MO, T> {
+            let transformation = sum::BoundedSum::<MI, MO, T>::make(lower, upper).unwrap();
             FfiTransformation::new_from_types(transformation)
         }
         let lower = util::as_ref(lower as *const T).clone();
@@ -236,7 +239,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, low
         fn monomorphize2<MO, T>(lower: T, upper: T, n: usize) -> *mut FfiTransformation
             where MO: 'static + SensitivityMetric<Distance=T>,
                   T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast {
-            let transformation = trans::BoundedSum::<SymmetricDistance, MO, T>::make3(lower, upper, n).unwrap();
+            let transformation = sum::BoundedSum::<SymmetricDistance, MO, T>::make3(lower, upper, n).unwrap();
             FfiTransformation::new_from_types(transformation)
         }
         let lower = util::as_ref(lower as *const T).clone();
@@ -258,7 +261,7 @@ pub extern "C" fn opendp_trans__make_count(type_args: *const c_char) -> *mut Ffi
     fn monomorphize<MI, MO, T: 'static>() -> *mut FfiTransformation
         where MI: 'static + DatasetMetric<Distance=u32> + Clone,
               MO: 'static + SensitivityMetric<Distance=u32> + Clone {
-        let transformation = trans::Count::<MI, MO, T>::make().unwrap();
+        let transformation = count::Count::<MI, MO, T>::make().unwrap();
         FfiTransformation::new_from_types(transformation)
     }
     let type_args = TypeArgs::expect(type_args, 3);
@@ -267,6 +270,64 @@ pub extern "C" fn opendp_trans__make_count(type_args: *const c_char) -> *mut Ffi
         (type_args.0[1], [L1Sensitivity<u32>, L2Sensitivity<u32>]),
         (type_args.0[2], @primitives)
     ], ())
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_trans__make_count_by_categories(type_args: *const c_char, categories: *const FfiObject) -> *mut FfiTransformation {
+    fn monomorphize<QO>(type_args: TypeArgs, categories: *const FfiObject) -> *mut FfiTransformation
+        where QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd + FloatConst + One + NumCast {
+
+        fn monomorphize2<MI, MO, TI, TO, QO>(categories: *const FfiObject) -> *mut FfiTransformation
+            where MI: 'static + DatasetMetric<Distance=u32>,
+                  MO: 'static + SensitivityMetric<Distance=QO>,
+                  TI: 'static + Eq + Hash + Clone,
+                  TO: 'static + Integer + Zero + One + AddAssign,
+                  QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd + FloatConst + One + NumCast,
+                  CountByCategories<MI, MO, TI, TO>: CountByCategoriesConstant<MI, MO> {
+            let categories = util::as_ref(categories as *const Vec<TI>).clone();
+            let transformation = count::CountByCategories::<MI, MO, TI, TO>::make(categories).unwrap();
+            FfiTransformation::new_from_types(transformation)
+        }
+        dispatch!(monomorphize2, [
+            (type_args.0[0], [HammingDistance, SymmetricDistance]),
+            (type_args.0[1], [L1Sensitivity<QO>, L2Sensitivity<QO>]),
+            (type_args.0[2], @hashable),
+            (type_args.0[3], @integers),
+            (type_args.0[4], [QO])
+        ], (categories))
+    }
+    let type_args = TypeArgs::expect(type_args, 5);
+    dispatch!(monomorphize, [(type_args.0[4], @floats)], (type_args, categories))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_trans__make_count_by(type_args: *const c_char, n: c_uint) -> *mut FfiTransformation {
+    fn monomorphize<QO>(type_args: TypeArgs, n: usize) -> *mut FfiTransformation
+        where QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd + FloatConst + One + NumCast {
+
+        fn monomorphize2<MI, MO, TI, TO, QO>(n: usize) -> *mut FfiTransformation
+            where MI: 'static + DatasetMetric<Distance=u32>,
+                  MO: 'static + SensitivityMetric<Distance=QO>,
+                  TI: 'static + Eq + Hash + Clone,
+                  TO: 'static + Integer + Zero + One + AddAssign,
+                  QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd + FloatConst + One + NumCast,
+                  CountBy<MI, MO, TI, TO>: CountByConstant<MI, MO> {
+            let transformation = count::CountBy::<MI, MO, TI, TO>::make(n).unwrap();
+                FfiTransformation::new_from_types(transformation)
+        }
+        dispatch!(monomorphize2, [
+            (type_args.0[0], [HammingDistance, SymmetricDistance]),
+            (type_args.0[1], [L1Sensitivity<QO>, L2Sensitivity<QO>]),
+            (type_args.0[2], @hashable),
+            (type_args.0[3], @integers),
+            (type_args.0[4], [QO])
+        ], (n))
+    }
+    // TODO: drop type_args.0[4] by parsing inner type from type_args.0[1], once data loading PR is merged
+    let n = n as usize;
+    let type_args = TypeArgs::expect(type_args, 5);
+    dispatch!(monomorphize, [(type_args.0[4], @floats)], (type_args, n))
 }
 
 #[no_mangle]
@@ -286,7 +347,10 @@ r#"{
     { "name": "make_clamp_scalar", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiTransformation *" },
     { "name": "make_cast_vec", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" },
     { "name": "make_bounded_sum", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiTransformation *" },
-    { "name": "make_count", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" }
+    { "name": "make_bounded_sum_n", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["unsigned int", "n"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count", "args": [ ["const char *", "selector"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count_by", "args": [ ["const char *", "selector"], ["unsigned int", "n"] ], "ret": "FfiTransformation *" },
+    { "name": "make_count_by_categories", "args": [ ["const char *", "selector"], ["FfiObject *", "categories"] ], "ret": "FfiTransformation *" }
 ]
 }"#;
     util::bootstrap(spec)

@@ -38,7 +38,7 @@
 //! use opendp::core;
 //! use opendp::meas;
 //! use opendp::trans;
-//! use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation};
+//! use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation, sum};
 //! use opendp::dist::{HammingDistance, L1Sensitivity};
 //! use opendp::core::{ChainTT, ChainMT};
 //! use opendp::meas::{MakeMeasurement2,  MakeMeasurement1};
@@ -57,7 +57,7 @@
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
 //!     let clamp = manipulation::Clamp::make(bounds.0, bounds.1).unwrap();
-//!     let bounded_sum = trans::BoundedSum::make2(bounds.0, bounds.1).unwrap();
+//!     let bounded_sum = sum::BoundedSum::make2(bounds.0, bounds.1).unwrap();
 //!     let laplace = BaseLaplace::make(sigma).unwrap();
 //!     let intermediate = ChainTT::make(&bounded_sum, &clamp).unwrap();
 //!     let noisy_sum = ChainMT::make(&laplace, &intermediate).unwrap();

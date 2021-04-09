@@ -60,8 +60,21 @@ class FfiResult(ctypes.Structure):
         ("payload", FfiResultPayload),
     ]
 
+
 class OdpException(Exception):
-    pass
+    def __init__(self, cls, message=None, inner_traceback=None):
+        self.cls = cls
+        self.message = message
+        self.inner_traceback = inner_traceback
+
+    def __str__(self):
+        response = self.cls
+        if self.message:
+            response += f"({self.message})"
+        if self.inner_traceback:
+            response += "\n" + '\n'.join('\t' + line for line in self.inner_traceback.split('\n'))
+        return response
+
 
 class Mod:
 
@@ -86,6 +99,7 @@ class Mod:
         "bool": ctypes.c_bool,
         "FfiSlice *": ctypes.POINTER(FfiSlice),
         "const FfiSlice *": ctypes.POINTER(FfiSlice),
+        "bool *": ctypes.POINTER(ctypes.c_bool),  # FIXME: I don't think we want this? It's for error-able bools
         "FfiObject *": ctypes.POINTER(FfiObject),
         "const FfiObject *": ctypes.POINTER(FfiObject),
         "FfiMeasurement *": ctypes.POINTER(FfiMeasurement),
@@ -163,9 +177,9 @@ class Mod:
                 err_contents = err.contents
                 variant = c_char_p_to_str(err_contents.variant)
                 message = c_char_p_to_str(err_contents.message)
-                backtace = c_char_p_to_str(err_contents.backtrace)
+                backtrace = c_char_p_to_str(err_contents.backtrace)
                 self.error_free(err)
-                raise OdpException(variant, message, backtace)
+                raise OdpException(variant, message, backtrace)
         return unwrap
 
 class OpenDP:

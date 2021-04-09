@@ -10,7 +10,7 @@ use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, 
 use opendp::error::Error;
 
 use crate::util;
-use crate::util::Type;
+use crate::util::{Type, c_bool};
 
 
 #[derive(PartialEq)]
@@ -242,6 +242,16 @@ pub extern "C" fn opendp_core__error_free(this: *mut FfiError) {
 }
 
 #[no_mangle]
+pub extern "C" fn opendp_core__measurement_check(this: *const FfiMeasurement, distance_in: *const FfiObject, distance_out: *const FfiObject) -> FfiResult<*mut c_bool> {
+    let this = util::as_ref(this);
+    let distance_in = util::as_ref(distance_in);
+    let distance_out = util::as_ref(distance_out);
+    let res = this.value.privacy_relation.eval(&distance_in.value, &distance_out.value);
+
+    FfiResult::new(res.map(|v| util::into_raw(if v {1} else {0})))
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, arg: *const FfiObject) -> FfiResult<*mut FfiObject> {
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
@@ -374,6 +384,7 @@ pub extern "C" fn opendp_core__bootstrap() -> *const c_char {
 r#"{
 "functions": [
     { "name": "error_free", "args": [ ["const FfiError *", "this"] ] },
+    { "name": "measurement_check", "args": [ ["const FfiMeasurement *", "this"], ["const FfiObject *", "d_in"], ["const FfiObject *", "d_out"] ], "ret": "FfiResult<bool *>" },
     { "name": "measurement_invoke", "args": [ ["const FfiMeasurement *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
     { "name": "measurement_free", "args": [ ["FfiMeasurement *", "this"] ] },
     { "name": "transformation_invoke", "args": [ ["const FfiTransformation *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
