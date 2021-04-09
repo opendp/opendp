@@ -102,7 +102,7 @@ pub extern "C" fn opendp_data__object_as_raw(obj: *const FfiObject) -> FfiResult
     }
     fn tuple_to_raw<T0: 'static + Clone, T1: 'static + Clone>(obj: &FfiObject) -> *mut FfiSlice {
         let tuple: &(T0, T1) = obj.as_ref();
-        let arr = vec![
+        let arr = [
             util::into_raw(tuple.0.clone()) as *const T0 as *const c_void,
             util::into_raw(tuple.1.clone()) as *const T1 as *const c_void
         ];
