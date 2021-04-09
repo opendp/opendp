@@ -60,3 +60,10 @@ def test_identity_list():
     arg = [1, 2, 3]
     ret = odp.transformation_invoke(transformation, arg)
     assert ret == arg
+
+def test_count():
+    odp = opendp.OpenDP()
+    transformation = odp.trans.make_count(b"<SymmetricDistance, L1Sensitivity<u32>, i32>")
+    arg = [1, 2, 3]
+    ret = odp.transformation_invoke(transformation, arg)
+    assert ret == 3

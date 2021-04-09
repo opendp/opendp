@@ -279,6 +279,8 @@ class OpenDP:
     def from_raw(self, type_name, raw):
         if type_name == "i32":
             return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_int32)).contents.value
+        elif type_name == "u32":
+            return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint32)).contents.value
         elif type_name == "f64":
             return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_double)).contents.value
         elif type_name == "String":
