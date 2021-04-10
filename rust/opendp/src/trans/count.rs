@@ -1,5 +1,5 @@
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -74,6 +74,10 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedD
           QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd,
           Self: CountByCategoriesConstant<MI, MO> {
     fn make1(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO>> {
+        let mut uniques = HashSet::new();
+        if categories.iter().any(move |x| !uniques.insert(x)) {
+            return fallible!(MakeTransformation, "categories must be distinct")
+        }
         Ok(Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
@@ -90,6 +94,7 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedD
 
                 categories.iter().map(|cat| counts.remove(cat))
                     .chain(vec![Some(null_count)])
+                    // we always know that .remove will be some, because categories are distinct and every category is in the map
                     .collect::<Option<_>>().unwrap_assert()
             }),
             MI::new(),
@@ -162,18 +167,18 @@ mod tests {
 
     #[test]
     fn test_make_count_l1() {
-        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make().unwrap_assert();
+        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_count_l2() {
-        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make().unwrap_assert();
+        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
         assert_eq!(ret, expected);
     }
@@ -182,26 +187,27 @@ mod tests {
     fn test_make_count_by_categories() {
         let transformation = CountByCategories::<SymmetricDistance, L2Sensitivity<f64>, i64, i8>::make(
             vec![2, 1, 3]
-        ).unwrap();
+        ).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = vec![2, 4, 1, 2];
         assert_eq!(ret, expected);
 
-        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap());
-        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap());
+        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap_test());
+        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap_test());
     }
 
     #[test]
-    fn test_make_count_by() {
+    fn test_make_count_by() -> Fallible<()> {
         let arg = vec![true, true, true, false, true, false, false, false, true, true];
-        let transformation = CountBy::<SymmetricDistance, L2Sensitivity<f64>, bool, i8>::make(arg.len()).unwrap();
-        let ret = transformation.function.eval(&arg).unwrap();
+        let transformation = CountBy::<SymmetricDistance, L2Sensitivity<f64>, bool, i8>::make(arg.len())?;
+        let ret = transformation.function.eval(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);
         expected.insert(false, 4);
         assert_eq!(ret, expected);
-        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap());
-        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap());
+        assert!(!transformation.stability_relation.eval(&5, &4.999)?);
+        assert!(transformation.stability_relation.eval(&5, &5.0)?);
+        Ok(())
     }
 }

@@ -22,7 +22,7 @@ use opendp::core::SensitivityMetric;
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, scale: *const c_void) -> FfiResult<*mut FfiMeasurement> {
     fn monomorphize<T>(scale: *const c_void) -> FfiResult<*mut FfiMeasurement>
         where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
-        let scale = util::as_ref(scale as *const T).clone();
+        let scale = try_as_ref!(scale as *const T).clone();
         BaseLaplace::<T>::make(scale).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
@@ -33,7 +33,7 @@ pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, scale
 pub extern "C" fn opendp_meas__make_base_laplace_vec(type_args: *const c_char, scale: *const c_void) -> FfiResult<*mut FfiMeasurement> {
     fn monomorphize<T>(scale: *const c_void) -> FfiResult<*mut FfiMeasurement>
         where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
-        let scale = util::as_ref(scale as *const T).clone();
+        let scale = try_as_ref!(scale as *const T).clone();
         BaseVectorLaplace::<T>::make(scale).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
@@ -44,7 +44,7 @@ pub extern "C" fn opendp_meas__make_base_laplace_vec(type_args: *const c_char, s
 pub extern "C" fn opendp_meas__make_base_gaussian(type_args: *const c_char, scale: *const c_void) -> FfiResult<*mut FfiMeasurement> {
     fn monomorphize<T>(scale: *const c_void) -> FfiResult<*mut FfiMeasurement> where
         T: 'static + Copy + SampleGaussian + Float {
-        let scale = util::as_ref(scale as *const T).clone();
+        let scale = try_as_ref!(scale as *const T).clone();
         BaseGaussian::<T>::make(scale).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
@@ -55,7 +55,7 @@ pub extern "C" fn opendp_meas__make_base_gaussian(type_args: *const c_char, scal
 pub extern "C" fn opendp_meas__make_base_gaussian_vec(type_args: *const c_char, scale: *const c_void) -> FfiResult<*mut FfiMeasurement> {
     fn monomorphize<T>(scale: *const c_void) -> FfiResult<*mut FfiMeasurement> where
         T: 'static + Copy + SampleGaussian + Float {
-        let scale = util::as_ref(scale as *const T).clone();
+        let scale = try_as_ref!(scale as *const T).clone();
         BaseGaussian::<T>::make(scale).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
@@ -68,9 +68,9 @@ pub extern "C" fn opendp_meas__make_base_simple_geometric(type_args: *const c_ch
     fn monomorphize<T, QO>(scale: *const c_void, min: *const c_void, max: *const c_void) -> FfiResult<*mut FfiMeasurement>
         where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast,
               QO: 'static + Float + DistanceCast, f64: From<QO> {
-        let scale = util::as_ref(scale as *const QO).clone();
-        let min = util::as_ref(min as *const T).clone();
-        let max = util::as_ref(max as *const T).clone();
+        let scale = try_as_ref!(scale as *const QO).clone();
+        let min = try_as_ref!(min as *const T).clone();
+        let max = try_as_ref!(max as *const T).clone();
         BaseSimpleGeometric::<T, QO>::make(scale, min, max).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 2));
@@ -90,8 +90,8 @@ pub extern "C" fn opendp_meas__make_base_stability(type_args: *const c_char, n: 
                   TOC: 'static + Clone + NumCast + PartialOrd + Float + CastRug {
             BaseStability::<MI, TIK, TIC, TOC>::make(n, scale, threshold).into()
         }
-        let scale = util::as_ref(scale as *const TOC).clone();
-        let threshold = util::as_ref(threshold as *const TOC).clone();
+        let scale = try_as_ref!(scale as *const TOC).clone();
+        let threshold = try_as_ref!(threshold as *const TOC).clone();
         dispatch!(monomorphize2, [
             (type_args.0[0], [L1Sensitivity<TOC>, L2Sensitivity<TOC>]),
             (type_args.0[1], @hashable),

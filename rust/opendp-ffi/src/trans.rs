@@ -31,7 +31,7 @@ pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiRe
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
     match &type_args.0[0].contents {
-        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [(Type::of_id(*element_id).unwrap(), @primitives)], ()),
+        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [(try_!(Type::of_id(*element_id)), @primitives)], ()),
         _ => dispatch!(monomorphize_scalar, [(&type_args.0[0], @primitives)], ())
     }
 }
@@ -66,7 +66,7 @@ pub extern "C" fn opendp_trans__make_split_records(type_args: *const c_char, sep
         trans::SplitRecords::<M>::make(separator).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
-    let separator = util::to_option_str(separator);
+    let separator = try_!(util::to_option_str(separator));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset)], (separator))
 }
 
@@ -75,10 +75,10 @@ pub extern "C" fn opendp_trans__make_create_dataframe(type_args: *const c_char, 
     fn monomorphize<M, K>(col_names: *const FfiObject) -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
               K: 'static + Eq + Hash + Debug + Clone {
-        let col_names = util::as_ref(col_names as *const Vec<K>).clone();
+        let col_names = try_as_ref!(col_names as *const Vec<K>).clone();
         trans::CreateDataFrame::<M, K>::make(col_names).into()
     }
-    let type_args = try_!(TypeArgs::parse(type_args, 1));
+    let type_args = try_!(TypeArgs::parse(type_args, 2));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[0], @hashable)], (col_names))
 }
 
@@ -87,11 +87,11 @@ pub extern "C" fn opendp_trans__make_split_dataframe(type_args: *const c_char, s
     fn monomorphize<M, K>(separator: Option<&str>, col_names: *const FfiObject) -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
               K: 'static + Eq + Hash + Debug + Clone {
-        let col_names = util::as_ref(col_names as *const Vec<K>).clone();
-        trans::SplitDataFrame::<M>::make(separator, col_names).into()
+        let col_names = try_as_ref!(col_names as *const Vec<K>).clone();
+        trans::SplitDataFrame::<M, K>::make(separator, col_names).into()
     }
-    let type_args = try_!(TypeArgs::parse(type_args, 1));
-    let separator = util::to_option_str(separator);
+    let type_args = try_!(TypeArgs::parse(type_args, 2));
+    let separator = try_!(util::to_option_str(separator));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[0], @hashable)], (separator, col_names))
 }
 
@@ -102,7 +102,7 @@ pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key:
         K: 'static + Hash + Eq + Debug + Clone,
         T: 'static + Debug + Clone + PartialEq + FromStr + Default,
         T::Err: Debug {
-        let key = util::as_ref(key as *const K).clone();
+        let key = try_as_ref!(key as *const K).clone();
         trans::ParseColumn::<M, T>::make(key, impute).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 3));
@@ -116,7 +116,7 @@ pub extern "C" fn opendp_trans__make_select_column(type_args: *const c_char, key
         M: 'static + DatasetMetric<Distance=u32> + Clone,
         K: 'static + Hash + Eq + Debug + Clone,
         T: 'static + Debug + Clone + PartialEq {
-        let key = util::as_ref(key as *const K).clone();
+        let key = try_as_ref!(key as *const K).clone();
         trans::SelectColumn::<M, T>::make(key).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 3));
@@ -128,8 +128,8 @@ pub extern "C" fn opendp_trans__make_clamp_vec(type_args: *const c_char, lower: 
     fn monomorphize<M, T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation>
         where M: 'static + Metric<Distance=u32> + Clone,
               T: 'static + Copy + PartialOrd {
-        let lower = util::as_ref(lower as *const T).clone();
-        let upper = util::as_ref(upper as *const T).clone();
+        let lower = try_as_ref!(lower as *const T).clone();
+        let upper = try_as_ref!(upper as *const T).clone();
         manipulation::Clamp::<M, Vec<T>>::make(lower, upper).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 2));
@@ -142,8 +142,8 @@ pub extern "C" fn opendp_trans__make_clamp_scalar(type_args: *const c_char, lowe
     fn monomorphize<T, Q>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation>
         where T: 'static + Clone + PartialOrd,
               Q: 'static + One + Mul<Output=Q> + Div<Output=Q> + PartialOrd + DistanceCast {
-        let lower = util::as_ref(lower as *const T).clone();
-        let upper = util::as_ref(upper as *const T).clone();
+        let lower = try_as_ref!(lower as *const T).clone();
+        let upper = try_as_ref!(upper as *const T).clone();
 
         fn monomorphize2<M, T, Q>(lower: T, upper: T) -> FfiResult<*mut FfiTransformation>
             where M: 'static + SensitivityMetric<Distance=Q>,
@@ -191,7 +191,7 @@ pub extern "C" fn opendp_trans__make_cast_vec(type_args: *const c_char) -> FfiRe
 //             (type_args.0[2], [TI]), (type_args.0[3], [TO])
 //         ], ())
 //     }
-//     let type_args = TypeArgs::expect(type_args, 4);
+//     let type_args = try_!(TypeArgs::parse(type_args, 4));
 //     dispatch!(monomorphize, [(type_args.0[2], @numbers), (type_args.0[3], @numbers)], (type_args))
 // }
 
@@ -206,8 +206,8 @@ pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower
                   BoundedSum<MI, MO>: BoundedSumConstant<MI, MO> {
             sum::BoundedSum::<MI, MO>::make(lower, upper).into()
         }
-        let lower = util::as_ref(lower as *const T).clone();
-        let upper = util::as_ref(upper as *const T).clone();
+        let lower = try_as_ref!(lower as *const T).clone();
+        let upper = try_as_ref!(upper as *const T).clone();
         dispatch!(monomorphize2, [
             (type_args.0[0], [HammingDistance, SymmetricDistance]),
             (type_args.0[1], [L1Sensitivity<T>, L2Sensitivity<T>]),
@@ -229,8 +229,8 @@ pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, low
                   T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast {
             sum::BoundedSum::<SymmetricDistance, MO>::make3(lower, upper, n).into()
         }
-        let lower = util::as_ref(lower as *const T).clone();
-        let upper = util::as_ref(upper as *const T).clone();
+        let lower = try_as_ref!(lower as *const T).clone();
+        let upper = try_as_ref!(upper as *const T).clone();
         dispatch!(monomorphize2, [
             (type_args.0[0], [L1Sensitivity<T>, L2Sensitivity<T>]),
             (type_args.0[1], [T])
@@ -271,7 +271,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(type_args: *const c_cha
                   TO: 'static + Integer + Zero + One + AddAssign,
                   QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd + FloatConst + One + NumCast,
                   CountByCategories<MI, MO, TI, TO>: CountByCategoriesConstant<MI, MO> {
-            let categories = util::as_ref(categories as *const Vec<TI>).clone();
+            let categories = try_as_ref!(categories as *const Vec<TI>).clone();
             count::CountByCategories::<MI, MO, TI, TO>::make(categories).into()
         }
         dispatch!(monomorphize2, [
@@ -323,8 +323,8 @@ r#"{
     { "name": "make_split_lines", "args": [ ["const char *", "selector"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_parse_series", "args": [ ["const char *", "selector"], ["bool", "impute"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_split_records", "args": [ ["const char *", "selector"], ["const char *", "separator"] ], "ret": "FfiResult<FfiTransformation *>" },
-    { "name": "make_create_dataframe", "args": [ ["const char *", "selector"], ["unsigned int", "col_count"] ], "ret": "FfiResult<FfiTransformation *>" },
-    { "name": "make_split_dataframe", "args": [ ["const char *", "selector"], ["const char *", "separator"], ["unsigned int", "col_count"] ], "ret": "FfiResult<FfiTransformation *>" },
+    { "name": "make_create_dataframe", "args": [ ["const char *", "selector"], ["FfiObject *", "col_names"] ], "ret": "FfiResult<FfiTransformation *>" },
+    { "name": "make_split_dataframe", "args": [ ["const char *", "selector"], ["const char *", "separator"], ["FfiObject *", "col_names"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_parse_column", "args": [ ["const char *", "selector"], ["void *", "key"], ["bool", "impute"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_select_column", "args": [ ["const char *", "selector"], ["void *", "key"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_clamp_vec", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiResult<FfiTransformation *>" },

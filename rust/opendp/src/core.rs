@@ -467,7 +467,7 @@ impl<D: 'static + Domain, M: 'static + Metric> MetricGlue<D, M> {
 pub struct ChainMT;
 
 impl ChainMT {
-    pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(
+    pub fn make_glue<DI, DX, DO, MI, MX, MO>(
         measurement1: &Measurement<DX, DO, MX, MO>,
         transformation0: &Transformation<DI, DX, MI, MX>,
         hint: Option<&HintMt<MI, MO, MX>>,
@@ -506,7 +506,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, D
           MX: 'static + Metric,
           MO: 'static + Measure {
     fn make2(measurement1: &Measurement<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Fallible<Measurement<DI, DO, MI, MO>> {
-        Self::make_chain_mt_glue(
+        Self::make_glue(
             measurement1, transformation0, None,
             &MetricGlue::<DI, MI>::new(),
             &MetricGlue::<DX, MX>::new(),
@@ -517,7 +517,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeMeasurement2<DI, DO, MI, MO, &Measurement<DX, D
 pub struct ChainTT;
 
 impl ChainTT {
-    pub fn make_chain_tt_glue<DI, DX, DO, MI, MX, MO>(
+    pub fn make_glue<DI, DX, DO, MI, MX, MO>(
         transformation1: &Transformation<DX, DO, MX, MO>,
         transformation0: &Transformation<DI, DX, MI, MX>,
         hint: Option<&HintTt<MI, MO, MX>>,
@@ -556,7 +556,7 @@ impl<DI, DX, DO, MI, MX, MO> MakeTransformation2<DI, DO, MI, MO, &Transformation
           MX: 'static + Metric,
           MO: 'static + Metric {
     fn make2(transformation1: &Transformation<DX, DO, MX, MO>, transformation0: &Transformation<DI, DX, MI, MX>) -> Fallible<Transformation<DI, DO, MI, MO>> {
-        Self::make_chain_tt_glue(
+        Self::make_glue(
             transformation1, transformation0, None,
             &MetricGlue::<DI, MI>::new(),
             &MetricGlue::<DX, MX>::new(),
@@ -573,7 +573,7 @@ impl<DI, DO0, DO1, MI, MO> MakeMeasurement2<DI, PairDomain<BoxDomain<DO0>, BoxDo
           MI: 'static + Metric,
           MO: 'static + Measure {
     fn make2(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Fallible<Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO>> {
-        make_composition_glue(
+        Self::make_glue(
             measurement0, measurement1,
             &MetricGlue::<DI, MI>::new(),
             &MeasureGlue::<DO0, MO>::new(),
@@ -581,34 +581,36 @@ impl<DI, DO0, DO1, MI, MO> MakeMeasurement2<DI, PairDomain<BoxDomain<DO0>, BoxDo
     }
 }
 
-pub fn make_composition_glue<DI, DO0, DO1, MI, MO>(
-    measurement0: &Measurement<DI, DO0, MI, MO>,
-    measurement1: &Measurement<DI, DO1, MI, MO>,
-    input_glue: &MetricGlue<DI, MI>,
-    output_glue0: &MeasureGlue<DO0, MO>,
-    output_glue1: &MeasureGlue<DO1, MO>
-) -> Fallible<Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO>>
-    where DI: 'static + Domain,
-          DO0: 'static + Domain,
-          DO1: 'static + Domain,
-          MI: 'static + Metric,
-          MO: 'static + Measure {
-    if (input_glue.domain_eq)(&measurement0.input_domain, &measurement1.input_domain) {
-        Ok(Measurement {
-            input_domain: (input_glue.domain_clone)(&measurement0.input_domain),
-            output_domain: Box::new(PairDomain::new(
-                BoxDomain::new((output_glue0.domain_clone)(&measurement0.output_domain)),
-                BoxDomain::new((output_glue1.domain_clone)(&measurement1.output_domain)))),
-            function: Function::make_composition(&measurement0.function, &measurement1.function),
-            // TODO: Figure out input_metric for composition.
-            input_metric: (input_glue.metric_clone)(&measurement0.input_metric),
-            // TODO: Figure out output_measure for composition.
-            output_measure: (output_glue0.measure_clone)(&measurement0.output_measure),
-            // TODO: PrivacyRelation for make_composition
-            privacy_relation: PrivacyRelation::new(|_i, _o| false)
-        })
-    } else {
-        fallible!(DomainMismatch)
+impl Composition {
+    pub fn make_glue<DI, DO0, DO1, MI, MO>(
+        measurement0: &Measurement<DI, DO0, MI, MO>,
+        measurement1: &Measurement<DI, DO1, MI, MO>,
+        input_glue: &MetricGlue<DI, MI>,
+        output_glue0: &MeasureGlue<DO0, MO>,
+        output_glue1: &MeasureGlue<DO1, MO>
+    ) -> Fallible<Measurement<DI, PairDomain<BoxDomain<DO0>, BoxDomain<DO1>>, MI, MO>>
+        where DI: 'static + Domain,
+              DO0: 'static + Domain,
+              DO1: 'static + Domain,
+              MI: 'static + Metric,
+              MO: 'static + Measure {
+        if (input_glue.domain_eq)(&measurement0.input_domain, &measurement1.input_domain) {
+            Ok(Measurement {
+                input_domain: (input_glue.domain_clone)(&measurement0.input_domain),
+                output_domain: Box::new(PairDomain::new(
+                    BoxDomain::new((output_glue0.domain_clone)(&measurement0.output_domain)),
+                    BoxDomain::new((output_glue1.domain_clone)(&measurement1.output_domain)))),
+                function: Function::make_composition(&measurement0.function, &measurement1.function),
+                // TODO: Figure out input_metric for composition.
+                input_metric: (input_glue.metric_clone)(&measurement0.input_metric),
+                // TODO: Figure out output_measure for composition.
+                output_measure: (output_glue0.measure_clone)(&measurement0.output_measure),
+                // TODO: PrivacyRelation for make_composition
+                privacy_relation: PrivacyRelation::new(|_i, _o| false)
+            })
+        } else {
+            fallible!(DomainMismatch)
+        }
     }
 }
 
@@ -631,7 +633,7 @@ mod tests {
         let stability_relation = StabilityRelation::new_from_constant(1);
         let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
         let arg = 99;
-        let ret = identity.function.eval(&arg).unwrap_assert();
+        let ret = identity.function.eval(&arg).unwrap_test();
         assert_eq!(ret, 99);
     }
 
@@ -651,9 +653,9 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let chain = ChainMT::make(&measurement1, &transformation0).unwrap_assert();
+        let chain = ChainMT::make(&measurement1, &transformation0).unwrap_test();
         let arg = 99_u8;
-        let ret = chain.function.eval(&arg).unwrap_assert();
+        let ret = chain.function.eval(&arg).unwrap_test();
         assert_eq!(ret, 101.0);
     }
 
@@ -673,9 +675,9 @@ mod tests {
         let output_metric1 = L1Sensitivity::<i32>::new();
         let stability_relation1 = StabilityRelation::new_from_constant(1);
         let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
-        let chain = ChainTT::make(&transformation1, &transformation0).unwrap_assert();
+        let chain = ChainTT::make(&transformation1, &transformation0).unwrap_test();
         let arg = 99_u8;
-        let ret = chain.function.eval(&arg).unwrap_assert();
+        let ret = chain.function.eval(&arg).unwrap_test();
         assert_eq!(ret, 101.0);
     }
 
@@ -695,9 +697,9 @@ mod tests {
         let output_measure1 = MaxDivergence::new();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let composition = Composition::make(&measurement0, &measurement1).unwrap_assert();
+        let composition = Composition::make(&measurement0, &measurement1).unwrap_test();
         let arg = 99;
-        let ret = composition.function.eval(&arg).unwrap_assert();
+        let ret = composition.function.eval(&arg).unwrap_test();
         assert_eq!(ret, (Box::new(100_f32), Box::new(98_f64)));
     }
 }

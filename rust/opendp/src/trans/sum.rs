@@ -83,18 +83,18 @@ mod tests {
 
     #[test]
     fn test_make_bounded_sum_l1() {
-        let transformation = BoundedSum::<HammingDistance, L1Sensitivity<i32>>::make(0, 10).unwrap_assert();
+        let transformation = BoundedSum::<HammingDistance, L1Sensitivity<i32>>::make(0, 10).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 15;
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_bounded_sum_l2() {
-        let transformation = BoundedSum::<HammingDistance, L2Sensitivity<i32>>::make(0, 10).unwrap_assert();
+        let transformation = BoundedSum::<HammingDistance, L2Sensitivity<i32>>::make(0, 10).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 15;
         assert_eq!(ret, expected);
     }

@@ -69,7 +69,7 @@
 //!     println!("result = {}", result);
 //!     Ok(())
 //! }
-//! example().unwrap_assert();
+//! example().unwrap_test();
 //! ```
 //!
 //! # Contributor Guide

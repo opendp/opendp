@@ -80,9 +80,6 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
-    ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [HammingDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
-    };
     ($function:ident, ($rt_type:expr, @floats),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [f32, f64]), $rt_dispatch_types, $type_args, $args)
     };

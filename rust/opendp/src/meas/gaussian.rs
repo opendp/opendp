@@ -57,10 +57,10 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_mechanism() {
-        let measurement = BaseGaussian::<f64>::make(1.0).unwrap_assert();
+        let measurement = BaseGaussian::<f64>::make(1.0).unwrap_test();
         let arg = 0.0;
-        let _ret = measurement.function.eval(&arg).unwrap_assert();
+        let _ret = measurement.function.eval(&arg).unwrap_test();
 
-        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap_assert());
+        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap_test());
     }
 }

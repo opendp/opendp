@@ -59,20 +59,20 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() {
-        let measurement = BaseLaplace::<f64>::make(1.0).unwrap_assert();
+        let measurement = BaseLaplace::<f64>::make(1.0).unwrap_test();
         let arg = 0.0;
-        let _ret = measurement.function.eval(&arg).unwrap_assert();
+        let _ret = measurement.function.eval(&arg).unwrap_test();
 
-        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_assert());
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_test());
     }
 
     #[test]
     fn test_make_vector_laplace_mechanism() {
-        let measurement = BaseVectorLaplace::<f64>::make(1.0).unwrap_assert();
+        let measurement = BaseVectorLaplace::<f64>::make(1.0).unwrap_test();
         let arg = vec![1.0, 2.0, 3.0];
-        let _ret = measurement.function.eval(&arg).unwrap_assert();
+        let _ret = measurement.function.eval(&arg).unwrap_test();
 
-        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_assert());
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_test());
     }
 }
 

@@ -2,13 +2,14 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::ffi::CStr;
+use std::ffi::{CStr, IntoStringError, NulError};
 use std::ffi::CString;
 use std::os::raw::c_char;
 
 use opendp::dist::{SymmetricDistance, HammingDistance, L1Sensitivity, L2Sensitivity};
 use opendp::error::*;
 use opendp::{err, fallible};
+use std::str::Utf8Error;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -170,7 +171,7 @@ pub struct TypeArgs(pub(crate) Vec<Type>);
 
 impl TypeArgs {
     pub fn parse(descriptor: *const c_char, count: usize) -> Fallible<TypeArgs> {
-        let descriptor = to_str(descriptor);
+        let descriptor = to_str(descriptor)?;
         let type_args: TypeArgs = descriptor.try_into()?;
         if type_args.0.len() != count {
             return fallible!(TypeParse, "expected {:?} arguments, received {:?} arguments", count, type_args.0.len())
@@ -226,14 +227,12 @@ pub fn into_box<T, U>(o: T) -> Box<U> {
     unsafe { Box::from_raw(p) }
 }
 
-pub fn into_owned<T>(p: *mut T) -> T {
-    assert!(!p.is_null());
-    *unsafe { Box::<T>::from_raw(p) }
+pub fn into_owned<T>(p: *mut T) -> Option<T> {
+    (!p.is_null()).then(|| *unsafe { Box::<T>::from_raw(p) })
 }
 
-pub fn as_ref<'a, T>(p: *const T) -> &'a T {
-    assert!(!p.is_null());
-    unsafe { &*p }
+pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
+    (!p.is_null()).then(|| unsafe { &*p })
 }
 
 
@@ -245,26 +244,31 @@ pub fn as_ref<'a, T>(p: *const T) -> &'a T {
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
     CString::new(s)
         .map(CString::into_raw)
-        .map_err(|_| err!(FailedCast, "Nul byte detected when casting to C string"))
+        .map_err(|e: NulError|
+            err!(FFI, "Nul byte detected when reading C string at position {:?}", e.nul_position()))
 }
 
-pub fn into_string(p: *mut c_char) -> String {
-    assert!(!p.is_null());
+pub fn into_string(p: *mut c_char) -> Fallible<String> {
+    if p.is_null() {
+        return fallible!(FFI, "Attempted to load a string from a null pointer");
+    }
     let s = unsafe { CString::from_raw(p) };
-    s.into_string().expect("Bad C string")
+    s.into_string().map_err(|e: IntoStringError| err!(FFI, "{:?} ", e.utf8_error()))
 }
 
-pub fn to_str<'a>(p: *const c_char) -> &'a str {
-    assert!(!p.is_null());
+pub fn to_str<'a>(p: *const c_char) -> Fallible<&'a str> {
+    if p.is_null() {
+        return fallible!(FFI, "Attempted to load a string from a null pointer");
+    }
     let s = unsafe { CStr::from_ptr(p) };
-    s.to_str().expect("Bad C string")
+    s.to_str().map_err(|e: Utf8Error| err!(FFI, "{:?}", e))
 }
 
-pub fn to_option_str<'a>(p: *const c_char) -> Option<&'a str> {
-    if !p.is_null() {
-        Some(to_str(p))
+pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
+    if p.is_null() {
+        Ok(None)
     } else {
-        None
+        Some(to_str(p)).transpose()
     }
 }
 
@@ -306,35 +310,36 @@ mod tests {
     }
 
     #[test]
-    fn test_type_try_from() {
+    fn test_type_try_from() -> Fallible<()> {
         let i32_t = TypeId::of::<i32>();
-        assert_eq!(TryInto::<Type>::try_into("()").unwrap(), Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
-        assert_eq!(TryInto::<Type>::try_into("i32").unwrap(), Type::new(i32_t, "i32", TypeContents::PLAIN("i32")));
-        assert_eq!(TryInto::<Type>::try_into("String").unwrap(), Type::new(TypeId::of::<String>(), "String", TypeContents::PLAIN("String")));
-        assert_eq!(TryInto::<Type>::try_into("(i32, i32)").unwrap(), Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
-        assert_eq!(TryInto::<Type>::try_into("[i32; 1]").unwrap(), Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
-        assert_eq!(TryInto::<Type>::try_into("[i32]").unwrap(), Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
-        assert_eq!(TryInto::<Type>::try_into("L1Sensitivity<i32>").unwrap(), Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
-        assert_eq!(TryInto::<Type>::try_into("Vec<i32>").unwrap(), Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
+        assert_eq!(TryInto::<Type>::try_into("()")?, Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
+        assert_eq!(TryInto::<Type>::try_into("i32")?, Type::new(i32_t, "i32", TypeContents::PLAIN("i32")));
+        assert_eq!(TryInto::<Type>::try_into("String")?, Type::new(TypeId::of::<String>(), "String", TypeContents::PLAIN("String")));
+        assert_eq!(TryInto::<Type>::try_into("(i32, i32)")?, Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
+        assert_eq!(TryInto::<Type>::try_into("[i32; 1]")?, Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
+        assert_eq!(TryInto::<Type>::try_into("[i32]")?, Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
+        assert_eq!(TryInto::<Type>::try_into("L1Sensitivity<i32>")?, Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
+        assert_eq!(TryInto::<Type>::try_into("Vec<i32>")?, Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
+        Ok(())
     }
 
     #[test]
     fn test_type_args_try_from_vec() {
-        let parsed: TypeArgs = "<Vec<i32>>".try_into().unwrap();
+        let parsed: TypeArgs = "<Vec<i32>>".try_into().unwrap_test();
         let explicit = TypeArgs(vec![Type::of::<Vec<i32>>()]);
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args_try_from_numbers() {
-        let parsed: TypeArgs = "<i32, f64>".try_into().unwrap();
+        let parsed: TypeArgs = "<i32, f64>".try_into().unwrap_test();
         let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f64>()]);
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args() {
-        let parsed: TypeArgs = "<i32, f32>".try_into().unwrap();
+        let parsed: TypeArgs = "<i32, f32>".try_into().unwrap_test();
         let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f32>()]);
         assert_eq!(parsed, explicit);
     }

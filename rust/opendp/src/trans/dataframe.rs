@@ -260,32 +260,32 @@ impl<M> MakeTransformation1<VectorDomain<AllDomain<String>>, VectorDomain<Vector
 mod tests {
     use crate::core::ChainTT;
     use crate::dist::HammingDistance;
-    use crate::error::UnwrapAssert;
+    use crate::error::ExplainUnwrap;
 
     use super::*;
 
     #[test]
     fn test_make_split_lines() {
-        let transformation = SplitLines::<HammingDistance>::make().unwrap_assert();
+        let transformation = SplitLines::<HammingDistance>::make().unwrap_test();
         let arg = "ant\nbat\ncat\n".to_owned();
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         assert_eq!(ret, vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()]);
     }
 
     #[test]
     fn test_make_parse_series() {
-        let transformation = ParseSeries::<i32, HammingDistance>::make(true).unwrap_assert();
+        let transformation = ParseSeries::<i32, HammingDistance>::make(true).unwrap_test();
         let arg = vec!["1".to_owned(), "2".to_owned(), "3".to_owned(), "foo".to_owned()];
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = vec![1, 2, 3, 0];
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_split_records() {
-        let transformation = SplitRecords::<HammingDistance>::make(None).unwrap_assert();
+        let transformation = SplitRecords::<HammingDistance>::make(None).unwrap_test();
         let arg = vec!["ant, foo".to_owned(), "bat, bar".to_owned(), "cat, baz".to_owned()];
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         assert_eq!(ret, vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
@@ -295,13 +295,13 @@ mod tests {
 
     #[test]
     fn test_make_create_dataframe() {
-        let transformation = CreateDataFrame::<HammingDistance, u32>::make(vec![0, 1]).unwrap_assert();
+        let transformation = CreateDataFrame::<HammingDistance, u32>::make(vec![0, 1]).unwrap_test();
         let arg = vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
             vec!["cat".to_owned(), "baz".to_owned()],
         ];
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected: DataFrame<u32> = vec![
             (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             (1, Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
@@ -311,9 +311,9 @@ mod tests {
 
     #[test]
     fn test_make_split_dataframe() {
-        let transformation = SplitDataFrame::<HammingDistance, String>::make(None, vec!["0".to_string(), "1".to_string()]).unwrap_assert();
+        let transformation = SplitDataFrame::<HammingDistance, String>::make(None, vec!["0".to_string(), "1".to_string()]).unwrap_test();
         let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
@@ -323,12 +323,12 @@ mod tests {
 
     #[test]
     fn test_make_parse_column() {
-        let transformation = ParseColumn::<HammingDistance, i32>::make(1, true).unwrap_assert();
+        let transformation = ParseColumn::<HammingDistance, i32>::make(1, true).unwrap_test();
         let arg: DataFrame<usize> = vec![
             (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             (1, Column::new(vec!["1".to_owned(), "2".to_owned(), "".to_owned()])),
         ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected: DataFrame<usize> = vec![
             (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             (1, Column::new(vec![1, 2, 0])),
@@ -338,15 +338,15 @@ mod tests {
 
     #[test]
     fn test_make_parse_columns() {
-        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1".to_string(), true).unwrap_assert();
-        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2".to_string(), true).unwrap_assert();
-        let transformation = ChainTT::make(&transformation1, &transformation0).unwrap_assert();
+        let transformation0 = ParseColumn::<HammingDistance, i32>::make("1".to_string(), true).unwrap_test();
+        let transformation1 = ParseColumn::<HammingDistance, f64>::make("2".to_string(), true).unwrap_test();
+        let transformation = ChainTT::make(&transformation1, &transformation0).unwrap_test();
         let arg: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
             ("2".to_owned(), Column::new(vec!["1.1".to_owned(), "2.2".to_owned(), "3.3".to_owned()])),
         ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec![1, 2, 3])),
@@ -357,12 +357,12 @@ mod tests {
 
     #[test]
     fn test_make_select_column() {
-        let transformation = SelectColumn::<HammingDistance, String>::make("1".to_owned()).unwrap_assert();
+        let transformation = SelectColumn::<HammingDistance, String>::make("1".to_owned()).unwrap_test();
         let arg: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
         ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap_assert();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()];
         assert_eq!(ret, expected);
     }

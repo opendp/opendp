@@ -38,13 +38,13 @@ pub struct Error {
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum ErrorVariant {
-    #[error("{0}")]
-    Raw(Box<dyn std::error::Error>),
+    #[error("FFI")]
+    FFI,
 
     #[error("TypeParse")]
     TypeParse,
 
-    #[error("Failed function execution")]
+    #[error("FailedFunction")]
     FailedFunction,
 
     #[error("FailedRelation")]
@@ -53,22 +53,22 @@ pub enum ErrorVariant {
     #[error("RelationDebug")]
     RelationDebug,
 
-    #[error("Unable to cast type")]
+    #[error("FailedCast")]
     FailedCast,
 
-    #[error("Domain mismatch")]
+    #[error("DomainMismatch")]
     DomainMismatch,
 
-    #[error("Failed to make transformation")]
+    #[error("MakeTransformation")]
     MakeTransformation,
 
-    #[error("Failed to make measurement")]
+    #[error("MakeMeasurement")]
     MakeMeasurement,
 
-    #[error("Invalid distance")]
+    #[error("InvalidDistance")]
     InvalidDistance,
 
-    #[error("Not implemented")]
+    #[error("NotImplemented")]
     NotImplemented,
 }
 
@@ -86,23 +86,31 @@ impl From<ErrorVariant> for Error {
 
 pub type Fallible<T> = Result<T, Error>;
 
-/// A trait for calling unwrap. Differs from unwrap in that the developer has made the assertion that failure should be unreachable
-/// This is ok to use in two scenarios:
-/// - Tests
-/// - Code with unreachable None or Err variants
-pub trait UnwrapAssert {
+/// A trait for calling unwrap with an explanation. Makes calls to unwrap() discoverable.
+/// - unwrap_test: panics are acceptable in tests
+/// - unwrap_assert: situations with unreachable None or Err variants
+pub trait ExplainUnwrap {
     type Inner;
+    /// use in tests
     fn unwrap_assert(self) -> Self::Inner;
+    /// use if the alternate variant is structurally unreachable
+    fn unwrap_test(self) -> Self::Inner;
 }
-impl<T> UnwrapAssert for Option<T> {
+impl<T> ExplainUnwrap for Option<T> {
     type Inner = T;
     fn unwrap_assert(self) -> T {
         self.unwrap()
     }
+    fn unwrap_test(self) -> T {
+        self.unwrap()
+    }
 }
-impl<T> UnwrapAssert for Fallible<T> {
+impl<T> ExplainUnwrap for Fallible<T> {
     type Inner = T;
     fn unwrap_assert(self) -> T {
+        self.unwrap()
+    }
+    fn unwrap_test(self) -> T {
         self.unwrap()
     }
 }

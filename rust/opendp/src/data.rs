@@ -80,7 +80,7 @@ mod tests {
 
     fn test_round_trip<T: 'static + IsVec + PartialEq>(form: T) {
         let data = Column(form.box_clone());
-        assert_eq!(&form, data.as_form().unwrap_assert());
-        assert_eq!(form, data.into_form().unwrap_assert())
+        assert_eq!(&form, data.as_form().unwrap_test());
+        assert_eq!(form, data.into_form().unwrap_test())
     }
 }

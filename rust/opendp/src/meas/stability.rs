@@ -67,8 +67,8 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
             MI::new(),
             SmoothedMaxDivergence::new(),
             PrivacyRelation::new_fallible(move |&d_in: &TOC, &(eps, del): &(TOC, TOC)|{
-                // let _eps: f64 = NumCast::from(eps).unwrap();
-                // let _del: f64 = NumCast::from(del).unwrap();
+                // let _eps: f64 = NumCast::from(eps).unwrap_test();
+                // let _del: f64 = NumCast::from(del).unwrap_test();
                 // println!("eps, del: {:?}, {:?}", _eps, _del);
                 let ideal_scale = d_in / (eps * _n);
                 let ideal_threshold = (_2 / del).ln() * ideal_scale + _n.recip();
@@ -103,14 +103,15 @@ mod test_stability {
     use super::*;
 
     #[test]
-    fn test_base_stability() {
+    fn test_base_stability() -> Fallible<()> {
         let mut arg = HashMap::new();
         arg.insert(true, 6);
         arg.insert(false, 4);
-        let measurement = BaseStability::<L2Sensitivity<f64>, bool, i8, f64>::make(10, 0.5, 1.).unwrap();
-        let ret = measurement.function.eval(&arg).unwrap();
+        let measurement = BaseStability::<L2Sensitivity<f64>, bool, i8, f64>::make(10, 0.5, 1.)?;
+        let ret = measurement.function.eval(&arg)?;
         println!("stability eval: {:?}", ret);
 
-        assert!(measurement.privacy_relation.eval(&1., &(2.3, 1e-5)).unwrap());
+        assert!(measurement.privacy_relation.eval(&1., &(2.3, 1e-5))?);
+        Ok(())
     }
 }

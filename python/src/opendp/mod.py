@@ -76,7 +76,7 @@ class OdpException(Exception):
     def __str__(self):
         response = self.variant
         if self.message:
-            response += f"({self.message})"
+            response += f'("{self.message}")'
         if self.inner_traceback:
             response += "\n" + '\n'.join('\t' + line for line in self.inner_traceback.split('\n'))
         return response
