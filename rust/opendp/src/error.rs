@@ -2,12 +2,13 @@ use std::fmt;
 
 use backtrace::Backtrace as _Backtrace;
 
-
+// create an instance of opendp::Fallible
 #[macro_export]
 macro_rules! fallible {
     ($variant:ident) => (Err(err!($variant)));
     ($variant:ident, $($inner:expr),+) => (Err(err!($variant, $($inner),+)));
 }
+// create an instance of opendp::Error
 // "error" is shadowed, and breaks intellij macro resolution
 #[macro_export]
 macro_rules! err {

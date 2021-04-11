@@ -67,7 +67,7 @@ impl Type {
                 (type1, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)])
             ],
             (type0, type1)
-        ).unwrap_assert()
+        ).unwrap()
     }
 }
 

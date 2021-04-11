@@ -9,7 +9,7 @@ use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice};
 use crate::util;
 use crate::util::{Type, TypeArgs, TypeContents, c_bool};
 use std::fmt::Debug;
-use opendp::error::{Fallible, ExplainUnwrap};
+use opendp::error::Fallible;
 use opendp::{fallible, err};
 
 #[no_mangle]
@@ -187,7 +187,7 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *mut c_char 
         (Box<i32>, Box<f64>),
         (Box<i32>, Box<u32>),
         (Box<(Box<f64>, Box<f64>)>, Box<f64>)
-    ])], (this)).unwrap_assert()
+    ])], (this)).expect(&format!("to_string given unknown type argument: {:?}", type_arg))
 }
 
 #[no_mangle]

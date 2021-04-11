@@ -189,7 +189,7 @@ impl<D: 'static + Domain, M: 'static + Measure> FfiMeasureGlue<D, M> {
 pub struct FfiDomain;
 impl Domain for FfiDomain {
     type Carrier = ();
-    fn member(&self, _val: &Self::Carrier) -> bool { unimplemented!() }
+    fn member(&self, _val: &Self::Carrier) -> bool { unreachable!() }
 }
 
 #[derive(Clone)]

@@ -178,6 +178,17 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
     }
 }
 
+fn chain_option_maps<QI, QX, QO>(
+    map1: &Option<Rc<dyn Fn(&QX) -> Fallible<Box<QO>>>>,
+    map0: &Option<Rc<dyn Fn(&QI) -> Fallible<Box<QX>>>>
+) -> Option<impl Fn(&QI) -> Fallible<Box<QO>>> {
+    if let (Some(map0), Some(map1)) = (map0, map1) {
+        Some(enclose!((map0, map1), move |d_in: &QI| map1(&*map0(d_in)?)))
+    } else {
+        None
+    }
+}
+
 impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
     pub fn make_chain<MX: 'static + Metric>(
         relation1: &PrivacyRelation<MX, MO>,
@@ -206,21 +217,11 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
             Self::make_chain_hint(relation1, relation0, &hint)
         } else {
             // TODO: Implement binary search for hints.
-            panic!("Binary search for hints not implemented, must have maps or supply explicit hint.")
+            unimplemented!("Binary search for hints not implemented, must have maps or supply explicit hint.")
         }
     }
 
     fn make_chain_hint<MX: 'static + Metric>(relation1: &PrivacyRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: &HintMt<MI, MO, MX>) -> Self {
-        fn chain_option_maps<QI, QX, QO>(
-            map1: &Option<Rc<dyn Fn(&QX) -> Fallible<Box<QO>>>>,
-            map0: &Option<Rc<dyn Fn(&QI) -> Fallible<Box<QX>>>>
-        ) -> Option<impl Fn(&QI) -> Fallible<Box<QO>>> {
-            if let (Some(map0), Some(map1)) = (map0, map1) {
-                Some(enclose!((map1, map0), move |d_in: &QI| map1(&*map0(d_in)?)))
-            } else {
-                None
-            }
-        }
         let PrivacyRelation {
             relation: relation1,
             backward_map: backward_map1
@@ -318,21 +319,11 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityRelation<MI, MO> {
             Self::make_chain_hint(relation1, relation0, &hint)
         } else {
             // TODO: Implement binary search for hints.
-            panic!("Binary search for hints not implemented, must have maps or supply explicit hint.")
+            unimplemented!("Binary search for hints not implemented, must have maps or supply explicit hint.")
         }
     }
 
     fn make_chain_hint<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: &HintTt<MI, MO, MX>) -> Self {
-        fn chain_option_maps<QI, QX, QO>(
-            map1: &Option<Rc<dyn Fn(&QX) -> Fallible<Box<QO>>>>,
-            map0: &Option<Rc<dyn Fn(&QI) -> Fallible<Box<QX>>>>
-        ) -> Option<impl Fn(&QI) -> Fallible<Box<QO>>> {
-            if let (Some(map0), Some(map1)) = (map0, map1) {
-                Some(enclose!((map0, map1), move |d_in: &QI| map1(&*map0(d_in)?)))
-            } else {
-                None
-            }
-        }
 
         let StabilityRelation {
             relation: relation0,
