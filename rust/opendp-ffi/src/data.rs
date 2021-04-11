@@ -9,7 +9,7 @@ use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice};
 use crate::util;
 use crate::util::{Type, TypeArgs, TypeContents, c_bool};
 use std::fmt::Debug;
-use opendp::error::Fallible;
+use opendp::error::{Fallible, ExplainUnwrap};
 use opendp::{fallible, err};
 
 #[no_mangle]
@@ -169,13 +169,13 @@ pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) {
 
 // TODO: Remove this function once we have composition and/or tuples sorted out.
 #[no_mangle]
-pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *const c_char {
-    fn monomorphize<T: 'static + std::fmt::Debug>(this: &FfiObject) -> *const c_char {
+pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *mut c_char {
+    fn monomorphize<T: 'static + std::fmt::Debug>(this: &FfiObject) -> Fallible<*mut c_char> {
         let this = this.as_ref::<T>();
         // FIXME: Figure out how to implement general to_string().
         let string = format!("{:?}", this);
         // FIXME: Leaks string.
-        util::into_c_char_p(string).unwrap()
+        util::into_c_char_p(string)
     }
     let this = util::as_ref(this).unwrap();
     let type_arg = &this.type_;
@@ -187,7 +187,7 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *const c_cha
         (Box<i32>, Box<f64>),
         (Box<i32>, Box<u32>),
         (Box<(Box<f64>, Box<f64>)>, Box<f64>)
-    ])], (this))
+    ])], (this)).unwrap_assert()
 }
 
 #[no_mangle]

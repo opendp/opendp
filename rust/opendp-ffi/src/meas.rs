@@ -17,6 +17,7 @@ use opendp::meas::stability::{BaseStability, BaseStabilityNoise};
 use std::hash::Hash;
 use opendp::dist::{L2Sensitivity, L1Sensitivity};
 use opendp::core::SensitivityMetric;
+use opendp::err;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(type_args: *const c_char, scale: *const c_void) -> FfiResult<*mut FfiMeasurement> {

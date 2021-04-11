@@ -20,6 +20,7 @@ use crate::util;
 use crate::util::{c_bool, Type, TypeArgs, TypeContents};
 use opendp::trans::count::{CountByCategoriesConstant, CountByCategories, CountBy, CountByConstant};
 use num::traits::FloatConst;
+use opendp::err;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {

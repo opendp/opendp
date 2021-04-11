@@ -84,6 +84,12 @@ impl From<ErrorVariant> for Error {
     }
 }
 
+impl<T> From<Error> for Result<T, Error> {
+    fn from(e: Error) -> Self {
+        Err(e)
+    }
+}
+
 pub type Fallible<T> = Result<T, Error>;
 
 /// A trait for calling unwrap with an explanation. Makes calls to unwrap() discoverable.

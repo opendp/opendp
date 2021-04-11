@@ -92,7 +92,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => panic!("No match for concrete type {:?}/{}", $rt_type.id, $rt_type.descriptor)
+            _ => opendp::err!(FFI, "No match for concrete type {:?}/{}", $rt_type.id, $rt_type.descriptor).into()
         }
     };
 }
