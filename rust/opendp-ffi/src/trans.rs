@@ -75,11 +75,11 @@ pub extern "C" fn opendp_trans__make_create_dataframe(type_args: *const c_char, 
     fn monomorphize<M, K>(col_names: *const FfiObject) -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
               K: 'static + Eq + Hash + Debug + Clone {
-        let col_names = try_as_ref!(col_names as *const Vec<K>).clone();
+        let col_names = try_as_ref!(col_names).as_ref::<Vec<K>>().clone();
         trans::CreateDataFrame::<M, K>::make(col_names).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 2));
-    dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[0], @hashable)], (col_names))
+    dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[1], @hashable)], (col_names))
 }
 
 #[no_mangle]
@@ -87,12 +87,12 @@ pub extern "C" fn opendp_trans__make_split_dataframe(type_args: *const c_char, s
     fn monomorphize<M, K>(separator: Option<&str>, col_names: *const FfiObject) -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
               K: 'static + Eq + Hash + Debug + Clone {
-        let col_names = try_as_ref!(col_names as *const Vec<K>).clone();
+        let col_names = try_as_ref!(col_names).as_ref::<Vec<K>>().clone();
         trans::SplitDataFrame::<M, K>::make(separator, col_names).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 2));
     let separator = try_!(util::to_option_str(separator));
-    dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[0], @hashable)], (separator, col_names))
+    dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[1], @hashable)], (separator, col_names))
 }
 
 #[no_mangle]
