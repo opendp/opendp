@@ -32,7 +32,7 @@ pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiRe
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
     match &type_args.0[0].contents {
-        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [(try_!(Type::of_id(*element_id)), @primitives)], ()),
+        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [(try_!(Type::of_id(element_id)), @primitives)], ()),
         _ => dispatch!(monomorphize_scalar, [(&type_args.0[0], @primitives)], ())
     }
 }

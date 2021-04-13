@@ -82,7 +82,8 @@ impl FfiError {
 }
 
 impl From<Error> for FfiError {
-    fn from(error: Error) -> Self {
+    fn from(mut error: Error) -> Self {
+        error.backtrace.resolve();
         Self {
             variant: try_!(util::into_c_char_p(format!("{:?}", error.variant))),
             message: try_!(error.message.map_or(Ok(ptr::null::<c_char>() as *mut c_char), util::into_c_char_p)),

@@ -45,8 +45,8 @@ impl Type {
         Self::new(TypeId::of::<T>(), descriptor, TypeContents::PLAIN(descriptor))
     }
 
-    pub fn of_id(id: TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(&id).cloned().ok_or_else(|| err!(TypeParse))
+    pub fn of_id(id: &TypeId) -> Fallible<Self> {
+        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse))
     }
 
     // Hacky special entry point for composition.

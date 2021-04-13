@@ -16,13 +16,13 @@ macro_rules! err {
     ($variant:ident) => (crate::error::Error {
         variant: crate::error::ErrorVariant::$variant,
         message: None,
-        backtrace: backtrace::Backtrace::new()
+        backtrace: backtrace::Backtrace::new_unresolved()
     });
     // error with explicit message
     ($variant:ident, $message:expr) => (crate::error::Error {
         variant: crate::error::ErrorVariant::$variant,
         message: Some($message.to_string()), // ToString is impl'ed for String
-        backtrace: backtrace::Backtrace::new()
+        backtrace: backtrace::Backtrace::new_unresolved()
     });
     // args to format into message
     ($variant:ident, $template:expr, $($args:expr),+) =>

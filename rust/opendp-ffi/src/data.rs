@@ -55,18 +55,18 @@ pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *c
             raw_to_string(raw)
         },
         TypeContents::SLICE(element_id) => {
-            let element = try_!(Type::of_id(element_id));
+            let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
         },
         TypeContents::VEC(element_id) => {
-            let element = try_!(Type::of_id(element_id));
+            let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_vec, [(element, @primitives)], (raw))
         },
         TypeContents::TUPLE(ref element_ids) => {
             if element_ids.len() != 2 {
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
-            if let Ok(types) = element_ids.iter().cloned().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
+            if let Ok(types) = element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
                 // primitively typed tuples
                 dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
             } else {
@@ -118,7 +118,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const FfiObject) -> FfiResu
         ]) as *mut c_void, 2))
     }
     let obj = try_as_ref!(obj);
-    match obj.type_.contents {
+    match &obj.type_.contents {
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
         },
@@ -130,11 +130,11 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const FfiObject) -> FfiResu
             let element = try_!(Type::of_id(element_id));
             dispatch!(vec_to_raw, [(element, @primitives)], (obj))
         },
-        TypeContents::TUPLE(ref element_ids) => {
+        TypeContents::TUPLE(element_ids) => {
             if element_ids.len() != 2 {
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
-            if let Ok(types) = element_ids.iter().cloned().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
+            if let Ok(types) = element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
                 // primitively typed tuples
                 dispatch!(tuple_to_raw, [(types[0], @primitives), (types[1], @primitives)], (obj))
             } else {
