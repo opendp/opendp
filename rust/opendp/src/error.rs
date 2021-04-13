@@ -94,13 +94,11 @@ impl<T> From<Error> for Result<T, Error> {
 pub type Fallible<T> = Result<T, Error>;
 
 /// A trait for calling unwrap with an explanation. Makes calls to unwrap() discoverable.
-/// - unwrap_test: panics are acceptable in tests
-/// - unwrap_assert: situations with unreachable None or Err variants
 pub trait ExplainUnwrap {
     type Inner;
-    /// use in tests
+    /// use if the None or Err variant is structurally unreachable
     fn unwrap_assert(self, explanation: &'static str) -> Self::Inner;
-    /// use if the alternate variant is structurally unreachable
+    /// use in tests, where panics are acceptable
     fn unwrap_test(self) -> Self::Inner;
 }
 impl<T> ExplainUnwrap for Option<T> {
