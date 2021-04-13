@@ -12,7 +12,7 @@ def main():
 
     ### SUMMARY STATS
     # Parse dataframe
-    col_names = odp.py_to_obj([0, 1, 2])
+    col_names = odp.py_to_object([0, 1, 2])
     split_dataframe = odp.trans.make_split_dataframe(b"<HammingDistance, i32>", b",", col_names)
     parse_column_1 = odp.trans.make_parse_column(b"<HammingDistance, i32, i32>", opendp.i32_p(1), True)
     parse_column_2 = odp.trans.make_parse_column(b"<HammingDistance, i32, f64>", opendp.i32_p(2), True)
