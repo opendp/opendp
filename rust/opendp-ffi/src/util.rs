@@ -7,6 +7,8 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 
 use opendp::dist::{L1Sensitivity, L2Sensitivity, HammingDistance, SymmetricDistance};
+use opendp::error::*;
+use opendp::{err};
 
 #[derive(Debug)]
 pub struct TypeError;
@@ -37,7 +39,7 @@ impl Type {
         let id = TypeId::of::<T>();
         // First try to find a registered type (which will have the nice descriptor). In lieu of that, create one on the fly.
         let type_ = TYPE_ID_TO_TYPE.get(&id);
-        type_.map_or_else(|| Self::of_unregistered::<T>(), Clone::clone)
+        type_.map_or_else(Self::of_unregistered::<T>, Clone::clone)
     }
 
     fn of_unregistered<T: 'static + ?Sized>() -> Self {
@@ -45,8 +47,8 @@ impl Type {
         Self::new(TypeId::of::<T>(), descriptor, TypeContents::PLAIN(descriptor))
     }
 
-    pub fn of_id(id: TypeId) -> Self {
-        TYPE_ID_TO_TYPE.get(&id).unwrap().clone()
+    pub fn of_id(id: TypeId) -> Fallible<Self> {
+        TYPE_ID_TO_TYPE.get(&id).cloned().ok_or_else(|| err!(UnknownType))
     }
 
     // Hacky special entry point for composition.
@@ -123,7 +125,7 @@ macro_rules! type_vec {
     ($name:ident, <$($args:ty),*>) => { vec![$(t!($name<$args>)),*] };
     ([$($elements:ty),*]) => { vec![$(t!([$elements])),*] };
     ([$($elements:ty),*]; $len:expr) => { vec![$(t!([$elements; $len])),*] };
-    (($($elements:ty),*)) => { vec![$(t!(($elements, $elements))),*] };
+    (($($elements:ty),*)) => { vec![$(t!(($elements,$elements))),*] };
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
 
@@ -190,9 +192,26 @@ impl TryFrom<&str> for TypeArgs {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.starts_with("<") && value.ends_with(">") {
             let value = &value[1..value.len()-1];
-            let split = value.split(",");
-            let types: Result<Vec<_>, _> = split.into_iter().map(|e| e.trim().try_into()).collect();
-            Ok(TypeArgs(types?))
+            let mut types = Vec::new();
+            let mut token_buffer = Vec::new();
+            let mut is_parenthesized = false;
+            for token in value.split(",") {
+                token_buffer.push(token.trim());
+                // loose and simple approximation assuming no nested tuples
+                if token.contains("(") {
+                    is_parenthesized = true;
+                }
+                if token.contains(")") {
+                    is_parenthesized = false;
+                }
+                if !is_parenthesized {
+                    let descriptor: String = token_buffer.join(", ");
+                    types.push(Type::try_from(descriptor.as_str()).unwrap());
+                    token_buffer.clear();
+                }
+            }
+            // let types: Result<Vec<_>, _> = split.into_iter().map(|e| e.trim().try_into()).collect();
+            Ok(TypeArgs(types))
         } else {
             Err(TypeError)
         }
@@ -253,6 +272,10 @@ pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
 
 pub fn to_bool(b: c_bool) -> bool {
     if b != 0 { true } else { false }
+}
+
+pub fn from_bool(b: bool) -> c_bool {
+    if b {1} else {0}
 }
 
 

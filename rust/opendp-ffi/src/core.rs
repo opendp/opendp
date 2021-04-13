@@ -1,7 +1,7 @@
 use std::{fmt, ptr};
-use std::ffi::{CStr, c_void};
+use std::ffi::{c_void, CStr};
 use std::fmt::{Debug, Formatter};
-use std::mem::{transmute, ManuallyDrop};
+use std::mem::{ManuallyDrop, transmute};
 use std::os::raw::c_char;
 
 use opendp::{err, fallible};
@@ -10,8 +10,7 @@ use opendp::core::{ChainMT, ChainTT, Domain, Measure, MeasureGlue, Measurement, 
 use opendp::error::Error;
 
 use crate::util;
-use crate::util::{Type, c_bool};
-
+use crate::util::{c_bool, Type};
 
 #[derive(PartialEq)]
 pub enum FfiOwnership {
@@ -248,7 +247,7 @@ pub extern "C" fn opendp_core__measurement_check(this: *const FfiMeasurement, di
     let distance_out = util::as_ref(distance_out);
     let res = this.value.privacy_relation.eval(&distance_in.value, &distance_out.value);
 
-    FfiResult::new(res.map(|v| util::into_raw(if v {1} else {0})))
+    FfiResult::new(res.map(util::from_bool).map(util::into_raw))
 }
 
 #[no_mangle]
@@ -256,7 +255,7 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, a
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
     if arg.type_ != this.input_glue.domain_carrier {
-        return FfiResult::new(fallible!(DomainMismatch))
+        return FfiResult::new(fallible!(DomainMismatch, "arg type does not match input domain"))
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
@@ -274,7 +273,7 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformat
     let this = util::as_ref(this);
     let arg = util::as_ref(arg);
     if arg.type_ != this.input_glue.domain_carrier {
-        return FfiResult::new(fallible!(DomainMismatch))
+        return FfiResult::new(fallible!(DomainMismatch, "arg type does not match input domain"))
     }
     let res_type = this.output_glue.domain_carrier.clone();
     let res = this.value.function.eval_ffi(&arg.value);
@@ -305,7 +304,7 @@ pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const FfiMeasurement
     } = measurement1;
 
     if output_glue0.domain_type != input_glue1.domain_type {
-        return FfiResult::new(fallible!(DomainMismatch))
+        return FfiResult::new(fallible!(DomainMismatch, "chained domain types do not match"))
     }
 
     let measurement = ChainMT::make_chain_mt_glue(
@@ -337,7 +336,7 @@ pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const FfiTransfor
     } = transformation1;
 
     if output_glue0.domain_type != input_glue1.domain_type {
-        return FfiResult::new(fallible!(DomainMismatch))
+        return FfiResult::new(fallible!(DomainMismatch, "chained domain types do not match"))
     }
 
     let transformation = ChainTT::make_chain_tt_glue(
@@ -357,7 +356,7 @@ pub extern "C" fn opendp_core__make_composition(measurement0: *const FfiMeasurem
     let measurement0 = util::as_ref(measurement0);
     let measurement1 = util::as_ref(measurement1);
     if measurement0.input_glue.domain_type != measurement1.input_glue.domain_type {
-        return FfiResult::new(fallible!(DomainMismatch))
+        return FfiResult::new(fallible!(DomainMismatch, "chained domain types do not match"))
     }
     let input_glue = measurement0.input_glue.clone();
     let output_glue0 = measurement0.output_glue.clone();

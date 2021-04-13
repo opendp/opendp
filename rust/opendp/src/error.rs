@@ -48,11 +48,17 @@ pub enum ErrorVariant {
     #[error("{0}")]
     Raw(Box<dyn std::error::Error>),
 
+    #[error("UnknownType")]
+    UnknownType,
+
     #[error("Failed function execution")]
     FailedFunction,
 
-    #[error("Failed relation")]
+    #[error("FailedRelation")]
     FailedRelation,
+
+    #[error("RelationDebug")]
+    RelationDebug,
 
     #[error("Unable to cast type")]
     FailedCast,
