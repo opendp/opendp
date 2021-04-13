@@ -8,36 +8,36 @@ def test_init():
 def test_data_object_int():
     odp = opendp.OpenDP()
     val_in = 123
-    obj = odp.py_to_obj(val_in)
-    val_out = odp.obj_to_py(obj)
+    obj = odp.py_to_object(val_in)
+    val_out = odp.object_to_py(obj)
     assert val_out == val_in
 
 def test_data_object_float():
     odp = opendp.OpenDP()
     val_in = 123.123
-    obj = odp.py_to_obj(val_in)
-    val_out = odp.obj_to_py(obj)
+    obj = odp.py_to_object(val_in)
+    val_out = odp.object_to_py(obj)
     assert val_out == val_in
 
 def test_data_object_str():
     odp = opendp.OpenDP()
     val_in = "hello, world"
-    obj = odp.py_to_obj(val_in)
-    val_out = odp.obj_to_py(obj)
+    obj = odp.py_to_object(val_in)
+    val_out = odp.object_to_py(obj)
     assert val_out == val_in
 
 def test_data_object_list():
     odp = opendp.OpenDP()
     val_in = [1, 2, 3]
-    obj = odp.py_to_obj(val_in)
-    val_out = odp.obj_to_py(obj)
+    obj = odp.py_to_object(val_in)
+    val_out = odp.object_to_py(obj)
     assert val_out == val_in
 
 def test_data_object_tuple():
     odp = opendp.OpenDP()
     val_in = (1., 1e-7)
-    obj = odp.py_to_obj(val_in)
-    val_out = odp.obj_to_py(obj)
+    obj = odp.py_to_object(val_in)
+    val_out = odp.object_to_py(obj)
     assert val_out == val_in
 
 def test_identity_int():

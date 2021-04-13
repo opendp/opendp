@@ -63,6 +63,10 @@ class FfiResult(ctypes.Structure):
     ]
 
 
+class UnknownTypeException(Exception):
+    pass
+
+
 class OdpException(Exception):
     def __init__(self, variant, message=None, inner_traceback=None):
         self.variant = variant
@@ -78,27 +82,27 @@ class OdpException(Exception):
         return response
 
 
-def wrap_in_ffislice(ptr, len_):
+def _wrap_in_slice(ptr, len_):  # -> *FfiSlice
     return ctypes.byref(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-def scalar_to_raw(val, type_name):
-    return wrap_in_ffislice(ctypes.byref(OpenDP.ATOM_MAP[type_name](val)), 1)
+def _scalar_to_slice(val, type_name):
+    return _wrap_in_slice(ctypes.byref(OpenDP.ATOM_MAP[type_name](val)), 1)
 
 
-def raw_to_scalar(raw, type_name):
+def _slice_to_scalar(raw, type_name):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(OpenDP.ATOM_MAP[type_name])).contents.value
 
 
-def string_to_raw(val):
-    return wrap_in_ffislice(ctypes.c_char_p(val.encode()), len(val) + 1)
+def _string_to_slice(val):
+    return _wrap_in_slice(ctypes.c_char_p(val.encode()), len(val) + 1)
 
 
-def raw_to_string(raw):
+def _slice_to_string(raw):
     return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode()
 
 
-def vector_to_raw(val, type_name):
+def _vector_to_slice(val, type_name):
     inner_type_name = type_name[4:-1]
     if not isinstance(val, list):
         raise OdpException(f"Cannot cast a non-list type to a vector")
@@ -108,20 +112,20 @@ def vector_to_raw(val, type_name):
 
     if val:
         # check that actual type can be represented by the inner_type_name
-        equivalence_class = OpenDP.ATOM_EQUIVALENCE_CLASSES[OpenDP.infer_ffi_type_name(val[0])]
+        equivalence_class = OpenDP.ATOM_EQUIVALENCE_CLASSES[OpenDP.infer_object_type(val[0])]
         if inner_type_name not in equivalence_class:
             raise OdpException("Data cannot be represented by the suggested type_name")
 
     array = (OpenDP.ATOM_MAP[inner_type_name] * len(val))(*val)
-    return wrap_in_ffislice(array, len(val))
+    return _wrap_in_slice(array, len(val))
 
 
-def raw_to_vector(raw, type_name):
+def _slice_to_vector(raw, type_name):
     inner_type_name = type_name[4:-1]
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(OpenDP.ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
-def tuple_to_raw(val, type_name):
+def _tuple_to_slice(val, type_name):
     inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
     if not isinstance(val, tuple):
         raise OdpException("Cannot cast a non-tuple type to a tuple")
@@ -140,16 +144,16 @@ def tuple_to_raw(val, type_name):
 
     # check that actual type can be represented by the inner_type_name
     for v, inner_type_name in zip(val, inner_type_names):
-        equivalence_class = OpenDP.ATOM_EQUIVALENCE_CLASSES[OpenDP.infer_ffi_type_name(v)]
+        equivalence_class = OpenDP.ATOM_EQUIVALENCE_CLASSES[OpenDP.infer_object_type(v)]
         if inner_type_name not in equivalence_class:
             raise OdpException("Data cannot be represented by the suggested type_name")
 
     ptr_data = (ctypes.cast(ctypes.pointer(OpenDP.ATOM_MAP[name](v)), ctypes.c_void_p) for v, name in zip(val, inner_type_names))
     array = (ctypes.c_void_p * len(val))(*ptr_data)
-    return wrap_in_ffislice(ctypes.byref(array), len(val))
+    return _wrap_in_slice(ctypes.byref(array), len(val))
 
 
-def raw_to_tuple(raw: FfiSlice, type_name: str):
+def _slice_to_tuple(raw, type_name: str):
     inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
     # typed pointer
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
@@ -158,6 +162,38 @@ def raw_to_tuple(raw: FfiSlice, type_name: str):
     # tuple of instances of python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(OpenDP.ATOM_MAP[name])).contents.value
                  for void_p, name in zip(ptr_data, inner_type_names))
+
+
+def _slice_to_py(raw, type_name):
+    if type_name in OpenDP.ATOM_MAP:
+        return _slice_to_scalar(raw, type_name)
+
+    if type_name.startswith("Vec<") and type_name.endswith('>'):
+        return _slice_to_vector(raw, type_name)
+
+    if type_name.startswith('(') and type_name.endswith(')'):
+        return _slice_to_tuple(raw, type_name)
+
+    if type_name == "String":
+        return _slice_to_string(raw)
+
+    raise UnknownTypeException(type_name)
+
+
+def _py_to_slice(val, type_name):
+    if type_name in OpenDP.ATOM_MAP:
+        return _scalar_to_slice(val, type_name)
+
+    if type_name.startswith("Vec<") and type_name.endswith('>'):
+        return _vector_to_slice(val, type_name)
+
+    if type_name.startswith('(') and type_name.endswith(')'):
+        return _tuple_to_slice(val, type_name)
+
+    if type_name == "String":
+        return _string_to_slice(val)
+
+    raise UnknownTypeException(type_name)
 
 
 class Mod:
@@ -344,7 +380,7 @@ class OpenDP:
     }
 
     @staticmethod
-    def infer_ffi_type_name(val):
+    def infer_object_type(val):
         if isinstance(val, int):
             return "i32"
         elif isinstance(val, float):
@@ -354,84 +390,66 @@ class OpenDP:
         elif isinstance(val, bool):
             return "bool"
         elif isinstance(val, list):
-            return f"Vec<{OpenDP.infer_ffi_type_name(OpenDP.get_first(val))}>"
+            return f"Vec<{OpenDP.infer_object_type(OpenDP.get_first(val))}>"
         elif isinstance(val, tuple):
-            return f"({','.join(map(OpenDP.infer_ffi_type_name, val))})"
+            return f"({','.join(map(OpenDP.infer_object_type, val))})"
 
         raise Exception("Unknown type", type(val))
 
-    def to_raw(self, val, type_name):
-        if type_name in self.ATOM_MAP:
-            return scalar_to_raw(val, type_name)
-
-        if type_name.startswith("Vec<") and type_name.endswith('>'):
-            return vector_to_raw(val, type_name)
-
-        if type_name.startswith('(') and type_name.endswith(')'):
-            return tuple_to_raw(val, type_name)
-
-        if type_name == "String":
-            return string_to_raw(val)
-
-        raise Exception("Unknown type name", type_name)
-
-    def py_to_obj(self, val, type_arg=None):
+    def py_to_object(self, val, type_arg=None):
         if type_arg:
             type_name = type_arg[1:-1]
         else:
-            type_name = self.infer_ffi_type_name(val)
+            type_name = self.infer_object_type(val)
 
-        raw = self.to_raw(val, type_name)
-        return self.data.object_new(f"<{type_name}>".encode(), raw)
+        ffi_slice = _py_to_slice(val, type_name)
+        return self.data.slice_as_object(f"<{type_name}>".encode(), ffi_slice)
 
-    def from_raw(self, raw, type_name):
-        if type_name in self.ATOM_MAP:
-            return raw_to_scalar(raw, type_name)
-
-        if type_name.startswith("Vec<") and type_name.endswith('>'):
-            return raw_to_vector(raw, type_name)
-
-        if type_name.startswith('(') and type_name.endswith(')'):
-            return raw_to_tuple(raw, type_name)
-
-        if type_name == "String":
-            return raw_to_string(raw)
-
-        raise Exception("Unknown type name", type_name)
-
-    def obj_to_py(self, obj):
-        type_name = self.data.object_type(obj).value.decode()
-        raw = self.data.object_as_raw(obj)
+    def object_to_py(self, obj):
+        type_name_ptr = self.data.object_type(obj)
+        type_name = type_name_ptr.value.decode()
+        self.data.str_free(type_name_ptr)
+        ffi_slice = self.data.object_as_slice(obj)
         try:
-            return self.from_raw(raw, type_name)
+            return _slice_to_py(ffi_slice, type_name)
+        except UnknownTypeException:
+            raise
         except Exception as err:
-            # print("MASKED ERROR:", err)
-            # print("using string fallback")
-            raise err
+            print("MASKED ERROR:", err)
+            print("using string fallback")
+            # raise err
             # If we fail, resort to string representation.
             #TODO: Remove this fallback once we have composition and/or tuples sorted out.
             return self.data.to_string(obj).decode()
+        finally:
+            self.data.slice_free(ffi_slice)
 
     def measurement_invoke(self, measurement, arg, *, type_name=None):
-        arg = self.py_to_obj(arg, type_name)
+        arg = self.py_to_object(arg, type_name)
         res = self.core.measurement_invoke(measurement, arg)
-        return self.obj_to_py(res)
+        return self.object_to_py(res)
 
     def transformation_invoke(self, transformation, arg, *, type_name=None):
-        arg = self.py_to_obj(arg, type_name)
+        arg = self.py_to_object(arg, type_name)
         res = self.core.transformation_invoke(transformation, arg)
-        return self.obj_to_py(res)
+        return self.object_to_py(res)
 
     def measurement_check(self, measurement, d_in, d_out, *, d_in_type_arg=None, d_out_type_arg=None, debug=False):
-        d_in = self.py_to_obj(d_in, d_in_type_arg and d_in_type_arg[1:-1])
-        d_out = self.py_to_obj(d_out, d_out_type_arg and d_out_type_arg[1:-1])
+        d_in = self.py_to_object(d_in, d_in_type_arg and d_in_type_arg[1:-1])
+        d_out = self.py_to_object(d_out, d_out_type_arg and d_out_type_arg[1:-1])
+
+        def _check():
+            val_ptr = self.core.measurement_check(measurement, d_in, d_out)
+            val = val_ptr.contents.value
+            self.data.bool_free(val_ptr)
+            return val
+
         if debug:
-            return self.core.measurement_check(measurement, d_in, d_out)
-        else:
-            try:
-                return self.core.measurement_check(measurement, d_in, d_out)
-            except OdpException as err:
-                if err.variant == "RelationDebug":
-                    return False
-                else:
-                    raise err
+            return _check()
+
+        try:
+            return _check()
+        except OdpException as err:
+            if err.variant == "RelationDebug":
+                return False
+            raise
