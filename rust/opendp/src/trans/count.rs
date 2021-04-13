@@ -1,11 +1,11 @@
-use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry;
 use std::convert::TryFrom;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, Div, Mul};
 
-use num::{Integer, One, Zero, NumCast};
+use num::{Integer, NumCast, One, Zero};
 use num::traits::FloatConst;
 
 use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
@@ -92,10 +92,10 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedD
                         Entry::Vacant(_v) => &mut null_count
                     } += TO::one());
 
-                categories.iter().map(|cat| counts.remove(cat))
-                    .chain(vec![Some(null_count)])
-                    // we always know that .remove will be some, because categories are distinct and every category is in the map
-                    .collect::<Option<_>>().unwrap_assert()
+                categories.iter().map(|cat| counts.remove(cat)
+                    .unwrap_assert("categories are distinct and every category is in the map"))
+                    .chain(vec![null_count])
+                    .collect()
             }),
             MI::new(),
             MO::new(),

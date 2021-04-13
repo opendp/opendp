@@ -93,8 +93,7 @@ impl From<Error> for FfiError {
 
 impl Drop for FfiError {
     fn drop(&mut self) {
-        // variants do not contain null bytes
-        let _variant = util::into_string(self.variant).unwrap_assert();
+        let _variant = util::into_string(self.variant).unwrap_assert("variants do not contain null bytes");
         let _message = unsafe { self.message.as_mut() }.map(|p| util::into_string(p).unwrap());
         let _backtrace = util::into_string(self.backtrace).unwrap();
     }

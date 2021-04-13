@@ -274,8 +274,7 @@ pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
 
 pub fn bootstrap(spec: &str) -> *const c_char {
     // FIXME: Leaks string.
-    // unwrap is ok because our json strings won't contain null bytes
-    into_c_char_p(spec.to_owned()).unwrap_assert()
+    into_c_char_p(spec.to_owned()).unwrap_assert("unwrap is ok because our json strings won't contain null bytes")
 }
 
 #[allow(non_camel_case_types)]

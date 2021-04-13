@@ -99,13 +99,13 @@ pub type Fallible<T> = Result<T, Error>;
 pub trait ExplainUnwrap {
     type Inner;
     /// use in tests
-    fn unwrap_assert(self) -> Self::Inner;
+    fn unwrap_assert(self, explanation: &'static str) -> Self::Inner;
     /// use if the alternate variant is structurally unreachable
     fn unwrap_test(self) -> Self::Inner;
 }
 impl<T> ExplainUnwrap for Option<T> {
     type Inner = T;
-    fn unwrap_assert(self) -> T {
+    fn unwrap_assert(self, _explanation: &'static str) -> T {
         self.unwrap()
     }
     fn unwrap_test(self) -> T {
@@ -114,7 +114,7 @@ impl<T> ExplainUnwrap for Option<T> {
 }
 impl<T> ExplainUnwrap for Fallible<T> {
     type Inner = T;
-    fn unwrap_assert(self) -> T {
+    fn unwrap_assert(self, _explanation: &'static str) -> T {
         self.unwrap()
     }
     fn unwrap_test(self) -> T {
