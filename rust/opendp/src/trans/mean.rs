@@ -8,7 +8,7 @@ use crate::dom::{VectorDomain, IntervalDomain, AllDomain, SizedDomain};
 use std::collections::Bound;
 use crate::trans::MakeTransformation3;
 use crate::dist::{HammingDistance, SymmetricDistance};
-use num::NumCast;
+use num::{NumCast, Float};
 
 pub struct BoundedMean<MI, MO> {
     input_metric: PhantomData<MI>,
@@ -42,7 +42,7 @@ impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<SymmetricDistance, MO> for B
 impl<MI, MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, MI, MO, T, T, usize> for BoundedMean<MI, MO>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=T>,
-          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
+          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Float,
           Self: BoundedMeanConstant<MI, MO> {
     fn make3(lower: T, upper: T, length: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, MI, MO>> {
         if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
@@ -79,7 +79,17 @@ mod tests {
     }
 
     #[test]
-    fn test_make_bounded_sum_symmetric() {
+    fn test_make_bounded_mean_symmetric() {
+        let transformation = BoundedMean::<SymmetricDistance, L2Sensitivity<f64>>::make(0., 10., 5).unwrap_test();
+        let arg = vec![1., 2., 3., 4., 5.];
+        let ret = transformation.function.eval(&arg).unwrap_test();
+        let expected = 3.;
+        assert_eq!(ret, expected);
+        assert!(transformation.stability_relation.eval(&1, &1.).unwrap_test())
+    }
+
+    #[test]
+    fn test_make_bounded_mean_int() {
         let transformation = BoundedMean::<SymmetricDistance, L2Sensitivity<f64>>::make(0., 10., 5).unwrap_test();
         let arg = vec![1., 2., 3., 4., 5.];
         let ret = transformation.function.eval(&arg).unwrap_test();

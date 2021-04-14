@@ -5,7 +5,7 @@ use std::ops::{Div, Mul, Sub, AddAssign};
 use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
-use num::{One, Integer, Zero, NumCast};
+use num::{One, Integer, Zero, NumCast, Float};
 
 use opendp::core::{DatasetMetric, Metric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
@@ -200,12 +200,12 @@ pub extern "C" fn opendp_trans__make_cast_vec(type_args: *const c_char) -> FfiRe
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_mean(type_args: *const c_char, lower: *const c_void, upper: *const c_void, length: c_uint) -> FfiResult<*mut FfiTransformation> {
     fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void, length: usize) -> FfiResult<*mut FfiTransformation>
-        where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Abs + NumCast {
+        where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Float {
 
         fn monomorphize2<MI, MO, T>(lower: T, upper: T, length: usize) -> FfiResult<*mut FfiTransformation>
             where MI: 'static + DatasetMetric<Distance=u32>,
                   MO: 'static + SensitivityMetric<Distance=T>,
-                  T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + NumCast,
+                  T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Float,
                   mean::BoundedMean<MI, MO>: BoundedMeanConstant<MI, MO> {
             mean::BoundedMean::<MI, MO>::make(lower, upper, length).into()
         }
