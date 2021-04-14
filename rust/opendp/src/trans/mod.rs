@@ -4,7 +4,7 @@
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
 use crate::core::{Domain, Metric};
-use crate::error::Fallible;
+use crate::error::*;
 pub use crate::trans::dataframe::*;
 
 pub mod dataframe;

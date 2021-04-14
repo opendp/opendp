@@ -58,19 +58,22 @@ pub trait SampleBernoulli: Sized {
     /// // returns a bit with Pr(bit = 1) = 0.7
     /// use opendp::samplers::SampleBernoulli;
     /// let n = bool::sample_bernoulli(0.7, false);
-    /// # n.unwrap();
+    /// # use opendp::error::ExplainUnwrap;
+    /// # n.unwrap_test();
     /// ```
     /// ```should_panic
     /// // fails because 1.3 not a valid probability
     /// use opendp::samplers::SampleBernoulli;
     /// let n = bool::sample_bernoulli(1.3, false);
-    /// # n.unwrap();
+    /// # use opendp::error::ExplainUnwrap;
+    /// # n.unwrap_test();
     /// ```
     /// ```should_panic
     /// // fails because -0.3 is not a valid probability
     /// use opendp::samplers::SampleBernoulli;
     /// let n = bool::sample_bernoulli(-0.3, false);
-    /// # n.unwrap();
+    /// # use opendp::error::ExplainUnwrap;
+    /// # n.unwrap_test();
     /// ```
     fn sample_bernoulli(prob: f64, enforce_constant_time: bool) -> Fallible<Self>;
 }
@@ -160,7 +163,8 @@ pub trait SampleUniform: Sized {
     /// // valid draw from Unif[0,1)
     /// use opendp::samplers::SampleUniform;
     /// let unif = f64::sample_standard_uniform(false);
-    /// # unif.unwrap();
+    /// # use opendp::error::ExplainUnwrap;
+    /// # unif.unwrap_test();
     /// ```
     fn sample_standard_uniform(enforce_constant_time: bool) -> Fallible<Self>;
 }
@@ -251,7 +255,8 @@ pub trait SampleGeometric: Sized {
     /// ```
     /// use opendp::samplers::SampleGeometric;
     /// let geom = u8::sample_geometric(0.1, 20, false);
-    /// # geom.unwrap();
+    /// # use opendp::error::ExplainUnwrap;
+    /// # geom.unwrap_test();
     /// ```
     fn sample_geometric(prob: f64, max_trials: Self, enforce_constant_time: bool) -> Fallible<Self>;
 }

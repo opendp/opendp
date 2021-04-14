@@ -7,7 +7,7 @@ use crate::dist::{L1Sensitivity, MaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::meas::{MakeMeasurement1};
-use crate::error::Fallible;
+use crate::error::*;
 use crate::traits::DistanceCast;
 
 pub struct BaseLaplace<T> {
@@ -18,6 +18,9 @@ pub struct BaseLaplace<T> {
 impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<T>, T> for BaseLaplace<T>
     where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
     fn make1(scale: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<T>>> {
+        if scale.is_sign_negative() {
+            return fallible!(MakeMeasurement, "scale must not be negative")
+        }
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
@@ -38,6 +41,9 @@ pub struct BaseVectorLaplace<T> {
 impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<T>, MaxDivergence<T>, T> for BaseVectorLaplace<T>
     where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
     fn make1(scale: T) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<T>, MaxDivergence<T>>> {
+        if scale.is_sign_negative() {
+            return fallible!(MakeMeasurement, "scale must not be negative")
+        }
         Ok(Measurement::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),
@@ -59,20 +65,20 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() {
-        let measurement = BaseLaplace::<f64>::make(1.0).unwrap();
+        let measurement = BaseLaplace::<f64>::make(1.0).unwrap_test();
         let arg = 0.0;
-        let _ret = measurement.function.eval(&arg).unwrap();
+        let _ret = measurement.function.eval(&arg).unwrap_test();
 
-        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap());
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_test());
     }
 
     #[test]
     fn test_make_vector_laplace_mechanism() {
-        let measurement = BaseVectorLaplace::<f64>::make(1.0).unwrap();
+        let measurement = BaseVectorLaplace::<f64>::make(1.0).unwrap_test();
         let arg = vec![1.0, 2.0, 3.0];
-        let _ret = measurement.function.eval(&arg).unwrap();
+        let _ret = measurement.function.eval(&arg).unwrap_test();
 
-        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap());
+        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_test());
     }
 }
 

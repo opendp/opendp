@@ -1,17 +1,17 @@
+use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{AddAssign, Div, Mul};
 
-use num::{Integer, One, Zero, NumCast};
+use num::{Integer, NumCast, One, Zero};
 use num::traits::FloatConst;
 
 use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
-use crate::error::Fallible;
+use crate::error::*;
 use crate::traits::DistanceCast;
 use crate::trans::{MakeTransformation0, MakeTransformation1};
 
@@ -74,6 +74,10 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedD
           QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd,
           Self: CountByCategoriesConstant<MI, MO> {
     fn make1(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO>> {
+        let mut uniques = HashSet::new();
+        if categories.iter().any(move |x| !uniques.insert(x)) {
+            return fallible!(MakeTransformation, "categories must be distinct")
+        }
         Ok(Transformation::new(
             VectorDomain::new_all(),
             SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
@@ -88,10 +92,10 @@ impl<MI, MO, TI, TO, QO> MakeTransformation1<VectorDomain<AllDomain<TI>>, SizedD
                         Entry::Vacant(_v) => &mut null_count
                     } += TO::one());
 
-                categories.iter().map(|cat| counts.remove(cat))
-                    .chain(vec![Some(null_count)])
-                    // this is a "safe" unwrap
-                    .collect::<Option<_>>().unwrap()
+                categories.iter().map(|cat| counts.remove(cat)
+                    .unwrap_assert("categories are distinct and every category is in the map"))
+                    .chain(vec![null_count])
+                    .collect()
             }),
             MI::new(),
             MO::new(),
@@ -111,7 +115,6 @@ pub struct CountBy<MI, MO, TI, TO> {
 pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
     fn get_stability_constant() -> Fallible<MO::Distance>;
 }
-
 
 impl<TI, TO, QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for CountBy<HammingDistance, L1Sensitivity<QO>, TI, TO> {
     fn get_stability_constant() -> Fallible<QO> {
@@ -164,18 +167,18 @@ mod tests {
 
     #[test]
     fn test_make_count_l1() {
-        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make().unwrap();
+        let transformation = Count::<SymmetricDistance, L1Sensitivity<_>, i32>::make().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
         assert_eq!(ret, expected);
     }
 
     #[test]
     fn test_make_count_l2() {
-        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make().unwrap();
+        let transformation = Count::<SymmetricDistance, L2Sensitivity<_>, i32>::make().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
         assert_eq!(ret, expected);
     }
@@ -184,26 +187,27 @@ mod tests {
     fn test_make_count_by_categories() {
         let transformation = CountByCategories::<SymmetricDistance, L2Sensitivity<f64>, i64, i8>::make(
             vec![2, 1, 3]
-        ).unwrap();
+        ).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
-        let ret = transformation.function.eval(&arg).unwrap();
+        let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = vec![2, 4, 1, 2];
         assert_eq!(ret, expected);
 
-        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap());
-        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap());
+        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap_test());
+        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap_test());
     }
 
     #[test]
-    fn test_make_count_by() {
+    fn test_make_count_by() -> Fallible<()> {
         let arg = vec![true, true, true, false, true, false, false, false, true, true];
-        let transformation = CountBy::<SymmetricDistance, L2Sensitivity<f64>, bool, i8>::make(arg.len()).unwrap();
-        let ret = transformation.function.eval(&arg).unwrap();
+        let transformation = CountBy::<SymmetricDistance, L2Sensitivity<f64>, bool, i8>::make(arg.len())?;
+        let ret = transformation.function.eval(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);
         expected.insert(false, 4);
         assert_eq!(ret, expected);
-        assert!(!transformation.stability_relation.eval(&5, &4.999).unwrap());
-        assert!(transformation.stability_relation.eval(&5, &5.0).unwrap());
+        assert!(!transformation.stability_relation.eval(&5, &4.999)?);
+        assert!(transformation.stability_relation.eval(&5, &5.0)?);
+        Ok(())
     }
 }

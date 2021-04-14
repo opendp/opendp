@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use std::fmt::Debug;
-use crate::error::Fallible;
+use crate::error::*;
 
 pub trait IsVec: Debug {
     // Not sure if we need into_any() (which consumes the Form), keeping it for now.
@@ -32,7 +32,7 @@ impl<T> From<Vec<T>> for Column
 pub struct Column(Box<dyn IsVec>);
 
 impl Column {
-    pub fn new<T: 'static + Debug>(form: Vec<T>) -> Column where Vec<T>: IsVec {
+    pub fn new<T: 'static + Debug>(form: Vec<T>) -> Self where Vec<T>: IsVec {
         Column(Box::new(form))
     }
     pub fn as_form<T: 'static + IsVec>(&self) -> Fallible<&T> {
@@ -80,7 +80,7 @@ mod tests {
 
     fn test_round_trip<T: 'static + IsVec + PartialEq>(form: T) {
         let data = Column(form.box_clone());
-        assert_eq!(&form, data.as_form().unwrap());
-        assert_eq!(form, data.into_form().unwrap())
+        assert_eq!(&form, data.as_form().unwrap_test());
+        assert_eq!(form, data.into_form().unwrap_test())
     }
 }

@@ -2,12 +2,13 @@ use std::fmt;
 
 use backtrace::Backtrace as _Backtrace;
 
-
+// create an instance of opendp::Fallible
 #[macro_export]
 macro_rules! fallible {
     ($variant:ident) => (Err(err!($variant)));
     ($variant:ident, $($inner:expr),+) => (Err(err!($variant, $($inner),+)));
 }
+// create an instance of opendp::Error
 // "error" is shadowed, and breaks intellij macro resolution
 #[macro_export]
 macro_rules! err {
@@ -15,13 +16,13 @@ macro_rules! err {
     ($variant:ident) => (crate::error::Error {
         variant: crate::error::ErrorVariant::$variant,
         message: None,
-        backtrace: backtrace::Backtrace::new()
+        backtrace: backtrace::Backtrace::new_unresolved()
     });
     // error with explicit message
     ($variant:ident, $message:expr) => (crate::error::Error {
         variant: crate::error::ErrorVariant::$variant,
         message: Some($message.to_string()), // ToString is impl'ed for String
-        backtrace: backtrace::Backtrace::new()
+        backtrace: backtrace::Backtrace::new_unresolved()
     });
     // args to format into message
     ($variant:ident, $template:expr, $($args:expr),+) =>
@@ -35,23 +36,16 @@ pub struct Error {
     pub backtrace: _Backtrace
 }
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.variant)
-    }
-}
-
-
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum ErrorVariant {
-    #[error("{0}")]
-    Raw(Box<dyn std::error::Error>),
+    #[error("FFI")]
+    FFI,
 
-    #[error("UnknownType")]
-    UnknownType,
+    #[error("TypeParse")]
+    TypeParse,
 
-    #[error("Failed function execution")]
+    #[error("FailedFunction")]
     FailedFunction,
 
     #[error("FailedRelation")]
@@ -60,23 +54,29 @@ pub enum ErrorVariant {
     #[error("RelationDebug")]
     RelationDebug,
 
-    #[error("Unable to cast type")]
+    #[error("FailedCast")]
     FailedCast,
 
-    #[error("Domain mismatch")]
+    #[error("DomainMismatch")]
     DomainMismatch,
 
-    #[error("Failed to make transformation")]
+    #[error("MakeTransformation")]
     MakeTransformation,
 
-    #[error("Failed to make measurement")]
+    #[error("MakeMeasurement")]
     MakeMeasurement,
 
-    #[error("Invalid distance")]
+    #[error("InvalidDistance")]
     InvalidDistance,
 
-    #[error("Not implemented")]
+    #[error("NotImplemented")]
     NotImplemented,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.variant)
+    }
 }
 
 impl From<ErrorVariant> for Error {
@@ -85,4 +85,37 @@ impl From<ErrorVariant> for Error {
     }
 }
 
+impl<T> From<Error> for Result<T, Error> {
+    fn from(e: Error) -> Self {
+        Err(e)
+    }
+}
+
 pub type Fallible<T> = Result<T, Error>;
+
+/// A trait for calling unwrap with an explanation. Makes calls to unwrap() discoverable.
+pub trait ExplainUnwrap {
+    type Inner;
+    /// use if the None or Err variant is structurally unreachable
+    fn unwrap_assert(self, explanation: &'static str) -> Self::Inner;
+    /// use in tests, where panics are acceptable
+    fn unwrap_test(self) -> Self::Inner;
+}
+impl<T> ExplainUnwrap for Option<T> {
+    type Inner = T;
+    fn unwrap_assert(self, _explanation: &'static str) -> T {
+        self.unwrap()
+    }
+    fn unwrap_test(self) -> T {
+        self.unwrap()
+    }
+}
+impl<T> ExplainUnwrap for Fallible<T> {
+    type Inner = T;
+    fn unwrap_assert(self, _explanation: &'static str) -> T {
+        self.unwrap()
+    }
+    fn unwrap_test(self) -> T {
+        self.unwrap()
+    }
+}

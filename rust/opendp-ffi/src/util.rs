@@ -2,16 +2,14 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::ffi::CStr;
+use std::ffi::{CStr, IntoStringError, NulError};
 use std::ffi::CString;
 use std::os::raw::c_char;
 
-use opendp::dist::{L1Sensitivity, L2Sensitivity, HammingDistance, SymmetricDistance};
+use opendp::dist::{SymmetricDistance, HammingDistance, L1Sensitivity, L2Sensitivity};
 use opendp::error::*;
-use opendp::{err};
-
-#[derive(Debug)]
-pub struct TypeError;
+use opendp::{err, fallible};
+use std::str::Utf8Error;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -47,19 +45,19 @@ impl Type {
         Self::new(TypeId::of::<T>(), descriptor, TypeContents::PLAIN(descriptor))
     }
 
-    pub fn of_id(id: TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(&id).cloned().ok_or_else(|| err!(UnknownType))
+    pub fn of_id(id: &TypeId) -> Fallible<Self> {
+        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse))
     }
 
     // Hacky special entry point for composition.
     pub fn new_box_pair(type0: &Type, type1: &Type) -> Self {
-        fn monomorphize<T0: 'static, T1: 'static>(type0: &Type, type1: &Type) -> Type {
+        fn monomorphize<T0: 'static, T1: 'static>(type0: &Type, type1: &Type) -> Fallible<Type> {
             let id = TypeId::of::<(Box<T0>, Box<T1>)>();
             let descriptor = format!("(Box<{}>, Box<{}>)", type0.descriptor, type1.descriptor);
             // Hacky way to get &'static str from String.
             let descriptor = Box::leak(descriptor.into_boxed_str());
             let contents = TypeContents::TUPLE(vec![TypeId::of::<Box<T0>>(), TypeId::of::<Box<T1>>()]);
-            Type::new(id, descriptor, contents)
+            Ok(Type::new(id, descriptor, contents))
         }
         dispatch!(
             monomorphize,
@@ -69,7 +67,7 @@ impl Type {
                 (type1, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)])
             ],
             (type0, type1)
-        )
+        ).unwrap()
     }
 }
 
@@ -161,10 +159,10 @@ lazy_static! {
 }
 
 impl TryFrom<&str> for Type {
-    type Error = TypeError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    type Error = Error;
+    fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.map(|e| e.clone()).ok_or(TypeError)
+        type_.map(|e| e.clone()).ok_or_else(|| err!(TypeParse, "failed to parse type: {:?}", value))
     }
 }
 
@@ -172,11 +170,13 @@ impl TryFrom<&str> for Type {
 pub struct TypeArgs(pub(crate) Vec<Type>);
 
 impl TypeArgs {
-    pub fn expect(descriptor: *const c_char, count: usize) -> TypeArgs {
-        let descriptor = to_str(descriptor);
-        let type_args: TypeArgs = descriptor.try_into().expect("Bogus type args");
-        assert!(type_args.0.len() == count);
-        type_args
+    pub fn parse(descriptor: *const c_char, count: usize) -> Fallible<TypeArgs> {
+        let descriptor = to_str(descriptor)?;
+        let type_args: TypeArgs = descriptor.try_into()?;
+        if type_args.0.len() != count {
+            return fallible!(TypeParse, "expected {:?} arguments, received {:?} arguments", count, type_args.0.len())
+        }
+        Ok(type_args)
     }
     // pub fn new(args: Vec<Type>) -> TypeArgs {
     //     TypeArgs(args)
@@ -188,8 +188,8 @@ impl TypeArgs {
 }
 
 impl TryFrom<&str> for TypeArgs {
-    type Error = TypeError;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    type Error = Error;
+    fn try_from(value: &str) -> Fallible<Self> {
         if value.starts_with("<") && value.ends_with(">") {
             let value = &value[1..value.len()-1];
             let mut types = Vec::new();
@@ -206,14 +206,13 @@ impl TryFrom<&str> for TypeArgs {
                 }
                 if !is_parenthesized {
                     let descriptor: String = token_buffer.join(", ");
-                    types.push(Type::try_from(descriptor.as_str()).unwrap());
+                    types.push(descriptor.as_str().try_into()?);
                     token_buffer.clear();
                 }
             }
-            // let types: Result<Vec<_>, _> = split.into_iter().map(|e| e.trim().try_into()).collect();
             Ok(TypeArgs(types))
         } else {
-            Err(TypeError)
+            fallible!(TypeParse, "failed to parse type: type ascription must start with '<' and end with '>'")
         }
     }
 }
@@ -228,43 +227,55 @@ pub fn into_box<T, U>(o: T) -> Box<U> {
     unsafe { Box::from_raw(p) }
 }
 
-pub fn into_owned<T>(p: *mut T) -> T {
-    assert!(!p.is_null());
-    *unsafe { Box::<T>::from_raw(p) }
+pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
+    (!p.is_null()).then(|| *unsafe { Box::<T>::from_raw(p) })
+        .ok_or_else(|| err!(FFI, "attempted to free a null pointer"))
 }
 
-pub fn as_ref<'a, T>(p: *const T) -> &'a T {
-    assert!(!p.is_null());
-    unsafe { &*p }
+pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
+    (!p.is_null()).then(|| unsafe { &*p })
 }
 
-pub fn into_c_char_p(s: String) -> *mut c_char {
-    CString::new(s).unwrap().into_raw()
+
+// pub fn as_mut<'a, T>(ptr: *mut T) -> &'a mut T {
+//     assert!(!ptr.is_null());
+//     unsafe { &mut *ptr }
+// }
+
+pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
+    CString::new(s)
+        .map(CString::into_raw)
+        .map_err(|e: NulError|
+            err!(FFI, "Nul byte detected when reading C string at position {:?}", e.nul_position()))
 }
 
-pub fn into_string(p: *mut c_char) -> String {
-    assert!(!p.is_null());
+pub fn into_string(p: *mut c_char) -> Fallible<String> {
+    if p.is_null() {
+        return fallible!(FFI, "Attempted to load a string from a null pointer");
+    }
     let s = unsafe { CString::from_raw(p) };
-    s.into_string().expect("Bad C string")
+    s.into_string().map_err(|e: IntoStringError| err!(FFI, "{:?} ", e.utf8_error()))
 }
 
-pub fn to_str<'a>(p: *const c_char) -> &'a str {
-    assert!(!p.is_null());
+pub fn to_str<'a>(p: *const c_char) -> Fallible<&'a str> {
+    if p.is_null() {
+        return fallible!(FFI, "Attempted to load a string from a null pointer");
+    }
     let s = unsafe { CStr::from_ptr(p) };
-    s.to_str().expect("Bad C string")
+    s.to_str().map_err(|e: Utf8Error| err!(FFI, "{:?}", e))
 }
 
-pub fn to_option_str<'a>(p: *const c_char) -> Option<&'a str> {
-    if !p.is_null() {
-        Some(to_str(p))
+pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
+    if p.is_null() {
+        Ok(None)
     } else {
-        None
+        Some(to_str(p)).transpose()
     }
 }
 
 pub fn bootstrap(spec: &str) -> *const c_char {
     // FIXME: Leaks string.
-    into_c_char_p(spec.to_owned())
+    into_c_char_p(spec.to_owned()).unwrap_assert("unwrap is ok because our json strings won't contain null bytes")
 }
 
 #[allow(non_camel_case_types)]
@@ -299,35 +310,36 @@ mod tests {
     }
 
     #[test]
-    fn test_type_try_from() {
+    fn test_type_try_from() -> Fallible<()> {
         let i32_t = TypeId::of::<i32>();
-        assert_eq!(TryInto::<Type>::try_into("()").unwrap(), Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
-        assert_eq!(TryInto::<Type>::try_into("i32").unwrap(), Type::new(i32_t, "i32", TypeContents::PLAIN("i32")));
-        assert_eq!(TryInto::<Type>::try_into("String").unwrap(), Type::new(TypeId::of::<String>(), "String", TypeContents::PLAIN("String")));
-        assert_eq!(TryInto::<Type>::try_into("(i32, i32)").unwrap(), Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
-        assert_eq!(TryInto::<Type>::try_into("[i32; 1]").unwrap(), Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
-        assert_eq!(TryInto::<Type>::try_into("[i32]").unwrap(), Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
-        assert_eq!(TryInto::<Type>::try_into("L1Sensitivity<i32>").unwrap(), Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
-        assert_eq!(TryInto::<Type>::try_into("Vec<i32>").unwrap(), Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
+        assert_eq!(TryInto::<Type>::try_into("()")?, Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
+        assert_eq!(TryInto::<Type>::try_into("i32")?, Type::new(i32_t, "i32", TypeContents::PLAIN("i32")));
+        assert_eq!(TryInto::<Type>::try_into("String")?, Type::new(TypeId::of::<String>(), "String", TypeContents::PLAIN("String")));
+        assert_eq!(TryInto::<Type>::try_into("(i32, i32)")?, Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
+        assert_eq!(TryInto::<Type>::try_into("[i32; 1]")?, Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
+        assert_eq!(TryInto::<Type>::try_into("[i32]")?, Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
+        assert_eq!(TryInto::<Type>::try_into("L1Sensitivity<i32>")?, Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
+        assert_eq!(TryInto::<Type>::try_into("Vec<i32>")?, Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
+        Ok(())
     }
 
     #[test]
     fn test_type_args_try_from_vec() {
-        let parsed: TypeArgs = "<Vec<i32>>".try_into().unwrap();
+        let parsed: TypeArgs = "<Vec<i32>>".try_into().unwrap_test();
         let explicit = TypeArgs(vec![Type::of::<Vec<i32>>()]);
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args_try_from_numbers() {
-        let parsed: TypeArgs = "<i32, f64>".try_into().unwrap();
+        let parsed: TypeArgs = "<i32, f64>".try_into().unwrap_test();
         let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f64>()]);
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args() {
-        let parsed: TypeArgs = "<i32, f32>".try_into().unwrap();
+        let parsed: TypeArgs = "<i32, f32>".try_into().unwrap_test();
         let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f32>()]);
         assert_eq!(parsed, explicit);
     }
