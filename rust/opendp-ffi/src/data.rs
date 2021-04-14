@@ -229,7 +229,7 @@ mod tests {
                 let obj = util::as_ref(obj).unwrap_test();
                 let val_out: &i32 = obj.as_ref();
                 assert_eq!(&val_in, val_out);
-                if let Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
+                if let FfiResult::Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
                     panic!("Got Err!")
                 }
             },
@@ -249,7 +249,7 @@ mod tests {
                 let obj = util::as_ref(obj).unwrap_test();
                 let val_out: &String = obj.as_ref();
                 assert_eq!(&val_in, val_out);
-                if let Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
+                if let FfiResult::Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
                     panic!("Got Err!")
                 }
             },
@@ -268,7 +268,7 @@ mod tests {
                 let obj = util::as_ref(obj).unwrap_test();
                 let val_out: &Vec<i32> = obj.as_ref();
                 assert_eq!(&val_in, val_out);
-                if let Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
+                if let FfiResult::Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
                     panic!("Got Err!")
                 }
             },
@@ -280,18 +280,19 @@ mod tests {
     fn test_data_as_raw_number() {
         let val_in = 999;
         let obj = FfiObject::new_raw_from_type(val_in);
-        let res = opendp_data__object_as_slice(obj);
         match opendp_data__object_as_slice(obj) {
             FfiResult::Ok(obj) => {
                 let raw = util::as_ref(obj).unwrap_test();
                 assert_eq!(raw.len, 1);
                 let val_out = util::as_ref(raw.ptr as *const i32).unwrap_test();
                 assert_eq!(&val_in, val_out);
-                opendp_data__slice_free(raw as *const FfiSlice as *mut FfiSlice)
+                if let FfiResult::Err(_) = opendp_data__slice_free(raw as *const FfiSlice as *mut FfiSlice) {
+                    panic!("Got Err!")
+                }
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
-        if let Err(_) = opendp_data__object_free(obj) {
+        if let FfiResult::Err(_) = opendp_data__object_free(obj) {
             panic!("Got Err!")
         }
     }
@@ -306,11 +307,13 @@ mod tests {
                 assert_eq!(raw.len, val_in.len() + 1);
                 let val_out = util::to_str(raw.ptr as *const c_char).unwrap_test().to_owned();
                 assert_eq!(val_in, val_out);
-                opendp_data__slice_free(raw as *const FfiSlice as *mut FfiSlice)
+                if let FfiResult::Err(_) = opendp_data__slice_free(raw as *const FfiSlice as *mut FfiSlice) {
+                    panic!("Got Err!")
+                }
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
-        if let Err(_) = opendp_data__object_free(obj) {
+        if let FfiResult::Err(_) = opendp_data__object_free(obj) {
             panic!("Got Err!")
         }
     }
@@ -325,11 +328,13 @@ mod tests {
                 assert_eq!(raw.len, val_in.len());
                 let val_out = unsafe { Vec::from_raw_parts(raw.ptr as *mut i32, raw.len, raw.len) };
                 assert_eq!(val_in, val_out);
-                opendp_data__slice_free(raw as *const FfiSlice as *mut FfiSlice)
+                if let FfiResult::Err(_) = opendp_data__slice_free(raw as *const FfiSlice as *mut FfiSlice) {
+                    panic!("Got Err!")
+                }
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
-        if let Err(_) = opendp_data__object_free(obj) {
+        if let FfiResult::Err(_) = opendp_data__object_free(obj) {
             panic!("Got Err!")
         }
     }
