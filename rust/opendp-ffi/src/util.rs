@@ -227,8 +227,9 @@ pub fn into_box<T, U>(o: T) -> Box<U> {
     unsafe { Box::from_raw(p) }
 }
 
-pub fn into_owned<T>(p: *mut T) -> Option<T> {
+pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
     (!p.is_null()).then(|| *unsafe { Box::<T>::from_raw(p) })
+        .ok_or_else(|| err!(FFI, "attempted to free a null pointer"))
 }
 
 pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {

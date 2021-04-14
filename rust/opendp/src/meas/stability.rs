@@ -45,6 +45,13 @@ impl<MI, TIK, TIC, TOC> MakeMeasurement3<CountDomain<TIK, TIC>, CountDomain<TIK,
           TIC: Integer + Clone + NumCast,
           TOC: 'static + Float + Clone + PartialOrd + SampleLaplace + NumCast {
     fn make3(n: usize, scale: TOC, threshold: TOC) -> Fallible<Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, TOC>, MI, SmoothedMaxDivergence<TOC>>> {
+        if scale.is_sign_negative() {
+            return fallible!(MakeMeasurement, "scale must not be negative")
+        }
+        if threshold.is_sign_negative() {
+            return fallible!(MakeMeasurement, "threshold must not be negative")
+        }
+
         let _n: TOC = TOC::from(n).ok_or_else(|| err!(FailedCast))?;
         let _2: TOC = TOC::from(2).ok_or_else(|| err!(FailedCast))?;
 

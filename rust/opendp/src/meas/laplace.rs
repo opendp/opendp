@@ -18,6 +18,9 @@ pub struct BaseLaplace<T> {
 impl<T> MakeMeasurement1<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<T>, T> for BaseLaplace<T>
     where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
     fn make1(scale: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<T>>> {
+        if scale.is_sign_negative() {
+            return fallible!(MakeMeasurement, "scale must not be negative")
+        }
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
@@ -38,6 +41,9 @@ pub struct BaseVectorLaplace<T> {
 impl<T> MakeMeasurement1<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<T>, MaxDivergence<T>, T> for BaseVectorLaplace<T>
     where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
     fn make1(scale: T) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<T>, MaxDivergence<T>>> {
+        if scale.is_sign_negative() {
+            return fallible!(MakeMeasurement, "scale must not be negative")
+        }
         Ok(Measurement::new(
             VectorDomain::new_all(),
             VectorDomain::new_all(),

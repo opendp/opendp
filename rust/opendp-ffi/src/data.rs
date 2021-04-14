@@ -5,7 +5,7 @@ use std::slice;
 
 use opendp::data::Column;
 
-use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice};
+use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice, FfiError};
 use crate::util;
 use crate::util::{Type, TypeArgs, TypeContents, c_bool};
 use std::fmt::Debug;
@@ -147,29 +147,29 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const FfiObject) -> FfiResu
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data__object_free(this: *mut FfiObject) {
-    util::into_owned(this).expect("Attempted to free a null pointer to an object.");
+pub extern "C" fn opendp_data__object_free(this: *mut FfiObject) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
 /// Frees the slice, but not what the slice references!
-pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) {
-    util::into_owned(this).expect("Attempted to free a null pointer to a slice.");
+pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data__str_free(this: *mut c_char) {
-    util::into_owned(this);
+pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) {
-    util::into_owned(this);
+pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
 }
 
 // TODO: Remove this function once we have composition and/or tuples sorted out.
 #[no_mangle]
-pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *mut c_char {
+pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> FfiResult<*mut c_char> {
     fn monomorphize<T: 'static + std::fmt::Debug>(this: &FfiObject) -> Fallible<*mut c_char> {
         let this = this.as_ref::<T>();
         // FIXME: Figure out how to implement general to_string().
@@ -177,7 +177,7 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *mut c_char 
         // FIXME: Leaks string.
         util::into_c_char_p(string)
     }
-    let this = util::as_ref(this).unwrap();
+    let this = try_as_ref!(this);
     let type_arg = &this.type_;
     dispatch!(monomorphize, [(type_arg, [
         u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
@@ -187,7 +187,9 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> *mut c_char 
         (Box<i32>, Box<f64>),
         (Box<i32>, Box<u32>),
         (Box<(Box<f64>, Box<f64>)>, Box<f64>)
-    ])], (this)).expect(&format!("to_string given unknown type argument: {:?}", type_arg))
+    ])], (this)).map_or_else(
+        |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
+        |v| FfiResult::Ok(v))
 }
 
 #[no_mangle]
@@ -199,10 +201,10 @@ r#"{
     { "name": "slice_as_object", "args": [ ["const char *", "type_args"], ["const void *", "raw"] ], "ret": "FfiResult<const FfiObject *>" },
     { "name": "object_type", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const char *>" },
     { "name": "object_as_slice", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const FfiSlice *>" },
-    { "name": "object_free", "args": [ ["FfiObject *", "this"] ] },
-    { "name": "slice_free", "args": [ ["FfiSlice *", "this"] ] },
-    { "name": "str_free", "args": [ ["const char *", "this"] ] },
-    { "name": "bool_free", "args": [ ["bool *", "this"] ] }
+    { "name": "object_free", "args": [ ["FfiObject *", "this"] ], "ret": "FfiResult<void *>" },
+    { "name": "slice_free", "args": [ ["FfiSlice *", "this"] ], "ret": "FfiResult<void *>" },
+    { "name": "str_free", "args": [ ["const char *", "this"] ], "ret": "FfiResult<void *>" },
+    { "name": "bool_free", "args": [ ["bool *", "this"] ], "ret": "FfiResult<void *>" }
 ]
 }"#;
     util::bootstrap(spec)
@@ -227,7 +229,9 @@ mod tests {
                 let obj = util::as_ref(obj).unwrap_test();
                 let val_out: &i32 = obj.as_ref();
                 assert_eq!(&val_in, val_out);
-                opendp_data__object_free(obj as *const FfiObject as *mut FfiObject)
+                if let Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
+                    panic!("Got Err!")
+                }
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
@@ -245,7 +249,9 @@ mod tests {
                 let obj = util::as_ref(obj).unwrap_test();
                 let val_out: &String = obj.as_ref();
                 assert_eq!(&val_in, val_out);
-                opendp_data__object_free(obj as *const FfiObject as *mut FfiObject)
+                if let Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
+                    panic!("Got Err!")
+                }
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
@@ -257,13 +263,14 @@ mod tests {
         let raw_ptr = val_in.as_ptr() as *mut c_void;
         let raw_len = val_in.len();
         let raw = FfiSlice::new_raw(raw_ptr, raw_len);
-        let res = opendp_data__slice_as_object(util::into_c_char_p("<Vec<i32>>".to_owned()).unwrap_test(), raw);
-        match res {
+        match opendp_data__slice_as_object(util::into_c_char_p("<Vec<i32>>".to_owned()).unwrap_test(), raw) {
             FfiResult::Ok(obj) => {
                 let obj = util::as_ref(obj).unwrap_test();
                 let val_out: &Vec<i32> = obj.as_ref();
                 assert_eq!(&val_in, val_out);
-                opendp_data__object_free(obj as *const FfiObject as *mut FfiObject)
+                if let Err(_) = opendp_data__object_free(obj as *const FfiObject as *mut FfiObject) {
+                    panic!("Got Err!")
+                }
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
@@ -274,7 +281,7 @@ mod tests {
         let val_in = 999;
         let obj = FfiObject::new_raw_from_type(val_in);
         let res = opendp_data__object_as_slice(obj);
-        match res {
+        match opendp_data__object_as_slice(obj) {
             FfiResult::Ok(obj) => {
                 let raw = util::as_ref(obj).unwrap_test();
                 assert_eq!(raw.len, 1);
@@ -284,15 +291,16 @@ mod tests {
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
-        opendp_data__object_free(obj)
+        if let Err(_) = opendp_data__object_free(obj) {
+            panic!("Got Err!")
+        }
     }
 
     #[test]
     fn test_data_as_raw_string() {
         let val_in = "Hello".to_owned();
         let obj = FfiObject::new_raw_from_type(val_in.clone());
-        let res = opendp_data__object_as_slice(obj);
-        match res {
+        match opendp_data__object_as_slice(obj) {
             FfiResult::Ok(obj) => {
                 let raw = util::as_ref(obj).unwrap_test();
                 assert_eq!(raw.len, val_in.len() + 1);
@@ -302,15 +310,16 @@ mod tests {
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
-        opendp_data__object_free(obj)
+        if let Err(_) = opendp_data__object_free(obj) {
+            panic!("Got Err!")
+        }
     }
 
     #[test]
     fn test_data_as_raw_vec() {
         let val_in = vec![1, 2, 3];
         let obj = FfiObject::new_raw_from_type(val_in.clone());
-        let res = opendp_data__object_as_slice(obj);
-        match res {
+        match opendp_data__object_as_slice(obj) {
             FfiResult::Ok(obj) => {
                 let raw = util::as_ref(obj).unwrap_test();
                 assert_eq!(raw.len, val_in.len());
@@ -320,7 +329,9 @@ mod tests {
             },
             FfiResult::Err(_) => panic!("Got Err!"),
         }
-        opendp_data__object_free(obj)
+        if let Err(_) = opendp_data__object_free(obj) {
+            panic!("Got Err!")
+        }
     }
 
 }

@@ -257,8 +257,8 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__error_free(this: *mut FfiError) {
-    util::into_owned(this).expect("Attempted to free a null pointer to an error.");
+pub extern "C" fn opendp_core__error_free(this: *mut FfiError) -> bool {
+    util::into_owned(this).is_ok()
 }
 
 #[no_mangle]
@@ -284,8 +284,8 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const FfiMeasurement, a
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_free(this: *mut FfiMeasurement) {
-    util::into_owned(this).expect("Attempted to free a null pointer to a measurement.");
+pub extern "C" fn opendp_core__measurement_free(this: *mut FfiMeasurement) -> FfiResult<*mut ()>{
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
@@ -301,8 +301,8 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformat
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_free(this: *mut FfiTransformation) {
-    util::into_owned(this).expect("Attempted to free a null pointer to a transformation.");
+pub extern "C" fn opendp_core__transformation_free(this: *mut FfiTransformation) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
@@ -413,12 +413,12 @@ pub extern "C" fn opendp_core__bootstrap() -> *const c_char {
     let spec =
 r#"{
 "functions": [
-    { "name": "error_free", "args": [ ["const FfiError *", "this"] ] },
+    { "name": "error_free", "args": [ ["const FfiError *", "this"] ], "res": "bool" },
     { "name": "measurement_check", "args": [ ["const FfiMeasurement *", "this"], ["const FfiObject *", "d_in"], ["const FfiObject *", "d_out"] ], "ret": "FfiResult<bool *>" },
     { "name": "measurement_invoke", "args": [ ["const FfiMeasurement *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
-    { "name": "measurement_free", "args": [ ["FfiMeasurement *", "this"] ] },
+    { "name": "measurement_free", "args": [ ["FfiMeasurement *", "this"] ], "ret": "FfiResult<void *>" },
     { "name": "transformation_invoke", "args": [ ["const FfiTransformation *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
-    { "name": "transformation_free", "args": [ ["FfiTransformation *", "this"] ] },
+    { "name": "transformation_free", "args": [ ["FfiTransformation *", "this"] ], "ret": "FfiResult<void *>" },
     { "name": "make_chain_mt", "args": [ ["const FfiMeasurement *", "measurement"], ["const FfiTransformation *", "transformation"] ], "ret": "FfiResult<FfiMeasurement *>" },
     { "name": "make_chain_tt", "args": [ ["const FfiTransformation *", "transformation1"], ["const FfiTransformation *", "transformation0"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_composition", "args": [ ["const FfiMeasurement *", "transformation0"], ["const FfiMeasurement *", "transformation1"] ], "ret": "FfiResult<FfiMeasurement *>" }

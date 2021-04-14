@@ -21,6 +21,9 @@ impl<T, QO> MakeMeasurement3<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDi
     where T: 'static + Clone + SampleGeometric + Sub<Output=T> + Add<Output=T> + DistanceCast,
           QO: 'static + Float + DistanceCast, f64: From<QO> {
     fn make3(scale: QO, min: T, max: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<QO>>> {
+        if scale.is_sign_negative() {
+            return fallible!(MakeMeasurement, "scale must not be negative")
+        }
         Ok(Measurement::new(
             AllDomain::new(),
             AllDomain::new(),

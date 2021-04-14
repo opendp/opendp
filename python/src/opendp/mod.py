@@ -238,8 +238,12 @@ class Mod:
         symbol = core_prefix + "error_free"
         function = lib[symbol]
         function.argtypes = [cls.get_type("FfiError *")]
-        function.restype = cls.get_type("void")
-        cls.error_free = function
+        function.restype = cls.get_type("bool")
+
+        def error_free(x):
+            if not function(x):
+                raise Exception("failed to de-allocate error")
+        cls.error_free = error_free
 
     @classmethod
     def get_type(cls, name, allow_generic=False):
@@ -298,7 +302,7 @@ class Mod:
                 variant = c_char_p_to_str(err_contents.variant)
                 message = c_char_p_to_str(err_contents.message)
                 backtrace = c_char_p_to_str(err_contents.backtrace)
-                self.error_free(err)
+                Mod.error_free(err)
                 raise OdpException(variant, message, backtrace)
         return unwrap
 
@@ -408,7 +412,9 @@ class OpenDP:
     def object_to_py(self, obj):
         type_name_ptr = self.data.object_type(obj)
         type_name = type_name_ptr.value.decode()
-        self.data.str_free(type_name_ptr)
+        # result = self.data.str_free(type_name_ptr)
+        # print('result', result)
+        # Mod.error_free(result)
         ffi_slice = self.data.object_as_slice(obj)
         try:
             return _slice_to_py(ffi_slice, type_name)
@@ -441,7 +447,7 @@ class OpenDP:
         def _check():
             val_ptr = self.core.measurement_check(measurement, d_in, d_out)
             val = val_ptr.contents.value
-            self.data.bool_free(val_ptr)
+            self.data.slice_free(self.data.bool_free(val_ptr))
             return val
 
         if debug:
