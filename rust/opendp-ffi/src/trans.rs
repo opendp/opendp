@@ -282,12 +282,14 @@ pub extern "C" fn opendp_trans__make_bounded_variance(
         lower: *const FfiObject, upper: *const FfiObject,
         length: usize, ddof: usize
     ) -> FfiResult<*mut FfiTransformation>
-        where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Float {
+        where for <'a> T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Float + Sum<&'a T> + Sum<T>,
+              for <'a> &'a T: Sub<Output=T> {
 
         fn monomorphize2<MI, MO, T>(lower: T, upper: T, length: usize, ddof: usize) -> FfiResult<*mut FfiTransformation>
             where MI: 'static + DatasetMetric<Distance=u32>,
                   MO: 'static + SensitivityMetric<Distance=T>,
-                  T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Float,
+                  for <'a> T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Float + Sum<&'a T> + Sum<T>,
+                  for <'a> &'a T: Sub<Output=T>,
                   variance::BoundedVariance<MI, MO>: BoundedVarianceConstant<MI, MO> {
             variance::BoundedVariance::<MI, MO>::make(lower, upper, length, ddof).into()
         }
