@@ -412,9 +412,6 @@ class OpenDP:
     def object_to_py(self, obj):
         type_name_ptr = self.data.object_type(obj)
         type_name = type_name_ptr.value.decode()
-        # result = self.data.str_free(type_name_ptr)
-        # print('result', result)
-        # Mod.error_free(result)
         ffi_slice = self.data.object_as_slice(obj)
         try:
             return _slice_to_py(ffi_slice, type_name)
