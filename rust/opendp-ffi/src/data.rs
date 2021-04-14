@@ -279,7 +279,6 @@ mod tests {
     #[test]
     fn test_data_as_raw_number() {
         let val_in = 999;
-        let obj = FfiObject::new_raw_from_type(val_in);
         match opendp_data__object_as_slice(obj) {
             FfiResult::Ok(obj) => {
                 let raw = util::as_ref(obj).unwrap_test();

@@ -257,6 +257,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 }
 
 #[no_mangle]
+#[must_use]
 pub extern "C" fn opendp_core__error_free(this: *mut FfiError) -> bool {
     util::into_owned(this).is_ok()
 }
