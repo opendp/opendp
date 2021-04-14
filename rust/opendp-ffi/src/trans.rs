@@ -5,13 +5,13 @@ use std::ops::{Div, Mul, Sub, AddAssign};
 use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
-use num::{One, Integer, Zero, NumCast};
+use num::{One, Integer, Zero, NumCast, Float};
 
 use opendp::core::{DatasetMetric, Metric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::traits::{Abs, CastFrom, DistanceCast};
-use opendp::trans::{count, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation, sum};
+use opendp::trans::{count, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation, sum, mean};
 use opendp::trans;
 use opendp::trans::sum::{BoundedSum, BoundedSumConstant};
 
@@ -21,6 +21,7 @@ use crate::util::{c_bool, Type, TypeArgs, TypeContents};
 use opendp::trans::count::{CountByCategoriesConstant, CountByCategories, CountBy, CountByConstant};
 use num::traits::FloatConst;
 use opendp::err;
+use opendp::trans::mean::BoundedMeanConstant;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
@@ -197,6 +198,32 @@ pub extern "C" fn opendp_trans__make_cast_vec(type_args: *const c_char) -> FfiRe
 // }
 
 #[no_mangle]
+pub extern "C" fn opendp_trans__make_bounded_mean(type_args: *const c_char, lower: *const c_void, upper: *const c_void, length: c_uint) -> FfiResult<*mut FfiTransformation> {
+    fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void, length: usize) -> FfiResult<*mut FfiTransformation>
+        where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Float {
+
+        fn monomorphize2<MI, MO, T>(lower: T, upper: T, length: usize) -> FfiResult<*mut FfiTransformation>
+            where MI: 'static + DatasetMetric<Distance=u32>,
+                  MO: 'static + SensitivityMetric<Distance=T>,
+                  T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Float,
+                  mean::BoundedMean<MI, MO>: BoundedMeanConstant<MI, MO> {
+            mean::BoundedMean::<MI, MO>::make(lower, upper, length).into()
+        }
+        let lower = try_as_ref!(lower as *const T).clone();
+        let upper = try_as_ref!(upper as *const T).clone();
+        dispatch!(monomorphize2, [
+            (type_args.0[0], [HammingDistance, SymmetricDistance]),
+            (type_args.0[1], [L1Sensitivity<T>, L2Sensitivity<T>]),
+            (type_args.0[2], [T])
+        ], (lower, upper, length))
+    }
+    let length = length as usize;
+
+    let type_args = try_!(TypeArgs::parse(type_args, 3));
+    dispatch!(monomorphize, [(type_args.0[2], @floats)], (type_args, lower, upper, length))
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation> {
     fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation>
         where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + Abs + DistanceCast {
@@ -331,6 +358,7 @@ r#"{
     { "name": "make_clamp_vec", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_clamp_scalar", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_cast_vec", "args": [ ["const char *", "selector"] ], "ret": "FfiResult<FfiTransformation *>" },
+    { "name": "make_bounded_mean", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["unsigned int", "length"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_bounded_sum", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_bounded_sum_n", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["unsigned int", "n"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_count", "args": [ ["const char *", "selector"] ], "ret": "FfiResult<FfiTransformation *>" },
