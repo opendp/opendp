@@ -46,8 +46,9 @@ impl<MO: Metric<Distance=T>, T> BoundedVarianceConstant<SymmetricDistance, MO> f
 impl<MI, MO, T> MakeTransformation4<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, MI, MO, T, T, usize, usize> for BoundedVariance<MI, MO>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=T>,
-          for <'a> T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Float + Sum<&'a T> + Sum<T>,
-          for <'a> &'a T: Sub<Output=T>,
+          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Float + Sum<T>,
+          for<'a> T: Sum<&'a T>,
+          for<'a> &'a T: Sub<Output=T>,
           Self: BoundedVarianceConstant<MI, MO> {
     fn make4(lower: T, upper: T, length: usize, ddof: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, MI, MO>> {
         if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
@@ -105,6 +106,7 @@ impl<MI, MO, T> MakeTransformation4<CovarianceDomain<T>, AllDomain<T>, MI, MO, (
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=T>,
           T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Zero,
+          for<'a> T: Add<&'a T, Output=T>,
           for<'a> &'a T: Sub<Output=T>,
           Self: BoundedCovarianceConstant<MI, MO> {
     fn make4(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, MI, MO>> {
@@ -117,7 +119,7 @@ impl<MI, MO, T> MakeTransformation4<CovarianceDomain<T>, AllDomain<T>, MI, MO, (
                 IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
             AllDomain::new(),
             Function::new(move |arg: &Vec<(T, T)>| {
-                let (sum_l, sum_r) = arg.clone().into_iter().fold(
+                let (sum_l, sum_r) = arg.iter().fold(
                     (T::zero(), T::zero()),
                     |(s_l, s_r), (v_l, v_r)| (s_l + v_l, s_r + v_r));
                 let (mean_l, mean_r) = (sum_l / _length, sum_r / _length);
