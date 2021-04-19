@@ -1,28 +1,28 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::Sum;
-use std::ops::{Div, Mul, Sub, AddAssign, Add};
+use std::ops::{Add, AddAssign, Div, Mul, Sub};
 use std::os::raw::{c_char, c_uint, c_void};
 use std::str::FromStr;
 
-use num::{One, Integer, Zero, NumCast, Float};
+use num::{Float, Integer, NumCast, One, Zero};
+use num::traits::FloatConst;
 
 use opendp::core::{DatasetMetric, Metric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
+use opendp::err;
 use opendp::traits::{Abs, CastFrom, DistanceCast};
-use opendp::trans::{count, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation, mean, variance, MakeTransformation4};
+use opendp::trans::{count, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, MakeTransformation4, manipulation, mean, variance};
 use opendp::trans;
+use opendp::trans::count::{CountBy, CountByCategories, CountByCategoriesConstant, CountByConstant};
+use opendp::trans::mean::BoundedMeanConstant;
 use opendp::trans::sum::{BoundedSum, BoundedSumConstant};
+use opendp::trans::variance::{BoundedCovarianceConstant, BoundedVarianceConstant};
 
-use crate::core::{FfiTransformation, FfiObject, FfiResult};
+use crate::core::{FfiObject, FfiResult, FfiTransformation};
 use crate::util;
 use crate::util::{c_bool, Type, TypeArgs, TypeContents};
-use opendp::trans::count::{CountByCategoriesConstant, CountByCategories, CountBy, CountByConstant};
-use num::traits::FloatConst;
-use opendp::err;
-use opendp::trans::mean::BoundedMeanConstant;
-use opendp::trans::variance::{BoundedVarianceConstant, BoundedCovarianceConstant};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
@@ -441,11 +441,11 @@ r#"{
     { "name": "make_clamp_scalar", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_cast_vec", "args": [ ["const char *", "selector"] ], "ret": "FfiResult<FfiTransformation *>" },
 
-    { "name": "make_bounded_covariance", "args": [ ["const char *", "selector"], ["FfiObject *", "lower"], ["FfiObject *", "upper"], ["length", "unsigned int"], ["ddof", "unsigned int"] ], "ret": "FfiResult<FfiTransformation *>" },
+    { "name": "make_bounded_covariance", "args": [ ["const char *", "selector"], ["FfiObject *", "lower"], ["FfiObject *", "upper"], ["unsigned int", "length"], ["unsigned int", "ddof"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_bounded_mean", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["unsigned int", "length"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_bounded_sum", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_bounded_sum_n", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["unsigned int", "n"] ], "ret": "FfiResult<FfiTransformation *>" },
-    { "name": "make_bounded_variance", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["length", "unsigned int"], ["ddof", "unsigned int"] ], "ret": "FfiResult<FfiTransformation *>" },
+    { "name": "make_bounded_variance", "args": [ ["const char *", "selector"], ["void *", "lower"], ["void *", "upper"], ["unsigned int", "length"], ["unsigned int", "ddof"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_count", "args": [ ["const char *", "selector"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_count_by", "args": [ ["const char *", "selector"], ["unsigned int", "n"] ], "ret": "FfiResult<FfiTransformation *>" },
     { "name": "make_count_by_categories", "args": [ ["const char *", "selector"], ["FfiObject *", "categories"] ], "ret": "FfiResult<FfiTransformation *>" }
