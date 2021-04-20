@@ -155,4 +155,21 @@ mod tests {
         assert_eq!(ret, expected);
         assert!(transformation_pop.stability_relation.eval(&1, &(100. * 4. / 25.)).unwrap_test());
     }
+
+    #[test]
+    fn test_make_bounded_covariance_hamming() {
+        let arg = vec![(1., 3.), (2., 4.), (3., 5.), (4., 6.), (5., 7.)];
+
+        let transformation_sample = BoundedCovariance::<HammingDistance, L1Sensitivity<f64>>::make((0., 2.), (10., 12.), 5, 1).unwrap_test();
+        let ret = transformation_sample.function.eval(&arg).unwrap_test();
+        let expected = 2.5;
+        assert_eq!(ret, expected);
+        assert!(transformation_sample.stability_relation.eval(&1, &(100. / 5.)).unwrap_test());
+
+        let transformation_pop = BoundedCovariance::<HammingDistance, L1Sensitivity<f64>>::make((0., 2.), (10., 12.), 5, 0).unwrap_test();
+        let ret = transformation_pop.function.eval(&arg).unwrap_test();
+        let expected = 2.0;
+        assert_eq!(ret, expected);
+        assert!(transformation_pop.stability_relation.eval(&1, &(100. * 4. / 25.)).unwrap_test());
+    }
 }
