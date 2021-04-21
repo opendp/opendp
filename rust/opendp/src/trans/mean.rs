@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use crate::core::{DatasetMetric, SensitivityMetric, Transformation, Function, Metric, StabilityRelation};
 use std::ops::{Sub, Mul, Div};
 use std::iter::Sum;
@@ -6,21 +5,14 @@ use crate::traits::DistanceCast;
 use crate::error::Fallible;
 use crate::dom::{VectorDomain, IntervalDomain, AllDomain, SizedDomain};
 use std::collections::Bound;
-use crate::trans::MakeTransformation3;
 use crate::dist::{HammingDistance, SymmetricDistance};
 use num::{NumCast, Float};
-
-pub struct BoundedMean<MI, MO> {
-    input_metric: PhantomData<MI>,
-    output_metric: PhantomData<MO>
-}
-
 
 pub trait BoundedMeanConstant<MI: Metric, MO: Metric> {
     fn get_stability(lower: MO::Distance, upper: MO::Distance, length: usize) -> Fallible<MO::Distance>;
 }
 
-impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<HammingDistance, MO> for BoundedMean<HammingDistance, MO>
+impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<HammingDistance, MO> for (HammingDistance, MO)
     where T: Sub<Output=T> + Div<Output=T> + NumCast {
     fn get_stability(lower: T, upper: T, length: usize) -> Fallible<T> {
         let length = T::from(length).ok_or_else(|| err!(FailedCast))?;
@@ -29,36 +21,33 @@ impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<HammingDistance, MO> for Bou
 }
 
 // postprocessing the sum
-impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<SymmetricDistance, MO> for BoundedMean<SymmetricDistance, MO>
+impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
     where T: Sub<Output=T> + Div<Output=T> + NumCast {
     fn get_stability(lower: T, upper: T, length: usize) -> Fallible<T> {
-        let length = T::from(length).ok_or_else(|| err!(FailedCast))?;
-        let _2 = T::from(2).ok_or_else(|| err!(FailedCast))?;
-        Ok((upper - lower) / length / _2)
+        Ok((upper - lower) / c!(length; T)? / c!(2; T)?)
     }
 }
 
-
-impl<MI, MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, MI, MO, T, T, usize> for BoundedMean<MI, MO>
+pub fn make_bounded_mean<MI, MO>(
+    lower: MO::Distance, upper: MO::Distance, length: usize
+) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
     where MI: DatasetMetric<Distance=u32>,
-          MO: SensitivityMetric<Distance=T>,
-          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Float,
-          for <'a> T: Sum<&'a T>,
-          Self: BoundedMeanConstant<MI, MO> {
-    fn make3(lower: T, upper: T, length: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, MI, MO>> {
-        if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
-        let _length = T::from(length).ok_or_else(|| err!(FailedCast))?;
+          MO: SensitivityMetric,
+          MO::Distance: 'static + Clone + PartialOrd + Sub<Output=MO::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + DistanceCast + Float,
+          for <'a> MO::Distance: Sum<&'a MO::Distance>,
+          (MI, MO): BoundedMeanConstant<MI, MO> {
+    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
+    let _length = c!(length; MO::Distance)?;
 
-        Ok(Transformation::new(
-            SizedDomain::new(VectorDomain::new(
-                IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
-                             length),
-            AllDomain::new(),
-            Function::new(move |arg: &Vec<T>| arg.iter().sum::<T>() / _length),
-            MI::new(),
-            MO::new(),
-            StabilityRelation::new_from_constant(Self::get_stability(lower, upper, length)?)))
-    }
+    Ok(Transformation::new(
+        SizedDomain::new(VectorDomain::new(
+            IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
+                         length),
+        AllDomain::new(),
+        Function::new(move |arg: &Vec<MO::Distance>| arg.iter().sum::<MO::Distance>() / _length),
+        MI::default(),
+        MO::default(),
+        StabilityRelation::new_from_constant(<(MI, MO)>::get_stability(lower, upper, length)?)))
 }
 
 
@@ -68,10 +57,11 @@ mod tests {
     use super::*;
     use crate::dist::{L1Sensitivity, L2Sensitivity};
     use crate::error::ExplainUnwrap;
+    use crate::trans::mean::make_bounded_mean;
 
     #[test]
     fn test_make_bounded_mean_hamming() {
-        let transformation = BoundedMean::<HammingDistance, L1Sensitivity<f64>>::make(0., 10., 5).unwrap_test();
+        let transformation = make_bounded_mean::<HammingDistance, L1Sensitivity<f64>>(0., 10., 5).unwrap_test();
         let arg = vec![1., 2., 3., 4., 5.];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 3.;
@@ -81,7 +71,7 @@ mod tests {
 
     #[test]
     fn test_make_bounded_mean_symmetric() {
-        let transformation = BoundedMean::<SymmetricDistance, L2Sensitivity<f64>>::make(0., 10., 5).unwrap_test();
+        let transformation = make_bounded_mean::<SymmetricDistance, L2Sensitivity<f64>>(0., 10., 5).unwrap_test();
         let arg = vec![1., 2., 3., 4., 5.];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 3.;

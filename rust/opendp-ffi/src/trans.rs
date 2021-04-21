@@ -13,29 +13,36 @@ use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDista
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
 use opendp::traits::{Abs, CastFrom, DistanceCast};
-use opendp::trans::{count, MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, MakeTransformation4, manipulation, mean, variance};
-use opendp::trans;
-use opendp::trans::count::{CountBy, CountByCategories, CountByCategoriesConstant, CountByConstant};
-use opendp::trans::mean::BoundedMeanConstant;
-use opendp::trans::sum::{BoundedSum, BoundedSumConstant};
-use opendp::trans::variance::{BoundedCovarianceConstant, BoundedVarianceConstant};
 
 use crate::core::{FfiObject, FfiResult, FfiTransformation};
 use crate::util;
 use crate::util::{c_bool, Type, TypeArgs, TypeContents};
+use opendp::trans::*;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
-    fn monomorphize_scalar<T: 'static + Clone>() -> FfiResult<*mut FfiTransformation> {
-        manipulation::Identity::make(AllDomain::<T>::new(), HammingDistance::new()).into()
+    fn monomorphize_scalar<M, T>() -> FfiResult<*mut FfiTransformation>
+        where M: 'static + DatasetMetric,
+              M::Distance: 'static + Clone + Div<Output=M::Distance> + Mul<Output=M::Distance> + PartialOrd + DistanceCast + One,
+              T: 'static + Clone {
+        make_identity::<AllDomain<T>, M>(AllDomain::<T>::new(), M::default()).into()
     }
-    fn monomorphize_vec<T: 'static + Clone>() -> FfiResult<*mut FfiTransformation> {
-        manipulation::Identity::make(VectorDomain::new(AllDomain::<T>::new()), HammingDistance::new()).into()
+    fn monomorphize_vec<M, T>() -> FfiResult<*mut FfiTransformation>
+        where M: 'static + DatasetMetric,
+              M::Distance: 'static + Clone + Div<Output=M::Distance> + Mul<Output=M::Distance> + PartialOrd + DistanceCast + One,
+              T: 'static + Clone {
+        make_identity::<VectorDomain<AllDomain<T>>, M>(VectorDomain::new(AllDomain::<T>::new()), M::default()).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
-    match &type_args.0[0].contents {
-        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [(try_!(Type::of_id(element_id)), @primitives)], ()),
-        _ => dispatch!(monomorphize_scalar, [(&type_args.0[0], @primitives)], ())
+    match &type_args.0[1].contents {
+        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [
+            (type_args.0[0], @dist_dataset),
+            (try_!(Type::of_id(element_id)), @primitives)
+        ], ()),
+        _ => dispatch!(monomorphize_scalar, [
+            (type_args.0[0], @dist_dataset),
+            (&type_args.0[1], @primitives)
+        ], ())
     }
 }
 
@@ -43,7 +50,7 @@ pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiRe
 pub extern "C" fn opendp_trans__make_split_lines(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
     fn monomorphize<M>() -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone {
-        trans::SplitLines::<M>::make().into()
+        make_split_lines::<M>().into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset)], ())
@@ -55,7 +62,7 @@ pub extern "C" fn opendp_trans__make_parse_series(type_args: *const c_char, impu
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
               T: 'static + FromStr + Default,
               T::Err: Debug {
-        trans::ParseSeries::<T, M>::make(impute).into()
+        make_parse_series::<M, T>(impute).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
     let impute = util::to_bool(impute);
@@ -66,7 +73,7 @@ pub extern "C" fn opendp_trans__make_parse_series(type_args: *const c_char, impu
 pub extern "C" fn opendp_trans__make_split_records(type_args: *const c_char, separator: *const c_char) -> FfiResult<*mut FfiTransformation> {
     fn monomorphize<M>(separator: Option<&str>) -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone {
-        trans::SplitRecords::<M>::make(separator).into()
+        make_split_records::<M>(separator).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 1));
     let separator = try_!(util::to_option_str(separator));
@@ -79,7 +86,7 @@ pub extern "C" fn opendp_trans__make_create_dataframe(type_args: *const c_char, 
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
               K: 'static + Eq + Hash + Debug + Clone {
         let col_names = try_as_ref!(col_names).as_ref::<Vec<K>>().clone();
-        trans::CreateDataFrame::<M, K>::make(col_names).into()
+        make_create_data_frame::<M, K>(col_names).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 2));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[1], @hashable)], (col_names))
@@ -91,7 +98,7 @@ pub extern "C" fn opendp_trans__make_split_dataframe(type_args: *const c_char, s
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
               K: 'static + Eq + Hash + Debug + Clone {
         let col_names = try_as_ref!(col_names).as_ref::<Vec<K>>().clone();
-        trans::SplitDataFrame::<M, K>::make(separator, col_names).into()
+        make_split_dataframe::<M, K>(separator, col_names).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 2));
     let separator = try_!(util::to_option_str(separator));
@@ -106,7 +113,7 @@ pub extern "C" fn opendp_trans__make_parse_column(type_args: *const c_char, key:
         T: 'static + Debug + Clone + PartialEq + FromStr + Default,
         T::Err: Debug {
         let key = try_as_ref!(key as *const K).clone();
-        trans::ParseColumn::<M, T>::make(key, impute).into()
+        make_parse_column::<M, K, T>(key, impute).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 3));
     let impute = util::to_bool(impute);
@@ -120,7 +127,7 @@ pub extern "C" fn opendp_trans__make_select_column(type_args: *const c_char, key
         K: 'static + Hash + Eq + Debug + Clone,
         T: 'static + Debug + Clone + PartialEq {
         let key = try_as_ref!(key as *const K).clone();
-        trans::SelectColumn::<M, T>::make(key).into()
+        make_select_column::<M, K, T>(key).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 3));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[1], @hashable), (type_args.0[2], @primitives)], (key))
@@ -133,7 +140,7 @@ pub extern "C" fn opendp_trans__make_clamp_vec(type_args: *const c_char, lower: 
               T: 'static + Copy + PartialOrd {
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
-        manipulation::Clamp::<M, Vec<T>>::make(lower, upper).into()
+        make_clamp_vec::<M, T>(lower, upper).into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 2));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[1], @numbers)], (lower, upper))
@@ -152,7 +159,7 @@ pub extern "C" fn opendp_trans__make_clamp_scalar(type_args: *const c_char, lowe
             where M: 'static + SensitivityMetric<Distance=Q>,
                   T: 'static + Clone + PartialOrd,
                   Q: 'static + One + Mul<Output=Q> + Div<Output=Q> + PartialOrd + DistanceCast {
-            trans::manipulation::Clamp::<M, T>::make(lower, upper).into()
+            make_clamp::<M, T>(lower, upper).into()
         }
         dispatch!(monomorphize2, [
             (type_args.0[0], [L1Sensitivity<Q>, L2Sensitivity<Q>]),
@@ -168,7 +175,7 @@ pub extern "C" fn opendp_trans__make_clamp_scalar(type_args: *const c_char, lowe
 pub extern "C" fn opendp_trans__make_cast_vec(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
     fn monomorphize<M, TI, TO>() -> FfiResult<*mut FfiTransformation> where
         M: 'static + DatasetMetric<Distance=u32>, TI: 'static + Clone, TO: 'static + CastFrom<TI> + Default {
-        trans::manipulation::Cast::<M, Vec<TI>, Vec<TO>>::make().into()
+        make_cast_vec::<M, TI, TO>().into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 3));
     dispatch!(monomorphize, [(type_args.0[0], @dist_dataset), (type_args.0[1], @primitives), (type_args.0[2], @primitives)], ())
@@ -185,7 +192,7 @@ pub extern "C" fn opendp_trans__make_cast_vec(type_args: *const c_char) -> FfiRe
 //                   MO: 'static + SensitivityMetric<Distance=TO>,
 //                   TI: 'static + Clone + DistanceCast,
 //                   TO: 'static + CastFrom<TI> + Default + DistanceCast + One + Div<Output=TO> + Mul<Output=TO> + PartialOrd {
-//             let transformation = trans::manipulation::Cast::<MI, MO, TI, TO>::make();
+//             let transformation = trans::manipulation::Cast::<MI, MO, TI, TO>();
 //             FfiResult::new(transformation.map(FfiTransformation::new_from_types))
 //         }
 //         dispatch!(monomorphize2, [
@@ -209,8 +216,8 @@ pub extern "C" fn opendp_trans__make_bounded_mean(type_args: *const c_char, lowe
                   MO: 'static + SensitivityMetric<Distance=T>,
                   T:'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Float,
                   for <'a> T: Sum<&'a T>,
-                  mean::BoundedMean<MI, MO>: BoundedMeanConstant<MI, MO> {
-            mean::BoundedMean::<MI, MO>::make(lower, upper, length).into()
+                  (MI, MO): BoundedMeanConstant<MI, MO> {
+            make_bounded_mean::<MI, MO>(lower, upper, length).into()
         }
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
@@ -234,8 +241,8 @@ pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower
             where MI: 'static + DatasetMetric<Distance=u32>,
                   MO: 'static + SensitivityMetric<Distance=T>,
                   for <'a> T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Abs + DistanceCast + Sum<&'a T>,
-                  BoundedSum<MI, MO>: BoundedSumConstant<MI, MO> {
-            BoundedSum::<MI, MO>::make(lower, upper).into()
+                  (MI, MO): BoundedSumConstant<MI, MO> {
+            make_bounded_sum::<MI, MO>(lower, upper).into()
         }
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
@@ -253,12 +260,13 @@ pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, lower: *const c_void, upper: *const c_void, n: c_uint) -> FfiResult<*mut FfiTransformation> {
     fn monomorphize<T>(type_args: TypeArgs, lower: *const c_void, upper: *const c_void, n: usize) -> FfiResult<*mut FfiTransformation>
-        where for <'a> T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Sum<&'a T> {
-
+        where T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast,
+              for<'a> T: Sum<&'a T> {
         fn monomorphize2<MO, T>(lower: T, upper: T, n: usize) -> FfiResult<*mut FfiTransformation>
             where MO: 'static + SensitivityMetric<Distance=T>,
-                  for <'a> T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Sum<&'a T> {
-            BoundedSum::<SymmetricDistance, MO>::make3(lower, upper, n).into()
+                  T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast,
+                  for<'a> T: Sum<&'a T> {
+            make_bounded_sum_n::<MO>(lower, upper, n).into()
         }
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
@@ -292,8 +300,8 @@ pub extern "C" fn opendp_trans__make_bounded_variance(
                   MO: 'static + SensitivityMetric<Distance=T>,
                   T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast + Float + for<'a> Sum<&'a T> + Sum<T>,
                   for<'a> &'a T: Sub<Output=T>,
-                  variance::BoundedVariance<MI, MO>: BoundedVarianceConstant<MI, MO> {
-            variance::BoundedVariance::<MI, MO>::make(lower, upper, length, ddof).into()
+                  (MI, MO): BoundedVarianceConstant<MI, MO> {
+            make_bounded_variance::<MI, MO>(lower, upper, length, ddof).into()
         }
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
@@ -318,23 +326,23 @@ pub extern "C" fn opendp_trans__make_bounded_covariance(
     upper: *const FfiObject,
     length: c_uint, ddof: c_uint
 ) -> FfiResult<*mut FfiTransformation> {
-
     fn monomorphize<T>(
         type_args: TypeArgs,
         lower: *const FfiObject,
         upper: *const FfiObject,
-        length: usize, ddof: usize
+        length: usize, ddof: usize,
     ) -> FfiResult<*mut FfiTransformation>
-        where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Zero + One + for<'a> Add<&'a T, Output=T>,
-              for<'a> &'a T: Sub<T, Output=T> {
-
+        where T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Zero + One,
+              for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
+              for<'a> &'a T: Sub<Output=T> {
         fn monomorphize2<MI, MO, T>(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> FfiResult<*mut FfiTransformation>
             where MI: 'static + DatasetMetric<Distance=u32>,
                   MO: 'static + SensitivityMetric<Distance=T>,
-                  T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Zero + One + for<'a> Add<&'a T, Output=T>,
-                  for<'a> &'a T: Sub<T, Output=T>,
-                  variance::BoundedCovariance<MI, MO>: BoundedCovarianceConstant<MI, MO> {
-            variance::BoundedCovariance::<MI, MO>::make(lower, upper, length, ddof).into()
+                  T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast + Zero + One,
+                  for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
+                  for<'a> &'a T: Sub<Output=T>,
+                  (MI, MO): BoundedCovarianceConstant<MI, MO> {
+            make_bounded_covariance::<MI, MO>(lower, upper, length, ddof).into()
         }
         let lower = try_as_ref!(lower).as_ref::<(T, T)>().clone();
         let upper = try_as_ref!(upper).as_ref::<(T, T)>().clone();
@@ -358,7 +366,7 @@ pub extern "C" fn opendp_trans__make_count(type_args: *const c_char) -> FfiResul
     fn monomorphize<MI, MO, T: 'static>() -> FfiResult<*mut FfiTransformation>
         where MI: 'static + DatasetMetric<Distance=u32> + Clone,
               MO: 'static + SensitivityMetric<Distance=u32> + Clone {
-        count::Count::<MI, MO, T>::make().into()
+        make_count::<MI, MO, T>().into()
     }
     let type_args = try_!(TypeArgs::parse(type_args, 3));
     dispatch!(monomorphize, [
@@ -380,9 +388,9 @@ pub extern "C" fn opendp_trans__make_count_by_categories(type_args: *const c_cha
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign,
                   QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd + FloatConst + One + NumCast,
-                  CountByCategories<MI, MO, TI, TO>: CountByCategoriesConstant<MI, MO> {
+                  (MI, MO): CountByCategoriesConstant<MI, MO> {
             let categories = try_as_ref!(categories as *const Vec<TI>).clone();
-            count::CountByCategories::<MI, MO, TI, TO>::make(categories).into()
+            make_count_by_categories::<MI, MO, TI, TO>(categories).into()
         }
         dispatch!(monomorphize2, [
             (type_args.0[0], [HammingDistance, SymmetricDistance]),
@@ -407,8 +415,8 @@ pub extern "C" fn opendp_trans__make_count_by(type_args: *const c_char, n: c_uin
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign,
                   QO: 'static + Clone + DistanceCast + Mul<Output=QO> + Div<Output=QO> + PartialOrd + FloatConst + One + NumCast,
-                  CountBy<MI, MO, TI, TO>: CountByConstant<MI, MO> {
-            count::CountBy::<MI, MO, TI, TO>::make(n).into()
+                  (MI, MO): CountByConstant<MI, MO> {
+            make_count_by::<MI, MO, TI, TO>(n).into()
         }
         dispatch!(monomorphize2, [
             (type_args.0[0], [HammingDistance, SymmetricDistance]),
