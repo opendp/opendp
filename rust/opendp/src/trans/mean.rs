@@ -1,7 +1,7 @@
 use crate::core::{DatasetMetric, SensitivityMetric, Transformation, Function, Metric, StabilityRelation};
-use std::ops::{Sub, Mul, Div};
+use std::ops::{Sub, Div};
 use std::iter::Sum;
-use crate::traits::DistanceCast;
+use crate::traits::DistanceConstant;
 use crate::error::Fallible;
 use crate::dom::{VectorDomain, IntervalDomain, AllDomain, SizedDomain};
 use std::collections::Bound;
@@ -33,7 +33,7 @@ pub fn make_bounded_mean<MI, MO>(
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric,
-          MO::Distance: 'static + Clone + PartialOrd + Sub<Output=MO::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + DistanceCast + Float,
+          MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float,
           for <'a> MO::Distance: Sum<&'a MO::Distance>,
           (MI, MO): BoundedMeanConstant<MI, MO> {
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }

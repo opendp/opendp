@@ -125,6 +125,7 @@
 
 #![allow(clippy::upper_case_acronyms)]
 #![allow(clippy::just_underscores_and_digits)]
+#![allow(clippy::type_complexity)]
 
 // create clones of variables that are free to be consumed by a closure
 macro_rules! enclose {

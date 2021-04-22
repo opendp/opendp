@@ -14,18 +14,18 @@ pub type DataFrame<K> = HashMap<K, Column>;
 pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 
 /// ensure all rows have `len` number of cells
-fn conform_records<'a>(len: usize, records: &Vec<Vec<&'a str>>) -> Vec<Vec<&'a str>> {
-    records.into_iter().map(|record| match record.len().cmp(&len) {
+fn conform_records<'a>(len: usize, records: &[Vec<&'a str>]) -> Vec<Vec<&'a str>> {
+    records.iter().map(|record| match record.len().cmp(&len) {
         Ordering::Less => // record is too short; pad with empty strings
             record.clone().into_iter().chain(repeat("").take(len - record.len())).collect(),
         Ordering::Equal => // record is just right
             record.clone(),
         Ordering::Greater => // record is too long; slice down
-            record[0..len].to_vec().clone()
+            record[0..len].to_vec()
     }).collect()
 }
 
-fn create_dataframe<K: Eq + Hash>(col_names: Vec<K>, records: &Vec<Vec<&str>>) -> DataFrame<K> {
+fn create_dataframe<K: Eq + Hash>(col_names: Vec<K>, records: &[Vec<&str>]) -> DataFrame<K> {
     // make data rectangular
     let records = conform_records(col_names.len(), &records);
 
@@ -50,7 +50,7 @@ pub fn make_create_data_frame<M, K>(
         VectorDomain::new(VectorDomain::new_all()),
         create_dataframe_domain(),
         Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
-            let arg = arg.into_iter().map(|e| vec_string_to_str(e)).collect();
+            let arg: Vec<_>  = arg.iter().map(|e| vec_string_to_str(e)).collect();
             create_dataframe(col_names.clone(), &arg)
         }),
         M::default(),
@@ -59,7 +59,7 @@ pub fn make_create_data_frame<M, K>(
     ))
 }
 
-fn split_dataframe<'a, K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str) -> DataFrame<K> {
+fn split_dataframe<K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str) -> DataFrame<K> {
     let lines = split_lines(s);
     let records = split_records(separator, &lines);
     let records = conform_records(col_names.len(), &records);
@@ -92,7 +92,7 @@ fn parse_column<K, T>(key: &K, impute: bool, df: &DataFrame<K>) -> Fallible<Data
     where T: 'static + Debug + Clone + PartialEq + FromStr + Default,
           K: Eq + Hash + Clone + Debug,
           T::Err: Debug {
-    let col = df.get(key)
+    let col: &Vec<String> = df.get(key)
         .ok_or_else(|| err!(FailedFunction, "column does not exist: {:?}", key))?
         .as_form()?;
     let col = vec_string_to_str(col);
@@ -132,10 +132,8 @@ pub fn make_select_column<M, K, T>(key: K) -> Fallible<Transformation<DataFrameD
         StabilityRelation::new_from_constant(1_u32)))
 }
 
-/// A [`Transformation`] that takes a `String` and splits it into a `Vec<String>` of its lines.
-
-fn vec_string_to_str(src: &Vec<String>) -> Vec<&str> {
-    src.into_iter().map(|e| e.as_str()).collect()
+fn vec_string_to_str(src: &[String]) -> Vec<&str> {
+    src.iter().map(|e| e.as_str()).collect()
 }
 
 fn vec_str_to_string(src: Vec<&str>) -> Vec<String> {
@@ -146,6 +144,7 @@ fn split_lines(s: &str) -> Vec<&str> {
     s.lines().collect()
 }
 
+/// A [`Transformation`] that takes a `String` and splits it into a `Vec<String>` of its lines.
 pub fn make_split_lines<M>() -> Fallible<Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M>>
     where M: Clone + DatasetMetric<Distance=u32> {
     Ok(Transformation::new(
@@ -159,13 +158,13 @@ pub fn make_split_lines<M>() -> Fallible<Transformation<AllDomain<String>, Vecto
         StabilityRelation::new_from_constant(1_u32)))
 }
 
-fn parse_series<T>(col: &Vec<&str>, default_on_error: bool) -> Fallible<Vec<T>> where
+fn parse_series<T>(col: &[&str], default_on_error: bool) -> Fallible<Vec<T>> where
     T: FromStr + Default,
     T::Err: Debug {
     if default_on_error {
-        Ok(col.into_iter().map(|v| v.parse().unwrap_or_default()).collect())
+        Ok(col.iter().map(|v| v.parse().unwrap_or_default()).collect())
     } else {
-        col.into_iter().map(|v| v.parse().map_err(|e| err!(FailedCast, "{:?}", e))).collect()
+        col.iter().map(|v| v.parse().map_err(|e| err!(FailedCast, "{:?}", e))).collect()
     }
 }
 
@@ -185,11 +184,11 @@ pub fn make_parse_series<M, T>(impute: bool) -> Fallible<Transformation<VectorDo
         StabilityRelation::new_from_constant(1_u32)))
 }
 
-fn split_records<'a>(separator: &str, lines: &Vec<&'a str>) -> Vec<Vec<&'a str>> {
+fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
     fn split<'a>(line: &'a str, separator: &str) -> Vec<&'a str> {
         line.split(separator).into_iter().map(|e| e.trim()).collect()
     }
-    lines.into_iter().map(|e| split(e, separator)).collect()
+    lines.iter().map(|e| split(e, separator)).collect()
 }
 
 pub fn make_split_records<M>(separator: Option<&str>) -> Fallible<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M>>

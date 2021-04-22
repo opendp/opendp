@@ -88,7 +88,7 @@ impl SampleBernoulli for bool {
     fn sample_bernoulli(prob: f64, enforce_constant_time: bool) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
-        if prob < 0.0 || prob > 1.0 {return fallible!(FailedFunction, "probability is not within [0, 1]")}
+        if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
         // decompose probability into mantissa and exponent integers to quickly identify the value in the first_heads_index
         let (_sign, exponent, mantissa) = prob.decompose_raw();
@@ -266,7 +266,7 @@ impl<T: Zero + One + PartialOrd + AddAssign + Clone> SampleGeometric for T {
     fn sample_geometric(prob: f64, max_trials: Self, enforce_constant_time: bool) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
-        if prob < 0.0 || prob > 1.0 {return fallible!(FailedFunction, "probability is not within [0, 1]")}
+        if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
         let mut n_trials: Self = T::zero();
         let mut geom_return: Self = T::zero();

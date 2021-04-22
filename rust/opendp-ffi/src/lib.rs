@@ -49,7 +49,7 @@
 //!
 //! In order to deal with this, we use a couple of different strategies, depending on the context.
 //!
-//! ## `TypeArgs` and the Dispatch Pattern
+//! ## `Vec<Type>` and the Dispatch Pattern
 //!
 //! To work through a simple example, imagine we had a generic function like this:
 //!
@@ -83,6 +83,8 @@
 //! specifying the FFI entry points of the module.
 //!
 //! // TODO: Show JSON example.
+
+#![allow(clippy::upper_case_acronyms)]
 
 #[macro_use]
 extern crate lazy_static;

@@ -1,13 +1,13 @@
 use std::cmp::Ordering;
 use std::collections::Bound;
 use std::iter::Sum;
-use std::ops::{Div, Mul, Sub};
+use std::ops::Sub;
 
 use crate::core::{DatasetMetric, Function, Metric, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{Abs, DistanceCast};
+use crate::traits::{Abs, DistanceCast, DistanceConstant};
 
 fn max<T: PartialOrd>(a: T, b: T) -> Option<T> {
     a.partial_cmp(&b).map(|o| if let Ordering::Less = o {b} else {a})
@@ -37,7 +37,7 @@ pub fn make_bounded_sum<MI, MO>(
 ) -> Fallible<Transformation<VectorDomain<IntervalDomain<MO::Distance>>, AllDomain<MO::Distance>, MI, MO>>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric,
-          MO::Distance: 'static + Clone + PartialOrd + Sub<Output=MO::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + DistanceCast,
+          MO::Distance: DistanceConstant + Sub<Output=MO::Distance>,
           for <'a> MO::Distance: Sum<&'a MO::Distance>,
           (MI, MO): BoundedSumConstant<MI, MO> {
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
@@ -56,7 +56,7 @@ pub fn make_bounded_sum_n<MO>(
     lower: MO::Distance, upper: MO::Distance, length: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, SymmetricDistance, MO>>
     where MO: SensitivityMetric,
-          MO::Distance: 'static + Clone + PartialOrd + Sub<Output=MO::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + DistanceCast,
+          MO::Distance: DistanceConstant + Sub<Output=MO::Distance>,
           for <'a> MO::Distance: Sum<&'a MO::Distance> {
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 

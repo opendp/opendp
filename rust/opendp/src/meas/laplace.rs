@@ -37,7 +37,7 @@ pub fn make_base_laplace_vec<T>(
         VectorDomain::new_all(),
         Function::new_fallible(move |arg: &Vec<T>| -> Fallible<Vec<T>> {
             arg.iter()
-                .map(|v| T::sample_laplace(v.clone(), scale, false))
+                .map(|v| T::sample_laplace(*v, scale, false))
                 .collect()
         }),
         L1Sensitivity::default(),

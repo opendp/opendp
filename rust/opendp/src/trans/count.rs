@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::convert::TryFrom;
 use std::hash::Hash;
-use std::ops::{AddAssign, Div, Mul};
+use std::ops::AddAssign;
 
 use num::{Integer, NumCast, One, Zero};
 use num::traits::FloatConst;
@@ -11,7 +11,7 @@ use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation,
 use crate::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::DistanceCast;
+use crate::traits::DistanceConstant;
 
 
 pub fn make_count<MI, MO, T>() -> Fallible<Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO>>
@@ -56,7 +56,7 @@ pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible
           MO: SensitivityMetric,
           TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign,
-          MO::Distance: 'static + Clone + DistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd,
+          MO::Distance: DistanceConstant,
           (MI, MO): CountByCategoriesConstant<MI, MO> {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
@@ -70,7 +70,7 @@ pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible
                 .map(|cat| (cat, TO::zero())).collect::<HashMap<&TI, TO>>();
             let mut null_count = TO::zero();
 
-            data.into_iter().for_each(|v|
+            data.iter().for_each(|v|
                 *match counts.entry(v) {
                     Entry::Occupied(v) => v.into_mut(),
                     Entry::Vacant(_v) => &mut null_count
@@ -117,15 +117,15 @@ pub fn make_count_by<MI, MO, TI, TO>(n: usize) -> Fallible<Transformation<SizedD
           MO: SensitivityMetric,
           TI: 'static + Eq + Hash + Clone,
           TO: Integer + Zero + One + AddAssign,
-          MO::Distance: 'static + Clone + DistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd,
+          MO::Distance: DistanceConstant,
           (MI, MO): CountByConstant<MI, MO> {
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), n),
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
         Function::new(move |data: &Vec<TI>| {
             let mut counts = HashMap::new();
-            data.into_iter().for_each(|v|
-                *counts.entry(v.clone()).or_insert(TO::zero()) += TO::one()
+            data.iter().for_each(|v|
+                *counts.entry(v.clone()).or_insert_with(TO::zero) += TO::one()
             );
             counts
         }),

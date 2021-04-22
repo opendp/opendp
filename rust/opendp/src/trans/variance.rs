@@ -1,6 +1,6 @@
 use std::collections::Bound;
 use std::iter::Sum;
-use std::ops::{Div, Mul, Sub, Add};
+use std::ops::{Div, Sub, Add};
 
 use num::{Float, One, Zero, NumCast};
 
@@ -8,7 +8,7 @@ use crate::core::{DatasetMetric, Function, Metric, SensitivityMetric, StabilityR
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::DistanceCast;
+use crate::traits::DistanceConstant;
 
 
 pub trait BoundedVarianceConstant<MI: Metric, MO: Metric> {
@@ -40,7 +40,7 @@ pub fn make_bounded_variance<MI, MO>(
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric,
-          MO::Distance: 'static + Clone + PartialOrd + Sub<Output=MO::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + DistanceCast + Float + Sum<MO::Distance> + for<'a> Sum<&'a MO::Distance>,
+          MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float + Sum<MO::Distance> + for<'a> Sum<&'a MO::Distance>,
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
           (MI, MO): BoundedVarianceConstant<MI, MO> {
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
@@ -94,7 +94,7 @@ pub fn make_bounded_covariance<MI, MO>(
 ) -> Fallible<Transformation<CovarianceDomain<MO::Distance>, AllDomain<MO::Distance>, MI, MO>>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric,
-          MO::Distance: 'static + Clone + PartialOrd + Sub<Output=MO::Distance> + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + Sum<MO::Distance> + DistanceCast + Zero,
+          MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Sum<MO::Distance> + Zero,
           for <'a> MO::Distance: Div<&'a MO::Distance, Output=MO::Distance> + Add<&'a MO::Distance, Output=MO::Distance>,
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
           (MI, MO): BoundedCovarianceConstant<MI, MO> {

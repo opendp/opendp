@@ -13,7 +13,7 @@ censored_data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'da
 
 
 def check_stability(scale, threshold, line_count, budget):
-    count_by = odp.trans.make_count_by(b"<SymmetricDistance, L2Sensitivity<f64>, String, u32, f64>", line_count)
+    count_by = odp.trans.make_count_by(b"<SymmetricDistance, L2Sensitivity<f64>, String, u32>", line_count)
     base_stability = odp.meas.make_base_stability(b"<L2Sensitivity<f64>, String, u32, f64>",
                                                   line_count, opendp.f64_p(scale), opendp.f64_p(threshold))
     stability_mech = odp.core.make_chain_mt(base_stability, count_by)

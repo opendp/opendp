@@ -7,7 +7,7 @@ use opendp::data::Column;
 
 use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice, FfiError};
 use crate::util;
-use crate::util::{Type, TypeArgs, TypeContents, c_bool};
+use crate::util::{Type, TypeContents, c_bool, parse_type_args};
 use std::fmt::Debug;
 use opendp::error::Fallible;
 use opendp::{fallible, err};
@@ -30,6 +30,7 @@ pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *c
         // TODO: Need to do some extra wrapping to own the slice here.
         unimplemented!()
     }
+    #[allow(clippy::unnecessary_wraps)]
     fn raw_to_vec<T: Clone>(raw: &FfiSlice) -> Fallible<*const c_void> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
         let vec = slice.to_vec();
@@ -47,8 +48,8 @@ pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *c
         // println!("rust: {:?}", tuple);
         Ok(util::into_raw(tuple) as *const c_void)
     }
-    let type_args = try_!(TypeArgs::parse(type_args, 1));
-    let type_ = type_args.0[0].clone();
+    let type_args = try_!(parse_type_args(type_args, 1));
+    let type_ = type_args[0].clone();
     let raw = try_as_ref!(raw);
     let val = try_!(match type_.contents {
         TypeContents::PLAIN("String") => {
@@ -189,7 +190,7 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> FfiResult<*m
         (Box<(Box<f64>, Box<f64>)>, Box<f64>)
     ])], (this)).map_or_else(
         |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
-        |v| FfiResult::Ok(v))
+        FfiResult::Ok)
 }
 
 #[no_mangle]

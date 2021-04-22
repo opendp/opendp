@@ -20,12 +20,11 @@
 // Ordering of generic arguments
 // DI, DO, MI, MO, TI, TO, QI, QO
 
-use std::ops::{Div, Mul};
 use std::rc::Rc;
 
 use crate::dom::{BoxDomain, PairDomain};
 use crate::error::*;
-use crate::traits::{Distance, DistanceCast};
+use crate::traits::{DistanceConstant, DistanceCast};
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -161,7 +160,7 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
         MI::Distance: Clone + DistanceCast,
-        MO::Distance: 'static + Distance {
+        MO::Distance: DistanceConstant {
 
         PrivacyRelation::new_all(
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
@@ -274,7 +273,7 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
         MI::Distance: Clone + DistanceCast,
-        MO::Distance: Clone + DistanceCast + Mul<Output=MO::Distance> + Div<Output=MO::Distance> + PartialOrd + 'static {
+        MO::Distance: DistanceConstant {
 
         StabilityRelation::new_all(
             // relation

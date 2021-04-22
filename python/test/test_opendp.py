@@ -42,28 +42,28 @@ def test_data_object_tuple():
 
 def test_identity_int():
     odp = opendp.OpenDP()
-    transformation = odp.trans.make_identity(b"<i32>")
+    transformation = odp.trans.make_identity(b"<HammingDistance, i32>")
     arg = 123
     ret = odp.transformation_invoke(transformation, arg)
     assert ret == arg
 
 def test_identity_float():
     odp = opendp.OpenDP()
-    transformation = odp.trans.make_identity(b"<f64>")
+    transformation = odp.trans.make_identity(b"<HammingDistance, f64>")
     arg = 123.123
     ret = odp.transformation_invoke(transformation, arg)
     assert ret == arg
 
 def test_identity_str():
     odp = opendp.OpenDP()
-    transformation = odp.trans.make_identity(b"<String>")
+    transformation = odp.trans.make_identity(b"<HammingDistance, String>")
     arg = "hello, world"
     ret = odp.transformation_invoke(transformation, arg)
     assert ret == arg
 
 def test_identity_list():
     odp = opendp.OpenDP()
-    transformation = odp.trans.make_identity(b"<Vec<i32>>")
+    transformation = odp.trans.make_identity(b"<HammingDistance, Vec<i32>>")
     arg = [1, 2, 3]
     ret = odp.transformation_invoke(transformation, arg)
     assert ret == arg

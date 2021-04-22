@@ -1,18 +1,17 @@
 use std::collections::Bound;
-use std::ops::{Div, Mul};
 
 use num::One;
 
 use crate::core::{DatasetMetric, Domain, Function, Metric, StabilityRelation, Transformation};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{CastFrom, DistanceCast, Distance};
+use crate::traits::{CastFrom, DistanceConstant};
 
 
 /// Constructs a [`Transformation`] representing the identity function.
 pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
     where D: Domain, D::Carrier: Clone,
-          M: Metric, M::Distance: 'static + Distance + One {
+          M: Metric, M::Distance: DistanceConstant + One {
     Ok(Transformation::new(
         domain.clone(),
         domain,
@@ -25,11 +24,11 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
 pub fn make_clamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M>>
     where M: Metric,
           T: 'static + Clone + PartialOrd,
-          M::Distance: 'static + One + Mul<Output=M::Distance> + Div<Output=M::Distance> + PartialOrd + DistanceCast {
+          M::Distance: DistanceConstant + One {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
-        Function::new(move |arg: &Vec<T>| arg.into_iter().map(|e| clamp(&lower, &upper, e)).collect()),
+        Function::new(move |arg: &Vec<T>| arg.iter().map(|e| clamp(&lower, &upper, e)).collect()),
         M::default(),
         M::default(),
         // clamping has a c-stability of one, as well as a lipschitz constant of one
@@ -39,7 +38,7 @@ pub fn make_clamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<Vecto
 pub fn make_clamp<M, T>(lower: T, upper: T) -> Fallible<Transformation<AllDomain<T>, IntervalDomain<T>, M, M>>
     where M: Metric,
           T: 'static + Clone + PartialOrd,
-          M::Distance: 'static + One + Mul<Output=M::Distance> + Div<Output=M::Distance> + PartialOrd + DistanceCast {
+          M::Distance: DistanceConstant + One {
     Ok(Transformation::new(
         AllDomain::new(),
         IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone())),
@@ -51,14 +50,14 @@ pub fn make_clamp<M, T>(lower: T, upper: T) -> Fallible<Transformation<AllDomain
 }
 
 fn clamp<T: Clone + PartialOrd>(lower: &T, upper: &T, x: &T) -> T {
-    (if x < &lower { lower } else if x > &upper { upper } else { x }).clone()
+    (if x < lower { lower } else if x > upper { upper } else { x }).clone()
 }
 
 
 pub fn make_unclamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, VectorDomain<AllDomain<T>>, M, M>>
     where M: Metric,
           T: 'static + Clone + PartialOrd,
-          M::Distance: 'static + Default + DistanceCast + One + Div<Output=M::Distance> + Mul<Output=M::Distance> + PartialOrd {
+          M::Distance: DistanceConstant + One {
     Ok(Transformation::new(
         VectorDomain::new(IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
         VectorDomain::new_all(),
@@ -72,7 +71,7 @@ pub fn make_unclamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<Vec
 pub fn make_unclamp<M, T>(lower: Bound<T>, upper: Bound<T>) -> Fallible<Transformation<IntervalDomain<T>, AllDomain<T>, M, M>>
     where M: Metric,
           T: 'static + Clone + PartialOrd,
-          M::Distance: 'static + Default + DistanceCast + One + Div<Output=M::Distance> + Mul<Output=M::Distance> + PartialOrd{
+          M::Distance: DistanceConstant + One {
     Ok(Transformation::new(
         IntervalDomain::new(lower, upper),
         AllDomain::new(),
@@ -90,7 +89,7 @@ pub fn make_cast_vec<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDom
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<TI>| arg.into_iter()
+        Function::new(move |arg: &Vec<TI>| arg.iter()
             .map(|v| TO::cast(v.clone()).unwrap_or_else(|_| TO::default()))
             .collect()),
         M::default(),
@@ -102,7 +101,7 @@ pub fn make_cast_vec<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDom
 // Need a way to also cast M::Distance that doesn't allow changing M
 pub fn make_cast<M, TI, TO>() -> Fallible<Transformation<AllDomain<TI>, AllDomain<TO>, M, M>>
     where M: Metric,
-          M::Distance: 'static + One + DistanceCast + Div<Output=M::Distance> + Mul<Output=M::Distance> + PartialOrd,
+          M::Distance: DistanceConstant + One,
           TI: Clone,
           TO: 'static + CastFrom<TI> + Default {
     Ok(Transformation::new(

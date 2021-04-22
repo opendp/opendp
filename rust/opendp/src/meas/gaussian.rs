@@ -59,7 +59,7 @@ pub fn make_base_gaussian_vec<T>(
         VectorDomain::new_all(),
         Function::new_fallible(move |arg: &Vec<T>| -> Fallible<Vec<T>> {
             arg.iter()
-                .map(|v| T::sample_gaussian(v.clone(), scale, false))
+                .map(|v| T::sample_gaussian(*v, scale, false))
                 .collect()
         }),
         L2Sensitivity::default(),
