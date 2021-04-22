@@ -90,7 +90,9 @@
 extern crate lazy_static;
 
 // internal module for err! macro resolution
-mod error { pub use opendp::error::{Error, ErrorVariant}; }
+mod error {
+    pub use opendp::error::{Error, ErrorVariant};
+}
 // replacement for ? operator, for FfiResults
 macro_rules! try_ {
     ($value:expr) => {
@@ -105,13 +107,14 @@ macro_rules! try_ {
 // *mut T -> Option<&T> -> Fallible<&T> -> &T
 macro_rules! try_as_ref {
     ($value:expr) => {
-        try_!(util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))));
+        try_!(crate::util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))));
     }
 }
 
 #[macro_use]
 mod dispatch;
 
+mod chain;
 mod core;
 mod data;
 mod meas;
