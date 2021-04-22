@@ -6,47 +6,47 @@ use crate::dom::{BoxDomain, PairDomain};
 use crate::error::Fallible;
 
 // GLUE FOR FFI USE OF COMBINATORS
-fn new_clone<T: Clone>() -> Rc<dyn Fn(&T) -> T> {
-    let clone = |t: &T| t.clone();
-    Rc::new(clone)
+fn new_clone<T: Clone>() -> Rc<dyn Fn(&Box<T>) -> Box<T>> {
+    Rc::new(|t: &Box<T>| t.clone())
 }
 
-fn new_domain_glue<D: Domain>() -> (Rc<dyn Fn(&D, &D) -> bool>, Rc<dyn Fn(&D) -> D>) {
-    let eq = |d0: &D, d1: &D| d0 == d1;
-    let eq = Rc::new(eq);
-    let clone = new_clone();
-    (eq, clone)
+fn new_domain_eq<D: Domain>() -> Rc<dyn Fn(&Box<D>, &Box<D>) -> bool> {
+    Rc::new(|d0: &Box<D>, d1: &Box<D>| d0 == d1)
 }
 
 /// Public only for access from FFI.
 #[derive(Clone)]
 pub struct MeasureGlue<D: Domain, M: Measure> {
-    pub domain_eq: Rc<dyn Fn(&D, &D) -> bool>,
-    pub domain_clone: Rc<dyn Fn(&D) -> D>,
-    pub measure_clone: Rc<dyn Fn(&M) -> M>,
+    pub domain_eq: Rc<dyn Fn(&Box<D>, &Box<D>) -> bool>,
+    pub domain_clone: Rc<dyn Fn(&Box<D>) -> Box<D>>,
+    pub measure_clone: Rc<dyn Fn(&Box<M>) -> Box<M>>,
 }
 
 impl<D: 'static + Domain, M: 'static + Measure> Default for MeasureGlue<D, M> {
     fn default() -> Self {
-        let (domain_eq, domain_clone) = new_domain_glue();
-        let measure_clone = new_clone();
-        MeasureGlue { domain_eq, domain_clone, measure_clone }
+        MeasureGlue {
+            domain_eq: new_domain_eq(),
+            domain_clone: new_clone(),
+            measure_clone: new_clone()
+        }
     }
 }
 
 /// Public only for access from FFI.
 #[derive(Clone)]
 pub struct MetricGlue<D: Domain, M: Metric> {
-    pub domain_eq: Rc<dyn Fn(&D, &D) -> bool>,
-    pub domain_clone: Rc<dyn Fn(&D) -> D>,
-    pub metric_clone: Rc<dyn Fn(&M) -> M>,
+    pub domain_eq: Rc<dyn Fn(&Box<D>, &Box<D>) -> bool>,
+    pub domain_clone: Rc<dyn Fn(&Box<D>) -> Box<D>>,
+    pub metric_clone: Rc<dyn Fn(&Box<M>) -> Box<M>>,
 }
 
 impl<D: 'static + Domain, M: 'static + Metric> Default for MetricGlue<D, M> {
     fn default() -> Self {
-        let (domain_eq, domain_clone) = new_domain_glue();
-        let metric_clone = new_clone();
-        MetricGlue { domain_eq, domain_clone, metric_clone }
+        MetricGlue {
+            domain_eq: new_domain_eq(),
+            domain_clone: new_clone(),
+            metric_clone: new_clone()
+        }
     }
 }
 
@@ -70,11 +70,11 @@ pub fn make_chain_mt_glue<DI, DX, DO, MI, MX, MO>(
         return fallible!(DomainMismatch);
     }
     Ok(Measurement {
-        input_domain: Box::new((input_glue.domain_clone)(&transformation0.input_domain)),
-        output_domain: Box::new((output_glue.domain_clone)(&measurement1.output_domain)),
+        input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
+        output_domain: (output_glue.domain_clone)(&measurement1.output_domain),
         function: Function::make_chain(&measurement1.function, &transformation0.function),
-        input_metric: Box::new((input_glue.metric_clone)(&transformation0.input_metric)),
-        output_measure: Box::new((output_glue.measure_clone)(&measurement1.output_measure)),
+        input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
+        output_measure: (output_glue.measure_clone)(&measurement1.output_measure),
         privacy_relation: PrivacyRelation::make_chain(
             &measurement1.privacy_relation,
             &transformation0.stability_relation, hint),
@@ -116,11 +116,11 @@ pub fn make_chain_tt_glue<DI, DX, DO, MI, MX, MO>(
         return fallible!(DomainMismatch)
     }
     Ok(Transformation {
-        input_domain: Box::new((input_glue.domain_clone)(&transformation0.input_domain)),
-        output_domain: Box::new((output_glue.domain_clone)(&transformation1.output_domain)),
+        input_domain: (input_glue.domain_clone)(&transformation0.input_domain),
+        output_domain: (output_glue.domain_clone)(&transformation1.output_domain),
         function: Function::make_chain(&transformation1.function, &transformation0.function),
-        input_metric: Box::new((input_glue.metric_clone)(&transformation0.input_metric)),
-        output_metric: Box::new((output_glue.metric_clone)(&transformation1.output_metric)),
+        input_metric: (input_glue.metric_clone)(&transformation0.input_metric),
+        output_metric: (output_glue.metric_clone)(&transformation1.output_metric),
         stability_relation: StabilityRelation::make_chain(
             &transformation1.stability_relation,
             &transformation0.stability_relation, hint),
@@ -174,15 +174,15 @@ pub fn make_composition_glue<DI, DO0, DO1, MI, MO>(
     }
 
     Ok(Measurement {
-        input_domain: Box::new((input_glue.domain_clone)(&measurement0.input_domain)),
+        input_domain: (input_glue.domain_clone)(&measurement0.input_domain),
         output_domain: Box::new(PairDomain::new(
-            BoxDomain::new(Box::new((output_glue0.domain_clone)(&measurement0.output_domain))),
-            BoxDomain::new(Box::new((output_glue1.domain_clone)(&measurement1.output_domain))))),
+            BoxDomain::new((output_glue0.domain_clone)(&measurement0.output_domain)),
+            BoxDomain::new((output_glue1.domain_clone)(&measurement1.output_domain)))),
         function: Function::make_composition(&measurement0.function, &measurement1.function),
         // TODO: Figure out input_metric for composition.
-        input_metric: Box::new((input_glue.metric_clone)(&measurement0.input_metric)),
+        input_metric: (input_glue.metric_clone)(&measurement0.input_metric),
         // TODO: Figure out output_measure for composition.
-        output_measure: Box::new((output_glue0.measure_clone)(&measurement0.output_measure)),
+        output_measure: (output_glue0.measure_clone)(&measurement0.output_measure),
         // TODO: PrivacyRelation for make_composition
         privacy_relation: PrivacyRelation::new(|_i, _o| false),
     })

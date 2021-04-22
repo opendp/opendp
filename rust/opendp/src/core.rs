@@ -63,11 +63,11 @@ impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
     pub fn make_chain<XD: 'static + Domain>(function1: &Function<XD, DO>, function0: &Function<DI, XD>) -> Function<DI, DO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
-        let function = move |arg: &DI::Carrier| -> Fallible<Box<DO::Carrier>> {
-            function1(&*function0(arg)?)
-        };
-        let function = Rc::new(function);
-        Function { function }
+        Function {
+            function: Rc::new(move |arg: &DI::Carrier| -> Fallible<Box<DO::Carrier>> {
+                function1(&*function0(arg)?)
+            })
+        }
     }
 }
 

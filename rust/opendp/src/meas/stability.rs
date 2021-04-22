@@ -108,7 +108,7 @@ mod test_stability {
         arg.insert(false, 4);
         let measurement = make_base_stability::<L2Sensitivity<f64>, bool, i8>(10, 0.5, 1.)?;
         let ret = measurement.function.eval(&arg)?;
-        println!("stability eval: {:?}", ret);
+        // println!("stability eval: {:?}", ret);
 
         assert!(measurement.privacy_relation.eval(&1., &(2.3, 1e-5))?);
         Ok(())

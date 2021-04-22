@@ -198,7 +198,7 @@ pub extern "C" fn opendp_data__bootstrap() -> *const c_char {
     let spec =
 r#"{
 "functions": [
-    { "name": "to_string", "args": [ ["const FfiObject *", "this"] ], "ret": "const char *" },
+    { "name": "to_string", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const char *>" },
     { "name": "slice_as_object", "args": [ ["const char *", "type_args"], ["const void *", "raw"] ], "ret": "FfiResult<const FfiObject *>" },
     { "name": "object_type", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const char *>" },
     { "name": "object_as_slice", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const FfiSlice *>" },
