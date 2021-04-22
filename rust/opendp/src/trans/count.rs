@@ -27,23 +27,23 @@ pub fn make_count<MI, MO, T>() -> Fallible<Transformation<VectorDomain<AllDomain
         StabilityRelation::new_from_constant(1_u32)))
 }
 
-pub trait CountByCategoriesConstant<MI: DatasetMetric, MO: SensitivityMetric> {
+pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
     fn get_stability_constant() -> Fallible<MO::Distance>;
 }
 
-impl<QO: NumCast> CountByCategoriesConstant<HammingDistance, L1Sensitivity<QO>> for (HammingDistance, L1Sensitivity<QO>) {
+impl<QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for (HammingDistance, L1Sensitivity<QO>) {
     fn get_stability_constant() -> Fallible<QO> {
         c!(2.; QO)
     }
 }
 
-impl<QO: FloatConst> CountByCategoriesConstant<HammingDistance, L2Sensitivity<QO>> for (HammingDistance, L2Sensitivity<QO>) {
+impl<QO: FloatConst> CountByConstant<HammingDistance, L2Sensitivity<QO>> for (HammingDistance, L2Sensitivity<QO>) {
     fn get_stability_constant() -> Fallible<QO> {
         Ok(QO::SQRT_2())
     }
 }
 
-impl<MO: SensitivityMetric> CountByCategoriesConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
+impl<MO: SensitivityMetric> CountByConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
     where MO::Distance: One {
     fn get_stability_constant() -> Fallible<MO::Distance> {
         Ok(MO::Distance::one())
@@ -57,7 +57,7 @@ pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible
           TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign,
           MO::Distance: DistanceConstant,
-          (MI, MO): CountByCategoriesConstant<MI, MO> {
+          (MI, MO): CountByConstant<MI, MO> {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct")
@@ -84,31 +84,6 @@ pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible
         MI::default(),
         MO::default(),
         StabilityRelation::new_from_constant(<(MI, MO)>::get_stability_constant()?)))
-}
-
-
-// this entire trait is duplicated code (only changed the struct it is impl'ed for)
-pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
-    fn get_stability_constant() -> Fallible<MO::Distance>;
-}
-
-impl<QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for (HammingDistance, L1Sensitivity<QO>) {
-    fn get_stability_constant() -> Fallible<QO> {
-        c!(2.; QO)
-    }
-}
-
-impl<QO: FloatConst> CountByConstant<HammingDistance, L2Sensitivity<QO>> for (HammingDistance, L2Sensitivity<QO>) {
-    fn get_stability_constant() -> Fallible<QO> {
-        Ok(QO::SQRT_2())
-    }
-}
-
-impl<MO: SensitivityMetric> CountByConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
-    where MO::Distance: One {
-    fn get_stability_constant() -> Fallible<MO::Distance> {
-        Ok(MO::Distance::one())
-    }
 }
 
 // count with known n, unknown categories

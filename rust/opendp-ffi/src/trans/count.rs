@@ -9,7 +9,7 @@ use opendp::core::{DatasetMetric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::err;
 use opendp::traits::DistanceConstant;
-use opendp::trans::{CountByCategoriesConstant, CountByConstant, make_count, make_count_by, make_count_by_categories};
+use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories};
 
 use crate::core::{FfiObject, FfiResult, FfiTransformation};
 use crate::util::{parse_type_args, Type};
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(type_args: *const c_cha
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign,
                   MO::Distance: DistanceConstant + FloatConst + One,
-                  (MI, MO): CountByCategoriesConstant<MI, MO> {
+                  (MI, MO): CountByConstant<MI, MO> {
             let categories = try_as_ref!(categories as *const Vec<TI>).clone();
             make_count_by_categories::<MI, MO, TI, TO>(categories).into()
         }
