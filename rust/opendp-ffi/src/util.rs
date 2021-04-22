@@ -326,21 +326,24 @@ mod tests {
 
     #[test]
     fn test_type_args_try_from_vec() {
-        let parsed: Vec<Type> = parse_type_args("<Vec<i32>>".as_ptr() as *const c_char, 1).unwrap_test();
+        let temp = "<Vec<i32>>".to_string();
+        let parsed: Vec<Type> = parse_type_args(temp.as_ptr() as *const c_char, 1).unwrap_test();
         let explicit = vec![Type::of::<Vec<i32>>()];
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args_try_from_numbers() {
-        let parsed: Vec<Type> = parse_type_args("<i32, f64>".as_ptr() as *const c_char, 2).unwrap_test();
+        let temp = "<i32, f64>".to_string();
+        let parsed: Vec<Type> = parse_type_args(temp.as_ptr() as *const c_char, 2).unwrap_test();
         let explicit = vec![Type::of::<i32>(), Type::of::<f64>()];
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args() {
-        let parsed: Vec<Type> = parse_type_args("<i32, f32>".as_ptr() as *const c_char, 2).unwrap_test();
+        let temp = "<i32, f32>".to_string();
+        let parsed: Vec<Type> = parse_type_args(temp.as_ptr() as *const c_char, 2).unwrap_test();
         let explicit = vec![Type::of::<i32>(), Type::of::<f32>()];
         assert_eq!(parsed, explicit);
     }
