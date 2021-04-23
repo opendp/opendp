@@ -17,7 +17,6 @@ pub fn make_base_snapping(
     if min > max {
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
-    let b = (max - min) / 2.;
     Ok(Measurement::new(
         AllDomain::new(),
         AllDomain::new(),
@@ -44,7 +43,12 @@ pub fn make_base_snapping(
                 return fallible!(FailedRelation, "Operating system does not support sufficient precision to use the Snapping Mechanism");
             }
 
+            if sensitivity < d_in {
+                return fallible!(RelationDebug, "supplied sensitivity {:?} is less than required sensitivity {:?}", sensitivity, d_in);
+            }
+
             // effective epsilon is reduced due to snapping mechanism
+            let b = (max - min) / 2.;
             let epsilon = redefine_epsilon(eps, b, precision);
             if epsilon == 0.0 {
                 return fallible!(FailedFunction, "epsilon is zero due to floating-point round-off");
