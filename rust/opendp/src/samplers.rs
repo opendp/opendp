@@ -22,7 +22,7 @@ use statrs::function::erf;
 use rand::Rng;
 
 #[cfg(feature="use-mpfr")]
-struct GeneratorOpenSSL;
+pub(crate) struct GeneratorOpenSSL;
 
 #[cfg(feature="use-mpfr")]
 impl ThreadRandGen for GeneratorOpenSSL {
