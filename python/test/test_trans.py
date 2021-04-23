@@ -18,6 +18,6 @@ def test_sum_int():
 
 
 def test_mean():
-    mean = odp.trans.make_bounded_mean(b"<HammingDistance, L1Sensitivity<f64>, f64>", opendp.f64_p(0.), opendp.f64_p(10.), 5)
+    mean = odp.trans.make_bounded_mean(b"<HammingDistance, L1Sensitivity<f64>>", opendp.f64_p(0.), opendp.f64_p(10.), 5)
     result = odp.transformation_invoke(mean, [1., 2., 3., 4., 5.])
     assert result == 3.
