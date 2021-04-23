@@ -42,7 +42,8 @@ impl<MO: Metric<Distance=T>, T> BoundedSumConstant<SymmetricDistance, MO> for Bo
 impl<MI, MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T>, MI, MO, T, T> for BoundedSum<MI, MO>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric<Distance=T>,
-          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast,
+          T: 'static + Clone + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast,
+          for <'a> T: Sum<&'a T>,
           Self: BoundedSumConstant<MI, MO> {
     fn make2(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, MI, MO>> {
         if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
@@ -50,7 +51,7 @@ impl<MI, MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T
         Ok(Transformation::new(
             VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
             AllDomain::new(),
-            Function::new(|arg: &Vec<T>| arg.iter().cloned().sum()),
+            Function::new(|arg: &Vec<T>| arg.iter().sum()),
             MI::new(),
             MO::new(),
             StabilityRelation::new_from_constant(Self::get_stability_constant(lower, upper)?)))
@@ -59,14 +60,15 @@ impl<MI, MO, T> MakeTransformation2<VectorDomain<IntervalDomain<T>>, AllDomain<T
 
 impl<MO, T> MakeTransformation3<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO, T, T, usize> for BoundedSum<SymmetricDistance, MO>
     where MO: SensitivityMetric<Distance=T>,
-          T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T> + DistanceCast {
+          T: 'static + Copy + PartialOrd + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + DistanceCast,
+          for <'a> T: Sum<&'a T> {
     fn make3(lower: T, upper: T, length: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, MO>> {
         if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
         Ok(Transformation::new(
             SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
             AllDomain::new(),
-            Function::new(|arg: &Vec<T>| arg.iter().cloned().sum()),
+            Function::new(|arg: &Vec<T>| arg.iter().sum()),
             SymmetricDistance::new(),
             MO::new(),
             // d_out >= d_in * (M - m) / 2

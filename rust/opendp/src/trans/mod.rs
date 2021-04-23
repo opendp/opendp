@@ -12,6 +12,7 @@ pub mod manipulation;
 pub mod sum;
 pub mod count;
 pub mod mean;
+pub mod variance;
 
 // Trait for all constructors, can have different implementations depending on concrete types of Domains and/or Metrics
 pub trait MakeTransformation0<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
