@@ -22,8 +22,8 @@ pub fn make_base_snapping(
         AllDomain::new(),
         Function::new_fallible(move |arg: &f64|
             snapping_mechanism(*arg, scale, sensitivity, min, max, precision)),
-        L1Sensitivity::default(),
-        MaxDivergence::default(),
+        L1Sensitivity::new(),
+        MaxDivergence::new(),
         PrivacyRelation::new_fallible(move |&d_in: &f64, &eps: &f64| {
             if eps.is_sign_negative() || eps.is_zero() {
                 return fallible!(FailedRelation, "cause: epsilon <= 0");
