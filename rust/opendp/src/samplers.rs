@@ -30,7 +30,7 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
 }
 
 #[cfg(feature="use-mpfr")]
-struct GeneratorOpenSSL;
+pub(crate) struct GeneratorOpenSSL;
 
 #[cfg(feature="use-mpfr")]
 impl ThreadRandGen for GeneratorOpenSSL {
