@@ -14,6 +14,7 @@ pub extern "C" fn opendp_meas__bootstrap() -> *const c_char {
     { "name": "make_base_laplace", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiResult<FfiMeasurement *>" },
     { "name": "make_base_laplace_vec", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiResult<FfiMeasurement *>" },
     { "name": "make_base_gaussian", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiResult<FfiMeasurement *>" },
+    { "name": "make_base_gaussian_vec", "args": [ ["const char *", "selector"], ["void *", "scale"] ], "ret": "FfiResult<FfiMeasurement *>" },
     { "name": "make_base_simple_geometric", "args": [ ["const char *", "selector"], ["void *", "scale"], ["void *", "min"], ["void *", "max"] ], "ret": "FfiResult<FfiMeasurement *>" },
     { "name": "make_base_stability", "args": [ ["const char *", "selector"], ["unsigned int", "n"], ["void *", "scale"], ["void *", "threshold"] ], "ret": "FfiResult<FfiMeasurement *>" }
 ]

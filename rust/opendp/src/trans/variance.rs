@@ -18,9 +18,9 @@ pub trait BoundedVarianceConstant<MI: Metric, MO: Metric> {
 impl<MO: Metric> BoundedVarianceConstant<HammingDistance, MO> for (HammingDistance, MO)
     where MO::Distance: Float + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + NumCast + One {
     fn get_stability(lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = c!(length; MO::Distance)?;
+        let _length = num_cast!(length; MO::Distance)?;
         let _1 = MO::Distance::one();
-        let _ddof = c!(ddof; MO::Distance)?;
+        let _ddof = num_cast!(ddof; MO::Distance)?;
         Ok((upper - lower).powi(2) * (_length - _1) / _length / (_length - _ddof))
     }
 }
@@ -28,9 +28,9 @@ impl<MO: Metric> BoundedVarianceConstant<HammingDistance, MO> for (HammingDistan
 impl<MO: Metric> BoundedVarianceConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
     where MO::Distance: Float + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + NumCast + One {
     fn get_stability(lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = c!(length; MO::Distance)?;
+        let _length = num_cast!(length; MO::Distance)?;
         let _1 = MO::Distance::one();
-        let _ddof = c!(ddof; MO::Distance)?;
+        let _ddof = num_cast!(ddof; MO::Distance)?;
         Ok((upper - lower).powi(2) * _length / (_length + _1) / (_length - _ddof))
     }
 }
@@ -44,8 +44,8 @@ pub fn make_bounded_variance<MI, MO>(
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
           (MI, MO): BoundedVarianceConstant<MI, MO> {
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
-    let _length = c!(length; MO::Distance)?;
-    let _ddof = c!(ddof; MO::Distance)?;
+    let _length = num_cast!(length; MO::Distance)?;
+    let _ddof = num_cast!(ddof; MO::Distance)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
@@ -68,9 +68,9 @@ pub trait BoundedCovarianceConstant<MI: Metric, MO: Metric> {
 impl<MO: Metric> BoundedCovarianceConstant<HammingDistance, MO> for (HammingDistance, MO)
     where MO::Distance: Clone + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + NumCast + One {
     fn get_stability_constant(lower: (MO::Distance, MO::Distance), upper: (MO::Distance, MO::Distance), length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = c!(length; MO::Distance)?;
+        let _length = num_cast!(length; MO::Distance)?;
         let _1 = MO::Distance::one();
-        let _ddof = c!(ddof; MO::Distance)?;
+        let _ddof = num_cast!(ddof; MO::Distance)?;
         Ok((upper.0 - lower.0) * (upper.1 - lower.1) * (_length.clone() - _1) / _length.clone() / (_length - _ddof))
     }
 }
@@ -78,9 +78,9 @@ impl<MO: Metric> BoundedCovarianceConstant<HammingDistance, MO> for (HammingDist
 impl<MO: Metric> BoundedCovarianceConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
     where MO::Distance: Clone + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + Add<Output=MO::Distance> + NumCast + One {
     fn get_stability_constant(lower: (MO::Distance, MO::Distance), upper: (MO::Distance, MO::Distance), length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = c!(length; MO::Distance)?;
+        let _length = num_cast!(length; MO::Distance)?;
         let _1 = MO::Distance::one();
-        let _ddof = c!(ddof; MO::Distance)?;
+        let _ddof = num_cast!(ddof; MO::Distance)?;
         Ok((upper.0 - lower.0) * (upper.1 - lower.1) * _length.clone() / (_length.clone() + _1) / (_length - _ddof))
     }
 }
@@ -100,8 +100,8 @@ pub fn make_bounded_covariance<MI, MO>(
           (MI, MO): BoundedCovarianceConstant<MI, MO> {
 
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
-    let _length = c!(length; MO::Distance)?;
-    let _ddof = c!(ddof; MO::Distance)?;
+    let _length = num_cast!(length; MO::Distance)?;
+    let _ddof = num_cast!(ddof; MO::Distance)?;
 
 
     Ok(Transformation::new(

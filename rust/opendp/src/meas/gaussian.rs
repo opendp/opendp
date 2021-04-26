@@ -11,8 +11,8 @@ const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
 fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float>(scale: T) -> PrivacyRelation<L2Sensitivity<T>, SmoothedMaxDivergence<T>> {
     PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
-        let _2 = c!(2.; T)?;
-        let additive_gauss_const = c!(ADDITIVE_GAUSS_CONST; T)?;
+        let _2 = num_cast!(2.; T)?;
+        let additive_gauss_const = num_cast!(ADDITIVE_GAUSS_CONST; T)?;
 
         if d_in.is_sign_negative() {
             return fallible!(InvalidDistance, "gaussian mechanism: input sensitivity must be non-negative")
@@ -77,6 +77,15 @@ mod tests {
     fn test_make_gaussian_mechanism() {
         let measurement = make_base_gaussian(1.0).unwrap_test();
         let arg = 0.0;
+        let _ret = measurement.function.eval(&arg).unwrap_test();
+
+        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap_test());
+    }
+
+    #[test]
+    fn test_make_gaussian_vec_mechanism() {
+        let measurement = make_base_gaussian_vec(1.0).unwrap_test();
+        let arg = vec![0.0, 1.0];
         let _ret = measurement.function.eval(&arg).unwrap_test();
 
         assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap_test());

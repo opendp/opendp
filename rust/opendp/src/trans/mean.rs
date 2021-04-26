@@ -24,7 +24,7 @@ impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<HammingDistance, MO> for (Ha
 impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
     where T: Sub<Output=T> + Div<Output=T> + NumCast {
     fn get_stability(lower: T, upper: T, length: usize) -> Fallible<T> {
-        Ok((upper - lower) / c!(length; T)? / c!(2; T)?)
+        Ok((upper - lower) / num_cast!(length; T)? / num_cast!(2; T)?)
     }
 }
 
@@ -37,7 +37,7 @@ pub fn make_bounded_mean<MI, MO>(
           for <'a> MO::Distance: Sum<&'a MO::Distance>,
           (MI, MO): BoundedMeanConstant<MI, MO> {
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
-    let _length = c!(length; MO::Distance)?;
+    let _length = num_cast!(length; MO::Distance)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(

@@ -81,8 +81,7 @@ impl Type {
             if args.len() != 1 {
                 return fallible!(TypeParse, "Sensitivity must have one generic argument")
             }
-            TYPE_ID_TO_TYPE.get(&args[0]).cloned()
-                .ok_or_else(|| err!(TypeParse, "failed to parse type: {:?}", args[0]))
+            Type::of_id(&args[0])
         } else {
             fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- L1Sensitivity<u32>")
         }
@@ -326,24 +325,24 @@ mod tests {
 
     #[test]
     fn test_type_args_try_from_vec() {
-        let temp = "<Vec<i32>>".to_string();
-        let parsed: Vec<Type> = parse_type_args(temp.as_ptr() as *const c_char, 1).unwrap_test();
+        let temp = into_c_char_p("<Vec<i32>>".to_string()).unwrap_test();
+        let parsed: Vec<Type> = parse_type_args(temp, 1).unwrap_test();
         let explicit = vec![Type::of::<Vec<i32>>()];
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args_try_from_numbers() {
-        let temp = "<i32, f64>".to_string();
-        let parsed: Vec<Type> = parse_type_args(temp.as_ptr() as *const c_char, 2).unwrap_test();
+        let temp = into_c_char_p("<i32, f64>".to_string()).unwrap_test();
+        let parsed: Vec<Type> = parse_type_args(temp, 2).unwrap_test();
         let explicit = vec![Type::of::<i32>(), Type::of::<f64>()];
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args() {
-        let temp = "<i32, f32>".to_string();
-        let parsed: Vec<Type> = parse_type_args(temp.as_ptr() as *const c_char, 2).unwrap_test();
+        let temp = into_c_char_p("<i32, f32>".to_string()).unwrap_test();
+        let parsed: Vec<Type> = parse_type_args(temp, 2).unwrap_test();
         let explicit = vec![Type::of::<i32>(), Type::of::<f32>()];
         assert_eq!(parsed, explicit);
     }

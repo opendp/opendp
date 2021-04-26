@@ -33,7 +33,7 @@ pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
 
 impl<QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for (HammingDistance, L1Sensitivity<QO>) {
     fn get_stability_constant() -> Fallible<QO> {
-        c!(2.; QO)
+        num_cast!(2.; QO)
     }
 }
 

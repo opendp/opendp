@@ -137,8 +137,7 @@ macro_rules! enclose {
         }
     };
 }
-macro_rules! c {
-    ($v:expr) => (num::NumCast::from($v).ok_or_else(|| err!(FailedCast)));
+macro_rules! num_cast {
     ($v:expr; $ty:ty) => (<$ty as num::NumCast>::from($v).ok_or_else(|| err!(FailedCast)))
 }
 

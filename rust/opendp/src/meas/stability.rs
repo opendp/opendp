@@ -43,8 +43,8 @@ pub fn make_base_stability<MI, TIK, TIC>(
     if threshold.is_sign_negative() {
         return fallible!(MakeMeasurement, "threshold must not be negative")
     }
-    let _n = c!(n; MI::Distance)?;
-    let _2 = c!(2; MI::Distance)?;
+    let _n = num_cast!(n; MI::Distance)?;
+    let _2 = num_cast!(2; MI::Distance)?;
 
     Ok(Measurement::new(
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
@@ -53,7 +53,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
             data.iter()
                 .map(|(k, c_in)| {
                     // cast the value to MI::Distance (output count)
-                    let c_out = c!(c_in.clone(); MI::Distance)?;
+                    let c_out = num_cast!(c_in.clone(); MI::Distance)?;
                     // noise output count
                     Ok((k.clone(), MI::noise(c_out, scale, false)?))
                 })
@@ -107,7 +107,7 @@ mod test_stability {
         arg.insert(true, 6);
         arg.insert(false, 4);
         let measurement = make_base_stability::<L2Sensitivity<f64>, bool, i8>(10, 0.5, 1.)?;
-        let ret = measurement.function.eval(&arg)?;
+        let _ret = measurement.function.eval(&arg)?;
         // println!("stability eval: {:?}", ret);
 
         assert!(measurement.privacy_relation.eval(&1., &(2.3, 1e-5))?);
