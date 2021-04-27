@@ -38,12 +38,11 @@
 //! use opendp::core;
 //! use opendp::meas;
 //! use opendp::trans;
-//! use opendp::trans::{MakeTransformation0, MakeTransformation1, MakeTransformation2, MakeTransformation3, manipulation, sum};
+//! use opendp::trans::{manipulation, sum, make_split_lines, make_parse_series, make_clamp_vec, make_bounded_sum};
 //! use opendp::dist::{HammingDistance, L1Sensitivity};
-//! use opendp::core::{ChainTT, ChainMT};
-//! use opendp::meas::{MakeMeasurement2,  MakeMeasurement1};
-//! use opendp::meas::laplace::BaseLaplace;
 //! use opendp::error::*;
+//! use opendp::chain::{make_chain_tt, make_chain_mt};
+//! use opendp::meas::make_base_laplace;
 //!
 //! pub fn example() -> Fallible<()> {
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
@@ -52,19 +51,19 @@
 //!     let sigma = (bounds.1 - bounds.0) / epsilon;
 //!
 //!     // Construct a Transformation to load the numbers.
-//!     let split_lines = trans::SplitLines::<HammingDistance>::make()?;
-//!     let parse_series = trans::ParseSeries::<f64, HammingDistance>::make(true)?;
-//!     let load_numbers = ChainTT::make(&parse_series, &split_lines)?;
+//!     let split_lines = make_split_lines::<HammingDistance>()?;
+//!     let parse_series = make_parse_series::<HammingDistance, f64>(true)?;
+//!     let load_numbers = make_chain_tt(&parse_series, &split_lines)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = manipulation::Clamp::make(bounds.0, bounds.1)?;
-//!     let bounded_sum = sum::BoundedSum::make2(bounds.0, bounds.1)?;
-//!     let laplace = BaseLaplace::make(sigma)?;
-//!     let intermediate = ChainTT::make(&bounded_sum, &clamp)?;
-//!     let noisy_sum = ChainMT::make(&laplace, &intermediate)?;
+//!     let clamp = make_clamp_vec(bounds.0, bounds.1)?;
+//!     let bounded_sum = make_bounded_sum(bounds.0, bounds.1)?;
+//!     let laplace = make_base_laplace(sigma)?;
+//!     let intermediate = make_chain_tt(&bounded_sum, &clamp)?;
+//!     let noisy_sum = make_chain_mt(&laplace, &intermediate)?;
 //!
 //!     // Put it all together.
-//!     let pipeline = ChainMT::make(&noisy_sum, &load_numbers)?;
+//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers)?;
 //!     let result = pipeline.function.eval(&data)?;
 //!     println!("result = {}", result);
 //!     Ok(())
@@ -103,8 +102,8 @@
 //!     let input_domain = AllDomain::new();
 //!     let output_domain = AllDomain::new();
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
-//!     let input_metric = L1Sensitivity::new();
-//!     let output_metric = L1Sensitivity::new();
+//!     let input_metric = L1Sensitivity::default();
+//!     let output_metric = L1Sensitivity::default();
 //!     let stability_relation = StabilityRelation::new_from_constant(1);
 //!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
 //! }
@@ -124,6 +123,10 @@
 //! [`Measurement`]/[`Transformation`] constructors are allowed to be generic! Typically, this means that the type parameter on the
 //! constructor will determine type of the input or output [`Domain::Carrier`] (or the generic type within, for instance the `i32` of `Vec<i32>`).
 
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::just_underscores_and_digits)]
+#![allow(clippy::type_complexity)]
+
 // create clones of variables that are free to be consumed by a closure
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
@@ -133,6 +136,9 @@ macro_rules! enclose {
             $y
         }
     };
+}
+macro_rules! num_cast {
+    ($v:expr; $ty:ty) => (<$ty as num::NumCast>::from($v).ok_or_else(|| err!(FailedCast)))
 }
 
 #[macro_use]
@@ -146,3 +152,4 @@ pub mod meas;
 pub mod trans;
 pub mod traits;
 pub mod samplers;
+pub mod chain;

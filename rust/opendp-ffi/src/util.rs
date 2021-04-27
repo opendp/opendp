@@ -51,6 +51,7 @@ impl Type {
 
     // Hacky special entry point for composition.
     pub fn new_box_pair(type0: &Type, type1: &Type) -> Self {
+        #[allow(clippy::unnecessary_wraps)]
         fn monomorphize<T0: 'static, T1: 'static>(type0: &Type, type1: &Type) -> Fallible<Type> {
             let id = TypeId::of::<(Box<T0>, Box<T1>)>();
             let descriptor = format!("(Box<{}>, Box<{}>)", type0.descriptor, type1.descriptor);
@@ -68,6 +69,22 @@ impl Type {
             ],
             (type0, type1)
         ).unwrap()
+    }
+}
+
+impl Type {
+    pub fn get_sensitivity_distance(&self) -> Fallible<Type> {
+        if let TypeContents::GENERIC {args, name} = &self.contents {
+            if !name.ends_with("Sensitivity") {
+                return fallible!(TypeParse, "Expected a sensitivity type name, received {:?}", name)
+            }
+            if args.len() != 1 {
+                return fallible!(TypeParse, "Sensitivity must have one generic argument")
+            }
+            Type::of_id(&args[0])
+        } else {
+            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- L1Sensitivity<u32>")
+        }
     }
 }
 
@@ -162,59 +179,42 @@ impl TryFrom<&str> for Type {
     type Error = Error;
     fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.map(|e| e.clone()).ok_or_else(|| err!(TypeParse, "failed to parse type: {:?}", value))
+        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: {:?}", value))
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct TypeArgs(pub(crate) Vec<Type>);
 
-impl TypeArgs {
-    pub fn parse(descriptor: *const c_char, count: usize) -> Fallible<TypeArgs> {
-        let descriptor = to_str(descriptor)?;
-        let type_args: TypeArgs = descriptor.try_into()?;
-        if type_args.0.len() != count {
-            return fallible!(TypeParse, "expected {:?} arguments, received {:?} arguments", count, type_args.0.len())
-        }
-        Ok(type_args)
+pub fn parse_type_args(descriptor: *const c_char, count: usize) -> Fallible<Vec<Type>> {
+    let descriptor = to_str(descriptor)?;
+
+    if !descriptor.starts_with('<') || !descriptor.ends_with('>') {
+        return fallible!(TypeParse, "type ascription must start with '<' and end with '>'");
     }
-    // pub fn new(args: Vec<Type>) -> TypeArgs {
-    //     TypeArgs(args)
-    // }
-    // pub fn descriptor(&self) -> String {
-    //     let arg_descriptors: Vec<_> = self.0.iter().map(|e| e.descriptor).collect();
-    //     format!("<{}>", arg_descriptors.join(", "))
-    // }
-}
 
-impl TryFrom<&str> for TypeArgs {
-    type Error = Error;
-    fn try_from(value: &str) -> Fallible<Self> {
-        if value.starts_with("<") && value.ends_with(">") {
-            let value = &value[1..value.len()-1];
-            let mut types = Vec::new();
-            let mut token_buffer = Vec::new();
-            let mut is_parenthesized = false;
-            for token in value.split(",") {
-                token_buffer.push(token.trim());
-                // loose and simple approximation assuming no nested tuples
-                if token.contains("(") {
-                    is_parenthesized = true;
-                }
-                if token.contains(")") {
-                    is_parenthesized = false;
-                }
-                if !is_parenthesized {
-                    let descriptor: String = token_buffer.join(", ");
-                    types.push(descriptor.as_str().try_into()?);
-                    token_buffer.clear();
-                }
-            }
-            Ok(TypeArgs(types))
-        } else {
-            fallible!(TypeParse, "failed to parse type: type ascription must start with '<' and end with '>'")
+    let descriptor = &descriptor[1..descriptor.len()-1];
+    let mut type_args = Vec::new();
+    let mut token_buffer = Vec::new();
+    let mut is_parenthesized = false;
+    for token in descriptor.split(',') {
+        token_buffer.push(token.trim());
+        // loose and simple approximation assuming no nested tuples
+        if token.contains('(') {
+            is_parenthesized = true;
+        }
+        if token.contains(')') {
+            is_parenthesized = false;
+        }
+        if !is_parenthesized {
+            let type_: String = token_buffer.join(", ");
+            type_args.push(type_.as_str().try_into()?);
+            token_buffer.clear();
         }
     }
+
+    if type_args.len() != count {
+        return fallible!(TypeParse, "expected {:?} arguments, received {:?} arguments", count, type_args.len())
+    }
+    Ok(type_args)
 }
 
 
@@ -282,7 +282,7 @@ pub fn bootstrap(spec: &str) -> *const c_char {
 pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
 
 pub fn to_bool(b: c_bool) -> bool {
-    if b != 0 { true } else { false }
+    b != 0
 }
 
 pub fn from_bool(b: bool) -> c_bool {
@@ -325,22 +325,25 @@ mod tests {
 
     #[test]
     fn test_type_args_try_from_vec() {
-        let parsed: TypeArgs = "<Vec<i32>>".try_into().unwrap_test();
-        let explicit = TypeArgs(vec![Type::of::<Vec<i32>>()]);
+        let temp = into_c_char_p("<Vec<i32>>".to_string()).unwrap_test();
+        let parsed: Vec<Type> = parse_type_args(temp, 1).unwrap_test();
+        let explicit = vec![Type::of::<Vec<i32>>()];
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args_try_from_numbers() {
-        let parsed: TypeArgs = "<i32, f64>".try_into().unwrap_test();
-        let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f64>()]);
+        let temp = into_c_char_p("<i32, f64>".to_string()).unwrap_test();
+        let parsed: Vec<Type> = parse_type_args(temp, 2).unwrap_test();
+        let explicit = vec![Type::of::<i32>(), Type::of::<f64>()];
         assert_eq!(parsed, explicit);
     }
 
     #[test]
     fn test_type_args() {
-        let parsed: TypeArgs = "<i32, f32>".try_into().unwrap_test();
-        let explicit = TypeArgs(vec![Type::of::<i32>(), Type::of::<f32>()]);
+        let temp = into_c_char_p("<i32, f32>".to_string()).unwrap_test();
+        let parsed: Vec<Type> = parse_type_args(temp, 2).unwrap_test();
+        let explicit = vec![Type::of::<i32>(), Type::of::<f32>()];
         assert_eq!(parsed, explicit);
     }
 }

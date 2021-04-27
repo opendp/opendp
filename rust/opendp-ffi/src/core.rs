@@ -4,8 +4,9 @@ use std::fmt::{Debug, Formatter};
 use std::mem::{ManuallyDrop, transmute};
 use std::os::raw::c_char;
 
+use opendp::chain::{MeasureGlue, MetricGlue};
+use opendp::core::{Domain, Measure, Measurement, Metric, Transformation};
 use opendp::err;
-use opendp::core::{ChainMT, ChainTT, Composition, Domain, Measure, MeasureGlue, Measurement, Metric, MetricGlue, Transformation};
 use opendp::error::*;
 
 use crate::util;
@@ -159,7 +160,7 @@ pub struct FfiMetricGlue<D: Domain, M: Metric> {
 impl<D: 'static + Domain, M: 'static + Metric> FfiMetricGlue<D, M> {
     pub fn new() -> Self {
         let (domain_type, domain_carrier) = new_domain_types::<D>();
-        let metric_glue = MetricGlue::new();
+        let metric_glue = MetricGlue::default();
         Self::new_explicit(domain_type, domain_carrier, metric_glue)
     }
 
@@ -177,7 +178,7 @@ pub struct FfiMeasureGlue<D: Domain, M: Measure> {
 impl<D: 'static + Domain, M: 'static + Measure> FfiMeasureGlue<D, M> {
     pub fn new() -> Self {
         let (domain_type, domain_carrier) = new_domain_types::<D>();
-        let measure_glue = MeasureGlue::new();
+        let measure_glue = MeasureGlue::default();
         Self::new_explicit(domain_type, domain_carrier, measure_glue)
     }
     pub fn new_explicit(domain_type: Type, domain_carrier: Type, measure_glue: MeasureGlue<D, M>) -> Self {
@@ -194,16 +195,20 @@ impl Domain for FfiDomain {
 
 #[derive(Clone)]
 pub struct FfiMeasure;
+impl Default for FfiMeasure {
+    fn default() -> Self { FfiMeasure }
+}
 impl Measure for FfiMeasure {
     type Distance = ();
-    fn new() -> Self { unreachable!() }
 }
 
 #[derive(Clone)]
 pub struct FfiMetric;
+impl Default for FfiMetric {
+    fn default() -> Self { FfiMetric }
+}
 impl Metric for FfiMetric {
     type Distance = ();
-    fn new() -> Self { unreachable!() }
 }
 
 pub struct FfiMeasurement {
@@ -307,109 +312,6 @@ pub extern "C" fn opendp_core__transformation_free(this: *mut FfiTransformation)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const FfiMeasurement, transformation0: *const FfiTransformation) -> FfiResult<*mut FfiMeasurement> {
-    let transformation0 = try_as_ref!(transformation0);
-    let measurement1 = try_as_ref!(measurement1);
-
-    let FfiTransformation {
-        input_glue: input_glue0,
-        output_glue: output_glue0,
-        value: value0
-    } = transformation0;
-
-    let FfiMeasurement {
-        input_glue: input_glue1,
-        output_glue: output_glue1,
-        value: value1
-    } = measurement1;
-
-    if output_glue0.domain_type != input_glue1.domain_type {
-        return err!(DomainMismatch, "chained domain types do not match").into()
-    }
-
-    let measurement = try_!(ChainMT::make_glue(
-        value1, value0, None,
-        &input_glue0.metric_glue,
-        &output_glue0.metric_glue,
-        &output_glue1.measure_glue));
-
-    FfiResult::Ok(util::into_raw(
-        FfiMeasurement::new(input_glue0.clone(), output_glue1.clone(), measurement)))
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const FfiTransformation, transformation0: *const FfiTransformation) -> FfiResult<*mut FfiTransformation> {
-    let transformation0 = try_as_ref!(transformation0);
-    let transformation1 = try_as_ref!(transformation1);
-
-    let FfiTransformation {
-        input_glue: input_glue0,
-        output_glue: output_glue0,
-        value: value0
-    } = transformation0;
-
-    let FfiTransformation {
-        input_glue: input_glue1,
-        output_glue: output_glue1,
-        value: value1
-    } = transformation1;
-
-    if output_glue0.domain_type != input_glue1.domain_type {
-        return err!(DomainMismatch, "chained domain types do not match").into()
-    }
-
-    let transformation = try_!(ChainTT::make_glue(
-        value1,
-        value0,
-        None,
-        &input_glue0.metric_glue,
-        &output_glue0.metric_glue,
-        &output_glue1.metric_glue));
-
-    FfiResult::Ok(util::into_raw(
-        FfiTransformation::new(input_glue0.clone(), output_glue1.clone(), transformation)))
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_core__make_composition(measurement0: *const FfiMeasurement, measurement1: *const FfiMeasurement) -> FfiResult<*mut FfiMeasurement> {
-    let measurement0 = try_as_ref!(measurement0);
-    let measurement1 = try_as_ref!(measurement1);
-
-    let FfiMeasurement {
-        input_glue: input_glue0,
-        output_glue: output_glue0,
-        value: value0
-    } = measurement0;
-
-
-    let FfiMeasurement {
-        input_glue: input_glue1,
-        output_glue: output_glue1,
-        value: value1
-    } = measurement1;
-
-
-    if input_glue0.domain_type != input_glue1.domain_type {
-        return err!(DomainMismatch, "chained domain types do not match").into()
-    }
-
-    let measurement = try_!(Composition::make_glue(
-        value0, value1,
-        &input_glue0.metric_glue,
-        &output_glue0.measure_glue,
-        &output_glue1.measure_glue));
-
-    // TODO: output_glue for composition.
-    let output_glue_domain_type = Type::of::<FfiDomain>();
-    let output_glue_domain_carrier = Type::new_box_pair(&output_glue0.domain_carrier, &output_glue1.domain_carrier);
-    let output_glue_measure_glue = output_glue0.measure_glue.clone();
-    let output_glue = FfiMeasureGlue::<FfiDomain, FfiMeasure>::new_explicit(output_glue_domain_type, output_glue_domain_carrier, output_glue_measure_glue);
-
-    FfiResult::Ok(util::into_raw(
-        FfiMeasurement::new(input_glue0.clone(), output_glue, measurement)))
-}
-
-#[no_mangle]
 pub extern "C" fn opendp_core__bootstrap() -> *const c_char {
     let spec =
 r#"{
@@ -432,6 +334,7 @@ r#"{
 #[cfg(test)]
 mod tests {
     use opendp::error::*;
+
     use super::*;
 
     #[test]

@@ -1,8 +1,9 @@
 use num::{NumCast, ToPrimitive, Zero, One};
 use crate::error::Fallible;
+use std::ops::{Div, Mul};
 
 pub trait CheckContinuous { fn is_continuous() -> bool; }
-pub trait Ceil : Copy { fn ceil(self) -> Self; }
+pub trait Ceil: Clone { fn ceil(self) -> Self; }
 macro_rules! impl_is_continuous {
     ($($ty:ty),+) => {
         $(
@@ -33,6 +34,10 @@ macro_rules! impl_is_not_continuous {
 }
 impl_is_continuous!(f32, f64);
 impl_is_not_continuous!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, isize, usize);
+
+/// A type that can be used as a stability or privacy constant to scale a distance
+pub trait DistanceConstant: 'static + Clone + DistanceCast + Div<Output=Self> + Mul<Output=Self> + PartialOrd {}
+impl<T: 'static + Clone + DistanceCast + Div<Output=Self> + Mul<Output=Self> + PartialOrd> DistanceConstant for T {}
 
 // include Ceil on QO to avoid requiring as an additional trait bound in all downstream code
 pub trait DistanceCast: NumCast + Ceil + CheckContinuous {

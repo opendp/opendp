@@ -49,7 +49,7 @@
 //!
 //! In order to deal with this, we use a couple of different strategies, depending on the context.
 //!
-//! ## `TypeArgs` and the Dispatch Pattern
+//! ## `Vec<Type>` and the Dispatch Pattern
 //!
 //! To work through a simple example, imagine we had a generic function like this:
 //!
@@ -84,11 +84,15 @@
 //!
 //! // TODO: Show JSON example.
 
+#![allow(clippy::upper_case_acronyms)]
+
 #[macro_use]
 extern crate lazy_static;
 
 // internal module for err! macro resolution
-mod error { pub use opendp::error::{Error, ErrorVariant}; }
+mod error {
+    pub use opendp::error::{Error, ErrorVariant};
+}
 // replacement for ? operator, for FfiResults
 macro_rules! try_ {
     ($value:expr) => {
@@ -103,13 +107,14 @@ macro_rules! try_ {
 // *mut T -> Option<&T> -> Fallible<&T> -> &T
 macro_rules! try_as_ref {
     ($value:expr) => {
-        try_!(util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))));
+        try_!(crate::util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))));
     }
 }
 
 #[macro_use]
 mod dispatch;
 
+mod chain;
 mod core;
 mod data;
 mod meas;

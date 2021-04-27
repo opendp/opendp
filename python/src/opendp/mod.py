@@ -354,10 +354,6 @@ class OpenDP:
         else:
             return self.make_chain_tt_multi(*transformations[:-2], self.core.make_chain_tt(transformations[-2], transformations[-1]))
 
-    def to_str(self, data):
-        string = self.data.to_string(data)
-        return c_char_p_to_str(string)
-
     @staticmethod
     def get_first(arr):
         return arr[0] if arr else 0
@@ -423,7 +419,7 @@ class OpenDP:
             # raise err
             # If we fail, resort to string representation.
             #TODO: Remove this fallback once we have composition and/or tuples sorted out.
-            return self.data.to_string(obj).decode()
+            return self.data.to_string(obj).value.decode()
         finally:
             self.data.slice_free(ffi_slice)
 
