@@ -193,7 +193,7 @@ impl Domain for FfiDomain {
     fn member(&self, _val: &Self::Carrier) -> bool { unreachable!() }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct FfiMeasure;
 impl Default for FfiMeasure {
     fn default() -> Self { FfiMeasure }
@@ -202,7 +202,7 @@ impl Measure for FfiMeasure {
     type Distance = ();
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct FfiMetric;
 impl Default for FfiMetric {
     fn default() -> Self { FfiMetric }

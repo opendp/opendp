@@ -7,8 +7,12 @@ use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
 /// Measures
 #[derive(Clone)]
 pub struct MaxDivergence<Q>(PhantomData<Q>);
-impl<Q> Default for  MaxDivergence<Q> {
+impl<Q> Default for MaxDivergence<Q> {
     fn default() -> Self { MaxDivergence(PhantomData) }
+}
+
+impl<Q> PartialEq for MaxDivergence<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
 }
 
 impl<Q: Clone> Measure for MaxDivergence<Q> {
@@ -20,6 +24,10 @@ pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
 
 impl<Q> Default for SmoothedMaxDivergence<Q> {
     fn default() -> Self { SmoothedMaxDivergence(PhantomData) }
+}
+
+impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
 }
 
 impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
@@ -34,6 +42,10 @@ impl Default for SymmetricDistance {
     fn default() -> Self { SymmetricDistance }
 }
 
+impl PartialEq for SymmetricDistance {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+
 impl Metric for SymmetricDistance {
     type Distance = u32;
 }
@@ -45,6 +57,10 @@ pub struct HammingDistance;
 
 impl Default for HammingDistance {
     fn default() -> Self { HammingDistance }
+}
+
+impl PartialEq for HammingDistance {
+    fn eq(&self, _other: &Self) -> bool { true }
 }
 
 impl Metric for HammingDistance {
@@ -63,6 +79,10 @@ impl<Q> Clone for L1Sensitivity<Q> {
     fn clone(&self) -> Self { Self::default() }
 }
 
+impl<Q> PartialEq for L1Sensitivity<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+
 impl<Q> Metric for L1Sensitivity<Q> {
     type Distance = Q;
 }
@@ -77,6 +97,10 @@ impl<Q> Default for L2Sensitivity<Q> {
 
 impl<Q> Clone for L2Sensitivity<Q> {
     fn clone(&self) -> Self { Self::default() }
+}
+
+impl<Q> PartialEq for L2Sensitivity<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
 }
 
 impl<Q> Metric for L2Sensitivity<Q> {

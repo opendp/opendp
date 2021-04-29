@@ -1,6 +1,8 @@
-use num::{NumCast, ToPrimitive, Zero, One};
+use std::ops::{Div, Mul, Sub};
+
+use num::{NumCast, One, ToPrimitive, Zero};
+
 use crate::error::Fallible;
-use std::ops::{Div, Mul};
 
 pub trait CheckContinuous { fn is_continuous() -> bool; }
 pub trait Ceil: Clone { fn ceil(self) -> Self; }
@@ -38,6 +40,26 @@ impl_is_not_continuous!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, isize,
 /// A type that can be used as a stability or privacy constant to scale a distance
 pub trait DistanceConstant: 'static + Clone + DistanceCast + Div<Output=Self> + Mul<Output=Self> + PartialOrd {}
 impl<T: 'static + Clone + DistanceCast + Div<Output=Self> + Mul<Output=Self> + PartialOrd> DistanceConstant for T {}
+
+pub trait FallibleSub<Rhs = Self> {
+    type Output;
+    fn sub(self, rhs: Rhs) -> Fallible<Self::Output>;
+}
+
+impl<T, Rhs> FallibleSub<Rhs> for T where T: Sub<Rhs> {
+    type Output = T::Output;
+    fn sub(self, rhs: Rhs) -> Fallible<Self::Output> {
+        Ok(self - rhs)
+    }
+}
+
+/// A type that can be used as a measure distance.
+pub trait MeasureDistance: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
+impl<T> MeasureDistance for T where T: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
+
+/// A type that can be used as a metric distance.
+pub trait MetricDistance: PartialOrd {}
+impl<T> MetricDistance for T where T: PartialOrd {}
 
 // include Ceil on QO to avoid requiring as an additional trait bound in all downstream code
 pub trait DistanceCast: NumCast + Ceil + CheckContinuous {

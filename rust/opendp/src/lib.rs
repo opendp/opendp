@@ -144,12 +144,14 @@ macro_rules! num_cast {
 #[macro_use]
 pub mod error;
 
+pub mod any;
+pub mod chain;
 pub mod core;
 pub mod data;
 pub mod dist;
 pub mod dom;
+pub mod interactive;
 pub mod meas;
-pub mod trans;
-pub mod traits;
 pub mod samplers;
-pub mod chain;
+pub mod traits;
+pub mod trans;
