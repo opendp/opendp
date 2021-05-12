@@ -55,6 +55,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, size),
         Function::new_fallible(move |data: &HashMap<TIK, TIC>| {
             data.iter()
+                .filter(|(_k, c_in)| !c_in.is_zero())
                 .map(|(k, c_in)| {
                     // cast the value to MI::Distance (output count)
                     let c_out = MI::Distance::exact_int_cast(c_in.clone()).unwrap_or(MI::Distance::MAX_CONSECUTIVE);
