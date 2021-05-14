@@ -27,7 +27,7 @@ impl<S, Q, A> Queryable<S, Q, A> {
         }
     }
 
-    /// Evaluates the given query.
+    /// Evaluates a query.
     pub fn eval(&mut self, query: &Q) -> Fallible<A> {
         // Take temporary ownership of the state from this struct.
         let state = self.state.take().unwrap_assert("Queryable state is only accessed in this method, always replaced.");
@@ -40,49 +40,110 @@ impl<S, Q, A> Queryable<S, Q, A> {
 }
 
 impl<S, Q> Queryable<S, Q, Box<dyn Any>> {
-    pub fn eval_downcast<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
+    /// Evaluates a polymorphic query and downcasts to the given type.
+    pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
         self.eval(query)?.downcast().map_err(|_| err!(FailedCast)).map(|b| *b)
     }
 }
 
-type AcState<DI, MI, MO> = (<DI as Domain>::Carrier, <MI as Metric>::Distance, <MO as Measure>::Distance);
-type AcQuery<DI, DO, MI, MO> = (Measurement<DI, DO, MI, MO>, <MO as Measure>::Distance);
-type AcQueryable<DI, DO, MI, MO> = Queryable<AcState<DI, MI, MO>, AcQuery<DI, DO, MI, MO>, <DO as Domain>::Carrier>;
-type AcMeasurement<DI, DO, MI, MO> = Measurement<DI, AllDomain<AcQueryable<DI, DO, MI, MO>>, MI, MO>;
+type InteractiveMeasurement<DI, DO, MI, MO, S, Q> = Measurement<DI, AllDomain<Queryable<S, Q, <DO as Domain>::Carrier>>, MI, MO>;
 
-fn ac_transition<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
-    (arg, d_in_budget, d_out_budget): AcState<DI, MI, MO>,
-    (measurement, d_out_query): &AcQuery<DI, DO, MI, MO>,
-) -> Fallible<(AcState<DI, MI, MO>, DO::Carrier)>
-    where MO::Distance: MeasureDistance {
-    measurement.privacy_relation.eval(&d_in_budget, d_out_query)?;
-    if d_out_query > &d_out_budget {
-        return fallible!(FailedRelation, "not enough budget")
-    }
-    let new_d_out_budget = d_out_budget.sub(d_out_query)?;
-    // we want the res to be fallible, so that failing eval does not consume the queryable
-    let res = measurement.function.eval(&arg)?;
-    Ok(((arg, d_in_budget, new_d_out_budget), res))
-}
-
-pub fn make_adaptive_composition<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
+/// The state of an adaptive composition Queryable.
+pub struct AcState<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     input_domain: DI,
+    output_domain: DO,
+    input_metric: MI,
+    output_measure: MO,
+    d_in_budget: MI::Distance,
+    d_out_budget: MO::Distance,
+    data: DI::Carrier,
+}
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> where MO::Distance: MeasureDistance {
+    pub fn new(
+        input_domain: DI,
+        output_domain: DO,
+        input_metric: MI,
+        output_measure: MO,
+        data: DI::Carrier,
+        d_in_budget: MI::Distance,
+        d_out_budget: MO::Distance,
+    ) -> Self {
+        Self {
+            input_domain,
+            output_domain,
+            input_metric,
+            output_measure,
+            data,
+            d_in_budget,
+            d_out_budget,
+        }
+    }
+
+    /// Checks that a measurement (of a query) is compatible with this Queryable state.
+    fn check_types(&self, measurement: &Measurement<DI, DO, MI, MO>) -> Fallible<()> {
+        if measurement.input_domain.as_ref() != &self.input_domain {
+            return fallible!(DomainMismatch, "wrong query input domain")
+        } else if measurement.output_domain.as_ref() != &self.output_domain {
+            return fallible!(DomainMismatch, "wrong query output domain")
+        } else if measurement.input_metric.as_ref() != &self.input_metric {
+            return fallible!(DomainMismatch, "wrong query input metric")
+        } else if measurement.output_measure.as_ref() != &self.output_measure {
+            return fallible!(DomainMismatch, "wrong query output metric")
+        }
+        Ok(())
+    }
+
+    /// Checks that there is adequate budget in this Queryable state.
+    fn check_budget(&self, privacy_relation: &PrivacyRelation<MI, MO>, d_out_query: &MO::Distance) -> Fallible<()> {
+        privacy_relation.eval(&self.d_in_budget, d_out_query)?;
+        if d_out_query > &self.d_out_budget {
+            return fallible!(FailedRelation, "not enough budget")
+        }
+        Ok(())
+    }
+
+    /// Updates this Queryable state by consuming the given amount of budget.
+    fn update(self, d_out_query: &MO::Distance) -> Fallible<Self> {
+        Ok(Self { d_out_budget: self.d_out_budget.sub(d_out_query)?, ..self })
+    }
+
+    /// Processes a query, generating a new Queryable state.
+    fn transition(self, (measurement, d_out_query): &AcQuery<DI, DO, MI, MO>) -> Fallible<(Self, DO::Carrier)>
+        where MO::Distance: Clone + MeasureDistance {
+        self.check_types(measurement)?;
+        self.check_budget(&measurement.privacy_relation, d_out_query)?;
+        let res = measurement.function.eval(&self.data)?;
+        let new = self.update(d_out_query)?;
+        Ok((new, res))
+    }
+}
+type AcQuery<DI, DO, MI, MO> = (Measurement<DI, DO, MI, MO>, <MO as Measure>::Distance);
+type AcQueryable<DI, DO, MI, MO> = Queryable<AcState<DI, DO, MI, MO>, AcQuery<DI, DO, MI, MO>, <DO as Domain>::Carrier>;
+type AcMeasurement<DI, DO, MI, MO> = InteractiveMeasurement<DI, DO, MI, MO, AcState<DI, DO, MI, MO>, AcQuery<DI, DO, MI, MO>>;
+
+pub fn make_adaptive_composition<DI, DO, MI, MO>(
+    input_domain: DI,
+    output_domain: DO,
     input_metric: MI,
     output_measure: MO,
     d_in_budget: MI::Distance,
     d_out_budget: MO::Distance,
 ) -> AcMeasurement<DI, DO, MI, MO>
-    where DI::Carrier: Clone,
+    where DI: 'static + Domain,
+          DI::Carrier: Clone,
+          DO: 'static + Domain,
+          MI: 'static + Metric,
           MI::Distance: 'static + MetricDistance + Clone,
+          MO: 'static + Measure,
           MO::Distance: 'static + MeasureDistance + Clone {
     AcMeasurement::new(
-        input_domain,
+        input_domain.clone(),
         AllDomain::new(),
-        Function::new(enclose!((d_in_budget, d_out_budget), move |arg: &DI::Carrier| -> AcQueryable<DI, DO, MI, MO> {
+        Function::new(enclose!((input_domain, input_metric, output_measure, d_in_budget, d_out_budget), move |arg: &DI::Carrier| -> AcQueryable<DI, DO, MI, MO> {
             AcQueryable::new(
-                // TODO: Remove these clones and have the Queryable use refs. (Also remove Clone trait bounds.)
-                (arg.clone(), d_in_budget.clone(), d_out_budget.clone()),
-                |s, q| ac_transition(s, q))
+                // TODO: Remove these clones and have the Queryable use refs? (Also remove Clone trait bounds.)
+                AcState::new(input_domain.clone(), output_domain.clone(), input_metric.clone(), output_measure.clone(), arg.clone(), d_in_budget.clone(), d_out_budget.clone()),
+                |s, q| s.transition(q))
         })),
         input_metric,
         output_measure,
@@ -100,6 +161,7 @@ mod tests {
     use crate::trans::*;
 
     use super::*;
+    use crate::poly::PolyDomain;
 
     fn make_dummy_meas<TO: From<i32>>() -> Measurement<AllDomain<i32>, AllDomain<TO>, L1Sensitivity<f64>, MaxDivergence<f64>> {
         Measurement::new(
@@ -120,7 +182,7 @@ mod tests {
         let data = 999;
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
-        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
+        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), *meas1.output_domain.clone(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
         let mut queryable = adaptive.function.eval(&data)?;
         let res1 = queryable.eval(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999);
@@ -131,32 +193,32 @@ mod tests {
     }
 
     #[test]
-    fn test_adaptive_comp_heterogeneous() -> Fallible<()> {
-        let meas1 = make_dummy_meas::<i32>().into_any_out();
-        let meas2 = make_dummy_meas::<i64>().into_any_out();
+    fn test_adaptive_composition_poly() -> Fallible<()> {
+        let meas1 = make_dummy_meas::<i32>().into_poly();
+        let meas2 = make_dummy_meas::<i64>().into_poly();
 
         let data = 999;
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
-        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
+        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), PolyDomain::new(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
         let mut queryable = adaptive.function.eval(&data)?;
-        let res1: i32 = queryable.eval_downcast(&(meas1, d_out_budget / 2.0))?;
+        let res1: i32 = queryable.eval_poly(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999_i32);
-        let res2: i64 = queryable.eval_downcast(&(meas2, d_out_budget / 2.0))?;
+        let res2: i64 = queryable.eval_poly(&(meas2, d_out_budget / 2.0))?;
         assert_eq!(res2, 999_i64);
 
         Ok(())
     }
 
     #[test]
-    fn test_adaptive_comp_budget() -> Fallible<()> {
+    fn test_adaptive_composition_no_budget() -> Fallible<()> {
         let meas1 = make_dummy_meas::<i32>();
         let meas2 = make_dummy_meas::<i32>();
 
         let data = 999;
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
-        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
+        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), *meas1.output_domain.clone(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
         let mut queryable = adaptive.function.eval(&data)?;
         let res1 = queryable.eval(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999);
@@ -168,17 +230,17 @@ mod tests {
     }
 
     #[test]
-    fn test_adaptive_comp_chain() -> Fallible<()> {
+    fn test_adaptive_composition_chain() -> Fallible<()> {
         // Definitions
         let input_domain = VectorDomain::new(AllDomain::new());
-        // Output domain is implied (AnyDomain).
+        let output_domain = PolyDomain::new();
         let input_metric = HammingDistance::default();
         let output_measure = MaxDivergence::default();
 
         // Build queryable
         let d_in = 1;
         let d_out_budget = 1.0;
-        let adaptive = make_adaptive_composition(input_domain, input_metric, output_measure, d_in, d_out_budget);
+        let adaptive = make_adaptive_composition(input_domain, output_domain, input_metric, output_measure, d_in, d_out_budget);
         let data = vec![0.6, 2.8, 6.0, 9.4, 8.9, 7.7, 5.9, 3.4, 8.0, 2.4, 4.4, 7.1, 6.0, 3.2, 7.1];
         let mut queryable = adaptive.function.eval(&data)?;
         // NO FURTHER ACCESS TO DATA AFTER THIS POINT.
@@ -192,20 +254,20 @@ mod tests {
         let measurement1 = (
             make_count()? >>
                 make_base_geometric(1.0 / d_out_query, count_bounds.0, count_bounds.1)?
-        )?.into_any_out();
+        )?.into_poly();
         let query1 = (measurement1, d_out_query);
-        let result1: u32 = queryable.eval_downcast(&query1)?;
-        println!("result = {}", result1);
+        let _result1: u32 = queryable.eval_poly(&query1)?;
+        // println!("_result = {}", result1);
 
         // Noisy sum
         let measurement2 = (
             make_clamp_vec(val_bounds.0, val_bounds.1)? >>
                 make_bounded_sum(val_bounds.0, val_bounds.1)? >>
                 make_base_laplace(1.0 / d_out_query)?
-        )?.into_any_out();
+        )?.into_poly();
         let query2 = (measurement2, d_out_query);
-        let result2: f64 = queryable.eval_downcast(&query2)?;
-        println!("result = {}", result2);
+        let _result2: f64 = queryable.eval_poly(&query2)?;
+        // println!("_result = {}", result2);
 
         Ok(())
     }

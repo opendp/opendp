@@ -274,14 +274,6 @@ impl Metric for AnyMetric {
 }
 
 impl<DI: Domain, DO: Domain> Function<DI, DO> where DI::Carrier: 'static, DO::Carrier: 'static {
-    pub fn as_any_out(&self) -> Function<DI, AnyDomain> {
-        let function = self.function.clone();
-        let function = move |arg: &DI::Carrier| -> Fallible<Box<dyn Any>> {
-            let res = function(arg);
-            res.map(|o| Box::new(*o) as Box<dyn Any>)
-        };
-        Function::new_fallible(function)
-    }
     pub fn as_any(&self) -> Function<AnyDomain, AnyDomain> {
         let function = self.function.clone();
         let function = move |arg: &Box<dyn Any>| -> Fallible<Box<dyn Any>> {
@@ -344,16 +336,6 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
           DO::Carrier: 'static,
           MI::Distance: 'static + Clone + PartialOrd,
           MO::Distance: 'static + Clone + PartialOrd {
-    pub fn into_any_out(self) -> Measurement<DI, AnyDomain, MI, MO> {
-        Measurement::new(
-            *self.input_domain,
-            AnyDomain::new(*self.output_domain),
-            self.function.as_any_out(),
-            *self.input_metric,
-            *self.output_measure,
-            self.privacy_relation,
-        )
-    }
     pub fn into_any(self) -> Measurement<AnyDomain, AnyDomain, AnyMetric, AnyMeasure> {
         Measurement::new(
             AnyDomain::new(*self.input_domain),
@@ -371,16 +353,6 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
           DO::Carrier: 'static,
           MI::Distance: 'static + Clone + PartialOrd,
           MO::Distance: 'static + Clone + PartialOrd {
-    pub fn into_any_out(self) -> Transformation<DI, AnyDomain, MI, MO> {
-        Transformation::new(
-            *self.input_domain,
-            AnyDomain::new(*self.output_domain),
-            self.function.as_any_out(),
-            *self.input_metric,
-            *self.output_metric,
-            self.stability_relation,
-        )
-    }
     pub fn into_any(self) -> Transformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric> {
         Transformation::new(
             AnyDomain::new(*self.input_domain),
