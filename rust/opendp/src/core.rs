@@ -84,12 +84,12 @@ impl<DI: 'static + Domain, DO1: 'static + Domain, DO2: 'static + Domain> Functio
 }
 
 /// A representation of the distance between two elements in a set.
-pub trait Metric: Default + Clone {
+pub trait Metric: Default + Clone + PartialEq {
     type Distance;
 }
 
 /// A representation of the distance between two distributions.
-pub trait Measure: Default + Clone {
+pub trait Measure: Default + Clone + PartialEq {
     type Distance;
 }
 
@@ -149,7 +149,7 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
             backward_map: None
         }
     }
-    fn new_all(
+    pub fn new_all(
         relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static,
         backward_map: Option<impl Fn(&MO::Distance) -> Fallible<Box<MI::Distance>> + 'static>
     ) -> Self {
@@ -260,7 +260,7 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
     pub fn new_fallible(relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static) -> Self {
         StabilityRelation { relation: Rc::new(relation), forward_map: None, backward_map: None }
     }
-    fn new_all(
+    pub fn new_all(
         relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static,
         forward_map: Option<impl Fn(&MI::Distance) -> Fallible<Box<MO::Distance>> + 'static>,
         backward_map: Option<impl Fn(&MO::Distance) -> Fallible<Box<MI::Distance>> + 'static>

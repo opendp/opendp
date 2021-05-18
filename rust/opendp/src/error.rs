@@ -1,4 +1,5 @@
 use std::fmt;
+use std::fmt::Debug;
 
 use backtrace::Backtrace as _Backtrace;
 
@@ -110,7 +111,7 @@ impl<T> ExplainUnwrap for Option<T> {
         self.unwrap()
     }
 }
-impl<T> ExplainUnwrap for Fallible<T> {
+impl<T, E: Debug> ExplainUnwrap for Result<T, E> {
     type Inner = T;
     fn unwrap_assert(self, _explanation: &'static str) -> T {
         self.unwrap()
