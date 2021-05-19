@@ -1,3 +1,5 @@
+pub mod chain;
+
 use std::{fmt, ptr};
 use std::ffi::{c_void, CStr};
 use std::fmt::{Debug, Formatter};
@@ -18,6 +20,7 @@ pub enum FfiOwnership {
     #[allow(dead_code)]
     CLIENT,
 }
+
 
 pub struct FfiObject {
     pub type_: Type,
@@ -309,25 +312,6 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const FfiTransformat
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_free(this: *mut FfiTransformation) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_core__bootstrap() -> *const c_char {
-    let spec =
-r#"{
-"functions": [
-    { "name": "error_free", "args": [ ["const FfiError *", "this"] ], "res": "bool" },
-    { "name": "measurement_check", "args": [ ["const FfiMeasurement *", "this"], ["const FfiObject *", "d_in"], ["const FfiObject *", "d_out"] ], "ret": "FfiResult<bool *>" },
-    { "name": "measurement_invoke", "args": [ ["const FfiMeasurement *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
-    { "name": "measurement_free", "args": [ ["FfiMeasurement *", "this"] ], "ret": "FfiResult<void *>" },
-    { "name": "transformation_invoke", "args": [ ["const FfiTransformation *", "this"], ["const FfiObject *", "arg"] ], "ret": "FfiResult<FfiObject *>" },
-    { "name": "transformation_free", "args": [ ["FfiTransformation *", "this"] ], "ret": "FfiResult<void *>" },
-    { "name": "make_chain_mt", "args": [ ["const FfiMeasurement *", "measurement"], ["const FfiTransformation *", "transformation"] ], "ret": "FfiResult<FfiMeasurement *>" },
-    { "name": "make_chain_tt", "args": [ ["const FfiTransformation *", "transformation1"], ["const FfiTransformation *", "transformation0"] ], "ret": "FfiResult<FfiTransformation *>" },
-    { "name": "make_composition", "args": [ ["const FfiMeasurement *", "transformation0"], ["const FfiMeasurement *", "transformation1"] ], "ret": "FfiResult<FfiMeasurement *>" }
-]
-}"#;
-    util::bootstrap(spec)
 }
 
 // UNIT TESTS

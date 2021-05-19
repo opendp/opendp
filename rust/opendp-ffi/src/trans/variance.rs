@@ -11,22 +11,27 @@ use opendp::traits::DistanceConstant;
 use opendp::trans::{BoundedCovarianceConstant, BoundedVarianceConstant, make_bounded_covariance, make_bounded_variance};
 
 use crate::core::{FfiObject, FfiResult, FfiTransformation};
-use crate::util::{parse_type_args, Type};
+use crate::util::Type;
+use std::convert::TryFrom;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_variance(
-    type_args: *const c_char,
     lower: *const FfiObject, upper: *const FfiObject,
     length: c_uint, ddof: c_uint,
+    MI: *const c_char, MO: *const c_char
 ) -> FfiResult<*mut FfiTransformation> {
+
     fn monomorphize<T>(
-        type_args: Vec<Type>,
         lower: *const FfiObject, upper: *const FfiObject,
         length: usize, ddof: usize,
+        MI: Type, MO: Type
     ) -> FfiResult<*mut FfiTransformation>
         where T: DistanceConstant + Sub<Output=T> + Float + for<'a> Sum<&'a T> + Sum<T>,
               for<'a> &'a T: Sub<Output=T> {
-        fn monomorphize2<MI, MO>(lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize) -> FfiResult<*mut FfiTransformation>
+
+        fn monomorphize2<MI, MO>(
+            lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize
+        ) -> FfiResult<*mut FfiTransformation>
             where MI: 'static + DatasetMetric<Distance=u32>,
                   MO: 'static + SensitivityMetric,
                   MO::Distance: DistanceConstant + Float + for<'a> Sum<&'a MO::Distance> + Sum<MO::Distance>,
@@ -37,35 +42,38 @@ pub extern "C" fn opendp_trans__make_bounded_variance(
         let lower = *try_as_ref!(lower as *const T);
         let upper = *try_as_ref!(upper as *const T);
         dispatch!(monomorphize2, [
-            (type_args[0], [HammingDistance, SymmetricDistance]),
-            (type_args[1], [L1Sensitivity<T>, L2Sensitivity<T>])
+            (MI, [HammingDistance, SymmetricDistance]),
+            (MO, [L1Sensitivity<T>, L2Sensitivity<T>])
         ], (lower, upper, length, ddof))
     }
     let length = length as usize;
     let ddof = ddof as usize;
 
-    let type_args = try_!(parse_type_args(type_args, 2));
-    let type_output = try_!(type_args[1].get_sensitivity_distance());
-    dispatch!(monomorphize, [(type_output, @floats)], (type_args, lower, upper, length, ddof))
+    let MI = try_!(Type::try_from(MI));
+    let MO = try_!(Type::try_from(MO));
+    let TO = try_!(MO.get_sensitivity_distance());
+    dispatch!(monomorphize, [(TO, @floats)], (lower, upper, length, ddof, MI, MO))
 }
 
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_covariance(
-    type_args: *const c_char,
     lower: *const FfiObject,
     upper: *const FfiObject,
     length: c_uint, ddof: c_uint,
+    MI: *const c_char, MO: *const c_char
 ) -> FfiResult<*mut FfiTransformation> {
+
     fn monomorphize<T>(
-        type_args: Vec<Type>,
         lower: *const FfiObject,
         upper: *const FfiObject,
         length: usize, ddof: usize,
+        MI: Type, MO: Type
     ) -> FfiResult<*mut FfiTransformation>
         where T: DistanceConstant + Sub<Output=T> + Sum<T> + Zero + One,
               for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
               for<'a> &'a T: Sub<Output=T> {
+
         fn monomorphize2<MI, MO>(
             lower: (MO::Distance, MO::Distance),
             upper: (MO::Distance, MO::Distance),
@@ -82,13 +90,15 @@ pub extern "C" fn opendp_trans__make_bounded_covariance(
         let lower = try_as_ref!(lower).as_ref::<(T, T)>().clone();
         let upper = try_as_ref!(upper).as_ref::<(T, T)>().clone();
         dispatch!(monomorphize2, [
-            (type_args[0], [HammingDistance, SymmetricDistance]),
-            (type_args[1], [L1Sensitivity<T>, L2Sensitivity<T>])
+            (MI, [HammingDistance, SymmetricDistance]),
+            (MO, [L1Sensitivity<T>, L2Sensitivity<T>])
         ], (lower, upper, length, ddof))
     }
     let length = length as usize;
     let ddof = ddof as usize;
 
-    let type_args = try_!(parse_type_args(type_args, 3));
-    dispatch!(monomorphize, [(type_args[2], @floats)], (type_args, lower, upper, length, ddof))
+    let MI = try_!(Type::try_from(MI));
+    let MO = try_!(Type::try_from(MO));
+    let TO = try_!(MO.get_sensitivity_distance());
+    dispatch!(monomorphize, [(TO, @floats)], (lower, upper, length, ddof, MI, MO))
 }

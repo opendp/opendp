@@ -1,0 +1,51 @@
+{
+    "make_base_laplace": {
+        "description": "Create a Measurement that adds noise from the laplace(scale) distribution.",
+        "args": [
+            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the laplace distribution"}
+        ],
+        "type_args": [
+            {"name": "T", "description": "data type to be privatized"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    },
+    "make_base_laplace_vec": {
+        "args": [
+            {"name": "type_args", "c_type": "const char *"},
+            {"name": "scale", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    },
+    "make_base_gaussian": {
+        "args": [
+            {"name": "type_args", "c_type": "const char *"},
+            {"name": "scale", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    },
+    "make_base_gaussian_vec": {
+        "args": [
+            {"name": "type_args", "c_type": "const char *"},
+            {"name": "scale", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    },
+    "make_base_simple_geometric": {
+        "args": [
+            {"name": "type_args", "c_type": "const char *"},
+            {"name": "scale", "c_type": "void *"},
+            {"name": "min", "c_type": "void *"},
+            {"name": "max", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    },
+    "make_base_stability": {
+        "args": [
+            {"name": "type_args", "c_type": "const char *"},
+            {"name": "n", "c_type": "unsigned int"},
+            {"name": "scale", "c_type": "void *"},
+            {"name": "threshold", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    }
+}

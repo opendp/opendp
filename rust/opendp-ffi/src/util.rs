@@ -1,7 +1,7 @@
 use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::ffi::{CStr, IntoStringError, NulError};
 use std::ffi::CString;
 use std::os::raw::c_char;
@@ -183,38 +183,11 @@ impl TryFrom<&str> for Type {
     }
 }
 
-
-pub fn parse_type_args(descriptor: *const c_char, count: usize) -> Fallible<Vec<Type>> {
-    let descriptor = to_str(descriptor)?;
-
-    if !descriptor.starts_with('<') || !descriptor.ends_with('>') {
-        return fallible!(TypeParse, "type ascription must start with '<' and end with '>'");
+impl TryFrom<*const c_char> for Type {
+    type Error = Error;
+    fn try_from(value: *const c_char) -> Fallible<Self> {
+        to_str(value).and_then(Type::try_from)
     }
-
-    let descriptor = &descriptor[1..descriptor.len()-1];
-    let mut type_args = Vec::new();
-    let mut token_buffer = Vec::new();
-    let mut is_parenthesized = false;
-    for token in descriptor.split(',') {
-        token_buffer.push(token.trim());
-        // loose and simple approximation assuming no nested tuples
-        if token.contains('(') {
-            is_parenthesized = true;
-        }
-        if token.contains(')') {
-            is_parenthesized = false;
-        }
-        if !is_parenthesized {
-            let type_: String = token_buffer.join(", ");
-            type_args.push(type_.as_str().try_into()?);
-            token_buffer.clear();
-        }
-    }
-
-    if type_args.len() != count {
-        return fallible!(TypeParse, "expected {:?} arguments, received {:?} arguments", count, type_args.len())
-    }
-    Ok(type_args)
 }
 
 
@@ -273,11 +246,6 @@ pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
     }
 }
 
-pub fn bootstrap(spec: &str) -> *const c_char {
-    // FIXME: Leaks string.
-    into_c_char_p(spec.to_owned()).unwrap_assert("unwrap is ok because our json strings won't contain null bytes")
-}
-
 #[allow(non_camel_case_types)]
 pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
 
@@ -295,6 +263,7 @@ mod tests {
     use opendp::dist::L1Sensitivity;
 
     use super::*;
+    use std::convert::TryInto;
 
     #[test]
     fn test_type_of() {
@@ -321,29 +290,5 @@ mod tests {
         assert_eq!(TryInto::<Type>::try_into("L1Sensitivity<i32>")?, Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
         assert_eq!(TryInto::<Type>::try_into("Vec<i32>")?, Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
         Ok(())
-    }
-
-    #[test]
-    fn test_type_args_try_from_vec() {
-        let temp = into_c_char_p("<Vec<i32>>".to_string()).unwrap_test();
-        let parsed: Vec<Type> = parse_type_args(temp, 1).unwrap_test();
-        let explicit = vec![Type::of::<Vec<i32>>()];
-        assert_eq!(parsed, explicit);
-    }
-
-    #[test]
-    fn test_type_args_try_from_numbers() {
-        let temp = into_c_char_p("<i32, f64>".to_string()).unwrap_test();
-        let parsed: Vec<Type> = parse_type_args(temp, 2).unwrap_test();
-        let explicit = vec![Type::of::<i32>(), Type::of::<f64>()];
-        assert_eq!(parsed, explicit);
-    }
-
-    #[test]
-    fn test_type_args() {
-        let temp = into_c_char_p("<i32, f32>".to_string()).unwrap_test();
-        let parsed: Vec<Type> = parse_type_args(temp, 2).unwrap_test();
-        let explicit = vec![Type::of::<i32>(), Type::of::<f32>()];
-        assert_eq!(parsed, explicit);
     }
 }

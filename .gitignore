@@ -150,3 +150,7 @@ Cargo.lock
 .idea
 
 .DS_Store
+
+python/example/pums/data
+data/
+data_censored/

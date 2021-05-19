@@ -85,6 +85,7 @@
 //! // TODO: Show JSON example.
 
 #![allow(clippy::upper_case_acronyms)]
+#![allow(non_snake_case)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -114,7 +115,6 @@ macro_rules! try_as_ref {
 #[macro_use]
 mod dispatch;
 
-mod chain;
 mod core;
 mod data;
 mod meas;

@@ -1,0 +1,157 @@
+{
+    "make_identity": {
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric", "description": "metric space"},
+            {"name": "T", "description": "type of data passed to the identity function"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_split_lines": {
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric", "description": "metric space"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_parse_series": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "impute", "c_type": "bool"}
+        ],
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_split_records": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "separator", "c_type":  "const char *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_create_dataframe": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "col_names", "c_type":  "FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_split_dataframe": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "separator", "c_type": "const char *"},
+            {"name": "col_names", "c_type": "FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_parse_column": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "key", "c_type": "void *"},
+            {"name": "impute", "c_type": "bool"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_select_column": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "key", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_clamp_vec": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "lower", "c_type": "void *"},
+            {"name": "upper", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_clamp_scalar": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "lower", "c_type": "void *"},
+            {"name": "upper", "c_type": "void *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_cast_vec": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_bounded_covariance": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "lower", "c_type": "FfiObject *", "type_arg": "(T, T)"},
+            {"name": "upper", "c_type": "FfiObject *", "type_arg": "(T, T)"},
+            {"name": "length", "c_type": "unsigned int"},
+            {"c_type": "unsigned int","name": "ddof"}
+        ],
+        "type_args": [
+            {"name": "T"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_bounded_mean": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "lower", "c_type": "void *"},
+            {"name": "upper", "c_type": "void *"},
+            {"name": "length", "c_type": "unsigned int"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_bounded_sum": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "lower", "c_type": "void *", "rust_type": "MO.0"},
+            {"name": "upper", "c_type": "void *", "rust_type": "MO.0"}
+        ],
+        "type_args": [
+            {"name": "MI", "hint": "DatasetMetric"},
+            {"name": "MO", "hint": "SensitivityMetric"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_bounded_sum_n": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "lower", "c_type": "void *"},
+            {"name": "upper", "c_type": "void *"},
+            {"name": "n", "c_type": "unsigned int"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_bounded_variance": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "lower", "c_type": "void *"},
+            {"name": "upper", "c_type": "void *"},
+            {"name": "length", "c_type": "unsigned int"},
+            {"name": "ddof", "c_type": "unsigned int"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_count": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_count_by": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "n", "c_type": "unsigned int"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_count_by_categories": {
+        "args": [
+            {"name": "selector", "c_type": "const char *"},
+            {"name": "categories", "c_type": "FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    }
+}

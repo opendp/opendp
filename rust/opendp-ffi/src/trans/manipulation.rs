@@ -10,10 +10,14 @@ use opendp::traits::{CastFrom, DistanceConstant};
 use opendp::trans::{make_cast_vec, make_clamp, make_clamp_vec, make_identity};
 
 use crate::core::{FfiResult, FfiTransformation};
-use crate::util::{parse_type_args, Type, TypeContents};
+use crate::util::{Type, TypeContents};
+use std::convert::TryFrom;
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
+pub extern "C" fn opendp_trans__make_identity(
+    M: *const c_char, T: *const c_char
+) -> FfiResult<*mut FfiTransformation> {
+
     fn monomorphize_scalar<M, T>() -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric,
               M::Distance: DistanceConstant + One,
@@ -26,21 +30,25 @@ pub extern "C" fn opendp_trans__make_identity(type_args: *const c_char) -> FfiRe
               T: 'static + Clone {
         make_identity::<VectorDomain<AllDomain<T>>, M>(VectorDomain::new(AllDomain::<T>::new()), M::default()).into()
     }
-    let type_args = try_!(parse_type_args(type_args, 2));
-    match &type_args[1].contents {
+    let M = try_!(Type::try_from(M));
+    let T = try_!(Type::try_from(T));
+    match &T.contents {
         TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [
-            (type_args[0], @dist_dataset),
+            (M, @dist_dataset),
             (try_!(Type::of_id(element_id)), @primitives)
         ], ()),
         _ => dispatch!(monomorphize_scalar, [
-            (type_args[0], @dist_dataset),
-            (&type_args[1], @primitives)
+            (M, @dist_dataset),
+            (&T, @primitives)
         ], ())
     }
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_clamp_vec(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation> {
+pub extern "C" fn opendp_trans__make_clamp_vec(
+    lower: *const c_void, upper: *const c_void,
+    M: *const c_char, T: *const c_char
+) -> FfiResult<*mut FfiTransformation> {
     fn monomorphize<M, T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation>
         where M: 'static + DatasetMetric + Clone,
               T: 'static + Copy + PartialOrd,
@@ -49,71 +57,60 @@ pub extern "C" fn opendp_trans__make_clamp_vec(type_args: *const c_char, lower: 
         let upper = *try_as_ref!(upper as *const T);
         make_clamp_vec::<M, T>(lower, upper).into()
     }
-    let type_args = try_!(parse_type_args(type_args, 2));
-    dispatch!(monomorphize, [(type_args[0], @dist_dataset), (type_args[1], @numbers)], (lower, upper))
+    let M = try_!(Type::try_from(M));
+    let T = try_!(Type::try_from(T));
+    dispatch!(monomorphize, [(M, @dist_dataset), (T, @numbers)], (lower, upper))
 }
 
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_clamp_scalar(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation> {
-    fn monomorphize<T, Q>(type_args: Vec<Type>, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation>
-        where T: 'static + Clone + PartialOrd,
-              Q: DistanceConstant + One {
-        let lower = try_as_ref!(lower as *const T).clone();
-        let upper = try_as_ref!(upper as *const T).clone();
+pub extern "C" fn opendp_trans__make_clamp_scalar(
+    lower: *const c_void, upper: *const c_void,
+    M: *const c_char, T: *const c_char
+) -> FfiResult<*mut FfiTransformation> {
 
-        fn monomorphize2<M, T>(lower: T, upper: T) -> FfiResult<*mut FfiTransformation>
+    fn monomorphize<Q>(
+        lower: *const c_void, upper: *const c_void,
+        M: Type, T: Type
+    ) -> FfiResult<*mut FfiTransformation>
+        where Q: DistanceConstant + One {
+
+        fn monomorphize2<M, T>(
+            lower: *const c_void, upper: *const c_void
+        ) -> FfiResult<*mut FfiTransformation>
             where M: 'static + SensitivityMetric,
                   T: 'static + Clone + PartialOrd,
                   M::Distance: DistanceConstant + One {
+            let lower = try_as_ref!(lower as *const T).clone();
+            let upper = try_as_ref!(upper as *const T).clone();
             make_clamp::<M, T>(lower, upper).into()
         }
         dispatch!(monomorphize2, [
-            (type_args[0], [L1Sensitivity<Q>, L2Sensitivity<Q>]),
-            (type_args[1], [T])
+            (M, [L1Sensitivity<Q>, L2Sensitivity<Q>]),
+            (T, @numbers)
         ], (lower, upper))
     }
-    let type_args = try_!(parse_type_args(type_args, 2));
-    let type_output_distance = try_!(type_args[0].get_sensitivity_distance());
-    dispatch!(monomorphize, [
-        (type_args[1], @numbers),
-        (type_output_distance, @numbers)
-    ], (type_args, lower, upper))
+    let M = try_!(Type::try_from(M));
+    let T = try_!(Type::try_from(T));
+    let Q = try_!(M.get_sensitivity_distance());
+
+    dispatch!(monomorphize, [(Q, @numbers)], (lower, upper, M, T))
 }
 
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_cast_vec(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
+pub extern "C" fn opendp_trans__make_cast_vec(
+    M: *const c_char, TI: *const c_char, TO: *const c_char
+) -> FfiResult<*mut FfiTransformation> {
+
     fn monomorphize<M, TI, TO>() -> FfiResult<*mut FfiTransformation> where
         M: 'static + DatasetMetric<Distance=u32>,
         TI: 'static + Clone,
         TO: 'static + CastFrom<TI> + Default {
         make_cast_vec::<M, TI, TO>().into()
     }
-    let type_args = try_!(parse_type_args(type_args, 3));
-    dispatch!(monomorphize, [(type_args[0], @dist_dataset), (type_args[1], @primitives), (type_args[2], @primitives)], ())
+    let M = try_!(Type::try_from(M));
+    let TI = try_!(Type::try_from(TI));
+    let TO = try_!(Type::try_from(TO));
+    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @primitives)], ())
 }
-
-// #[no_mangle]
-// pub extern "C" fn opendp_trans__make_cast(type_args: *const c_char) -> FfiResult<*mut FfiTransformation> {
-//     fn monomorphize<TI, TO>(type_args: Vec<Type>) -> FfiResult<*mut FfiTransformation>
-//         where TI: 'static + Clone + DistanceCast,
-//               TO: 'static + CastFrom<TI> + Default + DistanceCast + One + Div<Output=TO> + Mul<Output=TO> + PartialOrd {
-//
-//         fn monomorphize2<MI, MO, TI, TO>() -> FfiResult<*mut FfiTransformation>
-//             where MI: 'static + SensitivityMetric<Distance=TI>,
-//                   MO: 'static + SensitivityMetric<Distance=TO>,
-//                   TI: 'static + Clone + DistanceCast,
-//                   TO: 'static + CastFrom<TI> + Default + DistanceCast + One + Div<Output=TO> + Mul<Output=TO> + PartialOrd {
-//             let transformation = trans::manipulation::Cast::<MI, MO, TI, TO>();
-//             FfiResult::new(transformation.map(FfiTransformation::new_from_types))
-//         }
-//         dispatch!(monomorphize2, [
-//             (type_args[0], [L1Sensitivity<TI>, L2Sensitivity<TI>]),
-//             (type_args[1], [L1Sensitivity<TO>, L2Sensitivity<TO>]),
-//             (type_args[2], [TI]), (type_args[3], [TO])
-//         ], ())
-//     }
-//     let type_args = try_!(parse_type_args(type_args, 4));
-//     dispatch!(monomorphize, [(type_args[2], @numbers), (type_args[3], @numbers)], (type_args))
-// }

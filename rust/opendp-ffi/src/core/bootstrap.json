@@ -1,0 +1,63 @@
+{
+    "error_free": {
+        "args": [
+            {"name": "this", "c_type": "const FfiError *"}
+        ],
+        "ret": {"c_type": "bool"}
+    },
+    "measurement_check": {
+        "args": [
+            {"name": "this", "c_type": "const FfiMeasurement *"},
+            {"name": "d_in", "c_type": "const FfiObject *"},
+            {"name": "d_out", "c_type": "const FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<bool *>"}
+    },
+    "measurement_invoke": {
+        "args": [
+            {"name": "this", "c_type": "const FfiMeasurement *"},
+            {"name": "arg", "c_type": "const FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiObject *>"}
+    },
+    "measurement_free": {
+        "args": [
+            {"name": "this", "c_type": "FfiMeasurement *"}
+        ],
+        "ret": {"c_type": "FfiResult<void *>"}
+    },
+    "transformation_invoke": {
+        "args": [
+            {"name": "this", "c_type": "const FfiTransformation *"},
+            {"name": "arg", "c_type": "const FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiObject *>"}
+    },
+    "transformation_free": {
+        "args": [
+            {"name": "this", "c_type": "FfiTransformation *"}
+        ],
+        "ret": {"c_type": "FfiResult<void *>"}
+    },
+    "make_chain_mt": {
+        "args": [
+            {"name": "measurement", "c_type": "const FfiMeasurement *"},
+            {"name": "transformation", "c_type": "const FfiTransformation *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    },
+    "make_chain_tt": {
+        "args": [
+            {"name": "transformation1", "c_type": "const FfiTransformation *"},
+            {"name": "transformation0", "c_type": "const FfiTransformation *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+    },
+    "make_composition": {
+        "args": [
+            {"name": "transformation0", "c_type": "const FfiMeasurement *"},
+            {"name": "transformation1", "c_type": "const FfiMeasurement *"}
+        ],
+        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+    }
+}
