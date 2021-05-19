@@ -1,0 +1,53 @@
+{
+    "to_string": {
+        "args": [
+            {"name": "this", "c_type": "const FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<const char *>"}
+    },
+    "slice_as_object": {
+        "args": [
+            {"name": "raw", "c_type": "const void *", "rust_type": "T"}
+        ],
+        "type_args": [
+            {"name": "T"}
+        ],
+        "ret": {"c_type": "FfiResult<const FfiObject *>"}
+    },
+    "object_type": {
+        "args": [
+            {"name": "this", "c_type": "const FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<const char *>"}
+    },
+    "object_as_slice": {
+        "args": [
+            {"name": "this", "c_type": "const FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<const FfiSlice *>"}
+    },
+    "object_free": {
+        "args": [
+            {"name": "this", "c_type": "const FfiObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<void *>"}
+    },
+    "slice_free": {
+        "args": [
+            {"name": "this", "c_type": "const FfiSlice *"}
+        ],
+        "ret": {"c_type": "FfiResult<void *>"}
+    },
+    "str_free": {
+        "args": [
+            {"name": "this", "c_type": "const char *"}
+        ],
+        "ret": {"c_type": "FfiResult<void *>"}
+    },
+    "bool_free": {
+        "args": [
+            {"name": "this", "c_type": "bool *"}
+        ],
+        "ret": {"c_type": "FfiResult<void *>"}
+    }
+}
