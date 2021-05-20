@@ -8,13 +8,18 @@ use opendp::samplers::SampleGeometric;
 use opendp::traits::DistanceCast;
 
 use crate::core::{FfiMeasurement, FfiResult};
-use crate::util::parse_type_args;
+use crate::util::Type;
+use std::convert::TryFrom;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_simple_geometric(
-    type_args: *const c_char, scale: *const c_void, min: *const c_void, max: *const c_void,
+    scale: *const c_void, min: *const c_void, max: *const c_void,
+    T: *const c_char, QO: *const c_char
 ) -> FfiResult<*mut FfiMeasurement> {
-    fn monomorphize<T, QO>(scale: *const c_void, min: *const c_void, max: *const c_void) -> FfiResult<*mut FfiMeasurement>
+
+    fn monomorphize<T, QO>(
+        scale: *const c_void, min: *const c_void, max: *const c_void
+    ) -> FfiResult<*mut FfiMeasurement>
         where T: 'static + Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + DistanceCast + Zero,
               QO: 'static + Float + DistanceCast, f64: From<QO> {
         let scale = *try_as_ref!(scale as *const QO);
@@ -22,6 +27,10 @@ pub extern "C" fn opendp_meas__make_base_simple_geometric(
         let max = try_as_ref!(max as *const T).clone();
         make_base_geometric::<T, QO>(scale, min, max).into()
     }
-    let type_args = try_!(parse_type_args(type_args, 2));
-    dispatch!(monomorphize, [(type_args[0], @integers), (type_args[1], @floats)], (scale, min, max))
+    let T = try_!(Type::try_from(T));
+    let QO = try_!(Type::try_from(QO));
+    dispatch!(monomorphize, [
+        (T, @integers),
+        (QO, @floats)
+    ], (scale, min, max))
 }

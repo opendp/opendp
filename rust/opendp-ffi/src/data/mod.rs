@@ -7,13 +7,15 @@ use opendp::data::Column;
 
 use crate::core::{FfiObject, FfiOwnership, FfiResult, FfiSlice, FfiError};
 use crate::util;
-use crate::util::{Type, TypeContents, c_bool, parse_type_args};
+use crate::util::{Type, TypeContents, c_bool};
 use std::fmt::Debug;
 use opendp::error::Fallible;
 use opendp::{fallible, err};
+use std::convert::TryFrom;
+
 
 #[no_mangle]
-pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *const FfiSlice) -> FfiResult<*mut FfiObject> {
+pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut FfiObject> {
     fn raw_to_plain<T: Clone>(raw: &FfiSlice) -> Fallible<*const c_void> {
         if raw.len != 1 {
             return fallible!(FFI, "The slice length must be one when creating a scalar from FfiSlice")
@@ -48,10 +50,9 @@ pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *c
         // println!("rust: {:?}", tuple);
         Ok(util::into_raw(tuple) as *const c_void)
     }
-    let type_args = try_!(parse_type_args(type_args, 1));
-    let type_ = type_args[0].clone();
+    let T = try_!(Type::try_from(T));
     let raw = try_as_ref!(raw);
-    let val = try_!(match type_.contents {
+    let val = try_!(match T.contents {
         TypeContents::PLAIN("String") => {
             raw_to_string(raw)
         },
@@ -72,13 +73,13 @@ pub extern "C" fn opendp_data__slice_as_object(type_args: *const c_char, raw: *c
                 dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
             } else {
                 // boxy tuples
-                dispatch!(raw_to_plain, [(type_, @primitives)], (raw))
+                dispatch!(raw_to_plain, [(T, @primitives)], (raw))
             }
         }
-        _ => { dispatch!(raw_to_plain, [(type_, @primitives)], (raw)) }
+        _ => { dispatch!(raw_to_plain, [(T, @primitives)], (raw)) }
     });
     let val = unsafe { Box::from_raw(val as *mut ()) };
-    FfiResult::Ok(util::into_raw(FfiObject::new(type_, val, FfiOwnership::LIBRARY)))
+    FfiResult::Ok(util::into_raw(FfiObject::new(T, val, FfiOwnership::LIBRARY)))
 }
 
 #[no_mangle]
@@ -193,24 +194,6 @@ pub extern "C" fn opendp_data__to_string(this: *const FfiObject) -> FfiResult<*m
         FfiResult::Ok)
 }
 
-#[no_mangle]
-pub extern "C" fn opendp_data__bootstrap() -> *const c_char {
-    let spec =
-r#"{
-"functions": [
-    { "name": "to_string", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const char *>" },
-    { "name": "slice_as_object", "args": [ ["const char *", "type_args"], ["const void *", "raw"] ], "ret": "FfiResult<const FfiObject *>" },
-    { "name": "object_type", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const char *>" },
-    { "name": "object_as_slice", "args": [ ["const FfiObject *", "this"] ], "ret": "FfiResult<const FfiSlice *>" },
-    { "name": "object_free", "args": [ ["FfiObject *", "this"] ], "ret": "FfiResult<void *>" },
-    { "name": "slice_free", "args": [ ["FfiSlice *", "this"] ], "ret": "FfiResult<void *>" },
-    { "name": "str_free", "args": [ ["const char *", "this"] ], "ret": "FfiResult<void *>" },
-    { "name": "bool_free", "args": [ ["bool *", "this"] ], "ret": "FfiResult<void *>" }
-]
-}"#;
-    util::bootstrap(spec)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::util;
@@ -224,7 +207,8 @@ mod tests {
         let raw_ptr = util::into_raw(val_in) as *mut c_void;
         let raw_len = 1;
         let raw = FfiSlice::new_raw(raw_ptr, raw_len);
-        let res = opendp_data__slice_as_object(util::into_c_char_p("<i32>".to_owned()).unwrap_test(), raw);
+        let t_type = util::into_c_char_p("i32".to_owned()).unwrap_test();
+        let res = opendp_data__slice_as_object(raw, t_type);
         match res {
             FfiResult::Ok(obj) => {
                 let obj = util::as_ref(obj).unwrap_test();
@@ -244,7 +228,8 @@ mod tests {
         let raw_ptr = util::into_c_char_p(val_in.clone()).unwrap_test() as *mut c_void;
         let raw_len = val_in.len() + 1;
         let raw = FfiSlice::new_raw(raw_ptr, raw_len);
-        let res = opendp_data__slice_as_object(util::into_c_char_p("<String>".to_owned()).unwrap_test(), raw);
+        let t_type = util::into_c_char_p("String".to_owned()).unwrap_test();
+        let res = opendp_data__slice_as_object(raw, t_type);
         match res {
             FfiResult::Ok(obj) => {
                 let obj = util::as_ref(obj).unwrap_test();
@@ -264,7 +249,8 @@ mod tests {
         let raw_ptr = val_in.as_ptr() as *mut c_void;
         let raw_len = val_in.len();
         let raw = FfiSlice::new_raw(raw_ptr, raw_len);
-        match opendp_data__slice_as_object(util::into_c_char_p("<Vec<i32>>".to_owned()).unwrap_test(), raw) {
+        let t_type = util::into_c_char_p("Vec<i32>".to_owned()).unwrap_test();
+        match opendp_data__slice_as_object(raw, t_type) {
             FfiResult::Ok(obj) => {
                 let obj = util::as_ref(obj).unwrap_test();
                 let val_out: &Vec<i32> = obj.as_ref();

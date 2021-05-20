@@ -9,12 +9,21 @@ use opendp::traits::{Abs, DistanceConstant};
 use opendp::trans::{BoundedSumConstant, make_bounded_sum, make_bounded_sum_n};
 
 use crate::core::{FfiResult, FfiTransformation};
-use crate::util::{Type, parse_type_args};
+use crate::util::Type;
+use std::convert::TryFrom;
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation> {
-    fn monomorphize<T>(type_args: Vec<Type>, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut FfiTransformation>
+pub extern "C" fn opendp_trans__make_bounded_sum(
+    lower: *const c_void, upper: *const c_void,
+    MI: *const c_char, MO: *const c_char
+) -> FfiResult<*mut FfiTransformation> {
+
+    fn monomorphize<T>(
+        lower: *const c_void, upper: *const c_void,
+        MI: Type, MO: Type
+    ) -> FfiResult<*mut FfiTransformation>
         where for<'a> T: DistanceConstant + Sub<Output=T> + Abs + Sum<&'a T> {
+
         fn monomorphize2<MI, MO>(lower: MO::Distance, upper: MO::Distance) -> FfiResult<*mut FfiTransformation>
             where MI: 'static + DatasetMetric<Distance=u32>,
                   MO: 'static + SensitivityMetric,
@@ -25,21 +34,30 @@ pub extern "C" fn opendp_trans__make_bounded_sum(type_args: *const c_char, lower
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
         dispatch!(monomorphize2, [
-            (type_args[0], [HammingDistance, SymmetricDistance]),
-            (type_args[1], [L1Sensitivity<T>, L2Sensitivity<T>])
+            (MI, [HammingDistance, SymmetricDistance]),
+            (MO, [L1Sensitivity<T>, L2Sensitivity<T>])
         ], (lower, upper))
     }
-    let type_args = try_!(parse_type_args(type_args, 2));
-    let type_output = try_!(type_args[1].get_sensitivity_distance());
-    dispatch!(monomorphize, [(type_output, @numbers)], (type_args, lower, upper))
+    let MI = try_!(Type::try_from(MI));
+    let MO = try_!(Type::try_from(MO));
+    let T = try_!(MO.get_sensitivity_distance());
+    dispatch!(monomorphize, [(T, @numbers)], (lower, upper, MI, MO))
 }
 
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, lower: *const c_void, upper: *const c_void, n: c_uint) -> FfiResult<*mut FfiTransformation> {
-    fn monomorphize<T>(type_args: Vec<Type>, lower: *const c_void, upper: *const c_void, n: usize) -> FfiResult<*mut FfiTransformation>
+pub extern "C" fn opendp_trans__make_bounded_sum_n(
+    lower: *const c_void, upper: *const c_void, n: c_uint,
+    MO: *const c_char
+) -> FfiResult<*mut FfiTransformation> {
+
+    fn monomorphize<T>(
+        lower: *const c_void, upper: *const c_void, n: usize,
+        MO: Type
+    ) -> FfiResult<*mut FfiTransformation>
         where T: DistanceConstant + Sub<Output=T>,
               for<'a> T: Sum<&'a T> {
+
         fn monomorphize2<MO>(lower: MO::Distance, upper: MO::Distance, n: usize) -> FfiResult<*mut FfiTransformation>
             where MO: 'static + SensitivityMetric,
                   MO::Distance: DistanceConstant + Sub<Output=MO::Distance>,
@@ -49,11 +67,12 @@ pub extern "C" fn opendp_trans__make_bounded_sum_n(type_args: *const c_char, low
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
         dispatch!(monomorphize2, [
-            (type_args[0], [L1Sensitivity<T>, L2Sensitivity<T>])
+            (MO, [L1Sensitivity<T>, L2Sensitivity<T>])
         ], (lower, upper, n))
     }
     let n = n as usize;
-    let type_args = try_!(parse_type_args(type_args, 1));
-    let type_output = try_!(type_args[0].get_sensitivity_distance());
-    dispatch!(monomorphize, [(type_output, @numbers)], (type_args, lower, upper, n))
+
+    let MO = try_!(Type::try_from(MO));
+    let TO = try_!(MO.get_sensitivity_distance());
+    dispatch!(monomorphize, [(TO, @numbers)], (lower, upper, n, MO))
 }
