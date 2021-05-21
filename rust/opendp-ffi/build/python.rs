@@ -42,8 +42,8 @@ fn make_module(
     format!(r#"# Auto-generated. Do not edit.
 import ctypes
 from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object
-from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr
+from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
+from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr, BoolPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
 
 {functions}"#,
@@ -271,7 +271,7 @@ fn make_call(
 function.argtypes = [{ctype_args}]
 function.restype = {ctype_restype}
 
-return {call}"#,
+return c_to_py({call})"#,
             module_name = module_name,
             func_name = func_name,
             ctype_args = func.args.iter()

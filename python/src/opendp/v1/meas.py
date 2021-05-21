@@ -1,8 +1,8 @@
 # Auto-generated. Do not edit.
 import ctypes
 from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object
-from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr
+from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
+from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr, BoolPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
 
 
@@ -27,7 +27,7 @@ def make_base_laplace(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(scale, T), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(scale, T), FfiMeasurementPtr))
 
 
 def make_base_laplace_vec(
@@ -51,7 +51,7 @@ def make_base_laplace_vec(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(scale, T), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(scale, T), FfiMeasurementPtr))
 
 
 def make_base_gaussian(
@@ -75,7 +75,7 @@ def make_base_gaussian(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(scale, T), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(scale, T), FfiMeasurementPtr))
 
 
 def make_base_gaussian_vec(
@@ -99,7 +99,7 @@ def make_base_gaussian_vec(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(scale, T), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(scale, T), FfiMeasurementPtr))
 
 
 def make_base_geometric(
@@ -133,7 +133,7 @@ def make_base_geometric(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(scale, min, max, T, QO), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(scale, min, max, T, QO), FfiMeasurementPtr))
 
 
 def make_base_stability(
@@ -171,4 +171,4 @@ def make_base_stability(
     function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(n, scale, threshold, MI, TIK, TIC), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(n, scale, threshold, MI, TIK, TIC), FfiMeasurementPtr))

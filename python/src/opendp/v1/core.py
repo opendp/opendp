@@ -1,8 +1,8 @@
 # Auto-generated. Do not edit.
 import ctypes
 from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object
-from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr
+from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
+from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr, BoolPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
 
 
@@ -24,7 +24,7 @@ def error_free(
     function.argtypes = [ctypes.POINTER(FfiError)]
     function.restype = ctypes.c_bool
     
-    return function(error)
+    return c_to_py(function(error))
 
 
 def transformation_check(
@@ -50,7 +50,7 @@ def transformation_check(
     function.argtypes = [FfiMeasurementPtr, FfiObjectPtr, FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(transformation, d_in, d_out), ctypes.POINTER(ctypes.c_bool))
+    return c_to_py(unwrap(function(transformation, d_in, d_out), BoolPtr))
 
 
 def measurement_check(
@@ -76,7 +76,7 @@ def measurement_check(
     function.argtypes = [FfiMeasurementPtr, FfiObjectPtr, FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(measurement, d_in, d_out), ctypes.POINTER(ctypes.c_bool))
+    return c_to_py(unwrap(function(measurement, d_in, d_out), BoolPtr))
 
 
 def measurement_invoke(
@@ -99,7 +99,7 @@ def measurement_invoke(
     function.argtypes = [FfiMeasurementPtr, FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(measurement, arg), FfiObjectPtr)
+    return c_to_py(unwrap(function(measurement, arg), FfiObjectPtr))
 
 
 def measurement_free(
@@ -119,7 +119,7 @@ def measurement_free(
     function.argtypes = [FfiMeasurementPtr]
     function.restype = FfiResult
     
-    return unwrap(function(measurement), ctypes.c_void_p)
+    return c_to_py(unwrap(function(measurement), ctypes.c_void_p))
 
 
 def transformation_invoke(
@@ -142,7 +142,7 @@ def transformation_invoke(
     function.argtypes = [FfiTransformationPtr, FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(transformation, arg), FfiObjectPtr)
+    return c_to_py(unwrap(function(transformation, arg), FfiObjectPtr))
 
 
 def transformation_free(
@@ -162,7 +162,7 @@ def transformation_free(
     function.argtypes = [FfiTransformationPtr]
     function.restype = FfiResult
     
-    return unwrap(function(transformation), ctypes.c_void_p)
+    return c_to_py(unwrap(function(transformation), ctypes.c_void_p))
 
 
 def make_chain_mt(
@@ -185,7 +185,7 @@ def make_chain_mt(
     function.argtypes = [FfiMeasurementPtr, FfiTransformationPtr]
     function.restype = FfiResult
     
-    return unwrap(function(measurement, transformation), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(measurement, transformation), FfiMeasurementPtr))
 
 
 def make_chain_tt(
@@ -208,7 +208,7 @@ def make_chain_tt(
     function.argtypes = [FfiTransformationPtr, FfiTransformationPtr]
     function.restype = FfiResult
     
-    return unwrap(function(transformation1, transformation0), FfiTransformationPtr)
+    return c_to_py(unwrap(function(transformation1, transformation0), FfiTransformationPtr))
 
 
 def make_composition(
@@ -231,4 +231,4 @@ def make_composition(
     function.argtypes = [FfiMeasurementPtr, FfiMeasurementPtr]
     function.restype = FfiResult
     
-    return unwrap(function(transformation0, transformation1), FfiMeasurementPtr)
+    return c_to_py(unwrap(function(transformation0, transformation1), FfiMeasurementPtr))

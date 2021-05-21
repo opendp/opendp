@@ -1,7 +1,8 @@
 import ctypes
 from typing import Any, Sequence, Tuple, List
 
-from opendp.v1.mod import lib, UnknownTypeException, FfiSlice, OdpException, FfiObject, FfiObjectPtr, FfiSlicePtr
+from opendp.v1.mod import UnknownTypeException, FfiSlice, OdpException, FfiObjectPtr, FfiSlicePtr, BoolPtr, \
+    FfiTransformationPtr, FfiMeasurementPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor
 
 # list all acceptable alternative types for each default type
@@ -153,11 +154,9 @@ def py_to_object(val: Any, type_name: RuntimeTypeDescriptor = None) -> FfiObject
 
 def object_to_py(obj: FfiObjectPtr) -> Any:
     from opendp.v1.data import object_type, object_as_slice, to_string, slice_free
-    type_name_ptr = object_type(obj)
-    type_name = type_name_ptr.value.decode()
     ffi_slice = object_as_slice(obj)
     try:
-        return _slice_to_py(ffi_slice, type_name)
+        return _slice_to_py(ffi_slice, object_type(obj))
     except UnknownTypeException:
         raise
     except Exception as err:
@@ -166,7 +165,7 @@ def object_to_py(obj: FfiObjectPtr) -> Any:
         # raise err
         # If we fail, resort to string representation.
         # TODO: Remove this fallback once we have composition and/or tuples sorted out.
-        return to_string(obj).value.decode()
+        return to_string(obj)
     finally:
         slice_free(ffi_slice)
 
@@ -177,7 +176,6 @@ def py_to_ptr(val: Any, type_name: str = None):
     if type_name is None:
         type_name = RuntimeType.infer(val)
 
-    print(val, type_name)
     print('TODO: py_to_ptr without type_name check')
     # type_name.validate(val)
 
@@ -202,3 +200,23 @@ def py_to_c(val: Any, c_type):
         val = c_type(val)
 
     return val
+
+
+def c_to_py(c_value):
+    if isinstance(c_value, ctypes.c_char_p):
+        from opendp.v1.data import str_free
+        value = c_value.value.decode()
+        str_free(c_value)
+        return value
+
+    if isinstance(c_value, BoolPtr):
+        from opendp.v1.data import bool_free
+        value = c_value.contents.value
+        bool_free(c_value)
+        return value
+
+    if isinstance(c_value, (FfiTransformationPtr, FfiMeasurementPtr, FfiObjectPtr)):
+        return c_value
+
+    return c_value
+

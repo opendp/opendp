@@ -19,7 +19,7 @@
     "bool": "ctypes.c_bool",
     "FfiSlice *": "FfiSlicePtr",
     "const FfiSlice *": "FfiSlicePtr",
-    "bool *": "ctypes.POINTER(ctypes.c_bool)",
+    "bool *": "BoolPtr",
     "FfiObject *": "FfiObjectPtr",
     "const FfiObject *": "FfiObjectPtr",
     "FfiMeasurement *": "FfiMeasurementPtr",

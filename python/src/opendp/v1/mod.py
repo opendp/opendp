@@ -45,6 +45,10 @@ class FfiTransformation(ctypes.Structure):
     pass  # Opaque struct
 
 
+class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
+    _type_ = ctypes.c_bool
+
+
 class FfiObjectPtr(ctypes.POINTER(FfiObject)):
     _type_ = FfiObject
 
@@ -62,18 +66,15 @@ class FfiMeasurementPtr(ctypes.POINTER(FfiMeasurement)):
         res = measurement_invoke(self, arg)
         return object_to_py(res)
 
-    def check(self, d_in, d_out, *, d_in_type_arg=None, d_out_type_arg=None, debug=False):
+    def check(self, d_in, d_out, *, d_in_type_name=None, d_out_type_name=None, debug=False):
         from opendp.v1.convert import py_to_object
         from opendp.v1.core import measurement_check
         from opendp.v1.data import bool_free
-        d_in = py_to_object(d_in, d_in_type_arg and d_in_type_arg[1:-1])
-        d_out = py_to_object(d_out, d_out_type_arg and d_out_type_arg[1:-1])
+        d_in = py_to_object(d_in, d_in_type_name)
+        d_out = py_to_object(d_out, d_out_type_name)
 
         def _check():
-            val_ptr = measurement_check(self, d_in, d_out)
-            val = val_ptr.contents.value
-            bool_free(val_ptr)
-            return val
+            return measurement_check(self, d_in, d_out)
 
         if debug:
             return _check()
@@ -99,11 +100,11 @@ class FfiTransformationPtr(ctypes.POINTER(FfiTransformation)):
     def __rshift__(self, other: "FfiMeasurementPtr"):
         if isinstance(other, FfiMeasurementPtr):
             from opendp.v1.core import make_chain_mt
-            return make_chain_mt(self, other)
+            return make_chain_mt(other, self)
 
         if isinstance(other, FfiTransformationPtr):
             from opendp.v1.core import make_chain_tt
-            return make_chain_tt(self, other)
+            return make_chain_tt(other, self)
 
 
 

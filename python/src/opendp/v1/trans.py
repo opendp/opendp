@@ -1,8 +1,8 @@
 # Auto-generated. Do not edit.
 import ctypes
 from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object
-from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr
+from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
+from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr, BoolPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
 
 
@@ -27,7 +27,7 @@ def make_identity(
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(M, T), FfiTransformationPtr)
+    return c_to_py(unwrap(function(M, T), FfiTransformationPtr))
 
 
 def make_split_lines(
@@ -47,7 +47,7 @@ def make_split_lines(
     function.argtypes = []
     function.restype = FfiResult
     
-    return unwrap(function(), FfiTransformationPtr)
+    return c_to_py(unwrap(function(), FfiTransformationPtr))
 
 
 def make_parse_series(
@@ -70,7 +70,7 @@ def make_parse_series(
     function.argtypes = [ctypes.c_bool, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(impute, M), FfiTransformationPtr)
+    return c_to_py(unwrap(function(impute, M), FfiTransformationPtr))
 
 
 def make_split_records(
@@ -93,7 +93,7 @@ def make_split_records(
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(separator, M), FfiTransformationPtr)
+    return c_to_py(unwrap(function(separator, M), FfiTransformationPtr))
 
 
 def make_create_dataframe(
@@ -120,7 +120,7 @@ def make_create_dataframe(
     function.argtypes = [FfiObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(col_names, M, K), FfiTransformationPtr)
+    return c_to_py(unwrap(function(col_names, M, K), FfiTransformationPtr))
 
 
 def make_split_dataframe(
@@ -150,7 +150,7 @@ def make_split_dataframe(
     function.argtypes = [ctypes.c_char_p, FfiObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(separator, col_names, M, K), FfiTransformationPtr)
+    return c_to_py(unwrap(function(separator, col_names, M, K), FfiTransformationPtr))
 
 
 def make_parse_column(
@@ -184,7 +184,7 @@ def make_parse_column(
     function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(key, impute, M, K, T), FfiTransformationPtr)
+    return c_to_py(unwrap(function(key, impute, M, K, T), FfiTransformationPtr))
 
 
 def make_select_column(
@@ -215,7 +215,7 @@ def make_select_column(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(key, M, K, T), FfiTransformationPtr)
+    return c_to_py(unwrap(function(key, M, K, T), FfiTransformationPtr))
 
 
 def make_clamp_vec(
@@ -245,7 +245,7 @@ def make_clamp_vec(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(lower, upper, M, T), FfiTransformationPtr)
+    return c_to_py(unwrap(function(lower, upper, M, T), FfiTransformationPtr))
 
 
 def make_clamp_scalar(
@@ -275,7 +275,7 @@ def make_clamp_scalar(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(lower, upper, M, T), FfiTransformationPtr)
+    return c_to_py(unwrap(function(lower, upper, M, T), FfiTransformationPtr))
 
 
 def make_cast_vec(
@@ -303,7 +303,7 @@ def make_cast_vec(
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(M, TI, TO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(M, TI, TO), FfiTransformationPtr))
 
 
 def make_bounded_covariance(
@@ -340,7 +340,7 @@ def make_bounded_covariance(
     function.argtypes = [FfiObjectPtr, FfiObjectPtr, ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(lower, upper, length, ddof, MI, MO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(lower, upper, length, ddof, MI, MO), FfiTransformationPtr))
 
 
 def make_bounded_mean(
@@ -374,7 +374,7 @@ def make_bounded_mean(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(lower, upper, length, MI, MO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(lower, upper, length, MI, MO), FfiTransformationPtr))
 
 
 def make_bounded_sum(
@@ -405,7 +405,7 @@ def make_bounded_sum(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(lower, upper, MI, MO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(lower, upper, MI, MO), FfiTransformationPtr))
 
 
 def make_bounded_sum_n(
@@ -439,7 +439,7 @@ def make_bounded_sum_n(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(lower, upper, n, MI, MO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(lower, upper, n, MI, MO), FfiTransformationPtr))
 
 
 def make_bounded_variance(
@@ -476,7 +476,7 @@ def make_bounded_variance(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(lower, upper, length, ddof, MI, MO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(lower, upper, length, ddof, MI, MO), FfiTransformationPtr))
 
 
 def make_count(
@@ -504,7 +504,7 @@ def make_count(
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(MI, MO, TI), FfiTransformationPtr)
+    return c_to_py(unwrap(function(MI, MO, TI), FfiTransformationPtr))
 
 
 def make_count_by(
@@ -539,7 +539,7 @@ def make_count_by(
     function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(n, MI, MO, TI, TO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(n, MI, MO, TI, TO), FfiTransformationPtr))
 
 
 def make_count_by_categories(
@@ -574,4 +574,4 @@ def make_count_by_categories(
     function.argtypes = [FfiObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(categories, MI, MO, TI, TO), FfiTransformationPtr)
+    return c_to_py(unwrap(function(categories, MI, MO, TI, TO), FfiTransformationPtr))

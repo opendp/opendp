@@ -1,8 +1,8 @@
 # Auto-generated. Do not edit.
 import ctypes
 from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object
-from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr
+from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
+from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr, BoolPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
 
 
@@ -23,7 +23,7 @@ def to_string(
     function.argtypes = [FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(this), ctypes.c_char_p)
+    return c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
 def slice_as_object(
@@ -46,7 +46,7 @@ def slice_as_object(
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(raw, T), FfiObjectPtr)
+    return c_to_py(unwrap(function(raw, T), FfiObjectPtr))
 
 
 def object_type(
@@ -66,7 +66,7 @@ def object_type(
     function.argtypes = [FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(this), ctypes.c_char_p)
+    return c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
 def object_as_slice(
@@ -86,7 +86,7 @@ def object_as_slice(
     function.argtypes = [FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(this), FfiSlicePtr)
+    return c_to_py(unwrap(function(this), FfiSlicePtr))
 
 
 def object_free(
@@ -106,7 +106,7 @@ def object_free(
     function.argtypes = [FfiObjectPtr]
     function.restype = FfiResult
     
-    return unwrap(function(this), ctypes.c_void_p)
+    return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
 def slice_free(
@@ -126,7 +126,7 @@ def slice_free(
     function.argtypes = [FfiSlicePtr]
     function.restype = FfiResult
     
-    return unwrap(function(this), ctypes.c_void_p)
+    return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
 def str_free(
@@ -146,7 +146,7 @@ def str_free(
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(this), ctypes.c_void_p)
+    return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
 def bool_free(
@@ -159,11 +159,11 @@ def bool_free(
     
     
     # translate arguments to c types
-    this = py_to_c(this, c_type=ctypes.POINTER(ctypes.c_bool))
+    this = py_to_c(this, c_type=BoolPtr)
     
     # call library function
     function = lib.opendp_data__bool_free
-    function.argtypes = [ctypes.POINTER(ctypes.c_bool)]
+    function.argtypes = [BoolPtr]
     function.restype = FfiResult
     
-    return unwrap(function(this), ctypes.c_void_p)
+    return c_to_py(unwrap(function(this), ctypes.c_void_p))
