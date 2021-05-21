@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use std::hash::Hash;
 use std::ops::AddAssign;
 
-use num::{Integer, NumCast, One, Zero};
+use num::{Integer, NumCast, One, Zero, Bounded};
 use num::traits::FloatConst;
 
 use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
@@ -14,17 +14,18 @@ use crate::error::*;
 use crate::traits::DistanceConstant;
 
 
-pub fn make_count<MI, MO, T>() -> Fallible<Transformation<VectorDomain<AllDomain<T>>, AllDomain<u32>, MI, MO>>
+pub fn make_count<MI, MO, TI>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, AllDomain<MO::Distance>, MI, MO>>
     where MI: DatasetMetric<Distance=u32>,
-          MO: SensitivityMetric<Distance=u32> {
+          MO: SensitivityMetric,
+          MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
         // min(arg.len(), u32::MAX)
-        Function::new(move |arg: &Vec<T>| u32::try_from(arg.len()).unwrap_or(u32::MAX)),
+        Function::new(move |arg: &Vec<TI>| MO::Distance::try_from(arg.len()).unwrap_or(MO::Distance::max_value())),
         MI::default(),
         MO::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(MO::Distance::one())))
 }
 
 pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {

@@ -13,7 +13,7 @@ use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 
 #[no_mangle]
-pub extern "C" fn opendp_meas__make_base_simple_geometric(
+pub extern "C" fn opendp_meas__make_base_geometric(
     scale: *const c_void, min: *const c_void, max: *const c_void,
     T: *const c_char, QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {

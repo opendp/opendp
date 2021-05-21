@@ -184,6 +184,15 @@ pub extern "C" fn opendp_core__error_free(this: *mut FfiError) -> bool {
 }
 
 #[no_mangle]
+pub extern "C" fn opendp_core__transformation_check(this: *const FfiTransformation, distance_in: *const FfiObject, distance_out: *const FfiObject) -> FfiResult<*mut c_bool> {
+    let this = try_as_ref!(this);
+    let distance_in = try_as_ref!(distance_in);
+    let distance_out = try_as_ref!(distance_out);
+    let status = try_!(this.value.stability_relation.eval(&distance_in.value, &distance_out.value));
+    FfiResult::Ok(util::into_raw(util::from_bool(status)))
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_core__measurement_check(this: *const AnyMeasurement, distance_in: *const AnyMetricDistance, distance_out: *const AnyMeasureDistance) -> FfiResult<*mut c_bool> {
     let this = try_as_ref!(this);
     let distance_in = try_as_ref!(distance_in);

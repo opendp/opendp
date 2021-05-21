@@ -2,68 +2,159 @@
     "make_base_laplace": {
         "description": "Create a Measurement that adds noise from the laplace(scale) distribution to a scalar value.",
         "args": [
-            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the laplace distribution"}
-        ],
-        "type_args": [
-            {"name": "T", "description": "data type to be privatized"}
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "noise scale parameter of the laplace distribution"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "description": "data type to be privatized",
+                "is_type": true
+            }
         ],
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_laplace_vec": {
-        "description": "Create a Measurement that adds noise from the laplace(scale) distribution to a vector value.",
+        "description": "Create a Measurement that adds noise from the multivariate laplace(scale) distribution to a vector value.",
         "args": [
-            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the laplace distribution"}
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "noise scale parameter of the laplace distribution"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "description": "data type to be privatized",
+                "is_type": true
+            }
         ],
-        "type_args": [
-            {"name": "T", "description": "data type to be privatized"}
-        ],
-        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
     },
     "make_base_gaussian": {
         "description": "Create a Measurement that adds noise from the gaussian(scale) distribution to a scalar value.",
         "args": [
-            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the gaussian distribution"}
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "noise scale parameter to the gaussian distribution"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "description": "data type to be privatized",
+                "is_type": true
+            }
         ],
-        "type_args": [
-            {"name": "T", "description": "data type to be privatized"}
-        ],
-        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
     },
     "make_base_gaussian_vec": {
-        "description": "Create a Measurement that adds noise from the gaussian(scale) distribution to a vector value.",
+        "description": "Create a Measurement that adds noise from the multivariate gaussian(scale) distribution to a vector value.",
         "args": [
-            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the gaussian distribution"}
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "noise scale parameter to the gaussian distribution"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "description": "data type to be privatized",
+                "is_type": true
+            }
         ],
-        "type_args": [
-            {"name": "T", "description": "data type to be privatized"}
-        ],
-        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
     },
-    "make_base_simple_geometric": {
-        "description": "Create a Measurement that adds noise from the geometric(scale) distribution to a vector value.",
+    "make_base_geometric": {
+        "description": "Create a Measurement that adds noise from the geometric(scale) distribution to a scalar value.",
         "args": [
-            {"name": "scale", "c_type": "void *", "rust_type": "QO", "description": "noise scale parameter of the geometric distribution"},
-            {"name": "min", "c_type": "void *", "rust_type": "T", "description": "minimum value of the input"},
-            {"name": "max", "c_type": "void *", "rust_type": "T", "description": "maximum value of the input"}
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "QO",
+                "description": "noise scale parameter to the geometric distribution"
+            },
+            {
+                "name": "min",
+                "c_type": "void *",
+                "rust_type": "T"
+            },
+            {
+                "name": "max",
+                "c_type": "void *",
+                "rust_type": "T"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "description": "data type to be privatized",
+                "is_type": true
+            },
+            {
+                "name": "QO",
+                "c_type": "char *",
+                "description": "data type of the sensitivity space",
+                "is_type": true
+            }
         ],
-        "type_args": [
-            {"name": "T", "description": "data type to be privatized"},
-            {"name": "QO", "description": "type of the noise scale"}
-        ],
-        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
     },
     "make_base_stability": {
-        "description": "Create a Measurement that calculates noisy stability.",
+        "description": "Create a Measurement that implements a stability-based filtering and noising.",
         "args": [
-            {"name": "n", "c_type": "unsigned int", "description": "noise scale parameter of the geometric distribution"},
-            {"name": "scale", "c_type": "void *", "rust_type": "MI.0", "description": "noise scale parameter"},
-            {"name": "threshold", "c_type": "void *", "rust_type": "MI.0", "description": "threshold for counts"}
+            {
+                "name": "n",
+                "c_type": "unsigned int"
+            },
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": {"arg": ["MI", 0]},
+                "description": "noise scale parameter"
+            },
+            {
+                "name": "threshold",
+                "c_type": "void *",
+                "rust_type": {"arg": ["MI", 0]},
+                "description": "exclude counts that are less than this minimum value"
+            },
+            {
+                "name": "MI",
+                "c_type": "char *",
+                "description": "input metric space",
+                "is_type": true
+            },
+            {
+                "name": "TIK",
+                "c_type": "char *",
+                "description": "type of input key- hashable/categorical data type",
+                "is_type": true
+            },
+            {
+                "name": "TIC",
+                "c_type": "char *",
+                "description": "type of input count- integral",
+                "is_type": true,
+                "default": "int"
+            }
         ],
-        "type_args": [
-            {"name": "MI", "description": "type of the input metric"},
-            {"name": "TIK", "description": "type of the input key (hashable)"},
-            {"name": "TIC", "description": "type of the input count (integer)"}
-        ],
-        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
+>>>>>>> initial (buggy) bindings generation
     }
 }

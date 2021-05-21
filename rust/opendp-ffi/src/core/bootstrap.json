@@ -1,9 +1,17 @@
 {
     "error_free": {
         "args": [
-            {"name": "this", "c_type": "const FfiError *"}
+            {"name": "error", "c_type": "const FfiError *"}
         ],
         "ret": {"c_type": "bool"}
+    },
+    "transformation_check": {
+        "args": [
+            {"name": "transformation", "c_type": "const AnyMeasurement *"},
+            {"name": "d_in", "c_type": "const AnyObject *"},
+            {"name": "d_out", "c_type": "const AnyObject *"}
+        ],
+        "ret": {"c_type": "FfiResult<bool *>"}
     },
     "measurement_check": {
         "args": [
@@ -15,27 +23,27 @@
     },
     "measurement_invoke": {
         "args": [
-            {"name": "this", "c_type": "const AnyMeasurement *"},
+            {"name": "measurement", "c_type": "const AnyMeasurement *"},
             {"name": "arg", "c_type": "const AnyObject *"}
         ],
         "ret": {"c_type": "FfiResult<AnyObject *>"}
     },
     "measurement_free": {
         "args": [
-            {"name": "this", "c_type": "AnyMeasurement *"}
+            {"name": "measurement", "c_type": "AnyMeasurement *"}
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
     "transformation_invoke": {
         "args": [
-            {"name": "this", "c_type": "const AnyTransformation *"},
+            {"name": "transformation", "c_type": "const AnyTransformation *"},
             {"name": "arg", "c_type": "const AnyObject *"}
         ],
         "ret": {"c_type": "FfiResult<AnyObject *>"}
     },
     "transformation_free": {
         "args": [
-            {"name": "this", "c_type": "AnyTransformation *"}
+            {"name": "transformation", "c_type": "AnyTransformation *"}
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
