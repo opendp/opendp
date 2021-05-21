@@ -1,3 +1,4 @@
+use std::any;
 use std::any::Any;
 
 use crate::core::{Domain, Function, Measure, Measurement, Metric, Transformation};
@@ -23,9 +24,9 @@ impl<DI, DO> Function<DI, DO>
           DO::Carrier: 'static {
     /// Converts this Function into one with polymorphic output.
     pub fn into_poly(self) -> Function<DI, PolyDomain> {
-        let function = move |arg: &DI::Carrier| -> Fallible<Box<dyn Any>> {
-            let res = (self.function)(arg);
-            res.map(|o| Box::new(*o) as Box<dyn Any>)
+        let function = move |arg: &DI::Carrier| -> Fallible<<PolyDomain as Domain>::Carrier> {
+            let res = self.eval(arg);
+            res.map(|o| Box::new(o) as Box<dyn Any>)
         };
         Function::new_fallible(function)
     }
@@ -33,7 +34,7 @@ impl<DI, DO> Function<DI, DO>
 
 impl<DI: Domain> Function<DI, PolyDomain> {
     pub fn eval_poly<T: 'static>(&self, arg: &DI::Carrier) -> Fallible<T> {
-        self.eval(arg)?.downcast().map_err(|_| err!(FailedCast)).map(|res| *res)
+        self.eval(arg)?.downcast().map_err(|_| err!(FailedCast, "Failed downcast of eval_poly result to {}", any::type_name::<T>())).map(|res| *res)
     }
 }
 
@@ -48,11 +49,11 @@ impl<DI, DO, MI, MO> Measurement<DI, DO, MI, MO>
     /// of heterogeneous Measurements.
     pub fn into_poly(self) -> Measurement<DI, PolyDomain, MI, MO> {
         Measurement::new(
-            *self.input_domain,
+            self.input_domain,
             PolyDomain::new(),
             self.function.into_poly(),
-            *self.input_metric,
-            *self.output_measure,
+            self.input_metric,
+            self.output_measure,
             self.privacy_relation,
         )
     }
@@ -69,11 +70,11 @@ impl<DI, DO, MI, MO> Transformation<DI, DO, MI, MO>
     /// but it's provided for symmetry with Measurement.
     pub fn into_poly(self) -> Transformation<DI, PolyDomain, MI, MO> {
         Transformation::new(
-            *self.input_domain,
+            self.input_domain,
             PolyDomain::new(),
             self.function.into_poly(),
-            *self.input_metric,
-            *self.output_metric,
+            self.input_metric,
+            self.output_metric,
             self.stability_relation,
         )
     }
@@ -97,7 +98,7 @@ mod tests {
         let res_poly = op_poly.function.eval_poly::<f64>(&arg)?;
         assert_eq!(res_poly, arg);
         let res_bogus = op_poly.function.eval_poly::<i32>(&arg);
-        assert!(res_bogus.is_err());
+        assert_eq!(res_bogus.err().unwrap_test().variant, ErrorVariant::FailedCast);
         Ok(())
     }
 
@@ -111,7 +112,7 @@ mod tests {
         let res_poly = op_poly.function.eval_poly::<f64>(&arg)?;
         assert_eq!(res_poly, arg);
         let res_bogus = op_poly.function.eval_poly::<i32>(&arg);
-        assert!(res_bogus.is_err());
+        assert_eq!(res_bogus.err().unwrap_test().variant, ErrorVariant::FailedCast);
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 {
     "to_string": {
         "args": [
-            {"name": "this", "c_type": "const FfiObject *"}
+            {"name": "this", "c_type": "const AnyObject *"}
         ],
         "ret": {"c_type": "FfiResult<const char *>"}
     },
@@ -12,23 +12,23 @@
         "type_args": [
             {"name": "T"}
         ],
-        "ret": {"c_type": "FfiResult<const FfiObject *>"}
+        "ret": {"c_type": "FfiResult<const AnyObject *>"}
     },
     "object_type": {
         "args": [
-            {"name": "this", "c_type": "const FfiObject *"}
+            {"name": "this", "c_type": "const AnyObject *"}
         ],
         "ret": {"c_type": "FfiResult<const char *>"}
     },
     "object_as_slice": {
         "args": [
-            {"name": "this", "c_type": "const FfiObject *"}
+            {"name": "this", "c_type": "const AnyObject *"}
         ],
         "ret": {"c_type": "FfiResult<const FfiSlice *>"}
     },
     "object_free": {
         "args": [
-            {"name": "this", "c_type": "const FfiObject *"}
+            {"name": "this", "c_type": "const AnyObject *"}
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },

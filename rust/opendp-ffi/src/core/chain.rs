@@ -1,110 +1,99 @@
-use opendp::err;
+use opendp::chain::{make_basic_composition, make_chain_mt, make_chain_tt};
 
-use crate::core::{FfiDomain, FfiMeasure, FfiMeasureGlue, FfiMeasurement, FfiResult, FfiTransformation};
-use crate::util;
-use crate::util::Type;
-use opendp::chain::{make_chain_mt_glue, make_chain_tt_glue, make_composition_glue};
-
+use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
+use crate::core::FfiResult;
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const FfiMeasurement, transformation0: *const FfiTransformation) -> FfiResult<*mut FfiMeasurement> {
+pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
     let transformation0 = try_as_ref!(transformation0);
     let measurement1 = try_as_ref!(measurement1);
-
-    let FfiTransformation {
-        input_glue: input_glue0,
-        output_glue: output_glue0,
-        value: value0
-    } = transformation0;
-
-    let FfiMeasurement {
-        input_glue: input_glue1,
-        output_glue: output_glue1,
-        value: value1
-    } = measurement1;
-
-    if output_glue0.domain_type != input_glue1.domain_type {
-        return err!(DomainMismatch, "chained domain types do not match").into();
-    }
-
-    let measurement = try_!(make_chain_mt_glue(
-        value1, value0, None,
-        &input_glue0.metric_glue,
-        &output_glue0.metric_glue,
-        &output_glue1.measure_glue));
-
-    FfiResult::Ok(util::into_raw(
-        FfiMeasurement::new(input_glue0.clone(), output_glue1.clone(), measurement)))
+    make_chain_mt(measurement1, transformation0, None).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const FfiTransformation, transformation0: *const FfiTransformation) -> FfiResult<*mut FfiTransformation> {
+pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const AnyTransformation, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyTransformation> {
     let transformation0 = try_as_ref!(transformation0);
     let transformation1 = try_as_ref!(transformation1);
-
-    let FfiTransformation {
-        input_glue: input_glue0,
-        output_glue: output_glue0,
-        value: value0
-    } = transformation0;
-
-    let FfiTransformation {
-        input_glue: input_glue1,
-        output_glue: output_glue1,
-        value: value1
-    } = transformation1;
-
-    if output_glue0.domain_type != input_glue1.domain_type {
-        return err!(DomainMismatch, "chained domain types do not match").into();
-    }
-
-    let transformation = try_!(make_chain_tt_glue(
-        value1,
-        value0,
-        None,
-        &input_glue0.metric_glue,
-        &output_glue0.metric_glue,
-        &output_glue1.metric_glue));
-
-    FfiResult::Ok(util::into_raw(
-        FfiTransformation::new(input_glue0.clone(), output_glue1.clone(), transformation)))
+    make_chain_tt(transformation1, transformation0, None).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_composition(measurement0: *const FfiMeasurement, measurement1: *const FfiMeasurement) -> FfiResult<*mut FfiMeasurement> {
+pub extern "C" fn opendp_core__make_basic_composition(measurement0: *const AnyMeasurement, measurement1: *const AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
     let measurement0 = try_as_ref!(measurement0);
     let measurement1 = try_as_ref!(measurement1);
-
-    let FfiMeasurement {
-        input_glue: input_glue0,
-        output_glue: output_glue0,
-        value: value0
-    } = measurement0;
-
-
-    let FfiMeasurement {
-        input_glue: input_glue1,
-        output_glue: output_glue1,
-        value: value1
-    } = measurement1;
+    // This one has a different pattern than most constructors. The result of make_basic_composition()
+    // will be Measurement<AnyDomain, PairDomain, AnyMetric, AnyMeasure>. We need to get back to
+    // AnyMeasurement, but using IntoAnyMeasurementExt::into_any() would double-wrap the input.
+    // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
+    make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
+}
 
 
-    if input_glue0.domain_type != input_glue1.domain_type {
-        return err!(DomainMismatch, "chained domain types do not match").into();
+#[cfg(test)]
+mod tests {
+    use opendp::core::{Function, Measurement, PrivacyRelation, Transformation};
+    use opendp::dist::{MaxDivergence, SymmetricDistance};
+    use opendp::dom::AllDomain;
+    use opendp::error::*;
+    use opendp::trans;
+
+    use crate::any::{AnyObject, Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+    use crate::core;
+    use crate::util;
+
+    use super::*;
+
+    // TODO: Find all the places we've duplicated this code and replace with common function.
+    pub fn make_test_measurement<T: Clone>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
+        Measurement::new(
+            AllDomain::new(),
+            AllDomain::new(),
+            Function::new(|arg: &T| arg.clone()),
+            SymmetricDistance::default(),
+            MaxDivergence::default(),
+            PrivacyRelation::new(|_d_in, _d_out| true),
+        )
     }
 
-    let measurement = try_!(make_composition_glue(
-        value0, value1,
-        &input_glue0.metric_glue,
-        &output_glue0.measure_glue,
-        &output_glue1.measure_glue));
+    // TODO: Find all the places we've duplicated this code and replace with common function.
+    pub fn make_test_transformation<T: Clone>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
+        trans::make_identity(AllDomain::<T>::new(), SymmetricDistance::default()).unwrap_test()
+    }
 
-    // TODO: output_glue for composition.
-    let output_glue_domain_type = Type::of::<FfiDomain>();
-    let output_glue_domain_carrier = Type::new_box_pair(&output_glue0.domain_carrier, &output_glue1.domain_carrier);
-    let output_glue_measure_glue = output_glue0.measure_glue.clone();
-    let output_glue = FfiMeasureGlue::<FfiDomain, FfiMeasure>::new_explicit(output_glue_domain_type, output_glue_domain_carrier, output_glue_measure_glue);
+    #[test]
+    fn test_make_chain_mt() -> Fallible<()> {
+        let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
+        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
+        let chain = Result::from(opendp_core__make_chain_mt(measurement1, transformation0))?;
+        let arg = AnyObject::new_raw(999);
+        let res = core::opendp_core__measurement_invoke(&chain, arg);
+        let res: i32 = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, 999);
+        Ok(())
+    }
 
-    FfiResult::Ok(util::into_raw(
-        FfiMeasurement::new(input_glue0.clone(), output_glue, measurement)))
+    #[test]
+    fn test_make_chain_tt() -> Fallible<()> {
+        let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
+        let transformation1 = util::into_raw(make_test_transformation::<i32>().into_any());
+        let chain = Result::from(opendp_core__make_chain_tt(transformation1, transformation0))?;
+        let arg = AnyObject::new_raw(999);
+        let res = core::opendp_core__transformation_invoke(&chain, arg);
+        let res: i32 = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, 999);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_basic_composition() -> Fallible<()> {
+        let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
+        let basic_compostion = Result::from(opendp_core__make_basic_composition(measurement0, measurement1))?;
+        let arg = AnyObject::new_raw(999);
+        let res = core::opendp_core__measurement_invoke(&basic_compostion, arg);
+        let res: (AnyObject, AnyObject) = Fallible::from(res)?.downcast()?;
+        let res: (i32, i32) = (res.0.downcast()?, res.1.downcast()?);
+        assert_eq!(res, (999, 999));
+        Ok(())
+    }
 }

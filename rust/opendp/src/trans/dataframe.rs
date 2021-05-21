@@ -1,14 +1,14 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::iter::repeat;
 use std::str::FromStr;
 
-use crate::error::*;
 use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation};
 use crate::data::Column;
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
-use std::hash::Hash;
+use crate::error::*;
 
 pub type DataFrame<K> = HashMap<K, Column>;
 pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
@@ -211,11 +211,11 @@ pub fn make_split_records<M>(separator: Option<&str>) -> Fallible<Transformation
 
 #[cfg(test)]
 mod tests {
+    use crate::chain::make_chain_tt;
     use crate::dist::HammingDistance;
     use crate::error::ExplainUnwrap;
 
     use super::*;
-    use crate::chain::make_chain_tt;
 
     #[test]
     fn test_make_split_lines() {
@@ -293,7 +293,7 @@ mod tests {
     fn test_make_parse_columns() {
         let transformation0 = make_parse_column::<HammingDistance, _, i32>("1".to_string(), true).unwrap_test();
         let transformation1 = make_parse_column::<HammingDistance, _, f64>("2".to_string(), true).unwrap_test();
-        let transformation = make_chain_tt(&transformation1, &transformation0).unwrap_test();
+        let transformation = make_chain_tt(&transformation1, &transformation0, None).unwrap_test();
         let arg: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
