@@ -1,5 +1,7 @@
 # OpenDP
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
+![ci tests](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)
 
 [OpenDP](https://opendp.org) is a community effort to build trustworthy, open-source software tools for statistical analysis of sensitive private data. This repository contains OpenDP Core, a library of differential privacy algorithms powering OpenDP.
 
