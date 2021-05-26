@@ -53,17 +53,17 @@
 //!     // Construct a Transformation to load the numbers.
 //!     let split_lines = make_split_lines::<HammingDistance>()?;
 //!     let parse_series = make_parse_series::<HammingDistance, f64>(true)?;
-//!     let load_numbers = make_chain_tt(&parse_series, &split_lines)?;
+//!     let load_numbers = make_chain_tt(&parse_series, &split_lines, None)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
 //!     let clamp = make_clamp_vec(bounds.0, bounds.1)?;
 //!     let bounded_sum = make_bounded_sum(bounds.0, bounds.1)?;
 //!     let laplace = make_base_laplace(sigma)?;
-//!     let intermediate = make_chain_tt(&bounded_sum, &clamp)?;
-//!     let noisy_sum = make_chain_mt(&laplace, &intermediate)?;
+//!     let intermediate = make_chain_tt(&bounded_sum, &clamp, None)?;
+//!     let noisy_sum = make_chain_mt(&laplace, &intermediate, None)?;
 //!
 //!     // Put it all together.
-//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers)?;
+//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers, None)?;
 //!     let result = pipeline.function.eval(&data)?;
 //!     println!("result = {}", result);
 //!     Ok(())
@@ -144,7 +144,6 @@ macro_rules! num_cast {
 #[macro_use]
 pub mod error;
 
-pub mod any;
 pub mod chain;
 pub mod core;
 pub mod data;

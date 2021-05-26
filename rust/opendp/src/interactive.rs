@@ -46,7 +46,7 @@ impl<S, Q> Queryable<S, Q, Box<dyn Any>> {
     }
 }
 
-type InteractiveMeasurement<DI, DO, MI, MO, S, Q> = Measurement<DI, AllDomain<Queryable<S, Q, <DO as Domain>::Carrier>>, MI, MO>;
+pub type InteractiveMeasurement<DI, DO, MI, MO, S, Q> = Measurement<DI, AllDomain<Queryable<S, Q, <DO as Domain>::Carrier>>, MI, MO>;
 
 /// The state of an adaptive composition Queryable.
 pub struct AcState<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
@@ -81,14 +81,14 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> wh
 
     /// Checks that a measurement (of a query) is compatible with this Queryable state.
     fn check_types(&self, measurement: &Measurement<DI, DO, MI, MO>) -> Fallible<()> {
-        if measurement.input_domain.as_ref() != &self.input_domain {
+        if measurement.input_domain != self.input_domain {
             return fallible!(DomainMismatch, "wrong query input domain")
-        } else if measurement.output_domain.as_ref() != &self.output_domain {
+        } else if measurement.output_domain != self.output_domain {
             return fallible!(DomainMismatch, "wrong query output domain")
-        } else if measurement.input_metric.as_ref() != &self.input_metric {
-            return fallible!(DomainMismatch, "wrong query input metric")
-        } else if measurement.output_measure.as_ref() != &self.output_measure {
-            return fallible!(DomainMismatch, "wrong query output metric")
+        } else if measurement.input_metric != self.input_metric {
+            return fallible!(MetricMismatch, "wrong query input metric")
+        } else if measurement.output_measure != self.output_measure {
+            return fallible!(MeasureMismatch, "wrong query output measure")
         }
         Ok(())
     }
@@ -182,7 +182,7 @@ mod tests {
         let data = 999;
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
-        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), *meas1.output_domain.clone(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
+        let adaptive = make_adaptive_composition(meas1.input_domain.clone(), meas1.output_domain.clone(), meas1.input_metric.clone(), meas1.output_measure.clone(), d_in_budget, d_out_budget);
         let mut queryable = adaptive.function.eval(&data)?;
         let res1 = queryable.eval(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999);
@@ -200,7 +200,7 @@ mod tests {
         let data = 999;
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
-        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), PolyDomain::new(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
+        let adaptive = make_adaptive_composition(meas1.input_domain.clone(), PolyDomain::new(), meas1.input_metric.clone(), meas1.output_measure.clone(), d_in_budget, d_out_budget);
         let mut queryable = adaptive.function.eval(&data)?;
         let res1: i32 = queryable.eval_poly(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999_i32);
@@ -218,7 +218,7 @@ mod tests {
         let data = 999;
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
-        let adaptive = make_adaptive_composition(*meas1.input_domain.clone(), *meas1.output_domain.clone(), *meas1.input_metric.clone(), *meas1.output_measure.clone(), d_in_budget, d_out_budget);
+        let adaptive = make_adaptive_composition(meas1.input_domain.clone(), meas1.output_domain.clone(), meas1.input_metric.clone(), meas1.output_measure.clone(), d_in_budget, d_out_budget);
         let mut queryable = adaptive.function.eval(&data)?;
         let res1 = queryable.eval(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999);

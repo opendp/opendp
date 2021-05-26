@@ -1,51 +1,69 @@
 {
     "make_base_laplace": {
-        "description": "Create a Measurement that adds noise from the laplace(scale) distribution.",
+        "description": "Create a Measurement that adds noise from the laplace(scale) distribution to a scalar value.",
         "args": [
             {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the laplace distribution"}
         ],
         "type_args": [
             {"name": "T", "description": "data type to be privatized"}
         ],
-        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_laplace_vec": {
+        "description": "Create a Measurement that adds noise from the laplace(scale) distribution to a vector value.",
         "args": [
-            {"name": "type_args", "c_type": "const char *"},
-            {"name": "scale", "c_type": "void *"}
+            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the laplace distribution"}
         ],
-        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+        "type_args": [
+            {"name": "T", "description": "data type to be privatized"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_gaussian": {
+        "description": "Create a Measurement that adds noise from the gaussian(scale) distribution to a scalar value.",
         "args": [
-            {"name": "type_args", "c_type": "const char *"},
-            {"name": "scale", "c_type": "void *"}
+            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the gaussian distribution"}
         ],
-        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+        "type_args": [
+            {"name": "T", "description": "data type to be privatized"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_gaussian_vec": {
+        "description": "Create a Measurement that adds noise from the gaussian(scale) distribution to a vector value.",
         "args": [
-            {"name": "type_args", "c_type": "const char *"},
-            {"name": "scale", "c_type": "void *"}
+            {"name": "scale", "c_type": "void *", "rust_type": "T", "description": "noise scale parameter of the gaussian distribution"}
         ],
-        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+        "type_args": [
+            {"name": "T", "description": "data type to be privatized"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_simple_geometric": {
+        "description": "Create a Measurement that adds noise from the geometric(scale) distribution to a vector value.",
         "args": [
-            {"name": "type_args", "c_type": "const char *"},
-            {"name": "scale", "c_type": "void *"},
-            {"name": "min", "c_type": "void *"},
-            {"name": "max", "c_type": "void *"}
+            {"name": "scale", "c_type": "void *", "rust_type": "QO", "description": "noise scale parameter of the geometric distribution"},
+            {"name": "min", "c_type": "void *", "rust_type": "T", "description": "minimum value of the input"},
+            {"name": "max", "c_type": "void *", "rust_type": "T", "description": "maximum value of the input"}
         ],
-        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+        "type_args": [
+            {"name": "T", "description": "data type to be privatized"},
+            {"name": "QO", "description": "type of the noise scale"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_stability": {
+        "description": "Create a Measurement that calculates noisy stability.",
         "args": [
-            {"name": "type_args", "c_type": "const char *"},
-            {"name": "n", "c_type": "unsigned int"},
-            {"name": "scale", "c_type": "void *"},
-            {"name": "threshold", "c_type": "void *"}
+            {"name": "n", "c_type": "unsigned int", "description": "noise scale parameter of the geometric distribution"},
+            {"name": "scale", "c_type": "void *", "rust_type": "MI.0", "description": "noise scale parameter"},
+            {"name": "threshold", "c_type": "void *", "rust_type": "MI.0", "description": "threshold for counts"}
         ],
-        "ret": {"c_type": "FfiResult<FfiMeasurement *>"}
+        "type_args": [
+            {"name": "MI", "description": "type of the input metric"},
+            {"name": "TIK", "description": "type of the input key (hashable)"},
+            {"name": "TIC", "description": "type of the input count (integer)"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     }
 }

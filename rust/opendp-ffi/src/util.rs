@@ -5,11 +5,11 @@ use std::convert::TryFrom;
 use std::ffi::{CStr, IntoStringError, NulError};
 use std::ffi::CString;
 use std::os::raw::c_char;
-
-use opendp::dist::{SymmetricDistance, HammingDistance, L1Sensitivity, L2Sensitivity};
-use opendp::error::*;
-use opendp::{err, fallible};
 use std::str::Utf8Error;
+
+use opendp::{err, fallible};
+use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
+use opendp::error::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -195,25 +195,14 @@ pub fn into_raw<T>(o: T) -> *mut T {
     Box::into_raw(Box::<T>::new(o))
 }
 
-pub fn into_box<T, U>(o: T) -> Box<U> {
-    let p = into_raw(o) as *mut U;
-    unsafe { Box::from_raw(p) }
-}
-
 pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
     (!p.is_null()).then(|| *unsafe { Box::<T>::from_raw(p) })
-        .ok_or_else(|| err!(FFI, "attempted to free a null pointer"))
+        .ok_or_else(|| err!(FFI, "attempted to consume a null pointer"))
 }
 
 pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
 }
-
-
-// pub fn as_mut<'a, T>(ptr: *mut T) -> &'a mut T {
-//     assert!(!ptr.is_null());
-//     unsafe { &mut *ptr }
-// }
 
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
     CString::new(s)
@@ -259,11 +248,23 @@ pub fn from_bool(b: bool) -> c_bool {
 
 
 #[cfg(test)]
+pub trait ToCharP {
+    fn to_char_p(&self) -> *mut c_char;
+}
+#[cfg(test)]
+impl<S: ToString> ToCharP for S {
+    fn to_char_p(&self) -> *mut c_char {
+        crate::util::into_c_char_p(self.to_string()).unwrap_test()
+    }
+}
+
+#[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use opendp::dist::L1Sensitivity;
 
     use super::*;
-    use std::convert::TryInto;
 
     #[test]
     fn test_type_of() {

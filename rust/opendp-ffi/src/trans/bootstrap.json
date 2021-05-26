@@ -1,111 +1,154 @@
 {
-    "make_identity": {
+    "make_count": {
         "type_args": [
-            {"name": "M", "hint": "DatasetMetric", "description": "metric space"},
-            {"name": "T", "description": "type of data passed to the identity function"}
+            {"name": "MI", "hint": "DatasetMetric", "description": "input metric space"},
+            {"name": "MO", "hint": "SensitivityMetric", "description": "output metric space"},
+            {"name": "T", "description": "type of data"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_count_by_categories": {
+        "args": [
+            {"name": "categories", "c_type": "FfiObject *"}
+        ],
+        "type_args": [
+            {"name": "MI", "hint": "DatasetMetric", "description": "input metric space"},
+            {"name": "MO", "hint": "SensitivityMetric", "description": "output metric space"},
+            {"name": "TI", "description": "type of data"},
+            {"name": "TO", "description": "type of counts"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_count_by": {
+        "args": [
+            {"name": "n", "c_type": "unsigned int"}
+        ],
+        "type_args": [
+            {"name": "MI", "hint": "DatasetMetric", "description": "input metric space"},
+            {"name": "MO", "hint": "SensitivityMetric", "description": "output metric space"},
+            {"name": "TI", "description": "type of data"},
+            {"name": "TO", "description": "type of counts"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_split_lines": {
         "type_args": [
             {"name": "M", "hint": "DatasetMetric", "description": "metric space"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_parse_series": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
             {"name": "impute", "c_type": "bool"}
         ],
         "type_args": [
             {"name": "M", "hint": "DatasetMetric"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_split_records": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
             {"name": "separator", "c_type":  "const char *"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_create_dataframe": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
             {"name": "col_names", "c_type":  "FfiObject *"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_split_dataframe": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
             {"name": "separator", "c_type": "const char *"},
             {"name": "col_names", "c_type": "FfiObject *"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric"},
+            {"name": "K"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_parse_column": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "key", "c_type": "void *"},
+            {"name": "key", "c_type": "void *", "rust_type": "K"},
             {"name": "impute", "c_type": "bool"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric"},
+            {"name": "K"},
+            {"name": "T"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_select_column": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "key", "c_type": "void *"}
+            {"name": "key", "c_type": "void *", "rust_type": "K"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric"},
+            {"name": "K"},
+            {"name": "T"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_identity": {
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric", "description": "metric space"},
+            {"name": "T", "description": "type of data passed to the identity function"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_clamp": {
+        "args": [
+            {"name": "lower", "c_type": "void *", "rust_type": "T"},
+            {"name": "upper", "c_type": "void *", "rust_type": "T"}
+        ],
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric", "description": "metric space"},
+            {"name": "T", "description": "type of data"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_clamp_vec": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "lower", "c_type": "void *"},
-            {"name": "upper", "c_type": "void *"}
-        ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
-    },
-    "make_clamp_scalar": {
-        "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "lower", "c_type": "void *"},
-            {"name": "upper", "c_type": "void *"}
-        ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
-    },
-    "make_cast_vec": {
-        "args": [
-            {"name": "selector", "c_type": "const char *"}
-        ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
-    },
-    "make_bounded_covariance": {
-        "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "lower", "c_type": "FfiObject *", "type_arg": "(T, T)"},
-            {"name": "upper", "c_type": "FfiObject *", "type_arg": "(T, T)"},
-            {"name": "length", "c_type": "unsigned int"},
-            {"c_type": "unsigned int","name": "ddof"}
+            {"name": "lower", "c_type": "void *", "rust_type": "T"},
+            {"name": "upper", "c_type": "void *", "rust_type": "T"}
         ],
         "type_args": [
-            {"name": "T"}
+            {"name": "M", "hint": "DatasetMetric", "description": "metric space"},
+            {"name": "T", "description": "type of data"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_cast_vec": {
+        "type_args": [
+            {"name": "M", "hint": "DatasetMetric", "description": "metric space"},
+            {"name": "TI", "description": "type of input data"},
+            {"name": "TO", "description": "type of output data"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_bounded_mean": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "lower", "c_type": "void *"},
-            {"name": "upper", "c_type": "void *"},
+            {"name": "lower", "c_type": "void *", "rust_type": "MI.0"},
+            {"name": "upper", "c_type": "void *", "rust_type": "MI.0"},
             {"name": "length", "c_type": "unsigned int"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "type_args": [
+            {"name": "MI", "hint": "DatasetMetric", "description": "input metric space"},
+            {"name": "MO", "hint": "SensitivityMetric", "description": "output metric space"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_bounded_sum": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
             {"name": "lower", "c_type": "void *", "rust_type": "MO.0"},
             {"name": "upper", "c_type": "void *", "rust_type": "MO.0"}
         ],
@@ -113,45 +156,43 @@
             {"name": "MI", "hint": "DatasetMetric"},
             {"name": "MO", "hint": "SensitivityMetric"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_bounded_sum_n": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "lower", "c_type": "void *"},
-            {"name": "upper", "c_type": "void *"},
+            {"name": "lower", "c_type": "void *", "rust_type": "MO.0"},
+            {"name": "upper", "c_type": "void *", "rust_type": "MO.0"},
             {"name": "n", "c_type": "unsigned int"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "type_args": [
+            {"name": "MO", "hint": "SensitivityMetric"}
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_bounded_variance": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "lower", "c_type": "void *"},
-            {"name": "upper", "c_type": "void *"},
+            {"name": "lower", "c_type": "AnyObject *", "type_arg": "(MO.0, MO.0)"},
+            {"name": "upper", "c_type": "AnyObject *", "type_arg": "(MO.0, MO.0)"},
             {"name": "length", "c_type": "unsigned int"},
             {"name": "ddof", "c_type": "unsigned int"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
-    },
-    "make_count": {
-        "args": [
-            {"name": "selector", "c_type": "const char *"}
+        "type_args": [
+            {"name": "MI", "hint": "DatasetMetric"},
+            {"name": "MO", "hint": "SensitivityMetric"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_count_by": {
+    "make_bounded_covariance": {
         "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "n", "c_type": "unsigned int"}
+            {"name": "lower", "c_type": "AnyObject *", "type_arg": "(MO.0, MO.0)"},
+            {"name": "upper", "c_type": "AnyObject *", "type_arg": "(MO.0, MO.0)"},
+            {"name": "length", "c_type": "unsigned int"},
+            {"name": "ddof", "c_type": "unsigned int"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
-    },
-    "make_count_by_categories": {
-        "args": [
-            {"name": "selector", "c_type": "const char *"},
-            {"name": "categories", "c_type": "FfiObject *"}
+        "type_args": [
+            {"name": "MI", "hint": "DatasetMetric"},
+            {"name": "MO", "hint": "SensitivityMetric"}
         ],
-        "ret": {"c_type": "FfiResult<FfiTransformation *>"}
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     }
 }

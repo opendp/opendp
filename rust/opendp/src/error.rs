@@ -37,7 +37,13 @@ pub struct Error {
     pub backtrace: _Backtrace
 }
 
-#[derive(thiserror::Error, Debug)]
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        self.variant == other.variant && self.message == other.message
+    }
+}
+
+#[derive(PartialEq, thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum ErrorVariant {
     #[error("FFI")]
@@ -60,6 +66,12 @@ pub enum ErrorVariant {
 
     #[error("DomainMismatch")]
     DomainMismatch,
+
+    #[error("MetricMismatch")]
+    MetricMismatch,
+
+    #[error("MeasureMismatch")]
+    MeasureMismatch,
 
     #[error("MakeTransformation")]
     MakeTransformation,
