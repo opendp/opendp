@@ -12,7 +12,9 @@ def make_identity(
 ):
     """
     :param M: metric space
+    :type M: DatasetMetric
     :param T: type of data passed to the identity function
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -56,7 +58,9 @@ def make_parse_series(
 ):
     """
     :param impute: 
+    :type impute: bool
     :param M: 
+    :type M: DatasetMetric
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -79,7 +83,9 @@ def make_split_records(
 ):
     """
     :param separator: 
+    :type separator: str
     :param M: 
+    :type M: DatasetMetric
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -104,7 +110,9 @@ def make_create_dataframe(
     """
     :param col_names: 
     :param M: 
+    :type M: DatasetMetric
     :param K: 
+    :type K: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -131,9 +139,12 @@ def make_split_dataframe(
 ):
     """
     :param separator: 
+    :type separator: str
     :param col_names: 
     :param M: 
+    :type M: DatasetMetric
     :param K: 
+    :type K: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -163,9 +174,13 @@ def make_parse_column(
     """
     :param key: name of column to select from dataframe and parse
     :param impute: if false, raise an error if parsing fails
+    :type impute: bool
     :param M: 
+    :type M: DatasetMetric
     :param K: data type of the key
+    :type K: RuntimeTypeDescriptor
     :param T: data type to parse into
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -196,8 +211,11 @@ def make_select_column(
     """
     :param key: 
     :param M: 
+    :type M: DatasetMetric
     :param K: data type of the key
+    :type K: RuntimeTypeDescriptor
     :param T: data type to downcast to
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -228,7 +246,9 @@ def make_clamp_vec(
     :param lower: 
     :param upper: 
     :param M: 
+    :type M: DatasetMetric
     :param T: type of data being clamped
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -258,7 +278,9 @@ def make_clamp_scalar(
     :param lower: 
     :param upper: 
     :param M: 
+    :type M: DatasetMetric
     :param T: type of data being clamped
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -285,8 +307,11 @@ def make_cast_vec(
 ):
     """
     :param M: 
+    :type M: DatasetMetric
     :param TI: input data type
+    :type TI: RuntimeTypeDescriptor
     :param TO: output data type
+    :type TO: RuntimeTypeDescriptor
     """
     # parse type args
     M = RuntimeType.parse(type_name=M)
@@ -318,9 +343,13 @@ def make_bounded_covariance(
     :param lower: 
     :param upper: 
     :param length: 
+    :type length: int
     :param ddof: 
+    :type ddof: int
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)
@@ -354,8 +383,11 @@ def make_bounded_mean(
     :param lower: 
     :param upper: 
     :param length: 
+    :type length: int
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)
@@ -387,7 +419,9 @@ def make_bounded_sum(
     :param lower: 
     :param upper: 
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)
@@ -419,8 +453,11 @@ def make_bounded_sum_n(
     :param lower: 
     :param upper: 
     :param n: 
+    :type n: int
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)
@@ -454,9 +491,13 @@ def make_bounded_variance(
     :param lower: 
     :param upper: 
     :param length: 
+    :type length: int
     :param ddof: 
+    :type ddof: int
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)
@@ -486,8 +527,11 @@ def make_count(
 ):
     """
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     :param TI: 
+    :type TI: RuntimeTypeDescriptor
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)
@@ -516,10 +560,15 @@ def make_count_by(
 ):
     """
     :param n: 
+    :type n: int
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     :param TI: 
+    :type TI: RuntimeTypeDescriptor
     :param TO: 
+    :type TO: RuntimeTypeDescriptor
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)
@@ -552,9 +601,13 @@ def make_count_by_categories(
     """
     :param categories: 
     :param MI: 
+    :type MI: DatasetMetric
     :param MO: 
+    :type MO: SensitivityMetric
     :param TI: 
+    :type TI: RuntimeTypeDescriptor
     :param TO: 
+    :type TO: RuntimeTypeDescriptor
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)

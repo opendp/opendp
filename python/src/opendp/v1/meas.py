@@ -14,6 +14,7 @@ def make_base_laplace(
     Create a Measurement that adds noise from the laplace(scale) distribution.
     :param scale: noise scale parameter of the laplace distribution
     :param T: data type to be privatized
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -38,6 +39,7 @@ def make_base_laplace_vec(
     Create a Measurement that adds noise from the multivariate laplace(scale) distribution.
     :param scale: noise scale parameter of the laplace distribution
     :param T: data type to be privatized
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -62,6 +64,7 @@ def make_base_gaussian(
     Create a Measurement that adds noise from the gaussian(scale) distribution.
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -86,6 +89,7 @@ def make_base_gaussian_vec(
     Create a Measurement that adds noise from the multivariate gaussian(scale) distribution.
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -115,7 +119,9 @@ def make_base_geometric(
     :param min: 
     :param max: 
     :param T: data type to be privatized
+    :type T: RuntimeTypeDescriptor
     :param QO: data type of the sensitivity space
+    :type QO: RuntimeTypeDescriptor
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=min)
@@ -147,11 +153,15 @@ def make_base_stability(
     """
     Create a Measurement that implements a stability-based filtering and noising.
     :param n: 
+    :type n: int
     :param scale: noise scale parameter
     :param threshold: exclude counts that are less than this minimum value
     :param MI: input metric space
+    :type MI: RuntimeTypeDescriptor
     :param TIK: type of input key- hashable/categorical data type
+    :type TIK: RuntimeTypeDescriptor
     :param TIC: type of input count- integral
+    :type TIC: RuntimeTypeDescriptor
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)

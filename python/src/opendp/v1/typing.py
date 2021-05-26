@@ -3,7 +3,7 @@ import sys
 from collections import Hashable
 
 import typing
-from opendp.v1.mod import UnknownTypeException
+from opendp.v1.mod import UnknownTypeException, ATOM_EQUIVALENCE_CLASSES
 
 ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
 RuntimeTypeDescriptor = Union["RuntimeType", "typing._GenericAlias", tuple, list, int, float, str, bool]
@@ -80,9 +80,9 @@ class RuntimeType(object):
             return Tuple(map(cls.infer, public_example))
 
         elif isinstance(public_example, list):
-            if not public_example:
-                raise UnknownTypeException("attempted to infer inner type of empty list. Please fill the type argument.")
-            return RuntimeType('Vec', [cls.infer(public_example[0])])
+            return RuntimeType('Vec', [
+                cls.infer(public_example[0]) if public_example else UnknownType("cannot infer atomic type of empty list")
+            ])
 
         raise UnknownTypeException(public_example)
 
@@ -97,6 +97,39 @@ class RuntimeType(object):
         if public_example is not None:
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")
+
+    @classmethod
+    def assert_is_similar(cls, parsed, inferred):
+        """
+        assert that other only differs from self by differences in equivalence class
+        :param parsed:
+        :param inferred:
+        :return:
+        """
+        if isinstance(inferred, UnknownType):
+            return
+        if isinstance(parsed, str) and isinstance(inferred, str):
+            if inferred in ATOM_EQUIVALENCE_CLASSES:
+                assert parsed in ATOM_EQUIVALENCE_CLASSES[inferred]
+            else:
+                assert parsed == inferred
+        elif isinstance(parsed, RuntimeType) and isinstance(inferred, RuntimeType):
+            assert parsed.origin == inferred.origin
+            assert len(parsed.args) == len(inferred.args)
+            for (arg_par, arg_inf) in zip(parsed.args, inferred.args):
+                RuntimeType.assert_is_similar(arg_par, arg_inf)
+        else:
+            raise AssertionError("args are not similar because they have differing depths")
+
+
+class UnknownType(RuntimeType):
+    def __init__(self, reason):
+        self.origin = None
+        self.args = []
+        self.reason = reason
+
+    def __str__(self):
+        raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
 class Tuple(RuntimeType):

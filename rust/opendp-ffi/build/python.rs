@@ -136,7 +136,7 @@ fn make_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> 
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
     let doc_args = func.args.iter()
-        .map(|v| make_doc_arg(v))
+        .map(|v| make_doc_arg(v, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
 
@@ -149,12 +149,13 @@ fn make_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> 
 
 }
 
-fn make_doc_arg(arg: &Argument) -> String {
-    format!(r#":param {name}: {description}"#,
-            name=arg.name.clone().unwrap_or_else(String::new),
-            // type_=get_python_type(arg, is_type)
-            //     .map(|v| format!("{} ", v))
-            //     .unwrap_or_else(String::new),
+fn make_doc_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String>>) -> String {
+    let name = arg.name.clone().unwrap_or_else(String::new);
+    format!(r#":param {name}: {description}{type_}"#,
+            name=name,
+            type_=get_arg_type_hint(&arg, hierarchy)
+                .map(|v| format!("\n:type {}: {}", name, v))
+                .unwrap_or_else(String::new),
             description=arg.description.clone().unwrap_or_else(String::new))
 }
 
@@ -267,11 +268,12 @@ fn make_call(
         call = format!(r#"unwrap({call}, {restype})"#,
             call=call, restype=get_unwrapped_arg_c_type(&func.ret, typemap))
     }
+    if !func.ret.keep_as_c { call = format!(r#"c_to_py({})"#, call) }
     format!(r#"function = lib.opendp_{module_name}__{func_name}
 function.argtypes = [{ctype_args}]
 function.restype = {ctype_restype}
 
-return c_to_py({call})"#,
+return {call}"#,
             module_name = module_name,
             func_name = func_name,
             ctype_args = func.args.iter()

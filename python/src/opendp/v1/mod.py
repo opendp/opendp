@@ -3,6 +3,13 @@ import os
 import sys
 from typing import Optional, Any
 
+# list all acceptable alternative types for each default type
+ATOM_EQUIVALENCE_CLASSES = {
+    'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64'],
+    'f64': ['f32', 'f64'],
+    'bool': ['bool']
+}
+
 
 def _get_lib_dir() -> str:
     lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
@@ -61,10 +68,9 @@ class FfiMeasurementPtr(ctypes.POINTER(FfiMeasurement)):
     _type_ = FfiMeasurement
 
     def __call__(self, arg, *, type_name=None):
-        from opendp.v1.convert import object_to_py
         from opendp.v1.core import measurement_invoke
-        res = measurement_invoke(self, arg)
-        return object_to_py(res)
+        # TODO: route type_name into measurement_invoke
+        return measurement_invoke(self, arg)
 
     def check(self, d_in, d_out, *, d_in_type_name=None, d_out_type_name=None, debug=False):
         from opendp.v1.convert import py_to_object

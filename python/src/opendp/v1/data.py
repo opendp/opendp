@@ -32,7 +32,9 @@ def slice_as_object(
 ):
     """
     :param raw: 
+    :type raw: FfiSlicePtr
     :param T: 
+    :type T: RuntimeTypeDescriptor
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=raw)
@@ -46,7 +48,7 @@ def slice_as_object(
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(raw, T), FfiObjectPtr))
+    return unwrap(function(raw, T), FfiObjectPtr)
 
 
 def object_type(
@@ -134,6 +136,7 @@ def str_free(
 ):
     """
     :param this: 
+    :type this: str
     """
     # parse type args
     

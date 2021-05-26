@@ -1,10 +1,12 @@
 #[cfg(feature="python")]
 pub mod python;
+#[cfg(feature="python")]
+use std::io;
 
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::{io, env};
-use std::io::{Read, Write};
+use std::env;
 use serde::Deserialize;
 use indexmap::map::IndexMap;
 
@@ -30,8 +32,12 @@ pub struct Argument {
     description: Option<String>,
     default: Option<String>,
     #[serde(default)]
-    is_type: bool
+    is_type: bool,
+    #[serde(default)]
+    keep_as_c: bool
 }
+
+#[allow(dead_code)]
 impl Argument {
     fn name(&self) -> String {
         self.name.clone().expect("unknown name when parsing argument")
@@ -42,10 +48,6 @@ impl Argument {
     fn c_type_origin(&self) -> String {
         self.c_type().split("<").next().unwrap().to_string()
     }
-    // fn c_type_arg(&self, index: usize) -> String {
-    //     let c_type = self.c_type();
-    //
-    // }
 }
 
 #[derive(Deserialize, Debug)]
@@ -61,6 +63,7 @@ pub struct Function {
 
 type Module = IndexMap<String, Function>;
 
+#[allow(dead_code)]
 fn write_bindings(files: IndexMap<PathBuf, String>) {
     let base_dir = PathBuf::from(env::var("OPENDP_PYTHON_SRC_DIR")
         .expect("failed to read environment variable OPENDP_PYTHON_SRC_DIR"));
@@ -80,7 +83,8 @@ fn main() {
     module_names.iter().for_each(|module_name|
         println!("cargo:rerun-if-changed={:?}", get_bootstrap_path(module_name)));
 
-    let modules = module_names.iter()
+    // allow modules to be unused
+    let _modules = module_names.iter()
         .map(|module_name| {
             println!("parsing module: {}", module_name);
             let mut contents = String::new();
@@ -89,13 +93,9 @@ fn main() {
                 .read_to_string(&mut contents)
                 .expect("failed reading module json");
 
-            Ok((module_name.to_string(), serde_json::from_str(&contents).unwrap()))
+            (module_name.to_string(), serde_json::from_str(&contents).expect("failed to parse json"))
         })
-        .collect::<Result<IndexMap<String, Module>, io::Error>>().unwrap();
+        .collect::<IndexMap<String, Module>>();
 
-    if cfg!(feature="python") {
-        write_bindings(python::make_bindings(modules))
-    }
-
-    panic!()
+    #[cfg(feature="python")] write_bindings(python::make_bindings(_modules));
 }

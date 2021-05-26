@@ -184,20 +184,28 @@ pub extern "C" fn opendp_core__error_free(this: *mut FfiError) -> bool {
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_check(this: *const FfiTransformation, distance_in: *const FfiObject, distance_out: *const FfiObject) -> FfiResult<*mut c_bool> {
-    let this = try_as_ref!(this);
+pub extern "C" fn opendp_core__transformation_check(
+    transformation: *const AnyTransformation,
+    distance_in: *const AnyMetricDistance,
+    distance_out: *const AnyMetricDistance
+) -> FfiResult<*mut c_bool> {
+    let transformation = try_as_ref!(transformation);
     let distance_in = try_as_ref!(distance_in);
     let distance_out = try_as_ref!(distance_out);
-    let status = try_!(this.value.stability_relation.eval(&distance_in.value, &distance_out.value));
+    let status = try_!(transformation.stability_relation.eval(&distance_in, &distance_out));
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_check(this: *const AnyMeasurement, distance_in: *const AnyMetricDistance, distance_out: *const AnyMeasureDistance) -> FfiResult<*mut c_bool> {
-    let this = try_as_ref!(this);
+pub extern "C" fn opendp_core__measurement_check(
+    measurement: *const AnyMeasurement,
+    distance_in: *const AnyMetricDistance,
+    distance_out: *const AnyMeasureDistance
+) -> FfiResult<*mut c_bool> {
+    let measurement = try_as_ref!(measurement);
     let distance_in = try_as_ref!(distance_in);
     let distance_out = try_as_ref!(distance_out);
-    let status = try_!(this.privacy_relation.eval(distance_in, distance_out));
+    let status = try_!(measurement.privacy_relation.eval(distance_in, distance_out));
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 

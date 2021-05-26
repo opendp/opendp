@@ -2,15 +2,8 @@ import ctypes
 from typing import Any, Sequence, Tuple, List
 
 from opendp.v1.mod import UnknownTypeException, FfiSlice, OdpException, FfiObjectPtr, FfiSlicePtr, BoolPtr, \
-    FfiTransformationPtr, FfiMeasurementPtr
+    FfiTransformationPtr, FfiMeasurementPtr, ATOM_EQUIVALENCE_CLASSES
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor
-
-# list all acceptable alternative types for each default type
-ATOM_EQUIVALENCE_CLASSES = {
-    'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64'],
-    'f64': ['f32', 'f64'],
-    'bool': ['bool']
-}
 
 ATOM_MAP = {
     'f32': ctypes.c_float,
@@ -26,15 +19,16 @@ ATOM_MAP = {
     'bool': ctypes.c_bool,
 }
 
+
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-def _scalar_to_slice(val: Any, type_name: str) -> FfiSlicePtr:
-    return _wrap_in_slice(ctypes.byref(ATOM_MAP[type_name](val)), 1)
+def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
+    return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
 
 
-def _slice_to_scalar(raw: FfiSlicePtr, type_name: str) -> Any:
+def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value
 
 
@@ -172,12 +166,9 @@ def object_to_py(obj: FfiObjectPtr) -> Any:
 
 def py_to_ptr(val: Any, type_name: str = None):
     """map from python val to void *"""
-    # TODO: raise if val is inconsistent with type_name
-    if type_name is None:
-        type_name = RuntimeType.infer(val)
-
-    print('TODO: py_to_ptr without type_name check')
-    # type_name.validate(val)
+    type_name = RuntimeType.parse_or_infer(type_name=type_name, public_example=val)
+    # the explicit type_name must be compatible with the actual data
+    RuntimeType.assert_is_similar(type_name, RuntimeType.infer(val))
 
     if type_name in ATOM_MAP:
         return ctypes.byref(ATOM_MAP[type_name](val))
@@ -215,7 +206,10 @@ def c_to_py(c_value):
         bool_free(c_value)
         return value
 
-    if isinstance(c_value, (FfiTransformationPtr, FfiMeasurementPtr, FfiObjectPtr)):
+    if isinstance(c_value, FfiObjectPtr):
+        return object_to_py(c_value)
+
+    if isinstance(c_value, (FfiTransformationPtr, FfiMeasurementPtr)):
         return c_value
 
     return c_value

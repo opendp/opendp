@@ -155,6 +155,5 @@
         "ret": {
             "c_type": "FfiResult<AnyMeasurement *>"
         }
->>>>>>> initial (buggy) bindings generation
     }
 }

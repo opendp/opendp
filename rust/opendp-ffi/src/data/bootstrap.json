@@ -10,7 +10,10 @@
             {"name": "raw", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
             {"name": "T",  "c_type": "char *", "is_type": true}
         ],
-        "ret": {"c_type": "FfiResult<const AnyObject *>"}
+        "ret": {
+            "c_type": "FfiResult<const AnyObject *>",
+            "keep_as_c": true
+        }
     },
     "object_type": {
         "args": [
