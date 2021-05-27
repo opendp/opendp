@@ -40,15 +40,15 @@ class FfiSlice(ctypes.Structure):
     ]
 
 
-class FfiObject(ctypes.Structure):
+class AnyObject(ctypes.Structure):
     pass  # Opaque struct
 
 
-class FfiMeasurement(ctypes.Structure):
+class AnyMeasurement(ctypes.Structure):
     pass  # Opaque struct
 
 
-class FfiTransformation(ctypes.Structure):
+class AnyTransformation(ctypes.Structure):
     pass  # Opaque struct
 
 
@@ -56,16 +56,16 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
     _type_ = ctypes.c_bool
 
 
-class FfiObjectPtr(ctypes.POINTER(FfiObject)):
-    _type_ = FfiObject
+class AnyObjectPtr(ctypes.POINTER(AnyObject)):
+    _type_ = AnyObject
 
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _type_ = FfiSlice
 
 
-class FfiMeasurementPtr(ctypes.POINTER(FfiMeasurement)):
-    _type_ = FfiMeasurement
+class AnyMeasurementPtr(ctypes.POINTER(AnyMeasurement)):
+    _type_ = AnyMeasurement
 
     def __call__(self, arg, *, type_name=None):
         from opendp.v1.core import measurement_invoke
@@ -93,8 +93,8 @@ class FfiMeasurementPtr(ctypes.POINTER(FfiMeasurement)):
             raise
 
 
-class FfiTransformationPtr(ctypes.POINTER(FfiTransformation)):
-    _type_ = FfiTransformation
+class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
+    _type_ = AnyTransformation
 
     def __call__(self, arg, *, type_name=None):
         from opendp.v1.convert import py_to_object, object_to_py
@@ -103,12 +103,12 @@ class FfiTransformationPtr(ctypes.POINTER(FfiTransformation)):
         res = transformation_invoke(self, arg)
         return object_to_py(res)
 
-    def __rshift__(self, other: "FfiMeasurementPtr"):
-        if isinstance(other, FfiMeasurementPtr):
+    def __rshift__(self, other: "AnyMeasurementPtr"):
+        if isinstance(other, AnyMeasurementPtr):
             from opendp.v1.core import make_chain_mt
             return make_chain_mt(other, self)
 
-        if isinstance(other, FfiTransformationPtr):
+        if isinstance(other, AnyTransformationPtr):
             from opendp.v1.core import make_chain_tt
             return make_chain_tt(other, self)
 

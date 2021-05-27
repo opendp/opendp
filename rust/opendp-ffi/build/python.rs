@@ -43,7 +43,7 @@ fn make_module(
 import ctypes
 from typing import Type, Union
 from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
-from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr, BoolPtr
+from opendp.v1.mod import lib, unwrap, AnyTransformationPtr, AnyMeasurementPtr, FfiResult, AnyObject, FfiSlice, FfiError, AnyObjectPtr, AnySlicePtr, BoolPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
 
 {functions}"#,
@@ -238,7 +238,7 @@ fn make_data_formatter(func: &Function, typemap: &HashMap<String, String>) -> St
                 let type_name = arg.rust_type.clone().unwrap_or("None".into());
                 format!(r#"{name} = py_to_ptr({name}, type_name={type_name})"#, name = arg.name(), type_name = type_name.to_python())
             },
-            c_type if c_type.ends_with("FfiObject *") => {
+            c_type if c_type.ends_with("AnyObject *") => {
                 if let Some(type_name) = arg.rust_type.clone() {
                     format!(r#"{name} = py_to_object({name}, type_name={type_name})"#, name = arg.name(), type_name = type_name.to_python())
                 } else {

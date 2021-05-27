@@ -1,8 +1,8 @@
 import ctypes
 from typing import Any, Sequence, Tuple, List
 
-from opendp.v1.mod import UnknownTypeException, FfiSlice, OdpException, FfiObjectPtr, FfiSlicePtr, BoolPtr, \
-    FfiTransformationPtr, FfiMeasurementPtr, ATOM_EQUIVALENCE_CLASSES
+from opendp.v1.mod import UnknownTypeException, FfiSlice, OdpException, AnyObjectPtr, FfiSlicePtr, BoolPtr, \
+    AnyTransformationPtr, AnyMeasurementPtr, ATOM_EQUIVALENCE_CLASSES
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor
 
 ATOM_MAP = {
@@ -137,8 +137,8 @@ def _py_to_slice(val: Any, type_name: str) -> FfiSlicePtr:
     raise UnknownTypeException(type_name)
 
 
-def py_to_object(val: Any, type_name: RuntimeTypeDescriptor = None) -> FfiObjectPtr:
-    if isinstance(val, FfiObjectPtr):
+def py_to_object(val: Any, type_name: RuntimeTypeDescriptor = None) -> AnyObjectPtr:
+    if isinstance(val, AnyObjectPtr):
         return val
     type_name = str(RuntimeType.parse_or_infer(type_name=type_name, public_example=val))
     ffi_slice = _py_to_slice(val, type_name)
@@ -146,7 +146,7 @@ def py_to_object(val: Any, type_name: RuntimeTypeDescriptor = None) -> FfiObject
     return slice_as_object(ffi_slice, type_name)
 
 
-def object_to_py(obj: FfiObjectPtr) -> Any:
+def object_to_py(obj: AnyObjectPtr) -> Any:
     from opendp.v1.data import object_type, object_as_slice, to_string, slice_free
     ffi_slice = object_as_slice(obj)
     try:
@@ -206,10 +206,10 @@ def c_to_py(c_value):
         bool_free(c_value)
         return value
 
-    if isinstance(c_value, FfiObjectPtr):
+    if isinstance(c_value, AnyObjectPtr):
         return object_to_py(c_value)
 
-    if isinstance(c_value, (FfiTransformationPtr, FfiMeasurementPtr)):
+    if isinstance(c_value, (AnyTransformationPtr, AnyMeasurementPtr)):
         return c_value
 
     return c_value

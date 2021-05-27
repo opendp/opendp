@@ -2,7 +2,7 @@
 import ctypes
 from typing import Type, Union
 from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
-from opendp.v1.mod import lib, unwrap, FfiTransformationPtr, FfiMeasurementPtr, FfiResult, FfiObject, FfiSlice, FfiError, FfiObjectPtr, FfiSlicePtr, BoolPtr
+from opendp.v1.mod import lib, unwrap, AnyTransformationPtr, AnyMeasurementPtr, FfiResult, AnyObject, FfiSlice, FfiError, AnyObjectPtr, FfiSlicePtr, BoolPtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
 
 
@@ -20,7 +20,7 @@ def to_string(
     
     # call library function
     function = lib.opendp_data__to_string
-    function.argtypes = [FfiObjectPtr]
+    function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_char_p))
@@ -48,7 +48,7 @@ def slice_as_object(
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(raw, T), FfiObjectPtr)
+    return unwrap(function(raw, T), AnyObjectPtr)
 
 
 def object_type(
@@ -65,7 +65,7 @@ def object_type(
     
     # call library function
     function = lib.opendp_data__object_type
-    function.argtypes = [FfiObjectPtr]
+    function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_char_p))
@@ -85,7 +85,7 @@ def object_as_slice(
     
     # call library function
     function = lib.opendp_data__object_as_slice
-    function.argtypes = [FfiObjectPtr]
+    function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), FfiSlicePtr))
@@ -105,7 +105,7 @@ def object_free(
     
     # call library function
     function = lib.opendp_data__object_free
-    function.argtypes = [FfiObjectPtr]
+    function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_void_p))
