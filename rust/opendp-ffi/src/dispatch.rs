@@ -66,9 +66,17 @@ macro_rules! disp {
 // disp_expand!(func, (rt_type1, [u32, iu64]), [(rt_type2, [i32, i64]), (rt_type3, [f32, f64])], (), (arg1, arg2))
 // disp_expand!(func, (rt_type2, [i32, i64]), [(rt_type3, [i32, i64])], (u32), (arg1, arg2))
 // disp_expand!(func, (rt_type3, [f32, f64]), [], (u32, i32), (arg1, arg2))
+//
+// NB: The many types slow down compilation because of all the monomorphization, so we have a limited set gated behind cfg(debug_assertions).
+// (This seems like a slightly-inappropriate flag to use, but web consensus is that this is the preferred way to do things like this, and
+// https://doc.rust-lang.org/cargo/reference/profiles.html confirms it's the only flag set automatically by profile.dev and profile.test.)
+#[cfg(not(debug_assertions))]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, String]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
     };
     // TODO: reimplement Signed to cover u* types
     ($function:ident, ($rt_type:expr, @signed_numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
@@ -85,6 +93,41 @@ macro_rules! disp_expand {
     };
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [HammingDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        match $rt_type.id {
+            $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
+            _ => opendp::err!(FFI, "No match for concrete type {:?}/{}", $rt_type.id, $rt_type.descriptor).into()
+        }
+    };
+}
+
+#[cfg(debug_assertions)]
+macro_rules! disp_expand {
+    ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [i32, f64, String]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [i32, f64, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
+    };
+    // TODO: reimplement Signed to cover u* types
+    ($function:ident, ($rt_type:expr, @signed_numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [i32, f64]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [i32, f64]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [String]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @floats),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [f64]), $rt_dispatch_types, $type_args, $args)
+    };
+    ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
+        disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [HammingDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)

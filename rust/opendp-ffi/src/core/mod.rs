@@ -97,15 +97,10 @@ impl<T> From<Error> for FfiResult<T> {
 
 impl<T: PartialEq> PartialEq for FfiResult<*mut T> {
     fn eq(&self, other: &Self) -> bool {
-        match self {
-            Self::Ok(ok) => match other {
-                Self::Ok(other_ok) => util::as_ref(*ok) == util::as_ref(*other_ok),
-                _ => false
-            },
-            Self::Err(err) => match other {
-                Self::Err(other_err) => util::as_ref(*err) == util::as_ref(*other_err),
-                _ => false
-            }
+        match (self, other) {
+            (Self::Ok(self_), Self::Ok(other)) => util::as_ref(*self_) == util::as_ref(*other),
+            (Self::Err(self_), Self::Err(other)) => util::as_ref(*self_) == util::as_ref(*other),
+            _ => false
         }
     }
 }

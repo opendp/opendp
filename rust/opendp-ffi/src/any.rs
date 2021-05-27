@@ -206,9 +206,9 @@ impl AnyMeasureDistance {
             distance: AnyBoxClonePartialEq::new_clone_partial_eq(distance),
             partial_cmp_glue: Glue::new(|self_: &Self, other: &Self| -> Option<Ordering> {
                 let self_ = self_.downcast_ref::<Q>().unwrap_assert("downcast of AnyMeasureDistance to constructed type will always work");
-                let other = other.downcast_ref::<Q>();
+                let other = other.downcast_ref::<Q>().ok()?;
                 // FIXME: Do we want to have a FalliblePartialCmp for this?
-                other.map_or(None, |o| self_.partial_cmp(o))
+                self_.partial_cmp(other)
             }),
             sub_glue: Glue::new(|self_: Self, rhs: &Self| -> Fallible<Self> {
                 let distance = self_.downcast::<Q>()?;
