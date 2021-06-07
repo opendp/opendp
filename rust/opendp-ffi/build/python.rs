@@ -46,7 +46,8 @@ fn generate_module(
 
     format!(r#"# Auto-generated. Do not edit.
 from opendp.v1._convert import _py_to_c, _c_to_py
-from opendp.v1._mod import *
+from opendp.v1._lib import *
+from opendp.v1.mod import *
 from opendp.v1.typing import *
 
 {functions}"#, functions = functions)
@@ -153,16 +154,25 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 fn generate_docstring(func: &Function, func_name: &String, hierarchy: &HashMap<String, Vec<String>>) -> String {
-    let description = func.description.as_ref()
+    let mut description = func.description.as_ref()
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
+    if let Some(proof) = &func.proof {
+        description = format!(r#"{description}
+
+`This constructor is supported by the linked proof. <{proof}>`_
+"#,
+        description=description,
+        proof=proof);
+    }
+
     let doc_args = func.args.iter()
         .map(|v| generate_docstring_arg(v, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
 
-    format!(r#""""
-{description}{doc_args}{ret_arg}
+    format!(r#""""{description}
+{doc_args}{ret_arg}
 """"#,
             description = description,
             doc_args = doc_args,

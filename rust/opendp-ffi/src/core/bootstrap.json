@@ -45,7 +45,8 @@
         "args": [
             {
                 "name": "transformation",
-                "c_type": "const AnyTransformation *"
+                "c_type": "const AnyTransformation *",
+                "description": "Transformation to check the stability relation of."
             },
             {
                 "name": "d_in",
@@ -55,7 +56,8 @@
                     "params": [
                         "transformation"
                     ]
-                }
+                },
+                "description": "Distance in terms of the input metric space."
             },
             {
                 "name": "d_out",
@@ -65,7 +67,8 @@
                     "params": [
                         "transformation"
                     ]
-                }
+                },
+                "description": "Distance in terms of the output metric space."
             }
         ],
         "ret": {
@@ -79,7 +82,8 @@
         "args": [
             {
                 "name": "measurement",
-                "c_type": "const AnyMeasurement *"
+                "c_type": "const AnyMeasurement *",
+                "description": "Measurement to check the privacy relation of."
             },
             {
                 "name": "d_in",
@@ -89,7 +93,8 @@
                     "params": [
                         "measurement"
                     ]
-                }
+                },
+                "description": "Distance in terms of the input metric space."
             },
             {
                 "name": "d_out",
@@ -99,7 +104,8 @@
                     "params": [
                         "measurement"
                     ]
-                }
+                },
+                "description": "Distance in terms of the output measure space."
             }
         ],
         "ret": {
@@ -113,7 +119,8 @@
         "args": [
             {
                 "name": "measurement",
-                "c_type": "const AnyMeasurement *"
+                "c_type": "const AnyMeasurement *",
+                "description": "Measurement to invoke."
             },
             {
                 "name": "arg",
@@ -123,7 +130,8 @@
                     "params": [
                         "measurement"
                     ]
-                }
+                },
+                "description": "Input data to supply to the measurement. A member of the measurement's input domain."
             }
         ],
         "ret": {
@@ -136,7 +144,8 @@
         "args": [
             {
                 "name": "transformation",
-                "c_type": "const AnyTransformation *"
+                "c_type": "const AnyTransformation *",
+                "description": "Transformation to invoke."
             },
             {
                 "name": "arg",
@@ -146,7 +155,8 @@
                     "params": [
                         "transformation"
                     ]
-                }
+                },
+                "description": "Input data to supply to the measurement. A member of the transformations's input domain."
             }
         ],
         "ret": {
@@ -197,11 +207,13 @@
         "args": [
             {
                 "name": "measurement0",
-                "c_type": "const AnyMeasurement *"
+                "c_type": "const AnyMeasurement *",
+                "description": "The left member of the resulting 2-tuple."
             },
             {
                 "name": "measurement1",
-                "c_type": "const AnyMeasurement *"
+                "c_type": "const AnyMeasurement *",
+                "description": "The right member of the resulting 2-tuple."
             }
         ],
         "ret": {
@@ -214,7 +226,8 @@
         "args": [
             {
                 "name": "transformation",
-                "c_type": "const AnyTransformation *"
+                "c_type": "const AnyTransformation *",
+                "description": "The transformation to retrieve the type from."
             }
         ],
         "ret": {
@@ -226,7 +239,8 @@
         "args": [
             {
                 "name": "measurement",
-                "c_type": "const AnyMeasurement *"
+                "c_type": "const AnyMeasurement *",
+                "description": "The measurement to retrieve the type from."
             }
         ],
         "ret": {
@@ -238,7 +252,8 @@
         "args": [
             {
                 "name": "transformation",
-                "c_type": "const AnyTransformation *"
+                "c_type": "const AnyTransformation *",
+                "description": "The transformation to retrieve the type from."
             }
         ],
         "ret": {
@@ -250,7 +265,8 @@
         "args": [
             {
                 "name": "transformation",
-                "c_type": "const AnyTransformation *"
+                "c_type": "const AnyTransformation *",
+                "description": "The transformation to retrieve the type from."
             }
         ],
         "ret": {
@@ -262,7 +278,8 @@
         "args": [
             {
                 "name": "measurement",
-                "c_type": "const AnyMeasurement *"
+                "c_type": "const AnyMeasurement *",
+                "description": "The measurement to retrieve the type from."
             }
         ],
         "ret": {
@@ -274,7 +291,8 @@
         "args": [
             {
                 "name": "measurement",
-                "c_type": "const AnyMeasurement *"
+                "c_type": "const AnyMeasurement *",
+                "description": "The measurement to retrieve the type from."
             }
         ],
         "ret": {

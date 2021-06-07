@@ -1,14 +1,15 @@
 # Auto-generated. Do not edit.
 from opendp.v1._convert import _py_to_c, _c_to_py
-from opendp.v1._mod import *
+from opendp.v1._lib import *
+from opendp.v1.mod import *
 from opendp.v1.typing import *
 
 
 def _error_free(
     error: FfiError
 ) -> bool:
-    """
-    Internal function. Free the memory associated with `error`.
+    """Internal function. Free the memory associated with `error`.
+    
     :param error: 
     :type error: FfiError
     :return: true indicates successful free
@@ -27,8 +28,8 @@ def _error_free(
 def _transformation_free(
     transformation: Transformation
 ):
-    """
-    Internal function. Free the memory associated with `transformation`.
+    """Internal function. Free the memory associated with `transformation`.
+    
     :param transformation: 
     :type transformation: Transformation
     """
@@ -45,8 +46,8 @@ def _transformation_free(
 def _measurement_free(
     measurement: Measurement
 ):
-    """
-    Internal function. Free the memory associated with `measurement`.
+    """Internal function. Free the memory associated with `measurement`.
+    
     :param measurement: 
     :type measurement: Measurement
     """
@@ -65,12 +66,12 @@ def transformation_check(
     d_in,
     d_out
 ) -> bool:
-    """
-    Check the stability relation of the `transformation` at the given `d_in`, `d_out`.
-    :param transformation: 
+    """Check the stability relation of the `transformation` at the given `d_in`, `d_out`.
+    
+    :param transformation: Transformation to check the stability relation of.
     :type transformation: Transformation
-    :param d_in: 
-    :param d_out: 
+    :param d_in: Distance in terms of the input metric space.
+    :param d_out: Distance in terms of the output metric space.
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
     """
@@ -93,12 +94,12 @@ def measurement_check(
     d_in,
     d_out
 ) -> bool:
-    """
-    Check the privacy relation of the `measurement` at the given `d_in`, `d_out`.
-    :param measurement: 
+    """Check the privacy relation of the `measurement` at the given `d_in`, `d_out`.
+    
+    :param measurement: Measurement to check the privacy relation of.
     :type measurement: Measurement
-    :param d_in: 
-    :param d_out: 
+    :param d_in: Distance in terms of the input metric space.
+    :param d_out: Distance in terms of the output measure space.
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
     """
@@ -120,11 +121,11 @@ def measurement_invoke(
     measurement: Measurement,
     arg: Any
 ) -> Any:
-    """
-    Invoke the `measurement` with `arg`. Returns a differentially private release.
-    :param measurement: 
+    """Invoke the `measurement` with `arg`. Returns a differentially private release.
+    
+    :param measurement: Measurement to invoke.
     :type measurement: Measurement
-    :param arg: 
+    :param arg: Input data to supply to the measurement. A member of the measurement's input domain.
     :type arg: Any
     :return: Differentially private release.
     :rtype: Any
@@ -146,12 +147,12 @@ def transformation_invoke(
     transformation: Transformation,
     arg: Any
 ) -> Any:
-    """
-    Invoke the `transformation` with `arg`. 
+    """Invoke the `transformation` with `arg`. 
     The response is not differentially private as it has not been chained with a measurement.
-    :param transformation: 
+    
+    :param transformation: Transformation to invoke.
     :type transformation: Transformation
-    :param arg: 
+    :param arg: Input data to supply to the measurement. A member of the transformations's input domain.
     :type arg: Any
     :return: Non-differentially private answer to the query.
     :rtype: Any
@@ -173,8 +174,8 @@ def make_chain_mt(
     measurement: Measurement,
     transformation: Transformation
 ) -> Measurement:
-    """
-    Construct the functional composition (`measurement` ○ `transformation`). Returns a Measurement.
+    """Construct the functional composition (`measurement` ○ `transformation`). Returns a Measurement.
+    
     :param measurement: outer privatizer
     :type measurement: Measurement
     :param transformation: inner query
@@ -199,8 +200,8 @@ def make_chain_tt(
     transformation1: Transformation,
     transformation0: Transformation
 ) -> Transformation:
-    """
-    Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Tranformation.
+    """Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Tranformation.
+    
     :param transformation1: outer transformation
     :type transformation1: Transformation
     :param transformation0: inner transformation
@@ -225,11 +226,11 @@ def make_basic_composition(
     measurement0: Measurement,
     measurement1: Measurement
 ) -> Measurement:
-    """
-    Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.
-    :param measurement0: 
+    """Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.
+    
+    :param measurement0: The left member of the resulting 2-tuple.
     :type measurement0: Measurement
-    :param measurement1: 
+    :param measurement1: The right member of the resulting 2-tuple.
     :type measurement1: Measurement
     :return: Measurement representing the composed transformations.
     :rtype: Measurement
@@ -250,9 +251,9 @@ def make_basic_composition(
 def transformation_input_carrier_type(
     transformation: Transformation
 ) -> str:
-    """
-    Get the input (carrier) data type of `transformation`.
-    :param transformation: 
+    """Get the input (carrier) data type of `transformation`.
+    
+    :param transformation: The transformation to retrieve the type from.
     :type transformation: Transformation
     :rtype: str
     """
@@ -271,9 +272,9 @@ def transformation_input_carrier_type(
 def measurement_input_carrier_type(
     measurement: Measurement
 ) -> str:
-    """
-    Get the input (carrier) data type of `measurement`.
-    :param measurement: 
+    """Get the input (carrier) data type of `measurement`.
+    
+    :param measurement: The measurement to retrieve the type from.
     :type measurement: Measurement
     :rtype: str
     """
@@ -292,9 +293,9 @@ def measurement_input_carrier_type(
 def transformation_input_distance_type(
     transformation: Transformation
 ) -> str:
-    """
-    Get the input distance type of `transformation`.
-    :param transformation: 
+    """Get the input distance type of `transformation`.
+    
+    :param transformation: The transformation to retrieve the type from.
     :type transformation: Transformation
     :rtype: str
     """
@@ -313,9 +314,9 @@ def transformation_input_distance_type(
 def transformation_output_distance_type(
     transformation: Transformation
 ) -> str:
-    """
-    Get the output distance type of `transformation`.
-    :param transformation: 
+    """Get the output distance type of `transformation`.
+    
+    :param transformation: The transformation to retrieve the type from.
     :type transformation: Transformation
     :rtype: str
     """
@@ -334,9 +335,9 @@ def transformation_output_distance_type(
 def measurement_input_distance_type(
     measurement: Measurement
 ) -> str:
-    """
-    Get the input distance type of `measurement`.
-    :param measurement: 
+    """Get the input distance type of `measurement`.
+    
+    :param measurement: The measurement to retrieve the type from.
     :type measurement: Measurement
     :rtype: str
     """
@@ -355,9 +356,9 @@ def measurement_input_distance_type(
 def measurement_output_distance_type(
     measurement: Measurement
 ) -> str:
-    """
-    Get the output distance type of `measurement`.
-    :param measurement: 
+    """Get the output distance type of `measurement`.
+    
+    :param measurement: The measurement to retrieve the type from.
     :type measurement: Measurement
     :rtype: str
     """

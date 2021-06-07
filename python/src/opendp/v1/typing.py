@@ -1,9 +1,10 @@
 import sys
 import typing
-from collections import Hashable
+from collections.abc import Hashable
 from typing import Union, Any, Type
 
-from opendp.v1._mod import UnknownTypeException, ATOM_EQUIVALENCE_CLASSES
+from opendp.v1.mod import UnknownTypeException
+from opendp.v1._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
     from typing import _GenericAlias
@@ -23,8 +24,7 @@ RuntimeTypeDescriptor = Union[
 
 
 class RuntimeType(object):
-    """
-    Utility for validating, manipulating, inferring and parsing/normalizing type information.
+    """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
 
     def __init__(self, origin, args=None):
@@ -48,8 +48,7 @@ class RuntimeType(object):
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor) -> Union["RuntimeType", str]:
-        """
-        Normalize type information into a normalized type representation.
+        """Normalize type information into a normalized type representation.
         Type information may be expressed as
         - python type hints from std typing module
         - plaintext rust type strings for setting specific bit depth
@@ -106,8 +105,8 @@ class RuntimeType(object):
 
     @classmethod
     def infer(cls, public_example: Any) -> Union["RuntimeType", str]:
-        """
-        Infer the normalized type from a public example.
+        """Infer the normalized type from a public example.
+
         :param public_example: data used to infer the type
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
@@ -132,8 +131,8 @@ class RuntimeType(object):
             type_name: RuntimeTypeDescriptor = None,
             public_example: Any = None
     ) -> Union["RuntimeType", str]:
-        """
-        If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
+        """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
+
         :param type_name: type specifier. See RuntimeType.parse for documentation on valid inputs
         :param public_example: data used to infer the type
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
@@ -147,8 +146,8 @@ class RuntimeType(object):
 
     @classmethod
     def assert_is_similar(cls, expected, inferred):
-        """
-        Assert that `inferred` is a member of the same equivalence class as `parsed`.
+        """Assert that `inferred` is a member of the same equivalence class as `parsed`.
+
         :param expected: the type that the data will be converted to
         :param inferred: the type inferred from data
         """
@@ -176,8 +175,7 @@ class RuntimeType(object):
 
 
 class UnknownType(RuntimeType):
-    """
-    Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
+    """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
     RuntimeTypes containing UnknownType cannot be used in FFI, but still pass RuntimeType.assert_is_similar
     """
     def __init__(self, reason):
@@ -190,8 +188,7 @@ class UnknownType(RuntimeType):
 
 
 class DatasetMetric(RuntimeType):
-    """
-    All dataset metric RuntimeTypes inherit from DatasetMetric.
+    """All dataset metric RuntimeTypes inherit from DatasetMetric.
     Provides static type checking in user-code for dataset metrics.
     """
     pass
@@ -202,8 +199,7 @@ SymmetricDistance = DatasetMetric('SymmetricDistance')
 
 
 class SensitivityMetric(RuntimeType):
-    """
-    All sensitivity RuntimeTypes inherit from SensitivityMetric.
+    """All sensitivity RuntimeTypes inherit from SensitivityMetric.
     Provides static type checking in user-code for sensitivity metrics and a getitem interface like stdlib typing.
     """
     def __getitem__(self, associated_type):
@@ -215,8 +211,7 @@ L2Sensitivity = SensitivityMetric('L2Sensitivity')
 
 
 class PrivacyMeasure(RuntimeType):
-    """
-    All measure RuntimeTypes inherit from PrivacyMeasure.
+    """All measure RuntimeTypes inherit from PrivacyMeasure.
     Provides static type checking in user-code for privacy measures and a getitem interface like stdlib typing.
     """
     def __getitem__(self, associated_type):

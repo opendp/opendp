@@ -99,7 +99,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_split_dataframe": {
-        "description": "Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>, \n    and loads the resulting table into a dataframe keyed by `col_names`.",
+        "description": "Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>,\nand loads the resulting table into a dataframe keyed by `col_names`.",
         "args": [
             {
                 "name": "separator",

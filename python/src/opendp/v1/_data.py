@@ -1,14 +1,15 @@
 # Auto-generated. Do not edit.
 from opendp.v1._convert import _py_to_c, _c_to_py
-from opendp.v1._mod import *
+from opendp.v1._lib import *
+from opendp.v1.mod import *
 from opendp.v1.typing import *
 
 
 def _to_string(
     this: Any
 ) -> str:
-    """
-    Internal function. Convert the AnyObject to a string representation.
+    """Internal function. Convert the AnyObject to a string representation.
+    
     :param this: 
     :type this: Any
     :return: String representation of `this` AnyObject.
@@ -30,8 +31,8 @@ def _slice_as_object(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ) -> Any:
-    """
-    Internal function. Load data from a `slice` into an AnyObject
+    """Internal function. Load data from a `slice` into an AnyObject
+    
     :param slice: 
     :type slice: FfiSlicePtr
     :param T: 
@@ -58,8 +59,8 @@ def _slice_as_metric_distance(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ):
-    """
-    Internal function. Load data from a `slice` into an AnyMetricDistance
+    """Internal function. Load data from a `slice` into an AnyMetricDistance
+    
     :param slice: 
     :type slice: FfiSlicePtr
     :param T: 
@@ -85,8 +86,8 @@ def _slice_as_measure_distance(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ):
-    """
-    Internal function. Load data from a `slice` into an AnyMeasureDistance
+    """Internal function. Load data from a `slice` into an AnyMeasureDistance
+    
     :param slice: 
     :type slice: FfiSlicePtr
     :param T: 
@@ -111,8 +112,8 @@ def _slice_as_measure_distance(
 def _object_type(
     this: Any
 ) -> str:
-    """
-    Internal function. Retrieve the type descriptor string of an AnyObject.
+    """Internal function. Retrieve the type descriptor string of an AnyObject.
+    
     :param this: 
     :type this: Any
     :return: The rust type associated with `this` AnyObject.
@@ -133,8 +134,8 @@ def _object_type(
 def _object_as_slice(
     this: Any
 ) -> Any:
-    """
-    Internal function. Unload data from an AnyObject into an FfiSlicePtr.
+    """Internal function. Unload data from an AnyObject into an FfiSlicePtr.
+    
     :param this: 
     :type this: Any
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
@@ -155,8 +156,8 @@ def _object_as_slice(
 def _object_free(
     this: Any
 ):
-    """
-    Internal function. Free the memory associated with `this`, an AnyObject.
+    """Internal function. Free the memory associated with `this`, an AnyObject.
+    
     :param this: 
     :type this: Any
     """
@@ -173,9 +174,9 @@ def _object_free(
 def _slice_free(
     this: Any
 ):
-    """
-    Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
+    """Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
     Used to clean up after _object_as_slice.
+    
     :param this: 
     :type this: Any
     """
@@ -192,9 +193,9 @@ def _slice_free(
 def _str_free(
     this: str
 ):
-    """
-    Internal function. Free the memory associated with `this`, a string. 
+    """Internal function. Free the memory associated with `this`, a string. 
     Used to clean up after the type getter functions.
+    
     :param this: 
     :type this: str
     """
@@ -211,9 +212,9 @@ def _str_free(
 def _bool_free(
     this
 ):
-    """
-    Internal function. Free the memory associated with `this`, a bool. 
+    """Internal function. Free the memory associated with `this`, a bool. 
     Used to clean up after the relation check.
+    
     :param this: 
     """
     # No type arguments to standardize.

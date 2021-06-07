@@ -24,7 +24,9 @@ pub struct Function {
     #[serde(default)]
     derived_types: Vec<Argument>,
     // plaintext description of the function used to generate documentation
-    description: Option<String>
+    description: Option<String>,
+    // URL pointing to the location of the DP proof for the function
+    proof: Option<String>
 }
 
 // Metadata for function arguments, derived types and returns.

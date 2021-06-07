@@ -1,6 +1,7 @@
 {
     "make_base_laplace": {
         "description": "Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.",
+        "proof": "https://www.overleaf.com/read/brvrprjhrhwb",
         "args": [
             {
                 "name": "scale",

@@ -16,8 +16,7 @@ Differentially private computations are specified as an analysis graph that can 
    :maxdepth: {{ mastertocmaxdepth }}
    :caption: Contents:
 
-   opendp.v1.meas
-   opendp.v1.trans
+   opendp.v1
 
 Indices and tables
 ==================

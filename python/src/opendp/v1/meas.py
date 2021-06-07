@@ -1,6 +1,7 @@
 # Auto-generated. Do not edit.
 from opendp.v1._convert import _py_to_c, _c_to_py
-from opendp.v1._mod import *
+from opendp.v1._lib import *
+from opendp.v1.mod import *
 from opendp.v1.typing import *
 
 
@@ -8,8 +9,11 @@ def make_base_laplace(
     scale,
     T: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """
-    Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
+    """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
+    
+    
+    `This constructor is supported by the linked proof. <https://www.overleaf.com/read/brvrprjhrhwb>`_
+    
     :param scale: Noise scale parameter of the laplace distribution.
     :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
@@ -35,8 +39,8 @@ def make_base_laplace_vec(
     scale,
     T: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """
-    Make a Measurement that adds noise from the multivariate laplace(`scale`) distribution to a vector value.
+    """Make a Measurement that adds noise from the multivariate laplace(`scale`) distribution to a vector value.
+    
     :param scale: Noise scale parameter of the laplace distribution.
     :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
@@ -62,8 +66,8 @@ def make_base_gaussian(
     scale,
     T: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """
-    Make a Measurement that adds noise from the gaussian(`scale`) distribution to a scalar value.
+    """Make a Measurement that adds noise from the gaussian(`scale`) distribution to a scalar value.
+    
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
     :type T: RuntimeTypeDescriptor
@@ -89,8 +93,8 @@ def make_base_gaussian_vec(
     scale,
     T: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """
-    Make a Measurement that adds noise from the multivariate gaussian(`scale`) distribution to a vector value.
+    """Make a Measurement that adds noise from the multivariate gaussian(`scale`) distribution to a vector value.
+    
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
     :type T: RuntimeTypeDescriptor
@@ -119,9 +123,9 @@ def make_base_geometric(
     T: RuntimeTypeDescriptor = None,
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """
-    Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.
+    """Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.
     `lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.
+    
     :param scale: noise scale parameter to the geometric distribution
     :param lower: Expected lower bound of data.
     :param upper: Expected upper bound of data.
@@ -159,8 +163,8 @@ def make_base_stability(
     TIK: RuntimeTypeDescriptor,
     TIC: RuntimeTypeDescriptor = int
 ) -> Measurement:
-    """
-    Make a Measurement that implements a stability-based filtering and noising.
+    """Make a Measurement that implements a stability-based filtering and noising.
+    
     :param n: Number of records in the input vector.
     :type n: int
     :param scale: Noise scale parameter.

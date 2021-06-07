@@ -1,8 +1,8 @@
-import ctypes
-from typing import Any, Sequence, Tuple, List, Union
+from typing import Sequence, Tuple, List, Union
 
-from opendp.v1._mod import UnknownTypeException, FfiSlice, OpenDPException, AnyObjectPtr, FfiSlicePtr, BoolPtr, \
-    Transformation, Measurement, ATOM_EQUIVALENCE_CLASSES, AnyMetricDistancePtr, AnyMeasureDistancePtr
+from opendp.v1._lib import *
+
+from opendp.v1.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
 from opendp.v1.typing import RuntimeType
 
 ATOM_MAP = {
@@ -21,8 +21,8 @@ ATOM_MAP = {
 
 
 def _py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
-    """
-    Map from python `value` to ctypes `c_type`.
+    """Map from python `value` to ctypes `c_type`.
+
     :param value: value to convert to c_type
     :param c_type: expected ctypes type to convert to
     :param type_name: optional. rust_type to check inferred rust_type of value against, and/or specify bit depth
@@ -76,9 +76,9 @@ def _py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
 
 def _c_to_py(value):
-    """
-    Map from ctypes `value` to python value.
+    """Map from ctypes `value` to python value.
     It is assumed that the c type is simpler than in _py_to_c, as the library returns fewer types.
+
     :param value: data in ctypes format
     :return: copy of data in python representation
     """
@@ -123,10 +123,10 @@ def _c_to_py(value):
 
 
 def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
-    """
-    Convert from `raw` FfiSlicePtr to python type.
+    """Convert from `raw` FfiSlicePtr to python type.
     This is the postprocessing step after _object_to_slice that unloads data from a ctypes representation.
     External checks allow this function to assume that `raw` is compatible with the type_name type.
+
     :param raw: raw pointer to an FfiSlice that will be unloaded into a python type
     :param type_name: rust type name that determines the python type to unload into
     :return: a standard python reference-counted data type
@@ -147,10 +147,10 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
 
 
 def _py_to_slice(value: Any, type_name: str) -> FfiSlicePtr:
-    """
-    Convert from python `value` to FfiSlicePtr.
+    """Convert from python `value` to FfiSlicePtr.
     The initial preprocessing step for _slice_to_object that loads data into a ctypes representation.
     External checks allow this function to assume that `value` is compatible with the type_name type.
+
     :param value: data to load into an FfiSlice
     :param type_name: rust type name to load value into.
     :return: pointer to an FfiSlice owned by python.

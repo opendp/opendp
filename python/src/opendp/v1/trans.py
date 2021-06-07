@@ -1,6 +1,7 @@
 # Auto-generated. Do not edit.
 from opendp.v1._convert import _py_to_c, _c_to_py
-from opendp.v1._mod import *
+from opendp.v1._lib import *
+from opendp.v1.mod import *
 from opendp.v1.typing import *
 
 
@@ -8,8 +9,8 @@ def make_identity(
     M: DatasetMetric,
     T: RuntimeTypeDescriptor
 ) -> Transformation:
-    """
-    Make a Transformation that simply passes the data through.
+    """Make a Transformation that simply passes the data through.
+    
     :param M: Dataset metric space.
     :type M: DatasetMetric
     :param T: Type of data passed to the identity function.
@@ -36,8 +37,8 @@ def make_identity(
 def make_split_lines(
     M: DatasetMetric
 ) -> Transformation:
-    """
-    Make a Transformation that takes a string and splits it into a Vec<String> of its lines.
+    """Make a Transformation that takes a string and splits it into a Vec<String> of its lines.
+    
     :param M: dataset metric space
     :type M: DatasetMetric
     :return: A split_lines step.
@@ -61,8 +62,8 @@ def make_parse_series(
     impute: bool,
     M: DatasetMetric
 ) -> Transformation:
-    """
-    Make a Transformation that parses a Vec<String> into a Vec<M>.
+    """Make a Transformation that parses a Vec<String> into a Vec<M>.
+    
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
     :param M: 
@@ -89,8 +90,8 @@ def make_split_records(
     separator: str,
     M: DatasetMetric
 ) -> Transformation:
-    """
-    Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.
+    """Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.
+    
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
     :param M: dataset metric space
@@ -118,8 +119,8 @@ def make_create_dataframe(
     M: DatasetMetric,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """
-    Make a Transformation that constructs a dataframe from a Vec<Vec<String>>.
+    """Make a Transformation that constructs a dataframe from a Vec<Vec<String>>.
+    
     :param col_names: Column names for each record entry.
     :type col_names: Any
     :param M: dataset metric space
@@ -152,9 +153,9 @@ def make_split_dataframe(
     M: DatasetMetric,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """
-    Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>, 
-        and loads the resulting table into a dataframe keyed by `col_names`.
+    """Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>,
+    and loads the resulting table into a dataframe keyed by `col_names`.
+    
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
     :param col_names: Column names for each record entry.
@@ -191,8 +192,8 @@ def make_parse_column(
     T: RuntimeTypeDescriptor,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """
-    Make a Transformation that parses the `key` column of a dataframe as `T`.
+    """Make a Transformation that parses the `key` column of a dataframe as `T`.
+    
     :param key: name of column to select from dataframe and parse
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
@@ -231,8 +232,8 @@ def make_select_column(
     T: RuntimeTypeDescriptor,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """
-    Make a Transformation that retrieves the column `key` from a dataframe as Vec<`T`>.
+    """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`T`>.
+    
     :param key: categorical/hashable data type of the key/column name
     :param M: dataset metric space
     :type M: DatasetMetric
@@ -268,8 +269,8 @@ def make_clamp_vec(
     M: DatasetMetric,
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """
-    Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.
+    """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.
+    
     :param lower: If datum is less than lower, let datum be lower.
     :param upper: If datum is greater than upper, let datum be upper.
     :param M: dataset metric space
@@ -303,8 +304,8 @@ def make_clamp_scalar(
     M: DatasetMetric,
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """
-    Make a Transformation that clamps data of type `T` between `lower` and `upper`.
+    """Make a Transformation that clamps data of type `T` between `lower` and `upper`.
+    
     :param lower: If less than lower, return lower.
     :param upper: If greater than upper, return upper.
     :param M: dataset metric space
@@ -339,9 +340,9 @@ def make_bounded_mean(
     MI: DatasetMetric,
     MO: SensitivityMetric
 ) -> Transformation:
-    """
-    Make a Transformation that computes the mean of bounded data. 
+    """Make a Transformation that computes the mean of bounded data. 
     Use make_clamp_vec to bound data.
+    
     :param lower: Lower bound of input data.
     :param upper: Upper bound of input data.
     :param n: Number of records in input data.
@@ -379,9 +380,9 @@ def make_bounded_sum(
     MI: DatasetMetric,
     MO: SensitivityMetric
 ) -> Transformation:
-    """
-    Make a Transformation that computes the sum of bounded data. 
+    """Make a Transformation that computes the sum of bounded data. 
     Use make_clamp_vec to bound data.
+    
     :param lower: Lower bound of input data.
     :param upper: Upper bound of input data.
     :param MI: input dataset metric space
@@ -417,10 +418,10 @@ def make_bounded_sum_n(
     MI: DatasetMetric,
     MO: SensitivityMetric
 ) -> Transformation:
-    """
-    Make a Transformation that computes the sum of bounded data with known length. 
+    """Make a Transformation that computes the sum of bounded data with known length. 
     This uses a restricted-sensitivity proof that takes advantage of known N for better utility. 
     Use make_clamp_vec to bound data.
+    
     :param lower: Lower bound of input data.
     :param upper: Upper bound of input data.
     :param n: Number of records in input data.
@@ -460,9 +461,9 @@ def make_bounded_variance(
     MI: DatasetMetric,
     MO: SensitivityMetric
 ) -> Transformation:
-    """
-    Make a Transformation that computes the variance of bounded data. 
+    """Make a Transformation that computes the variance of bounded data. 
     Use make_clamp_vec to bound data.
+    
     :param lower: Lower bound of input data.
     :param upper: Upper bound of input data.
     :param n: Number of records in input data.
@@ -502,8 +503,8 @@ def make_count(
     MO: SensitivityMetric,
     TI: RuntimeTypeDescriptor
 ) -> Transformation:
-    """
-    Make a Transformation that computes a count of the number of records in data.
+    """Make a Transformation that computes a count of the number of records in data.
+    
     :param MI: input dataset metric space
     :type MI: DatasetMetric
     :param MO: output sensitivity metric space
@@ -538,10 +539,10 @@ def make_count_by(
     TI: RuntimeTypeDescriptor,
     TO: RuntimeTypeDescriptor = int
 ) -> Transformation:
-    """
-    Make a Transformation that computes the count of each unique value in data. 
+    """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown. 
     Use make_base_stability to release this query.
+    
     :param n: Number of records in input data.
     :type n: int
     :param MI: input dataset metric space
@@ -583,9 +584,9 @@ def make_count_by_categories(
     TI: RuntimeTypeDescriptor = None,
     TO: RuntimeTypeDescriptor = int
 ) -> Transformation:
-    """
-    Make a Transformation that computes the number of times each category appears in the data. 
+    """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
+    
     :param categories: The set of categories to compute counts for.
     :type categories: Any
     :param MI: input dataset metric space

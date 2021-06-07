@@ -1,8 +1,7 @@
 import ctypes
 
 from opendp.v1._convert import _scalar_to_slice, _slice_to_scalar
-from opendp.v1._mod import FfiSlice, FfiSlicePtr, AnyObjectPtr
-
+from opendp.v1._lib import FfiSlice, FfiSlicePtr, AnyObjectPtr
 from opendp.v1._convert import _py_to_c, _c_to_py
 
 
