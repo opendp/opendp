@@ -122,6 +122,9 @@ class AnyMeasurementPtr(ctypes.POINTER(AnyMeasurement)):
         from opendp.v1.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
+    def __del__(self):
+        from opendp.v1.core import measurement_free
+        measurement_free(self)
 
 
 class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
@@ -176,6 +179,10 @@ class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
         from opendp.v1.core import transformation_input_carrier_type
         from opendp.v1.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
+
+    def __del__(self):
+        from opendp.v1.core import transformation_free
+        transformation_free(self)
 
 
 class FfiError(ctypes.Structure):
