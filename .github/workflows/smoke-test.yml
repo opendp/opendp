@@ -78,13 +78,13 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Prepare for libs
-        run: mkdir -p src/opendp/lib
+        run: mkdir -p src/opendp/v1/lib
 
       - name: Download libs
         uses: actions/download-artifact@v2
         with:
           name: libs
-          path: python/src/opendp/lib
+          path: python/src/opendp/v1/lib
 
       - name: Install package
         run: python -m pip install -e .
