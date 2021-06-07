@@ -1,12 +1,17 @@
-from typing import Union, Any, _GenericAlias
+from typing import Union, Any
 import sys
 from collections import Hashable
 
 import typing
 from opendp.v1.mod import UnknownTypeException, ATOM_EQUIVALENCE_CLASSES
 
+if sys.version_info >= (3, 7):
+    from typing import _GenericAlias
+else:
+    from typing import GenericMeta as _GenericAlias
+
 ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
-RuntimeTypeDescriptor = Union["RuntimeType", "typing._GenericAlias", tuple, list, int, float, str, bool]
+RuntimeTypeDescriptor = Union["RuntimeType", _GenericAlias, tuple, list, int, float, str, bool]
 
 
 class RuntimeType(object):
@@ -35,7 +40,7 @@ class RuntimeType(object):
         # parse type hints from the typing module
         if isinstance(type_name, _GenericAlias):
             if sys.version_info < (3, 8):
-                raise NotImplementedError("typing hints are only supported in python 3.8 and above")
+                raise NotImplementedError("parsing type hint annotations are only supported in python 3.8 and above")
 
             origin = typing.get_origin(type_name)
             args = list(map(RuntimeType.parse, typing.get_args(type_name))) or None
