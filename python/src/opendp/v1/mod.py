@@ -105,19 +105,19 @@ class AnyMeasurementPtr(ctypes.POINTER(AnyMeasurement)):
             raise
 
     @property
-    def input_distance_type(self) -> "RuntimeType":
+    def input_distance_type(self):
         from opendp.v1.core import measurement_input_distance_type
         from opendp.v1.typing import RuntimeType
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> "RuntimeType":
+    def output_distance_type(self):
         from opendp.v1.typing import RuntimeType
         from opendp.v1.core import measurement_output_distance_type
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property
-    def input_carrier_type(self) -> "RuntimeType":
+    def input_carrier_type(self):
         from opendp.v1.core import measurement_input_carrier_type
         from opendp.v1.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
@@ -163,19 +163,19 @@ class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
             raise
 
     @property
-    def input_distance_type(self) -> "RuntimeType":
+    def input_distance_type(self):
         from opendp.v1.core import transformation_input_distance_type
         from opendp.v1.typing import RuntimeType
         return RuntimeType.parse(transformation_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> "RuntimeType":
+    def output_distance_type(self):
         from opendp.v1.core import transformation_output_distance_type
         from opendp.v1.typing import RuntimeType
         return RuntimeType.parse(transformation_output_distance_type(self))
     
     @property
-    def input_carrier_type(self) -> "RuntimeType":
+    def input_carrier_type(self):
         from opendp.v1.core import transformation_input_carrier_type
         from opendp.v1.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
