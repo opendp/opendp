@@ -90,7 +90,7 @@ mod tests {
         let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
         let basic_composition = Result::from(opendp_core__make_basic_composition(measurement0, measurement1))?;
         let arg = AnyObject::new_raw(999);
-        let res = core::opendp_core__measurement_invoke(&basic_compostion, arg);
+        let res = core::opendp_core__measurement_invoke(&basic_composition, arg);
         let res: (AnyObject, AnyObject) = Fallible::from(res)?.downcast()?;
         let res: (i32, i32) = (res.0.downcast()?, res.1.downcast()?);
         assert_eq!(res, (999, 999));
