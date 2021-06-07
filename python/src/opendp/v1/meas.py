@@ -1,20 +1,20 @@
 # Auto-generated. Do not edit.
-import ctypes
-from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
-from opendp.v1.mod import lib, unwrap, AnyTransformationPtr, AnyMeasurementPtr, FfiResult, AnyObject, FfiSlice, FfiError, AnyObjectPtr, FfiSlicePtr, BoolPtr
-from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
+from opendp.v1.convert import *
+from opendp.v1.mod import *
+from opendp.v1.typing import *
 
 
 def make_base_laplace(
     scale,
     T: RuntimeTypeDescriptor = None
-):
+) -> AnyMeasurementPtr:
     """
-    Create a Measurement that adds noise from the laplace(scale) distribution.
-    :param scale: noise scale parameter of the laplace distribution
-    :param T: data type to be privatized
+    Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
+    :param scale: Noise scale parameter of the laplace distribution.
+    :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
+    :return: A base_laplace step.
+    :rtype: AnyMeasurementPtr
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -34,12 +34,14 @@ def make_base_laplace(
 def make_base_laplace_vec(
     scale,
     T: RuntimeTypeDescriptor = None
-):
+) -> AnyMeasurementPtr:
     """
-    Create a Measurement that adds noise from the multivariate laplace(scale) distribution.
-    :param scale: noise scale parameter of the laplace distribution
-    :param T: data type to be privatized
+    Make a Measurement that adds noise from the multivariate laplace(`scale`) distribution to a vector value.
+    :param scale: Noise scale parameter of the laplace distribution.
+    :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
+    :return: A base_laplace_vec step.
+    :rtype: AnyMeasurementPtr
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -59,12 +61,14 @@ def make_base_laplace_vec(
 def make_base_gaussian(
     scale,
     T: RuntimeTypeDescriptor = None
-):
+) -> AnyMeasurementPtr:
     """
-    Create a Measurement that adds noise from the gaussian(scale) distribution.
+    Make a Measurement that adds noise from the gaussian(`scale`) distribution to a scalar value.
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
     :type T: RuntimeTypeDescriptor
+    :return: A base_gaussian step.
+    :rtype: AnyMeasurementPtr
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -84,12 +88,14 @@ def make_base_gaussian(
 def make_base_gaussian_vec(
     scale,
     T: RuntimeTypeDescriptor = None
-):
+) -> AnyMeasurementPtr:
     """
-    Create a Measurement that adds noise from the multivariate gaussian(scale) distribution.
+    Make a Measurement that adds noise from the multivariate gaussian(`scale`) distribution to a vector value.
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
     :type T: RuntimeTypeDescriptor
+    :return: A base_gaussian_vec step.
+    :rtype: AnyMeasurementPtr
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
@@ -108,29 +114,32 @@ def make_base_gaussian_vec(
 
 def make_base_geometric(
     scale,
-    min,
-    max,
+    lower,
+    upper,
     T: RuntimeTypeDescriptor = None,
     QO: RuntimeTypeDescriptor = None
-):
+) -> AnyMeasurementPtr:
     """
-    Create a Measurement that adds noise from the geometric(scale) distribution.
+    Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.
+    `lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.
     :param scale: noise scale parameter to the geometric distribution
-    :param min: 
-    :param max: 
-    :param T: data type to be privatized
+    :param lower: Expected lower bound of data.
+    :param upper: Expected upper bound of data.
+    :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
-    :param QO: data type of the sensitivity space
+    :param QO: Data type of the sensitivity space.
     :type QO: RuntimeTypeDescriptor
+    :return: A base_geometric step.
+    :rtype: AnyMeasurementPtr
     """
     # parse type args
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=min)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
     # translate arguments to c types
     scale = py_to_ptr(scale, type_name=QO)
-    min = py_to_ptr(min, type_name=T)
-    max = py_to_ptr(max, type_name=T)
+    lower = py_to_ptr(lower, type_name=T)
+    upper = py_to_ptr(upper, type_name=T)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
@@ -139,29 +148,31 @@ def make_base_geometric(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, min, max, T, QO), AnyMeasurementPtr))
+    return c_to_py(unwrap(function(scale, lower, upper, T, QO), AnyMeasurementPtr))
 
 
 def make_base_stability(
     n: int,
     scale,
     threshold,
-    MI: RuntimeTypeDescriptor,
+    MI: SensitivityMetric,
     TIK: RuntimeTypeDescriptor,
     TIC: RuntimeTypeDescriptor = int
-):
+) -> AnyMeasurementPtr:
     """
-    Create a Measurement that implements a stability-based filtering and noising.
-    :param n: 
+    Make a Measurement that implements a stability-based filtering and noising.
+    :param n: Number of records in the input vector.
     :type n: int
-    :param scale: noise scale parameter
-    :param threshold: exclude counts that are less than this minimum value
-    :param MI: input metric space
-    :type MI: RuntimeTypeDescriptor
-    :param TIK: type of input key- hashable/categorical data type
+    :param scale: Noise scale parameter.
+    :param threshold: Exclude counts that are less than this minimum value.
+    :param MI: Input metric space.
+    :type MI: SensitivityMetric
+    :param TIK: Data type of input key- must be hashable/categorical.
     :type TIK: RuntimeTypeDescriptor
-    :param TIC: type of input count- integral
+    :param TIC: Data type of input count- must be integral.
     :type TIC: RuntimeTypeDescriptor
+    :return: A base_stability step.
+    :rtype: AnyMeasurementPtr
     """
     # parse type args
     MI = RuntimeType.parse(type_name=MI)

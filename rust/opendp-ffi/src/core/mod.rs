@@ -7,7 +7,7 @@ use opendp::error::*;
 
 use crate::any::{AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
 use crate::util;
-use crate::util::c_bool;
+use crate::util::{c_bool, into_c_char_p};
 
 pub mod chain;
 
@@ -231,6 +231,42 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformat
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_carrier_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_carrier_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_output_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.output_metric.distance_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.output_measure.distance_type.descriptor.to_string())))
 }
 
 

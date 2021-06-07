@@ -1,35 +1,35 @@
 {
     "make_base_laplace": {
-        "description": "Create a Measurement that adds noise from the laplace(scale) distribution to a scalar value.",
+        "description": "Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.",
         "args": [
             {
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "noise scale parameter of the laplace distribution"
+                "description": "Noise scale parameter of the laplace distribution."
             },
             {
                 "name": "T",
                 "c_type": "char *",
-                "description": "data type to be privatized",
+                "description": "Data type to be privatized.",
                 "is_type": true
             }
         ],
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_laplace_vec": {
-        "description": "Create a Measurement that adds noise from the multivariate laplace(scale) distribution to a vector value.",
+        "description": "Make a Measurement that adds noise from the multivariate laplace(`scale`) distribution to a vector value.",
         "args": [
             {
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "noise scale parameter of the laplace distribution"
+                "description": "Noise scale parameter of the laplace distribution."
             },
             {
                 "name": "T",
                 "c_type": "char *",
-                "description": "data type to be privatized",
+                "description": "Data type to be privatized.",
                 "is_type": true
             }
         ],
@@ -38,7 +38,7 @@
         }
     },
     "make_base_gaussian": {
-        "description": "Create a Measurement that adds noise from the gaussian(scale) distribution to a scalar value.",
+        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to a scalar value.",
         "args": [
             {
                 "name": "scale",
@@ -58,7 +58,7 @@
         }
     },
     "make_base_gaussian_vec": {
-        "description": "Create a Measurement that adds noise from the multivariate gaussian(scale) distribution to a vector value.",
+        "description": "Make a Measurement that adds noise from the multivariate gaussian(`scale`) distribution to a vector value.",
         "args": [
             {
                 "name": "scale",
@@ -78,7 +78,7 @@
         }
     },
     "make_base_geometric": {
-        "description": "Create a Measurement that adds noise from the geometric(scale) distribution to a scalar value.",
+        "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.\n`lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.",
         "args": [
             {
                 "name": "scale",
@@ -87,25 +87,27 @@
                 "description": "noise scale parameter to the geometric distribution"
             },
             {
-                "name": "min",
+                "name": "lower",
                 "c_type": "void *",
-                "rust_type": "T"
+                "rust_type": "T",
+                "description": "Expected lower bound of data."
             },
             {
-                "name": "max",
+                "name": "upper",
                 "c_type": "void *",
-                "rust_type": "T"
+                "rust_type": "T",
+                "description": "Expected upper bound of data."
             },
             {
                 "name": "T",
                 "c_type": "char *",
-                "description": "data type to be privatized",
+                "description": "Data type to be privatized.",
                 "is_type": true
             },
             {
                 "name": "QO",
                 "c_type": "char *",
-                "description": "data type of the sensitivity space",
+                "description": "Data type of the sensitivity space.",
                 "is_type": true
             }
         ],
@@ -114,40 +116,42 @@
         }
     },
     "make_base_stability": {
-        "description": "Create a Measurement that implements a stability-based filtering and noising.",
+        "description": "Make a Measurement that implements a stability-based filtering and noising.",
         "args": [
             {
                 "name": "n",
-                "c_type": "unsigned int"
+                "c_type": "unsigned int",
+                "description": "Number of records in the input vector."
             },
             {
                 "name": "scale",
                 "c_type": "void *",
-                "rust_type": {"arg": ["MI", 0]},
-                "description": "noise scale parameter"
+                "rust_type": {"root": "MI", "index": 0},
+                "description": "Noise scale parameter."
             },
             {
                 "name": "threshold",
                 "c_type": "void *",
-                "rust_type": {"arg": ["MI", 0]},
-                "description": "exclude counts that are less than this minimum value"
+                "rust_type": {"root": "MI", "index": 0},
+                "description": "Exclude counts that are less than this minimum value."
             },
             {
                 "name": "MI",
                 "c_type": "char *",
-                "description": "input metric space",
-                "is_type": true
+                "description": "Input metric space.",
+                "is_type": true,
+                "hint": "SensitivityMetric"
             },
             {
                 "name": "TIK",
                 "c_type": "char *",
-                "description": "type of input key- hashable/categorical data type",
+                "description": "Data type of input key- must be hashable/categorical.",
                 "is_type": true
             },
             {
                 "name": "TIC",
                 "c_type": "char *",
-                "description": "type of input count- integral",
+                "description": "Data type of input count- must be integral.",
                 "is_type": true,
                 "default": "int"
             }

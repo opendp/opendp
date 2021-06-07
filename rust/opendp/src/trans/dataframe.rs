@@ -41,7 +41,7 @@ fn create_dataframe_domain<K: Eq + Hash>() -> DataFrameDomain<K> {
     MapDomain::new(AllDomain::new(), AllDomain::new())
 }
 
-pub fn make_create_data_frame<M, K>(
+pub fn make_create_dataframe<M, K>(
     col_names: Vec<K>
 ) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M>>
     where M: Clone + DatasetMetric<Distance=u32>,
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_make_create_dataframe() {
-        let transformation = make_create_data_frame::<HammingDistance, u32>(vec![0, 1]).unwrap_test();
+        let transformation = make_create_dataframe::<HammingDistance, u32>(vec![0, 1]).unwrap_test();
         let arg = vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],

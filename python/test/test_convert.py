@@ -3,6 +3,43 @@ import ctypes
 from opendp.v1.convert import _scalar_to_slice, _slice_to_scalar
 from opendp.v1.mod import FfiSlice, FfiSlicePtr
 
+from opendp.v1.convert import py_to_object, object_to_py
+
+
+def test_data_object_int():
+    val_in = 123
+    obj = py_to_object(val_in)
+    val_out = object_to_py(obj)
+    assert val_out == val_in
+
+
+def test_data_object_float():
+    val_in = 123.123
+    obj = py_to_object(val_in)
+    val_out = object_to_py(obj)
+    assert val_out == val_in
+
+
+def test_data_object_str():
+    val_in = "hello, world"
+    obj = py_to_object(val_in)
+    val_out = object_to_py(obj)
+    assert val_out == val_in
+
+
+def test_data_object_list():
+    val_in = [1, 2, 3]
+    obj = py_to_object(val_in)
+    val_out = object_to_py(obj)
+    assert val_out == val_in
+
+
+def test_data_object_tuple():
+    val_in = (1., 1e-7)
+    obj = py_to_object(val_in)
+    val_out = object_to_py(obj)
+    assert val_out == val_in
+
 
 def test_roundtrip_int():
     in_ = 23

@@ -44,6 +44,14 @@ class AnyObject(ctypes.Structure):
     pass  # Opaque struct
 
 
+class AnyMetricDistance(ctypes.Structure):
+    pass  # Opaque struct
+
+
+class AnyMeasureDistance(ctypes.Structure):
+    pass  # Opaque struct
+
+
 class AnyMeasurement(ctypes.Structure):
     pass  # Opaque struct
 
@@ -60,6 +68,14 @@ class AnyObjectPtr(ctypes.POINTER(AnyObject)):
     _type_ = AnyObject
 
 
+class AnyMeasureDistancePtr(ctypes.POINTER(AnyMeasureDistance)):
+    _type_ = AnyMeasureDistance
+
+
+class AnyMetricDistancePtr(ctypes.POINTER(AnyMetricDistance)):
+    _type_ = AnyMetricDistance
+
+
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _type_ = FfiSlice
 
@@ -67,41 +83,57 @@ class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
 class AnyMeasurementPtr(ctypes.POINTER(AnyMeasurement)):
     _type_ = AnyMeasurement
 
-    def __call__(self, arg, *, type_name=None):
+    def __call__(self, arg):
         from opendp.v1.core import measurement_invoke
-        # TODO: route type_name into measurement_invoke
         return measurement_invoke(self, arg)
 
-    def check(self, d_in, d_out, *, d_in_type_name=None, d_out_type_name=None, debug=False):
-        from opendp.v1.convert import py_to_object
-        from opendp.v1.core import measurement_check
-        from opendp.v1.data import bool_free
-        d_in = py_to_object(d_in, d_in_type_name)
-        d_out = py_to_object(d_out, d_out_type_name)
+    def invoke(self, arg):
+        from opendp.v1.core import measurement_invoke
+        return measurement_invoke(self, arg)
 
-        def _check():
-            return measurement_check(self, d_in, d_out)
+    def check(self, d_in, d_out, *, debug=False):
+        from opendp.v1.core import measurement_check
 
         if debug:
-            return _check()
+            return measurement_check(self, d_in, d_out)
 
         try:
-            return _check()
+            return measurement_check(self, d_in, d_out)
         except OdpException as err:
             if err.variant == "RelationDebug":
                 return False
             raise
 
+    @property
+    def input_distance_type(self) -> "RuntimeType":
+        from opendp.v1.core import measurement_input_distance_type
+        from opendp.v1.typing import RuntimeType
+        return RuntimeType.parse(measurement_input_distance_type(self))
+
+    @property
+    def output_distance_type(self) -> "RuntimeType":
+        from opendp.v1.typing import RuntimeType
+        from opendp.v1.core import measurement_output_distance_type
+        return RuntimeType.parse(measurement_output_distance_type(self))
+
+    @property
+    def input_carrier_type(self) -> "RuntimeType":
+        from opendp.v1.core import measurement_input_carrier_type
+        from opendp.v1.typing import RuntimeType
+        return RuntimeType.parse(measurement_input_carrier_type(self))
+
+
 
 class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
     _type_ = AnyTransformation
 
-    def __call__(self, arg, *, type_name=None):
-        from opendp.v1.convert import py_to_object, object_to_py
+    def __call__(self, arg):
         from opendp.v1.core import transformation_invoke
-        arg = py_to_object(arg, type_name)
-        res = transformation_invoke(self, arg)
-        return object_to_py(res)
+        return transformation_invoke(self, arg)
+
+    def invoke(self, arg):
+        from opendp.v1.core import transformation_invoke
+        return transformation_invoke(self, arg)
 
     def __rshift__(self, other: "AnyMeasurementPtr"):
         if isinstance(other, AnyMeasurementPtr):
@@ -112,6 +144,38 @@ class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
             from opendp.v1.core import make_chain_tt
             return make_chain_tt(other, self)
 
+        raise ValueError(f"rshift expected a measurement or transformation, got {other}")
+
+    def check(self, d_in, d_out, *, debug=False):
+        from opendp.v1.core import transformation_check
+
+        if debug:
+            return transformation_check(self, d_in, d_out)
+
+        try:
+            return transformation_check(self, d_in, d_out)
+        except OdpException as err:
+            if err.variant == "RelationDebug":
+                return False
+            raise
+
+    @property
+    def input_distance_type(self) -> "RuntimeType":
+        from opendp.v1.core import transformation_input_distance_type
+        from opendp.v1.typing import RuntimeType
+        return RuntimeType.parse(transformation_input_distance_type(self))
+
+    @property
+    def output_distance_type(self) -> "RuntimeType":
+        from opendp.v1.core import transformation_output_distance_type
+        from opendp.v1.typing import RuntimeType
+        return RuntimeType.parse(transformation_output_distance_type(self))
+    
+    @property
+    def input_carrier_type(self) -> "RuntimeType":
+        from opendp.v1.core import transformation_input_carrier_type
+        from opendp.v1.typing import RuntimeType
+        return RuntimeType.parse(transformation_input_carrier_type(self))
 
 
 class FfiError(ctypes.Structure):

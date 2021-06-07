@@ -1,38 +1,54 @@
-#[cfg(feature="python")]
-pub mod python;
-#[cfg(feature="python")]
-use std::io;
-
+use std::env;
+use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::fs::File;
-use std::env;
-use serde::Deserialize;
+
 use indexmap::map::IndexMap;
+use serde::Deserialize;
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
-enum RuntimeTypeSelector {
-    Name(String),
-    Arg {arg: (Box<RuntimeTypeSelector>, i32)}
+#[cfg(feature="python")]
+pub mod python;
+
+// a module contains functions by name
+type Module = IndexMap<String, Function>;
+
+// metadata for each function in a module
+#[derive(Deserialize, Debug)]
+pub struct Function {
+    #[serde(default)]
+    args: Vec<Argument>,
+    // metadata for return type
+    #[serde(default)]
+    ret: Argument,
+    // metadata for constructing new types based on existing types or introspection
+    #[serde(default)]
+    derived_types: Vec<Argument>,
+    // plaintext description of the function used to generate documentation
+    description: Option<String>
 }
 
-impl<S: Into<String>> From<S> for RuntimeTypeSelector {
-    fn from(name: S) -> Self {
-        RuntimeTypeSelector::Name(name.into())
-    }
-}
-
-#[derive(Deserialize, Debug, Default)]
+// Metadata for function arguments, derived types and returns.
+#[derive(Deserialize, Debug, Default, Clone)]
 pub struct Argument {
+    // argument name. Optional for return types
     name: Option<String>,
+    // c type to translate to/from for FFI. Optional for derived types
     c_type: Option<String>,
-    rust_type: Option<RuntimeTypeSelector>,
+    // RuntimeType expressed in terms of rust types with generics.
+    // Includes various RuntimeType constructors
+    rust_type: Option<RuntimeType>,
+    // type hint- a more abstract type that all potential arguments inherit from
     hint: Option<String>,
+    // plaintext description of the argument used to generate documentation
     description: Option<String>,
+    // default value for the argument
     default: Option<String>,
+    // set to true if the argument represents a type
     #[serde(default)]
     is_type: bool,
+    // most functions call c_to_py on return values. Set to true to leave the return value as-is
+    // this is a special case for slice_as_object,
+    //  to prevent the returned AnyObject from getting converted back to python
     #[serde(default)]
     keep_as_c: bool
 }
@@ -50,18 +66,23 @@ impl Argument {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Function {
-    #[serde(default)]
-    args: Vec<Argument>,
-    #[serde(default)]
-    ret: Argument,
-    #[serde(default)]
-    derived_types: Vec<Argument>,
-    description: Option<String>
+#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[serde(untagged)]
+enum RuntimeType {
+    Name(String),
+    // get the ith subtype of an existing RuntimeType
+    Lower { root: Box<RuntimeType>, index: i32 },
+    // build a higher level RuntimeType
+    Raise { origin: String, args: Vec<Box<RuntimeType>> },
+    // construct the RuntimeType via function call
+    Function { function: String, params: Vec<String> },
 }
 
-type Module = IndexMap<String, Function>;
+impl<S: Into<String>> From<S> for RuntimeType {
+    fn from(name: S) -> Self {
+        RuntimeType::Name(name.into())
+    }
+}
 
 #[allow(dead_code)]
 fn write_bindings(files: IndexMap<PathBuf, String>) {
@@ -83,7 +104,7 @@ fn main() {
     module_names.iter().for_each(|module_name|
         println!("cargo:rerun-if-changed={:?}", get_bootstrap_path(module_name)));
 
-    // allow modules to be unused
+    // allow modules to be unused if no bindings feature flags are enabled
     let _modules = module_names.iter()
         .map(|module_name| {
             println!("parsing module: {}", module_name);
@@ -97,5 +118,5 @@ fn main() {
         })
         .collect::<IndexMap<String, Module>>();
 
-    #[cfg(feature="python")] write_bindings(python::make_bindings(_modules));
+    #[cfg(feature="python")] write_bindings(python::generate_bindings(_modules));
 }

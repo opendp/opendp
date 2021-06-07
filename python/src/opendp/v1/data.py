@@ -1,19 +1,19 @@
 # Auto-generated. Do not edit.
-import ctypes
-from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
-from opendp.v1.mod import lib, unwrap, AnyTransformationPtr, AnyMeasurementPtr, FfiResult, AnyObject, FfiSlice, FfiError, AnyObjectPtr, FfiSlicePtr, BoolPtr
-from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
+from opendp.v1.convert import *
+from opendp.v1.mod import *
+from opendp.v1.typing import *
 
 
 def to_string(
-    this
-):
+    this: AnyObjectPtr
+) -> str:
     """
+    Internal function. Convert the AnyObject to a string representation.
     :param this: 
+    :type this: AnyObjectPtr
+    :return: String representation of `this` AnyObject.
+    :rtype: str
     """
-    # parse type args
-    
     
     # translate arguments to c types
     this = py_to_object(this)
@@ -27,20 +27,23 @@ def to_string(
 
 
 def slice_as_object(
-    raw: FfiSlicePtr,
+    slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
-):
+) -> AnyObjectPtr:
     """
-    :param raw: 
-    :type raw: FfiSlicePtr
+    Internal function. Load data from a `slice` into an AnyObject
+    :param slice: 
+    :type slice: FfiSlicePtr
     :param T: 
     :type T: RuntimeTypeDescriptor
+    :return: An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
+    :rtype: AnyObjectPtr
     """
     # parse type args
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=raw)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
     # translate arguments to c types
-    raw = py_to_c(raw, c_type=FfiSlicePtr)
+    slice = py_to_c(slice, c_type=FfiSlicePtr, rust_type=T)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # call library function
@@ -48,17 +51,73 @@ def slice_as_object(
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return unwrap(function(raw, T), AnyObjectPtr)
+    return unwrap(function(slice, T), AnyObjectPtr)
+
+
+def slice_as_metric_distance(
+    slice: FfiSlicePtr,
+    T: RuntimeTypeDescriptor = None
+):
+    """
+    Internal function. Load data from a `slice` into an AnyMetricDistance
+    :param slice: 
+    :type slice: FfiSlicePtr
+    :param T: 
+    :type T: RuntimeTypeDescriptor
+    :return: An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information.
+    """
+    # parse type args
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
+    
+    # translate arguments to c types
+    slice = py_to_c(slice, c_type=FfiSlicePtr, rust_type=T)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # call library function
+    function = lib.opendp_data__slice_as_metric_distance
+    function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return unwrap(function(slice, T), AnyMetricDistancePtr)
+
+
+def slice_as_measure_distance(
+    slice: FfiSlicePtr,
+    T: RuntimeTypeDescriptor = None
+):
+    """
+    Internal function. Load data from a `slice` into an AnyMeasureDistance
+    :param slice: 
+    :type slice: FfiSlicePtr
+    :param T: 
+    :type T: RuntimeTypeDescriptor
+    :return: An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information.
+    """
+    # parse type args
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
+    
+    # translate arguments to c types
+    slice = py_to_c(slice, c_type=FfiSlicePtr, rust_type=T)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # call library function
+    function = lib.opendp_data__slice_as_measure_distance
+    function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return unwrap(function(slice, T), AnyMeasureDistancePtr)
 
 
 def object_type(
-    this
-):
+    this: AnyObjectPtr
+) -> str:
     """
+    Internal function. Retrieve the type descriptor string of an AnyObject.
     :param this: 
+    :type this: AnyObjectPtr
+    :return: The rust type associated with `this` AnyObject.
+    :rtype: str
     """
-    # parse type args
-    
     
     # translate arguments to c types
     this = py_to_object(this)
@@ -72,13 +131,15 @@ def object_type(
 
 
 def object_as_slice(
-    this
-):
+    this: AnyObjectPtr
+) -> FfiSlicePtr:
     """
+    Internal function. Unload data from an AnyObject into an FfiSlicePtr.
     :param this: 
+    :type this: AnyObjectPtr
+    :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
+    :rtype: FfiSlicePtr
     """
-    # parse type args
-    
     
     # translate arguments to c types
     this = py_to_object(this)
@@ -92,13 +153,13 @@ def object_as_slice(
 
 
 def object_free(
-    this
+    this: AnyObjectPtr
 ):
     """
+    Internal function. Free the memory associated with `this`, an AnyObject.
     :param this: 
+    :type this: AnyObjectPtr
     """
-    # parse type args
-    
     
     # translate arguments to c types
     this = py_to_object(this)
@@ -112,13 +173,14 @@ def object_free(
 
 
 def slice_free(
-    this
+    this: FfiSlicePtr
 ):
     """
+    Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
+    Used to clean up after object_free.
     :param this: 
+    :type this: FfiSlicePtr
     """
-    # parse type args
-    
     
     # translate arguments to c types
     this = py_to_c(this, c_type=FfiSlicePtr)
@@ -135,11 +197,11 @@ def str_free(
     this: str
 ):
     """
+    Internal function. Free the memory associated with `this`, a string. 
+    Used to clean up after the type getter functions.
     :param this: 
     :type this: str
     """
-    # parse type args
-    
     
     # translate arguments to c types
     this = py_to_c(this, c_type=ctypes.c_char_p)
@@ -156,10 +218,10 @@ def bool_free(
     this
 ):
     """
+    Internal function. Free the memory associated with `this`, a bool. 
+    Used to clean up after the relation check.
     :param this: 
     """
-    # parse type args
-    
     
     # translate arguments to c types
     this = py_to_c(this, c_type=BoolPtr)

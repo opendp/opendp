@@ -180,7 +180,7 @@ impl TryFrom<&str> for Type {
     type Error = Error;
     fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: {:?}", value))
+        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: `{}`", value))
     }
 }
 

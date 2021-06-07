@@ -45,7 +45,7 @@ pub trait Downcast {
 /// A struct wrapping a Box<dyn Any>, optionally implementing Clone and/or PartialEq.
 pub struct AnyBoxBase<CLONE: Bool, PARTIALEQ: Bool> {
     _markers: (PhantomData<CLONE>, PhantomData<PARTIALEQ>),
-    value: Box<dyn Any>,
+    pub value: Box<dyn Any>,
     clone_glue: Option<Glue<fn(&Self) -> Self>>,
     eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
 }
@@ -281,12 +281,16 @@ impl PartialOrd for AnyMetricDistance {
 
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasure {
-    measure: AnyBoxClonePartialEq,
+    pub measure: AnyBoxClonePartialEq,
+    pub distance_type: Type
 }
 
 impl AnyMeasure {
     pub fn new<M: 'static + Measure>(measure: M) -> Self {
-        Self { measure: AnyBoxClonePartialEq::new_clone_partial_eq(measure) }
+        Self {
+            measure: AnyBoxClonePartialEq::new_clone_partial_eq(measure),
+            distance_type: Type::of::<M::Distance>()
+        }
     }
 }
 
@@ -309,12 +313,16 @@ impl Measure for AnyMeasure {
 
 #[derive(Clone, PartialEq)]
 pub struct AnyMetric {
-    metric: AnyBoxClonePartialEq,
+    pub metric: AnyBoxClonePartialEq,
+    pub distance_type: Type
 }
 
 impl AnyMetric {
     pub fn new<M: 'static + Metric>(metric: M) -> Self {
-        Self { metric: AnyBoxClonePartialEq::new_clone_partial_eq(metric) }
+        Self {
+            metric: AnyBoxClonePartialEq::new_clone_partial_eq(metric),
+            distance_type: Type::of::<M::Distance>()
+        }
     }
 }
 

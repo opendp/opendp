@@ -4,77 +4,98 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
 import opendp
-
-odp = opendp.OpenDP()
-max_word_count_per_individual = 20
-
-data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data'))
-censored_data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data_censored'))
+from opendp.v1.meas import make_base_laplace, make_base_stability
+from opendp.v1.trans import make_count_by
+from opendp.v1.typing import L2Sensitivity, SymmetricDistance
 
 
-def check_stability(scale, threshold, line_count, budget):
-    count_by = odp.trans.make_count_by(b"<SymmetricDistance, L2Sensitivity<f64>, String, u32>", line_count)
-    base_stability = odp.meas.make_base_stability(b"<L2Sensitivity<f64>, String, u32, f64>",
-                                                  line_count, opendp.f64_p(scale), opendp.f64_p(threshold))
-    stability_mech = odp.core.make_chain_mt(base_stability, count_by)
+def get_bounded_vocabulary(corpus_path, dataset_distance):
+    """create a non-private vocabulary with bounded user contribution"""
+    total_counter = Counter()
+    with open(corpus_path, 'r') as corpus_file:
+        for line in corpus_file:
+            # truncate number of words in line to bound dataset distance
+            individual_counter = Counter(line.split())
+            for key in individual_counter:
+                individual_counter[key] = min(dataset_distance, individual_counter[key])
+            total_counter += individual_counter
+    return total_counter
 
-    # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts
-    check = odp.measurement_check(stability_mech, max_word_count_per_individual, budget)
-    odp.core.measurement_free(stability_mech)
-    return check
 
+def privatize_vocabulary(word_count, line_count, dataset_distance, budget):
+    """privatize a vocabulary with bounded user contribution"""
 
-def privatize_vocabulary(word_count, line_count, budget):
-
-    scale = binary_search(lambda s: check_stability(s, 1000., line_count, budget), 0., 100.)
-    threshold = binary_search(lambda thresh: check_stability(scale, thresh, line_count, budget), 0., 1000.)
+    scale = opendp.binary_search(
+        lambda s: check_stability(s, 1000., line_count,  dataset_distance, budget),
+        0., 100.)
+    threshold = opendp.binary_search(
+        lambda thresh: check_stability(scale, thresh, line_count, dataset_distance, budget),
+        0., 1000.)
 
     print("chosen scale and threshold:", scale, threshold)
-    # stability_mech = odp.meas.make_stability_mechanism_l1(b"<u32, u32>", line_count, scale, threshold)
-    # print("does chosen scale and threshold pass:", odp.core.measurement_check(stability_mech, d_in, d_out))
+    # stability_mech = make_base_stability(line_count, scale, threshold, L2Sensitivity[float], str, int)
+    # print("does chosen scale and threshold pass:", stability_mech.check(d_in, d_out))
 
-    laplace_mechanism = odp.meas.make_base_laplace(b"<f64>", opendp.f64_p(scale))
+    laplace_mechanism = make_base_laplace(scale, float)
     word_count = dict(word_count)
 
     vocabulary = set()
     for word in word_count:
-        privatized_count = odp.measurement_invoke(laplace_mechanism, word_count[word], type_name="<f64>")
+        privatized_count = laplace_mechanism(word_count[word])
         if privatized_count >= threshold:
             vocabulary.add(word)
 
     return vocabulary
 
 
-def main():
+def check_stability(scale, threshold, line_count, dataset_distance, budget):
+    count_by = make_count_by(line_count, SymmetricDistance, L2Sensitivity[float], str, int)
+    base_stability = make_base_stability(line_count, scale, threshold, L2Sensitivity[float], str, int)
+    stability_mech = count_by >> base_stability
 
-    word_counts = {}
-    line_counts = {}
+    # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts
+    return stability_mech.check(dataset_distance, budget)
 
-    for corpus_name in os.listdir(data_dir)[:1]:
+
+def get_private_vocabulary(corpus_path, dataset_distance, budget):
+    """create a private vocabulary"""
+    word_counts = get_bounded_vocabulary(corpus_path, dataset_distance)
+    line_count = sum(1 for _ in open(corpus_path))
+
+    return privatize_vocabulary(word_counts, line_count, dataset_distance, budget)
+
+
+def write_private_vocabulary(corpus_path, output_path, dataset_distance, budget):
+    """write a vocabulary file in the format needed for subword-nmt"""
+    vocab = get_private_vocabulary(corpus_path, dataset_distance, budget)
+
+    with open(output_path, 'w') as output_file:
+        for key, count in sorted(vocab.items(), key=lambda x: x[1], reverse=True):
+            output_file.write(key + " " + str(count) + "\n")
+
+
+if __name__ == "__main__":
+    max_word_count_per_individual = 20
+
+    data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data'))
+    censored_data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data_censored'))
+
+    for corpus_name in os.listdir(data_dir):
         corpus_path = os.path.join(data_dir, corpus_name)
 
-        with open(corpus_path, 'r') as corpus_file:
-            # truncate number of words in line to bound hamming distance
-            total_counter = Counter()
-            for line in corpus_file:
-                individual_counter = Counter(line.split())
-                for key in individual_counter:
-                    individual_counter[key] = min(max_word_count_per_individual, individual_counter[key])
-                total_counter += individual_counter
+        word_counts = get_bounded_vocabulary(corpus_path, max_word_count_per_individual)
+        line_count = sum(1 for _ in open(corpus_path))
 
-            word_counts[corpus_name] = total_counter
-
-        line_counts[corpus_name] = sum(1 for _ in open(corpus_path))
-
-    for corpus_name in word_counts:
         epsilons = np.linspace(.001, .01, 10)
         deltas = np.linspace(1e-10, 1e-8, 10)
         vocabulary_counts = np.zeros((len(epsilons), len(deltas)), dtype=int)
 
         for i, epsilon in enumerate(epsilons):
             for j, delta in enumerate(deltas):
-                vocabulary = privatize_vocabulary(word_counts[corpus_name], line_counts[corpus_name], (epsilon, delta))
-                print(f"from {len(word_counts[corpus_name])} words to {len(vocabulary)} words")
+                vocabulary = privatize_vocabulary(
+                    word_counts, line_count,  # carrier (real data)
+                    max_word_count_per_individual, (epsilon, delta))  # distance
+                print(f"from {len(word_counts)} words to {len(vocabulary)} words")
                 vocabulary_counts[i, j] = len(vocabulary)
 
         fig, ax = plt.subplots()
@@ -110,27 +131,3 @@ def main():
 # with open(corpus_path, 'r') as in_file, open(censored_corpus_path, 'w') as out_file:
 #     for line in in_file:
 #         out_file.write(' '.join([word if word in vocabulary else 'CENSORED' for word in line.split()]) + '\n')
-
-
-def binary_search(predicate, start, end):
-    if start > end:
-        raise ValueError
-
-    if not predicate(end):
-        raise ValueError("no possible value in range")
-
-    while True:
-        mid = (start + end) / 2
-        passes = predicate(mid)
-
-        if passes and end - start < .00001:
-            return mid
-
-        if passes:
-            end = mid
-        else:
-            start = mid
-
-
-if __name__ == "__main__":
-    main()

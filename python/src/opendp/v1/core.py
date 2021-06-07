@@ -1,20 +1,19 @@
 # Auto-generated. Do not edit.
-import ctypes
-from typing import Type, Union
-from opendp.v1.convert import py_to_ptr, py_to_c, py_to_object, c_to_py
-from opendp.v1.mod import lib, unwrap, AnyTransformationPtr, AnyMeasurementPtr, FfiResult, AnyObject, FfiSlice, FfiError, AnyObjectPtr, FfiSlicePtr, BoolPtr
-from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor, DatasetMetric, SensitivityMetric
+from opendp.v1.convert import *
+from opendp.v1.mod import *
+from opendp.v1.typing import *
 
 
 def error_free(
-    error
+    error: FfiError
 ) -> bool:
     """
+    Internal function. Free the memory associated with `error`.
     :param error: 
+    :type error: FfiError
+    :return: true indicates successful free
     :rtype: bool
     """
-    # parse type args
-    
     
     # translate arguments to c types
     error = py_to_c(error, c_type=ctypes.POINTER(FfiError))
@@ -27,132 +26,14 @@ def error_free(
     return c_to_py(function(error))
 
 
-def transformation_check(
-    transformation,
-    d_in,
-    d_out
-):
-    """
-    :param transformation: 
-    :param d_in: 
-    :param d_out: 
-    """
-    # parse type args
-    
-    
-    # translate arguments to c types
-    transformation = py_to_c(transformation, c_type=AnyMeasurementPtr)
-    d_in = py_to_object(d_in)
-    d_out = py_to_object(d_out)
-    
-    # call library function
-    function = lib.opendp_core__transformation_check
-    function.argtypes = [AnyMeasurementPtr, AnyObjectPtr, AnyObjectPtr]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(transformation, d_in, d_out), BoolPtr))
-
-
-def measurement_check(
-    measurement,
-    d_in,
-    d_out
-):
-    """
-    :param measurement: 
-    :param d_in: 
-    :param d_out: 
-    """
-    # parse type args
-    
-    
-    # translate arguments to c types
-    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
-    d_in = py_to_object(d_in)
-    d_out = py_to_object(d_out)
-    
-    # call library function
-    function = lib.opendp_core__measurement_check
-    function.argtypes = [AnyMeasurementPtr, AnyObjectPtr, AnyObjectPtr]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(measurement, d_in, d_out), BoolPtr))
-
-
-def measurement_invoke(
-    measurement,
-    arg
-):
-    """
-    :param measurement: 
-    :param arg: 
-    """
-    # parse type args
-    
-    
-    # translate arguments to c types
-    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
-    arg = py_to_object(arg)
-    
-    # call library function
-    function = lib.opendp_core__measurement_invoke
-    function.argtypes = [AnyMeasurementPtr, AnyObjectPtr]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(measurement, arg), AnyObjectPtr))
-
-
-def measurement_free(
-    measurement
-):
-    """
-    :param measurement: 
-    """
-    # parse type args
-    
-    
-    # translate arguments to c types
-    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
-    
-    # call library function
-    function = lib.opendp_core__measurement_free
-    function.argtypes = [AnyMeasurementPtr]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(measurement), ctypes.c_void_p))
-
-
-def transformation_invoke(
-    transformation,
-    arg
-):
-    """
-    :param transformation: 
-    :param arg: 
-    """
-    # parse type args
-    
-    
-    # translate arguments to c types
-    transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
-    arg = py_to_object(arg)
-    
-    # call library function
-    function = lib.opendp_core__transformation_invoke
-    function.argtypes = [AnyTransformationPtr, AnyObjectPtr]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(transformation, arg), AnyObjectPtr))
-
-
 def transformation_free(
-    transformation
+    transformation: AnyTransformationPtr
 ):
     """
+    Internal function. Free the memory associated with `transformation`.
     :param transformation: 
+    :type transformation: AnyTransformationPtr
     """
-    # parse type args
-    
     
     # translate arguments to c types
     transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
@@ -165,16 +46,148 @@ def transformation_free(
     return c_to_py(unwrap(function(transformation), ctypes.c_void_p))
 
 
-def make_chain_mt(
-    measurement,
-    transformation
+def measurement_free(
+    measurement: AnyMeasurementPtr
 ):
     """
+    Internal function. Free the memory associated with `measurement`.
     :param measurement: 
-    :param transformation: 
+    :type measurement: AnyMeasurementPtr
     """
-    # parse type args
     
+    # translate arguments to c types
+    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
+    
+    # call library function
+    function = lib.opendp_core__measurement_free
+    function.argtypes = [AnyMeasurementPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement), ctypes.c_void_p))
+
+
+def transformation_check(
+    transformation: AnyTransformationPtr,
+    d_in,
+    d_out
+) -> bool:
+    """
+    Check the stability relation of the `transformation` at the given `d_in`, `d_out`.
+    :param transformation: 
+    :type transformation: AnyTransformationPtr
+    :param d_in: 
+    :param d_out: 
+    :return: True indicates that the relation passed at the given distance.
+    :rtype: bool
+    """
+    
+    # translate arguments to c types
+    transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
+    d_in = py_to_metric_distance(d_in, type_name=transformation_input_distance_type(transformation))
+    d_out = py_to_metric_distance(d_out, type_name=transformation_output_distance_type(transformation))
+    
+    # call library function
+    function = lib.opendp_core__transformation_check
+    function.argtypes = [AnyTransformationPtr, AnyMetricDistancePtr, AnyMetricDistancePtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation, d_in, d_out), BoolPtr))
+
+
+def measurement_check(
+    measurement: AnyMeasurementPtr,
+    d_in,
+    d_out
+) -> bool:
+    """
+    Check the privacy relation of the `measurement` at the given `d_in`, `d_out`.
+    :param measurement: 
+    :type measurement: AnyMeasurementPtr
+    :param d_in: 
+    :param d_out: 
+    :return: True indicates that the relation passed at the given distance.
+    :rtype: bool
+    """
+    
+    # translate arguments to c types
+    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
+    d_in = py_to_metric_distance(d_in, type_name=measurement_input_distance_type(measurement))
+    d_out = py_to_measure_distance(d_out, type_name=measurement_output_distance_type(measurement))
+    
+    # call library function
+    function = lib.opendp_core__measurement_check
+    function.argtypes = [AnyMeasurementPtr, AnyMetricDistancePtr, AnyMeasureDistancePtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement, d_in, d_out), BoolPtr))
+
+
+def measurement_invoke(
+    measurement: AnyMeasurementPtr,
+    arg: AnyObjectPtr
+) -> AnyObjectPtr:
+    """
+    Invoke the `measurement` with `arg`. Returns a differentially private release.
+    :param measurement: 
+    :type measurement: AnyMeasurementPtr
+    :param arg: 
+    :type arg: AnyObjectPtr
+    :return: Differentially private release.
+    :rtype: AnyObjectPtr
+    """
+    
+    # translate arguments to c types
+    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
+    arg = py_to_object(arg, type_name=measurement_input_carrier_type(measurement))
+    
+    # call library function
+    function = lib.opendp_core__measurement_invoke
+    function.argtypes = [AnyMeasurementPtr, AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement, arg), AnyObjectPtr))
+
+
+def transformation_invoke(
+    transformation: AnyTransformationPtr,
+    arg: AnyObjectPtr
+) -> AnyObjectPtr:
+    """
+    Invoke the `transformation` with `arg`. 
+    The response is not differentially private as it has not been chained with a measurement.
+    :param transformation: 
+    :type transformation: AnyTransformationPtr
+    :param arg: 
+    :type arg: AnyObjectPtr
+    :return: Non-differentially private answer to the query.
+    :rtype: AnyObjectPtr
+    """
+    
+    # translate arguments to c types
+    transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
+    arg = py_to_object(arg, type_name=transformation_input_carrier_type(transformation))
+    
+    # call library function
+    function = lib.opendp_core__transformation_invoke
+    function.argtypes = [AnyTransformationPtr, AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation, arg), AnyObjectPtr))
+
+
+def make_chain_mt(
+    measurement: AnyMeasurementPtr,
+    transformation: AnyTransformationPtr
+) -> AnyMeasurementPtr:
+    """
+    Construct the functional composition (`measurement` ○ `transformation`). Returns a Measurement.
+    :param measurement: outer privatizer
+    :type measurement: AnyMeasurementPtr
+    :param transformation: inner query
+    :type transformation: AnyTransformationPtr
+    :return: Measurement representing the chained computation.
+    :rtype: AnyMeasurementPtr
+    """
     
     # translate arguments to c types
     measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
@@ -189,15 +202,18 @@ def make_chain_mt(
 
 
 def make_chain_tt(
-    transformation1,
-    transformation0
-):
+    transformation1: AnyTransformationPtr,
+    transformation0: AnyTransformationPtr
+) -> AnyTransformationPtr:
     """
-    :param transformation1: 
-    :param transformation0: 
+    Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Tranformation.
+    :param transformation1: outer transformation
+    :type transformation1: AnyTransformationPtr
+    :param transformation0: inner transformation
+    :type transformation0: AnyTransformationPtr
+    :return: Transformation representing the chained computation.
+    :rtype: AnyTransformationPtr
     """
-    # parse type args
-    
     
     # translate arguments to c types
     transformation1 = py_to_c(transformation1, c_type=AnyTransformationPtr)
@@ -211,24 +227,153 @@ def make_chain_tt(
     return c_to_py(unwrap(function(transformation1, transformation0), AnyTransformationPtr))
 
 
-def make_composition(
-    transformation0,
-    transformation1
-):
+def make_basic_composition(
+    measurement0: AnyMeasurementPtr,
+    measurement1: AnyMeasurementPtr
+) -> AnyMeasurementPtr:
     """
-    :param transformation0: 
-    :param transformation1: 
+    Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.
+    :param measurement0: 
+    :type measurement0: AnyMeasurementPtr
+    :param measurement1: 
+    :type measurement1: AnyMeasurementPtr
+    :return: Measurement representing the composed transformations.
+    :rtype: AnyMeasurementPtr
     """
-    # parse type args
-    
     
     # translate arguments to c types
-    transformation0 = py_to_c(transformation0, c_type=AnyMeasurementPtr)
-    transformation1 = py_to_c(transformation1, c_type=AnyMeasurementPtr)
+    measurement0 = py_to_c(measurement0, c_type=AnyMeasurementPtr)
+    measurement1 = py_to_c(measurement1, c_type=AnyMeasurementPtr)
     
     # call library function
-    function = lib.opendp_core__make_composition
+    function = lib.opendp_core__make_basic_composition
     function.argtypes = [AnyMeasurementPtr, AnyMeasurementPtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(transformation0, transformation1), AnyMeasurementPtr))
+    return c_to_py(unwrap(function(measurement0, measurement1), AnyMeasurementPtr))
+
+
+def transformation_input_carrier_type(
+    transformation: AnyTransformationPtr
+) -> str:
+    """
+    Get the input (carrier) data type of `transformation`.
+    :param transformation: 
+    :type transformation: AnyTransformationPtr
+    :rtype: str
+    """
+    
+    # translate arguments to c types
+    transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
+    
+    # call library function
+    function = lib.opendp_core__transformation_input_carrier_type
+    function.argtypes = [AnyTransformationPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation), ctypes.c_char_p))
+
+
+def measurement_input_carrier_type(
+    measurement: AnyMeasurementPtr
+) -> str:
+    """
+    Get the input (carrier) data type of `measurement`.
+    :param measurement: 
+    :type measurement: AnyMeasurementPtr
+    :rtype: str
+    """
+    
+    # translate arguments to c types
+    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
+    
+    # call library function
+    function = lib.opendp_core__measurement_input_carrier_type
+    function.argtypes = [AnyMeasurementPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement), ctypes.c_char_p))
+
+
+def transformation_input_distance_type(
+    transformation: AnyTransformationPtr
+) -> str:
+    """
+    Get the input distance type of `transformation`.
+    :param transformation: 
+    :type transformation: AnyTransformationPtr
+    :rtype: str
+    """
+    
+    # translate arguments to c types
+    transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
+    
+    # call library function
+    function = lib.opendp_core__transformation_input_distance_type
+    function.argtypes = [AnyTransformationPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation), ctypes.c_char_p))
+
+
+def transformation_output_distance_type(
+    transformation: AnyTransformationPtr
+) -> str:
+    """
+    Get the output distance type of `transformation`.
+    :param transformation: 
+    :type transformation: AnyTransformationPtr
+    :rtype: str
+    """
+    
+    # translate arguments to c types
+    transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
+    
+    # call library function
+    function = lib.opendp_core__transformation_output_distance_type
+    function.argtypes = [AnyTransformationPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation), ctypes.c_char_p))
+
+
+def measurement_input_distance_type(
+    measurement: AnyMeasurementPtr
+) -> str:
+    """
+    Get the input distance type of `measurement`.
+    :param measurement: 
+    :type measurement: AnyMeasurementPtr
+    :rtype: str
+    """
+    
+    # translate arguments to c types
+    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
+    
+    # call library function
+    function = lib.opendp_core__measurement_input_distance_type
+    function.argtypes = [AnyMeasurementPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement), ctypes.c_char_p))
+
+
+def measurement_output_distance_type(
+    measurement: AnyMeasurementPtr
+) -> str:
+    """
+    Get the output distance type of `measurement`.
+    :param measurement: 
+    :type measurement: AnyMeasurementPtr
+    :rtype: str
+    """
+    
+    # translate arguments to c types
+    measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
+    
+    # call library function
+    function = lib.opendp_core__measurement_output_distance_type
+    function.argtypes = [AnyMeasurementPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement), ctypes.c_char_p))

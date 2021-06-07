@@ -17,12 +17,14 @@ class RuntimeType(object):
         self.args = args
 
     def __eq__(self, other):
+        if isinstance(other, str):
+            other = RuntimeType.parse(other)
         return self.origin == other.origin and self.args == other.args
 
     def __str__(self):
         result = self.origin or ''
         if self.args:
-            result += f'<{",".join(map(str, self.args))}>'
+            result += f'<{", ".join(map(str, self.args))}>'
         return result
 
     @classmethod
@@ -51,7 +53,7 @@ class RuntimeType(object):
         if isinstance(type_name, str):
             type_name = type_name.strip()
             if type_name.startswith('(') and type_name.endswith(')'):
-                return Tuple(cls._parse_args(type_name[1:-1]))
+                return Tuple(*cls._parse_args(type_name[1:-1]))
             start, end = type_name.find('<'), type_name.rfind('>')
             if 0 < start < end < len(type_name):
                 return RuntimeType(type_name[:start], cls._parse_args(type_name[start + 1: end]))
@@ -77,7 +79,7 @@ class RuntimeType(object):
             return ELEMENTARY_TYPES[type(public_example)]
 
         elif isinstance(public_example, tuple):
-            return Tuple(map(cls.infer, public_example))
+            return Tuple(*map(cls.infer, public_example))
 
         elif isinstance(public_example, list):
             return RuntimeType('Vec', [
@@ -101,7 +103,7 @@ class RuntimeType(object):
     @classmethod
     def assert_is_similar(cls, parsed, inferred):
         """
-        assert that other only differs from self by differences in equivalence class
+        assert that inferred is a member of the same equivalence class as parsed
         :param parsed:
         :param inferred:
         :return:
@@ -110,12 +112,12 @@ class RuntimeType(object):
             return
         if isinstance(parsed, str) and isinstance(inferred, str):
             if inferred in ATOM_EQUIVALENCE_CLASSES:
-                assert parsed in ATOM_EQUIVALENCE_CLASSES[inferred]
+                assert parsed in ATOM_EQUIVALENCE_CLASSES[inferred], f"inferred type is {inferred}, expected {parsed}"
             else:
-                assert parsed == inferred
+                assert parsed == inferred, f"inferred type is {inferred}, expected {parsed}"
         elif isinstance(parsed, RuntimeType) and isinstance(inferred, RuntimeType):
-            assert parsed.origin == inferred.origin
-            assert len(parsed.args) == len(inferred.args)
+            assert parsed.origin == inferred.origin, f"inferred type is {inferred.origin}, expected {parsed.origin}"
+            assert len(parsed.args) == len(inferred.args), f"inferred type has {len(inferred.args)} args, expected {len(parsed.args)} args"
             for (arg_par, arg_inf) in zip(parsed.args, inferred.args):
                 RuntimeType.assert_is_similar(arg_par, arg_inf)
         else:
@@ -137,7 +139,7 @@ class Tuple(RuntimeType):
         super().__init__('Tuple', list(args))
 
     def __str__(self):
-        return f'({",".join(map(str, self.args))})'
+        return f'({", ".join(map(str, self.args))})'
 
 
 class SensitivityMetric(RuntimeType):

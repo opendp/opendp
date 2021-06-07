@@ -2,7 +2,7 @@ import ctypes
 from typing import Any, Sequence, Tuple, List
 
 from opendp.v1.mod import UnknownTypeException, FfiSlice, OdpException, AnyObjectPtr, FfiSlicePtr, BoolPtr, \
-    AnyTransformationPtr, AnyMeasurementPtr, ATOM_EQUIVALENCE_CLASSES
+    AnyTransformationPtr, AnyMeasurementPtr, ATOM_EQUIVALENCE_CLASSES, AnyMetricDistancePtr, AnyMeasureDistancePtr
 from opendp.v1.typing import RuntimeType, RuntimeTypeDescriptor
 
 ATOM_MAP = {
@@ -60,7 +60,7 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
 
 
 def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
-    assert type_name[:4] == 'Vec'
+    assert type_name[:3] == 'Vec'
     inner_type_name = type_name[4:-1]
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
@@ -91,7 +91,7 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: str) -> FfiSlicePtr:
     ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)
                 for v, name in zip(val, inner_type_names))
     array = (ctypes.c_void_p * len(val))(*ptr_data)
-    return _wrap_in_slice(ctypes.byref(array), len(val))
+    return _wrap_in_slice(ctypes.pointer(array), len(val))
 
 
 def _slice_to_tuple(raw: FfiSlicePtr, type_name: str) -> Tuple[Any, ...]:
@@ -137,13 +137,28 @@ def _py_to_slice(val: Any, type_name: str) -> FfiSlicePtr:
     raise UnknownTypeException(type_name)
 
 
+def py_to_metric_distance(val: Any, type_name: RuntimeTypeDescriptor = None) -> AnyMetricDistancePtr:
+    if isinstance(val, AnyMetricDistancePtr):
+        return val
+
+    from opendp.v1.data import slice_as_metric_distance
+    return slice_as_metric_distance(val, type_name)
+
+
+def py_to_measure_distance(val: Any, type_name: RuntimeTypeDescriptor = None) -> AnyMeasureDistancePtr:
+    if isinstance(val, AnyMeasureDistancePtr):
+        return val
+
+    from opendp.v1.data import slice_as_measure_distance
+    return slice_as_measure_distance(val, type_name)
+
+
 def py_to_object(val: Any, type_name: RuntimeTypeDescriptor = None) -> AnyObjectPtr:
     if isinstance(val, AnyObjectPtr):
         return val
-    type_name = str(RuntimeType.parse_or_infer(type_name=type_name, public_example=val))
-    ffi_slice = _py_to_slice(val, type_name)
+
     from opendp.v1.data import slice_as_object
-    return slice_as_object(ffi_slice, type_name)
+    return slice_as_object(val, type_name)
 
 
 def object_to_py(obj: AnyObjectPtr) -> Any:
@@ -179,8 +194,18 @@ def py_to_ptr(val: Any, type_name: str = None):
     raise UnknownTypeException(type_name)
 
 
-def py_to_c(val: Any, c_type):
+def py_to_c(val: Any, c_type, rust_type=None):
     """map from python val to any c type"""
+    if isinstance(val, c_type):
+        return val
+
+    if rust_type is not None:
+        RuntimeType.assert_is_similar(rust_type, RuntimeType.infer(val))
+
+    if c_type == FfiSlicePtr:
+        assert rust_type is not None
+        return _py_to_slice(val, str(rust_type))
+
     if isinstance(val, RuntimeType):
         val = str(val)
 

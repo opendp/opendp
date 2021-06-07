@@ -1,71 +1,281 @@
 {
     "error_free": {
+        "description": "Internal function. Free the memory associated with `error`.",
         "args": [
-            {"name": "error", "c_type": "const FfiError *"}
+            {
+                "name": "error",
+                "c_type": "const FfiError *",
+                "hint": "FfiError"
+            }
         ],
-        "ret": {"c_type": "bool"}
-    },
-    "transformation_check": {
-        "args": [
-            {"name": "transformation", "c_type": "const AnyMeasurement *"},
-            {"name": "d_in", "c_type": "const AnyObject *"},
-            {"name": "d_out", "c_type": "const AnyObject *"}
-        ],
-        "ret": {"c_type": "FfiResult<bool *>"}
-    },
-    "measurement_check": {
-        "args": [
-            {"name": "this", "c_type": "const AnyMeasurement *"},
-            {"name": "d_in", "c_type": "const AnyObject *"},
-            {"name": "d_out", "c_type": "const AnyObject *"}
-        ],
-        "ret": {"c_type": "FfiResult<bool *>"}
-    },
-    "measurement_invoke": {
-        "args": [
-            {"name": "measurement", "c_type": "const AnyMeasurement *"},
-            {"name": "arg", "c_type": "const AnyObject *"}
-        ],
-        "ret": {"c_type": "FfiResult<AnyObject *>"}
-    },
-    "measurement_free": {
-        "args": [
-            {"name": "measurement", "c_type": "AnyMeasurement *"}
-        ],
-        "ret": {"c_type": "FfiResult<void *>"}
-    },
-    "transformation_invoke": {
-        "args": [
-            {"name": "transformation", "c_type": "const AnyTransformation *"},
-            {"name": "arg", "c_type": "const AnyObject *"}
-        ],
-        "ret": {"c_type": "FfiResult<AnyObject *>"}
+        "ret": {
+            "c_type": "bool",
+            "description": "true indicates successful free"
+        }
     },
     "transformation_free": {
+        "description": "Internal function. Free the memory associated with `transformation`.",
         "args": [
-            {"name": "transformation", "c_type": "AnyTransformation *"}
+            {
+                "name": "transformation",
+                "c_type": "AnyTransformation *"
+            }
         ],
-        "ret": {"c_type": "FfiResult<void *>"}
+        "ret": {
+            "c_type": "FfiResult<void *>"
+        }
+    },
+    "measurement_free": {
+        "description": "Internal function. Free the memory associated with `measurement`.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "AnyMeasurement *"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<void *>"
+        }
+    },
+    "transformation_check": {
+        "description": "Check the stability relation of the `transformation` at the given `d_in`, `d_out`.",
+        "args": [
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *"
+            },
+            {
+                "name": "d_in",
+                "c_type": "const AnyMetricDistance *",
+                "rust_type": {
+                    "function": "transformation_input_distance_type",
+                    "params": [
+                        "transformation"
+                    ]
+                }
+            },
+            {
+                "name": "d_out",
+                "c_type": "const AnyMetricDistance *",
+                "rust_type": {
+                    "function": "transformation_output_distance_type",
+                    "params": [
+                        "transformation"
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<bool *>",
+            "hint": "bool",
+            "description": "True indicates that the relation passed at the given distance."
+        }
+    },
+    "measurement_check": {
+        "description": "Check the privacy relation of the `measurement` at the given `d_in`, `d_out`.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *"
+            },
+            {
+                "name": "d_in",
+                "c_type": "const AnyMetricDistance *",
+                "rust_type": {
+                    "function": "measurement_input_distance_type",
+                    "params": [
+                        "measurement"
+                    ]
+                }
+            },
+            {
+                "name": "d_out",
+                "c_type": "const AnyMeasureDistance *",
+                "rust_type": {
+                    "function": "measurement_output_distance_type",
+                    "params": [
+                        "measurement"
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<bool *>",
+            "hint": "bool",
+            "description": "True indicates that the relation passed at the given distance."
+        }
+    },
+    "measurement_invoke": {
+        "description": "Invoke the `measurement` with `arg`. Returns a differentially private release.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *"
+            },
+            {
+                "name": "arg",
+                "c_type": "const AnyObject *",
+                "rust_type": {
+                    "function": "measurement_input_carrier_type",
+                    "params": [
+                        "measurement"
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyObject *>",
+            "description": "Differentially private release."
+        }
+    },
+    "transformation_invoke": {
+        "description": "Invoke the `transformation` with `arg`. \nThe response is not differentially private as it has not been chained with a measurement.",
+        "args": [
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *"
+            },
+            {
+                "name": "arg",
+                "c_type": "const AnyObject *",
+                "rust_type": {
+                    "function": "transformation_input_carrier_type",
+                    "params": [
+                        "transformation"
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyObject *>",
+            "description": "Non-differentially private answer to the query."
+        }
     },
     "make_chain_mt": {
+        "description": "Construct the functional composition (`measurement` ○ `transformation`). Returns a Measurement.",
         "args": [
-            {"name": "measurement", "c_type": "const AnyMeasurement *"},
-            {"name": "transformation", "c_type": "const AnyTransformation *"}
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *",
+                "description": "outer privatizer"
+            },
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *",
+                "description": "inner query"
+            }
         ],
-        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "Measurement representing the chained computation."
+        }
     },
     "make_chain_tt": {
+        "description": "Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Tranformation.",
         "args": [
-            {"name": "transformation1", "c_type": "const AnyTransformation *"},
-            {"name": "transformation0", "c_type": "const AnyTransformation *"}
+            {
+                "name": "transformation1",
+                "c_type": "const AnyTransformation *",
+                "description": "outer transformation"
+            },
+            {
+                "name": "transformation0",
+                "c_type": "const AnyTransformation *",
+                "description": "inner transformation"
+            }
         ],
-        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "Transformation representing the chained computation."
+        }
     },
     "make_basic_composition": {
+        "description": "Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.",
         "args": [
-            {"name": "transformation0", "c_type": "const AnyMeasurement *"},
-            {"name": "transformation1", "c_type": "const AnyMeasurement *"}
+            {
+                "name": "measurement0",
+                "c_type": "const AnyMeasurement *"
+            },
+            {
+                "name": "measurement1",
+                "c_type": "const AnyMeasurement *"
+            }
         ],
-        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "Measurement representing the composed transformations."
+        }
+    },
+    "transformation_input_carrier_type": {
+        "description": "Get the input (carrier) data type of `transformation`.",
+        "args": [
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const char *>"
+        }
+    },
+    "measurement_input_carrier_type": {
+        "description": "Get the input (carrier) data type of `measurement`.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const char *>"
+        }
+    },
+    "transformation_input_distance_type": {
+        "description": "Get the input distance type of `transformation`.",
+        "args": [
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const char *>"
+        }
+    },
+    "transformation_output_distance_type": {
+        "description": "Get the output distance type of `transformation`.",
+        "args": [
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const char *>"
+        }
+    },
+    "measurement_input_distance_type": {
+        "description": "Get the input distance type of `measurement`.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const char *>"
+        }
+    },
+    "measurement_output_distance_type": {
+        "description": "Get the output distance type of `measurement`.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const char *>"
+        }
     }
 }
