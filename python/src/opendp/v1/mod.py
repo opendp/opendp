@@ -47,7 +47,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
             raise
 
     @property
-    def input_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=import-error
+    def input_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=F821
         """Retrieve the distance type of the input metric space.
         This may be any integral type for dataset metric spaces, or any numeric type for sensitivity metric spaces.
         
@@ -58,7 +58,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=import-error
+    def output_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=F821
         """Retrieve the distance type of the output measure space.
         This is the type that the budget is expressed in.
         
@@ -69,7 +69,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property
-    def input_carrier_type(self) -> Union["RuntimeType", str]:  # pylint: disable=import-error
+    def input_carrier_type(self) -> Union["RuntimeType", str]:  # pylint: disable=F821
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
         
@@ -138,7 +138,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             raise
 
     @property
-    def input_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=import-error
+    def input_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=F821
         """Retrieve the distance type of the input metric space.
         This may be any integral type for dataset metric spaces, or any numeric type for sensitivity metric spaces.
 
@@ -149,7 +149,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return RuntimeType.parse(transformation_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=import-error
+    def output_distance_type(self) -> Union["RuntimeType", str]:  # pylint: disable=F821
         """Retrieve the distance type of the output metric space.
         This may be any integral type for dataset metric spaces, or any numeric type for sensitivity metric spaces.
 
@@ -160,7 +160,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return RuntimeType.parse(transformation_output_distance_type(self))
     
     @property
-    def input_carrier_type(self) -> Union["RuntimeType", str]:  # pylint: disable=import-error
+    def input_carrier_type(self) -> Union["RuntimeType", str]:  # pylint: disable=F821
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
 
