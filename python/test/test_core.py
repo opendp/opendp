@@ -19,8 +19,8 @@ def test_chain():
     from opendp.v1.trans import make_count
     from opendp.v1.meas import make_base_laplace, make_base_geometric
 
-    data = [True, False, True, True, False]
-    count = make_count(MI=HammingDistance, MO=L1Sensitivity[int], TI=bool)
+    data = [1, 2, 3, 4, 5]
+    count = make_count(MI=HammingDistance, MO=L1Sensitivity[int], TI=int)
     print("count:", count(data))
 
     base_laplace = make_base_laplace(scale=1.)

@@ -68,7 +68,7 @@ def test_identity_list():
 
 def test_count():
     from opendp.v1.trans import make_count
-    transformation = make_count(SymmetricDistance, L1Sensitivity["u32"], int)
+    transformation = make_count(SymmetricDistance, L1Sensitivity["i32"], int)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == 3
