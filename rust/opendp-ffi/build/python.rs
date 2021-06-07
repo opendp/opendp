@@ -24,8 +24,10 @@ pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf,
     let hierarchy: HashMap<String, Vec<String>> = serde_json::from_str(&contents).unwrap();
 
     modules.into_iter()
-        .map(|(module_name, module)|
-            (PathBuf::from(format!("{}.py", module_name)), generate_module(module_name, module, &typemap, &hierarchy)))
+        .map(|(module_name, module)| (
+            PathBuf::from(format!("{}.py", if module_name == "data".to_string() {"_data".to_string()} else {module_name.clone()})),
+            generate_module(module_name, module, &typemap, &hierarchy)
+        ))
         .collect()
 }
 
@@ -43,8 +45,8 @@ fn generate_module(
         .join("\n");
 
     format!(r#"# Auto-generated. Do not edit.
-from opendp.v1.convert import _py_to_c, _c_to_py
-from opendp.v1.mod import *
+from opendp.v1._convert import _py_to_c, _c_to_py
+from opendp.v1._mod import *
 from opendp.v1.typing import *
 
 {functions}"#, functions = functions)
@@ -104,10 +106,10 @@ impl Argument {
                 c_type = c_type[10..c_type.len() - 1].to_string();
             }
             if c_type.ends_with("AnyTransformation *") {
-                return Some("AnyTransformationPtr".to_string())
+                return Some("Transformation".to_string())
             }
             if c_type.ends_with("AnyMeasurement *") {
-                return Some("AnyMeasurementPtr".to_string())
+                return Some("Measurement".to_string())
             }
             if c_type.ends_with("AnyObject *") {
                 // _py_to_object converts Any to AnyObjectPtr
@@ -264,9 +266,9 @@ fn generate_type_arg_formatter(func: &Function) -> String {
 
 
     if type_arg_formatter.is_empty() {
-        "# No type arguments to normalize.".to_string()
+        "# No type arguments to standardize.".to_string()
     } else {
-        format!(r#"# parse type args
+        format!(r#"# Standardize type arguments.
 {formatter}
 "#, formatter = type_arg_formatter)
     }
@@ -307,7 +309,7 @@ fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -
     if data_converter.is_empty() {
         "# No arguments to convert to c types.".to_string()
     } else {
-        format!(r#"# Translate arguments to c types.
+        format!(r#"# Convert arguments to c types.
 {converter}
 "#, converter = data_converter)
     }

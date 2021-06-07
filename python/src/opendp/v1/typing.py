@@ -3,7 +3,7 @@ import typing
 from collections import Hashable
 from typing import Union, Any, Type
 
-from opendp.v1.mod import UnknownTypeException, ATOM_EQUIVALENCE_CLASSES
+from opendp.v1._mod import UnknownTypeException, ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
     from typing import _GenericAlias

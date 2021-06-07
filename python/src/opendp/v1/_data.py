@@ -1,6 +1,6 @@
 # Auto-generated. Do not edit.
-from opendp.v1.convert import _py_to_c, _c_to_py
-from opendp.v1.mod import *
+from opendp.v1._convert import _py_to_c, _c_to_py
+from opendp.v1._mod import *
 from opendp.v1.typing import *
 
 
@@ -14,8 +14,8 @@ def _to_string(
     :return: String representation of `this` AnyObject.
     :rtype: str
     """
-    # No type arguments to normalize.
-    # Translate arguments to c types.
+    # No type arguments to standardize.
+    # Convert arguments to c types.
     this = _py_to_c(this, c_type=AnyObjectPtr)
     
     # Call library function.
@@ -39,10 +39,10 @@ def _slice_as_object(
     :return: An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
     :rtype: Any
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
@@ -66,10 +66,10 @@ def _slice_as_metric_distance(
     :type T: RuntimeTypeDescriptor
     :return: An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information.
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
@@ -93,10 +93,10 @@ def _slice_as_measure_distance(
     :type T: RuntimeTypeDescriptor
     :return: An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information.
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
@@ -118,8 +118,8 @@ def _object_type(
     :return: The rust type associated with `this` AnyObject.
     :rtype: str
     """
-    # No type arguments to normalize.
-    # Translate arguments to c types.
+    # No type arguments to standardize.
+    # Convert arguments to c types.
     this = _py_to_c(this, c_type=AnyObjectPtr)
     
     # Call library function.
@@ -140,8 +140,8 @@ def _object_as_slice(
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
     :rtype: Any
     """
-    # No type arguments to normalize.
-    # Translate arguments to c types.
+    # No type arguments to standardize.
+    # Convert arguments to c types.
     this = _py_to_c(this, c_type=AnyObjectPtr)
     
     # Call library function.
@@ -160,7 +160,7 @@ def _object_free(
     :param this: 
     :type this: Any
     """
-    # No type arguments to normalize.
+    # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
     function = lib.opendp_data___object_free
@@ -179,7 +179,7 @@ def _slice_free(
     :param this: 
     :type this: Any
     """
-    # No type arguments to normalize.
+    # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
     function = lib.opendp_data___slice_free
@@ -198,7 +198,7 @@ def _str_free(
     :param this: 
     :type this: str
     """
-    # No type arguments to normalize.
+    # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
     function = lib.opendp_data___str_free
@@ -216,7 +216,7 @@ def _bool_free(
     Used to clean up after the relation check.
     :param this: 
     """
-    # No type arguments to normalize.
+    # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
     function = lib.opendp_data___bool_free

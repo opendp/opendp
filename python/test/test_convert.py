@@ -1,9 +1,9 @@
 import ctypes
 
-from opendp.v1.convert import _scalar_to_slice, _slice_to_scalar
-from opendp.v1.mod import FfiSlice, FfiSlicePtr, AnyObjectPtr
+from opendp.v1._convert import _scalar_to_slice, _slice_to_scalar
+from opendp.v1._mod import FfiSlice, FfiSlicePtr, AnyObjectPtr
 
-from opendp.v1.convert import _py_to_c, _c_to_py
+from opendp.v1._convert import _py_to_c, _c_to_py
 
 
 def test_data_object_int():

@@ -1,25 +1,25 @@
 # Auto-generated. Do not edit.
-from opendp.v1.convert import _py_to_c, _c_to_py
-from opendp.v1.mod import *
+from opendp.v1._convert import _py_to_c, _c_to_py
+from opendp.v1._mod import *
 from opendp.v1.typing import *
 
 
 def make_base_laplace(
     scale,
     T: RuntimeTypeDescriptor = None
-) -> AnyMeasurementPtr:
+) -> Measurement:
     """
     Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     :param scale: Noise scale parameter of the laplace distribution.
     :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
     :return: A base_laplace step.
-    :rtype: AnyMeasurementPtr
+    :rtype: Measurement
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
@@ -28,25 +28,25 @@ def make_base_laplace(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(scale, T), AnyMeasurementPtr))
+    return _c_to_py(unwrap(function(scale, T), Measurement))
 
 
 def make_base_laplace_vec(
     scale,
     T: RuntimeTypeDescriptor = None
-) -> AnyMeasurementPtr:
+) -> Measurement:
     """
     Make a Measurement that adds noise from the multivariate laplace(`scale`) distribution to a vector value.
     :param scale: Noise scale parameter of the laplace distribution.
     :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
     :return: A base_laplace_vec step.
-    :rtype: AnyMeasurementPtr
+    :rtype: Measurement
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
@@ -55,25 +55,25 @@ def make_base_laplace_vec(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(scale, T), AnyMeasurementPtr))
+    return _c_to_py(unwrap(function(scale, T), Measurement))
 
 
 def make_base_gaussian(
     scale,
     T: RuntimeTypeDescriptor = None
-) -> AnyMeasurementPtr:
+) -> Measurement:
     """
     Make a Measurement that adds noise from the gaussian(`scale`) distribution to a scalar value.
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
     :type T: RuntimeTypeDescriptor
     :return: A base_gaussian step.
-    :rtype: AnyMeasurementPtr
+    :rtype: Measurement
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
@@ -82,25 +82,25 @@ def make_base_gaussian(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(scale, T), AnyMeasurementPtr))
+    return _c_to_py(unwrap(function(scale, T), Measurement))
 
 
 def make_base_gaussian_vec(
     scale,
     T: RuntimeTypeDescriptor = None
-) -> AnyMeasurementPtr:
+) -> Measurement:
     """
     Make a Measurement that adds noise from the multivariate gaussian(`scale`) distribution to a vector value.
     :param scale: noise scale parameter to the gaussian distribution
     :param T: data type to be privatized
     :type T: RuntimeTypeDescriptor
     :return: A base_gaussian_vec step.
-    :rtype: AnyMeasurementPtr
+    :rtype: Measurement
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
@@ -109,7 +109,7 @@ def make_base_gaussian_vec(
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(scale, T), AnyMeasurementPtr))
+    return _c_to_py(unwrap(function(scale, T), Measurement))
 
 
 def make_base_geometric(
@@ -118,7 +118,7 @@ def make_base_geometric(
     upper,
     T: RuntimeTypeDescriptor = None,
     QO: RuntimeTypeDescriptor = None
-) -> AnyMeasurementPtr:
+) -> Measurement:
     """
     Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.
     `lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.
@@ -130,13 +130,13 @@ def make_base_geometric(
     :param QO: Data type of the sensitivity space.
     :type QO: RuntimeTypeDescriptor
     :return: A base_geometric step.
-    :rtype: AnyMeasurementPtr
+    :rtype: Measurement
     """
-    # parse type args
+    # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
@@ -148,7 +148,7 @@ def make_base_geometric(
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(scale, lower, upper, T, QO), AnyMeasurementPtr))
+    return _c_to_py(unwrap(function(scale, lower, upper, T, QO), Measurement))
 
 
 def make_base_stability(
@@ -158,7 +158,7 @@ def make_base_stability(
     MI: SensitivityMetric,
     TIK: RuntimeTypeDescriptor,
     TIC: RuntimeTypeDescriptor = int
-) -> AnyMeasurementPtr:
+) -> Measurement:
     """
     Make a Measurement that implements a stability-based filtering and noising.
     :param n: Number of records in the input vector.
@@ -172,14 +172,14 @@ def make_base_stability(
     :param TIC: Data type of input count- must be integral.
     :type TIC: RuntimeTypeDescriptor
     :return: A base_stability step.
-    :rtype: AnyMeasurementPtr
+    :rtype: Measurement
     """
-    # parse type args
+    # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
     TIK = RuntimeType.parse(type_name=TIK)
     TIC = RuntimeType.parse(type_name=TIC)
     
-    # Translate arguments to c types.
+    # Convert arguments to c types.
     n = _py_to_c(n, c_type=ctypes.c_uint)
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=MI.args[0])
     threshold = _py_to_c(threshold, c_type=ctypes.c_void_p, type_name=MI.args[0])
@@ -192,4 +192,4 @@ def make_base_stability(
     function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(n, scale, threshold, MI, TIK, TIC), AnyMeasurementPtr))
+    return _c_to_py(unwrap(function(n, scale, threshold, MI, TIK, TIC), Measurement))

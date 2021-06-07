@@ -1,8 +1,8 @@
 import ctypes
 from typing import Any, Sequence, Tuple, List, Union
 
-from opendp.v1.mod import UnknownTypeException, FfiSlice, OdpException, AnyObjectPtr, FfiSlicePtr, BoolPtr, \
-    AnyTransformationPtr, AnyMeasurementPtr, ATOM_EQUIVALENCE_CLASSES, AnyMetricDistancePtr, AnyMeasureDistancePtr
+from opendp.v1._mod import UnknownTypeException, FfiSlice, OpenDPException, AnyObjectPtr, FfiSlicePtr, BoolPtr, \
+    Transformation, Measurement, ATOM_EQUIVALENCE_CLASSES, AnyMetricDistancePtr, AnyMeasureDistancePtr
 from opendp.v1.typing import RuntimeType
 
 ATOM_MAP = {
@@ -48,15 +48,15 @@ def _py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         raise UnknownTypeException(rust_type)
 
     if c_type == AnyObjectPtr:
-        from opendp.v1.data import _slice_as_object
+        from opendp.v1._data import _slice_as_object
         return _slice_as_object(value, type_name)
 
     if c_type == AnyMeasureDistancePtr:
-        from opendp.v1.data import _slice_as_measure_distance
+        from opendp.v1._data import _slice_as_measure_distance
         return _slice_as_measure_distance(value, type_name)
 
     if c_type == AnyMetricDistancePtr:
-        from opendp.v1.data import _slice_as_metric_distance
+        from opendp.v1._data import _slice_as_metric_distance
         return _slice_as_metric_distance(value, type_name)
 
     if c_type == FfiSlicePtr:
@@ -83,7 +83,7 @@ def _c_to_py(value):
     :return: copy of data in python representation
     """
     if isinstance(value, AnyObjectPtr):
-        from opendp.v1.data import _object_type, _object_as_slice, _to_string, _slice_free
+        from opendp.v1._data import _object_type, _object_as_slice, _to_string, _slice_free
         ffi_slice = _object_as_slice(value)
         try:
             return _slice_to_py(ffi_slice, _object_type(value))
@@ -100,18 +100,18 @@ def _c_to_py(value):
             _slice_free(ffi_slice)
 
     if isinstance(value, ctypes.c_char_p):
-        from opendp.v1.data import _str_free
+        from opendp.v1._data import _str_free
         value_contents = value.value.decode()
         _str_free(value)
         return value_contents
 
     if isinstance(value, BoolPtr):
-        from opendp.v1.data import _bool_free
+        from opendp.v1._data import _bool_free
         value_contents = value.contents.value
         _bool_free(value)
         return value_contents
 
-    if isinstance(value, (AnyTransformationPtr, AnyMeasurementPtr)):
+    if isinstance(value, (Transformation, Measurement)):
         # these types are meant to pass through
         return value
 
@@ -191,16 +191,16 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     assert type_name[:4] == 'Vec<'
     inner_type_name = type_name[4:-1]
     if not isinstance(val, list):
-        raise OdpException(f"Cannot cast a non-list type to a vector")
+        raise OpenDPException(f"Cannot cast a non-list type to a vector")
 
     if inner_type_name not in ATOM_MAP:
-        raise OdpException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
+        raise OpenDPException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
 
     if val:
         # check that actual type can be represented by the inner_type_name
         equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(val[0]))]
         if inner_type_name not in equivalence_class:
-            raise OdpException("Data cannot be represented by the suggested type_name")
+            raise OpenDPException("Data cannot be represented by the suggested type_name")
 
     array = (ATOM_MAP[inner_type_name] * len(val))(*val)
     return _wrap_in_slice(array, len(val))
@@ -215,25 +215,25 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
 def _tuple_to_slice(val: Tuple[Any, ...], type_name: str) -> FfiSlicePtr:
     inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
     if not isinstance(val, tuple):
-        raise OdpException("Cannot cast a non-tuple type to a tuple")
+        raise OpenDPException("Cannot cast a non-tuple type to a tuple")
     # TODO: temporary check
     if len(inner_type_names) != 2:
-        raise OdpException("Only 2-tuples are currently supported.")
+        raise OpenDPException("Only 2-tuples are currently supported.")
     # TODO: temporary check
     if len(set(inner_type_names)) > 1:
-        raise OdpException("Only homogeneously-typed tuples are currently supported.")
+        raise OpenDPException("Only homogeneously-typed tuples are currently supported.")
 
     if len(inner_type_names) != len(val):
-        raise OdpException("type_name members must have same length as tuple")
+        raise OpenDPException("type_name members must have same length as tuple")
 
     if any(t not in ATOM_MAP for t in inner_type_names):
-        raise OdpException(f"Tuple members must be one of {ATOM_MAP.keys()}")
+        raise OpenDPException(f"Tuple members must be one of {ATOM_MAP.keys()}")
 
     # check that actual type can be represented by the inner_type_name
     for v, inner_type_name in zip(val, inner_type_names):
         equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(v))]
         if inner_type_name not in equivalence_class:
-            raise OdpException("Data cannot be represented by the suggested type_name")
+            raise OpenDPException("Data cannot be represented by the suggested type_name")
 
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)
