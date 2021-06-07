@@ -1,5 +1,5 @@
 # Auto-generated. Do not edit.
-from opendp.v1.convert import *
+from opendp.v1.convert import _py_to_c, _c_to_py
 from opendp.v1.mod import *
 from opendp.v1.typing import *
 
@@ -16,14 +16,14 @@ def _to_string(
     """
     
     # translate arguments to c types
-    this = py_to_object(this)
+    this = _py_to_c(this, c_type=AnyObjectPtr)
     
     # call library function
     function = lib.opendp_data___to_string
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    return _c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
 def _slice_as_object(
@@ -43,8 +43,8 @@ def _slice_as_object(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
     # translate arguments to c types
-    slice = py_to_c(slice, c_type=FfiSlicePtr, rust_type=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
+    T = _py_to_c(T, c_type=ctypes.c_char_p)
     
     # call library function
     function = lib.opendp_data___slice_as_object
@@ -70,8 +70,8 @@ def _slice_as_metric_distance(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
     # translate arguments to c types
-    slice = py_to_c(slice, c_type=FfiSlicePtr, rust_type=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
+    T = _py_to_c(T, c_type=ctypes.c_char_p)
     
     # call library function
     function = lib.opendp_data___slice_as_metric_distance
@@ -97,8 +97,8 @@ def _slice_as_measure_distance(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
     # translate arguments to c types
-    slice = py_to_c(slice, c_type=FfiSlicePtr, rust_type=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
+    T = _py_to_c(T, c_type=ctypes.c_char_p)
     
     # call library function
     function = lib.opendp_data___slice_as_measure_distance
@@ -120,14 +120,14 @@ def _object_type(
     """
     
     # translate arguments to c types
-    this = py_to_object(this)
+    this = _py_to_c(this, c_type=AnyObjectPtr)
     
     # call library function
     function = lib.opendp_data___object_type
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    return _c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
 def _object_as_slice(
@@ -142,14 +142,14 @@ def _object_as_slice(
     """
     
     # translate arguments to c types
-    this = py_to_object(this)
+    this = _py_to_c(this, c_type=AnyObjectPtr)
     
     # call library function
     function = lib.opendp_data___object_as_slice
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), FfiSlicePtr))
+    return unwrap(function(this), FfiSlicePtr)
 
 
 def _object_free(
@@ -162,14 +162,14 @@ def _object_free(
     """
     
     # translate arguments to c types
-    this = py_to_object(this)
+    this = _py_to_c(this, c_type=AnyObjectPtr)
     
     # call library function
     function = lib.opendp_data___object_free
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    return _c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
 def _slice_free(
@@ -183,14 +183,14 @@ def _slice_free(
     """
     
     # translate arguments to c types
-    this = py_to_c(this, c_type=FfiSlicePtr)
+    this = _py_to_c(this, c_type=FfiSlicePtr)
     
     # call library function
     function = lib.opendp_data___slice_free
     function.argtypes = [FfiSlicePtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    return _c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
 def _str_free(
@@ -204,14 +204,14 @@ def _str_free(
     """
     
     # translate arguments to c types
-    this = py_to_c(this, c_type=ctypes.c_char_p)
+    this = _py_to_c(this, c_type=ctypes.c_char_p)
     
     # call library function
     function = lib.opendp_data___str_free
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    return _c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
 def _bool_free(
@@ -224,11 +224,11 @@ def _bool_free(
     """
     
     # translate arguments to c types
-    this = py_to_c(this, c_type=BoolPtr)
+    this = _py_to_c(this, c_type=BoolPtr)
     
     # call library function
     function = lib.opendp_data___bool_free
     function.argtypes = [BoolPtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    return _c_to_py(unwrap(function(this), ctypes.c_void_p))

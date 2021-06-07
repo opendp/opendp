@@ -43,7 +43,7 @@ fn generate_module(
         .join("\n");
 
     format!(r#"# Auto-generated. Do not edit.
-from opendp.v1.convert import *
+from opendp.v1.convert import _py_to_c, _c_to_py
 from opendp.v1.mod import *
 from opendp.v1.typing import *
 
@@ -75,14 +75,10 @@ def {func_name}(
 {body}
 "#,
             func_name=func_name,
-            args=indent(args),
+            args= crate::indent(args),
             sig_return=sig_return,
-            docstring=indent(generate_docstring(&func, func_name, hierarchy)),
-            body=indent(generate_body(module_name, func_name, &func, typemap)))
-}
-
-fn indent(text: String) -> String {
-    text.split("\n").map(|v| format!("    {}", v)).collect::<Vec<_>>().join("\n")
+            docstring= crate::indent(generate_docstring(&func, func_name, hierarchy)),
+            body= crate::indent(generate_body(module_name, func_name, &func, typemap)))
 }
 
 
@@ -114,11 +110,11 @@ impl Argument {
                 return Some("AnyMeasurementPtr".to_string())
             }
             if c_type.ends_with("AnyObject *") {
-                // py_to_object will convert Any to AnyObjectPtr
+                // _py_to_object converts Any to AnyObjectPtr
                 return Some("Any".to_string())
             }
             if c_type.ends_with("FfiSlice *") {
-                // py_to_c will convert Any to FfiSlicePtr
+                // _py_to_c converts Any to FfiSlicePtr
                 return Some("Any".to_string())
             }
 
@@ -216,33 +212,6 @@ fn generate_body(
             make_call = generate_call(module_name, func_name, func, typemap))
 }
 
-/// resolve references to derived types
-fn flatten_runtime_type(runtime_type: &RuntimeType, derived_types: &Vec<Argument>) -> RuntimeType {
-    let resolve_name = |name: &String|
-        derived_types.iter()
-            .find(|derived| derived.name.as_ref().unwrap() == name)
-            .map(|derived_type| flatten_runtime_type(
-                derived_type.rust_type.as_ref().unwrap(), derived_types))
-            .unwrap_or_else(|| runtime_type.clone());
-
-    match runtime_type {
-        RuntimeType::Name(name) =>
-            resolve_name(name),
-        RuntimeType::Lower { root, index } =>
-            RuntimeType::Lower {
-                root: Box::new(flatten_runtime_type(root, derived_types)),
-                index: *index
-            },
-        RuntimeType::Raise { origin, args } =>
-            RuntimeType::Raise {
-                origin: origin.clone(),
-                args: args.iter().map(|arg|
-                    Box::new(flatten_runtime_type(arg, derived_types))).collect()
-            },
-        other => other.clone()
-    }
-}
-
 /// generate code that provides an example of the type of the type_arg
 fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<String> {
     let type_name = type_arg.name.as_ref().unwrap();
@@ -251,7 +220,7 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
     let mut args = func.args.clone();
     args.iter_mut()
         .filter(|arg| arg.rust_type.is_some())
-        .for_each(|arg| arg.rust_type = Some(flatten_runtime_type(
+        .for_each(|arg| arg.rust_type = Some(crate::flatten_runtime_type(
             arg.rust_type.as_ref().unwrap(), &func.derived_types)));
 
     // code generation
@@ -323,39 +292,13 @@ impl RuntimeType {
 /// the generated code ensures that all arguments have been converted to their c representations
 fn generate_data_formatter(func: &Function, typemap: &HashMap<String, String>) -> String {
     let mut data_formatter: String = func.args.iter()
-        .map(|arg| match arg.c_type() {
-            c_type if c_type.ends_with("void *") => {
-                let type_name = arg.rust_type.clone().unwrap_or("None".into());
-                format!(r#"{name} = py_to_ptr({name}, type_name={type_name})"#, name = arg.name(), type_name = type_name.to_python())
-            },
-            c_type if c_type.ends_with("AnyObject *") => {
-                if let Some(type_name) = arg.rust_type.clone() {
-                    format!(r#"{name} = py_to_object({name}, type_name={type_name})"#, name = arg.name(), type_name = type_name.to_python())
-                } else {
-                    format!(r#"{name} = py_to_object({name})"#, name = arg.name())
-                }
-            },
-            c_type if c_type.ends_with("AnyMetricDistance *") => {
-                if let Some(type_name) = arg.rust_type.clone() {
-                    format!(r#"{name} = py_to_metric_distance({name}, type_name={type_name})"#, name = arg.name(), type_name = type_name.to_python())
-                } else {
-                    format!(r#"{name} = py_to_metric_distance({name})"#, name = arg.name())
-                }
-            },
-            c_type if c_type.ends_with("AnyMeasureDistance *") => {
-                if let Some(type_name) = arg.rust_type.clone() {
-                    format!(r#"{name} = py_to_measure_distance({name}, type_name={type_name})"#, name = arg.name(), type_name = type_name.to_python())
-                } else {
-                    format!(r#"{name} = py_to_measure_distance({name})"#, name = arg.name())
-                }
-            },
-            _ => format!(r#"{name} = py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
-                         name = arg.name(),
-                         c_type = arg.python_origin_ctype(typemap),
-                         rust_type_arg=arg.rust_type.as_ref()
-                             .map(|r_type| format!(", rust_type={}", r_type.to_python()))
-                             .unwrap_or_else(|| "".to_string()))
-        })
+        .map(|arg| format!(
+            r#"{name} = _py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
+            name = arg.name(),
+            c_type = arg.python_origin_ctype(typemap),
+            rust_type_arg = arg.rust_type.as_ref()
+                .map(|r_type| format!(", type_name={}", r_type.to_python()))
+                .unwrap_or_else(|| "".to_string())))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -390,7 +333,7 @@ fn generate_call(
         call = format!(r#"unwrap({call}, {restype})"#,
             call=call, restype= func.ret.python_unwrapped_ctype(typemap))
     }
-    if !func.ret.keep_as_c { call = format!(r#"c_to_py({})"#, call) }
+    if !func.ret.keep_as_c { call = format!(r#"_c_to_py({})"#, call) }
     format!(r#"# call library function
 function = lib.opendp_{module_name}__{func_name}
 function.argtypes = [{ctype_args}]

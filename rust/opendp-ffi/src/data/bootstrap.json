@@ -62,6 +62,7 @@
         ],
         "ret": {
             "c_type": "FfiResult<const FfiSlice *>",
+            "keep_as_c": true,
             "description": "An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages."
         }
     },

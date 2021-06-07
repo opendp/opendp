@@ -172,7 +172,7 @@ class RuntimeType(object):
             for (arg_par, arg_inf) in zip(expected.args, inferred.args):
                 RuntimeType.assert_is_similar(arg_par, arg_inf)
         else:
-            raise AssertionError("args are not similar because they have differing depths")
+            raise AssertionError(f"args are not similar because they have differing depths. Expected: {expected}. Inferred: {inferred}")
 
 
 class UnknownType(RuntimeType):

@@ -120,3 +120,36 @@ fn main() {
 
     #[cfg(feature="python")] write_bindings(python::generate_bindings(_modules));
 }
+
+#[allow(dead_code)]
+fn indent(text: String) -> String {
+    text.split("\n").map(|v| format!("    {}", v)).collect::<Vec<_>>().join("\n")
+}
+
+/// resolve references to derived types
+#[allow(dead_code)]
+fn flatten_runtime_type(runtime_type: &RuntimeType, derived_types: &Vec<Argument>) -> RuntimeType {
+    let resolve_name = |name: &String|
+        derived_types.iter()
+            .find(|derived| derived.name.as_ref().unwrap() == name)
+            .map(|derived_type| flatten_runtime_type(
+                derived_type.rust_type.as_ref().unwrap(), derived_types))
+            .unwrap_or_else(|| runtime_type.clone());
+
+    match runtime_type {
+        RuntimeType::Name(name) =>
+            resolve_name(name),
+        RuntimeType::Lower { root, index } =>
+            RuntimeType::Lower {
+                root: Box::new(flatten_runtime_type(root, derived_types)),
+                index: *index
+            },
+        RuntimeType::Raise { origin, args } =>
+            RuntimeType::Raise {
+                origin: origin.clone(),
+                args: args.iter().map(|arg|
+                    Box::new(flatten_runtime_type(arg, derived_types))).collect()
+            },
+        other => other.clone()
+    }
+}
