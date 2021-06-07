@@ -1,8 +1,8 @@
-from typing import Union, Any, Type
 import sys
-from collections import Hashable
-
 import typing
+from collections import Hashable
+from typing import Union, Any, Type
+
 from opendp.v1.mod import UnknownTypeException, ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
@@ -11,10 +11,22 @@ else:
     from typing import GenericMeta as _GenericAlias
 
 ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
-RuntimeTypeDescriptor = Union["RuntimeType", _GenericAlias, tuple, Type[list], Type[int], Type[float], Type[str], Type[bool]]
+
+# all ways of providing type information
+RuntimeTypeDescriptor = Union[
+    "RuntimeType",  # as the normalized type -- HammingDistance; RuntimeType.parse("i32")
+    _GenericAlias,  # a python type hint from the std typing module -- List[int]
+    str,  # plaintext string in terms of rust types -- "Vec<i32>"
+    Type[Union[int, float, str, bool]],  # using the python type class itself -- int; float; bool
+    tuple,  # shorthand for tuples -- (float, "f64"); (HammingDistance, List[int])
+]
 
 
 class RuntimeType(object):
+    """
+    Utility for validating, manipulating, inferring and parsing/normalizing type information.
+    """
+
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
             raise ValueError("origin must be a string", origin)
@@ -28,12 +40,26 @@ class RuntimeType(object):
 
     def __str__(self):
         result = self.origin or ''
+        if result == 'Tuple':
+            return f'({", ".join(map(str, self.args))})'
         if self.args:
             result += f'<{", ".join(map(str, self.args))}>'
         return result
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor) -> Union["RuntimeType", str]:
+        """
+        Normalize type information into a normalized type representation.
+        Type information may be expressed as
+        - python type hints from std typing module
+        - plaintext rust type strings for setting specific bit depth
+        - python type class - one of {int, str, float, bool}
+        - tuple of type information - for example: (float, float)
+
+        :param type_name: type specifier
+        :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
+        :rtype: Union["RuntimeType", str]
+        """
         if isinstance(type_name, RuntimeType):
             return type_name
 
@@ -45,20 +71,20 @@ class RuntimeType(object):
             origin = typing.get_origin(type_name)
             args = list(map(RuntimeType.parse, typing.get_args(type_name))) or None
             if origin == tuple:
-                return Tuple(*args)
+                origin = 'Tuple'
             if origin == list:
                 origin = 'Vec'
             return RuntimeType(RuntimeType.parse(origin), args)
 
         # parse a tuple of types-- (int, "f64"); (List[int], (int, bool))
         if isinstance(type_name, tuple):
-            return Tuple(*(cls.parse(v) for v in type_name))
+            return RuntimeType('Tuple', list(cls.parse(v) for v in type_name))
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
             type_name = type_name.strip()
             if type_name.startswith('(') and type_name.endswith(')'):
-                return Tuple(*cls._parse_args(type_name[1:-1]))
+                return RuntimeType('Tuple', cls._parse_args(type_name[1:-1]))
             start, end = type_name.find('<'), type_name.rfind('>')
             if 0 < start < end < len(type_name):
                 return RuntimeType(type_name[:start], cls._parse_args(type_name[start + 1: end]))
@@ -80,15 +106,22 @@ class RuntimeType(object):
 
     @classmethod
     def infer(cls, public_example: Any) -> Union["RuntimeType", str]:
+        """
+        Infer the normalized type from a public example.
+        :param public_example: data used to infer the type
+        :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
+        :rtype: Union["RuntimeType", str]
+        """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
 
         elif isinstance(public_example, tuple):
-            return Tuple(*map(cls.infer, public_example))
+            return RuntimeType('Tuple', list(map(cls.infer, public_example)))
 
         elif isinstance(public_example, list):
             return RuntimeType('Vec', [
-                cls.infer(public_example[0]) if public_example else UnknownType("cannot infer atomic type of empty list")
+                cls.infer(public_example[0]) if public_example else UnknownType(
+                    "cannot infer atomic type of empty list")
             ])
 
         raise UnknownTypeException(public_example)
@@ -99,6 +132,13 @@ class RuntimeType(object):
             type_name: RuntimeTypeDescriptor = None,
             public_example: Any = None
     ) -> Union["RuntimeType", str]:
+        """
+        If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
+        :param type_name: type specifier. See RuntimeType.parse for documentation on valid inputs
+        :param public_example: data used to infer the type
+        :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
+        :rtype: Union["RuntimeType", str]
+        """
         if type_name is not None:
             return cls.parse(type_name)
         if public_example is not None:
@@ -106,30 +146,40 @@ class RuntimeType(object):
         raise UnknownTypeException("either type_name or public_example must be passed")
 
     @classmethod
-    def assert_is_similar(cls, parsed, inferred):
+    def assert_is_similar(cls, expected, inferred):
         """
-        assert that inferred is a member of the same equivalence class as parsed
-        :param parsed:
-        :param inferred:
-        :return:
+        Assert that `inferred` is a member of the same equivalence class as `parsed`.
+        :param expected: the type that the data will be converted to
+        :param inferred: the type inferred from data
         """
         if isinstance(inferred, UnknownType):
             return
-        if isinstance(parsed, str) and isinstance(inferred, str):
+        if isinstance(expected, str) and isinstance(inferred, str):
             if inferred in ATOM_EQUIVALENCE_CLASSES:
-                assert parsed in ATOM_EQUIVALENCE_CLASSES[inferred], f"inferred type is {inferred}, expected {parsed}"
+                assert expected in ATOM_EQUIVALENCE_CLASSES[inferred], \
+                    f"inferred type is {inferred}, expected {expected}"
             else:
-                assert parsed == inferred, f"inferred type is {inferred}, expected {parsed}"
-        elif isinstance(parsed, RuntimeType) and isinstance(inferred, RuntimeType):
-            assert parsed.origin == inferred.origin, f"inferred type is {inferred.origin}, expected {parsed.origin}"
-            assert len(parsed.args) == len(inferred.args), f"inferred type has {len(inferred.args)} args, expected {len(parsed.args)} args"
-            for (arg_par, arg_inf) in zip(parsed.args, inferred.args):
+                assert expected == inferred, \
+                    f"inferred type is {inferred}, expected {expected}"
+
+        elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
+            assert expected.origin == inferred.origin, \
+                f"inferred type is {inferred.origin}, expected {expected.origin}"
+
+            assert len(expected.args) == len(inferred.args), \
+                f"inferred type has {len(inferred.args)} args, expected {len(expected.args)} args"
+
+            for (arg_par, arg_inf) in zip(expected.args, inferred.args):
                 RuntimeType.assert_is_similar(arg_par, arg_inf)
         else:
             raise AssertionError("args are not similar because they have differing depths")
 
 
 class UnknownType(RuntimeType):
+    """
+    Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
+    RuntimeTypes containing UnknownType cannot be used in FFI, but still pass RuntimeType.assert_is_similar
+    """
     def __init__(self, reason):
         self.origin = None
         self.args = []
@@ -139,33 +189,39 @@ class UnknownType(RuntimeType):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown type: {self.reason}")
 
 
-class Tuple(RuntimeType):
-    def __init__(self, *args):
-        super().__init__('Tuple', list(args))
-
-    def __str__(self):
-        return f'({", ".join(map(str, self.args))})'
-
-
-class SensitivityMetric(RuntimeType):
-    def __getitem__(self, associated_type):
-        return SensitivityMetric(self.origin, [self.parse(type_name=associated_type)])
-
-
 class DatasetMetric(RuntimeType):
+    """
+    All dataset metric RuntimeTypes inherit from DatasetMetric.
+    Provides static type checking in user-code for dataset metrics.
+    """
     pass
 
 
-class PrivacyMeasure(RuntimeType):
+HammingDistance = DatasetMetric('HammingDistance')
+SymmetricDistance = DatasetMetric('SymmetricDistance')
+
+
+class SensitivityMetric(RuntimeType):
+    """
+    All sensitivity RuntimeTypes inherit from SensitivityMetric.
+    Provides static type checking in user-code for sensitivity metrics and a getitem interface like stdlib typing.
+    """
     def __getitem__(self, associated_type):
-        return PrivacyMeasure(self.origin, [self.parse(type_name=associated_type)])
+        return SensitivityMetric(self.origin, [self.parse(type_name=associated_type)])
 
 
 L1Sensitivity = SensitivityMetric('L1Sensitivity')
 L2Sensitivity = SensitivityMetric('L2Sensitivity')
 
-HammingDistance = DatasetMetric('HammingDistance')
-SymmetricDistance = DatasetMetric('SymmetricDistance')
+
+class PrivacyMeasure(RuntimeType):
+    """
+    All measure RuntimeTypes inherit from PrivacyMeasure.
+    Provides static type checking in user-code for privacy measures and a getitem interface like stdlib typing.
+    """
+    def __getitem__(self, associated_type):
+        return PrivacyMeasure(self.origin, [self.parse(type_name=associated_type)])
+
 
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
