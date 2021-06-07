@@ -10,6 +10,7 @@ use std::str::Utf8Error;
 use opendp::{err, fallible};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::error::*;
+use crate::any::AnyObject;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -150,14 +151,14 @@ lazy_static! {
     static ref TYPES: Vec<Type> = {
         let types: Vec<Type> = vec![
             vec![t!(())],
-            type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String],
-            type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String)],
-            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
-            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String]],
+            type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject],
+            type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject)],
+            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
+            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]],
             type_vec![HammingDistance, SymmetricDistance],
             type_vec![L1Sensitivity, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Sensitivity, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len());

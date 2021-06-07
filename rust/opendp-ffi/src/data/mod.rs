@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::ffi::c_void;
-use std::fmt::Debug;
 use std::os::raw::c_char;
 use std::slice;
 
@@ -67,13 +66,10 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
             if element_ids.len() != 2 {
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
-            if let Ok(types) = element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
-                // primitively typed tuples
-                dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
-            } else {
-                // boxy tuples
-                dispatch!(raw_to_plain, [(T, @primitives)], (raw))
-            }
+            let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
+            // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
+            // because the only likely way to get a tuple of AnyObjects is as the output of composition.
+            dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
         }
         _ => { dispatch!(raw_to_plain, [(T, @primitives)], (raw)) }
     };
@@ -109,7 +105,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let vec: &Vec<T> = obj.downcast_ref()?;
         Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()))
     }
-    fn tuple_to_raw<T0: 'static + Clone + Debug, T1: 'static + Clone + Debug>(obj: &AnyObject) -> Fallible<FfiSlice> {
+    fn tuple_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(T0, T1) = obj.downcast_ref()?;
         Ok(FfiSlice::new(util::into_raw([
             &tuple.0 as *const T0 as *const c_void,
@@ -133,14 +129,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             if element_ids.len() != 2 {
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
-            if let Ok(types) = element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>() {
-                // primitively typed tuples
-                dispatch!(tuple_to_raw, [(types[0], @primitives), (types[1], @primitives)], (obj))
-            } else {
-                // boxy tuples
-                // plain_to_raw(obj)
-                todo!()
-            }
+            let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
+            // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
+            dispatch!(tuple_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
         }
         _ => { dispatch!(plain_to_raw, [(&obj.type_, @primitives)], (obj)) }
     };
@@ -168,7 +159,7 @@ pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()
     util::into_owned(this).map(|_| ()).into()
 }
 
-// TODO: Remove this function once we have composition and/or tuples sorted out.
+// TODO: Remove this function once we have data loaders for HashMaps/DataFrames.
 #[no_mangle]
 pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
     fn monomorphize<T: 'static + std::fmt::Debug>(this: &AnyObject) -> Fallible<*mut c_char> {
@@ -195,8 +186,6 @@ pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*m
 
 #[cfg(test)]
 mod tests {
-    use std::mem::ManuallyDrop;
-
     use opendp::error::*;
 
     use crate::util;
@@ -205,7 +194,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_data_new_number() -> Fallible<()> {
+    fn test_slice_as_object_number() -> Fallible<()> {
         let raw_ptr = util::into_raw(999) as *mut c_void;
         let raw_len = 1;
         let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
@@ -216,7 +205,7 @@ mod tests {
     }
 
     #[test]
-    fn test_data_new_string() -> Fallible<()> {
+    fn test_slice_as_object_string() -> Fallible<()> {
         let data = "Hello".to_owned();
         let raw_ptr = util::into_c_char_p(data.clone()).unwrap_test() as *mut c_void;
         let raw_len = data.len() + 1;
@@ -228,15 +217,25 @@ mod tests {
     }
 
     #[test]
-    fn test_data_new_vec() -> Fallible<()> {
-        let data = ManuallyDrop::new(vec![1, 2, 3]);
+    fn test_slice_as_object_vec() -> Fallible<()> {
+        let data = vec![1, 2, 3];
         let raw_ptr = data.as_ptr() as *mut c_void;
         let raw_len = data.len();
         let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
         let res = opendp_data__slice_as_object(raw, "Vec<i32>".to_char_p());
         let res: Vec<i32> = Fallible::from(res)?.downcast()?;
         assert_eq!(res, vec![1, 2, 3]);
-        ManuallyDrop::into_inner(data);
+        Ok(())
+    }
+
+    #[test]
+    fn test_slice_as_object_tuple_numbers() -> Fallible<()> {
+        let raw_ptr = util::into_raw((util::into_raw(999), util::into_raw(-999))) as *mut c_void;
+        let raw_len = 2;
+        let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
+        let res = opendp_data__slice_as_object(raw, "(i32, i32)".to_char_p());
+        let res: (i32, i32) = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, (999, -999));
         Ok(())
     }
 
@@ -245,8 +244,8 @@ mod tests {
         let obj = AnyObject::new_raw(999);
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
-        assert_eq!(util::into_owned(res.ptr as *mut i32).unwrap_test(), 999);
         assert_eq!(res.len, 1);
+        assert_eq!(util::as_ref(res.ptr as *const i32).unwrap_test(), &999);
         Ok(())
     }
 
@@ -255,8 +254,8 @@ mod tests {
         let obj = AnyObject::new_raw("Hello".to_owned());
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
-        assert_eq!(util::into_string(res.ptr as *mut c_char).unwrap_test(), "Hello");
         assert_eq!(res.len, 6);
+        assert_eq!(util::into_string(res.ptr as *mut c_char).unwrap_test(), "Hello");
         Ok(())
     }
 
@@ -265,7 +264,33 @@ mod tests {
         let obj = AnyObject::new_raw(vec![1, 2, 3]);
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
-        assert_eq!(unsafe { Vec::from_raw_parts(res.ptr as *mut i32, res.len, res.len) }, vec![1, 2, 3]);
+        assert_eq!(res.len, 3);
+        assert_eq!(util::as_ref(res.ptr as *const [i32;3]).unwrap_test(), &[1, 2, 3]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_data_as_raw_tuple_numbers() -> Fallible<()> {
+        let obj = AnyObject::new_raw((999, -999));
+        let res = opendp_data__object_as_slice(obj);
+        let res = Fallible::from(res)?;
+        assert_eq!(res.len, 2);
+        let res_ptr = util::as_ref(res.ptr as *const [*mut i32;2]).unwrap_test();
+        assert_eq!((util::as_ref(res_ptr[0]).unwrap_test(), util::as_ref(res_ptr[1]).unwrap_test()), (&999, &-999));
+        Ok(())
+    }
+
+    #[test]
+    fn test_data_as_raw_tuple_objects() -> Fallible<()> {
+        let obj = AnyObject::new_raw((AnyObject::new(999), AnyObject::new(999.0)));
+        let res = opendp_data__object_as_slice(obj);
+        let res = Fallible::from(res)?;
+        assert_eq!(res.len, 2);
+        let res_ptr = util::as_ref(res.ptr as *const [*mut AnyObject;2]).unwrap_test();
+        assert_eq!(
+            (util::as_ref(res_ptr[0]).unwrap_test().downcast_ref()?, util::as_ref(res_ptr[1]).unwrap_test().downcast_ref()?),
+            (&999, &999.0)
+        );
         Ok(())
     }
 }
