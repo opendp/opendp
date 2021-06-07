@@ -17,7 +17,7 @@
         ],
         "ret": {
             "c_type": "FfiResult<const AnyObject *>",
-            "keep_as_c": true,
+            "do_not_convert": true,
             "description": "An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information."
         }
     },
@@ -29,7 +29,7 @@
         ],
         "ret": {
             "c_type": "FfiResult<const AnyMetricDistance *>",
-            "keep_as_c": true,
+            "do_not_convert": true,
             "description": "An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information."
         }
     },
@@ -41,7 +41,7 @@
         ],
         "ret": {
             "c_type": "FfiResult<const AnyMeasureDistance *>",
-            "keep_as_c": true,
+            "do_not_convert": true,
             "description": "An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information."
         }
     },
@@ -62,35 +62,51 @@
         ],
         "ret": {
             "c_type": "FfiResult<const FfiSlice *>",
-            "keep_as_c": true,
+            "do_not_convert": true,
             "description": "An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages."
         }
     },
     "_object_free": {
         "description": "Internal function. Free the memory associated with `this`, an AnyObject.",
         "args": [
-            {"name": "this", "c_type": "const AnyObject *"}
+            {
+                "name": "this",
+                "c_type": "const AnyObject *",
+                "do_not_convert": true
+            }
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
     "_slice_free": {
         "description": "Internal function. Free the memory associated with `this`, an FfiSlicePtr. \nUsed to clean up after _object_as_slice.",
         "args": [
-            {"name": "this", "c_type": "const FfiSlice *"}
+            {
+                "name": "this",
+                "c_type": "const FfiSlice *",
+                "do_not_convert": true
+            }
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
     "_str_free": {
         "description": "Internal function. Free the memory associated with `this`, a string. \nUsed to clean up after the type getter functions.",
         "args": [
-            {"name": "this", "c_type": "const char *"}
+            {
+                "name": "this",
+                "c_type": "const char *",
+                "do_not_convert": true
+            }
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
     "_bool_free": {
         "description": "Internal function. Free the memory associated with `this`, a bool. \nUsed to clean up after the relation check.",
         "args": [
-            {"name": "this", "c_type": "bool *"}
+            {
+                "name": "this",
+                "c_type": "bool *",
+                "do_not_convert": true
+            }
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     }

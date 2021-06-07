@@ -19,11 +19,11 @@ def make_base_laplace(
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_meas__make_base_laplace
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -46,11 +46,11 @@ def make_base_laplace_vec(
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_meas__make_base_laplace_vec
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -73,11 +73,11 @@ def make_base_gaussian(
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_meas__make_base_gaussian
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -100,11 +100,11 @@ def make_base_gaussian_vec(
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_meas__make_base_gaussian_vec
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -136,14 +136,14 @@ def make_base_geometric(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     QO = _py_to_c(QO, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_meas__make_base_geometric
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -179,7 +179,7 @@ def make_base_stability(
     TIK = RuntimeType.parse(type_name=TIK)
     TIC = RuntimeType.parse(type_name=TIC)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     n = _py_to_c(n, c_type=ctypes.c_uint)
     scale = _py_to_c(scale, c_type=ctypes.c_void_p, type_name=MI.args[0])
     threshold = _py_to_c(threshold, c_type=ctypes.c_void_p, type_name=MI.args[0])
@@ -187,7 +187,7 @@ def make_base_stability(
     TIK = _py_to_c(TIK, c_type=ctypes.c_char_p)
     TIC = _py_to_c(TIC, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_meas__make_base_stability
     function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult

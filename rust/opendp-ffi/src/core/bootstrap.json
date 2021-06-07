@@ -5,7 +5,8 @@
             {
                 "name": "error",
                 "c_type": "const FfiError *",
-                "hint": "FfiError"
+                "hint": "FfiError",
+                "do_not_convert": true
             }
         ],
         "ret": {
@@ -18,7 +19,8 @@
         "args": [
             {
                 "name": "transformation",
-                "c_type": "AnyTransformation *"
+                "c_type": "AnyTransformation *",
+                "do_not_convert": true
             }
         ],
         "ret": {
@@ -30,7 +32,8 @@
         "args": [
             {
                 "name": "measurement",
-                "c_type": "AnyMeasurement *"
+                "c_type": "AnyMeasurement *",
+                "do_not_convert": true
             }
         ],
         "ret": {

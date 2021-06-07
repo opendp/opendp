@@ -14,11 +14,11 @@ def _to_string(
     :return: String representation of `this` AnyObject.
     :rtype: str
     """
-    
-    # translate arguments to c types
+    # No type arguments to normalize.
+    # Translate arguments to c types.
     this = _py_to_c(this, c_type=AnyObjectPtr)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_data___to_string
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
@@ -42,11 +42,11 @@ def _slice_as_object(
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_data___slice_as_object
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
@@ -69,11 +69,11 @@ def _slice_as_metric_distance(
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_data___slice_as_metric_distance
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
@@ -96,11 +96,11 @@ def _slice_as_measure_distance(
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     slice = _py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_data___slice_as_measure_distance
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
@@ -118,11 +118,11 @@ def _object_type(
     :return: The rust type associated with `this` AnyObject.
     :rtype: str
     """
-    
-    # translate arguments to c types
+    # No type arguments to normalize.
+    # Translate arguments to c types.
     this = _py_to_c(this, c_type=AnyObjectPtr)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_data___object_type
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
@@ -140,11 +140,11 @@ def _object_as_slice(
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
     :rtype: Any
     """
-    
-    # translate arguments to c types
+    # No type arguments to normalize.
+    # Translate arguments to c types.
     this = _py_to_c(this, c_type=AnyObjectPtr)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_data___object_as_slice
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
@@ -160,11 +160,9 @@ def _object_free(
     :param this: 
     :type this: Any
     """
-    
-    # translate arguments to c types
-    this = _py_to_c(this, c_type=AnyObjectPtr)
-    
-    # call library function
+    # No type arguments to normalize.
+    # No arguments to convert to c types.
+    # Call library function.
     function = lib.opendp_data___object_free
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
@@ -181,11 +179,9 @@ def _slice_free(
     :param this: 
     :type this: Any
     """
-    
-    # translate arguments to c types
-    this = _py_to_c(this, c_type=FfiSlicePtr)
-    
-    # call library function
+    # No type arguments to normalize.
+    # No arguments to convert to c types.
+    # Call library function.
     function = lib.opendp_data___slice_free
     function.argtypes = [FfiSlicePtr]
     function.restype = FfiResult
@@ -202,11 +198,9 @@ def _str_free(
     :param this: 
     :type this: str
     """
-    
-    # translate arguments to c types
-    this = _py_to_c(this, c_type=ctypes.c_char_p)
-    
-    # call library function
+    # No type arguments to normalize.
+    # No arguments to convert to c types.
+    # Call library function.
     function = lib.opendp_data___str_free
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
@@ -222,11 +216,9 @@ def _bool_free(
     Used to clean up after the relation check.
     :param this: 
     """
-    
-    # translate arguments to c types
-    this = _py_to_c(this, c_type=BoolPtr)
-    
-    # call library function
+    # No type arguments to normalize.
+    # No arguments to convert to c types.
+    # Call library function.
     function = lib.opendp_data___bool_free
     function.argtypes = [BoolPtr]
     function.restype = FfiResult

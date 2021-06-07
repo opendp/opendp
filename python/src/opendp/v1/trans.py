@@ -21,11 +21,11 @@ def make_identity(
     M = RuntimeType.parse(type_name=M)
     T = RuntimeType.parse(type_name=T)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_identity
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -46,10 +46,10 @@ def make_split_lines(
     # parse type args
     M = RuntimeType.parse(type_name=M)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_split_lines
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
@@ -73,11 +73,11 @@ def make_parse_series(
     # parse type args
     M = RuntimeType.parse(type_name=M)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     impute = _py_to_c(impute, c_type=ctypes.c_bool)
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_parse_series
     function.argtypes = [ctypes.c_bool, ctypes.c_char_p]
     function.restype = FfiResult
@@ -101,11 +101,11 @@ def make_split_records(
     # parse type args
     M = RuntimeType.parse(type_name=M)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     separator = _py_to_c(separator, c_type=ctypes.c_char_p)
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_split_records
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -133,12 +133,12 @@ def make_create_dataframe(
     M = RuntimeType.parse(type_name=M)
     K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     col_names = _py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     K = _py_to_c(K, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_create_dataframe
     function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -170,13 +170,13 @@ def make_split_dataframe(
     M = RuntimeType.parse(type_name=M)
     K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     separator = _py_to_c(separator, c_type=ctypes.c_char_p)
     col_names = _py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     K = _py_to_c(K, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_split_dataframe
     function.argtypes = [ctypes.c_char_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -210,14 +210,14 @@ def make_parse_column(
     K = RuntimeType.parse_or_infer(type_name=K, public_example=key)
     T = RuntimeType.parse(type_name=T)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     key = _py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
     impute = _py_to_c(impute, c_type=ctypes.c_bool)
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     K = _py_to_c(K, c_type=ctypes.c_char_p)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_parse_column
     function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -248,13 +248,13 @@ def make_select_column(
     K = RuntimeType.parse_or_infer(type_name=K, public_example=key)
     T = RuntimeType.parse(type_name=T)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     key = _py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     K = _py_to_c(K, c_type=ctypes.c_char_p)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_select_column
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -283,13 +283,13 @@ def make_clamp_vec(
     M = RuntimeType.parse(type_name=M)
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_clamp_vec
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -318,13 +318,13 @@ def make_clamp_scalar(
     M = RuntimeType.parse(type_name=M)
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     M = _py_to_c(M, c_type=ctypes.c_char_p)
     T = _py_to_c(T, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_clamp_scalar
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -358,14 +358,14 @@ def make_bounded_mean(
     MO = RuntimeType.parse(type_name=MO)
     T = MO.args[0]
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     n = _py_to_c(n, c_type=ctypes.c_uint)
     MI = _py_to_c(MI, c_type=ctypes.c_char_p)
     MO = _py_to_c(MO, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_bounded_mean
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -396,13 +396,13 @@ def make_bounded_sum(
     MO = RuntimeType.parse(type_name=MO)
     T = MO.args[0]
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     MI = _py_to_c(MI, c_type=ctypes.c_char_p)
     MO = _py_to_c(MO, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_bounded_sum
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -437,14 +437,14 @@ def make_bounded_sum_n(
     MO = RuntimeType.parse(type_name=MO)
     T = MO.args[0]
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     n = _py_to_c(n, c_type=ctypes.c_uint)
     MI = _py_to_c(MI, c_type=ctypes.c_char_p)
     MO = _py_to_c(MO, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_bounded_sum_n
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -481,7 +481,7 @@ def make_bounded_variance(
     MO = RuntimeType.parse(type_name=MO)
     T = MO.args[0]
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     n = _py_to_c(n, c_type=ctypes.c_uint)
@@ -489,7 +489,7 @@ def make_bounded_variance(
     MI = _py_to_c(MI, c_type=ctypes.c_char_p)
     MO = _py_to_c(MO, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_bounded_variance
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -518,12 +518,12 @@ def make_count(
     MO = RuntimeType.parse(type_name=MO)
     TI = RuntimeType.parse(type_name=TI)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     MI = _py_to_c(MI, c_type=ctypes.c_char_p)
     MO = _py_to_c(MO, c_type=ctypes.c_char_p)
     TI = _py_to_c(TI, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_count
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -561,14 +561,14 @@ def make_count_by(
     TI = RuntimeType.parse(type_name=TI)
     TO = RuntimeType.parse(type_name=TO)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     n = _py_to_c(n, c_type=ctypes.c_uint)
     MI = _py_to_c(MI, c_type=ctypes.c_char_p)
     MO = _py_to_c(MO, c_type=ctypes.c_char_p)
     TI = _py_to_c(TI, c_type=ctypes.c_char_p)
     TO = _py_to_c(TO, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_count_by
     function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
@@ -605,14 +605,14 @@ def make_count_by_categories(
     TI = RuntimeType.parse_or_infer(type_name=TI, public_example=next(iter(categories), None))
     TO = RuntimeType.parse(type_name=TO)
     
-    # translate arguments to c types
+    # Translate arguments to c types.
     categories = _py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TI]))
     MI = _py_to_c(MI, c_type=ctypes.c_char_p)
     MO = _py_to_c(MO, c_type=ctypes.c_char_p)
     TI = _py_to_c(TI, c_type=ctypes.c_char_p)
     TO = _py_to_c(TO, c_type=ctypes.c_char_p)
     
-    # call library function
+    # Call library function.
     function = lib.opendp_trans__make_count_by_categories
     function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult

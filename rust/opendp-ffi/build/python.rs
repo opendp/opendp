@@ -35,7 +35,7 @@ fn generate_module(
     module_name: String,
     module: Module,
     typemap: &HashMap<String, String>,
-    hierarchy: &HashMap<String, Vec<String>>
+    hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
     let functions = module.into_iter()
         .map(|(func_name, func)| generate_function(&module_name, &func_name, &func, typemap, hierarchy))
@@ -47,14 +47,14 @@ from opendp.v1.convert import _py_to_c, _c_to_py
 from opendp.v1.mod import *
 from opendp.v1.typing import *
 
-{functions}"#, functions=functions)
+{functions}"#, functions = functions)
 }
 
 fn generate_function(
     module_name: &String,
     func_name: &String, func: &Function,
     typemap: &HashMap<String, String>,
-    hierarchy: &HashMap<String, Vec<String>>
+    hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
     println!("generating: {}", func_name);
     let mut args = func.args.iter()
@@ -74,11 +74,11 @@ def {func_name}(
 {docstring}
 {body}
 "#,
-            func_name=func_name,
-            args= crate::indent(args),
-            sig_return=sig_return,
-            docstring= crate::indent(generate_docstring(&func, func_name, hierarchy)),
-            body= crate::indent(generate_body(module_name, func_name, &func, typemap)))
+            func_name = func_name,
+            args = crate::indent(args),
+            sig_return = sig_return,
+            docstring = crate::indent(generate_docstring(&func, func_name, hierarchy)),
+            body = crate::indent(generate_body(module_name, func_name, &func, typemap)))
 }
 
 
@@ -162,53 +162,52 @@ fn generate_docstring(func: &Function, func_name: &String, hierarchy: &HashMap<S
     format!(r#""""
 {description}{doc_args}{ret_arg}
 """"#,
-            description=description,
-            doc_args=doc_args,
-            ret_arg= generate_docstring_return_arg(&func.ret, func_name, hierarchy))
-
+            description = description,
+            doc_args = doc_args,
+            ret_arg = generate_docstring_return_arg(&func.ret, func_name, hierarchy))
 }
 
 /// generate the part of a docstring corresponding to an argument
 fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let name = arg.name.clone().unwrap_or_else(String::new);
     format!(r#":param {name}: {description}{type_}"#,
-            name=name,
-            type_= arg.python_type_hint(hierarchy)
+            name = name,
+            type_ = arg.python_type_hint(hierarchy)
                 .map(|v| format!("\n:type {}: {}", name, v))
                 .unwrap_or_else(String::new),
-            description=arg.description.clone().unwrap_or_else(String::new))
+            description = arg.description.clone().unwrap_or_else(String::new))
 }
 
 /// generate the part of a docstring corresponding to a return argument
 fn generate_docstring_return_arg(arg: &Argument, func_name: &String, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let mut ret = Vec::new();
     if let Some(description) = &arg.description {
-        ret.push(format!(":return: {description}", description=description));
+        ret.push(format!(":return: {description}", description = description));
     } else if func_name.starts_with("make_") {
-        ret.push(format!(":return: A {name} step.", name=func_name.replace("make_", "")))
+        ret.push(format!(":return: A {name} step.", name = func_name.replace("make_", "")))
     }
     if let Some(type_) = arg.python_type_hint(hierarchy) {
-        ret.push(format!(":rtype: {type_}", type_=type_));
+        ret.push(format!(":rtype: {type_}", type_ = type_));
     }
     if !ret.is_empty() { ret.insert(0, String::new()); }
     ret.join("\n")
 }
 
-/// generate the function body, consisting of type args formatters, data formatters, and the call
+/// generate the function body, consisting of type args formatters, data converters, and the call
 /// - type arg formatters make every type arg a RuntimeType, and construct derived RuntimeTypes
-/// - data formatters convert from python to c representations according to the formatted type args
+/// - data converters convert from python to c representations according to the formatted type args
 /// - the call constructs and retrieves the ffi function name, sets ctypes,
 ///     makes the call, handles errors, and converts the response to python
 fn generate_body(
     module_name: &String,
     func_name: &String, func: &Function,
-    typemap: &HashMap<String, String>
+    typemap: &HashMap<String, String>,
 ) -> String {
     format!(r#"{type_arg_formatter}
-{data_formatter}
+{data_converter}
 {make_call}"#,
             type_arg_formatter = generate_type_arg_formatter(func),
-            data_formatter = generate_data_formatter(func, typemap),
+            data_converter = generate_data_converter(func, typemap),
             make_call = generate_call(module_name, func_name, func, typemap))
 }
 
@@ -231,10 +230,10 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
                 if origin == "Vec" {
                     if let RuntimeType::Name(arg_name) = &*args[0] {
                         if arg_name == type_name {
-                            Some(format!("next(iter({name}), None)", name=arg.name()))
-                        } else {None}
-                    } else {None}
-                } else {None}
+                            Some(format!("next(iter({name}), None)", name = arg.name()))
+                        } else { None }
+                    } else { None }
+                } else { None }
             _ => None
         })
         .next()
@@ -242,7 +241,7 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
 
 /// the generated code ensures every type arg is a RuntimeType, and constructs derived RuntimeTypes
 fn generate_type_arg_formatter(func: &Function) -> String {
-    let mut type_arg_formatter: String = func.args.iter()
+    let type_arg_formatter: String = func.args.iter()
         .filter(|arg| arg.is_type)
         .map(|type_arg| {
             let name = type_arg.name.as_ref().expect("type args must be named");
@@ -263,12 +262,14 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .collect::<Vec<_>>()
         .join("\n");
 
-    if !type_arg_formatter.is_empty() {
-        type_arg_formatter = format!(r#"# parse type args
+
+    if type_arg_formatter.is_empty() {
+        "# No type arguments to normalize.".to_string()
+    } else {
+        format!(r#"# parse type args
 {formatter}
-"#, formatter=type_arg_formatter)
+"#, formatter = type_arg_formatter)
     }
-    type_arg_formatter
 }
 
 impl RuntimeType {
@@ -280,18 +281,19 @@ impl RuntimeType {
             Self::Lower { root: arg, index } =>
                 format!("{}.args[{}]", arg.to_python(), index),
             Self::Function { function, params } =>
-                format!("{function}({params})", function=function, params=params.join(",")),
+                format!("{function}({params})", function = function, params = params.join(",")),
             Self::Raise { origin, args } =>
                 format!("RuntimeType(origin='{origin}', args=[{args}])",
-                        origin=origin,
-                        args=args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(",")),
+                        origin = origin,
+                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(",")),
         }
     }
 }
 
 /// the generated code ensures that all arguments have been converted to their c representations
-fn generate_data_formatter(func: &Function, typemap: &HashMap<String, String>) -> String {
-    let mut data_formatter: String = func.args.iter()
+fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -> String {
+    let data_converter: String = func.args.iter()
+        .filter(|arg| !arg.do_not_convert)
         .map(|arg| format!(
             r#"{name} = _py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
             name = arg.name(),
@@ -302,13 +304,13 @@ fn generate_data_formatter(func: &Function, typemap: &HashMap<String, String>) -
         .collect::<Vec<_>>()
         .join("\n");
 
-    if !data_formatter.is_empty() {
-        data_formatter = format!(r#"# translate arguments to c types
-{formatter}
-"#, formatter=data_formatter)
+    if data_converter.is_empty() {
+        "# No arguments to convert to c types.".to_string()
+    } else {
+        format!(r#"# Translate arguments to c types.
+{converter}
+"#, converter = data_converter)
     }
-    data_formatter
-
 }
 
 /// the generated code
@@ -320,21 +322,20 @@ fn generate_data_formatter(func: &Function, typemap: &HashMap<String, String>) -
 fn generate_call(
     module_name: &String,
     func_name: &String, func: &Function,
-    typemap: &HashMap<String, String>
+    typemap: &HashMap<String, String>,
 ) -> String {
-
     let mut call = format!(r#"function({args})"#,
-            args=func.args.iter()
-                // .chain(func.type_args.iter())
-                .map(|arg| arg.name())
-                .collect::<Vec<_>>().join(", "));
+                           args = func.args.iter()
+                               // .chain(func.type_args.iter())
+                               .map(|arg| arg.name())
+                               .collect::<Vec<_>>().join(", "));
     let ctype_restype = func.ret.python_origin_ctype(typemap);
     if ctype_restype == "FfiResult" {
         call = format!(r#"unwrap({call}, {restype})"#,
-            call=call, restype= func.ret.python_unwrapped_ctype(typemap))
+                       call = call, restype = func.ret.python_unwrapped_ctype(typemap))
     }
-    if !func.ret.keep_as_c { call = format!(r#"_c_to_py({})"#, call) }
-    format!(r#"# call library function
+    if !func.ret.do_not_convert { call = format!(r#"_c_to_py({})"#, call) }
+    format!(r#"# Call library function.
 function = lib.opendp_{module_name}__{func_name}
 function.argtypes = [{ctype_args}]
 function.restype = {ctype_restype}

@@ -46,11 +46,11 @@ pub struct Argument {
     // set to true if the argument represents a type
     #[serde(default)]
     is_type: bool,
-    // most functions call c_to_py on return values. Set to true to leave the return value as-is
-    // this is a special case for _slice_as_object,
+    // most functions convert _c_to_py or _py_to_c. Set to true to leave the value as-is
+    // an example usage is _slice_as_object,
     //  to prevent the returned AnyObject from getting converted back to python
     #[serde(default)]
-    keep_as_c: bool
+    do_not_convert: bool
 }
 
 #[allow(dead_code)]
