@@ -33,7 +33,6 @@ def test_bounded_sum_int():
         pass
 
 
-
 def test_identity_int():
     from opendp.v1.trans import make_identity
     transformation = make_identity(HammingDistance, int)
