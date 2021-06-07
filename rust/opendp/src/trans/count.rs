@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_make_count_l1() {
-        let transformation = make_count::<SymmetricDistance, L1Sensitivity<_>, _>().unwrap_test();
+        let transformation = make_count::<SymmetricDistance, L1Sensitivity<i32>, _>().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_make_count_l2() {
-        let transformation = make_count::<SymmetricDistance, L2Sensitivity<_>, i32>().unwrap_test();
+        let transformation = make_count::<SymmetricDistance, L2Sensitivity<i32>, i32>().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;

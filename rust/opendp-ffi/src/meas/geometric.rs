@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn test_make_base_simple_geometric() -> Fallible<()> {
-        let measurement = Result::from(opendp_meas__make_base_simple_geometric(
+        let measurement = Result::from(opendp_meas__make_base_geometric(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(0) as *const c_void,
             util::into_raw(100) as *const c_void,
