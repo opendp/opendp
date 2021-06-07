@@ -127,8 +127,8 @@ class AnyMeasurementPtr(ctypes.POINTER(AnyMeasurement)):
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
     def __del__(self):
-        from opendp.v1.core import measurement_free
-        measurement_free(self)
+        from opendp.v1.core import _measurement_free
+        _measurement_free(self)
 
 
 class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
@@ -185,8 +185,8 @@ class AnyTransformationPtr(ctypes.POINTER(AnyTransformation)):
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
     def __del__(self):
-        from opendp.v1.core import transformation_free
-        transformation_free(self)
+        from opendp.v1.core import _transformation_free
+        _transformation_free(self)
 
 
 class FfiError(ctypes.Structure):
@@ -239,7 +239,7 @@ def c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
 
 
 def unwrap(result, type_) -> Any:
-    from opendp.v1.core import error_free
+    from opendp.v1.core import _error_free
 
     if not isinstance(result, FfiResult):
         return result
@@ -253,7 +253,7 @@ def unwrap(result, type_) -> Any:
     message = c_char_p_to_str(err_contents.message)
     backtrace = c_char_p_to_str(err_contents.backtrace)
 
-    if not error_free(err):
+    if not _error_free(err):
         raise OdpException("Failed to free error.")
 
     raise OdpException(variant, message, backtrace)

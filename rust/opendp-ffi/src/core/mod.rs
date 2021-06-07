@@ -179,7 +179,7 @@ impl<T> From<FfiResult<*mut T>> for Fallible<T> {
 
 #[no_mangle]
 #[must_use]
-pub extern "C" fn opendp_core__error_free(this: *mut FfiError) -> bool {
+pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
     util::into_owned(this).is_ok()
 }
 
@@ -217,7 +217,7 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const AnyMeasurement, a
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_free(this: *mut AnyMeasurement) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
@@ -229,7 +229,7 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformat
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_core___transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 

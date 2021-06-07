@@ -4,7 +4,7 @@ from opendp.v1.mod import *
 from opendp.v1.typing import *
 
 
-def error_free(
+def _error_free(
     error: FfiError
 ) -> bool:
     """
@@ -19,14 +19,14 @@ def error_free(
     error = py_to_c(error, c_type=ctypes.POINTER(FfiError))
     
     # call library function
-    function = lib.opendp_core__error_free
+    function = lib.opendp_core___error_free
     function.argtypes = [ctypes.POINTER(FfiError)]
     function.restype = ctypes.c_bool
     
     return c_to_py(function(error))
 
 
-def transformation_free(
+def _transformation_free(
     transformation: AnyTransformationPtr
 ):
     """
@@ -39,14 +39,14 @@ def transformation_free(
     transformation = py_to_c(transformation, c_type=AnyTransformationPtr)
     
     # call library function
-    function = lib.opendp_core__transformation_free
+    function = lib.opendp_core___transformation_free
     function.argtypes = [AnyTransformationPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(transformation), ctypes.c_void_p))
 
 
-def measurement_free(
+def _measurement_free(
     measurement: AnyMeasurementPtr
 ):
     """
@@ -59,7 +59,7 @@ def measurement_free(
     measurement = py_to_c(measurement, c_type=AnyMeasurementPtr)
     
     # call library function
-    function = lib.opendp_core__measurement_free
+    function = lib.opendp_core___measurement_free
     function.argtypes = [AnyMeasurementPtr]
     function.restype = FfiResult
     

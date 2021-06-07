@@ -141,31 +141,31 @@ def py_to_metric_distance(val: Any, type_name: RuntimeTypeDescriptor = None) -> 
     if isinstance(val, AnyMetricDistancePtr):
         return val
 
-    from opendp.v1.data import slice_as_metric_distance
-    return slice_as_metric_distance(val, type_name)
+    from opendp.v1.data import _slice_as_metric_distance
+    return _slice_as_metric_distance(val, type_name)
 
 
 def py_to_measure_distance(val: Any, type_name: RuntimeTypeDescriptor = None) -> AnyMeasureDistancePtr:
     if isinstance(val, AnyMeasureDistancePtr):
         return val
 
-    from opendp.v1.data import slice_as_measure_distance
-    return slice_as_measure_distance(val, type_name)
+    from opendp.v1.data import _slice_as_measure_distance
+    return _slice_as_measure_distance(val, type_name)
 
 
 def py_to_object(val: Any, type_name: RuntimeTypeDescriptor = None) -> AnyObjectPtr:
     if isinstance(val, AnyObjectPtr):
         return val
 
-    from opendp.v1.data import slice_as_object
-    return slice_as_object(val, type_name)
+    from opendp.v1.data import _slice_as_object
+    return _slice_as_object(val, type_name)
 
 
 def object_to_py(obj: AnyObjectPtr) -> Any:
-    from opendp.v1.data import object_type, object_as_slice, to_string, slice_free
-    ffi_slice = object_as_slice(obj)
+    from opendp.v1.data import _object_type, _object_as_slice, _to_string, _slice_free
+    ffi_slice = _object_as_slice(obj)
     try:
-        return _slice_to_py(ffi_slice, object_type(obj))
+        return _slice_to_py(ffi_slice, _object_type(obj))
     except UnknownTypeException:
         raise
     except Exception as err:
@@ -174,9 +174,9 @@ def object_to_py(obj: AnyObjectPtr) -> Any:
         # raise err
         # If we fail, resort to string representation.
         # TODO: Remove this fallback once we have composition and/or tuples sorted out.
-        return to_string(obj)
+        return _to_string(obj)
     finally:
-        slice_free(ffi_slice)
+        _slice_free(ffi_slice)
 
 
 def py_to_ptr(val: Any, type_name: str = None):
@@ -220,15 +220,15 @@ def py_to_c(val: Any, c_type, rust_type=None):
 
 def c_to_py(c_value):
     if isinstance(c_value, ctypes.c_char_p):
-        from opendp.v1.data import str_free
+        from opendp.v1.data import _str_free
         value = c_value.value.decode()
-        str_free(c_value)
+        _str_free(c_value)
         return value
 
     if isinstance(c_value, BoolPtr):
-        from opendp.v1.data import bool_free
+        from opendp.v1.data import _bool_free
         value = c_value.contents.value
-        bool_free(c_value)
+        _bool_free(c_value)
         return value
 
     if isinstance(c_value, AnyObjectPtr):

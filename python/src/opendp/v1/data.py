@@ -4,7 +4,7 @@ from opendp.v1.mod import *
 from opendp.v1.typing import *
 
 
-def to_string(
+def _to_string(
     this: Any
 ) -> str:
     """
@@ -19,14 +19,14 @@ def to_string(
     this = py_to_object(this)
     
     # call library function
-    function = lib.opendp_data__to_string
+    function = lib.opendp_data___to_string
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
-def slice_as_object(
+def _slice_as_object(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ) -> Any:
@@ -47,14 +47,14 @@ def slice_as_object(
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # call library function
-    function = lib.opendp_data__slice_as_object
+    function = lib.opendp_data___slice_as_object
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return unwrap(function(slice, T), AnyObjectPtr)
 
 
-def slice_as_metric_distance(
+def _slice_as_metric_distance(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ):
@@ -74,14 +74,14 @@ def slice_as_metric_distance(
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # call library function
-    function = lib.opendp_data__slice_as_metric_distance
+    function = lib.opendp_data___slice_as_metric_distance
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return unwrap(function(slice, T), AnyMetricDistancePtr)
 
 
-def slice_as_measure_distance(
+def _slice_as_measure_distance(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ):
@@ -101,14 +101,14 @@ def slice_as_measure_distance(
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # call library function
-    function = lib.opendp_data__slice_as_measure_distance
+    function = lib.opendp_data___slice_as_measure_distance
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return unwrap(function(slice, T), AnyMeasureDistancePtr)
 
 
-def object_type(
+def _object_type(
     this: Any
 ) -> str:
     """
@@ -123,36 +123,36 @@ def object_type(
     this = py_to_object(this)
     
     # call library function
-    function = lib.opendp_data__object_type
+    function = lib.opendp_data___object_type
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
-def object_as_slice(
+def _object_as_slice(
     this: Any
-) -> FfiSlicePtr:
+) -> Any:
     """
     Internal function. Unload data from an AnyObject into an FfiSlicePtr.
     :param this: 
     :type this: Any
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
-    :rtype: FfiSlicePtr
+    :rtype: Any
     """
     
     # translate arguments to c types
     this = py_to_object(this)
     
     # call library function
-    function = lib.opendp_data__object_as_slice
+    function = lib.opendp_data___object_as_slice
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), FfiSlicePtr))
 
 
-def object_free(
+def _object_free(
     this: Any
 ):
     """
@@ -165,35 +165,35 @@ def object_free(
     this = py_to_object(this)
     
     # call library function
-    function = lib.opendp_data__object_free
+    function = lib.opendp_data___object_free
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
-def slice_free(
-    this: FfiSlicePtr
+def _slice_free(
+    this: Any
 ):
     """
     Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
-    Used to clean up after object_free.
+    Used to clean up after _object_as_slice.
     :param this: 
-    :type this: FfiSlicePtr
+    :type this: Any
     """
     
     # translate arguments to c types
     this = py_to_c(this, c_type=FfiSlicePtr)
     
     # call library function
-    function = lib.opendp_data__slice_free
+    function = lib.opendp_data___slice_free
     function.argtypes = [FfiSlicePtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
-def str_free(
+def _str_free(
     this: str
 ):
     """
@@ -207,14 +207,14 @@ def str_free(
     this = py_to_c(this, c_type=ctypes.c_char_p)
     
     # call library function
-    function = lib.opendp_data__str_free
+    function = lib.opendp_data___str_free
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
-def bool_free(
+def _bool_free(
     this
 ):
     """
@@ -227,7 +227,7 @@ def bool_free(
     this = py_to_c(this, c_type=BoolPtr)
     
     # call library function
-    function = lib.opendp_data__bool_free
+    function = lib.opendp_data___bool_free
     function.argtypes = [BoolPtr]
     function.restype = FfiResult
     

@@ -1,5 +1,5 @@
 {
-    "to_string": {
+    "_to_string": {
         "description": "Internal function. Convert the AnyObject to a string representation.",
         "args": [
             {"name": "this", "c_type": "const AnyObject *"}
@@ -9,7 +9,7 @@
             "description": "String representation of `this` AnyObject."
         }
     },
-    "slice_as_object": {
+    "_slice_as_object": {
         "description": "Internal function. Load data from a `slice` into an AnyObject",
         "args": [
             {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
@@ -21,7 +21,7 @@
             "description": "An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information."
         }
     },
-    "slice_as_metric_distance": {
+    "_slice_as_metric_distance": {
         "description": "Internal function. Load data from a `slice` into an AnyMetricDistance",
         "args": [
             {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
@@ -33,7 +33,7 @@
             "description": "An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information."
         }
     },
-    "slice_as_measure_distance": {
+    "_slice_as_measure_distance": {
         "description": "Internal function. Load data from a `slice` into an AnyMeasureDistance",
         "args": [
             {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
@@ -45,7 +45,7 @@
             "description": "An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information."
         }
     },
-    "object_type": {
+    "_object_type": {
         "description": "Internal function. Retrieve the type descriptor string of an AnyObject.",
         "args": [
             {"name": "this", "c_type": "const AnyObject *"}
@@ -55,7 +55,7 @@
             "description": "The rust type associated with `this` AnyObject."
         }
     },
-    "object_as_slice": {
+    "_object_as_slice": {
         "description": "Internal function. Unload data from an AnyObject into an FfiSlicePtr.",
         "args": [
             {"name": "this", "c_type": "const AnyObject *"}
@@ -65,28 +65,28 @@
             "description": "An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages."
         }
     },
-    "object_free": {
+    "_object_free": {
         "description": "Internal function. Free the memory associated with `this`, an AnyObject.",
         "args": [
             {"name": "this", "c_type": "const AnyObject *"}
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
-    "slice_free": {
-        "description": "Internal function. Free the memory associated with `this`, an FfiSlicePtr. \nUsed to clean up after object_free.",
+    "_slice_free": {
+        "description": "Internal function. Free the memory associated with `this`, an FfiSlicePtr. \nUsed to clean up after _object_as_slice.",
         "args": [
             {"name": "this", "c_type": "const FfiSlice *"}
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
-    "str_free": {
+    "_str_free": {
         "description": "Internal function. Free the memory associated with `this`, a string. \nUsed to clean up after the type getter functions.",
         "args": [
             {"name": "this", "c_type": "const char *"}
         ],
         "ret": {"c_type": "FfiResult<void *>"}
     },
-    "bool_free": {
+    "_bool_free": {
         "description": "Internal function. Free the memory associated with `this`, a bool. \nUsed to clean up after the relation check.",
         "args": [
             {"name": "this", "c_type": "bool *"}

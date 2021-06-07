@@ -1,5 +1,5 @@
 {
-    "error_free": {
+    "_error_free": {
         "description": "Internal function. Free the memory associated with `error`.",
         "args": [
             {
@@ -13,7 +13,7 @@
             "description": "true indicates successful free"
         }
     },
-    "transformation_free": {
+    "_transformation_free": {
         "description": "Internal function. Free the memory associated with `transformation`.",
         "args": [
             {
@@ -25,7 +25,7 @@
             "c_type": "FfiResult<void *>"
         }
     },
-    "measurement_free": {
+    "_measurement_free": {
         "description": "Internal function. Free the memory associated with `measurement`.",
         "args": [
             {
