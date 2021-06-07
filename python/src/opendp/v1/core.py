@@ -124,16 +124,16 @@ def measurement_check(
 
 def measurement_invoke(
     measurement: AnyMeasurementPtr,
-    arg: AnyObjectPtr
-) -> AnyObjectPtr:
+    arg: Any
+) -> Any:
     """
     Invoke the `measurement` with `arg`. Returns a differentially private release.
     :param measurement: 
     :type measurement: AnyMeasurementPtr
     :param arg: 
-    :type arg: AnyObjectPtr
+    :type arg: Any
     :return: Differentially private release.
-    :rtype: AnyObjectPtr
+    :rtype: Any
     """
     
     # translate arguments to c types
@@ -150,17 +150,17 @@ def measurement_invoke(
 
 def transformation_invoke(
     transformation: AnyTransformationPtr,
-    arg: AnyObjectPtr
-) -> AnyObjectPtr:
+    arg: Any
+) -> Any:
     """
     Invoke the `transformation` with `arg`. 
     The response is not differentially private as it has not been chained with a measurement.
     :param transformation: 
     :type transformation: AnyTransformationPtr
     :param arg: 
-    :type arg: AnyObjectPtr
+    :type arg: Any
     :return: Non-differentially private answer to the query.
-    :rtype: AnyObjectPtr
+    :rtype: Any
     """
     
     # translate arguments to c types

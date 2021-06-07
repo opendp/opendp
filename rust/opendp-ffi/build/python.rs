@@ -114,10 +114,12 @@ impl Argument {
                 return Some("AnyMeasurementPtr".to_string())
             }
             if c_type.ends_with("AnyObject *") {
-                return Some("AnyObjectPtr".to_string())
+                // py_to_object will convert Any to AnyObjectPtr
+                return Some("Any".to_string())
             }
             if c_type.ends_with("FfiSlice *") {
-                return Some("FfiSlicePtr".to_string())
+                // py_to_c will convert Any to FfiSlicePtr
+                return Some("Any".to_string())
             }
 
             hierarchy.iter()

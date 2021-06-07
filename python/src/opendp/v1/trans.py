@@ -114,14 +114,14 @@ def make_split_records(
 
 
 def make_create_dataframe(
-    col_names: AnyObjectPtr,
+    col_names: Any,
     M: DatasetMetric,
     K: RuntimeTypeDescriptor = None
 ) -> AnyTransformationPtr:
     """
     Make a Transformation that constructs a dataframe from a Vec<Vec<String>>.
     :param col_names: Column names for each record entry.
-    :type col_names: AnyObjectPtr
+    :type col_names: Any
     :param M: dataset metric space
     :type M: DatasetMetric
     :param K: categorical/hashable data type of column names
@@ -148,7 +148,7 @@ def make_create_dataframe(
 
 def make_split_dataframe(
     separator: str,
-    col_names: AnyObjectPtr,
+    col_names: Any,
     M: DatasetMetric,
     K: RuntimeTypeDescriptor = None
 ) -> AnyTransformationPtr:
@@ -158,7 +158,7 @@ def make_split_dataframe(
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
     :param col_names: Column names for each record entry.
-    :type col_names: AnyObjectPtr
+    :type col_names: Any
     :param M: dataset metric space
     :type M: DatasetMetric
     :param K: categorical/hashable data type of column names
@@ -577,7 +577,7 @@ def make_count_by(
 
 
 def make_count_by_categories(
-    categories: AnyObjectPtr,
+    categories: Any,
     MI: DatasetMetric,
     MO: SensitivityMetric,
     TI: RuntimeTypeDescriptor = None,
@@ -587,7 +587,7 @@ def make_count_by_categories(
     Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
     :param categories: The set of categories to compute counts for.
-    :type categories: AnyObjectPtr
+    :type categories: Any
     :param MI: input dataset metric space
     :type MI: DatasetMetric
     :param MO: output sensitivity metric space

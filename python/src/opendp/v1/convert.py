@@ -47,7 +47,7 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
         raise OdpException(f"Cannot cast a non-list type to a vector")
 
     if inner_type_name not in ATOM_MAP:
-        raise OdpException(f"Members must be one of {ATOM_MAP.keys()}")
+        raise OdpException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
 
     if val:
         # check that actual type can be represented by the inner_type_name

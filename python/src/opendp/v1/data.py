@@ -5,12 +5,12 @@ from opendp.v1.typing import *
 
 
 def to_string(
-    this: AnyObjectPtr
+    this: Any
 ) -> str:
     """
     Internal function. Convert the AnyObject to a string representation.
     :param this: 
-    :type this: AnyObjectPtr
+    :type this: Any
     :return: String representation of `this` AnyObject.
     :rtype: str
     """
@@ -29,7 +29,7 @@ def to_string(
 def slice_as_object(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
-) -> AnyObjectPtr:
+) -> Any:
     """
     Internal function. Load data from a `slice` into an AnyObject
     :param slice: 
@@ -37,7 +37,7 @@ def slice_as_object(
     :param T: 
     :type T: RuntimeTypeDescriptor
     :return: An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
-    :rtype: AnyObjectPtr
+    :rtype: Any
     """
     # parse type args
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
@@ -109,12 +109,12 @@ def slice_as_measure_distance(
 
 
 def object_type(
-    this: AnyObjectPtr
+    this: Any
 ) -> str:
     """
     Internal function. Retrieve the type descriptor string of an AnyObject.
     :param this: 
-    :type this: AnyObjectPtr
+    :type this: Any
     :return: The rust type associated with `this` AnyObject.
     :rtype: str
     """
@@ -131,12 +131,12 @@ def object_type(
 
 
 def object_as_slice(
-    this: AnyObjectPtr
+    this: Any
 ) -> FfiSlicePtr:
     """
     Internal function. Unload data from an AnyObject into an FfiSlicePtr.
     :param this: 
-    :type this: AnyObjectPtr
+    :type this: Any
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
     :rtype: FfiSlicePtr
     """
@@ -153,12 +153,12 @@ def object_as_slice(
 
 
 def object_free(
-    this: AnyObjectPtr
+    this: Any
 ):
     """
     Internal function. Free the memory associated with `this`, an AnyObject.
     :param this: 
-    :type this: AnyObjectPtr
+    :type this: Any
     """
     
     # translate arguments to c types

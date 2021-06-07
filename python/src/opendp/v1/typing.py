@@ -1,4 +1,4 @@
-from typing import Union, Any
+from typing import Union, Any, Type
 import sys
 from collections import Hashable
 
@@ -11,7 +11,7 @@ else:
     from typing import GenericMeta as _GenericAlias
 
 ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
-RuntimeTypeDescriptor = Union["RuntimeType", _GenericAlias, tuple, list, int, float, str, bool]
+RuntimeTypeDescriptor = Union["RuntimeType", _GenericAlias, tuple, Type[list], Type[int], Type[float], Type[str], Type[bool]]
 
 
 class RuntimeType(object):
