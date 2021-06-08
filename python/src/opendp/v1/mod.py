@@ -13,7 +13,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     :example:
 
     >>> from opendp.v1.mod import Measurement
-    >>> from opendp.v1.typing import HammingDistance, L1Sensitivity
     >>>
     >>> # create an instance of Measurement using a constructor from the meas module
     >>> from opendp.v1.meas import make_base_geometric
@@ -27,12 +26,14 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> #     (1, 0.5): (L1Sensitivity<u32>, MaxDivergence)
     >>> assert base_geometric.check(1, 0.5)
     >>>
-    >>> # chain with a transformation
+    >>> # chain with a transformation from the trans module
     >>> from opendp.v1.trans import make_count
+    >>> from opendp.v1.typing import HammingDistance, L1Sensitivity
     >>> chained = (
     >>>     make_count(MI=HammingDistance, MO=L1Sensitivity[int], TI=int) >>
     >>>     base_geometric
     >>> )
+    >>>
     >>> # the resulting measurement has the same features
     >>> chained([1, 2, 3])  # -> 4
     >>> # check the chained measurement's relation at
@@ -123,7 +124,6 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     :example:
 
     >>> from opendp.v1.mod import Transformation
-    >>> from opendp.v1.typing import SymmetricDistance, L1Sensitivity
     >>>
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> from opendp.v1.trans import make_count
@@ -137,13 +137,15 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> #     (1, 1): (SymmetricDistance, L1Sensitivity<u32>)
     >>> assert count.check(1, 1)
     >>>
-    >>> # chain the transformations
+    >>> # chain with more transformations from the trans module
     >>> from opendp.v1.trans import make_split_lines, make_parse_series
+    >>> from opendp.v1.typing import SymmetricDistance, L1Sensitivity
     >>> chained = (
     >>>     make_split_lines(M=SymmetricDistance) >>
     >>>     make_parse_series(impute=True, M=SymmetricDistance, TO=int) >>
     >>>     count
     >>> )
+    >>>
     >>> # the resulting transformation has the same features
     >>> chained("1\\n2\\n3")  # -> 3
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
