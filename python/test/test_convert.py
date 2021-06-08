@@ -1,43 +1,40 @@
-import ctypes
-
+from opendp.v1._convert import *
 from opendp.v1._convert import _scalar_to_slice, _slice_to_scalar
-from opendp.v1._lib import FfiSlice, FfiSlicePtr, AnyObjectPtr
-from opendp.v1._convert import _py_to_c, _c_to_py
 
 
 def test_data_object_int():
     val_in = 123
-    obj = _py_to_c(val_in, c_type=AnyObjectPtr)
+    obj = py_to_c(val_in, c_type=AnyObjectPtr)
     print(obj)
-    val_out = _c_to_py(obj)
+    val_out = c_to_py(obj)
     assert val_out == val_in
 
 
 def test_data_object_float():
     val_in = 123.123
-    obj = _py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = _c_to_py(obj)
+    obj = py_to_c(val_in, c_type=AnyObjectPtr)
+    val_out = c_to_py(obj)
     assert val_out == val_in
 
 
 def test_data_object_str():
     val_in = "hello, world"
-    obj = _py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = _c_to_py(obj)
+    obj = py_to_c(val_in, c_type=AnyObjectPtr)
+    val_out = c_to_py(obj)
     assert val_out == val_in
 
 
 def test_data_object_list():
     val_in = [1, 2, 3]
-    obj = _py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = _c_to_py(obj)
+    obj = py_to_c(val_in, c_type=AnyObjectPtr)
+    val_out = c_to_py(obj)
     assert val_out == val_in
 
 
 def test_data_object_tuple():
     val_in = (1., 1e-7)
-    obj = _py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = _c_to_py(obj)
+    obj = py_to_c(val_in, c_type=AnyObjectPtr)
+    val_out = c_to_py(obj)
     assert val_out == val_in
 
 

@@ -15,6 +15,7 @@ use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_ca
 use crate::any::{AnyObject, AnyTransformation};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
+use crate::any::Downcast;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count(
@@ -67,7 +68,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
                   TO: 'static + Integer + Zero + One + AddAssign,
                   MO::Distance: DistanceConstant + FloatConst + One,
                   (MI, MO): CountByConstant<MI, MO> {
-            let categories = try_as_ref!(categories as *const Vec<TI>).clone();
+            let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
             make_count_by_categories::<MI, MO, TI, TO>(categories).into_any()
         }
         dispatch!(monomorphize2, [

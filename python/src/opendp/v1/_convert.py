@@ -20,7 +20,7 @@ ATOM_MAP = {
 }
 
 
-def _py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
+def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     """Map from python `value` to ctypes `c_type`.
 
     :param value: value to convert to c_type
@@ -75,9 +75,9 @@ def _py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     return value
 
 
-def _c_to_py(value):
+def c_to_py(value):
     """Map from ctypes `value` to python value.
-    It is assumed that the c type is simpler than in _py_to_c, as the library returns fewer types.
+    It is assumed that the c type is simpler than in py_to_c, as the library returns fewer types.
 
     :param value: data in ctypes format
     :return: copy of data in python representation

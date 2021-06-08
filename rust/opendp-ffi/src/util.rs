@@ -84,7 +84,7 @@ impl Type {
             }
             Type::of_id(&args[0])
         } else {
-            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- L1Sensitivity<u32>")
+            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, L1Sensitivity<u32>")
         }
     }
 }

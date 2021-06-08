@@ -48,7 +48,7 @@ pub struct Argument {
     // set to true if the argument represents a type
     #[serde(default)]
     is_type: bool,
-    // most functions convert _c_to_py or _py_to_c. Set to true to leave the value as-is
+    // most functions convert c_to_py or py_to_c. Set to true to leave the value as-is
     // an example usage is _slice_as_object,
     //  to prevent the returned AnyObject from getting converted back to python
     #[serde(default)]
@@ -68,9 +68,11 @@ impl Argument {
     }
 }
 
+// RuntimeType contains the metadata to generate code that evaluates to a rust type name
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 enum RuntimeType {
+    // reference an existing RuntimeType
     Name(String),
     // get the ith subtype of an existing RuntimeType
     Lower { root: Box<RuntimeType>, index: i32 },
@@ -83,16 +85,6 @@ enum RuntimeType {
 impl<S: Into<String>> From<S> for RuntimeType {
     fn from(name: S) -> Self {
         RuntimeType::Name(name.into())
-    }
-}
-
-#[allow(dead_code)]
-fn write_bindings(files: IndexMap<PathBuf, String>) {
-    let base_dir = PathBuf::from(env::var("OPENDP_PYTHON_SRC_DIR")
-        .expect("failed to read environment variable OPENDP_PYTHON_SRC_DIR"));
-    for (file_path, file_contents) in files {
-        File::create(base_dir.join(file_path)).unwrap()
-            .write_all(file_contents.as_ref()).unwrap();
     }
 }
 
@@ -122,6 +114,18 @@ fn main() {
 
     #[cfg(feature="python")] write_bindings(python::generate_bindings(_modules));
 }
+
+
+#[allow(dead_code)]
+fn write_bindings(files: IndexMap<PathBuf, String>) {
+    let base_dir = PathBuf::from(env::var("OPENDP_PYTHON_SRC_DIR")
+        .expect("failed to read environment variable OPENDP_PYTHON_SRC_DIR"));
+    for (file_path, file_contents) in files {
+        File::create(base_dir.join(file_path)).unwrap()
+            .write_all(file_contents.as_ref()).unwrap();
+    }
+}
+
 
 #[allow(dead_code)]
 fn indent(text: String) -> String {

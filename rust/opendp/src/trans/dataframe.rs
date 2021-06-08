@@ -45,7 +45,7 @@ pub fn make_create_dataframe<M, K>(
     col_names: Vec<K>
 ) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M>>
     where M: Clone + DatasetMetric<Distance=u32>,
-          K: 'static + Eq + Hash + Debug + Clone {
+          K: 'static + Eq + Hash + Clone {
     Ok(Transformation::new(
         VectorDomain::new(VectorDomain::new_all()),
         create_dataframe_domain(),
@@ -168,14 +168,14 @@ fn parse_series<T>(col: &[&str], default_on_error: bool) -> Fallible<Vec<T>> whe
     }
 }
 
-pub fn make_parse_series<M, T>(impute: bool) -> Fallible<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<T>>, M, M>>
+pub fn make_parse_series<M, TO>(impute: bool) -> Fallible<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<TO>>, M, M>>
     where M: Clone + DatasetMetric<Distance=u32>,
-          T: FromStr + Default,
-          T::Err: Debug {
+          TO: FromStr + Default,
+          TO::Err: Debug {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<String>| -> Fallible<Vec<T>> {
+        Function::new_fallible(move |arg: &Vec<String>| -> Fallible<Vec<TO>> {
             let arg = vec_string_to_str(arg);
             parse_series(&arg, impute)
         }),

@@ -45,7 +45,7 @@ fn generate_module(
         .join("\n");
 
     format!(r#"# Auto-generated. Do not edit.
-from opendp.v1._convert import _py_to_c, _c_to_py
+from opendp.v1._convert import *
 from opendp.v1._lib import *
 from opendp.v1.mod import *
 from opendp.v1.typing import *
@@ -113,11 +113,11 @@ impl Argument {
                 return Some("Measurement".to_string())
             }
             if c_type.ends_with("AnyObject *") {
-                // _py_to_object converts Any to AnyObjectPtr
+                // py_to_object converts Any to AnyObjectPtr
                 return Some("Any".to_string())
             }
             if c_type.ends_with("FfiSlice *") {
-                // _py_to_c converts Any to FfiSlicePtr
+                // py_to_c converts Any to FfiSlicePtr
                 return Some("Any".to_string())
             }
 
@@ -307,7 +307,7 @@ fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -
     let data_converter: String = func.args.iter()
         .filter(|arg| !arg.do_not_convert)
         .map(|arg| format!(
-            r#"{name} = _py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
+            r#"{name} = py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
             name = arg.name(),
             c_type = arg.python_origin_ctype(typemap),
             rust_type_arg = arg.rust_type.as_ref()
@@ -346,7 +346,7 @@ fn generate_call(
         call = format!(r#"unwrap({call}, {restype})"#,
                        call = call, restype = func.ret.python_unwrapped_ctype(typemap))
     }
-    if !func.ret.do_not_convert { call = format!(r#"_c_to_py({})"#, call) }
+    if !func.ret.do_not_convert { call = format!(r#"c_to_py({})"#, call) }
     format!(r#"# Call library function.
 function = lib.opendp_{module_name}__{func_name}
 function.argtypes = [{ctype_args}]

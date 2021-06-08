@@ -9,27 +9,27 @@ use crate::dist::{HammingDistance, SymmetricDistance};
 use num::{NumCast, Float};
 
 pub trait BoundedMeanConstant<MI: Metric, MO: Metric> {
-    fn get_stability(lower: MO::Distance, upper: MO::Distance, length: usize) -> Fallible<MO::Distance>;
+    fn get_stability(lower: MO::Distance, upper: MO::Distance, n: usize) -> Fallible<MO::Distance>;
 }
 
 impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<HammingDistance, MO> for (HammingDistance, MO)
     where T: Sub<Output=T> + Div<Output=T> + NumCast {
-    fn get_stability(lower: T, upper: T, length: usize) -> Fallible<T> {
-        let length = T::from(length).ok_or_else(|| err!(FailedCast))?;
-        Ok((upper - lower) / length)
+    fn get_stability(lower: T, upper: T, n: usize) -> Fallible<T> {
+        let n = T::from(n).ok_or_else(|| err!(FailedCast))?;
+        Ok((upper - lower) / n)
     }
 }
 
 // postprocessing the sum
 impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
     where T: Sub<Output=T> + Div<Output=T> + NumCast {
-    fn get_stability(lower: T, upper: T, length: usize) -> Fallible<T> {
-        Ok((upper - lower) / num_cast!(length; T)? / num_cast!(2; T)?)
+    fn get_stability(lower: T, upper: T, n: usize) -> Fallible<T> {
+        Ok((upper - lower) / num_cast!(n; T)? / num_cast!(2; T)?)
     }
 }
 
 pub fn make_bounded_mean<MI, MO>(
-    lower: MO::Distance, upper: MO::Distance, length: usize
+    lower: MO::Distance, upper: MO::Distance, n: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
     where MI: DatasetMetric<Distance=u32>,
           MO: SensitivityMetric,
@@ -37,17 +37,17 @@ pub fn make_bounded_mean<MI, MO>(
           for <'a> MO::Distance: Sum<&'a MO::Distance>,
           (MI, MO): BoundedMeanConstant<MI, MO> {
     if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
-    let _length = num_cast!(length; MO::Distance)?;
+    let _n = num_cast!(n; MO::Distance)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
             IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
-                         length),
+                         n),
         AllDomain::new(),
-        Function::new(move |arg: &Vec<MO::Distance>| arg.iter().sum::<MO::Distance>() / _length),
+        Function::new(move |arg: &Vec<MO::Distance>| arg.iter().sum::<MO::Distance>() / _n),
         MI::default(),
         MO::default(),
-        StabilityRelation::new_from_constant(<(MI, MO)>::get_stability(lower, upper, length)?)))
+        StabilityRelation::new_from_constant(<(MI, MO)>::get_stability(lower, upper, n)?)))
 }
 
 

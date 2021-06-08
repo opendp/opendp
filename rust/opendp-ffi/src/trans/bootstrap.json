@@ -34,7 +34,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_parse_series": {
-        "description": "Make a Transformation that parses a Vec<String> into a Vec<M>.",
+        "description": "Make a Transformation that parses a Vec<String> into a Vec<T>.",
         "args": [
             {
                 "name": "impute",
@@ -45,7 +45,14 @@
                 "name": "M",
                 "c_type": "char *",
                 "hint": "DatasetMetric",
-                "is_type": true
+                "is_type": true,
+                "description": "dataset metric space"
+            },
+            {
+                "name": "TO",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic type of the output vector"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -231,8 +238,8 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_clamp_scalar": {
-        "description": "Make a Transformation that clamps data of type `T` between `lower` and `upper`.",
+    "make_clamp_sensitivity": {
+        "description": "Make a Transformation that clamps the non-dp result of a query of type `T` between `lower` and `upper`.\nUsed to bound the sensitivity.",
         "args": [
             {
                 "name": "lower",
@@ -249,9 +256,9 @@
             {
                 "name": "M",
                 "c_type": "char *",
-                "hint": "DatasetMetric",
+                "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "sensitivity metric space"
             },
             {
                 "name": "T",
@@ -374,13 +381,6 @@
                 "description": "Number of records in input data."
             },
             {
-                "name": "MI",
-                "c_type": "char *",
-                "hint": "DatasetMetric",
-                "is_type": true,
-                "description": "input dataset metric space"
-            },
-            {
                 "name": "MO",
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
@@ -424,6 +424,7 @@
             {
                 "name": "ddof",
                 "c_type": "unsigned int",
+                "default": "1",
                 "description": "Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate."
             },
             {

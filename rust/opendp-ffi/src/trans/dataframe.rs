@@ -29,21 +29,21 @@ pub extern "C" fn opendp_trans__make_split_lines(
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_parse_series(
     impute: c_bool,
-    M: *const c_char, T: *const c_char,
+    M: *const c_char, TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<M, T>(impute: bool) -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<M, TO>(impute: bool) -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
-              T: 'static + FromStr + Default,
-              T::Err: Debug {
-        make_parse_series::<M, T>(impute).into_any()
+              TO: 'static + FromStr + Default,
+              TO::Err: Debug {
+        make_parse_series::<M, TO>(impute).into_any()
     }
     let M = try_!(Type::try_from(M));
-    let T = try_!(Type::try_from(T));
+    let TO = try_!(Type::try_from(TO));
     let impute = util::to_bool(impute);
 
     dispatch!(monomorphize, [
         (M, @dist_dataset),
-        (T, @primitives)
+        (TO, @primitives)
     ], (impute))
 }
 
@@ -69,7 +69,7 @@ pub extern "C" fn opendp_trans__make_create_dataframe(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<M, K>(col_names: *const AnyObject) -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric<Distance=u32> + Clone,
-              K: 'static + Eq + Hash + Debug + Clone {
+              K: 'static + Eq + Hash + Clone {
         let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
         make_create_dataframe::<M, K>(col_names).into_any()
     }

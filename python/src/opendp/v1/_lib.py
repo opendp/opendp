@@ -106,9 +106,9 @@ class FfiResult(ctypes.Structure):
     ]
 
 
-# def str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
+# def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
-def c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
+def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
     return s and s.decode("utf-8")
 
 
@@ -124,9 +124,9 @@ def unwrap(result, type_) -> Any:
 
     err = result.payload.Err
     err_contents = err.contents
-    variant = c_char_p_to_str(err_contents.variant)
-    message = c_char_p_to_str(err_contents.message)
-    backtrace = c_char_p_to_str(err_contents.backtrace)
+    variant = _c_char_p_to_str(err_contents.variant)
+    message = _c_char_p_to_str(err_contents.message)
+    backtrace = _c_char_p_to_str(err_contents.backtrace)
 
     if not _error_free(err):
         raise OpenDPException("Failed to free error.")

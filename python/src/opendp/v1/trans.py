@@ -1,5 +1,5 @@
 # Auto-generated. Do not edit.
-from opendp.v1._convert import _py_to_c, _c_to_py
+from opendp.v1._convert import *
 from opendp.v1._lib import *
 from opendp.v1.mod import *
 from opendp.v1.typing import *
@@ -23,15 +23,15 @@ def make_identity(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
-    T = _py_to_c(T, c_type=ctypes.c_char_p)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_identity
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(M, T), Transformation))
+    return c_to_py(unwrap(function(M, T), Transformation))
 
 
 def make_split_lines(
@@ -48,42 +48,47 @@ def make_split_lines(
     M = RuntimeType.parse(type_name=M)
     
     # Convert arguments to c types.
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_split_lines
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(M), Transformation))
+    return c_to_py(unwrap(function(M), Transformation))
 
 
 def make_parse_series(
     impute: bool,
-    M: DatasetMetric
+    M: DatasetMetric,
+    TO: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that parses a Vec<String> into a Vec<M>.
+    """Make a Transformation that parses a Vec<String> into a Vec<T>.
     
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
-    :param M: 
+    :param M: dataset metric space
     :type M: DatasetMetric
+    :param TO: atomic type of the output vector
+    :type TO: RuntimeTypeDescriptor
     :return: A parse_series step.
     :rtype: Transformation
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
+    TO = RuntimeType.parse(type_name=TO)
     
     # Convert arguments to c types.
-    impute = _py_to_c(impute, c_type=ctypes.c_bool)
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
+    impute = py_to_c(impute, c_type=ctypes.c_bool)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_parse_series
-    function.argtypes = [ctypes.c_bool, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(impute, M), Transformation))
+    return c_to_py(unwrap(function(impute, M, TO), Transformation))
 
 
 def make_split_records(
@@ -103,15 +108,15 @@ def make_split_records(
     M = RuntimeType.parse(type_name=M)
     
     # Convert arguments to c types.
-    separator = _py_to_c(separator, c_type=ctypes.c_char_p)
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
+    separator = py_to_c(separator, c_type=ctypes.c_char_p)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_split_records
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(separator, M), Transformation))
+    return c_to_py(unwrap(function(separator, M), Transformation))
 
 
 def make_create_dataframe(
@@ -135,16 +140,16 @@ def make_create_dataframe(
     K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
     
     # Convert arguments to c types.
-    col_names = _py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
-    K = _py_to_c(K, c_type=ctypes.c_char_p)
+    col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    K = py_to_c(K, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_create_dataframe
     function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(col_names, M, K), Transformation))
+    return c_to_py(unwrap(function(col_names, M, K), Transformation))
 
 
 def make_split_dataframe(
@@ -172,17 +177,17 @@ def make_split_dataframe(
     K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
     
     # Convert arguments to c types.
-    separator = _py_to_c(separator, c_type=ctypes.c_char_p)
-    col_names = _py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
-    K = _py_to_c(K, c_type=ctypes.c_char_p)
+    separator = py_to_c(separator, c_type=ctypes.c_char_p)
+    col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    K = py_to_c(K, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_split_dataframe
     function.argtypes = [ctypes.c_char_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(separator, col_names, M, K), Transformation))
+    return c_to_py(unwrap(function(separator, col_names, M, K), Transformation))
 
 
 def make_parse_column(
@@ -212,18 +217,18 @@ def make_parse_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = _py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
-    impute = _py_to_c(impute, c_type=ctypes.c_bool)
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
-    K = _py_to_c(K, c_type=ctypes.c_char_p)
-    T = _py_to_c(T, c_type=ctypes.c_char_p)
+    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    impute = py_to_c(impute, c_type=ctypes.c_bool)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    K = py_to_c(K, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_parse_column
     function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(key, impute, M, K, T), Transformation))
+    return c_to_py(unwrap(function(key, impute, M, K, T), Transformation))
 
 
 def make_select_column(
@@ -250,17 +255,17 @@ def make_select_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = _py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
-    K = _py_to_c(K, c_type=ctypes.c_char_p)
-    T = _py_to_c(T, c_type=ctypes.c_char_p)
+    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    K = py_to_c(K, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_select_column
     function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(key, M, K, T), Transformation))
+    return c_to_py(unwrap(function(key, M, K, T), Transformation))
 
 
 def make_clamp_vec(
@@ -285,34 +290,35 @@ def make_clamp_vec(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
-    lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
-    T = _py_to_c(T, c_type=ctypes.c_char_p)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_clamp_vec
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(lower, upper, M, T), Transformation))
+    return c_to_py(unwrap(function(lower, upper, M, T), Transformation))
 
 
-def make_clamp_scalar(
+def make_clamp_sensitivity(
     lower,
     upper,
-    M: DatasetMetric,
+    M: SensitivityMetric,
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that clamps data of type `T` between `lower` and `upper`.
+    """Make a Transformation that clamps the non-dp result of a query of type `T` between `lower` and `upper`.
+    Used to bound the sensitivity.
     
     :param lower: If less than lower, return lower.
     :param upper: If greater than upper, return upper.
-    :param M: dataset metric space
-    :type M: DatasetMetric
+    :param M: sensitivity metric space
+    :type M: SensitivityMetric
     :param T: type of data being clamped
     :type T: RuntimeTypeDescriptor
-    :return: A clamp_scalar step.
+    :return: A clamp_sensitivity step.
     :rtype: Transformation
     """
     # Standardize type arguments.
@@ -320,17 +326,17 @@ def make_clamp_scalar(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
-    lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    M = _py_to_c(M, c_type=ctypes.c_char_p)
-    T = _py_to_c(T, c_type=ctypes.c_char_p)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_clamp_scalar
+    function = lib.opendp_trans__make_clamp_sensitivity
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(lower, upper, M, T), Transformation))
+    return c_to_py(unwrap(function(lower, upper, M, T), Transformation))
 
 
 def make_bounded_mean(
@@ -360,18 +366,18 @@ def make_bounded_mean(
     T = MO.args[0]
     
     # Convert arguments to c types.
-    lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    n = _py_to_c(n, c_type=ctypes.c_uint)
-    MI = _py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = _py_to_c(MO, c_type=ctypes.c_char_p)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    n = py_to_c(n, c_type=ctypes.c_uint)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_mean
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(lower, upper, n, MI, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, n, MI, MO), Transformation))
 
 
 def make_bounded_sum(
@@ -398,24 +404,23 @@ def make_bounded_sum(
     T = MO.args[0]
     
     # Convert arguments to c types.
-    lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    MI = _py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = _py_to_c(MO, c_type=ctypes.c_char_p)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_sum
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(lower, upper, MI, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, MI, MO), Transformation))
 
 
 def make_bounded_sum_n(
     lower,
     upper,
     n: int,
-    MI: DatasetMetric,
     MO: SensitivityMetric
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known length. 
@@ -426,40 +431,36 @@ def make_bounded_sum_n(
     :param upper: Upper bound of input data.
     :param n: Number of records in input data.
     :type n: int
-    :param MI: input dataset metric space
-    :type MI: DatasetMetric
     :param MO: output sensitivity metric space
     :type MO: SensitivityMetric
     :return: A bounded_sum_n step.
     :rtype: Transformation
     """
     # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
     MO = RuntimeType.parse(type_name=MO)
     T = MO.args[0]
     
     # Convert arguments to c types.
-    lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    n = _py_to_c(n, c_type=ctypes.c_uint)
-    MI = _py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = _py_to_c(MO, c_type=ctypes.c_char_p)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    n = py_to_c(n, c_type=ctypes.c_uint)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_sum_n
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(lower, upper, n, MI, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, n, MO), Transformation))
 
 
 def make_bounded_variance(
     lower,
     upper,
     n: int,
-    ddof: int,
     MI: DatasetMetric,
-    MO: SensitivityMetric
+    MO: SensitivityMetric,
+    ddof: int = 1
 ) -> Transformation:
     """Make a Transformation that computes the variance of bounded data. 
     Use make_clamp_vec to bound data.
@@ -483,19 +484,19 @@ def make_bounded_variance(
     T = MO.args[0]
     
     # Convert arguments to c types.
-    lower = _py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = _py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    n = _py_to_c(n, c_type=ctypes.c_uint)
-    ddof = _py_to_c(ddof, c_type=ctypes.c_uint)
-    MI = _py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = _py_to_c(MO, c_type=ctypes.c_char_p)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    n = py_to_c(n, c_type=ctypes.c_uint)
+    ddof = py_to_c(ddof, c_type=ctypes.c_uint)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_variance
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(lower, upper, n, ddof, MI, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, n, ddof, MI, MO), Transformation))
 
 
 def make_count(
@@ -520,16 +521,16 @@ def make_count(
     TI = RuntimeType.parse(type_name=TI)
     
     # Convert arguments to c types.
-    MI = _py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = _py_to_c(MO, c_type=ctypes.c_char_p)
-    TI = _py_to_c(TI, c_type=ctypes.c_char_p)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TI = py_to_c(TI, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_count
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(MI, MO, TI), Transformation))
+    return c_to_py(unwrap(function(MI, MO, TI), Transformation))
 
 
 def make_count_by(
@@ -563,18 +564,18 @@ def make_count_by(
     TO = RuntimeType.parse(type_name=TO)
     
     # Convert arguments to c types.
-    n = _py_to_c(n, c_type=ctypes.c_uint)
-    MI = _py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = _py_to_c(MO, c_type=ctypes.c_char_p)
-    TI = _py_to_c(TI, c_type=ctypes.c_char_p)
-    TO = _py_to_c(TO, c_type=ctypes.c_char_p)
+    n = py_to_c(n, c_type=ctypes.c_uint)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TI = py_to_c(TI, c_type=ctypes.c_char_p)
+    TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_count_by
     function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(n, MI, MO, TI, TO), Transformation))
+    return c_to_py(unwrap(function(n, MI, MO, TI, TO), Transformation))
 
 
 def make_count_by_categories(
@@ -607,15 +608,15 @@ def make_count_by_categories(
     TO = RuntimeType.parse(type_name=TO)
     
     # Convert arguments to c types.
-    categories = _py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TI]))
-    MI = _py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = _py_to_c(MO, c_type=ctypes.c_char_p)
-    TI = _py_to_c(TI, c_type=ctypes.c_char_p)
-    TO = _py_to_c(TO, c_type=ctypes.c_char_p)
+    categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TI]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TI = py_to_c(TI, c_type=ctypes.c_char_p)
+    TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_count_by_categories
     function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return _c_to_py(unwrap(function(categories, MI, MO, TI, TO), Transformation))
+    return c_to_py(unwrap(function(categories, MI, MO, TI, TO), Transformation))
