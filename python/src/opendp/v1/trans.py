@@ -11,7 +11,7 @@ def make_identity(
 ) -> Transformation:
     """Make a Transformation that simply passes the data through.
     
-    :param M: Dataset metric.
+    :param M: dataset metric
     :type M: DatasetMetric
     :param T: Type of data passed to the identity function.
     :type T: RuntimeTypeDescriptor
