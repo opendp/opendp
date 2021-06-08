@@ -137,8 +137,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_clamp() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_clamp(
+    fn test_make_clamp_sensitivity() -> Fallible<()> {
+        let transformation = Result::from(opendp_trans__make_clamp_sensitivity(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(10.0) as *const c_void,
             "L2Sensitivity<f64>".to_char_p(),
