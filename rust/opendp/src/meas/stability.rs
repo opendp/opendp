@@ -15,7 +15,7 @@ use crate::error::Fallible;
 
 pub type CountDomain<TIK, TIC> = SizedDomain<MapDomain<AllDomain<TIK>, AllDomain<TIC>>>;
 
-// tie metric space with distribution
+// tie metric with distribution
 pub trait BaseStabilityNoise: Metric {
     fn noise(shift: Self::Distance, scale: Self::Distance, enforce_constant_time: bool) -> Fallible<Self::Distance>;
 }

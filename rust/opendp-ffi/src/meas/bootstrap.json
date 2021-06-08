@@ -139,7 +139,7 @@
             {
                 "name": "MI",
                 "c_type": "char *",
-                "description": "Input metric space.",
+                "description": "Input metric.",
                 "is_type": true,
                 "hint": "SensitivityMetric"
             },

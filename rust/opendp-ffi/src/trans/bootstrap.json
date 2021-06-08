@@ -6,7 +6,7 @@
                 "name": "M",
                 "c_type": "char *",
                 "hint": "DatasetMetric",
-                "description": "Dataset metric space.",
+                "description": "dataset metric",
                 "is_type": true
             },
             {
@@ -27,7 +27,7 @@
                 "name": "M",
                 "c_type": "char *",
                 "hint": "DatasetMetric",
-                "description": "dataset metric space",
+                "description": "dataset metric",
                 "is_type": true
             }
         ],
@@ -46,7 +46,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "dataset metric"
             },
             {
                 "name": "TO",
@@ -70,7 +70,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "dataset metric"
             }
         ],
         "ret": {
@@ -94,7 +94,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "dataset metric"
             },
             {
                 "name": "K",
@@ -127,7 +127,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "dataset metric"
             },
             {
                 "name": "K",
@@ -159,7 +159,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "dataset metric"
             },
             {
                 "name": "K",
@@ -190,7 +190,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "dataset metric"
             },
             {
                 "name": "K",
@@ -227,7 +227,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "dataset metric space"
+                "description": "dataset metric"
             },
             {
                 "name": "T",
@@ -258,7 +258,7 @@
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "sensitivity metric space"
+                "description": "sensitivity metric"
             },
             {
                 "name": "T",
@@ -294,7 +294,7 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "input metric space"
+                "description": "input metric"
             },
             {
                 "name": "MO",
@@ -337,14 +337,14 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "input dataset metric space"
+                "description": "input dataset metric"
             },
             {
                 "name": "MO",
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "output sensitivity metric space"
+                "description": "output sensitivity metric"
             }
         ],
         "derived_types": [
@@ -385,7 +385,7 @@
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "output sensitivity metric space"
+                "description": "output sensitivity metric"
             }
         ],
         "derived_types": [
@@ -432,14 +432,14 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "input dataset metric space"
+                "description": "input dataset metric"
             },
             {
                 "name": "MO",
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "output sensitivity metric space"
+                "description": "output sensitivity metric"
             }
         ],
         "derived_types": [
@@ -463,14 +463,14 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "input dataset metric space"
+                "description": "input dataset metric"
             },
             {
                 "name": "MO",
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "output sensitivity metric space"
+                "description": "output sensitivity metric"
             },
             {
                 "name": "TI",
@@ -494,14 +494,14 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "input dataset metric space"
+                "description": "input dataset metric"
             },
             {
                 "name": "MO",
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "output sensitivity metric space"
+                "description": "output sensitivity metric"
             },
             {
                 "name": "TI",
@@ -539,14 +539,14 @@
                 "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "input dataset metric space"
+                "description": "input dataset metric"
             },
             {
                 "name": "MO",
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "output sensitivity metric space"
+                "description": "output sensitivity metric"
             },
             {
                 "name": "TI",

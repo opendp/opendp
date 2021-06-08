@@ -8,7 +8,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     """A differentially private unit of computation.
     A measurement contains a function and a privacy relation.
     The function releases a differentially-private release.
-    The privacy relation maps from an input metric space to an output measure space.
+    The privacy relation maps from an input metric to an output measure.
     """
     _type_ = AnyMeasurement
 
@@ -28,8 +28,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     def check(self, d_in, d_out, *, debug=False) -> bool:
         """Check if the measurement satisfies the privacy relation at `d_in`, `d_out`.
         
-        :param d_in: Distance in terms of the input metric space.
-        :param d_out: Distance in terms of the output measure space.
+        :param d_in: Distance in terms of the input metric.
+        :param d_out: Distance in terms of the output measure.
         :param debug: Enable to raise Exceptions to help identify why the privacy relation failed.
         :return: If True, a release is differentially private at `d_in`, `d_out`.
         :rtype: bool
@@ -48,8 +48,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     @property
     def input_distance_type(self):
-        """Retrieve the distance type of the input metric space.
-        This may be any integral type for dataset metric spaces, or any numeric type for sensitivity metric spaces.
+        """Retrieve the distance type of the input metric.
+        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
         
         :return: distance type
         """
@@ -59,7 +59,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     @property
     def output_distance_type(self):
-        """Retrieve the distance type of the output measure space.
+        """Retrieve the distance type of the output measure.
         This is the type that the budget is expressed in.
         
         :return: distance type
@@ -88,7 +88,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     """A non-differentially private unit of computation.
     A transformation contains a function and a stability relation.
     The function maps from an input domain to an output domain.
-    The stability relation maps from an input metric space to an output metric space.
+    The stability relation maps from an input metric to an output metric.
     """
     _type_ = AnyTransformation
 
@@ -119,8 +119,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def check(self, d_in, d_out, *, debug=False):
         """Check if the transformation satisfies the stability relation at `d_in`, `d_out`.
 
-        :param d_in: Distance in terms of the input metric space.
-        :param d_out: Distance in terms of the output metric space.
+        :param d_in: Distance in terms of the input metric.
+        :param d_out: Distance in terms of the output metric.
         :param debug: Enable to raise Exceptions to help identify why the stability relation failed.
         :return: True if the relation passes. False if the relation failed.
         :rtype: bool
@@ -139,8 +139,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     @property
     def input_distance_type(self):
-        """Retrieve the distance type of the input metric space.
-        This may be any integral type for dataset metric spaces, or any numeric type for sensitivity metric spaces.
+        """Retrieve the distance type of the input metric.
+        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
         :return: distance type
         """
@@ -150,8 +150,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     @property
     def output_distance_type(self):
-        """Retrieve the distance type of the output metric space.
-        This may be any integral type for dataset metric spaces, or any numeric type for sensitivity metric spaces.
+        """Retrieve the distance type of the output metric.
+        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
         :return: distance type
         """

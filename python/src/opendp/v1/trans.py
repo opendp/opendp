@@ -11,7 +11,7 @@ def make_identity(
 ) -> Transformation:
     """Make a Transformation that simply passes the data through.
     
-    :param M: Dataset metric space.
+    :param M: Dataset metric.
     :type M: DatasetMetric
     :param T: Type of data passed to the identity function.
     :type T: RuntimeTypeDescriptor
@@ -39,7 +39,7 @@ def make_split_lines(
 ) -> Transformation:
     """Make a Transformation that takes a string and splits it into a Vec<String> of its lines.
     
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :return: A split_lines step.
     :rtype: Transformation
@@ -67,7 +67,7 @@ def make_parse_series(
     
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :param TO: atomic type of the output vector
     :type TO: RuntimeTypeDescriptor
@@ -99,7 +99,7 @@ def make_split_records(
     
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :return: A split_records step.
     :rtype: Transformation
@@ -128,7 +128,7 @@ def make_create_dataframe(
     
     :param col_names: Column names for each record entry.
     :type col_names: Any
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :param K: categorical/hashable data type of column names
     :type K: RuntimeTypeDescriptor
@@ -165,7 +165,7 @@ def make_split_dataframe(
     :type separator: str
     :param col_names: Column names for each record entry.
     :type col_names: Any
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :param K: categorical/hashable data type of column names
     :type K: RuntimeTypeDescriptor
@@ -202,7 +202,7 @@ def make_parse_column(
     :param key: name of column to select from dataframe and parse
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :param K: categorical/hashable data type of the key/column name
     :type K: RuntimeTypeDescriptor
@@ -240,7 +240,7 @@ def make_select_column(
     """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`T`>.
     
     :param key: categorical/hashable data type of the key/column name
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :param K: data type of the key
     :type K: RuntimeTypeDescriptor
@@ -278,7 +278,7 @@ def make_clamp_vec(
     
     :param lower: If datum is less than lower, let datum be lower.
     :param upper: If datum is greater than upper, let datum be upper.
-    :param M: dataset metric space
+    :param M: dataset metric
     :type M: DatasetMetric
     :param T: type of data being clamped
     :type T: RuntimeTypeDescriptor
@@ -314,7 +314,7 @@ def make_clamp_sensitivity(
     
     :param lower: If less than lower, return lower.
     :param upper: If greater than upper, return upper.
-    :param M: sensitivity metric space
+    :param M: sensitivity metric
     :type M: SensitivityMetric
     :param T: type of data being clamped
     :type T: RuntimeTypeDescriptor
@@ -353,7 +353,7 @@ def make_bounded_mean(
     :param upper: Upper bound of input data.
     :param n: Number of records in input data.
     :type n: int
-    :param MI: input metric space
+    :param MI: input metric
     :type MI: DatasetMetric
     :param MO: output sensitivity space
     :type MO: SensitivityMetric
@@ -391,9 +391,9 @@ def make_bounded_sum(
     
     :param lower: Lower bound of input data.
     :param upper: Upper bound of input data.
-    :param MI: input dataset metric space
+    :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric space
+    :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :return: A bounded_sum step.
     :rtype: Transformation
@@ -431,7 +431,7 @@ def make_bounded_sum_n(
     :param upper: Upper bound of input data.
     :param n: Number of records in input data.
     :type n: int
-    :param MO: output sensitivity metric space
+    :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :return: A bounded_sum_n step.
     :rtype: Transformation
@@ -471,9 +471,9 @@ def make_bounded_variance(
     :type n: int
     :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
     :type ddof: int
-    :param MI: input dataset metric space
+    :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric space
+    :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :return: A bounded_variance step.
     :rtype: Transformation
@@ -506,9 +506,9 @@ def make_count(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
-    :param MI: input dataset metric space
+    :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric space
+    :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :param TI: atomic type of input data. Input data is expected to be of the form Vec<TI>.
     :type TI: RuntimeTypeDescriptor
@@ -546,9 +546,9 @@ def make_count_by(
     
     :param n: Number of records in input data.
     :type n: int
-    :param MI: input dataset metric space
+    :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric space
+    :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :param TI: categorical/hashable input data type. Input data must be Vec<TI>.
     :type TI: RuntimeTypeDescriptor
@@ -590,9 +590,9 @@ def make_count_by_categories(
     
     :param categories: The set of categories to compute counts for.
     :type categories: Any
-    :param MI: input dataset metric space
+    :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric space
+    :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :param TI: categorical/hashable input data type. Input data must be Vec<TI>.
     :type TI: RuntimeTypeDescriptor

@@ -169,7 +169,7 @@ def make_base_stability(
     :type n: int
     :param scale: Noise scale parameter.
     :param threshold: Exclude counts that are less than this minimum value.
-    :param MI: Input metric space.
+    :param MI: Input metric.
     :type MI: SensitivityMetric
     :param TIK: Data type of input key- must be hashable/categorical.
     :type TIK: RuntimeTypeDescriptor

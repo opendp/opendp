@@ -70,8 +70,8 @@ def transformation_check(
     
     :param transformation: Transformation to check the stability relation of.
     :type transformation: Transformation
-    :param d_in: Distance in terms of the input metric space.
-    :param d_out: Distance in terms of the output metric space.
+    :param d_in: Distance in terms of the input metric.
+    :param d_out: Distance in terms of the output metric.
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
     """
@@ -98,8 +98,8 @@ def measurement_check(
     
     :param measurement: Measurement to check the privacy relation of.
     :type measurement: Measurement
-    :param d_in: Distance in terms of the input metric space.
-    :param d_out: Distance in terms of the output measure space.
+    :param d_in: Distance in terms of the input metric.
+    :param d_out: Distance in terms of the output measure.
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
     """

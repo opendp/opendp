@@ -20,7 +20,7 @@ pub extern "C" fn opendp_meas__make_base_stability(
     n: usize,
     scale: *const c_void,
     threshold: *const c_void,
-    MI: *const c_char,  // input metric space (sensitivity)
+    MI: *const c_char,  // input metric (sensitivity)
     TIK: *const c_char,  // type of input key (hashable)
     TIC: *const c_char,  // type of input count (int)
 ) -> FfiResult<*mut AnyMeasurement> {
