@@ -49,7 +49,9 @@ class RuntimeType(object):
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor) -> Union["RuntimeType", str]:
         """Normalize type information into a normalized type representation.
-        Type information may be expressed as
+
+        Type information may be expressed as:
+
         - python type hints from std typing module
         - plaintext rust type strings for setting specific bit depth
         - python type class - one of {int, str, float, bool}
