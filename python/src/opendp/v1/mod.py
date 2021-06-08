@@ -9,6 +9,35 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     A measurement contains a function and a privacy relation.
     The function releases a differentially-private release.
     The privacy relation maps from an input metric to an output measure.
+
+    :example:
+
+    >>> from opendp.v1.mod import Measurement
+    >>> from opendp.v1.typing import HammingDistance, L1Sensitivity
+    >>>
+    >>> # create an instance of Measurement using a constructor from the meas module
+    >>> from opendp.v1.meas import make_base_geometric
+    >>> base_geometric: Measurement = make_base_geometric(scale=2., lower=0, upper=20)
+    >>>
+    >>> # invoke the measurement (invoke and __call__ are equivalent)
+    >>> base_geometric.invoke(100)  # -> 101
+    >>> base_geometric(100)  # -> 99
+    >>>
+    >>> # check the measurement's relation at
+    >>> #     (1, 0.5): (L1Sensitivity<u32>, MaxDivergence)
+    >>> assert base_geometric.check(1, 0.5)
+    >>>
+    >>> # chain with a transformation
+    >>> from opendp.v1.trans import make_count
+    >>> chained = (
+    >>>     make_count(MI=HammingDistance, MO=L1Sensitivity[int], TI=int) >>
+    >>>     base_geometric
+    >>> )
+    >>> # the resulting measurement has the same features
+    >>> chained([1, 2, 3])  # -> 4
+    >>> # check the chained measurement's relation at
+    >>> #     (1, 0.5): (HammingDistance, MaxDivergence)
+    >>> assert chained.check(1, 0.5)
     """
     _type_ = AnyMeasurement
 
@@ -21,6 +50,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         
         :param arg: Input to the measurement.
         :return: differentially-private release
+        :raises OpenDPException: packaged error from the core OpenDP library
         """
         from opendp.v1.core import measurement_invoke
         return measurement_invoke(self, arg)
@@ -89,32 +119,50 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     A transformation contains a function and a stability relation.
     The function maps from an input domain to an output domain.
     The stability relation maps from an input metric to an output metric.
+
+    :example:
+
+    >>> from opendp.v1.mod import Transformation
+    >>> from opendp.v1.typing import SymmetricDistance, L1Sensitivity
+    >>>
+    >>> # create an instance of Transformation using a constructor from the trans module
+    >>> from opendp.v1.trans import make_count
+    >>> count: Transformation = make_count(MI=SymmetricDistance, MO=L1Sensitivity[int], TI=int)
+    >>>
+    >>> # invoke the transformation (invoke and __call__ are equivalent)
+    >>> count.invoke([1, 2, 3])  # -> 3
+    >>> count([1, 2, 3])  # -> 3
+    >>>
+    >>> # check the transformation's relation at
+    >>> #     (1, 1): (SymmetricDistance, L1Sensitivity<u32>)
+    >>> assert count.check(1, 1)
+    >>>
+    >>> # chain the transformations
+    >>> from opendp.v1.trans import make_split_lines, make_parse_series
+    >>> chained = (
+    >>>     make_split_lines(M=SymmetricDistance) >>
+    >>>     make_parse_series(impute=True, M=SymmetricDistance, TO=int) >>
+    >>>     count
+    >>> )
+    >>> # the resulting transformation has the same features
+    >>> chained("1\\n2\\n3")  # -> 3
+    >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """
     _type_ = AnyTransformation
-
-    def __call__(self, arg):
-        from opendp.v1.core import transformation_invoke
-        return transformation_invoke(self, arg)
 
     def invoke(self, arg):
         """Execute a non-differentially-private query with `arg`.
 
         :param arg: Input to the transformation.
         :return: non-differentially-private answer
+        :raises OpenDPException: packaged error from the core OpenDP library
         """
         from opendp.v1.core import transformation_invoke
         return transformation_invoke(self, arg)
 
-    def __rshift__(self, other: "Measurement"):
-        if isinstance(other, Measurement):
-            from opendp.v1.core import make_chain_mt
-            return make_chain_mt(other, self)
-
-        if isinstance(other, Transformation):
-            from opendp.v1.core import make_chain_tt
-            return make_chain_tt(other, self)
-
-        raise ValueError(f"rshift expected a measurement or transformation, got {other}")
+    def __call__(self, arg):
+        from opendp.v1.core import transformation_invoke
+        return transformation_invoke(self, arg)
 
     def check(self, d_in, d_out, *, debug=False):
         """Check if the transformation satisfies the stability relation at `d_in`, `d_out`.
@@ -124,6 +172,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         :param debug: Enable to raise Exceptions to help identify why the stability relation failed.
         :return: True if the relation passes. False if the relation failed.
         :rtype: bool
+        :raises OpenDPException: packaged error from the core OpenDP library
         """
         from opendp.v1.core import transformation_check
 
@@ -136,6 +185,17 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             if err.variant == "RelationDebug":
                 return False
             raise
+
+    def __rshift__(self, other: Union["Measurement", "Transformation"]):
+        if isinstance(other, Measurement):
+            from opendp.v1.core import make_chain_mt
+            return make_chain_mt(other, self)
+
+        if isinstance(other, Transformation):
+            from opendp.v1.core import make_chain_tt
+            return make_chain_tt(other, self)
+
+        raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
     @property
     def input_distance_type(self):
@@ -184,7 +244,7 @@ class OpenDPException(Exception):
     The variant attribute corresponds to `one of the following variants <https://github.com/opendp/opendp/blob/53ec58d01762ca5ceee08590d7e7b725bbdafcf6/rust/opendp/src/error.rs#L46-L87>`_ and can be matched on.
     Error variants may change in library updates.
 
-    TODO: Link to generated rust documentation for ErrorVariant.
+    .. todo:: Link to generated rust documentation for ErrorVariant.
     """
     def __init__(self, variant: str, message: str = None, inner_traceback: str = None):
         self.variant = variant

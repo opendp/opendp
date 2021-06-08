@@ -18,7 +18,7 @@ RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- HammingDistance; RuntimeType.parse("i32")
     _GenericAlias,  # a python type hint from the std typing module -- List[int]
     str,  # plaintext string in terms of rust types -- "Vec<i32>"
-    Type[Union[int, float, str, bool]],  # using the python type class itself -- int; float; bool
+    Type[Union[typing.List, int, float, str, bool]],  # using the python type class itself -- int; float; bool
     tuple,  # shorthand for tuples -- (float, "f64"); (HammingDistance, List[int])
 ]
 
@@ -48,9 +48,9 @@ class RuntimeType(object):
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor) -> Union["RuntimeType", str]:
-        """Normalize type information into a normalized type representation.
+        """Parse type descriptor into a normalized rust type.
 
-        Type information may be expressed as:
+        Type descriptor may be expressed as:
 
         - python type hints from std typing module
         - plaintext rust type strings for setting specific bit depth
@@ -60,6 +60,17 @@ class RuntimeType(object):
         :param type_name: type specifier
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
+        :raises ValueError: if `type_name` fails to parse
+
+        :examples:
+
+        >>> from opendp.v1.typing import RuntimeType, L1Sensitivity
+        >>> assert RuntimeType.parse(int) == "i32"
+        >>> assert RuntimeType.parse("i32") == "i32"
+        >>> assert RuntimeType.parse(L1Sensitivity[int]) == "L1Sensitivity<i32>"
+        >>> assert RuntimeType.parse(L1Sensitivity["f32"]) == "L1Sensitivity<f32>"
+        >>> from typing import List
+        >>> assert RuntimeType.parse(List[int]) == "Vec<int>"
         """
         if isinstance(type_name, RuntimeType):
             return type_name
@@ -112,6 +123,15 @@ class RuntimeType(object):
         :param public_example: data used to infer the type
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
+        :raises UnknownTypeException: if inference fails on `public_example`
+
+        :examples:
+
+        >>> from opendp.v1.typing import RuntimeType, L1Sensitivity
+        >>> assert RuntimeType.infer(23) == "i32"
+        >>> assert RuntimeType.infer(12.) == "f64"
+        >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
+        >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
@@ -139,6 +159,8 @@ class RuntimeType(object):
         :param public_example: data used to infer the type
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
+        :raises ValueError: if `type_name` fails to parse
+        :raises UnknownTypeException: if inference fails on `public_example` or no args are supplied
         """
         if type_name is not None:
             return cls.parse(type_name)
@@ -152,6 +174,7 @@ class RuntimeType(object):
 
         :param expected: the type that the data will be converted to
         :param inferred: the type inferred from data
+        :raises AssertionError: if `expected` type differs significantly from `inferred` type
         """
         if isinstance(inferred, UnknownType):
             return

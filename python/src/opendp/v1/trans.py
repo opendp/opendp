@@ -17,6 +17,8 @@ def make_identity(
     :type T: RuntimeTypeDescriptor
     :return: A identity step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -43,6 +45,8 @@ def make_split_lines(
     :type M: DatasetMetric
     :return: A split_lines step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -73,6 +77,8 @@ def make_parse_series(
     :type TO: RuntimeTypeDescriptor
     :return: A parse_series step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -103,6 +109,8 @@ def make_split_records(
     :type M: DatasetMetric
     :return: A split_records step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -134,6 +142,8 @@ def make_create_dataframe(
     :type K: RuntimeTypeDescriptor
     :return: A create_dataframe step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -171,6 +181,8 @@ def make_split_dataframe(
     :type K: RuntimeTypeDescriptor
     :return: A split_dataframe step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -210,6 +222,8 @@ def make_parse_column(
     :type T: RuntimeTypeDescriptor
     :return: A parse_column step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -248,6 +262,8 @@ def make_select_column(
     :type T: RuntimeTypeDescriptor
     :return: A select_column step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -284,6 +300,8 @@ def make_clamp_vec(
     :type T: RuntimeTypeDescriptor
     :return: A clamp_vec step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -320,6 +338,8 @@ def make_clamp_sensitivity(
     :type T: RuntimeTypeDescriptor
     :return: A clamp_sensitivity step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     M = RuntimeType.parse(type_name=M)
@@ -359,6 +379,8 @@ def make_bounded_mean(
     :type MO: SensitivityMetric
     :return: A bounded_mean step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
@@ -397,6 +419,8 @@ def make_bounded_sum(
     :type MO: SensitivityMetric
     :return: A bounded_sum step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
@@ -435,6 +459,8 @@ def make_bounded_sum_n(
     :type MO: SensitivityMetric
     :return: A bounded_sum_n step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     MO = RuntimeType.parse(type_name=MO)
@@ -477,6 +503,8 @@ def make_bounded_variance(
     :type MO: SensitivityMetric
     :return: A bounded_variance step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
@@ -514,6 +542,8 @@ def make_count(
     :type TI: RuntimeTypeDescriptor
     :return: A count step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
@@ -556,6 +586,8 @@ def make_count_by(
     :type TO: RuntimeTypeDescriptor
     :return: The carrier type is HashMap<TI, TO>- the counts for each unique data input.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
@@ -600,6 +632,8 @@ def make_count_by_categories(
     :type TO: RuntimeTypeDescriptor
     :return: A count_by_categories step.
     :rtype: Transformation
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)

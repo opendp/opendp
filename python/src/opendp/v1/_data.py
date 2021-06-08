@@ -14,6 +14,8 @@ def _to_string(
     :type this: Any
     :return: String representation of `this` AnyObject.
     :rtype: str
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -39,6 +41,8 @@ def _slice_as_object(
     :type T: RuntimeTypeDescriptor
     :return: An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
     :rtype: Any
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
@@ -66,6 +70,8 @@ def _slice_as_metric_distance(
     :param T: 
     :type T: RuntimeTypeDescriptor
     :return: An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information.
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
@@ -93,6 +99,8 @@ def _slice_as_measure_distance(
     :param T: 
     :type T: RuntimeTypeDescriptor
     :return: An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information.
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
@@ -118,6 +126,8 @@ def _object_type(
     :type this: Any
     :return: The rust type associated with `this` AnyObject.
     :rtype: str
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -140,6 +150,8 @@ def _object_as_slice(
     :type this: Any
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
     :rtype: Any
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
@@ -160,6 +172,8 @@ def _object_free(
     
     :param this: 
     :type this: Any
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -179,6 +193,8 @@ def _slice_free(
     
     :param this: 
     :type this: Any
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -198,6 +214,8 @@ def _str_free(
     
     :param this: 
     :type this: str
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -216,6 +234,8 @@ def _bool_free(
     Used to clean up after the relation check.
     
     :param this: 
+    :raises AssertionError: if type of argument differs from the expected type
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
