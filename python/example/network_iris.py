@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from sklearn.datasets import load_iris
 from torch.utils.data import random_split, DataLoader, TensorDataset
 
-from opendp.network.accountant import PrivacyAccountant
+from opendp.network.odometer import PrivacyOdometer
 
 # demonstrates this bug:
 # https://github.com/pytorch/pytorch/issues/56380
@@ -74,22 +74,17 @@ optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
 print("Epoch | Accuracy | Loss")
 
-accountant = PrivacyAccountant(
-    model,
+odometer = PrivacyOdometer(
     step_epsilon=1.0, step_delta=1E-7,
     clipping_norm=1.0, reduction='mean')
-model = accountant.model
+private_model = odometer.make_tracked_view(model)
 
 for epoch in range(epochs):
     for batch in train_loader:
-        loss = model.loss(batch)
+        loss = private_model.loss(batch)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        # for name, param in model.named_parameters():
-        #     print(name, param.grad1.size())
-        # print("epoch activations: ", epoch)
-        # print(activations)
 
     accuracy, loss = evaluate(model, test_loader)
     print(f"{epoch: 5d} | {accuracy.item():.2f}     | {loss.item():.2f}")

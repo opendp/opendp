@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from opendp.network import PrivacyAccountant
+from opendp.network.odometer import PrivacyOdometer
 from opendp.network.layers.bahdanau import DPBahdanauAttentionScale
 
 from pums.download import datasets
@@ -130,7 +130,8 @@ def run_lstm_worker(rank, size, epoch_limit=None, private_step_limit=None, feder
         tagset_size=len(tag_to_idx),
         bahdanau=False)
 
-    accountant = PrivacyAccountant(model, step_epsilon=1.0, reduction='sum')
+    odometer = PrivacyOdometer(step_epsilon=1.0, reduction='sum')
+    odometer.track_(model)
     coordinator = ModelCoordinator(model, rank, size, federation_scheme, end_event=end_event)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
@@ -157,11 +158,11 @@ def run_lstm_worker(rank, size, epoch_limit=None, private_step_limit=None, feder
             sentence = prepare_sequence(sentence, word_to_idx)
             target = prepare_sequence(tags, tag_to_idx)
 
-            loss = accountant.model.loss(sentence, target)
+            loss = model.loss(sentence, target)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-        accountant.increment_epoch()
+        odometer.increment_epoch()
 
         inputs = prepare_sequence(training_data[0][0], word_to_idx)
         tag_scores = model(inputs).detach().numpy()
@@ -184,7 +185,7 @@ def run_lstm_worker(rank, size, epoch_limit=None, private_step_limit=None, feder
             coordinator.send()
 
     if queue:
-        queue.put((tuple(datasets[rank].values()), accountant.compute_usage()))
+        queue.put((tuple(datasets[rank].values()), odometer.compute_usage()))
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from torch.multiprocessing import Process
 from torch.utils.data import DataLoader, TensorDataset
 
-from opendp.network import PrivacyAccountant
+from opendp.network.odometer import PrivacyOdometer
 from pums.coordinator import ModelCoordinator
 from pums.download import get_pums_data_path, download_pums_data, datasets
 
@@ -116,7 +116,7 @@ def evaluate(model, loader):
 def train(
         model, optimizer, private_step_limit,
         train_loader, test_loader,
-        coordinator, accountant,
+        coordinator, odometer,
         rank, public):
 
     history = []
@@ -131,7 +131,7 @@ def train(
             if coordinator.step == private_step_limit:
                 return history
 
-            loss = accountant.model.loss(batch)
+            loss = model.loss(batch)
             loss.backward()
 
             optimizer.step()
@@ -150,9 +150,8 @@ def train(
         # privacy book-keeping
         epoch += 1
         if not public:
-            accountant.steps = len(train_loader)
-        accountant.increment_epoch()
-    return history
+            odometer.steps = len(train_loader)
+            odometer.increment_epoch()
 
 
 def run_pums_worker(rank, size, private_step_limit=None, federation_scheme='shuffle', queue=None, model_filepath=None, end_event=None):
@@ -163,7 +162,7 @@ def run_pums_worker(rank, size, private_step_limit=None, federation_scheme='shuf
     :param size: total ring size
     :param federation_scheme:
     :param private_step_limit:
-    :param queue: stores values and privacy accountant usage
+    :param queue: stores values and privacy usage
     :param model_filepath: indicating where to save the model checkpoint
     :return:
     """
@@ -176,7 +175,9 @@ def run_pums_worker(rank, size, private_step_limit=None, federation_scheme='shuf
 
     model = PumsModule(len(problem['predictors']), 2)
 
-    accountant = PrivacyAccountant(model, step_epsilon=.1, disable=public)
+    odometer = PrivacyOdometer(step_epsilon=.1)
+    if not public:
+        odometer.track_(model)
     coordinator = ModelCoordinator(model, rank, size, private_step_limit, federation_scheme, end_event=end_event)
 
     optimizer = torch.optim.SGD(model.parameters(), .00005)
@@ -185,7 +186,7 @@ def run_pums_worker(rank, size, private_step_limit=None, federation_scheme='shuf
         model, optimizer,
         private_step_limit,
         train_loader, test_loader,
-        coordinator, accountant,
+        coordinator, odometer,
         rank, public)
 
     # Only save if filename is given
@@ -197,7 +198,7 @@ def run_pums_worker(rank, size, private_step_limit=None, federation_scheme='shuf
         }, model_filepath)
 
     if queue:
-        queue.put((tuple(datasets[rank].values()), accountant.compute_usage(), history))
+        queue.put((tuple(datasets[rank].values()), odometer.compute_usage(), history))
 
 
 def init_process(rank, size, fn, kwargs, backend='gloo'):

@@ -9,16 +9,17 @@ B, backprops: backprop values (aka Jacobian-vector product) observed at current 
 import copy
 import math
 from functools import wraps
-from typing import List
+from typing import List, Optional, Union, Dict
 import numpy as np
 
 import torch
 import torch.nn as nn
-from opendp.typing import RuntimeType, DatasetMetric
+from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
 from torch.nn.parameter import Parameter
 
 import opendp.trans as trans
 import opendp.meas as meas
+from opendp.mod import binary_search
 
 from opendp.network.layers.bahdanau import DPBahdanauAttention
 from opendp.network.layers.base import InstanceGrad
@@ -36,174 +37,140 @@ REPLACEMENT_MODULES = {
 FULL_BACKWARD_HOOK = False
 
 
-class _SharedParameter(Parameter):
-    @classmethod
-    def mark(cls, parameter):
-        assert isinstance(parameter, Parameter)
-        parameter.__class__ = cls
-
-    def unmark(self):
-        self.__class__ = Parameter
-
-    def __copy__(self):
-        return self
-
-    def __deepcopy__(self, memodict={}):
-        return self
-
-
-class PrivacyAccountant(object):
+class PrivacyOdometer(object):
     def __init__(
             self,
-            model: nn.Module,
-            step_epsilon, step_delta=0., clipping_norm=1.,
-            dataset_distance: int = 1, dataset_space="HammingDistance",
-            modules=None,
-            hook=True,
-            disable=False,
+            step_epsilon, step_delta=0.,
+            clipping_norm=1.,
             reduction='mean',
-            replacement_modules=None):
+            dataset_distance: int = 1,
+            MI: DatasetMetric = SymmetricDistance):
         """
         Utility for tracking privacy usage
-        :param model: pyTorch model
         :param step_epsilon:
         :param step_delta:
         :param dataset_distance: group size
-        :param dataset_space: HammingDistance or SymmetricDistance
-        :param hook: whether to call hook() on __init__
-        :param disable: turn off all privatization
-        :param replacement_modules: dict of module classes to replace (for example nn.LSTM -> DPLSTM)
+        :param MI: HammingDistance or SymmetricDistance
         """
 
-        # copy network architecture, but share parameters
-        for param in model.parameters():
-            _SharedParameter.mark(param)
-        self.model = copy.deepcopy(model)
-        for param in model.parameters():
-            param.unmark()
-
-        replacement_modules = {**REPLACEMENT_MODULES, **(replacement_modules or {})}
-
-        # restructure the copied network architecture in-place, without breaking references to original parameters
-        self._replace_modules(self.model, replacement_modules)
-        # overwrite forward on the first module to set requires_grad=True
-        if FULL_BACKWARD_HOOK:
-            self._patch_first_hook()
-
         self.dataset_distance = dataset_distance
-        dataset_space = RuntimeType.parse(dataset_space)
-        if not isinstance(dataset_space, DatasetMetric):
-            raise ValueError(f"dataset_space must be a dataset metric")
-        self.dataset_space = dataset_space
+        MI = RuntimeType.parse(MI)
+        if not isinstance(MI, DatasetMetric):
+            raise ValueError(f"MI must be a dataset metric")
+        self.MI = MI
 
-        self._hooks_enabled = False  # work-around for https://github.com/pytorch/pytorch/issues/25723
         self.step_epsilon = step_epsilon
         self.step_delta = step_delta
+
+        # for budget tracking
         self._epochs = []
         self.steps = 0
-        self._disable = disable
 
         assert reduction in ('sum', 'mean')
         self.reduction = reduction
-
-        self.modules = modules
         self.clipping_norm = clipping_norm
 
-        if not disable and hook:
-            self.hook()
+    def make_tracked_view(
+            self,
+            model: nn.Module,
+            replacement_modules: Dict[Union[nn.Module, str], nn.Module] = None,
+            whitelist: Optional[List[nn.Module]] = None
+    ) -> nn.Module:
+        """Returns an equivalent model that shares the input model's parameters.
+        When .backward() is called on the returned model, .grad on parameters is differentially private.
+        The related budget costs are tracked in this odometer class.
+        The original model can still be used to train the same parameters with public data.
 
-    def find_suitable_step_measure(self, reduction, clipping_norm, size):
-        mechanism_name = 'gaussian' if self.step_delta else 'laplace'
-        # find the tightest scale between 0. and 10k that satisfies the stepwise budget
-        scale = binary_search(lambda s: self._check_noise_scale(reduction, clipping_norm, size, mechanism_name, s),
-                              0., 10_000.)
-        return self._make_base_mechanism(mechanism_name, scale)
-
-    def _check_noise_scale(self, reduction, clipping_norm, size, mechanism_name, scale):
-
-        if reduction == 'mean':
-            aggregator = trans.make_sized_bounded_mean(
-                size, (-clipping_norm, clipping_norm))
-        elif reduction == 'sum':
-            aggregator = trans.make_sized_bounded_sum(
-                size, (-clipping_norm, clipping_norm))
-        else:
-            raise ValueError(f'unrecognized reduction: {reduction}. Must be "mean" or "sum"')
-
-        chained = aggregator >> self._make_base_mechanism(mechanism_name, scale)
-
-        budget = (self.step_epsilon, self.step_delta) if self.step_delta else self.step_epsilon
-        return chained.check(self.dataset_distance, budget)
-
-    @staticmethod
-    def _make_base_mechanism(mechanism_name, scale):
-        if mechanism_name == 'laplace':
-            return meas.make_base_laplace(scale)
-        if mechanism_name == 'gaussian':
-            return meas.make_base_gaussian(scale)
-
-    @staticmethod
-    def _replace_modules(module, replacement_modules):
-        """
-        replaces modules with DP-capable versions of modules throughout a network
+        :param model:
+        :param replacement_modules: dict of custom module replacement classes
+        :param whitelist: if defined, only hook these modules
+        :return:
         """
 
-        for attr_str in dir(module):
-            target_attr = getattr(module, attr_str)
-            # ignore anything that isn't a module
-            if not issubclass(type(target_attr), nn.Module):
-                continue
+        class _SharedParameter(Parameter):
+            @classmethod
+            def mark(cls, parameter):
+                assert isinstance(parameter, Parameter)
+                parameter.__class__ = cls
 
-            replacement_module = replacement_modules.get(type(target_attr))
-            if not replacement_module:
-                replacement_module = replacement_modules.get(target_attr.__class__.__name__)
-            if replacement_module:
-                replacement_attr = replacement_module.replace(target_attr)
-                setattr(module, attr_str, replacement_attr)
+            def unmark(self):
+                self.__class__ = Parameter
 
-        # recurse down child modules
-        for name, child_module in module.named_children():
-            PrivacyAccountant._replace_modules(child_module, replacement_modules)
+            def __copy__(self):
+                return self
 
-    def _patch_first_hook(self):
-        def set_requires_grad(arg):
-            if torch.is_grad_enabled() and isinstance(arg, torch.Tensor) and arg.dtype.is_floating_point:
-                arg.requires_grad = True
-            return arg
+            def __deepcopy__(self, memodict={}):
+                return self
 
-        old_forward = self.model.forward
+        # copy network architecture, but share parameters
+        for param in model.parameters():
+            # temporarily mutates the original model to prevent parameters from being copied
+            _SharedParameter.mark(param)
+        model = copy.deepcopy(model)
+        # param is shared in both the original and copied model, so the original model is restored
+        for param in model.parameters():
+            param.unmark()
 
-        @wraps(old_forward)
-        def wrapper(*args, **kwargs):
-            return old_forward(
-                *(set_requires_grad(arg) for arg in args),
-                **{kw: set_requires_grad(arg) for kw, arg in kwargs.items()})
+        self.track_(model, replacement_modules, whitelist)
 
-        setattr(self.model, 'forward', wrapper)
+        return model
 
-    def hook(self):
+    def track_(
+            self,
+            model: nn.Module,
+            replacement_modules: Dict[Union[nn.Module, str], nn.Module] = None,
+            whitelist: Optional[List[nn.Module]] = None
+    ) -> None:
         """
-        Adds hooks to model to save activations and backprop values.
+        When .backward() is called on model, .grad on parameters is differentially private.
+        The related budget costs are tracked in this odometer class.
 
-        The hooks will
+        Adds hooks throughout the module tree to save activations and backprop values.
+        Adds hooks to parameters to overwrite .grad.
+        May replace modules in the module tree with equivalent modules that have DP capabilities.
+
+        The module hooks will
         1. save activations into module.activations during forward pass
         2. save backprops into module.backprops during backward pass.
-
-        Use unhook to disable this.
         """
 
-        if self._hooks_enabled:
-            # hooks have already been added
-            return self
+        replacement_modules = {**REPLACEMENT_MODULES, **(replacement_modules or {})}
 
-        self._hooks_enabled = True
+        def replace_modules(module):
+            """
+            replaces modules with DP-capable versions of modules throughout a network
+            """
 
-        modules = [m for m in self.modules or self.model.modules() if self._has_params(m)]
+            for attr_str in dir(module):
+                target_attr = getattr(module, attr_str)
+                # ignore anything that isn't a module
+                if not issubclass(type(target_attr), nn.Module):
+                    continue
+
+                # only replace modules in the module whitelist
+                if whitelist is not None and id(target_attr) not in whitelist:
+                    continue
+
+                replacement_module = replacement_modules.get(type(target_attr))
+                if not replacement_module:
+                    replacement_module = replacement_modules.get(target_attr.__class__.__name__)
+                if replacement_module:
+                    replacement_attr = replacement_module.replace(target_attr)
+                    setattr(module, attr_str, replacement_attr)
+
+            # recurse down child modules
+            for name, child_module in module.named_children():
+                replace_modules(child_module)
+
+        # restructure the copied network architecture in-place, without breaking references to original parameters
+        replace_modules(model)
+
+        # overwrite forward on the first module to set requires_grad=True
+        if FULL_BACKWARD_HOOK:
+            self._patch_first_hook(model)
 
         def capture_activations(module_: nn.Module, input_: List[torch.Tensor], _output):
             """Save activations into module.activations in forward pass"""
-            if not self._hooks_enabled:
-                return
             if not hasattr(module_, 'activations'):
                 module_.activations = []
             # NOTE: clone is required to prevent in-place-overwrite of stored activations
@@ -211,64 +178,62 @@ class PrivacyAccountant(object):
 
         def capture_backprops(module_: nn.Module, _input: List[torch.Tensor], output: List[torch.Tensor]):
             """Save backprops into module.backprops in backward pass"""
-            if not self._hooks_enabled:
-                return
             if not hasattr(module_, 'backprops'):
                 module_.backprops = []
             # NOTE: clone is required to prevent in-place-overwrite of stored backprops
             module_.backprops.append(tuple(out_arg.detach().clone() for out_arg in output))
 
-        def get_batch_size(module):
+        def get_batch_size(module_):
             # first activation, first arg, first axis shape
-            return module.activations[0][0].shape[0]
+            return module_.activations[0][0].shape[0]
 
-        def make_privatization_hook(module, param, instance_grad_generator):
+        def make_privatization_hook(module_, param_, instance_grad_generator):
             def privatization_hook(grad):
 
                 # ignore leading activations from evaluations outside of the training loop
-                module.activations = module.activations[-len(module.backprops):]
+                module_.activations = module_.activations[-len(module_.backprops):]
 
                 if self.reduction == 'mean':
-                    for backprop in module.backprops:
-                        backprop *= get_batch_size(module)
+                    for backprop in module_.backprops:
+                        backprop *= get_batch_size(module_)
 
                 # backprops are in reverse-order
-                for A, B in zip(module.activations, module.backprops[::-1]):
+                for A, B in zip(module_.activations, module_.backprops[::-1]):
                     for chunk in instance_grad_generator(A, B):
-                        InstanceGrad.accumulate_instance_grad(param, chunk)
+                        InstanceGrad.accumulate_instance_grad(param_, chunk)
 
                 if CHECK_CORRECTNESS:
-                    print('checking:', module, param.shape)
-                    self._check_grad(grad, param.grad_instance, self.reduction)
+                    print('checking:', module_, param_.shape)
+                    self._check_grad(grad, param_.grad_instance, self.reduction)
 
                 actual_norm = torch.norm(
-                    param.grad_instance.reshape(param.grad_instance.shape[0], -1) ** 2,
+                    param_.grad_instance.reshape(param_.grad_instance.shape[0], -1) ** 2,
                     dim=1)
 
                 private_grad = self._privatize_grad(
-                    param.grad_instance, self.reduction,
+                    param_.grad_instance, self.reduction,
                     actual_norm, self.clipping_norm)
 
-                del param.grad_instance
-                param.is_grad_dp = True
+                del param_.grad_instance
+                param_.is_grad_dp = True
                 # clear module hook data once all param grads are dp
-                if all(hasattr(par, 'is_grad_dp') and par.is_grad_dp for par in module.parameters(recurse=False)):
-                    del module.activations
-                    del module.backprops
-                    for par in module.parameters(recurse=False):
+                if all(hasattr(par, 'is_grad_dp') and par.is_grad_dp for par in module_.parameters(recurse=False)):
+                    del module_.activations
+                    del module_.backprops
+                    for par in module_.parameters(recurse=False):
                         del par.is_grad_dp
 
                 return private_grad
             return privatization_hook
 
-        self.model.autograd_hooks = []
-        for module in modules:
+        model.autograd_hooks = []
+        for module in [m for m in whitelist or model.modules() if self._has_params(m)]:
             # ignore the module if it has no parameters
             if next(module.parameters(recurse=False), None) is None:
                 continue
 
             # register global hooks
-            self.model.autograd_hooks.extend([
+            model.autograd_hooks.extend([
                 module.register_forward_hook(capture_activations),
                 module.register_backward_hook(capture_backprops)
             ])
@@ -343,7 +308,54 @@ class PrivacyAccountant(object):
 
             for param in instance_grads:
                 privatization_hook = make_privatization_hook(module, param, instance_grads[param])
-                self.model.autograd_hooks.append(param.register_hook(privatization_hook))
+                model.autograd_hooks.append(param.register_hook(privatization_hook))
+
+    def _find_suitable_step_measure(self, reduction, clipping_norm, size):
+        mechanism_name = 'gaussian' if self.step_delta else 'laplace'
+        # find the tightest scale between 0. and 10k that satisfies the stepwise budget
+        scale = binary_search(lambda s: self._check_noise_scale(reduction, clipping_norm, size, mechanism_name, s),
+                              0., 10_000.)
+        return self._make_base_mechanism(mechanism_name, scale)
+
+    def _check_noise_scale(self, reduction, clipping_norm, size, mechanism_name, scale):
+
+        if reduction == 'mean':
+            aggregator = trans.make_sized_bounded_mean(
+                size, (-clipping_norm, clipping_norm))
+        elif reduction == 'sum':
+            aggregator = trans.make_sized_bounded_sum(
+                size, (-clipping_norm, clipping_norm))
+        else:
+            raise ValueError(f'unrecognized reduction: {reduction}. Must be "mean" or "sum"')
+
+        chained = aggregator >> self._make_base_mechanism(mechanism_name, scale)
+
+        budget = (self.step_epsilon, self.step_delta) if self.step_delta else self.step_epsilon
+        return chained.check(self.dataset_distance, budget)
+
+    @staticmethod
+    def _make_base_mechanism(mechanism_name, scale):
+        if mechanism_name == 'laplace':
+            return meas.make_base_laplace(scale)
+        if mechanism_name == 'gaussian':
+            return meas.make_base_gaussian(scale)
+
+    @staticmethod
+    def _patch_first_hook(model):
+        def set_requires_grad(arg):
+            if torch.is_grad_enabled() and isinstance(arg, torch.Tensor) and arg.dtype.is_floating_point:
+                arg.requires_grad = True
+            return arg
+
+        old_forward = model.forward
+
+        @wraps(old_forward)
+        def wrapper(*args, **kwargs):
+            return old_forward(
+                *(set_requires_grad(arg) for arg in args),
+                **{kw: set_requires_grad(arg) for kw, arg in kwargs.items()})
+
+        setattr(model, 'forward', wrapper)
 
     @staticmethod
     def _determine_chunk_count(A, B, chunk_size_limit):
@@ -361,7 +373,7 @@ class PrivacyAccountant(object):
         other_axis_size = max(np.prod(A_shape), np.prod(B_shape))
         return int(other_axis_size / chunk_size_limit)
 
-    def unhook(self):
+    def unhook(self, model):
         """
         Remove and deactivate hooks added by .hook()
         """
@@ -371,26 +383,16 @@ class PrivacyAccountant(object):
         # Based on testing, the hooks are actually removed
         # Since hooks are removed, there is not an accumulation of hooks if the context manager is used within a loop
 
-        if not hasattr(self.model, 'autograd_hooks'):
+        if not hasattr(model, 'autograd_hooks'):
             print("Warning, asked to remove hooks, but no hooks found")
         else:
-            for handle in self.model.autograd_hooks:
+            for handle in model.autograd_hooks:
                 handle.remove()
-            del self.model.autograd_hooks
-
-        # The _hooks_enabled flag is a secondary fallback if hooks aren't removed
-        self._hooks_enabled = False
-
-    def __enter__(self):
-        self.hook()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.unhook()
+            del model.autograd_hooks
 
     @staticmethod
     def _check_grad(grad, instance_grad, reduction):
-        grad_2 = PrivacyAccountant._reduce_grad(instance_grad, reduction)
+        grad_2 = PrivacyOdometer._reduce_grad(instance_grad, reduction)
         if not torch.equal(torch.Tensor(list(grad.shape)), torch.Tensor(list(grad_2.shape))):
             raise ValueError(f"Non-private reconstructed gradient {grad_2.shape} differs from expected shape {grad.shape}")
         if not torch.allclose(grad, grad_2, atol=.01, equal_nan=True):
@@ -414,9 +416,9 @@ class PrivacyAccountant(object):
         """
 
         # clip
-        PrivacyAccountant._clip_grad_(grad_instance, actual_norm, clipping_norm)
+        PrivacyOdometer._clip_grad_(grad_instance, actual_norm, clipping_norm)
         # reduce
-        grad = PrivacyAccountant._reduce_grad(grad_instance, reduction)
+        grad = PrivacyOdometer._reduce_grad(grad_instance, reduction)
         # noise
         grad = self._noise_grad(grad, clipping_norm, reduction, grad_instance.shape[0])
 
@@ -438,7 +440,7 @@ class PrivacyAccountant(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        grad.apply_(self.find_suitable_step_measure(reduction, clipping_norm, n))
+        grad.apply_(self._find_suitable_step_measure(reduction, clipping_norm, n))
 
         if device != 'cpu':
             grad = grad.to(device)
@@ -477,13 +479,13 @@ class PrivacyAccountant(object):
                     num_steps=batch_len
                 ).check(self.dataset_distance, (batch_epsilon, batch_delta))
 
-            epsilon += binary_search(check_epsilon, 0., 10_000.)
+            epsilon += _binary_search(check_epsilon, 0., 10_000.)
             delta += batch_delta
 
         return epsilon, delta
 
 
-def binary_search(predicate, start, end):
+def _binary_search(predicate, start, end):
     if start > end:
         raise ValueError
 
