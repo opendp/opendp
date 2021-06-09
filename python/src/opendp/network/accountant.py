@@ -13,9 +13,12 @@ from typing import List
 
 import torch
 import torch.nn as nn
+from opendp.typing import RuntimeType, DatasetMetric
 from torch.nn.parameter import Parameter
 
-import opendp
+import opendp.trans as trans
+import opendp.meas as meas
+
 from opendp.network.layers.bahdanau import DPBahdanauAttention
 from opendp.network.layers.base import InstanceGrad
 from opendp.network.layers.lstm import DPLSTM, DPLSTMCell
@@ -27,8 +30,6 @@ REPLACEMENT_MODULES = {
     nn.LSTMCell: DPLSTMCell,
     'BahdanauAttention': DPBahdanauAttention
 }
-
-DATASET_SPACES = ('HammingDistance', 'SymmetricDistance')
 
 # see https://github.com/pytorch/pytorch/issues/56380
 FULL_BACKWARD_HOOK = False
@@ -83,8 +84,9 @@ class PrivacyAccountant(object):
             self._patch_first_hook()
 
         self.dataset_distance = dataset_distance
-        if dataset_space not in DATASET_SPACES:
-            raise ValueError(f"dataset_space must be one of {DATASET_SPACES}")
+        dataset_space = RuntimeType.parse(dataset_space)
+        if not isinstance(dataset_space, DatasetMetric):
+            raise ValueError(f"dataset_space must be a dataset metric")
         self.dataset_space = dataset_space
 
         self._hooks_enabled = False  # work-around for https://github.com/pytorch/pytorch/issues/25723
@@ -94,38 +96,38 @@ class PrivacyAccountant(object):
         self.steps = 0
         self._disable = disable
 
-        self.odp = opendp.OpenDP()
-
         if not disable and hook:
             self.hook()
 
-    def find_suitable_step_measure(self, reduction, clipping_norm, n):
+    def find_suitable_step_measure(self, reduction, clipping_norm, size):
         mechanism_name = 'gaussian' if self.step_delta else 'laplace'
         # find the tightest scale between 0. and 10k that satisfies the stepwise budget
-        scale = binary_search(lambda s: self._check_noise_scale(reduction, clipping_norm, n, mechanism_name, s),
-                                     0., 10_000.)
+        scale = binary_search(lambda s: self._check_noise_scale(reduction, clipping_norm, size, mechanism_name, s),
+                              0., 10_000.)
         return self._make_base_mechanism(mechanism_name, scale)
 
-    def _check_noise_scale(self, reduction, clipping_norm, n, mechanism_name, scale):
-        base_mechanism = self._make_base_mechanism(mechanism_name, scale)
-        sensitivity_space = {'laplace': 'L1Sensitivity<f64>', 'gaussian': 'L2Sensitivity<f64>'}[mechanism_name]
-        aggregator = {
-            "mean": lambda: self.odp.trans.make_bounded_mean(
-                f"<{self.dataset_space}, {sensitivity_space}, f64>".encode(),
-                opendp.f64_p(-clipping_norm), opendp.f64_p(clipping_norm), n),
-            "sum": lambda: self.odp.trans.make_bounded_sum(
-                f"<{self.dataset_space}, {sensitivity_space}, f64>".encode(),
-                opendp.f64_p(-clipping_norm), opendp.f64_p(clipping_norm))
-        }[reduction]()
-        chained = self.odp.core.make_chain_mt(base_mechanism, aggregator)
+    def _check_noise_scale(self, reduction, clipping_norm, size, mechanism_name, scale):
+
+        if reduction == 'mean':
+            aggregator = trans.make_sized_bounded_mean(
+                size, (-clipping_norm, clipping_norm))
+        elif reduction == 'sum':
+            aggregator = trans.make_sized_bounded_sum(
+                size, (-clipping_norm, clipping_norm))
+        else:
+            raise ValueError(f'unrecognized reduction: {reduction}. Must be "mean" or "sum"')
+
+        chained = aggregator >> self._make_base_mechanism(mechanism_name, scale)
 
         budget = (self.step_epsilon, self.step_delta) if self.step_delta else self.step_epsilon
-        check = self.odp.measurement_check(chained, self.dataset_distance, budget)
-        self.odp.core.measurement_free(chained)
-        return check
+        return chained.check(self.dataset_distance, budget)
 
-    def _make_base_mechanism(self, mechanism_name, scale):
-        return getattr(self.odp.meas, f"make_base_{mechanism_name}")(b"<f64>", opendp.f64_p(scale))
+    @staticmethod
+    def _make_base_mechanism(mechanism_name, scale):
+        if mechanism_name == 'laplace':
+            return meas.make_base_laplace(scale)
+        if mechanism_name == 'gaussian':
+            return meas.make_base_gaussian(scale)
 
     @staticmethod
     def _replace_modules(module, replacement_modules):
@@ -301,7 +303,7 @@ class PrivacyAccountant(object):
                     grad_instance = torch.zeros([batch_size, *module.weight.shape])
                     grad_instance.scatter_add_(1, A.reshape(*shape), B.reshape(*shape))
 
-                    InstanceGrad._accumulate_instance_grad(module.weight, grad_instance)
+                    InstanceGrad.accumulate_instance_grad(module.weight, grad_instance)
 
                     # # reconstructs exact grad
                     # grad = torch.zeros_like(module.weight.grad)
@@ -312,14 +314,14 @@ class PrivacyAccountant(object):
                     if len(A.shape) > 2:
                         for A, B in zip(torch.chunk(A, chunks=10, dim=1), torch.chunk(B, chunks=10, dim=1)):
                             grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
-                            InstanceGrad._accumulate_instance_grad(module.weight, torch.einsum('n...ij->nij', grad_instance))
+                            InstanceGrad.accumulate_instance_grad(module.weight, torch.einsum('n...ij->nij', grad_instance))
                             if module.bias is not None:
-                                InstanceGrad._accumulate_instance_grad(module.bias, torch.einsum('n...i->ni', B))
+                                InstanceGrad.accumulate_instance_grad(module.bias, torch.einsum('n...i->ni', B))
                     else:
                         grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
-                        InstanceGrad._accumulate_instance_grad(module.weight, torch.einsum('n...ij->nij', grad_instance))
+                        InstanceGrad.accumulate_instance_grad(module.weight, torch.einsum('n...ij->nij', grad_instance))
                         if module.bias is not None:
-                            InstanceGrad._accumulate_instance_grad(module.bias, torch.einsum('n...i->ni', B))
+                            InstanceGrad.accumulate_instance_grad(module.bias, torch.einsum('n...i->ni', B))
 
                 else:
                     raise NotImplementedError(f"Gradient reconstruction is not implemented for {module}")
@@ -395,9 +397,7 @@ class PrivacyAccountant(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        measurement = self.find_suitable_step_measure(reduction, clipping_norm, n)
-        grad.apply_(lambda x: self.odp.measurement_invoke(measurement, x))
-        self.odp.core.measurement_free(measurement)
+        grad.apply_(self.find_suitable_step_measure(reduction, clipping_norm, n))
 
         if device != 'cpu':
             grad = grad.to(device)
@@ -447,13 +447,11 @@ class PrivacyAccountant(object):
                 batch_delta = suggested_delta / len(self._epochs)
 
             def check_epsilon(batch_epsilon):
-                step_budget = (self.step_epsilon, self.step_delta or 0.)
-                batch_budget = (batch_epsilon, batch_delta)
-
-                amplifier = self.odp.meas.make_shuffle_amplification(f"<{self.dataset_space}>".encode(), *step_budget, batch_len)
-                check = self.odp.measurement_check(amplifier, self.dataset_distance, batch_budget)
-                self.odp.core.measurement_free(amplifier)
-                return check
+                return meas.make_shuffle_amplification(
+                    step_epsilon=self.step_epsilon,
+                    step_delta=self.step_delta or 0.,
+                    num_steps=batch_len
+                ).check(self.dataset_distance, (batch_epsilon, batch_delta))
 
             epsilon += binary_search(check_epsilon, 0., 10_000.)
             delta += batch_delta

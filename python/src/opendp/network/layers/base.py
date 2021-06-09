@@ -6,7 +6,7 @@ class InstanceGrad(object):
         raise NotImplementedError
 
     @staticmethod
-    def _accumulate_instance_grad(tensor, grad):
+    def accumulate_instance_grad(tensor, grad):
         if hasattr(tensor, 'grad_instance'):
             tensor.grad_instance += grad.detach()
         else:

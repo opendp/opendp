@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 use crate::error::*;
 use crate::dom::AllDomain;
-use crate::dist::{HammingDistance, SmoothedMaxDivergence, SymmetricDistance};
-use crate::core::{Measurement, Function, PrivacyRelation, DatasetMetric};
+use crate::dist::{SmoothedMaxDivergence, SymmetricDistance};
+use crate::core::{Measurement, Function, PrivacyRelation};
 use std::marker::PhantomData;
 
 
@@ -10,30 +10,19 @@ pub struct ShuffleAmplification<MI> {
     in_distance: PhantomData<MI>
 }
 
-pub trait ShuffleAmplificationConstant {
-    fn get_stability_constant() -> f64;
-}
-impl ShuffleAmplificationConstant for HammingDistance {
-    fn get_stability_constant() -> f64 { 2. }
-}
-impl ShuffleAmplificationConstant for SymmetricDistance {
-    fn get_stability_constant() -> f64 { 1. }
-}
-
 
 pub enum ShuffleBound {
     Empirical, Theoretical
 }
 
-fn make_shuffle_amplification<MI>(
+pub fn make_shuffle_amplification(
     step_epsilon: f64, step_delta: f64, n: u64, bound: ShuffleBound
-) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, MI, SmoothedMaxDivergence<f64>>>
-    where MI: DatasetMetric<Distance=u32> + ShuffleAmplificationConstant {
+) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, SymmetricDistance, SmoothedMaxDivergence<f64>>> {
     Ok(Measurement::new(
         AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(|_arg: &f64| unreachable!("this is not meant to be called")),
-        MI::default(),
+        SymmetricDistance::default(),
         SmoothedMaxDivergence::default(),
         PrivacyRelation::new_fallible(move |d_in: &u32, (eps, delta): &(f64, f64)| {
 
@@ -49,7 +38,7 @@ fn make_shuffle_amplification<MI>(
             let epoch_epsilon = match bound {
                 ShuffleBound::Empirical => compose_epsilon_empirical(step_epsilon, *delta, n)?,
                 ShuffleBound::Theoretical => compose_epsilon_theoretical(step_epsilon, *delta, n)
-            } * MI::get_stability_constant();
+            };
 
             // theorem 3.8
             let epoch_delta = compose_delta(*delta, epoch_epsilon, step_epsilon, step_delta, n);
@@ -182,13 +171,10 @@ fn binomial_cdf(x: u64, n: u64, p: f64) -> f64 {
 #[cfg(test)]
 mod compositor_tests {
     use super::*;
-    use crate::dist::HammingDistance;
-    use crate::meas::MakeMeasurement4;
-    use crate::error::ExplainUnwrap;
 
     #[test]
     fn theoretical() {
-        let amplifier = ShuffleAmplification::<HammingDistance>::make(
+        let amplifier = make_shuffle_amplification(
             1.0, 1e-8, 1000, ShuffleBound::Theoretical).unwrap_test();
         let check = amplifier.privacy_relation.eval(&1, &(10., 1e-6)).unwrap_test();
         println!("theoretical {:?}", check);
@@ -196,7 +182,7 @@ mod compositor_tests {
 
     #[test]
     fn empirical() {
-        let amplifier = ShuffleAmplification::<HammingDistance>::make(
+        let amplifier = make_shuffle_amplification(
             1.0, 1e-8, 1000, ShuffleBound::Empirical).unwrap_test();
         let check = amplifier.privacy_relation.eval(&1, &(10., 1e-6)).unwrap_test();
         println!("empirical {:?}", check);

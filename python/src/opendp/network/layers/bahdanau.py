@@ -33,10 +33,10 @@ class DPBahdanauAttentionScale(nn.Module, InstanceGrad):
 
         if self.normalize:
             g_grad_instance = torch.einsum('n...->n', ba * self.v) / torch.norm(self.v)
-            self._accumulate_instance_grad(self.g, g_grad_instance.unsqueeze(-1))
+            self.accumulate_instance_grad(self.g, g_grad_instance.unsqueeze(-1))
             v_grad_instance *= self.g / torch.norm(self.v)
 
-        self._accumulate_instance_grad(self.v, v_grad_instance)
+        self.accumulate_instance_grad(self.v, v_grad_instance)
 
 
 class DPBahdanauAttention(nn.Module):

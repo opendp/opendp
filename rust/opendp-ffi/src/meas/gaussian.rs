@@ -12,6 +12,7 @@ use opendp::traits::{CheckNull, InfCast};
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::{c_bool, to_bool, Type};
+use opendp::meas::shuffle::{ShuffleBound, make_shuffle_amplification};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(
@@ -31,6 +32,13 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
     dispatch!(monomorphize, [
         (D, [AllDomain<f64>, AllDomain<f32>, VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f32>>])
     ], (scale, analytic))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_meas__make_shuffle_amplification(
+    step_epsilon: f64, step_delta: f64, n: u64
+) -> FfiResult<*mut AnyMeasurement> {
+    make_shuffle_amplification(step_epsilon, step_delta, n, ShuffleBound::Theoretical).into_any()
 }
 
 

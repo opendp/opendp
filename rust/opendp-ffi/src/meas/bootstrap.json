@@ -234,5 +234,28 @@
         "ret": {
             "c_type": "FfiResult<AnyMeasurement *>"
         }
+    },
+    "make_shuffle_amplification": {
+        "description": "Make a Measurement that estimates privacy usage under shuffle amplification.",
+        "args": [
+            {
+                "name": "step_epsilon",
+                "c_type": "double",
+                "description": "Epsilon usage of each disjoint step."
+            },
+            {
+                "name": "step_delta",
+                "c_type": "double",
+                "description": "Epsilon usage of each disjoint step."
+            },
+            {
+                "name": "num_steps",
+                "c_type": "unsigned int",
+                "description": "Number of disjoint steps taken."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
     }
 }
