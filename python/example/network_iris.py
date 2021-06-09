@@ -74,16 +74,16 @@ optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 
 print("Epoch | Accuracy | Loss")
 
-accountant = PrivacyAccountant(model, step_epsilon=1.0, step_delta=1E-7)
+accountant = PrivacyAccountant(
+    model,
+    step_epsilon=1.0, step_delta=1E-7,
+    clipping_norm=1.0, reduction='mean')
 model = accountant.model
 
 for epoch in range(epochs):
     for batch in train_loader:
         loss = model.loss(batch)
         loss.backward()
-
-        accountant.privatize_grad(clipping_norm=1.0, reduction='mean')
-
         optimizer.step()
         optimizer.zero_grad()
         # for name, param in model.named_parameters():

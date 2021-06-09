@@ -134,9 +134,6 @@ def train(
             loss = accountant.model.loss(batch)
             loss.backward()
 
-            # privatize the gradient and record usage
-            accountant.privatize_grad()
-
             optimizer.step()
             optimizer.zero_grad()
 
