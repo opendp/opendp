@@ -71,6 +71,8 @@ class PrivacyOdometer(object):
         self.reduction = reduction
         self.clipping_norm = clipping_norm
 
+        self.is_tracking = False
+
     def make_tracked_view(
             self,
             model: nn.Module,
@@ -85,7 +87,7 @@ class PrivacyOdometer(object):
         :param model:
         :param replacement_modules: dict of custom module replacement classes
         :param whitelist: if defined, only hook these modules
-        :return:
+        :return: a copy of the model that shares parameters and has DP backprop
         """
 
         class _SharedParameter(Parameter):
@@ -122,8 +124,7 @@ class PrivacyOdometer(object):
             replacement_modules: Dict[Union[nn.Module, str], nn.Module] = None,
             whitelist: Optional[List[nn.Module]] = None
     ) -> None:
-        """
-        When .backward() is called on model, .grad on parameters is differentially private.
+        """When .backward() is called on model, .grad on each parameter is differentially private.
         The related budget costs are tracked in this odometer class.
 
         Adds hooks throughout the module tree to save activations and backprop values.
@@ -134,8 +135,15 @@ class PrivacyOdometer(object):
         1. save activations into module.activations during forward pass
         2. save backprops into module.backprops during backward pass.
         """
+        if self.is_tracking:
+            raise ValueError("An odometer can only track one model.")
+        self.is_tracking = True
 
+        # 1. MODULE REWRITING
         replacement_modules = {**REPLACEMENT_MODULES, **(replacement_modules or {})}
+
+        if model in replacement_modules:
+            raise ValueError("Root module cannot be replaced. Try wrapping the model in a module.")
 
         def replace_modules(module_):
             """
@@ -170,36 +178,41 @@ class PrivacyOdometer(object):
         if FULL_BACKWARD_HOOK:
             self._patch_first_hook(model)
 
-        def capture_activations(module_: nn.Module, input_: List[torch.Tensor], _output):
+        # 2. DEFINE HOOKS
+        def hook_module_forward(module_: nn.Module, input_: List[torch.Tensor], _output):
             """Save activations into module.activations in forward pass"""
             if not hasattr(module_, 'activations'):
                 module_.activations = []
             # NOTE: clone is required to prevent in-place-overwrite of stored activations
             module_.activations.append(tuple(in_arg.detach().clone() for in_arg in input_))
 
-        def capture_backprops(module_: nn.Module, _input: List[torch.Tensor], output: List[torch.Tensor]):
+        def hook_module_backward(module_: nn.Module, _input: List[torch.Tensor], output: List[torch.Tensor]):
             """Save backprops into module.backprops in backward pass"""
             if not hasattr(module_, 'backprops'):
                 module_.backprops = []
             # NOTE: clone is required to prevent in-place-overwrite of stored backprops
             module_.backprops.append(tuple(out_arg.detach().clone() for out_arg in output))
 
-        def get_batch_size(module_):
-            # first activation, first arg, first axis shape
-            return module_.activations[0][0].shape[0]
-
-        def privatization_hook(module_, param_, instance_grad_generator, grad):
+        def hook_param_grad(param_, module_, get_instance_grad, grad):
+            """
+            Privatization hook for parameters
+            :param param_: the parameter being hooked
+            :param module_: the module of the parameter being hooked
+            :param get_instance_grad: function that returns a generator containing instance grad chunks
+            :param grad: non-private gradient. Only useful for debugging grad correctness.
+            :return: private grad
+            """
 
             # ignore leading activations from evaluations outside of the training loop
             module_.activations = module_.activations[-len(module_.backprops):]
 
             if self.reduction == 'mean':
                 for backprop in module_.backprops:
-                    backprop *= get_batch_size(module_)
+                    backprop *= self._get_batch_size(module_)
 
             # backprops are in reverse-order
             for A, B in zip(module_.activations, module_.backprops[::-1]):
-                for chunk in instance_grad_generator(A, B):
+                for chunk in get_instance_grad(A, B):
                     if hasattr(param_, 'grad_instance'):
                         param_.grad_instance += chunk.detach()
                     else:
@@ -228,18 +241,17 @@ class PrivacyOdometer(object):
 
             return private_grad
 
+        # 3. SET HOOKS
         model.autograd_hooks = []
-        for module in [m for m in whitelist or model.modules() if self._has_params(m)]:
-            # ignore the module if it has no parameters
-            if next(module.parameters(recurse=False), None) is None:
-                continue
+        for module in self._filter_modules(model, whitelist):
 
-            # register global hooks
+            # hooks on the module
             model.autograd_hooks.extend([
-                module.register_forward_hook(capture_activations),
-                module.register_backward_hook(capture_backprops)
+                module.register_forward_hook(hook_module_forward),
+                module.register_backward_hook(hook_module_backward)
             ])
 
+            # hooks on each of the params. First need to define how to build instance grads for each param
             if isinstance(module, InstanceGrad):
                 # Dict[Parameter, Callable[[A, B], G]], where A is activations, B is backprops, G is instance grad
                 # A: tuple of activations, one for each argument
@@ -269,7 +281,7 @@ class PrivacyOdometer(object):
 
             elif isinstance(module, nn.Linear):
                 def weight_grad_generator(A, B):
-                    # linear is unary
+                    # linear is unary; there are only activations/backprops for one argument
                     A, B = A[0], B[0]
 
                     chunk_count = self._determine_chunk_count(A, B, chunk_size_limit=1000)
@@ -284,9 +296,9 @@ class PrivacyOdometer(object):
                         yield torch.einsum('n...ij->nij', grad_instance)
 
                 def bias_grad_generator(module_, A, B):
-                    A, B = A[0], B[0]
                     if module_.bias is None:
                         return
+                    A, B = A[0], B[0]
 
                     if len(A.shape) > 2:
                         for A, B in zip(torch.chunk(A, chunks=10, dim=1), torch.chunk(B, chunks=10, dim=1)):
@@ -302,8 +314,9 @@ class PrivacyOdometer(object):
             else:
                 raise NotImplementedError(f"Gradient reconstruction is not implemented for {module}")
 
+            # hooks on each of the params of the module
             for param in instance_grads:
-                hook = param.register_hook(partial(privatization_hook, module, param, instance_grads[param]))
+                hook = param.register_hook(partial(hook_param_grad, param, module, instance_grads[param]))
                 model.autograd_hooks.append(hook)
 
     def _find_suitable_step_measure(self, reduction, clipping_norm, size):
@@ -335,6 +348,12 @@ class PrivacyOdometer(object):
             return meas.make_base_laplace(scale)
         if mechanism_name == 'gaussian':
             return meas.make_base_gaussian(scale)
+
+    @staticmethod
+    def _get_batch_size(module_):
+        # first activation, first arg, first axis shape
+        # TODO: this could be flaky, especially around lstms
+        return module_.activations[0][0].shape[0]
 
     @staticmethod
     def _patch_first_hook(model):
@@ -369,15 +388,15 @@ class PrivacyOdometer(object):
         other_axis_size = max(np.prod(A_shape), np.prod(B_shape))
         return int(other_axis_size / chunk_size_limit)
 
-    def unhook(self, model):
+    @staticmethod
+    def _unhook(model):
         """
-        Remove and deactivate hooks added by .hook()
+        Remove hooks added to `model`. Does not reverse module replacement.
         """
 
         # This issue indicates that hooks are not actually removed if the forward pass is run
         # https://github.com/pytorch/pytorch/issues/25723
         # Based on testing, the hooks are actually removed
-        # Since hooks are removed, there is not an accumulation of hooks if the context manager is used within a loop
 
         if not hasattr(model, 'autograd_hooks'):
             print("Warning, asked to remove hooks, but no hooks found")
@@ -443,8 +462,10 @@ class PrivacyOdometer(object):
         return grad
 
     @staticmethod
-    def _has_params(module):
-        return next(module.parameters(recurse=False), None) is not None
+    def _filter_modules(model, whitelist=None):
+        def has_params(module):
+            return next(module.parameters(recurse=False), None) is not None
+        return [m for m in whitelist or model.modules() if has_params(m)]
 
     def increment_epoch(self):
         if self.steps:
