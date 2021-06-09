@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use crate::error::*;
-use crate::meas::MakeMeasurement4;
 use crate::dom::AllDomain;
 use crate::dist::{HammingDistance, SmoothedMaxDivergence, SymmetricDistance};
 use crate::core::{Measurement, Function, PrivacyRelation, DatasetMetric};
@@ -14,10 +13,10 @@ pub struct ShuffleAmplification<MI> {
 pub trait ShuffleAmplificationConstant {
     fn get_stability_constant() -> f64;
 }
-impl ShuffleAmplificationConstant for ShuffleAmplification<HammingDistance> {
+impl ShuffleAmplificationConstant for HammingDistance {
     fn get_stability_constant() -> f64 { 2. }
 }
-impl ShuffleAmplificationConstant for ShuffleAmplification<SymmetricDistance> {
+impl ShuffleAmplificationConstant for SymmetricDistance {
     fn get_stability_constant() -> f64 { 1. }
 }
 
@@ -26,40 +25,39 @@ pub enum ShuffleBound {
     Empirical, Theoretical
 }
 
-impl<MI> MakeMeasurement4<AllDomain<f64>, AllDomain<f64>, MI, SmoothedMaxDivergence<f64>, f64, f64, u64, ShuffleBound> for ShuffleAmplification<MI>
-    where MI: DatasetMetric<Distance=u32>,
-          Self: ShuffleAmplificationConstant {
-    fn make4(step_epsilon: f64, step_delta: f64, n: u64, bound: ShuffleBound) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, MI, SmoothedMaxDivergence<f64>>> {
-        Ok(Measurement::new(
-            AllDomain::new(),
-            AllDomain::new(),
-            Function::new_fallible(|_arg: &f64| unreachable!("this is not meant to be called")),
-            MI::new(),
-            SmoothedMaxDivergence::new(),
-            PrivacyRelation::new_fallible(move |d_in: &u32, (eps, delta): &(f64, f64)| {
+fn make_shuffle_amplification<MI>(
+    step_epsilon: f64, step_delta: f64, n: u64, bound: ShuffleBound
+) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, MI, SmoothedMaxDivergence<f64>>>
+    where MI: DatasetMetric<Distance=u32> + ShuffleAmplificationConstant {
+    Ok(Measurement::new(
+        AllDomain::new(),
+        AllDomain::new(),
+        Function::new_fallible(|_arg: &f64| unreachable!("this is not meant to be called")),
+        MI::default(),
+        SmoothedMaxDivergence::default(),
+        PrivacyRelation::new_fallible(move |d_in: &u32, (eps, delta): &(f64, f64)| {
 
-                let step_epsilon = step_epsilon * *d_in as f64;
-                let step_delta = step_delta * *d_in as f64;
+            let step_epsilon = step_epsilon * *d_in as f64;
+            let step_delta = step_delta * *d_in as f64;
 
-                let epsilon_constraint = (n as f64 / (16. * (2. / delta).ln())).ln();
-                if step_epsilon > epsilon_constraint {
-                    return fallible!(RelationDebug, "step_epsilon ({:?}) must be <= ln(n / (16 ln(2 / delta))) ({:?})", step_epsilon, epsilon_constraint)
-                }
+            let epsilon_constraint = (n as f64 / (16. * (2. / delta).ln())).ln();
+            if step_epsilon > epsilon_constraint {
+                return fallible!(RelationDebug, "step_epsilon ({:?}) must be <= ln(n / (16 ln(2 / delta))) ({:?})", step_epsilon, epsilon_constraint)
+            }
 
-                // TODO: double-check where d_in should be integrated
-                let epoch_epsilon = match bound {
-                    ShuffleBound::Empirical => compose_epsilon_empirical(step_epsilon, *delta, n)?,
-                    ShuffleBound::Theoretical => compose_epsilon_theoretical(step_epsilon, *delta, n)
-                } * Self::get_stability_constant();
+            // TODO: double-check where d_in should be integrated
+            let epoch_epsilon = match bound {
+                ShuffleBound::Empirical => compose_epsilon_empirical(step_epsilon, *delta, n)?,
+                ShuffleBound::Theoretical => compose_epsilon_theoretical(step_epsilon, *delta, n)
+            } * MI::get_stability_constant();
 
-                // theorem 3.8
-                let epoch_delta = compose_delta(*delta, epoch_epsilon, step_epsilon, step_delta, n);
-                println!("(eps, del): ({:?}, {:?})", epoch_epsilon, epoch_delta);
+            // theorem 3.8
+            let epoch_delta = compose_delta(*delta, epoch_epsilon, step_epsilon, step_delta, n);
+            println!("(eps, del): ({:?}, {:?})", epoch_epsilon, epoch_delta);
 
-                Ok((epoch_epsilon, epoch_delta) < (*eps, *delta))
-            }))
-        )
-    }
+            Ok((epoch_epsilon, epoch_delta) < (*eps, *delta))
+        }))
+    )
 }
 
 // theorem 3.8
