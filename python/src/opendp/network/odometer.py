@@ -24,6 +24,7 @@ from opendp.mod import binary_search
 from opendp.network.layers.bahdanau import DPBahdanauAttention
 from opendp.network.layers.base import InstanceGrad
 from opendp.network.layers.lstm import DPLSTM, DPLSTMCell
+from functools import partial
 
 CHECK_CORRECTNESS = False
 
@@ -136,13 +137,13 @@ class PrivacyOdometer(object):
 
         replacement_modules = {**REPLACEMENT_MODULES, **(replacement_modules or {})}
 
-        def replace_modules(module):
+        def replace_modules(module_):
             """
             replaces modules with DP-capable versions of modules throughout a network
             """
 
-            for attr_str in dir(module):
-                target_attr = getattr(module, attr_str)
+            for attr_str in dir(module_):
+                target_attr = getattr(module_, attr_str)
                 # ignore anything that isn't a module
                 if not issubclass(type(target_attr), nn.Module):
                     continue
@@ -156,10 +157,10 @@ class PrivacyOdometer(object):
                     replacement_module = replacement_modules.get(target_attr.__class__.__name__)
                 if replacement_module:
                     replacement_attr = replacement_module.replace(target_attr)
-                    setattr(module, attr_str, replacement_attr)
+                    setattr(module_, attr_str, replacement_attr)
 
             # recurse down child modules
-            for name, child_module in module.named_children():
+            for name, child_module in module_.named_children():
                 replace_modules(child_module)
 
         # restructure the copied network architecture in-place, without breaking references to original parameters
@@ -187,44 +188,45 @@ class PrivacyOdometer(object):
             # first activation, first arg, first axis shape
             return module_.activations[0][0].shape[0]
 
-        def make_privatization_hook(module_, param_, instance_grad_generator):
-            def privatization_hook(grad):
+        def privatization_hook(module_, param_, instance_grad_generator, grad):
 
-                # ignore leading activations from evaluations outside of the training loop
-                module_.activations = module_.activations[-len(module_.backprops):]
+            # ignore leading activations from evaluations outside of the training loop
+            module_.activations = module_.activations[-len(module_.backprops):]
 
-                if self.reduction == 'mean':
-                    for backprop in module_.backprops:
-                        backprop *= get_batch_size(module_)
+            if self.reduction == 'mean':
+                for backprop in module_.backprops:
+                    backprop *= get_batch_size(module_)
 
-                # backprops are in reverse-order
-                for A, B in zip(module_.activations, module_.backprops[::-1]):
-                    for chunk in instance_grad_generator(A, B):
-                        InstanceGrad.accumulate_instance_grad(param_, chunk)
+            # backprops are in reverse-order
+            for A, B in zip(module_.activations, module_.backprops[::-1]):
+                for chunk in instance_grad_generator(A, B):
+                    if hasattr(param_, 'grad_instance'):
+                        param_.grad_instance += chunk.detach()
+                    else:
+                        param_.grad_instance = chunk.detach()
 
-                if CHECK_CORRECTNESS:
-                    print('checking:', module_, param_.shape)
-                    self._check_grad(grad, param_.grad_instance, self.reduction)
+            if CHECK_CORRECTNESS:
+                print('checking:', module_, param_.shape)
+                self._check_grad(grad, param_.grad_instance, self.reduction)
 
-                actual_norm = torch.norm(
-                    param_.grad_instance.reshape(param_.grad_instance.shape[0], -1) ** 2,
-                    dim=1)
+            actual_norm = torch.norm(
+                param_.grad_instance.reshape(param_.grad_instance.shape[0], -1) ** 2,
+                dim=1)
 
-                private_grad = self._privatize_grad(
-                    param_.grad_instance, self.reduction,
-                    actual_norm, self.clipping_norm)
+            private_grad = self._privatize_grad(
+                param_.grad_instance, self.reduction,
+                actual_norm, self.clipping_norm)
 
-                del param_.grad_instance
-                param_.is_grad_dp = True
-                # clear module hook data once all param grads are dp
-                if all(hasattr(par, 'is_grad_dp') and par.is_grad_dp for par in module_.parameters(recurse=False)):
-                    del module_.activations
-                    del module_.backprops
-                    for par in module_.parameters(recurse=False):
-                        del par.is_grad_dp
+            del param_.grad_instance
+            param_.is_grad_dp = True
+            # clear module hook data once all param grads are dp
+            if all(hasattr(par, 'is_grad_dp') and par.is_grad_dp for par in module_.parameters(recurse=False)):
+                del module_.activations
+                del module_.backprops
+                for par in module_.parameters(recurse=False):
+                    del par.is_grad_dp
 
-                return private_grad
-            return privatization_hook
+            return private_grad
 
         model.autograd_hooks = []
         for module in [m for m in whitelist or model.modules() if self._has_params(m)]:
@@ -246,21 +248,19 @@ class PrivacyOdometer(object):
                 instance_grads = module.get_instance_grad_functions()
 
             elif isinstance(module, nn.Embedding):
-                def make_embedding_grad_generator(module):
-                    def embedding_grad_generator(A, B):
-                        # only take the first argument to embedding forward
-                        A, B = A[0], B[0]
-                        batch_size = A.shape[0]
-                        A = A.unsqueeze(-1).expand(*A.shape, module.embedding_dim)
-                        shape = batch_size, -1, module.embedding_dim
+                def embedding_grad_generator(module_, A, B):
+                    # only take the first argument to embedding forward
+                    A, B = A[0], B[0]
+                    batch_size = A.shape[0]
+                    A = A.unsqueeze(-1).expand(*A.shape, module_.embedding_dim)
+                    shape = batch_size, -1, module_.embedding_dim
 
-                        # massive... empty... tensor, because clip doesn't distribute
-                        grad_instance = torch.zeros([batch_size, *module.weight.shape])
-                        grad_instance.scatter_add_(1, A.reshape(*shape), B.reshape(*shape))
-                        yield grad_instance
-                    return embedding_grad_generator
+                    # massive... empty... tensor, because clip doesn't distribute
+                    grad_instance = torch.zeros([batch_size, *module_.weight.shape])
+                    grad_instance.scatter_add_(1, A.reshape(*shape), B.reshape(*shape))
+                    yield grad_instance
 
-                instance_grads = {module.weight: make_embedding_grad_generator(module)}
+                instance_grads = {module.weight: partial(embedding_grad_generator, module)}
 
                 # # reconstructs exact grad
                 # grad = torch.zeros_like(module.weight.grad)
@@ -268,47 +268,43 @@ class PrivacyOdometer(object):
                 # self._accumulate_grad(module.weight, grad)
 
             elif isinstance(module, nn.Linear):
-                def make_weight_grad_generator(_module):
-                    def weight_grad_generator(A, B):
-                        # linear is unary
-                        A, B = A[0], B[0]
+                def weight_grad_generator(A, B):
+                    # linear is unary
+                    A, B = A[0], B[0]
 
-                        chunk_count = self._determine_chunk_count(A, B, chunk_size_limit=1000)
-                        if len(A.shape) > 2 and chunk_count:
-                            for A, B in zip(
-                                    torch.chunk(A, chunks=chunk_count, dim=1),
-                                    torch.chunk(B, chunks=chunk_count, dim=1)):
-                                grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
-                                yield torch.einsum('n...ij->nij', grad_instance)
-                        else:
+                    chunk_count = self._determine_chunk_count(A, B, chunk_size_limit=1000)
+                    if len(A.shape) > 2 and chunk_count:
+                        for A, B in zip(
+                                torch.chunk(A, chunks=chunk_count, dim=1),
+                                torch.chunk(B, chunks=chunk_count, dim=1)):
                             grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
                             yield torch.einsum('n...ij->nij', grad_instance)
-                    return weight_grad_generator
+                    else:
+                        grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
+                        yield torch.einsum('n...ij->nij', grad_instance)
 
-                def make_bias_grad_generator(module):
-                    def bias_grad_generator(A, B):
-                        A, B = A[0], B[0]
-                        if module.bias is None:
-                            return
+                def bias_grad_generator(module_, A, B):
+                    A, B = A[0], B[0]
+                    if module_.bias is None:
+                        return
 
-                        if len(A.shape) > 2:
-                            for A, B in zip(torch.chunk(A, chunks=10, dim=1), torch.chunk(B, chunks=10, dim=1)):
-                                yield torch.einsum('n...i->ni', B)
-                        else:
+                    if len(A.shape) > 2:
+                        for A, B in zip(torch.chunk(A, chunks=10, dim=1), torch.chunk(B, chunks=10, dim=1)):
                             yield torch.einsum('n...i->ni', B)
-                    return bias_grad_generator
+                    else:
+                        yield torch.einsum('n...i->ni', B)
 
                 instance_grads = {
-                    module.weight: make_weight_grad_generator(module),
-                    module.bias: make_bias_grad_generator(module),
+                    module.weight: weight_grad_generator,
+                    module.bias: partial(bias_grad_generator, module),
                 }
 
             else:
                 raise NotImplementedError(f"Gradient reconstruction is not implemented for {module}")
 
             for param in instance_grads:
-                privatization_hook = make_privatization_hook(module, param, instance_grads[param])
-                model.autograd_hooks.append(param.register_hook(privatization_hook))
+                hook = param.register_hook(partial(privatization_hook, module, param, instance_grads[param]))
+                model.autograd_hooks.append(hook)
 
     def _find_suitable_step_measure(self, reduction, clipping_norm, size):
         mechanism_name = 'gaussian' if self.step_delta else 'laplace'

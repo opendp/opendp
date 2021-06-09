@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Callable, Iterable
 
 import torch
 import torch.nn as nn
@@ -22,9 +22,9 @@ class DPCatBias(nn.Module, InstanceGrad):
     def forward(self, query):
         return torch.cat([query, self.bias.repeat(1, query.size(1), 1)])
 
-    def update_instance_grad(self, activation, backprop):
+    def get_instance_grad_functions(self) -> Dict[nn.Parameter, Callable[[torch.Tensor, torch.Tensor], Iterable[torch.Tensor]]]:
         # grab the last column of the backprop for the layer, which corresponds to the cat'ed column
-        self._accumulate_grad(self.bias, backprop[:, -1])
+        return {self.bias: lambda _activation, backprop: backprop[:, -1]}
 
 
 class DPMultiheadAttention(nn.Module):

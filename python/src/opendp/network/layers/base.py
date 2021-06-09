@@ -1,13 +1,14 @@
-from torch.tensor import Tensor
+from typing import Callable, Dict, Iterable
+
+import torch
+import torch.nn as nn
 
 
 class InstanceGrad(object):
-    def update_instance_grad(self, activation: Tensor, backprop: Tensor):
-        raise NotImplementedError
-
-    @staticmethod
-    def accumulate_instance_grad(tensor, grad):
-        if hasattr(tensor, 'grad_instance'):
-            tensor.grad_instance += grad.detach()
-        else:
-            tensor.grad_instance = grad.detach()
+    def get_instance_grad_functions(self) -> Dict[nn.Parameter, Callable[[torch.Tensor, torch.Tensor], Iterable[torch.Tensor]]]:
+        """
+        Returns a function for each parameter.
+        Each function is provided activations and backprops,
+            and returns an iterator that contains chunks of instance gradients
+        """
+        raise NotImplementedError("get_instance_grad_functions is not defined")

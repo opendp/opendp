@@ -1,4 +1,5 @@
 import math
+from typing import Dict, Callable, Iterable
 
 import torch
 import torch.nn as nn
@@ -27,16 +28,29 @@ class DPBahdanauAttentionScale(nn.Module, InstanceGrad):
             x = x * self.g / torch.norm(self.v)
         return x * self.v
 
-    def update_instance_grad(self, activation, backprop):
-        ba = backprop * activation
-        v_grad_instance = torch.einsum('n...i->ni', ba)
+    def get_instance_grad_functions(self) -> Dict[nn.Parameter, Callable[[torch.Tensor, torch.Tensor], Iterable[torch.Tensor]]]:
+        def grad_v(activations, backprops):
+            v_grad_instance = torch.einsum('n...i->ni', backprops * activations)
+            if self.normalize:
+                v_grad_instance *= self.g / torch.norm(self.v)
+            yield v_grad_instance
 
-        if self.normalize:
-            g_grad_instance = torch.einsum('n...->n', ba * self.v) / torch.norm(self.v)
-            self.accumulate_instance_grad(self.g, g_grad_instance.unsqueeze(-1))
-            v_grad_instance *= self.g / torch.norm(self.v)
+        def grad_g(activations, backprops):
+            if self.normalize:
+                yield torch.einsum('n...->n', backprops * activations * self.v) / torch.norm(self.v).unsqueeze(-1)
 
-        self.accumulate_instance_grad(self.v, v_grad_instance)
+        return {self.v: grad_v, self.g: grad_g}
+
+    # def update_instance_grad(self, activation, backprop):
+    #     ba = backprop * activation
+    #     v_grad_instance = torch.einsum('n...i->ni', ba)
+    #
+    #     if self.normalize:
+    #         g_grad_instance = torch.einsum('n...->n', ba * self.v) / torch.norm(self.v)
+    #         self.accumulate_instance_grad(self.g, g_grad_instance.unsqueeze(-1))
+    #         v_grad_instance *= self.g / torch.norm(self.v)
+    #
+    #     self.accumulate_instance_grad(self.v, v_grad_instance)
 
 
 class DPBahdanauAttention(nn.Module):
