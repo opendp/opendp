@@ -11,7 +11,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
+/python/build/
 develop-eggs/
 dist/
 downloads/
@@ -154,3 +154,6 @@ Cargo.lock
 /python/example/pums/data
 /data/
 /data_censored/
+
+/python/docs/
+/python/docs_temp/

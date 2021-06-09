@@ -3,12 +3,21 @@ name = "opendp-ffi"
 version = "0.1.0"
 authors = ["Andrew Vyrros <6577271+andrewvyrros@users.noreply.github.com>"]
 edition = "2018"
+build = "build/main.rs"
 
 [dependencies]
 opendp = { path = "../opendp" }
 lazy_static = "1.4.0"
 num = "0.3.1"
 backtrace = "0.3"
+
+[build-dependencies]
+serde_json = {version = "1.0.64", features = ["preserve_order"] }
+serde = { version = "1.0.126", features = ["derive"] }
+indexmap = {version = "1.6.2", features = ["serde"] }
+
+[features]
+python = []
 
 [lib]
 crate-type = ["rlib", "cdylib"]

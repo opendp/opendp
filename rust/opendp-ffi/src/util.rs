@@ -84,7 +84,7 @@ impl Type {
             }
             Type::of_id(&args[0])
         } else {
-            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- L1Sensitivity<u32>")
+            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, L1Sensitivity<u32>")
         }
     }
 }
@@ -180,7 +180,7 @@ impl TryFrom<&str> for Type {
     type Error = Error;
     fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: {:?}", value))
+        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: `{}`", value))
     }
 }
 

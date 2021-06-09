@@ -158,10 +158,10 @@ mod tests {
     use crate::dom::VectorDomain;
     use crate::error::*;
     use crate::meas::*;
+    use crate::poly::PolyDomain;
     use crate::trans::*;
 
     use super::*;
-    use crate::poly::PolyDomain;
 
     fn make_dummy_meas<TO: From<i32>>() -> Measurement<AllDomain<i32>, AllDomain<TO>, L1Sensitivity<f64>, MaxDivergence<f64>> {
         Measurement::new(
@@ -253,17 +253,17 @@ mod tests {
         // Noisy count
         let measurement1 = (
             make_count()? >>
-                make_base_geometric(1.0 / d_out_query, count_bounds.0, count_bounds.1)?
+            make_base_geometric(1.0 / d_out_query, count_bounds.0, count_bounds.1)?
         )?.into_poly();
         let query1 = (measurement1, d_out_query);
-        let _result1: u32 = queryable.eval_poly(&query1)?;
+        let _result1: i32 = queryable.eval_poly(&query1)?;
         // println!("_result = {}", result1);
 
         // Noisy sum
         let measurement2 = (
             make_clamp_vec(val_bounds.0, val_bounds.1)? >>
-                make_bounded_sum(val_bounds.0, val_bounds.1)? >>
-                make_base_laplace(1.0 / d_out_query)?
+            make_bounded_sum(val_bounds.0, val_bounds.1)? >>
+            make_base_laplace(1.0 / d_out_query)?
         )?.into_poly();
         let query2 = (measurement2, d_out_query);
         let _result2: f64 = queryable.eval_poly(&query2)?;

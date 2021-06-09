@@ -7,12 +7,13 @@ use opendp::core::{DatasetMetric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
-use opendp::traits::{CastFrom, DistanceConstant};
-use opendp::trans::{make_cast_vec, make_clamp, make_clamp_vec, make_identity};
+use opendp::traits::{CastFrom, DistanceConstant, DistanceCast};
+use opendp::trans::{make_cast_vec, make_clamp_sensitivity, make_clamp_vec, make_identity};
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
+use std::ops::Sub;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(
@@ -45,7 +46,7 @@ pub extern "C" fn opendp_trans__make_identity(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_clamp(
+pub extern "C" fn opendp_trans__make_clamp_sensitivity(
     lower: *const c_void, upper: *const c_void,
     M: *const c_char, T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
@@ -58,11 +59,11 @@ pub extern "C" fn opendp_trans__make_clamp(
             lower: *const c_void, upper: *const c_void,
         ) -> FfiResult<*mut AnyTransformation>
             where M: 'static + SensitivityMetric,
-                  T: 'static + Clone + PartialOrd,
+                  T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T>,
                   M::Distance: DistanceConstant + One {
             let lower = try_as_ref!(lower as *const T).clone();
             let upper = try_as_ref!(upper as *const T).clone();
-            make_clamp::<M, T>(lower, upper).into_any()
+            make_clamp_sensitivity::<M, T>(lower, upper).into_any()
         }
         dispatch!(monomorphize2, [
             (M, [L1Sensitivity<Q>, L2Sensitivity<Q>]),
@@ -136,8 +137,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_clamp() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_clamp(
+    fn test_make_clamp_sensitivity() -> Fallible<()> {
+        let transformation = Result::from(opendp_trans__make_clamp_sensitivity(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(10.0) as *const c_void,
             "L2Sensitivity<f64>".to_char_p(),

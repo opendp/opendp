@@ -2,10 +2,11 @@ use std::collections::Bound;
 
 use num::One;
 
-use crate::core::{DatasetMetric, Domain, Function, Metric, StabilityRelation, Transformation};
+use crate::core::{DatasetMetric, Domain, Function, Metric, StabilityRelation, Transformation, SensitivityMetric};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{CastFrom, DistanceConstant};
+use crate::traits::{CastFrom, DistanceConstant, DistanceCast};
+use std::ops::Sub;
 
 
 /// Constructs a [`Transformation`] representing the identity function.
@@ -25,6 +26,7 @@ pub fn make_clamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<Vecto
     where M: Metric,
           T: 'static + Clone + PartialOrd,
           M::Distance: DistanceConstant + One {
+    if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
@@ -35,18 +37,30 @@ pub fn make_clamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<Vecto
         StabilityRelation::new_from_constant(M::Distance::one())))
 }
 
-pub fn make_clamp<M, T>(lower: T, upper: T) -> Fallible<Transformation<AllDomain<T>, IntervalDomain<T>, M, M>>
-    where M: Metric,
-          T: 'static + Clone + PartialOrd,
+fn min<T: PartialOrd>(a: T, b: T) -> T { if a < b {a} else {b} }
+
+pub fn make_clamp_sensitivity<M, T>(lower: T, upper: T) -> Fallible<Transformation<AllDomain<T>, IntervalDomain<T>, M, M>>
+    where M: SensitivityMetric,
+          T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T>,
           M::Distance: DistanceConstant + One {
+    if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
     Ok(Transformation::new(
         AllDomain::new(),
         IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone())),
-        Function::new(move |arg: &T| clamp(&lower, &upper, arg)),
+        Function::new(enclose!((lower, upper), move |arg: &T| clamp(&lower, &upper, arg))),
         M::default(),
         M::default(),
-        // clamping has a c-stability of one, as well as a lipschitz constant of one
-        StabilityRelation::new_from_constant(M::Distance::one())))
+        // the sensitivity is at most upper - lower
+        StabilityRelation::new_all(
+            // relation
+            enclose!((lower, upper), move |d_in: &M::Distance, d_out: &M::Distance|
+                Ok(d_out.clone() >= min(d_in.clone(), M::Distance::distance_cast(upper.clone() - lower.clone())?))),
+            // forward map
+            Some(enclose!((lower, upper), move |d_in: &M::Distance|
+                Ok(Box::new(min(d_in.clone(), M::Distance::distance_cast(upper.clone() - lower.clone())?))))),
+            // backward map
+            None::<fn(&_)->_>
+        )))
 }
 
 fn clamp<T: Clone + PartialOrd>(lower: &T, upper: &T, x: &T) -> T {

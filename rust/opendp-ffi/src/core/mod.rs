@@ -7,7 +7,7 @@ use opendp::error::*;
 
 use crate::any::{AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
 use crate::util;
-use crate::util::c_bool;
+use crate::util::{c_bool, into_c_char_p};
 
 pub mod chain;
 
@@ -43,11 +43,15 @@ impl FfiError {
 
 impl From<Error> for FfiError {
     fn from(mut error: Error) -> Self {
-        error.backtrace.resolve();
         Self {
             variant: try_!(util::into_c_char_p(format!("{:?}", error.variant))),
             message: try_!(error.message.map_or(Ok(ptr::null::<c_char>() as *mut c_char), util::into_c_char_p)),
-            backtrace: try_!(util::into_c_char_p(format!("{:?}", error.backtrace))),
+            backtrace: try_!(util::into_c_char_p(if let ErrorVariant::RelationDebug = error.variant{
+                String::default()
+            } else {
+                error.backtrace.resolve();
+                format!("{:?}", error.backtrace)
+            })),
         }
     }
 }
@@ -179,16 +183,33 @@ impl<T> From<FfiResult<*mut T>> for Fallible<T> {
 
 #[no_mangle]
 #[must_use]
-pub extern "C" fn opendp_core__error_free(this: *mut FfiError) -> bool {
+pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
     util::into_owned(this).is_ok()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_check(this: *const AnyMeasurement, distance_in: *const AnyMetricDistance, distance_out: *const AnyMeasureDistance) -> FfiResult<*mut c_bool> {
-    let this = try_as_ref!(this);
+pub extern "C" fn opendp_core__transformation_check(
+    transformation: *const AnyTransformation,
+    distance_in: *const AnyMetricDistance,
+    distance_out: *const AnyMetricDistance
+) -> FfiResult<*mut c_bool> {
+    let transformation = try_as_ref!(transformation);
     let distance_in = try_as_ref!(distance_in);
     let distance_out = try_as_ref!(distance_out);
-    let status = try_!(this.privacy_relation.eval(distance_in, distance_out));
+    let status = try_!(transformation.stability_relation.eval(&distance_in, &distance_out));
+    FfiResult::Ok(util::into_raw(util::from_bool(status)))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_check(
+    measurement: *const AnyMeasurement,
+    distance_in: *const AnyMetricDistance,
+    distance_out: *const AnyMeasureDistance
+) -> FfiResult<*mut c_bool> {
+    let measurement = try_as_ref!(measurement);
+    let distance_in = try_as_ref!(distance_in);
+    let distance_out = try_as_ref!(distance_out);
+    let status = try_!(measurement.privacy_relation.eval(distance_in, distance_out));
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
@@ -200,7 +221,7 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const AnyMeasurement, a
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__measurement_free(this: *mut AnyMeasurement) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
@@ -212,8 +233,44 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformat
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_core___transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_carrier_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_carrier_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_output_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.output_metric.distance_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
+    let this = try_as_ref!(this);
+    FfiResult::Ok(try_!(into_c_char_p(this.output_measure.distance_type.descriptor.to_string())))
 }
 
 

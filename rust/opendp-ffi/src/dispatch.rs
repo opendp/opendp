@@ -100,7 +100,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => opendp::err!(FFI, "No match for concrete type {:?}/{}", $rt_type.id, $rt_type.descriptor).into()
+            _ => opendp::err!(FFI, "No match for concrete type {} ({:?})", $rt_type.descriptor, $rt_type.id).into()
         }
     };
 }
@@ -118,10 +118,11 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [i32, f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32, f64]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, i32, f64]), $rt_dispatch_types, $type_args, $args)
     };
+    // TODO: remove i32 once we have Vec<String> data loader
     ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @floats),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [f64]), $rt_dispatch_types, $type_args, $args)
@@ -135,7 +136,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => opendp::err!(FFI, "No match for concrete type {:?}/{}", $rt_type.id, $rt_type.descriptor).into()
+            _ => opendp::err!(FFI, "No match for concrete type {} ({:?})", $rt_type.descriptor, $rt_type.id).into()
         }
     };
 }
