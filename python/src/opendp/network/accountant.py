@@ -200,23 +200,23 @@ class PrivacyAccountant(object):
 
         modules = [m for m in self.modules or self.model.modules() if self._has_params(m)]
 
-        def capture_activations(module: nn.Module, input: List[torch.Tensor], _output):
+        def capture_activations(module_: nn.Module, input_: List[torch.Tensor], _output):
             """Save activations into module.activations in forward pass"""
             if not self._hooks_enabled:
                 return
-            if not hasattr(module, 'activations'):
-                module.activations = []
+            if not hasattr(module_, 'activations'):
+                module_.activations = []
             # NOTE: clone is required to prevent in-place-overwrite of stored activations
-            module.activations.append(tuple(in_arg.detach().clone() for in_arg in input))
+            module_.activations.append(tuple(in_arg.detach().clone() for in_arg in input_))
 
-        def capture_backprops(module: nn.Module, _input: List[torch.Tensor], output: List[torch.Tensor]):
+        def capture_backprops(module_: nn.Module, _input: List[torch.Tensor], output: List[torch.Tensor]):
             """Save backprops into module.backprops in backward pass"""
             if not self._hooks_enabled:
                 return
-            if not hasattr(module, 'backprops'):
-                module.backprops = []
+            if not hasattr(module_, 'backprops'):
+                module_.backprops = []
             # NOTE: clone is required to prevent in-place-overwrite of stored backprops
-            module.backprops.append(tuple(out_arg.detach().clone() for out_arg in output))
+            module_.backprops.append(tuple(out_arg.detach().clone() for out_arg in output))
 
         def get_batch_size(module):
             # first activation, first arg, first axis shape
@@ -447,23 +447,6 @@ class PrivacyAccountant(object):
     @staticmethod
     def _has_params(module):
         return next(module.parameters(recurse=False), None) is not None
-
-    def make_private_optimizer(self, optimizer, *args, **kwargs):
-
-        class _PrivacyOptimizer(optimizer):
-            """Extend *Optimizer with custom step function."""
-
-            def __init__(_self, *_args, **_kwargs):
-                _self.accountant = self
-                super().__init__(*_args, **_kwargs)
-
-            def step(_self, *_args, **_kwargs):
-                r"""Performs a single optimization step (parameter update)."""
-                with _self.accountant:
-                    _self.accountant.privatize_grad(*_args, **_kwargs)
-                return super().step(*_args, **_kwargs)
-
-        return _PrivacyOptimizer(*args, **kwargs)
 
     def increment_epoch(self):
         if self.steps:
