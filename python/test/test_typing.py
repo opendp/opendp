@@ -1,7 +1,8 @@
 import sys
 from typing import List, Tuple, Any
 
-from opendp.v1.typing import RuntimeType, L1Sensitivity, SensitivityMetric, L2Sensitivity
+from opendp.v1.mod import UnknownTypeException
+from opendp.v1.typing import RuntimeType, L1Sensitivity, SensitivityMetric, L2Sensitivity, DatasetMetric
 
 
 def test_typing_hint():
@@ -19,11 +20,13 @@ def test_typing_hint():
     assert str(RuntimeType.parse(List[int])) == "Vec<i32>"
     assert str(RuntimeType.parse(List[List[str]])) == "Vec<Vec<String>>"
     assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
+    assert isinstance(RuntimeType.parse('HammingDistance'), DatasetMetric)
+    assert isinstance(RuntimeType.parse('L1Sensitivity<f64>'), SensitivityMetric)
 
     try:
         RuntimeType.parse(List[Any])
         raise Exception("typing.Any should fail to parse")
-    except ValueError:
+    except UnknownTypeException:
         pass
 
 

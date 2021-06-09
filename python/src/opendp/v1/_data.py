@@ -14,7 +14,8 @@ def _to_string(
     :type this: Any
     :return: String representation of `this` AnyObject.
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -41,7 +42,8 @@ def _slice_as_object(
     :type T: RuntimeTypeDescriptor
     :return: An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
     :rtype: Any
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -70,7 +72,8 @@ def _slice_as_metric_distance(
     :param T: 
     :type T: RuntimeTypeDescriptor
     :return: An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information.
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -99,7 +102,8 @@ def _slice_as_measure_distance(
     :param T: 
     :type T: RuntimeTypeDescriptor
     :return: An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information.
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -126,7 +130,8 @@ def _object_type(
     :type this: Any
     :return: The rust type associated with `this` AnyObject.
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -150,7 +155,8 @@ def _object_as_slice(
     :type this: Any
     :return: An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
     :rtype: Any
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -172,7 +178,8 @@ def _object_free(
     
     :param this: 
     :type this: Any
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -193,7 +200,8 @@ def _slice_free(
     
     :param this: 
     :type this: Any
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -214,7 +222,8 @@ def _str_free(
     
     :param this: 
     :type this: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -234,7 +243,8 @@ def _bool_free(
     Used to clean up after the relation check.
     
     :param this: 
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.

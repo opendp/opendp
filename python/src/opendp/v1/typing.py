@@ -18,7 +18,7 @@ RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- HammingDistance; RuntimeType.parse("i32")
     _GenericAlias,  # a python type hint from the std typing module -- List[int]
     str,  # plaintext string in terms of rust types -- "Vec<i32>"
-    Type[Union[typing.List, int, float, str, bool]],  # using the python type class itself -- int; float; bool
+    Type[Union[typing.List, typing.Tuple, int, float, str, bool]],  # using the python type class itself -- int, float
     tuple,  # shorthand for tuples -- (float, "f64"); (HammingDistance, List[int])
 ]
 
@@ -60,7 +60,7 @@ class RuntimeType(object):
         :param type_name: type specifier
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
-        :raises ValueError: if `type_name` fails to parse
+        :raises UnknownTypeError: if `type_name` fails to parse
 
         :examples:
 
@@ -98,8 +98,24 @@ class RuntimeType(object):
             if type_name.startswith('(') and type_name.endswith(')'):
                 return RuntimeType('Tuple', cls._parse_args(type_name[1:-1]))
             start, end = type_name.find('<'), type_name.rfind('>')
+
+            # attempt to upgrade strings to the metric/measure instance
+            origin = type_name[:start] if 0 < start else type_name
+            closeness = {
+                'HammingDistance': HammingDistance,
+                'SymmetricDistance': SymmetricDistance,
+                'L1Sensitivity': L1Sensitivity,
+                'L2Sensitivity': L2Sensitivity,
+                'MaxDivergence': MaxDivergence,
+                'SmoothedMaxDivergence': SmoothedMaxDivergence
+            }.get(origin)
+            if closeness is not None:
+                if isinstance(closeness, (SensitivityMetric, PrivacyMeasure)):
+                    return closeness[cls._parse_args(type_name[start + 1: end])[0]]
+                return closeness
+
             if 0 < start < end < len(type_name):
-                return RuntimeType(type_name[:start], cls._parse_args(type_name[start + 1: end]))
+                return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end]))
             if start == end < 0:
                 return type_name
 
@@ -107,9 +123,9 @@ class RuntimeType(object):
             return ELEMENTARY_TYPES[type_name]
 
         if type_name == tuple:
-            raise ValueError(f"non-parameterized argument")
+            raise UnknownTypeException(f"non-parameterized argument")
 
-        raise ValueError(f"unable to parse type: {type_name}")
+        raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
     def _parse_args(cls, args):

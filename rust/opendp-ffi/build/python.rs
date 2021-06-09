@@ -171,13 +171,16 @@ fn generate_docstring(func: &Function, func_name: &String, hierarchy: &HashMap<S
         .collect::<Vec<String>>()
         .join("\n");
 
-    let raises = if func.ret.c_type_origin() == "FfiResult" {
-        "\n:raises OpenDPException: packaged error from the core OpenDP library"
-    } else {""};
+    let raises = format!(
+        r#":raises AssertionError: if an argument's type differs from the expected type
+:raises UnknownTypeError: if a type-argument fails to parse{opendp_raise}"#,
+        opendp_raise = if func.ret.c_type_origin() == "FfiResult" {
+            "\n:raises OpenDPException: packaged error from the core OpenDP library"
+        } else { "" });
 
     format!(r#""""{description}
 {doc_args}{ret_arg}
-:raises AssertionError: if type of argument differs from the expected type{raises}
+{raises}
 """"#,
             description = description,
             doc_args = doc_args,

@@ -14,7 +14,8 @@ def _error_free(
     :type error: FfiError
     :return: true indicates successful free
     :rtype: bool
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     """
     # No type arguments to standardize.
     # No arguments to convert to c types.
@@ -33,7 +34,8 @@ def _transformation_free(
     
     :param transformation: 
     :type transformation: Transformation
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -53,7 +55,8 @@ def _measurement_free(
     
     :param measurement: 
     :type measurement: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -79,7 +82,8 @@ def transformation_check(
     :param d_out: Distance in terms of the output metric.
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -109,7 +113,8 @@ def measurement_check(
     :param d_out: Distance in terms of the output measure.
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -138,7 +143,8 @@ def measurement_invoke(
     :type arg: Any
     :return: Differentially private release.
     :rtype: Any
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -167,7 +173,8 @@ def transformation_invoke(
     :type arg: Any
     :return: Non-differentially private answer to the query.
     :rtype: Any
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -195,7 +202,8 @@ def make_chain_mt(
     :type transformation: Transformation
     :return: Measurement representing the chained computation.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -223,7 +231,8 @@ def make_chain_tt(
     :type transformation0: Transformation
     :return: Transformation representing the chained computation.
     :rtype: Transformation
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -251,7 +260,8 @@ def make_basic_composition(
     :type measurement1: Measurement
     :return: Measurement representing the composed transformations.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -275,7 +285,8 @@ def transformation_input_carrier_type(
     :param transformation: The transformation to retrieve the type from.
     :type transformation: Transformation
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -298,7 +309,8 @@ def measurement_input_carrier_type(
     :param measurement: The measurement to retrieve the type from.
     :type measurement: Measurement
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -321,7 +333,8 @@ def transformation_input_distance_type(
     :param transformation: The transformation to retrieve the type from.
     :type transformation: Transformation
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -344,7 +357,8 @@ def transformation_output_distance_type(
     :param transformation: The transformation to retrieve the type from.
     :type transformation: Transformation
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -367,7 +381,8 @@ def measurement_input_distance_type(
     :param measurement: The measurement to retrieve the type from.
     :type measurement: Measurement
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
@@ -390,7 +405,8 @@ def measurement_output_distance_type(
     :param measurement: The measurement to retrieve the type from.
     :type measurement: Measurement
     :rtype: str
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.

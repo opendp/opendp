@@ -19,7 +19,8 @@ def make_base_laplace(
     :type T: RuntimeTypeDescriptor
     :return: A base_laplace step.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -48,7 +49,8 @@ def make_base_laplace_vec(
     :type T: RuntimeTypeDescriptor
     :return: A base_laplace_vec step.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -77,7 +79,8 @@ def make_base_gaussian(
     :type T: RuntimeTypeDescriptor
     :return: A base_gaussian step.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -106,7 +109,8 @@ def make_base_gaussian_vec(
     :type T: RuntimeTypeDescriptor
     :return: A base_gaussian_vec step.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -143,7 +147,8 @@ def make_base_geometric(
     :type QO: RuntimeTypeDescriptor
     :return: A base_geometric step.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -187,7 +192,8 @@ def make_base_stability(
     :type TIC: RuntimeTypeDescriptor
     :return: A base_stability step.
     :rtype: Measurement
-    :raises AssertionError: if type of argument differs from the expected type
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
