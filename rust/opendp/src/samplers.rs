@@ -332,39 +332,57 @@ impl MantissaDigits for f32 { const MANTISSA_DIGITS: u32 = f32::MANTISSA_DIGITS;
 impl MantissaDigits for f64 { const MANTISSA_DIGITS: u32 = f64::MANTISSA_DIGITS; }
 
 #[cfg(feature = "use-mpfr")]
-pub trait CastRug: MantissaDigits + Sized {
-    fn from_rug(v: Float) -> Self;
-    fn into_rug(self) -> Float;
+pub trait CastInternalReal: MantissaDigits + Sized {
+    fn from_internal(v: Float) -> Self;
+    fn into_internal(self) -> Float;
+}
+
+#[cfg(not(feature = "use-mpfr"))]
+pub trait CastInternalReal: rand::distributions::uniform::SampleUniform + SampleGaussian {
+    fn from_internal(v: Self) -> Self;
+    fn into_internal(self) -> Self;
 }
 
 #[cfg(feature = "use-mpfr")]
-impl CastRug for f64 {
-    fn from_rug(v: Float) -> Self { v.to_f64() }
-    fn into_rug(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
+impl CastInternalReal for f64 {
+    fn from_internal(v: Float) -> Self { v.to_f64() }
+    fn into_internal(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
 }
 
 #[cfg(feature = "use-mpfr")]
-impl CastRug for f32 {
-    fn from_rug(v: Float) -> Self { v.to_f32() }
-    fn into_rug(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
+impl CastInternalReal for f32 {
+    fn from_internal(v: Float) -> Self { v.to_f32() }
+    fn into_internal(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
+}
+
+#[cfg(not(feature = "use-mpfr"))]
+impl CastInternalReal for f64 {
+    fn from_internal(v: f64) -> Self { v }
+    fn into_internal(self) -> Self { self }
+}
+
+#[cfg(not(feature = "use-mpfr"))]
+impl CastInternalReal for f32 {
+    fn from_internal(v: f32) -> Self { v }
+    fn into_internal(self) -> Self { self }
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastRug + SampleRademacher> SampleLaplace for T {
+impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
         if enforce_constant_time {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
 
-        let shift = shift.into_rug();
-        let scale = scale.into_rug() * T::sample_standard_rademacher()?.into_rug();
+        let shift = shift.into_internal();
+        let scale = scale.into_internal() * T::sample_standard_rademacher()?.into_internal();
         let standard_exponential_sample = {
             let mut rng = GeneratorOpenSSL {};
             let mut state = ThreadRandState::new_custom(&mut rng);
             rug::Float::with_val(Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state))
         };
 
-        Ok(Self::from_rug(standard_exponential_sample.mul_add(&scale, &shift)))
+        Ok(Self::from_internal(standard_exponential_sample.mul_add(&scale, &shift)))
     }
 }
 
@@ -380,7 +398,7 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastRug> SampleGaussian for T {
+impl<T: CastInternalReal> SampleGaussian for T {
 
     fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
         if enforce_constant_time {
@@ -395,9 +413,9 @@ impl<T: CastRug> SampleGaussian for T {
         let gauss = rug::Float::with_val(Self::MANTISSA_DIGITS, Float::random_normal(&mut state));
 
         // initialize floats within mpfr/rug
-        let shift = shift.into_rug();
-        let scale = scale.into_rug();
-        Ok(Self::from_rug(gauss.mul_add(&scale, &shift)))
+        let shift = shift.into_internal();
+        let scale = scale.into_internal();
+        Ok(Self::from_internal(gauss.mul_add(&scale, &shift)))
     }
 }
 
