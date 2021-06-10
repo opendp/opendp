@@ -13,6 +13,7 @@ from typing import List, Optional, Union, Dict
 import numpy as np
 
 import torch
+from torch.linalg import norm
 import torch.nn as nn
 from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
 from torch.nn.parameter import Parameter
@@ -206,31 +207,41 @@ class PrivacyOdometer(object):
             # ignore leading activations from evaluations outside of the training loop
             module_.activations = module_.activations[-len(module_.backprops):]
 
-            if self.reduction == 'mean':
-                for backprop in module_.backprops:
-                    backprop *= self._get_batch_size(module_)
+            def norm_sum(chunk):
+                chunk = chunk.detach()
+                return torch.sum(chunk.reshape(chunk.size()[0], -1) ** 2, axis=1)
 
-            # backprops are in reverse-order
-            for A, B in zip(module_.activations, module_.backprops[::-1]):
-                for chunk in get_instance_grad(A, B):
-                    if hasattr(param_, 'grad_instance'):
-                        param_.grad_instance += chunk.detach()
-                    else:
-                        param_.grad_instance = chunk.detach()
+            def sum_pass(A, B, mapper):
+                """sum the gradients associated with one forward/backward pass"""
+                return sum(map(mapper, get_instance_grad(A, B)))
 
-            if CHECK_CORRECTNESS:
-                print('checking:', module_, param_.shape)
-                self._check_grad(grad, param_.grad_instance, self.reduction)
+            def sum_all_passes(mapper):
+                # backprops are in reverse-order
+                return sum(sum_pass(A, B, mapper) for A, B in zip(module_.activations, module_.backprops[::-1]))
 
-            actual_norm = torch.norm(
-                param_.grad_instance.reshape(param_.grad_instance.shape[0], -1) ** 2,
-                dim=1)
+            actual_norm = torch.sqrt(sum_all_passes(norm_sum))
 
-            private_grad = self._privatize_grad(
-                param_.grad_instance, self.reduction,
-                actual_norm, self.clipping_norm)
+            # if CHECK_CORRECTNESS:
+            #     print('checking:', module_, param_.shape)
+            #     if self.reduction == 'mean':
+            #         for backprop in module_.backprops:
+            #             backprop *= self._get_batch_size(module_)
+            #     self._check_grad(grad, param_.grad_instance, self.reduction)
+            # actual_norm = norm(
+            #     param_.grad_instance.reshape(param_.grad_instance.shape[0], -1),
+            #     dim=1)
 
-            del param_.grad_instance
+            def clip_chunk(chunk):
+                """clip and then sum all leading axes of chunk, leaving a tensor of shape _param.shape"""
+                chunk = chunk.detach()
+                self.clip_grad_(chunk, actual_norm)
+                return torch.sum(chunk.reshape(-1, *param_.shape), axis=0)
+
+            clipped_grad = sum_all_passes(clip_chunk)
+
+            private_grad = self._noise_grad(
+                clipped_grad, self.clipping_norm, self.reduction, self._get_batch_size(module_))
+
             param_.is_grad_dp = True
             # clear module hook data once all param grads are dp
             if all(hasattr(par, 'is_grad_dp') and par.is_grad_dp for par in module_.parameters(recurse=False)):
@@ -420,35 +431,11 @@ class PrivacyOdometer(object):
             print(grad_2)
             raise ValueError("Non-private reconstructed gradient differs in value")
 
-    def _privatize_grad(self, grad_instance, reduction, actual_norm, clipping_norm):
-        """
-
-        :param grad_instance:
-        :param reduction:
-        :param actual_norm:
-        :param clipping_norm:
-        :return:
-        """
-
-        # clip
-        PrivacyOdometer._clip_grad_(grad_instance, actual_norm, clipping_norm)
-        # reduce
-        grad = PrivacyOdometer._reduce_grad(grad_instance, reduction)
-        # noise
-        grad = self._noise_grad(grad, clipping_norm, reduction, grad_instance.shape[0])
-
-        return grad
-
-    @staticmethod
-    def _clip_grad_(grad_instance, actual_norm, clipping_norm):
+    def clip_grad_(self, grad_instance, actual_norm):
         singletons = (1,) * (grad_instance.ndim - 1)
-        grad_instance /= torch.max(torch.ones_like(actual_norm), actual_norm / clipping_norm) \
+        grad_instance /= torch.max(torch.ones_like(actual_norm), actual_norm / self.clipping_norm) \
             .reshape(-1, *singletons) \
             .expand_as(grad_instance)
-
-    @staticmethod
-    def _reduce_grad(grad_instance, reduction):
-        return {'sum': torch.sum, 'mean': torch.mean}[reduction](grad_instance, dim=0)
 
     def _noise_grad(self, grad, clipping_norm, reduction, n):
         device = grad.device
