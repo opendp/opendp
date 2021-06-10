@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::File;
+use std::fs::{File, canonicalize};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -118,8 +118,8 @@ fn main() {
 
 #[allow(dead_code)]
 fn write_bindings(files: IndexMap<PathBuf, String>) {
-    let base_dir = PathBuf::from(env::var("OPENDP_PYTHON_SRC_DIR")
-        .expect("failed to read environment variable OPENDP_PYTHON_SRC_DIR"));
+    let base_dir = env::var("OPENDP_PYTHON_SRC_DIR").map(PathBuf::from)
+        .unwrap_or_else(|_| canonicalize("../../python/src/opendp/v1").unwrap());
     for (file_path, file_contents) in files {
         File::create(base_dir.join(file_path)).unwrap()
             .write_all(file_contents.as_ref()).unwrap();
