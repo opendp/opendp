@@ -9,7 +9,7 @@ use opendp::core::SensitivityMetric;
 use opendp::dist::{L1Sensitivity, L2Sensitivity};
 use opendp::err;
 use opendp::meas::{BaseStabilityNoise, make_base_stability};
-use opendp::samplers::CastRug;
+use opendp::samplers::CastInternalReal;
 
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
@@ -28,14 +28,14 @@ pub extern "C" fn opendp_meas__make_base_stability(
         n: usize, scale: *const c_void, threshold: *const c_void,
         MI: Type, TIK: Type, TIC: Type,
     ) -> FfiResult<*mut AnyMeasurement>
-        where TOC: 'static + PartialOrd + Clone + NumCast + Float + CastRug {
+        where TOC: 'static + PartialOrd + Clone + NumCast + Float + CastInternalReal {
         fn monomorphize2<MI, TIK, TIC>(
             n: usize, scale: MI::Distance, threshold: MI::Distance,
         ) -> FfiResult<*mut AnyMeasurement>
             where MI: 'static + SensitivityMetric + BaseStabilityNoise,
                   TIK: 'static + Eq + Hash + Clone,
                   TIC: 'static + Integer + Zero + One + AddAssign + Clone + NumCast,
-                  MI::Distance: 'static + Clone + NumCast + PartialOrd + Float + CastRug {
+                  MI::Distance: 'static + Clone + NumCast + PartialOrd + Float + CastInternalReal {
             make_base_stability::<MI, TIK, TIC>(n, scale, threshold).into_any()
         }
         let scale = *try_as_ref!(scale as *const TOC);
