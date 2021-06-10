@@ -334,7 +334,7 @@ class PrivacyOdometer(object):
         mechanism_name = 'gaussian' if self.step_delta else 'laplace'
         # find the tightest scale between 0. and 10k that satisfies the stepwise budget
         scale = binary_search(lambda s: self._check_noise_scale(reduction, clipping_norm, size, mechanism_name, s),
-                              0., 10_000.)
+                              (0., 10_000.))
         return self._make_base_mechanism(mechanism_name, scale)
 
     def _check_noise_scale(self, reduction, clipping_norm, size, mechanism_name, scale):
@@ -359,6 +359,13 @@ class PrivacyOdometer(object):
             return meas.make_base_laplace(scale)
         if mechanism_name == 'gaussian':
             return meas.make_base_gaussian(scale)
+
+    @staticmethod
+    def _make_base_mechanism_vec(mechanism_name, scale):
+        if mechanism_name == 'laplace':
+            return meas.make_base_laplace_vec(scale)
+        if mechanism_name == 'gaussian':
+            return meas.make_base_gaussian_vec(scale)
 
     @staticmethod
     def _get_batch_size(module_):
@@ -442,7 +449,8 @@ class PrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        grad.apply_(self._find_suitable_step_measure(reduction, clipping_norm, n))
+        measurement = self._find_suitable_step_measure(reduction, clipping_norm, n)
+        grad = torch.FloatTensor(measurement(grad)).reshape(grad.shape)
 
         if device != 'cpu':
             grad = grad.to(device)

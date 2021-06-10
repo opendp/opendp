@@ -75,7 +75,7 @@ optimizer = torch.optim.Adam(model.parameters(), learning_rate)
 print("Epoch | Accuracy | Loss")
 
 odometer = PrivacyOdometer(
-    step_epsilon=1.0, step_delta=1E-7,
+    step_epsilon=1.0,
     clipping_norm=1.0, reduction='mean')
 private_model = odometer.make_tracked_view(model)
 
