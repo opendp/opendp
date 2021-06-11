@@ -6,10 +6,13 @@ edition = "2018"
 build = "build/main.rs"
 
 [dependencies]
-opendp = { path = "../opendp" }
 lazy_static = "1.4.0"
 num = "0.3.1"
 backtrace = "0.3"
+
+[dependencies.opendp]
+path = "../opendp"
+default-features = false
 
 [build-dependencies]
 serde_json = {version = "1.0.64", features = ["preserve_order"] }
@@ -17,7 +20,11 @@ serde = { version = "1.0.126", features = ["derive"] }
 indexmap = {version = "1.6.2", features = ["serde"] }
 
 [features]
+default = ["use-mpfr", "python"]
 python = []
+# re-export features from opendp
+use-mpfr = ["opendp/use-mpfr"]
+use-system-libs = ["opendp/use-system-libs"]
 
 [lib]
 crate-type = ["rlib", "cdylib"]
