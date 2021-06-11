@@ -64,42 +64,6 @@ def make_split_lines(
     return c_to_py(unwrap(function(M), Transformation))
 
 
-def make_parse_series(
-    impute: bool,
-    M: DatasetMetric,
-    TO: RuntimeTypeDescriptor
-) -> Transformation:
-    """Make a Transformation that parses a Vec<String> into a Vec<T>.
-    
-    :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
-    :type impute: bool
-    :param M: dataset metric
-    :type M: DatasetMetric
-    :param TO: atomic type of the output vector
-    :type TO: RuntimeTypeDescriptor
-    :return: A parse_series step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # Standardize type arguments.
-    M = RuntimeType.parse(type_name=M)
-    TO = RuntimeType.parse(type_name=TO)
-    
-    # Convert arguments to c types.
-    impute = py_to_c(impute, c_type=ctypes.c_bool)
-    M = py_to_c(M, c_type=ctypes.c_char_p)
-    TO = py_to_c(TO, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_trans__make_parse_series
-    function.argtypes = [ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(impute, M, TO), Transformation))
-
-
 def make_split_records(
     separator: str,
     M: DatasetMetric

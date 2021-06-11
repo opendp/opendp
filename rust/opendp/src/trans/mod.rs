@@ -9,6 +9,9 @@ pub mod sum;
 pub mod count;
 pub mod mean;
 pub mod variance;
+pub mod impute;
+pub mod clamp;
+pub mod cast;
 
 pub use crate::trans::dataframe::*;
 pub use crate::trans::manipulation::*;
@@ -16,3 +19,6 @@ pub use crate::trans::sum::*;
 pub use crate::trans::count::*;
 pub use crate::trans::mean::*;
 pub use crate::trans::variance::*;
+pub use crate::trans::impute::*;
+pub use crate::trans::clamp::*;
+pub use crate::trans::cast::*;

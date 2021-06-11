@@ -223,7 +223,7 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Fallible<Tr
 mod test_shift_op {
     use crate::dist::HammingDistance;
     use crate::meas::geometric::make_base_geometric;
-    use crate::trans::{make_bounded_sum, make_clamp_vec, make_parse_series, make_split_lines};
+    use crate::trans::{make_bounded_sum, make_parse_series, make_split_lines, make_clamp_vec};
 
     use super::*;
 

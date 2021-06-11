@@ -1,6 +1,5 @@
 from opendp.v1.trans import *
 from opendp.v1.meas import *
-from opendp.v1.core import *
 
 from opendp.v1.typing import HammingDistance, L1Sensitivity
 
@@ -8,7 +7,7 @@ from opendp.v1.typing import HammingDistance, L1Sensitivity
 def main():
 
     ### HELLO WORLD
-    identity = make_identity(HammingDistance, str)
+    identity = make_identity(M=HammingDistance, T=str)
     arg = "hello, world!"
     res = identity(arg)
     print(res)

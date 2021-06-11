@@ -182,3 +182,20 @@ impl<D: Domain> Domain for SizedDomain<D> {
         self.element_domain.member(val)
     }
 }
+
+/// A domain with a built-in representation of nullity, that may be null
+#[derive(Clone, PartialEq)]
+pub struct NullableDomain<D: Domain> {
+    pub element_domain: D,
+}
+impl<D: Domain> NullableDomain<D> {
+    pub fn new(member_domain: D) -> Self {
+        NullableDomain { element_domain: member_domain }
+    }
+}
+impl<D: Domain> Domain for NullableDomain<D> {
+    type Carrier = D::Carrier;
+    fn member(&self, val: &Self::Carrier) -> bool {
+        self.element_domain.member(val)
+    }
+}

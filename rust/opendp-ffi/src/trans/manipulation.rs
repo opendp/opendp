@@ -175,8 +175,8 @@ mod tests {
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
-        let res: Vec<f64> = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, vec![1.0, 2.0, 3.0]);
+        let res: Vec<Option<f64>> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, vec![Some(1.0), Some(2.0), Some(3.0)]);
         Ok(())
     }
 }

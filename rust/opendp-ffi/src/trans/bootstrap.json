@@ -33,30 +33,6 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_parse_series": {
-        "description": "Make a Transformation that parses a Vec<String> into a Vec<T>.",
-        "args": [
-            {
-                "name": "impute",
-                "c_type": "bool",
-                "description": "Enable to impute values that fail to parse. If false, raise an error if parsing fails."
-            },
-            {
-                "name": "M",
-                "c_type": "char *",
-                "hint": "DatasetMetric",
-                "is_type": true,
-                "description": "dataset metric"
-            },
-            {
-                "name": "TO",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "atomic type of the output vector"
-            }
-        ],
-        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
-    },
     "make_split_records": {
         "description": "Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.",
         "args": [
