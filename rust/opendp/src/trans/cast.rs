@@ -1,8 +1,8 @@
 use crate::error::Fallible;
 use crate::core::{Transformation, DatasetMetric, Function, StabilityRelation};
-use crate::dom::{VectorDomain, AllDomain};
+use crate::dom::{VectorDomain, AllDomain, NullableDomain};
 use crate::traits::{DistanceConstant, CastFrom};
-use num::One;
+use num::{One, Float};
 
 
 /// A [`Transformation`] that casts elements between types
@@ -53,6 +53,22 @@ pub fn make_is_equal<M, T>(
         M::default(),
         StabilityRelation::new_from_constant(M::Distance::one())
     ))
+}
+
+/// A [`Transformation`] that casts elements to a type that can express nullity internally.
+/// Maps a Vec<TI> -> Vec<TO>
+pub fn make_cast_vec_nullable<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<NullableDomain<AllDomain<TO>>>, M, M>>
+    where M: DatasetMetric<Distance=u32>,
+          TI: Clone, TO: CastFrom<TI> + Float {
+    Ok(Transformation::new(
+        VectorDomain::new_all(),
+        VectorDomain::new(NullableDomain::new(AllDomain::new())),
+        Function::new(move |arg: &Vec<TI>| arg.iter()
+            .map(|v| TO::cast(v.clone()).unwrap_or(TO::nan()))
+            .collect()),
+        M::default(),
+        M::default(),
+        StabilityRelation::new_from_constant(1_u32)))
 }
 
 // casting primitive types is not exposed over ffi.
