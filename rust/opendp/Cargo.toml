@@ -15,6 +15,7 @@ statrs = "0.13.0"
 [dependencies.openssl]
 version = "0.10.29"
 features = ["vendored"]
+optional = true
 
 [dependencies.rug]
 version = "1.9.0"
@@ -29,9 +30,11 @@ features = ["mpfr"]
 optional = true
 
 [features]
-default = ["use-mpfr"]
-# re-export use-system-libs from mpfr
+default = ["use-openssl", "use-mpfr"]
+
+use-openssl = ["openssl"]
 use-mpfr = ["gmp-mpfr-sys", "rug"]
+# re-export use-system-libs from mpfr
 use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 
 [lib]
