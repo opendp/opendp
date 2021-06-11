@@ -4,22 +4,29 @@ use std::ops::{AddAssign, Neg};
 use ieee754::Ieee754;
 
 use num::{One, Zero};
-use openssl::rand::rand_bytes;
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
-
-
-pub fn fill_bytes(mut buffer: &mut [u8]) -> Fallible<()> {
-    if let Err(e) = rand_bytes(&mut buffer) {
-        fallible!(FailedFunction, "OpenSSL error: {:?}", e)
-    } else { Ok(()) }
-}
 
 use crate::error::Fallible;
 #[cfg(not(feature="use-mpfr"))]
 use statrs::function::erf;
-#[cfg(not(feature="use-mpfr"))]
+#[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
+
+#[cfg(feature="use-openssl")]
+pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
+    use openssl::rand::rand_bytes;
+    if let Err(e) = rand_bytes(buffer) {
+        fallible!(FailedFunction, "OpenSSL error: {:?}", e)
+    } else { Ok(()) }
+}
+
+#[cfg(not(feature="use-openssl"))]
+pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
+    if let Err(e) = rand::thread_rng().try_fill(buffer) {
+        fallible!(FailedFunction, "Rand error: {:?}", e)
+    } else { Ok(()) }
+}
 
 #[cfg(feature="use-mpfr")]
 struct GeneratorOpenSSL;

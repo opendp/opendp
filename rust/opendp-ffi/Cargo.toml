@@ -20,10 +20,11 @@ serde = { version = "1.0.126", features = ["derive"] }
 indexmap = {version = "1.6.2", features = ["serde"] }
 
 [features]
-default = ["use-mpfr", "python"]
+default = ["use-openssl", "use-mpfr", "python"]
 python = []
-# re-export features from opendp
+use-openssl = ["opendp/use-openssl"]
 use-mpfr = ["opendp/use-mpfr"]
+# re-export features from opendp
 use-system-libs = ["opendp/use-system-libs"]
 
 [lib]
