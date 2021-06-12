@@ -2,8 +2,8 @@ use std::ops::{Add, Mul, Sub};
 
 use num::{Float, One};
 
-use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation, Domain};
-use crate::dom::{AllDomain, VectorDomain, NullableDomain};
+use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
+use crate::dom::{AllDomain, NullableDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::samplers::SampleUniform;
 use crate::traits::DistanceConstant;
@@ -40,6 +40,7 @@ pub fn make_impute_uniform_float<M, T>(
 pub trait ImputableDomain: Domain {
     type NonNull;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull;
+    fn is_null(constant: &Self::NonNull) -> bool;
     fn new() -> Self;
 }
 // how to impute, when null represented as Option<T>
@@ -48,14 +49,16 @@ impl<T: Clone> ImputableDomain for AllDomain<Option<T>> {
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
         default.as_ref().unwrap_or(constant)
     }
+    fn is_null(_constant: &Self::NonNull) -> bool { false }
     fn new() -> Self { AllDomain::new() }
 }
 // how to impute, when null represented as T with internal nullity
 impl<T: Float> ImputableDomain for NullableDomain<AllDomain<T>> {
     type NonNull = Self::Carrier;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
-        if default.is_nan() {constant} else {default}
+        if default.is_nan() { constant } else { default }
     }
+    fn is_null(constant: &Self::NonNull) -> bool { constant.is_nan() }
     fn new() -> Self { NullableDomain::new(AllDomain::new()) }
 }
 
@@ -70,6 +73,7 @@ pub fn make_impute_constant<DA, M>(
           DA::NonNull: 'static + Clone,
           M: DatasetMetric<Distance=u32>,
           M::Distance: One + DistanceConstant {
+    if DA::is_null(&constant) { return fallible!(MakeTransformation, "Constant may not be null.") }
 
     Ok(Transformation::new(
         VectorDomain::new(DA::new()),
@@ -87,7 +91,7 @@ pub fn make_impute_constant<DA, M>(
 mod test {
     use crate::dist::HammingDistance;
     use crate::error::ExplainUnwrap;
-    use crate::trans::{make_impute_uniform_float, make_impute_constant};
+    use crate::trans::{make_impute_constant, make_impute_uniform_float};
 
     #[test]
     fn test_impute_uniform() {
