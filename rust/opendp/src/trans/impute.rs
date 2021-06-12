@@ -37,23 +37,23 @@ pub fn make_impute_uniform_float<M, T>(
 }
 
 // utility trait to replace null with a constant, regardless of the representation of null
-pub trait NullDomainConstant: Domain {
+pub trait ImputeNull: Domain {
     type Inner;
-    fn replace_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner;
+    fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner;
     fn new() -> Self;
 }
 // how to replace null, when null represented as Option<T>
-impl<T: Clone> NullDomainConstant for AllDomain<Option<T>> {
+impl<T: Clone> ImputeNull for AllDomain<Option<T>> {
     type Inner = T;
-    fn replace_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
+    fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
         default.as_ref().unwrap_or(constant)
     }
     fn new() -> Self { AllDomain::new() }
 }
 // how to replace null, when null represented as T with internal nullity
-impl<T: Float> NullDomainConstant for NullableDomain<AllDomain<T>> {
+impl<T: Float> ImputeNull for NullableDomain<AllDomain<T>> {
     type Inner = Self::Carrier;
-    fn replace_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
+    fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
         if default.is_nan() {constant} else {default}
     }
     fn new() -> Self { NullableDomain::new(AllDomain::new()) }
@@ -65,7 +65,7 @@ pub fn make_impute_constant<DAtom, M>(
     constant: DAtom::Inner
 ) -> Fallible<Transformation<VectorDomain<DAtom>, VectorDomain<AllDomain<DAtom::Inner>>, M, M>>
     where M: DatasetMetric<Distance=u32>,
-          DAtom: NullDomainConstant,
+          DAtom: ImputeNull,
           DAtom::Inner: 'static + Clone,
           M::Distance: One + DistanceConstant {
 
@@ -73,7 +73,7 @@ pub fn make_impute_constant<DAtom, M>(
         VectorDomain::new(DAtom::new()),
         VectorDomain::new_all(),
         Function::new(move |arg: &Vec<DAtom::Carrier>| arg.iter()
-            .map(|v| DAtom::replace_null(v, &constant))
+            .map(|v| DAtom::impute_null(v, &constant))
             .cloned().collect()),
         M::default(),
         M::default(),
