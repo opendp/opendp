@@ -2,55 +2,84 @@ use std::collections::Bound;
 
 use num::One;
 
-use crate::core::{DatasetMetric, Function, Metric, StabilityRelation, Transformation, SensitivityMetric};
+use crate::core::{DatasetMetric, Function, Metric, StabilityRelation, Transformation, SensitivityMetric, Domain};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, DistanceCast};
 use std::ops::Sub;
 
-pub fn make_clamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, M, M>>
-    where M: DatasetMetric,
-          T: 'static + Clone + PartialOrd,
-          M::Distance: DistanceConstant + One {
-    if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
-        Function::new(move |arg: &Vec<T>| arg.iter().map(|e| clamp(&lower, &upper, e)).collect()),
-        M::default(),
-        M::default(),
-        // clamping has a c-stability of one, as well as a lipschitz constant of one
-        StabilityRelation::new_from_constant(M::Distance::one())))
+pub trait ClampableDomain<M, DO>: Domain
+    where M: Metric, DO: Domain {
+    type Atom;
+    fn new_input_domain() -> Self;
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> DO;
+    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, DO>;
+    fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<M, M>;
 }
 
-fn min<T: PartialOrd>(a: T, b: T) -> T { if a < b {a} else {b} }
+impl<M, T> ClampableDomain<M, VectorDomain<IntervalDomain<T>>> for VectorDomain<AllDomain<T>>
+    where M: DatasetMetric,
+          M::Distance: DistanceConstant + One,
+          T: 'static + PartialOrd + Clone, {
+    type Atom = T;
+    fn new_input_domain() -> Self { VectorDomain::new_all() }
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> VectorDomain<IntervalDomain<T>> {
+        VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone())))
+    }
+    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, VectorDomain<IntervalDomain<T>>> {
+        Function::new(move |arg: &Vec<T>| arg.iter().map(|v| clamp(&lower, &upper, v)).cloned().collect())
+    }
+    fn stability_relation(_lower: Self::Atom, _upper: Self::Atom) -> StabilityRelation<M, M> {
+        StabilityRelation::new_from_constant(M::Distance::one())
+    }
+}
 
-pub fn make_clamp_sensitivity<M, T>(lower: T, upper: T) -> Fallible<Transformation<AllDomain<T>, IntervalDomain<T>, M, M>>
+impl<M, T> ClampableDomain<M, IntervalDomain<T>> for AllDomain<T>
     where M: SensitivityMetric,
-          T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T>,
-          M::Distance: DistanceConstant + One {
-    if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
-    Ok(Transformation::new(
-        AllDomain::new(),
-        IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone())),
-        Function::new(enclose!((lower, upper), move |arg: &T| clamp(&lower, &upper, arg))),
-        M::default(),
-        M::default(),
+          M::Distance: DistanceConstant + One,
+          T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T> {
+    type Atom = Self::Carrier;
+
+    fn new_input_domain() -> Self { AllDomain::new() }
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> IntervalDomain<T> {
+        IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))
+    }
+    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, IntervalDomain<T>> {
+        Function::new(move |arg: &T| clamp(&lower, &upper, arg).clone())
+    }
+    fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<M, M> {
         // the sensitivity is at most upper - lower
         StabilityRelation::new_all(
             // relation
             enclose!((lower, upper), move |d_in: &M::Distance, d_out: &M::Distance|
                 Ok(d_out.clone() >= min(d_in.clone(), M::Distance::distance_cast(upper.clone() - lower.clone())?))),
             // forward map
-            Some(enclose!((lower, upper), move |d_in: &M::Distance|
-                Ok(Box::new(min(d_in.clone(), M::Distance::distance_cast(upper.clone() - lower.clone())?))))),
+            Some(move |d_in: &M::Distance|
+                Ok(Box::new(min(d_in.clone(), M::Distance::distance_cast(upper.clone() - lower.clone())?)))),
             // backward map
             None::<fn(&_)->_>
-        )))
+        )
+    }
 }
 
-fn clamp<T: Clone + PartialOrd>(lower: &T, upper: &T, x: &T) -> T {
-    (if x < lower { lower } else if x > upper { upper } else { x }).clone()
+pub fn make_clamp<DI, DO, M>(lower: DI::Atom, upper: DI::Atom) -> Fallible<Transformation<DI, DO, M, M>>
+    where DI: ClampableDomain<M, DO>,
+          DI::Atom: Clone + PartialOrd,
+          DO: Domain,
+          M: Metric {
+    if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
+    Ok(Transformation::new(
+        DI::new_input_domain(),
+        DI::new_output_domain(lower.clone(), upper.clone()),
+        DI::clamp_function(lower.clone(), upper.clone()),
+        M::default(),
+        M::default(),
+        DI::stability_relation(lower, upper)))
+}
+
+fn min<T: PartialOrd>(a: T, b: T) -> T { if a < b {a} else {b} }
+fn clamp<'a, T: PartialOrd>(lower: &'a T, upper: &'a T, x: &'a T) -> &'a T {
+    if x < lower { lower } else if x > upper { upper } else { x }
 }
 
 
