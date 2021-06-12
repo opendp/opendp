@@ -4,13 +4,13 @@
 //! Most of the implementations are generic, with the type parameter setting the underlying [`Domain::Carrier`]
 //! type.
 
+use std::any::Any;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Bound;
 
 use crate::core::Domain;
-use std::hash::Hash;
-use std::any::Any;
 
 /// A Domain that contains all members of the carrier type.
 pub struct AllDomain<T> {
@@ -183,19 +183,55 @@ impl<D: Domain> Domain for SizedDomain<D> {
     }
 }
 
-/// A domain with a built-in representation of nullity, that may be null
+/// A domain with a built-in representation of nullity, that may take on null values at runtime
 #[derive(Clone, PartialEq)]
-pub struct NullableDomain<D: Domain> {
+pub struct InternalNullDomain<D: Domain>
+    where D::Carrier: InternalNull {
     pub element_domain: D,
 }
-impl<D: Domain> NullableDomain<D> {
+impl<D: Domain> InternalNullDomain<D> where D::Carrier: InternalNull {
     pub fn new(member_domain: D) -> Self {
-        NullableDomain { element_domain: member_domain }
+        InternalNullDomain { element_domain: member_domain }
     }
 }
-impl<D: Domain> Domain for NullableDomain<D> {
+impl<D: Domain> Domain for InternalNullDomain<D> where D::Carrier: InternalNull {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> bool {
+        if val.is_null() {return true}
         self.element_domain.member(val)
+    }
+}
+pub trait InternalNull {
+    fn is_null(&self) -> bool;
+    const NULL: Self;
+}
+macro_rules! impl_internal_null_float {
+    ($($ty:ty),+) => ($(impl InternalNull for $ty {
+        #[inline]
+        fn is_null(&self) -> bool { self.is_nan() }
+        const NULL: Self = Self::NAN;
+    })+)
+}
+impl_internal_null_float!(f64, f32);
+
+/// A domain that represents nullity via the Option type.
+/// The value inside is non-null by definition.
+/// Transformations should not emit data that can take on null-values at runtime.
+/// For example, it is fine to have an OptionDomain<AllDomain<f64>>, but the f64 should never be nan
+#[derive(Clone, PartialEq)]
+pub struct OptionNullDomain<D: Domain> {
+    pub element_domain: D,
+}
+impl<D: Domain> OptionNullDomain<D> {
+    pub fn new(member_domain: D) -> Self {
+        OptionNullDomain { element_domain: member_domain }
+    }
+}
+impl<D: Domain> Domain for OptionNullDomain<D> {
+    type Carrier = Option<D::Carrier>;
+    fn member(&self, value: &Self::Carrier) -> bool {
+        value.as_ref()
+            .map(|v| self.element_domain.member(v))
+            .unwrap_or(true)
     }
 }

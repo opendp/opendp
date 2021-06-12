@@ -3,8 +3,9 @@ use std::ops::{Add, Mul, Sub};
 use num::{Float, One};
 
 use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
-use crate::dom::{AllDomain, NullableDomain, VectorDomain};
+use crate::dom::{AllDomain, InternalNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
+use crate::dom::InternalNull;
 use crate::samplers::SampleUniform;
 use crate::traits::DistanceConstant;
 
@@ -12,9 +13,9 @@ use crate::traits::DistanceConstant;
 /// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
 pub fn make_impute_uniform_float<M, T>(
     lower: T, upper: T,
-) -> Fallible<Transformation<VectorDomain<NullableDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<InternalNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, M, M>>
     where M: DatasetMetric<Distance=u32>,
-          for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T>,
+          for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InternalNull,
           M::Distance: One + DistanceConstant {
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
@@ -22,11 +23,11 @@ pub fn make_impute_uniform_float<M, T>(
     let scale = upper.clone() - lower.clone();
 
     Ok(Transformation::new(
-        VectorDomain::new(NullableDomain::new(AllDomain::new())),
+        VectorDomain::new(InternalNullDomain::new(AllDomain::new())),
         VectorDomain::new_all(),
         Function::new_fallible(move |arg: &Vec<T>| {
             arg.iter().map(|v| {
-                if v.is_nan() {
+                if v.is_null() {
                     T::sample_standard_uniform(false).map(|v| v * &scale + &lower)
                 } else { Ok(v.clone()) }
             }).collect()
@@ -44,22 +45,22 @@ pub trait ImputableDomain: Domain {
     fn new() -> Self;
 }
 // how to impute, when null represented as Option<T>
-impl<T: Clone> ImputableDomain for AllDomain<Option<T>> {
+impl<T: Clone> ImputableDomain for OptionNullDomain<AllDomain<T>> {
     type NonNull = T;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
         default.as_ref().unwrap_or(constant)
     }
     fn is_null(_constant: &Self::NonNull) -> bool { false }
-    fn new() -> Self { AllDomain::new() }
+    fn new() -> Self { OptionNullDomain::new(AllDomain::new()) }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: Float> ImputableDomain for NullableDomain<AllDomain<T>> {
+impl<T: InternalNull> ImputableDomain for InternalNullDomain<AllDomain<T>> {
     type NonNull = Self::Carrier;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
-        if default.is_nan() { constant } else { default }
+        if default.is_null() { constant } else { default }
     }
-    fn is_null(constant: &Self::NonNull) -> bool { constant.is_nan() }
-    fn new() -> Self { NullableDomain::new(AllDomain::new()) }
+    fn is_null(constant: &Self::NonNull) -> bool { constant.is_null() }
+    fn new() -> Self { InternalNullDomain::new(AllDomain::new()) }
 }
 
 /// A [`Transformation`] that imputes elementwise with a constant value.

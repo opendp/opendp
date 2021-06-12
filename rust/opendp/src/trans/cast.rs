@@ -1,18 +1,18 @@
 use crate::error::Fallible;
 use crate::core::{Transformation, DatasetMetric, Function, StabilityRelation};
-use crate::dom::{VectorDomain, AllDomain, NullableDomain};
+use crate::dom::{VectorDomain, AllDomain, InternalNullDomain, InternalNull, OptionNullDomain};
 use crate::traits::{DistanceConstant, CastFrom};
-use num::{One, Float};
+use num::{One};
 
 
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TI> -> Vec<Option<TO>>
-pub fn make_cast_vec<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<Option<TO>>>, M, M>>
+pub fn make_cast_vec<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, M, M>>
     where M: DatasetMetric<Distance=u32>,
           TI: Clone, TO: CastFrom<TI> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
-        VectorDomain::new_all(),
+        VectorDomain::new(OptionNullDomain::new(AllDomain::new())),
         Function::new(move |arg: &Vec<TI>| arg.iter()
             .map(|v| TO::cast(v.clone()).ok())
             .collect()),
@@ -57,14 +57,14 @@ pub fn make_is_equal<M, T>(
 
 /// A [`Transformation`] that casts elements to a type that can express nullity internally.
 /// Maps a Vec<TI> -> Vec<TO>
-pub fn make_cast_vec_nullable<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<NullableDomain<AllDomain<TO>>>, M, M>>
+pub fn make_cast_vec_nullable<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InternalNullDomain<AllDomain<TO>>>, M, M>>
     where M: DatasetMetric<Distance=u32>,
-          TI: Clone, TO: CastFrom<TI> + Float {
+          TI: Clone, TO: CastFrom<TI> + InternalNull {
     Ok(Transformation::new(
         VectorDomain::new_all(),
-        VectorDomain::new(NullableDomain::new(AllDomain::new())),
+        VectorDomain::new(InternalNullDomain::new(AllDomain::new())),
         Function::new(move |arg: &Vec<TI>| arg.iter()
-            .map(|v| TO::cast(v.clone()).unwrap_or(TO::nan()))
+            .map(|v| TO::cast(v.clone()).unwrap_or(TO::NULL))
             .collect()),
         M::default(),
         M::default(),
