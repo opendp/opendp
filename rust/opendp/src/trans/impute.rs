@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, Sub};
 
 use num::{Float, One};
 
-use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation};
+use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation, Domain};
 use crate::dom::{AllDomain, VectorDomain, NullableDomain};
 use crate::error::Fallible;
 use crate::samplers::SampleUniform;
@@ -36,21 +36,45 @@ pub fn make_impute_uniform_float<M, T>(
         StabilityRelation::new_from_constant(M::Distance::one())))
 }
 
+// utility trait to replace null with a constant, regardless of the representation of null
+pub trait NullDomainConstant: Domain {
+    type Inner;
+    fn replace_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner;
+    fn new() -> Self;
+}
+// how to replace null, when null represented as Option<T>
+impl<T: Clone> NullDomainConstant for AllDomain<Option<T>> {
+    type Inner = T;
+    fn replace_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
+        default.as_ref().unwrap_or(constant)
+    }
+    fn new() -> Self { AllDomain::new() }
+}
+// how to replace null, when null represented as T with internal nullity
+impl<T: Float> NullDomainConstant for NullableDomain<AllDomain<T>> {
+    type Inner = Self::Carrier;
+    fn replace_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
+        if default.is_nan() {constant} else {default}
+    }
+    fn new() -> Self { NullableDomain::new(AllDomain::new()) }
+}
+
 /// A [`Transformation`] that imputes elementwise with a constant value.
 /// Maps a Vec<Option<T>> -> Vec<T>
-pub fn make_impute_constant<M, T>(
-    constant: T
-) -> Fallible<Transformation<VectorDomain<AllDomain<Option<T>>>, VectorDomain<AllDomain<T>>, M, M>>
+pub fn make_impute_constant<DAtom, M>(
+    constant: DAtom::Inner
+) -> Fallible<Transformation<VectorDomain<DAtom>, VectorDomain<AllDomain<DAtom::Inner>>, M, M>>
     where M: DatasetMetric<Distance=u32>,
-          T: 'static + Clone,
+          DAtom: NullDomainConstant,
+          DAtom::Inner: 'static + Clone,
           M::Distance: One + DistanceConstant {
 
     Ok(Transformation::new(
+        VectorDomain::new(DAtom::new()),
         VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<Option<T>>| arg.iter()
-            .map(|v| v.as_ref().cloned().unwrap_or_else(|| constant.clone()))
-            .collect()),
+        Function::new(move |arg: &Vec<DAtom::Carrier>| arg.iter()
+            .map(|v| DAtom::replace_null(v, &constant))
+            .cloned().collect()),
         M::default(),
         M::default(),
         StabilityRelation::new_from_constant(M::Distance::one())))
