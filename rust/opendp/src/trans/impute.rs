@@ -37,23 +37,23 @@ pub fn make_impute_uniform_float<M, T>(
 }
 
 // utility trait to impute with a constant, regardless of the representation of null
-pub trait ImputeNull: Domain {
-    type Inner;
-    fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner;
+pub trait ImputableDomain: Domain {
+    type NonNull;
+    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull;
     fn new() -> Self;
 }
 // how to impute, when null represented as Option<T>
-impl<T: Clone> ImputeNull for AllDomain<Option<T>> {
-    type Inner = T;
-    fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
+impl<T: Clone> ImputableDomain for AllDomain<Option<T>> {
+    type NonNull = T;
+    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
         default.as_ref().unwrap_or(constant)
     }
     fn new() -> Self { AllDomain::new() }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: Float> ImputeNull for NullableDomain<AllDomain<T>> {
-    type Inner = Self::Carrier;
-    fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
+impl<T: Float> ImputableDomain for NullableDomain<AllDomain<T>> {
+    type NonNull = Self::Carrier;
+    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
         if default.is_nan() {constant} else {default}
     }
     fn new() -> Self { NullableDomain::new(AllDomain::new()) }
@@ -62,19 +62,20 @@ impl<T: Float> ImputeNull for NullableDomain<AllDomain<T>> {
 /// A [`Transformation`] that imputes elementwise with a constant value.
 /// Maps a Vec<Option<T>> -> Vec<T> if input domain is AllDomain<Option<T>>,
 ///     or Vec<T> -> Vec<T> if input domain is NullableDomain<AllDomain<T>>
-pub fn make_impute_constant<DAtom, M>(
-    constant: DAtom::Inner
-) -> Fallible<Transformation<VectorDomain<DAtom>, VectorDomain<AllDomain<DAtom::Inner>>, M, M>>
-    where M: DatasetMetric<Distance=u32>,
-          DAtom: ImputeNull,
-          DAtom::Inner: 'static + Clone,
+/// Type argument DA is "Domain of the Atom"; the domain type inside VectorDomain.
+pub fn make_impute_constant<DA, M>(
+    constant: DA::NonNull
+) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::NonNull>>, M, M>>
+    where DA: ImputableDomain,
+          DA::NonNull: 'static + Clone,
+          M: DatasetMetric<Distance=u32>,
           M::Distance: One + DistanceConstant {
 
     Ok(Transformation::new(
-        VectorDomain::new(DAtom::new()),
+        VectorDomain::new(DA::new()),
         VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<DAtom::Carrier>| arg.iter()
-            .map(|v| DAtom::impute_null(v, &constant))
+        Function::new(move |arg: &Vec<DA::Carrier>| arg.iter()
+            .map(|v| DA::impute_constant(v, &constant))
             .cloned().collect()),
         M::default(),
         M::default(),
