@@ -36,13 +36,13 @@ pub fn make_impute_uniform_float<M, T>(
         StabilityRelation::new_from_constant(M::Distance::one())))
 }
 
-// utility trait to replace null with a constant, regardless of the representation of null
+// utility trait to impute with a constant, regardless of the representation of null
 pub trait ImputeNull: Domain {
     type Inner;
     fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner;
     fn new() -> Self;
 }
-// how to replace null, when null represented as Option<T>
+// how to impute, when null represented as Option<T>
 impl<T: Clone> ImputeNull for AllDomain<Option<T>> {
     type Inner = T;
     fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
@@ -50,7 +50,7 @@ impl<T: Clone> ImputeNull for AllDomain<Option<T>> {
     }
     fn new() -> Self { AllDomain::new() }
 }
-// how to replace null, when null represented as T with internal nullity
+// how to impute, when null represented as T with internal nullity
 impl<T: Float> ImputeNull for NullableDomain<AllDomain<T>> {
     type Inner = Self::Carrier;
     fn impute_null<'a>(default: &'a Self::Carrier, constant: &'a Self::Inner) -> &'a Self::Inner {
@@ -60,7 +60,8 @@ impl<T: Float> ImputeNull for NullableDomain<AllDomain<T>> {
 }
 
 /// A [`Transformation`] that imputes elementwise with a constant value.
-/// Maps a Vec<Option<T>> -> Vec<T>
+/// Maps a Vec<Option<T>> -> Vec<T> if input domain is AllDomain<Option<T>>,
+///     or Vec<T> -> Vec<T> if input domain is NullableDomain<AllDomain<T>>
 pub fn make_impute_constant<DAtom, M>(
     constant: DAtom::Inner
 ) -> Fallible<Transformation<VectorDomain<DAtom>, VectorDomain<AllDomain<DAtom::Inner>>, M, M>>
