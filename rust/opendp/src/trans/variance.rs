@@ -43,13 +43,12 @@ pub fn make_bounded_variance<MI, MO>(
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float + Sum<MO::Distance> + for<'a> Sum<&'a MO::Distance>,
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
           (MI, MO): BoundedVarianceConstant<MI, MO> {
-    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
     let _length = num_cast!(length; MO::Distance)?;
     let _ddof = num_cast!(ddof; MO::Distance)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
-            IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))), length),
+            IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))?), length),
         AllDomain::new(),
         Function::new(move |arg: &Vec<MO::Distance>| {
             let mean = arg.iter().sum::<MO::Distance>() / _length;
@@ -99,14 +98,13 @@ pub fn make_bounded_covariance<MI, MO>(
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
           (MI, MO): BoundedCovarianceConstant<MI, MO> {
 
-    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
     let _length = num_cast!(length; MO::Distance)?;
     let _ddof = num_cast!(ddof; MO::Distance)?;
 
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
-            IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
+            IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))?), length),
         AllDomain::new(),
         Function::new(move |arg: &Vec<(MO::Distance, MO::Distance)>| {
             let (sum_l, sum_r) = arg.iter().fold(

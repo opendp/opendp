@@ -527,13 +527,13 @@ mod tests {
 
     #[test]
     fn test_any_domain() -> Fallible<()> {
-        let domain1 = IntervalDomain::new(Bound::Included(0), Bound::Included(1));
-        let domain2 = IntervalDomain::new(Bound::Included(0), Bound::Included(1));
+        let domain1 = IntervalDomain::new(Bound::Included(0), Bound::Included(1))?;
+        let domain2 = IntervalDomain::new(Bound::Included(0), Bound::Included(1))?;
         // TODO: Add Debug to Domain so we can use assert_eq!.
         assert!(domain1 == domain2);
 
-        let domain1 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1)));
-        let domain2 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1)));
+        let domain1 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1))?);
+        let domain2 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1))?);
         let domain3 = AnyDomain::new(AllDomain::<i32>::new());
         assert!(domain1 == domain2);
         assert!(domain1 != domain3);

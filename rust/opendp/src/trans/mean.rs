@@ -36,12 +36,11 @@ pub fn make_bounded_mean<MI, MO>(
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float,
           for <'a> MO::Distance: Sum<&'a MO::Distance>,
           (MI, MO): BoundedMeanConstant<MI, MO> {
-    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
     let _n = num_cast!(n; MO::Distance)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
-            IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
+            IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))?),
                          n),
         AllDomain::new(),
         Function::new(move |arg: &Vec<MO::Distance>| arg.iter().sum::<MO::Distance>() / _n),

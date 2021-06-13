@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 use std::ops::Bound;
 
 use crate::core::Domain;
+use crate::error::Fallible;
 
 /// A Domain that contains all members of the carrier type.
 pub struct AllDomain<T> {
@@ -77,12 +78,33 @@ impl<D: Domain> Domain for DataDomain<D> where
 /// A Domain that contains all the values in an interval.
 #[derive(Clone, PartialEq)]
 pub struct IntervalDomain<T> {
-    pub lower: Bound<T>,
-    pub upper: Bound<T>,
+    lower: Bound<T>,
+    upper: Bound<T>,
 }
-impl<T> IntervalDomain<T> {
-    pub fn new(lower: Bound<T>, upper: Bound<T>) -> Self {
-        IntervalDomain { lower, upper }
+impl<T: PartialOrd> IntervalDomain<T> {
+    pub fn new(lower: Bound<T>, upper: Bound<T>) -> Fallible<Self> {
+        fn get<T>(value: &Bound<T>) -> Option<&T> {
+            match value {
+                Bound::Included(value) => Some(value),
+                Bound::Excluded(value) => Some(value),
+                Bound::Unbounded => None
+            }
+        }
+        if let Some((v_lower, v_upper)) = get(&lower).zip(get(&upper)) {
+            if v_lower > v_upper {
+                return fallible!(MakeTransformation, "lower bound may not be greater than upper bound")
+            }
+            if v_lower == v_upper {
+                match (&lower, &upper) {
+                    (Bound::Included(_l), Bound::Excluded(_u)) =>
+                        return fallible!(MakeTransformation, "upper bound excludes inclusive lower bound"),
+                    (Bound::Excluded(_l), Bound::Included(_u)) =>
+                        return fallible!(MakeTransformation, "lower bound excludes inclusive upper bound"),
+                    _ => ()
+                }
+            }
+        }
+        Ok(IntervalDomain { lower, upper })
     }
 }
 impl<T: Clone + PartialOrd> Domain for IntervalDomain<T> {

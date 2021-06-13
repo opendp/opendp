@@ -8,12 +8,18 @@ use crate::error::*;
 use crate::traits::{DistanceConstant, DistanceCast};
 use std::ops::Sub;
 
+
+fn min<T: PartialOrd>(a: T, b: T) -> T { if a < b {a} else {b} }
+fn clamp<'a, T: PartialOrd>(lower: &'a T, upper: &'a T, x: &'a T) -> &'a T {
+    if x < lower { lower } else if x > upper { upper } else { x }
+}
+
 pub trait ClampableDomain<M>: Domain
     where M: Metric {
     type Atom;
     type OutputDomain: Domain;
     fn new_input_domain() -> Self;
-    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Self::OutputDomain;
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Fallible<Self::OutputDomain>;
     fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain>;
     fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<M, M>;
 }
@@ -25,8 +31,9 @@ impl<M, T> ClampableDomain<M> for VectorDomain<AllDomain<T>>
     type OutputDomain = VectorDomain<IntervalDomain<T>>;
 
     fn new_input_domain() -> Self { VectorDomain::new_all() }
-    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Self::OutputDomain {
-        VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone())))
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Fallible<Self::OutputDomain> {
+        IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))
+            .map(VectorDomain::new)
     }
     fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain> {
         Function::new(move |arg: &Vec<T>| arg.iter().map(|v| clamp(&lower, &upper, v)).cloned().collect())
@@ -44,7 +51,7 @@ impl<M, T> ClampableDomain<M> for AllDomain<T>
     type OutputDomain = IntervalDomain<T>;
 
     fn new_input_domain() -> Self { AllDomain::new() }
-    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Self::OutputDomain {
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Fallible<Self::OutputDomain> {
         IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))
     }
     fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain> {
@@ -69,44 +76,59 @@ pub fn make_clamp<DI, M>(lower: DI::Atom, upper: DI::Atom) -> Fallible<Transform
     where DI: ClampableDomain<M>,
           DI::Atom: Clone + PartialOrd,
           M: Metric {
-    if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
     Ok(Transformation::new(
         DI::new_input_domain(),
-        DI::new_output_domain(lower.clone(), upper.clone()),
+        DI::new_output_domain(lower.clone(), upper.clone())?,
         DI::clamp_function(lower.clone(), upper.clone()),
         M::default(),
         M::default(),
         DI::stability_relation(lower, upper)))
 }
 
-fn min<T: PartialOrd>(a: T, b: T) -> T { if a < b {a} else {b} }
-fn clamp<'a, T: PartialOrd>(lower: &'a T, upper: &'a T, x: &'a T) -> &'a T {
-    if x < lower { lower } else if x > upper { upper } else { x }
+
+pub trait UnclampableDomain: Domain {
+    type Atom;
+    type OutputDomain: Domain<Carrier=Self::Carrier>;
+    fn new_input_domain(lower: Bound<Self::Atom>, upper: Bound<Self::Atom>) -> Fallible<Self>;
+    fn new_output_domain() -> Self::OutputDomain;
 }
 
+impl<T> UnclampableDomain for VectorDomain<IntervalDomain<T>>
+    where T: PartialOrd + Clone {
+    type Atom = T;
+    type OutputDomain = VectorDomain<AllDomain<T>>;
 
-pub fn make_unclamp_vec<M, T>(lower: T, upper: T) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, VectorDomain<AllDomain<T>>, M, M>>
-    where M: Metric,
-          T: 'static + Clone + PartialOrd,
-          M::Distance: DistanceConstant + One {
-    Ok(Transformation::new(
-        VectorDomain::new(IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<T>| arg.clone()),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(M::Distance::one())
-    ))
+    fn new_input_domain(lower: Bound<Self::Atom>, upper: Bound<Self::Atom>) -> Fallible<Self> {
+        IntervalDomain::new(lower, upper).map(VectorDomain::new)
+    }
+    fn new_output_domain() -> Self::OutputDomain {
+        VectorDomain::new_all()
+    }
 }
 
-pub fn make_unclamp<M, T>(lower: Bound<T>, upper: Bound<T>) -> Fallible<Transformation<IntervalDomain<T>, AllDomain<T>, M, M>>
-    where M: Metric,
-          T: 'static + Clone + PartialOrd,
+impl<T> UnclampableDomain for IntervalDomain<T>
+    where T: PartialOrd + Clone, {
+    type Atom = T;
+    type OutputDomain = AllDomain<T>;
+
+    fn new_input_domain(lower: Bound<Self::Atom>, upper: Bound<Self::Atom>) -> Fallible<Self> {
+        IntervalDomain::new(lower, upper)
+    }
+    fn new_output_domain() -> Self::OutputDomain {
+        AllDomain::new()
+    }
+}
+
+pub fn make_unclamp<DI, M>(lower: Bound<DI::Atom>, upper: Bound<DI::Atom>) -> Fallible<Transformation<DI, DI::OutputDomain, M, M>>
+    where DI: UnclampableDomain,
+          DI::Carrier: Clone,
+          M: Metric,
+          DI::Atom: 'static + Clone + PartialOrd,
           M::Distance: DistanceConstant + One {
     Ok(Transformation::new(
-        IntervalDomain::new(lower, upper),
-        AllDomain::new(),
-        Function::new(move |arg: &T| arg.clone()),
+        DI::new_input_domain(lower.clone(), upper.clone())?,
+        DI::new_output_domain(),
+        Function::new(|arg: &DI::Carrier| arg.clone()),
         M::default(),
         M::default(),
         StabilityRelation::new_from_constant(M::Distance::one())
@@ -120,12 +142,12 @@ mod test_manipulations {
 
     use super::*;
     use crate::dist::{SymmetricDistance, HammingDistance};
-    use crate::trans::{make_clamp, make_unclamp_vec};
+    use crate::trans::{make_clamp, make_unclamp};
 
     #[test]
     fn test_make_unclamp() -> Fallible<()> {
         let clamp = make_clamp::<VectorDomain<_>, SymmetricDistance>(2, 3)?;
-        let unclamp = make_unclamp_vec(2, 3)?;
+        let unclamp = make_unclamp(Bound::Included(2), Bound::Included(3))?;
 
         (clamp >> unclamp).map(|_| ())
     }

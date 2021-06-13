@@ -40,10 +40,10 @@ pub fn make_bounded_sum<MI, MO>(
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance>,
           for <'a> MO::Distance: Sum<&'a MO::Distance>,
           (MI, MO): BoundedSumConstant<MI, MO> {
-    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
     Ok(Transformation::new(
-        VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))),
+        VectorDomain::new(IntervalDomain::new(
+            Bound::Included(lower.clone()), Bound::Included(upper.clone()))?),
         AllDomain::new(),
         Function::new(|arg: &Vec<MO::Distance>| arg.iter().sum()),
         MI::default(),
@@ -58,10 +58,10 @@ pub fn make_bounded_sum_n<MO>(
     where MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance>,
           for <'a> MO::Distance: Sum<&'a MO::Distance> {
-    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound") }
 
     Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
+        SizedDomain::new(VectorDomain::new(IntervalDomain::new(
+            Bound::Included(lower.clone()), Bound::Included(upper.clone()))?), length),
         AllDomain::new(),
         Function::new(|arg: &Vec<MO::Distance>| arg.iter().sum()),
         SymmetricDistance::default(),
