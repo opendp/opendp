@@ -120,11 +120,11 @@ mod test_manipulations {
 
     use super::*;
     use crate::dist::{SymmetricDistance, HammingDistance};
-    use crate::trans::{make_clamp_vec, make_unclamp_vec};
+    use crate::trans::{make_clamp, make_unclamp_vec};
 
     #[test]
-    fn test_unclamp() -> Fallible<()> {
-        let clamp = make_clamp_vec::<SymmetricDistance, u8>(2, 3)?;
+    fn test_make_unclamp() -> Fallible<()> {
+        let clamp = make_clamp::<VectorDomain<_>, SymmetricDistance>(2, 3)?;
         let unclamp = make_unclamp_vec(2, 3)?;
 
         (clamp >> unclamp).map(|_| ())
@@ -132,7 +132,7 @@ mod test_manipulations {
 
     #[test]
     fn test_make_clamp() {
-        let transformation = make_clamp_vec::<HammingDistance, i32>(0, 10).unwrap_test();
+        let transformation = make_clamp::<VectorDomain<_>, HammingDistance>(0, 10).unwrap_test();
         let arg = vec![-10, -5, 0, 5, 10, 20];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = vec![0, 0, 0, 5, 10, 10];

@@ -5,4 +5,6 @@ pub mod count;
 pub mod mean;
 pub mod variance;
 pub mod impute;
+pub mod clamp;
+pub mod cast;
 

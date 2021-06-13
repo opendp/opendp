@@ -1,12 +1,11 @@
 use std::convert::TryFrom;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::c_char;
 
 use opendp::core::DatasetMetric;
 use opendp::dist::{HammingDistance, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
-use opendp::traits::CastFrom;
-use opendp::trans::{ClampableDomain, make_cast, make_clamp, make_identity};
+use opendp::trans::make_identity;
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -40,85 +39,17 @@ pub extern "C" fn opendp_trans__make_identity(
     }
 }
 
-// #[no_mangle]
-// pub extern "C" fn opendp_trans__make_clamp_sensitivity(
-//     lower: *const c_void, upper: *const c_void,
-//     M: *const c_char, T: *const c_char,
-// ) -> FfiResult<*mut AnyTransformation> {
-//     fn monomorphize<Q>(
-//         lower: *const c_void, upper: *const c_void,
-//         M: Type, T: Type,
-//     ) -> FfiResult<*mut AnyTransformation>
-//         where Q: DistanceConstant + One {
-//         fn monomorphize2<M, T>(
-//             lower: *const c_void, upper: *const c_void,
-//         ) -> FfiResult<*mut AnyTransformation>
-//             where M: 'static + SensitivityMetric,
-//                   T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T>,
-//                   M::Distance: DistanceConstant + One {
-//             let lower = try_as_ref!(lower as *const T).clone();
-//             let upper = try_as_ref!(upper as *const T).clone();
-//             make_clamp::<M, T>(lower, upper).into_any()
-//         }
-//         dispatch!(monomorphize2, [
-//             (M, [L1Sensitivity<Q>, L2Sensitivity<Q>]),
-//             (T, @numbers)
-//         ], (lower, upper))
-//     }
-//     let M = try_!(Type::try_from(M));
-//     let T = try_!(Type::try_from(T));
-//     let Q = try_!(M.get_sensitivity_distance());
-//
-//     dispatch!(monomorphize, [(Q, @numbers)], (lower, upper, M, T))
-// }
-
-#[no_mangle]
-pub extern "C" fn opendp_trans__make_clamp_vec(
-    lower: *const c_void, upper: *const c_void,
-    M: *const c_char, T: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<M, T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
-        where VectorDomain<AllDomain<T>>: 'static + ClampableDomain<M, Atom=T>,
-              T: 'static + Clone + PartialOrd,
-              M: 'static + DatasetMetric {
-        let lower = try_as_ref!(lower as *const T).clone();
-        let upper = try_as_ref!(upper as *const T).clone();
-        make_clamp::<VectorDomain<AllDomain<T>>, M>(
-            lower, upper,
-        ).into_any()
-    }
-    let M = try_!(Type::try_from(M));
-    let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(M, @dist_dataset), (T, @numbers)], (lower, upper))
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_trans__make_cast_vec(
-    M: *const c_char, TI: *const c_char, TO: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation> where
-        M: 'static + DatasetMetric,
-        TI: 'static + Clone,
-        TO: 'static + CastFrom<TI> + Default {
-        make_cast::<M, TI, TO>().into_any()
-    }
-    let M = try_!(Type::try_from(M));
-    let TI = try_!(Type::try_from(TI));
-    let TO = try_!(Type::try_from(TO));
-    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @primitives)], ())
-}
-
 
 #[cfg(test)]
 mod tests {
+
     use opendp::error::Fallible;
 
     use crate::any::{AnyObject, Downcast};
     use crate::core;
-    use crate::util;
-    use crate::util::ToCharP;
 
     use super::*;
+    use crate::util::ToCharP;
 
     #[test]
     fn test_make_identity() -> Fallible<()> {
@@ -130,50 +61,6 @@ mod tests {
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 123);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_clamp_sensitivity() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_clamp_sensitivity(
-            util::into_raw(0.0) as *const c_void,
-            util::into_raw(10.0) as *const c_void,
-            "L2Sensitivity<f64>".to_char_p(),
-            "f64".to_char_p(),
-        ))?;
-        let arg = AnyObject::new_raw(-1.0);
-        let res = core::opendp_core__transformation_invoke(&transformation, arg);
-        let res: f64 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 0.0);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_clamp_vec() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_clamp_vec(
-            util::into_raw(0.0) as *const c_void,
-            util::into_raw(10.0) as *const c_void,
-            "SymmetricDistance".to_char_p(),
-            "f64".to_char_p(),
-        ))?;
-        let arg = AnyObject::new_raw(vec![-1.0, 5.0, 11.0]);
-        let res = core::opendp_core__transformation_invoke(&transformation, arg);
-        let res: Vec<f64> = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, vec![0.0, 5.0, 10.0]);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_cast_vec() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_cast_vec(
-            "SymmetricDistance".to_char_p(),
-            "i32".to_char_p(),
-            "f64".to_char_p(),
-        ))?;
-        let arg = AnyObject::new_raw(vec![1, 2, 3]);
-        let res = core::opendp_core__transformation_invoke(&transformation, arg);
-        let res: Vec<Option<f64>> = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, vec![Some(1.0), Some(2.0), Some(3.0)]);
         Ok(())
     }
 }

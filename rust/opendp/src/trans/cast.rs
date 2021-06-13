@@ -2,7 +2,7 @@ use num::One;
 
 use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
-use crate::dom::{AllDomain, InternalNull, InternalNullDomain, OptionNullDomain, VectorDomain};
+use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{CastFrom};
 
@@ -55,14 +55,15 @@ pub fn make_is_equal<M, T>(
     ))
 }
 
-/// A [`Transformation`] that casts elements to a type that can express nullity internally.
+/// A [`Transformation`] that casts elements to a type that has an inherent representation of nullity.
 /// Maps a Vec<TI> -> Vec<TO>
-pub fn make_cast_nullable<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InternalNullDomain<AllDomain<TO>>>, M, M>>
+pub fn make_cast_inherent<M, TI, TO>(
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InherentNullDomain<AllDomain<TO>>>, M, M>>
     where M: DatasetMetric,
-          TI: Clone, TO: CastFrom<TI> + InternalNull {
+          TI: Clone, TO: CastFrom<TI> + InherentNull {
     Ok(Transformation::new(
         VectorDomain::new_all(),
-        VectorDomain::new(InternalNullDomain::new(AllDomain::new())),
+        VectorDomain::new(InherentNullDomain::new(AllDomain::new())),
         Function::new(move |arg: &Vec<TI>| arg.iter()
             .map(|v| TO::cast(v.clone()).unwrap_or(TO::NULL))
             .collect()),
@@ -120,9 +121,9 @@ mod test_manipulations {
     fn test_cast() {
         macro_rules! test_pair {
             ($from:ty, $to:ty) => {
-                let caster = make_cast_vec::<SymmetricDistance, $from, $to>().unwrap_test();
+                let caster = make_cast::<SymmetricDistance, $from, $to>().unwrap_test();
                 caster.function.eval(&vec!(<$from>::default())).unwrap_test();
-                let caster = make_cast_vec::<HammingDistance, $from, $to>().unwrap_test();
+                let caster = make_cast::<HammingDistance, $from, $to>().unwrap_test();
                 caster.function.eval(&vec!(<$from>::default())).unwrap_test();
             }
         }

@@ -185,34 +185,34 @@ impl<D: Domain> Domain for SizedDomain<D> {
 
 /// A domain with a built-in representation of nullity, that may take on null values at runtime
 #[derive(Clone, PartialEq)]
-pub struct InternalNullDomain<D: Domain>
-    where D::Carrier: InternalNull {
+pub struct InherentNullDomain<D: Domain>
+    where D::Carrier: InherentNull {
     pub element_domain: D,
 }
-impl<D: Domain> InternalNullDomain<D> where D::Carrier: InternalNull {
+impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
     pub fn new(member_domain: D) -> Self {
-        InternalNullDomain { element_domain: member_domain }
+        InherentNullDomain { element_domain: member_domain }
     }
 }
-impl<D: Domain> Domain for InternalNullDomain<D> where D::Carrier: InternalNull {
+impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> bool {
         if val.is_null() {return true}
         self.element_domain.member(val)
     }
 }
-pub trait InternalNull {
+pub trait InherentNull {
     fn is_null(&self) -> bool;
     const NULL: Self;
 }
-macro_rules! impl_internal_null_float {
-    ($($ty:ty),+) => ($(impl InternalNull for $ty {
+macro_rules! impl_inherent_null_float {
+    ($($ty:ty),+) => ($(impl InherentNull for $ty {
         #[inline]
         fn is_null(&self) -> bool { self.is_nan() }
         const NULL: Self = Self::NAN;
     })+)
 }
-impl_internal_null_float!(f64, f32);
+impl_inherent_null_float!(f64, f32);
 
 /// A domain that represents nullity via the Option type.
 /// The value inside is non-null by definition.
