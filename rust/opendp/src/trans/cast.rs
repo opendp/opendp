@@ -40,15 +40,15 @@ pub fn make_cast_default<M, TI, TO>() -> Fallible<Transformation<VectorDomain<Al
 
 /// A [`Transformation`] that checks equality elementwise with `value`.
 /// Maps a Vec<T> -> Vec<bool>
-pub fn make_is_equal<M, T>(
-    value: T
-) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<bool>>, M, M>>
+pub fn make_is_equal<M, TI>(
+    value: TI
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, M, M>>
     where M: DatasetMetric,
-          T: 'static + Eq {
+          TI: 'static + PartialEq {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<T>| arg.iter().map(|v| v == &value).collect()),
+        Function::new(move |arg: &Vec<TI>| arg.iter().map(|v| v == &value).collect()),
         M::default(),
         M::default(),
         StabilityRelation::new_from_constant(M::Distance::one())
