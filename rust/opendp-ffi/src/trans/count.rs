@@ -29,7 +29,8 @@ pub extern "C" fn opendp_trans__make_count(
     ) -> FfiResult<*mut AnyTransformation> {
         fn monomorphize2<MI, MO, T: 'static>() -> FfiResult<*mut AnyTransformation>
             where MI: 'static + DatasetMetric + Clone,
-                  MO: 'static + SensitivityMetric + Clone {
+                  MO: 'static + SensitivityMetric + Clone,
+                  MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant {
             make_count::<MI, MO, T>().into_any()
         }
         dispatch!(monomorphize2, [

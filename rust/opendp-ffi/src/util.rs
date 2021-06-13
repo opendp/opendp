@@ -87,19 +87,6 @@ impl Type {
             fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, L1Sensitivity<u32>")
         }
     }
-    pub fn get_sensitivity_distance(&self) -> Fallible<Type> {
-        if let TypeContents::GENERIC {args, name} = &self.contents {
-            if !name.ends_with("Sensitivity") {
-                return fallible!(TypeParse, "Expected a sensitivity type name, received {:?}", name)
-            }
-            if args.len() != 1 {
-                return fallible!(TypeParse, "Sensitivity must have one generic argument")
-            }
-            Type::of_id(&args[0])
-        } else {
-            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, L1Sensitivity<u32>")
-        }
-    }
 }
 
 /// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].

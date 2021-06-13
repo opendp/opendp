@@ -1,19 +1,16 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use num::One;
-
-use opendp::core::{DatasetMetric, SensitivityMetric};
-use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
+use opendp::core::DatasetMetric;
+use opendp::dist::{HammingDistance, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
-use opendp::traits::{CastFrom, DistanceConstant, DistanceCast};
-use opendp::trans::{make_cast, make_clamp_sensitivity, make_clamp_vec, make_identity};
+use opendp::traits::CastFrom;
+use opendp::trans::{ClampableDomain, make_cast, make_clamp, make_identity};
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
-use std::ops::Sub;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(
@@ -43,37 +40,37 @@ pub extern "C" fn opendp_trans__make_identity(
     }
 }
 
-#[no_mangle]
-pub extern "C" fn opendp_trans__make_clamp_sensitivity(
-    lower: *const c_void, upper: *const c_void,
-    M: *const c_char, T: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<Q>(
-        lower: *const c_void, upper: *const c_void,
-        M: Type, T: Type,
-    ) -> FfiResult<*mut AnyTransformation>
-        where Q: DistanceConstant + One {
-        fn monomorphize2<M, T>(
-            lower: *const c_void, upper: *const c_void,
-        ) -> FfiResult<*mut AnyTransformation>
-            where M: 'static + SensitivityMetric,
-                  T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T>,
-                  M::Distance: DistanceConstant + One {
-            let lower = try_as_ref!(lower as *const T).clone();
-            let upper = try_as_ref!(upper as *const T).clone();
-            make_clamp_sensitivity::<M, T>(lower, upper).into_any()
-        }
-        dispatch!(monomorphize2, [
-            (M, [L1Sensitivity<Q>, L2Sensitivity<Q>]),
-            (T, @numbers)
-        ], (lower, upper))
-    }
-    let M = try_!(Type::try_from(M));
-    let T = try_!(Type::try_from(T));
-    let Q = try_!(M.get_sensitivity_distance());
-
-    dispatch!(monomorphize, [(Q, @numbers)], (lower, upper, M, T))
-}
+// #[no_mangle]
+// pub extern "C" fn opendp_trans__make_clamp_sensitivity(
+//     lower: *const c_void, upper: *const c_void,
+//     M: *const c_char, T: *const c_char,
+// ) -> FfiResult<*mut AnyTransformation> {
+//     fn monomorphize<Q>(
+//         lower: *const c_void, upper: *const c_void,
+//         M: Type, T: Type,
+//     ) -> FfiResult<*mut AnyTransformation>
+//         where Q: DistanceConstant + One {
+//         fn monomorphize2<M, T>(
+//             lower: *const c_void, upper: *const c_void,
+//         ) -> FfiResult<*mut AnyTransformation>
+//             where M: 'static + SensitivityMetric,
+//                   T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T>,
+//                   M::Distance: DistanceConstant + One {
+//             let lower = try_as_ref!(lower as *const T).clone();
+//             let upper = try_as_ref!(upper as *const T).clone();
+//             make_clamp::<M, T>(lower, upper).into_any()
+//         }
+//         dispatch!(monomorphize2, [
+//             (M, [L1Sensitivity<Q>, L2Sensitivity<Q>]),
+//             (T, @numbers)
+//         ], (lower, upper))
+//     }
+//     let M = try_!(Type::try_from(M));
+//     let T = try_!(Type::try_from(T));
+//     let Q = try_!(M.get_sensitivity_distance());
+//
+//     dispatch!(monomorphize, [(Q, @numbers)], (lower, upper, M, T))
+// }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_clamp_vec(
@@ -81,11 +78,14 @@ pub extern "C" fn opendp_trans__make_clamp_vec(
     M: *const c_char, T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<M, T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
-        where M: 'static + DatasetMetric,
-              T: 'static + Copy + PartialOrd {
-        let lower = *try_as_ref!(lower as *const T);
-        let upper = *try_as_ref!(upper as *const T);
-        make_clamp_vec::<M, T>(lower, upper).into_any()
+        where VectorDomain<AllDomain<T>>: 'static + ClampableDomain<M, Atom=T>,
+              T: 'static + Clone + PartialOrd,
+              M: 'static + DatasetMetric {
+        let lower = try_as_ref!(lower as *const T).clone();
+        let upper = try_as_ref!(upper as *const T).clone();
+        make_clamp::<VectorDomain<AllDomain<T>>, M>(
+            lower, upper,
+        ).into_any()
     }
     let M = try_!(Type::try_from(M));
     let T = try_!(Type::try_from(T));

@@ -8,24 +8,27 @@ use crate::error::*;
 use crate::traits::{DistanceConstant, DistanceCast};
 use std::ops::Sub;
 
-pub trait ClampableDomain<M, DO>: Domain
-    where M: Metric, DO: Domain {
+pub trait ClampableDomain<M>: Domain
+    where M: Metric {
     type Atom;
+    type OutputDomain: Domain;
     fn new_input_domain() -> Self;
-    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> DO;
-    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, DO>;
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Self::OutputDomain;
+    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain>;
     fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<M, M>;
 }
 
-impl<M, T> ClampableDomain<M, VectorDomain<IntervalDomain<T>>> for VectorDomain<AllDomain<T>>
+impl<M, T> ClampableDomain<M> for VectorDomain<AllDomain<T>>
     where M: DatasetMetric,
           T: 'static + PartialOrd + Clone, {
     type Atom = T;
+    type OutputDomain = VectorDomain<IntervalDomain<T>>;
+
     fn new_input_domain() -> Self { VectorDomain::new_all() }
-    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> VectorDomain<IntervalDomain<T>> {
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Self::OutputDomain {
         VectorDomain::new(IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone())))
     }
-    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, VectorDomain<IntervalDomain<T>>> {
+    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain> {
         Function::new(move |arg: &Vec<T>| arg.iter().map(|v| clamp(&lower, &upper, v)).cloned().collect())
     }
     fn stability_relation(_lower: Self::Atom, _upper: Self::Atom) -> StabilityRelation<M, M> {
@@ -33,17 +36,18 @@ impl<M, T> ClampableDomain<M, VectorDomain<IntervalDomain<T>>> for VectorDomain<
     }
 }
 
-impl<M, T> ClampableDomain<M, IntervalDomain<T>> for AllDomain<T>
+impl<M, T> ClampableDomain<M> for AllDomain<T>
     where M: SensitivityMetric,
           M::Distance: DistanceConstant + One,
           T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T> {
     type Atom = Self::Carrier;
+    type OutputDomain = IntervalDomain<T>;
 
     fn new_input_domain() -> Self { AllDomain::new() }
-    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> IntervalDomain<T> {
+    fn new_output_domain(lower: Self::Atom, upper: Self::Atom) -> Self::OutputDomain {
         IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))
     }
-    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, IntervalDomain<T>> {
+    fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain> {
         Function::new(move |arg: &T| clamp(&lower, &upper, arg).clone())
     }
     fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<M, M> {
@@ -61,10 +65,9 @@ impl<M, T> ClampableDomain<M, IntervalDomain<T>> for AllDomain<T>
     }
 }
 
-pub fn make_clamp<DI, DO, M>(lower: DI::Atom, upper: DI::Atom) -> Fallible<Transformation<DI, DO, M, M>>
-    where DI: ClampableDomain<M, DO>,
+pub fn make_clamp<DI, M>(lower: DI::Atom, upper: DI::Atom) -> Fallible<Transformation<DI, DI::OutputDomain, M, M>>
+    where DI: ClampableDomain<M>,
           DI::Atom: Clone + PartialOrd,
-          DO: Domain,
           M: Metric {
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
     Ok(Transformation::new(
