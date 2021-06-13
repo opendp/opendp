@@ -1,14 +1,15 @@
-use crate::error::Fallible;
-use crate::core::{Transformation, DatasetMetric, Function, StabilityRelation};
-use crate::dom::{VectorDomain, AllDomain, InternalNullDomain, InternalNull, OptionNullDomain};
-use crate::traits::{DistanceConstant, CastFrom};
-use num::{One};
+use num::One;
 
+use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
+use crate::dist::{HammingDistance, SymmetricDistance};
+use crate::dom::{AllDomain, InternalNull, InternalNullDomain, OptionNullDomain, VectorDomain};
+use crate::error::Fallible;
+use crate::traits::{CastFrom};
 
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TI> -> Vec<Option<TO>>
-pub fn make_cast_vec<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, M, M>>
-    where M: DatasetMetric<Distance=u32>,
+pub fn make_cast<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, M, M>>
+    where M: DatasetMetric,
           TI: Clone, TO: CastFrom<TI> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
@@ -23,8 +24,8 @@ pub fn make_cast_vec<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDom
 
 /// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.
 /// Maps a Vec<TI> -> Vec<TO>
-pub fn make_cast_vec_default<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, M, M>>
-    where M: DatasetMetric<Distance=u32>,
+pub fn make_cast_default<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, M, M>>
+    where M: DatasetMetric,
           TI: Clone, TO: CastFrom<TI> + Default {
     Ok(Transformation::new(
         VectorDomain::new_all(),
@@ -43,8 +44,7 @@ pub fn make_is_equal<M, T>(
     value: T
 ) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<bool>>, M, M>>
     where M: DatasetMetric,
-          T: 'static + Eq,
-          M::Distance: One + DistanceConstant {
+          T: 'static + Eq {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
@@ -57,8 +57,8 @@ pub fn make_is_equal<M, T>(
 
 /// A [`Transformation`] that casts elements to a type that can express nullity internally.
 /// Maps a Vec<TI> -> Vec<TO>
-pub fn make_cast_vec_nullable<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InternalNullDomain<AllDomain<TO>>>, M, M>>
-    where M: DatasetMetric<Distance=u32>,
+pub fn make_cast_nullable<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InternalNullDomain<AllDomain<TO>>>, M, M>>
+    where M: DatasetMetric,
           TI: Clone, TO: CastFrom<TI> + InternalNull {
     Ok(Transformation::new(
         VectorDomain::new_all(),
@@ -71,29 +71,50 @@ pub fn make_cast_vec_nullable<M, TI, TO>() -> Fallible<Transformation<VectorDoma
         StabilityRelation::new_from_constant(1_u32)))
 }
 
-// casting primitive types is not exposed over ffi.
-// Need a way to also cast M::Distance that doesn't allow changing M
-// pub fn make_cast<M, TI, TO>() -> Fallible<Transformation<AllDomain<TI>, AllDomain<TO>, M, M>>
-//     where M: Metric,
-//           M::Distance: DistanceConstant + One,
-//           TI: Clone,
-//           TO: 'static + CastFrom<TI> + Default {
-//     Ok(Transformation::new(
-//         AllDomain::new(),
-//         AllDomain::new(),
-//         Function::new(move |v: &TI| TO::cast(v.clone()).unwrap_or_else(|_| TO::default())),
-//         M::default(),
-//         M::default(),
-//         StabilityRelation::new_from_constant(M::Distance::one())))
-// }
+pub trait DatasetMetricCast {
+    type Distance;
+    fn stability_constant() -> u32;
+}
+
+macro_rules! impl_metric_cast {
+    ($ty:ty, $constant:literal) => {
+         impl DatasetMetricCast for $ty {
+            type Distance = u32;
+            fn stability_constant() -> u32 {
+                $constant
+            }
+        }
+    }
+}
+impl_metric_cast!((HammingDistance, SymmetricDistance), 2);
+impl_metric_cast!((SymmetricDistance, HammingDistance), 1);
+impl_metric_cast!((SymmetricDistance, SymmetricDistance), 1);
+impl_metric_cast!((HammingDistance, HammingDistance), 1);
+
+pub fn make_cast_metric<D, MI, MO>(
+    domain: D
+) -> Fallible<Transformation<D, D, MI, MO>>
+    where D: Domain + Clone,
+          D::Carrier: Clone,
+          MI: DatasetMetric, MO: DatasetMetric,
+          (MI, MO): DatasetMetricCast {
+
+    Ok(Transformation::new(
+        domain.clone(),
+        domain,
+        Function::new(|val: &D::Carrier| val.clone()),
+        MI::default(),
+        MO::default(),
+        StabilityRelation::new_from_constant(<(MI, MO)>::stability_constant())
+    ))
+}
 
 #[cfg(test)]
 mod test_manipulations {
-
-    use super::*;
-    use crate::dist::{SymmetricDistance, HammingDistance};
+    use crate::dist::{HammingDistance, SymmetricDistance};
     use crate::error::ExplainUnwrap;
 
+    use super::*;
 
     #[test]
     fn test_cast() {
@@ -129,7 +150,7 @@ mod test_manipulations {
 
     #[test]
     fn test_cast_unsigned() -> Fallible<()> {
-        let caster = make_cast_vec_default::<SymmetricDistance, f64, u8>()?;
+        let caster = make_cast_default::<SymmetricDistance, f64, u8>()?;
         assert_eq!(caster.function.eval(&vec![-1.])?, vec![u8::default()]);
         Ok(())
     }
@@ -138,10 +159,10 @@ mod test_manipulations {
     fn test_cast_parse() -> Fallible<()> {
         let data = vec!["2".to_string(), "3".to_string(), "a".to_string(), "".to_string()];
 
-        let caster = make_cast_vec_default::<SymmetricDistance, String, u8>()?;
+        let caster = make_cast_default::<SymmetricDistance, String, u8>()?;
         assert_eq!(caster.function.eval(&data)?, vec![2, 3, u8::default(), u8::default()]);
 
-        let caster = make_cast_vec_default::<SymmetricDistance, String, f64>()?;
+        let caster = make_cast_default::<SymmetricDistance, String, f64>()?;
         assert_eq!(caster.function.eval(&data)?, vec![2., 3., f64::default(), f64::default()]);
         Ok(())
     }
@@ -149,19 +170,19 @@ mod test_manipulations {
     #[test]
     fn test_cast_floats() -> Fallible<()> {
         let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
-        let caster = make_cast_vec_default::<SymmetricDistance, f64, String>()?;
+        let caster = make_cast_default::<SymmetricDistance, f64, String>()?;
         assert_eq!(
             caster.function.eval(&data)?,
             vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]);
 
-        let caster = make_cast_vec_default::<SymmetricDistance, f64, u8>()?;
+        let caster = make_cast_default::<SymmetricDistance, f64, u8>()?;
         assert_eq!(
             caster.function.eval(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
             vec![u8::default(), u8::default(), u8::default()]);
 
         let data = vec!["1e+2", "1e2", "1e+02", "1.e+02", "1.0E+02", "1.0E+00002", "01.E+02", "1.0E2"]
             .into_iter().map(|v| v.to_string()).collect();
-        let caster = make_cast_vec_default::<SymmetricDistance, String, f64>()?;
+        let caster = make_cast_default::<SymmetricDistance, String, f64>()?;
         assert!(caster.function.eval(&data)?.into_iter().all(|v| v == 100.));
         Ok(())
     }

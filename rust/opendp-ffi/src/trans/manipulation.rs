@@ -8,7 +8,7 @@ use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDista
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
 use opendp::traits::{CastFrom, DistanceConstant, DistanceCast};
-use opendp::trans::{make_cast_vec, make_clamp_sensitivity, make_clamp_vec, make_identity};
+use opendp::trans::{make_cast, make_clamp_sensitivity, make_clamp_vec, make_identity};
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -21,13 +21,11 @@ pub extern "C" fn opendp_trans__make_identity(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize_scalar<M, T>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              M::Distance: DistanceConstant + One,
               T: 'static + Clone {
         make_identity::<AllDomain<T>, M>(AllDomain::<T>::new(), M::default()).into_any()
     }
     fn monomorphize_vec<M, T>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              M::Distance: DistanceConstant + One,
               T: 'static + Clone {
         make_identity::<VectorDomain<AllDomain<T>>, M>(VectorDomain::new(AllDomain::<T>::new()), M::default()).into_any()
     }
@@ -83,9 +81,8 @@ pub extern "C" fn opendp_trans__make_clamp_vec(
     M: *const c_char, T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<M, T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
-        where M: 'static + DatasetMetric + Clone,
-              T: 'static + Copy + PartialOrd,
-              M::Distance: DistanceConstant + One {
+        where M: 'static + DatasetMetric,
+              T: 'static + Copy + PartialOrd {
         let lower = *try_as_ref!(lower as *const T);
         let upper = *try_as_ref!(upper as *const T);
         make_clamp_vec::<M, T>(lower, upper).into_any()
@@ -100,10 +97,10 @@ pub extern "C" fn opendp_trans__make_cast_vec(
     M: *const c_char, TI: *const c_char, TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation> where
-        M: 'static + DatasetMetric<Distance=u32>,
+        M: 'static + DatasetMetric,
         TI: 'static + Clone,
         TO: 'static + CastFrom<TI> + Default {
-        make_cast_vec::<M, TI, TO>().into_any()
+        make_cast::<M, TI, TO>().into_any()
     }
     let M = try_!(Type::try_from(M));
     let TI = try_!(Type::try_from(TI));

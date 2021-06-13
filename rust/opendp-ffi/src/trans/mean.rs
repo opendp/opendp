@@ -27,7 +27,7 @@ pub extern "C" fn opendp_trans__make_bounded_mean(
         where T: DistanceConstant + Sub<Output=T> + Float,
               for<'a> T: Sum<&'a T> {
         fn monomorphize2<MI, MO>(lower: MO::Distance, upper: MO::Distance, n: usize) -> FfiResult<*mut AnyTransformation>
-            where MI: 'static + DatasetMetric<Distance=u32>,
+            where MI: 'static + DatasetMetric,
                   MO: 'static + SensitivityMetric,
                   MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float,
                   for<'a> MO::Distance: Sum<&'a MO::Distance>,

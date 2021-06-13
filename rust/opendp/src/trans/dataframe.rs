@@ -44,7 +44,7 @@ fn create_dataframe_domain<K: Eq + Hash>() -> DataFrameDomain<K> {
 pub fn make_create_dataframe<M, K>(
     col_names: Vec<K>
 ) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, M, M>>
-    where M: Clone + DatasetMetric<Distance=u32>,
+    where M: Clone + DatasetMetric,
           K: 'static + Eq + Hash + Clone {
     Ok(Transformation::new(
         VectorDomain::new(VectorDomain::new_all()),
@@ -70,7 +70,7 @@ pub fn make_split_dataframe<M, K>(
     separator: Option<&str>, col_names: Vec<K>
 ) -> Fallible<Transformation<AllDomain<String>, DataFrameDomain<K>, M, M>>
     where K: 'static + Hash + Eq + Clone,
-          M: Clone + DatasetMetric<Distance=u32> {
+          M: Clone + DatasetMetric {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
         AllDomain::new(),
@@ -101,7 +101,7 @@ fn parse_column<K, T>(key: &K, impute: bool, df: &DataFrame<K>) -> Fallible<Data
 }
 
 pub fn make_parse_column<M, K, T>(key: K, impute: bool) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, M, M>>
-    where M: Clone + DatasetMetric<Distance=u32>,
+    where M: Clone + DatasetMetric,
           K: 'static + Hash + Eq + Debug + Clone,
           T: 'static + Debug + FromStr + Clone + Default + PartialEq,
           T::Err: Debug {
@@ -115,7 +115,7 @@ pub fn make_parse_column<M, K, T>(key: K, impute: bool) -> Fallible<Transformati
 }
 
 pub fn make_select_column<M, K, T>(key: K) -> Fallible<Transformation<DataFrameDomain<K>, VectorDomain<AllDomain<T>>, M, M>>
-    where M: Clone + DatasetMetric<Distance=u32>,
+    where M: Clone + DatasetMetric,
           K: 'static + Eq + Hash + Debug,
           T: 'static + Debug + Clone + PartialEq {
     Ok(Transformation::new(
@@ -146,7 +146,7 @@ fn split_lines(s: &str) -> Vec<&str> {
 
 /// A [`Transformation`] that takes a `String` and splits it into a `Vec<String>` of its lines.
 pub fn make_split_lines<M>() -> Fallible<Transformation<AllDomain<String>, VectorDomain<AllDomain<String>>, M, M>>
-    where M: Clone + DatasetMetric<Distance=u32> {
+    where M: Clone + DatasetMetric {
     Ok(Transformation::new(
         AllDomain::<String>::new(),
         VectorDomain::new_all(),
@@ -169,7 +169,7 @@ fn parse_series<T>(col: &[&str], default_on_error: bool) -> Fallible<Vec<T>> whe
 }
 
 pub fn make_parse_series<M, TO>(impute: bool) -> Fallible<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<TO>>, M, M>>
-    where M: Clone + DatasetMetric<Distance=u32>,
+    where M: Clone + DatasetMetric,
           TO: FromStr + Default,
           TO::Err: Debug {
     Ok(Transformation::new(
@@ -192,7 +192,7 @@ fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
 }
 
 pub fn make_split_records<M>(separator: Option<&str>) -> Fallible<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<VectorDomain<AllDomain<String>>>, M, M>>
-    where M: Clone + DatasetMetric<Distance=u32> {
+    where M: Clone + DatasetMetric {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
         VectorDomain::new_all(),

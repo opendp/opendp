@@ -24,7 +24,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum(
     ) -> FfiResult<*mut AnyTransformation>
         where for<'a> T: DistanceConstant + Sub<Output=T> + Abs + Sum<&'a T> {
         fn monomorphize2<MI, MO>(lower: MO::Distance, upper: MO::Distance) -> FfiResult<*mut AnyTransformation>
-            where MI: 'static + DatasetMetric<Distance=u32>,
+            where MI: 'static + DatasetMetric,
                   MO: 'static + SensitivityMetric,
                   for<'a> MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Abs + Sum<&'a MO::Distance>,
                   (MI, MO): BoundedSumConstant<MI, MO> {

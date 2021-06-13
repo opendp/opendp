@@ -38,7 +38,7 @@ impl<MO: Metric> BoundedVarianceConstant<SymmetricDistance, MO> for (SymmetricDi
 pub fn make_bounded_variance<MI, MO>(
     lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float + Sum<MO::Distance> + for<'a> Sum<&'a MO::Distance>,
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
@@ -92,7 +92,7 @@ pub fn make_bounded_covariance<MI, MO>(
     upper: (MO::Distance, MO::Distance),
     length: usize, ddof: usize
 ) -> Fallible<Transformation<CovarianceDomain<MO::Distance>, AllDomain<MO::Distance>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Sum<MO::Distance> + Zero,
           for <'a> MO::Distance: Div<&'a MO::Distance, Output=MO::Distance> + Add<&'a MO::Distance, Output=MO::Distance>,

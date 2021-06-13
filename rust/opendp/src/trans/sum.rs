@@ -35,7 +35,7 @@ impl<MO: Metric> BoundedSumConstant<SymmetricDistance, MO> for (SymmetricDistanc
 pub fn make_bounded_sum<MI, MO>(
     lower: MO::Distance, upper: MO::Distance
 ) -> Fallible<Transformation<VectorDomain<IntervalDomain<MO::Distance>>, AllDomain<MO::Distance>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance>,
           for <'a> MO::Distance: Sum<&'a MO::Distance>,

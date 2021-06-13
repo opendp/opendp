@@ -7,16 +7,14 @@ use crate::dom::{AllDomain, InternalNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::dom::InternalNull;
 use crate::samplers::SampleUniform;
-use crate::traits::DistanceConstant;
 
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
 /// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
 pub fn make_impute_uniform_float<M, T>(
     lower: T, upper: T,
 ) -> Fallible<Transformation<VectorDomain<InternalNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, M, M>>
-    where M: DatasetMetric<Distance=u32>,
-          for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InternalNull,
-          M::Distance: One + DistanceConstant {
+    where M: DatasetMetric,
+          for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InternalNull {
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
@@ -72,8 +70,7 @@ pub fn make_impute_constant<DA, M>(
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::NonNull>>, M, M>>
     where DA: ImputableDomain,
           DA::NonNull: 'static + Clone,
-          M: DatasetMetric<Distance=u32>,
-          M::Distance: One + DistanceConstant {
+          M: DatasetMetric {
     if DA::is_null(&constant) { return fallible!(MakeTransformation, "Constant may not be null.") }
 
     Ok(Transformation::new(

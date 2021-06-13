@@ -31,7 +31,7 @@ impl<MO: Metric<Distance=T>, T> BoundedMeanConstant<SymmetricDistance, MO> for (
 pub fn make_bounded_mean<MI, MO>(
     lower: MO::Distance, upper: MO::Distance, n: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float,
           for <'a> MO::Distance: Sum<&'a MO::Distance>,

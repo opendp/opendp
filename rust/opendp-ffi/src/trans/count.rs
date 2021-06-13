@@ -28,9 +28,8 @@ pub extern "C" fn opendp_trans__make_count(
         MI: Type, MO: Type, T: Type
     ) -> FfiResult<*mut AnyTransformation> {
         fn monomorphize2<MI, MO, T: 'static>() -> FfiResult<*mut AnyTransformation>
-            where MI: 'static + DatasetMetric<Distance=u32> + Clone,
-                  MO: 'static + SensitivityMetric + Clone,
-                  MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant {
+            where MI: 'static + DatasetMetric + Clone,
+                  MO: 'static + SensitivityMetric + Clone {
             make_count::<MI, MO, T>().into_any()
         }
         dispatch!(monomorphize2, [
@@ -62,7 +61,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
     ) -> FfiResult<*mut AnyTransformation>
         where QO: DistanceConstant + FloatConst + One {
         fn monomorphize2<MI, MO, TI, TO>(categories: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-            where MI: 'static + DatasetMetric<Distance=u32>,
+            where MI: 'static + DatasetMetric,
                   MO: 'static + SensitivityMetric,
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign,
@@ -100,7 +99,7 @@ pub extern "C" fn opendp_trans__make_count_by(
     ) -> FfiResult<*mut AnyTransformation>
         where QO: DistanceConstant + FloatConst + One {
         fn monomorphize2<MI, MO, TI, TO>(n: usize) -> FfiResult<*mut AnyTransformation>
-            where MI: 'static + DatasetMetric<Distance=u32>,
+            where MI: 'static + DatasetMetric,
                   MO: 'static + SensitivityMetric,
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign,

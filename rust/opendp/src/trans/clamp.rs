@@ -19,7 +19,6 @@ pub trait ClampableDomain<M, DO>: Domain
 
 impl<M, T> ClampableDomain<M, VectorDomain<IntervalDomain<T>>> for VectorDomain<AllDomain<T>>
     where M: DatasetMetric,
-          M::Distance: DistanceConstant + One,
           T: 'static + PartialOrd + Clone, {
     type Atom = T;
     fn new_input_domain() -> Self { VectorDomain::new_all() }
