@@ -39,8 +39,8 @@ pub extern "C" fn opendp_trans__make_impute_uniform_float(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_impute_constant(
-    constant: *const c_void,
-    M: *const c_char, T: *const c_char, inherent: c_bool,
+    constant: *const c_void, inherent: c_bool,
+    M: *const c_char, T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let M = try_!(Type::try_from(M));
     let T = try_!(Type::try_from(T));

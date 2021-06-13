@@ -233,7 +233,7 @@ mod test_shift_op {
             >> make_parse_series(true)?
             >> make_clamp(0, 1)?
             >> make_bounded_sum(0, 1)?
-            >> make_base_geometric(1., 0, 10)?;
+            >> make_base_geometric(1., 0, 10, false)?;
         meas?;
         Ok(())
     }

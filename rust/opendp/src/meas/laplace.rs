@@ -1,45 +1,50 @@
 use num::Float;
 
-use crate::core::{Measurement, Function, PrivacyRelation};
+use crate::core::{Measurement, Function, PrivacyRelation, Domain};
 use crate::dist::{L1Sensitivity, MaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::error::*;
 use crate::traits::DistanceCast;
 
-pub fn make_base_laplace<T>(scale: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L1Sensitivity<T>, MaxDivergence<T>>>
-    where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative")
-    }
-    Ok(Measurement::new(
-        AllDomain::new(),
-        AllDomain::new(),
-        Function::new_fallible(move |arg: &T| -> Fallible<T> {
-            T::sample_laplace(*arg, scale, false)
-        }),
-        L1Sensitivity::default(),
-        MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(scale.recip())
-    ))
+pub trait LaplaceDomain: Domain {
+    type Atom;
+    fn new() -> Self;
+    fn noise_function(scale: Self::Atom) -> Function<Self, Self>;
 }
 
-pub fn make_base_laplace_vec<T>(
-    scale: T
-) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L1Sensitivity<T>, MaxDivergence<T>>>
+impl<T> LaplaceDomain for AllDomain<T>
+    where T: 'static + SampleLaplace + Float + DistanceCast {
+    type Atom = Self::Carrier;
 
-    where T: 'static + Clone + SampleLaplace + Float + DistanceCast {
+    fn new() -> Self { AllDomain::new() }
+    fn noise_function(scale: Self::Carrier) -> Function<Self, Self> {
+        Function::new_fallible(move |arg: &Self::Carrier| Self::Carrier::sample_laplace(*arg, scale, false))
+    }
+}
+
+impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
+    where T: 'static + SampleLaplace + Float + DistanceCast {
+    type Atom = T;
+
+    fn new() -> Self { VectorDomain::new_all() }
+    fn noise_function(scale: T) -> Function<Self, Self> {
+        Function::new_fallible(move |arg: &Self::Carrier| arg.iter()
+            .map(|v| T::sample_laplace(*v, scale, false))
+            .collect())
+    }
+}
+
+pub fn make_base_laplace<DA>(scale: DA::Atom) -> Fallible<Measurement<DA, DA, L1Sensitivity<DA::Atom>, MaxDivergence<DA::Atom>>>
+    where DA: LaplaceDomain,
+          DA::Atom: 'static + Clone + SampleLaplace + Float + DistanceCast {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     Ok(Measurement::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<T>| -> Fallible<Vec<T>> {
-            arg.iter()
-                .map(|v| T::sample_laplace(*v, scale, false))
-                .collect()
-        }),
+        DA::new(),
+        DA::new(),
+        DA::noise_function(scale.clone()),
         L1Sensitivity::default(),
         MaxDivergence::default(),
         PrivacyRelation::new_from_constant(scale.recip())
@@ -50,23 +55,37 @@ pub fn make_base_laplace_vec<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::trans::make_bounded_mean;
+    use crate::dist::HammingDistance;
 
     #[test]
-    fn test_make_laplace_mechanism() {
-        let measurement = make_base_laplace(1.0).unwrap_test();
-        let arg = 0.0;
-        let _ret = measurement.function.eval(&arg).unwrap_test();
+    fn test_chain_laplace() -> Fallible<()> {
+        let chain = (
+            make_bounded_mean::<HammingDistance, _>(10.0, 12.0, 3)? >>
+            make_base_laplace(1.0)?
+        )?;
+        let _ret = chain.function.eval(&vec![10.0, 11.0, 12.0])?;
+        Ok(())
 
-        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_test());
     }
 
     #[test]
-    fn test_make_vector_laplace_mechanism() {
-        let measurement = make_base_laplace_vec(1.0).unwrap_test();
-        let arg = vec![1.0, 2.0, 3.0];
-        let _ret = measurement.function.eval(&arg).unwrap_test();
+    fn test_make_laplace_mechanism() -> Fallible<()> {
+        let measurement = make_base_laplace::<AllDomain<_>>(1.0)?;
+        let _ret = measurement.function.eval(&0.0)?;
 
-        assert!(measurement.privacy_relation.eval(&1., &1.).unwrap_test());
+        assert!(measurement.privacy_relation.eval(&1., &1.)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_vector_laplace_mechanism() -> Fallible<()> {
+        let measurement = make_base_laplace::<VectorDomain<_>>(1.0)?;
+        let arg = vec![1.0, 2.0, 3.0];
+        let _ret = measurement.function.eval(&arg)?;
+
+        assert!(measurement.privacy_relation.eval(&1., &1.)?);
+        Ok(())
     }
 }
 

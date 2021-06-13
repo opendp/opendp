@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use num::{CheckedAdd, CheckedSub, Float, Zero};
+use num::{CheckedAdd, CheckedSub, Float, Zero, Bounded};
 
 use opendp::err;
 use opendp::meas::make_base_geometric;
@@ -10,29 +10,56 @@ use opendp::traits::DistanceCast;
 
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::util::Type;
+use crate::util::{Type, to_bool, c_bool};
+use opendp::dom::{AllDomain, VectorDomain};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
-    scale: *const c_void, min: *const c_void, max: *const c_void,
+    scale: *const c_void, min: *const c_void, max: *const c_void, constant_time: c_bool,
     T: *const c_char, QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<T, QO>(
-        scale: *const c_void, min: *const c_void, max: *const c_void,
+        scale: *const c_void, min: *const c_void, max: *const c_void, constant_time: bool
     ) -> FfiResult<*mut AnyMeasurement>
-        where T: 'static + Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + DistanceCast + Zero + PartialOrd,
+        where T: 'static + Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + DistanceCast + Zero + PartialOrd + Bounded,
               QO: 'static + Float + DistanceCast, f64: From<QO> {
         let scale = *try_as_ref!(scale as *const QO);
         let min = try_as_ref!(min as *const T).clone();
         let max = try_as_ref!(max as *const T).clone();
-        make_base_geometric::<T, QO>(scale, min, max).into_any()
+        make_base_geometric::<AllDomain<T>, QO>(scale, min, max, constant_time).into_any()
     }
+    let constant_time = to_bool(constant_time);
     let T = try_!(Type::try_from(T));
     let QO = try_!(Type::try_from(QO));
     dispatch!(monomorphize, [
         (T, @integers),
         (QO, @floats)
-    ], (scale, min, max))
+    ], (scale, min, max, constant_time))
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_meas__make_base_vector_geometric(
+    scale: *const c_void, min: *const c_void, max: *const c_void, constant_time: c_bool,
+    T: *const c_char, QO: *const c_char,
+) -> FfiResult<*mut AnyMeasurement> {
+    fn monomorphize<T, QO>(
+        scale: *const c_void, min: *const c_void, max: *const c_void, constant_time: bool
+    ) -> FfiResult<*mut AnyMeasurement>
+        where T: 'static + Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + DistanceCast + Zero + PartialOrd + Bounded,
+              QO: 'static + Float + DistanceCast, f64: From<QO> {
+        let scale = *try_as_ref!(scale as *const QO);
+        let min = try_as_ref!(min as *const T).clone();
+        let max = try_as_ref!(max as *const T).clone();
+        make_base_geometric::<VectorDomain<_>, QO>(scale, min, max, constant_time).into_any()
+    }
+    let constant_time = to_bool(constant_time);
+    let T = try_!(Type::try_from(T));
+    let QO = try_!(Type::try_from(QO));
+    dispatch!(monomorphize, [
+        (T, @integers),
+        (QO, @floats)
+    ], (scale, min, max, constant_time))
 }
 
 

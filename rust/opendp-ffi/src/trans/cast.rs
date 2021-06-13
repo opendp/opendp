@@ -14,7 +14,8 @@ use crate::util::{c_bool, to_bool, Type};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast(
-    M: *const c_char, TI: *const c_char, TO: *const c_char, inherent: c_bool
+    inherent: c_bool,
+    M: *const c_char, TI: *const c_char, TO: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
     let M = try_!(Type::try_from(M));
     let TI = try_!(Type::try_from(TI));
@@ -127,10 +128,10 @@ mod tests {
     #[test]
     fn test_make_cast_vec() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_cast(
+            from_bool(true),
             "SymmetricDistance".to_char_p(),
             "i32".to_char_p(),
             "f64".to_char_p(),
-            from_bool(true),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
