@@ -54,7 +54,8 @@ mod tests {
 
     #[test]
     fn test_make_base_gaussian() -> Fallible<()> {
-        let measurement = Result::from(opendp_meas__make_base_gaussian(util::into_raw(0.0) as *const c_void, "f64".to_char_p()))?;
+        let measurement = Result::from(opendp_meas__make_base_gaussian(
+            util::into_raw(0.0) as *const c_void, "f64".to_char_p()))?;
         let arg = AnyObject::new_raw(1.0);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);
         let res: f64 = Fallible::from(res)?.downcast()?;
@@ -64,7 +65,8 @@ mod tests {
 
     #[test]
     fn test_make_base_gaussian_vec() -> Fallible<()> {
-        let measurement = Result::from(opendp_meas__make_base_gaussian_vec(util::into_raw(0.0) as *const c_void, "f64".to_char_p()))?;
+        let measurement = Result::from(opendp_meas__make_base_vector_gaussian(
+            util::into_raw(0.0) as *const c_void, "f64".to_char_p()))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);
         let res: Vec<f64> = Fallible::from(res)?.downcast()?;

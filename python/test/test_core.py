@@ -9,7 +9,7 @@ def test_type_getters():
     assert transformation.input_carrier_type == "Vec<f64>"
 
     from opendp.v1.meas import make_base_geometric
-    measurement = make_base_geometric(scale=1.5, lower=0, upper=20)
+    measurement = make_base_geometric(scale=1.5)
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
     assert measurement.input_carrier_type == "i32"
@@ -26,7 +26,7 @@ def test_chain():
     base_laplace = make_base_laplace(scale=1.)
     print("base laplace:", base_laplace(10.))
 
-    base_geometric = make_base_geometric(scale=0.5, lower=0, upper=20)
+    base_geometric = make_base_geometric(scale=0.5)
     print("base_geometric:", base_geometric(1))
 
     chain = count >> base_geometric

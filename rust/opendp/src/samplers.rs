@@ -1,9 +1,9 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg};
+use std::ops::{AddAssign, Neg, SubAssign};
 
 use ieee754::Ieee754;
 
-use num::{One, Zero, CheckedSub, CheckedAdd, Bounded};
+use num::{One, Zero, CheckedSub, CheckedAdd, Bounded, clamp};
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 
@@ -246,85 +246,121 @@ fn sample_i10_geometric(constant_time: bool) -> Fallible<i16> {
 
 pub trait SampleGeometric: Sized {
 
-    /// Sample from the censored geometric distribution with parameter "prob" and maximum
-    /// number of trials "max_trials".
+    /// Sample from the censored geometric distribution with parameter `prob`.
+    /// If `trials` is none, `trials` is infinite, and the output saturates.
+    /// The support of the distribution is shift += {1, 2, 3, ..., `trials`}, saturated to Self's data bounds.
+    /// "Censored" because the long tail of probability saturates at `trials` or Self's data bounds.
     ///
     /// # Arguments
-    /// * `prob` - Parameter for the geometric distribution, the probability of success on any given trials.
-    /// * `max_trials` - The maximum number of trials allowed.
-    /// * `constant_time` - Whether or not to enforce the algorithm to run in constant time; if true,
-    ///                             it will always run for "max_trials" trials.
+    /// * `shift` - Parameter to shift the output by
+    /// * `positive` - If true, positive noise is added, else negative
+    /// * `prob` - Parameter for the geometric distribution, the probability of success on any given trial.
+    /// * `trials` - If Some, run the algorithm in constant time with exactly this many trials.
     ///
     /// # Return
-    /// A draw from the censored geometric distribution.
+    /// A draw from the censored geometric distribution defined above.
     ///
     /// # Example
     /// ```
     /// use opendp::samplers::SampleGeometric;
-    /// let geom = u8::sample_geometric(0.1, 20, false);
+    /// let geom = u8::sample_geometric(0, true, 0.1, Some(20));
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();
     /// ```
-    fn sample_geometric(prob: f64, max_trials: Self, constant_time: bool) -> Fallible<Self>;
+    fn sample_geometric(shift: Self, positive: bool, prob: f64, trials: Option<Self>) -> Fallible<Self>;
 }
 
-impl<T: Zero + One + PartialOrd + AddAssign + Clone> SampleGeometric for T {
+impl<T: Zero + One + PartialOrd + CheckedAdd + CheckedSub + AddAssign + SubAssign + Clone + Bounded> SampleGeometric for T {
 
-    fn sample_geometric(prob: f64, max_trials: Self, constant_time: bool) -> Fallible<Self> {
+    fn sample_geometric(mut shift: Self, positive: bool, prob: f64, mut trials: Option<Self>) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
         if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
-        let mut n_trials: Self = T::zero();
-        let mut geom_return: Self = T::zero();
+        let bound = if positive { Self::max_value() } else { Self::min_value() };
+        let mut success: bool = false;
 
-        // generate bits until we find a 1
-        // if enforcing the runtime of the algorithm to be constant, the while loop
-        // continues after the 1 is found and just stores the first location of a 1 bit.
-        while n_trials < max_trials {
-            n_trials += T::one();
-
-            // If we haven't seen a 1 yet, set the return to the current number of trials
-            if bool::sample_bernoulli(prob, constant_time)? && geom_return.is_zero() {
-                geom_return = n_trials.clone();
-                if !constant_time {
-                    return Ok(geom_return);
-                }
+        // loop must increment at least once
+        loop {
+            // make steps on `shift` until there is a successful trial or have reached the boundary
+            if !success && shift != bound {
+                if positive { shift += T::one() } else { shift -= T::one() }
             }
-        }
 
-        // set geom_return to max if we never saw a bit equaling 1
-        if geom_return.is_zero() {
-            geom_return = max_trials; // could also set this equal to n_trials - 1.
-        }
+            // stopping criteria
+            if let Some(trials) = trials.as_mut() {
+                // in the constant-time regime, decrement trials until zero
+                if trials.is_zero() { break }
+                *trials -= T::one();
+            } else if success {
+                // otherwise break on first success
+                break
+            }
 
-        Ok(geom_return)
+            // run a trial-- do we stop?
+            success |= bool::sample_bernoulli(prob, trials.is_some())?;
+        }
+        Ok(shift)
     }
 }
 
 pub trait SampleTwoSidedGeometric: SampleGeometric {
+
+    /// Sample from the two-sided geometric distribution with parameter "prob".
+    /// If `trials` is none, `trials` is Self's max value.
+    /// The support of the distribution is
+    ///     {max(shift - trials, Self::min_value), ..., shift - 1, shift, shift + 1, ..., trials}
+    /// "Censored" because the long tails of probability saturates at the boundaries of the support.
+    ///
+    /// # Arguments
+    /// * `prob` - Parameter for the geometric distribution, the probability of success on any given trial.
+    /// * `trials` - If Some, run the algorithm in constant time with exactly this many trials.
+    ///
+    /// # Return
+    /// A draw from the two-sided censored geometric distribution defined above.
+    ///
+    /// # Example
+    /// ```
+    /// use opendp::samplers::SampleTwoSidedGeometric;
+    /// let geom = u8::sample_two_sided_geometric(0, 0.1, Some((20, 30)));
+    /// # use opendp::error::ExplainUnwrap;
+    /// # geom.unwrap_test();
+    /// ```
     fn sample_two_sided_geometric(
-        shift: Self, scale: f64, max_trials: Self, constant_time: bool
+        shift: Self, scale: f64, bounds: Option<(Self, Self)>
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + Bounded + Zero> SampleTwoSidedGeometric for T {
-    fn sample_two_sided_geometric(shift: T, scale: f64, max_trials: Self, constant_time: bool) -> Fallible<Self>  {
+impl<T: Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + Bounded + Zero + One + PartialOrd> SampleTwoSidedGeometric for T {
+    fn sample_two_sided_geometric(shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+        // If bounds are not provided, then the bounds are assumed to be the smallest and largest representable values in T.
+        // Due to the finite nature of computers, this simulation of the geometric distribution censors outputs to values within the bounds.
+        // All values between the bounds need to be reachable from shift + noise,
+        //     so in the worst-case, (upper_bound - lower_bound - 1) bernoulli trials are needed
+        // For example, if bounds are [0, 10], and input is 0,
+        //     the geometric sample needs to run 9 trials to cover the worst-case execution time of having 9 failures
+        // To run the calculation in constant-time, provide tighter lower and upper bounds to limit the worst-case number of trials
+        let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
+            // if the output interval is a point
+            if lower == upper {return Ok(lower)}
+            Some(upper - lower - T::one())
+        } else {None};
+
         let alpha: f64 = (-scale.recip()).exp();
 
         // TODO: check MIR for reordering that moves these samples inside the conditional
-        // TODO: benchmark execution time
-        let uniform = f64::sample_standard_uniform(constant_time)?;
-        let bernoulli = bool::sample_standard_bernoulli()?;
-        let geometric = T::sample_geometric(1. - alpha, max_trials.clone(), constant_time)?;
+        // TODO: benchmark execution time on different inputs
+        let uniform = f64::sample_standard_uniform(bounds.is_some())?;
+        let direction = bool::sample_standard_bernoulli()?;
+        let geometric = T::sample_geometric(shift.clone(), direction,1. - alpha, trials)?;
 
-        // return 0 noise with probability (1-alpha) / (1+alpha), otherwise apply geometric sample
-        Ok(if uniform < (1. - alpha) / (1. + alpha) {
-            shift.checked_add(&T::zero()).unwrap_or_else(|| shift)
-        } else if bernoulli {
-            shift.checked_add(&geometric).unwrap_or_else(T::max_value) // saturating math
+        // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
+        let noised = if uniform < (1. - alpha) / (1. + alpha) { shift } else { geometric };
+
+        Ok(if let Some((lower, upper)) = bounds {
+            clamp(noised, lower, upper)
         } else {
-            shift.checked_sub(&geometric).unwrap_or_else(T::min_value)
+            noised
         })
     }
 }

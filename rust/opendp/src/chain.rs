@@ -234,7 +234,7 @@ mod test_shift_op {
             make_cast_default()? >>
             make_clamp(0, 1)? >>
             make_bounded_sum(0, 1)? >>
-            make_base_geometric(1., 0, 10, false)?
+            make_base_geometric(1., Some((0, 10)))?
         ).map(|_| ())
     }
 }

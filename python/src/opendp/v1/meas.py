@@ -130,20 +130,12 @@ def make_base_vector_gaussian(
 
 def make_base_geometric(
     scale,
-    lower,
-    upper,
-    constant_time: bool = False,
-    T: RuntimeTypeDescriptor = None,
+    T: RuntimeTypeDescriptor = "i32",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.
-    `lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.
     
     :param scale: noise scale parameter to the geometric distribution
-    :param lower: Expected lower bound of data.
-    :param upper: Expected upper bound of data.
-    :param constant_time: Execute the function such that the elapsed time on any input is the same.
-    :type constant_time: bool
     :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
     :param QO: Data type of the sensitivity space.
@@ -155,46 +147,75 @@ def make_base_geometric(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse(type_name=T)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    constant_time = py_to_c(constant_time, c_type=ctypes.c_bool)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_geometric
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, lower, upper, constant_time, T, QO), Measurement))
+    return c_to_py(unwrap(function(scale, T, QO), Measurement))
 
 
 def make_base_vector_geometric(
     scale,
-    lower,
-    upper,
-    constant_time: bool = False,
-    T: RuntimeTypeDescriptor = None,
+    T: RuntimeTypeDescriptor = "i32",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the geometric(`scale`) distribution to a vector value.
-    `lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.
     
     :param scale: noise scale parameter to the geometric distribution
-    :param lower: Expected lower bound of data.
-    :param upper: Expected upper bound of data.
-    :param constant_time: Execute the function such that the elapsed time on any input is the same.
-    :type constant_time: bool
     :param T: Data type to be privatized.
     :type T: RuntimeTypeDescriptor
     :param QO: Data type of the sensitivity space.
     :type QO: RuntimeTypeDescriptor
     :return: A base_vector_geometric step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    T = RuntimeType.parse(type_name=T)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+    
+    # Convert arguments to c types.
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_base_vector_geometric
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(scale, T, QO), Measurement))
+
+
+def make_constant_time_base_geometric(
+    scale,
+    lower,
+    upper,
+    T: RuntimeTypeDescriptor = None,
+    QO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.
+    `lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.
+    
+    :param scale: noise scale parameter to the geometric distribution
+    :param lower: Expected lower bound of data.
+    :param upper: Expected upper bound of data.
+    :param T: Data type to be privatized.
+    :type T: RuntimeTypeDescriptor
+    :param QO: Data type of the sensitivity space.
+    :type QO: RuntimeTypeDescriptor
+    :return: A constant_time_base_geometric step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -208,16 +229,57 @@ def make_base_vector_geometric(
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    constant_time = py_to_c(constant_time, c_type=ctypes.c_bool)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_meas__make_base_vector_geometric
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    function = lib.opendp_meas__make_constant_time_base_geometric
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, lower, upper, constant_time, T, QO), Measurement))
+    return c_to_py(unwrap(function(scale, lower, upper, T, QO), Measurement))
+
+
+def make_constant_time_base_vector_geometric(
+    scale,
+    lower,
+    upper,
+    T: RuntimeTypeDescriptor = None,
+    QO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Make a Measurement that adds noise from the geometric(`scale`) distribution to a vector value.
+    `lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.
+    
+    :param scale: noise scale parameter to the geometric distribution
+    :param lower: Expected lower bound of data.
+    :param upper: Expected upper bound of data.
+    :param T: Data type to be privatized.
+    :type T: RuntimeTypeDescriptor
+    :param QO: Data type of the sensitivity space.
+    :type QO: RuntimeTypeDescriptor
+    :return: A constant_time_base_vector_geometric step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+    
+    # Convert arguments to c types.
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_constant_time_base_vector_geometric
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(scale, lower, upper, T, QO), Measurement))
 
 
 def make_base_stability(
