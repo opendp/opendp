@@ -70,7 +70,7 @@ mod tests {
     use crate::any::{AnyObject, Downcast};
     use crate::core;
     use crate::util;
-    use crate::util::ToCharP;
+    use crate::util::{ToCharP, from_bool};
 
     use super::*;
 
@@ -80,6 +80,7 @@ mod tests {
             util::into_raw(0.0) as *const c_void,
             util::into_raw(0) as *const c_void,
             util::into_raw(100) as *const c_void,
+            from_bool(false),
             "i32".to_char_p(),
             "f64".to_char_p(),
         ))?;

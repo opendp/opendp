@@ -1,41 +1,30 @@
-use num::One;
-
 use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{CastFrom};
+use crate::trans::make_row_by_row;
 
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TI> -> Vec<Option<TO>>
 pub fn make_cast<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, M, M>>
     where M: DatasetMetric,
-          TI: Clone, TO: CastFrom<TI> {
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new(OptionNullDomain::new(AllDomain::new())),
-        Function::new(move |arg: &Vec<TI>| arg.iter()
-            .map(|v| TO::cast(v.clone()).ok())
-            .collect()),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+          TI: 'static + Clone, TO: 'static + CastFrom<TI> {
+    make_row_by_row(
+        AllDomain::new(),
+        OptionNullDomain::new(AllDomain::new()),
+        |v| TO::cast(v.clone()).ok())
 }
 
 /// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_default<M, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, M, M>>
     where M: DatasetMetric,
-          TI: Clone, TO: CastFrom<TI> + Default {
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<TI>| arg.iter()
-            .map(|v| TO::cast(v.clone()).unwrap_or_default())
-            .collect()),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+          TI: 'static + Clone, TO: 'static + CastFrom<TI> + Default {
+    make_row_by_row(
+        AllDomain::new(),
+        AllDomain::new(),
+        |v| TO::cast(v.clone()).unwrap_or_default())
 }
 
 /// A [`Transformation`] that checks equality elementwise with `value`.
@@ -45,14 +34,10 @@ pub fn make_is_equal<M, TI>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, M, M>>
     where M: DatasetMetric,
           TI: 'static + PartialEq {
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<TI>| arg.iter().map(|v| v == &value).collect()),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(M::Distance::one())
-    ))
+    make_row_by_row(
+        AllDomain::new(),
+        AllDomain::new(),
+        move |v| v == &value)
 }
 
 /// A [`Transformation`] that casts elements to a type that has an inherent representation of nullity.
@@ -60,16 +45,11 @@ pub fn make_is_equal<M, TI>(
 pub fn make_cast_inherent<M, TI, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InherentNullDomain<AllDomain<TO>>>, M, M>>
     where M: DatasetMetric,
-          TI: Clone, TO: CastFrom<TI> + InherentNull {
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new(InherentNullDomain::new(AllDomain::new())),
-        Function::new(move |arg: &Vec<TI>| arg.iter()
-            .map(|v| TO::cast(v.clone()).unwrap_or(TO::NULL))
-            .collect()),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+          TI: 'static + Clone, TO: 'static + CastFrom<TI> + InherentNull {
+    make_row_by_row(
+        AllDomain::new(),
+        InherentNullDomain::new(AllDomain::new()),
+        |v| TO::cast(v.clone()).unwrap_or(TO::NULL))
 }
 
 pub trait DatasetMetricCast {

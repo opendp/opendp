@@ -29,11 +29,36 @@ def test_identity():
 
 
 # TODO: cannot test independently until Vec<String> data loader implemented
-def test_split_lines__parse_series():
-    from opendp.v1.trans import make_split_lines, make_parse_series
-    query = make_split_lines(M=HammingDistance) >> make_parse_series(impute=True, M=HammingDistance, TO=int)
+def test_split_lines__cast__impute():
+    from opendp.v1.trans import make_split_lines, make_cast, make_impute_constant
+    query = (
+            make_split_lines(M=HammingDistance) >>
+            make_cast(M=HammingDistance, TI=str, TO=int) >>
+            make_impute_constant(constant=2, M=HammingDistance)
+    )
     assert query("1\n2\n3") == [1, 2, 3]
     assert query.check(1, 1)
+
+
+def test_inherent_cast__impute():
+    from opendp.v1.trans import make_split_lines, make_cast_inherent, make_impute_constant_inherent
+    cast = make_split_lines(M=HammingDistance) >> make_cast_inherent(M=HammingDistance, TI=str, TO=float)
+    constant = cast >> make_impute_constant_inherent(constant=9., M=HammingDistance)
+
+    assert constant("a\n23.23\n12") == [9., 23.23, 12.]
+    assert constant.check(1, 1)
+
+
+def test_inherent_cast__impute_uniform():
+    from opendp.v1.trans import make_split_lines, make_cast_inherent, make_impute_uniform_float
+    cast = make_split_lines(M=HammingDistance) >> make_cast_inherent(M=HammingDistance, TI=str, TO=float)
+    constant = cast >> make_impute_uniform_float(lower=23., upper=32.5, M=HammingDistance)
+
+    res = constant("a\n23.23\n12")
+    assert res[1:] == [23.23, 12.]
+    assert 23. <= res[0] <= 32.5
+    assert constant.check(1, 1)
+
 
 
 def test_dataframe_pipeline():
@@ -64,15 +89,15 @@ def test_split_dataframe():
 
 
 def test_clamp_vec():
-    from opendp.v1.trans import make_clamp_vec
-    query = make_clamp_vec(lower=-1, upper=1, M=HammingDistance)
+    from opendp.v1.trans import make_clamp
+    query = make_clamp(lower=-1, upper=1, M=HammingDistance)
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
 
 
 def test_clamp_sensitivity():
-    from opendp.v1.trans import make_clamp_sensitivity
-    query = make_clamp_sensitivity(lower=-1, upper=1, M=L1Sensitivity[int])
+    from opendp.v1.trans import make_clamp
+    query = make_clamp(lower=-1, upper=1, M=L1Sensitivity[int])
     assert query(20) == 1
     assert query.check(20, 2)
 

@@ -3,8 +3,8 @@ use std::collections::Bound;
 use std::iter::Sum;
 use std::ops::Sub;
 
-use crate::core::{DatasetMetric, Function, Metric, SensitivityMetric, StabilityRelation, Transformation};
-use crate::dist::{HammingDistance, SymmetricDistance};
+use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
+use crate::dist::{HammingDistance, SymmetricDistance, LPSensitivity};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{Abs, DistanceCast, DistanceConstant};
@@ -13,20 +13,20 @@ fn max<T: PartialOrd>(a: T, b: T) -> Option<T> {
     a.partial_cmp(&b).map(|o| if let Ordering::Less = o {b} else {a})
 }
 
-pub trait BoundedSumConstant<MI: Metric, MO: Metric> {
-    fn get_stability_constant(lower: MO::Distance, upper: MO::Distance) -> Fallible<MO::Distance>;
+pub trait BoundedSumConstant<T> {
+    fn get_stability_constant(lower: T, upper: T) -> Fallible<T>;
 }
 
-impl<MO: Metric> BoundedSumConstant<HammingDistance, MO> for (HammingDistance, MO)
-    where MO::Distance: 'static + Sub<Output=MO::Distance> {
-    fn get_stability_constant(lower: MO::Distance, upper: MO::Distance) -> Fallible<MO::Distance> {
+impl<T, const P: usize> BoundedSumConstant<T> for (HammingDistance, LPSensitivity<T, P>)
+    where T: 'static + Sub<Output=T> {
+    fn get_stability_constant(lower: T, upper: T) -> Fallible<T> {
         Ok(upper - lower)
     }
 }
 
-impl<MO: Metric> BoundedSumConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
-    where MO::Distance: 'static + PartialOrd + Abs {
-    fn get_stability_constant(lower: MO::Distance, upper: MO::Distance) -> Fallible<MO::Distance> {
+impl<T, const P: usize> BoundedSumConstant<T> for (SymmetricDistance, LPSensitivity<T, P>)
+    where T: 'static + PartialOrd + Abs {
+    fn get_stability_constant(lower: T, upper: T) -> Fallible<T> {
         max(lower.abs(), upper.abs())
             .ok_or_else(|| err!(InvalidDistance, "lower and upper must be comparable"))
     }
@@ -39,7 +39,7 @@ pub fn make_bounded_sum<MI, MO>(
           MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance>,
           for <'a> MO::Distance: Sum<&'a MO::Distance>,
-          (MI, MO): BoundedSumConstant<MI, MO> {
+          (MI, MO): BoundedSumConstant<MO::Distance> {
 
     Ok(Transformation::new(
         VectorDomain::new(IntervalDomain::new(

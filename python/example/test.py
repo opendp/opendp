@@ -23,7 +23,7 @@ def main():
     # Noisy sum, col 1
     noisy_sum_1 = (
         make_select_column(key=1, M=HammingDistance, T=int) >>
-        make_clamp_vec(lower=0, upper=10, M=HammingDistance) >>
+        make_clamp(lower=0, upper=10, M=HammingDistance) >>
         make_bounded_sum(lower=0, upper=10, MI=HammingDistance, MO=L1Sensitivity[int]) >>
         make_base_geometric(scale=1.0, lower=0, upper=1000)
     )

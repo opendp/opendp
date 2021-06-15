@@ -35,7 +35,7 @@ pub extern "C" fn opendp_trans__make_bounded_variance(
                   MO: 'static + SensitivityMetric,
                   MO::Distance: DistanceConstant + Float + for<'a> Sum<&'a MO::Distance> + Sum<MO::Distance>,
                   for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
-                  (MI, MO): BoundedVarianceConstant<MI, MO> {
+                  (MI, MO): BoundedVarianceConstant<MO::Distance> {
             make_bounded_variance::<MI, MO>(lower, upper, length, ddof).into_any()
         }
         let lower = *try_as_ref!(lower as *const T);
@@ -80,7 +80,7 @@ pub extern "C" fn opendp_trans__make_bounded_covariance(
                   MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Sum<MO::Distance> + Zero + One,
                   for<'a> MO::Distance: Div<&'a MO::Distance, Output=MO::Distance> + Add<&'a MO::Distance, Output=MO::Distance>,
                   for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
-                  (MI, MO): BoundedCovarianceConstant<MI, MO> {
+                  (MI, MO): BoundedCovarianceConstant<MO::Distance> {
             make_bounded_covariance::<MI, MO>(lower, upper, length, ddof).into_any()
         }
         let lower = try_!(try_as_ref!(lower).downcast_ref::<(T, T)>()).clone();

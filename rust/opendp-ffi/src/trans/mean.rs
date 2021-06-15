@@ -31,7 +31,7 @@ pub extern "C" fn opendp_trans__make_bounded_mean(
                   MO: 'static + SensitivityMetric,
                   MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float,
                   for<'a> MO::Distance: Sum<&'a MO::Distance>,
-                  (MI, MO): BoundedMeanConstant<MI, MO> {
+                  (MI, MO): BoundedMeanConstant<MO::Distance> {
             make_bounded_mean::<MI, MO>(lower, upper, n).into_any()
         }
         let lower = *try_as_ref!(lower as *const T);

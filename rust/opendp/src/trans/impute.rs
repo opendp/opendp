@@ -1,12 +1,13 @@
 use std::ops::{Add, Mul, Sub};
 
-use num::{Float, One};
+use num::Float;
 
-use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
+use crate::core::{DatasetMetric, Domain, Transformation};
 use crate::dom::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::dom::InherentNull;
 use crate::samplers::SampleUniform;
+use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
 /// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
@@ -20,19 +21,12 @@ pub fn make_impute_uniform_float<M, T>(
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
     let scale = upper.clone() - lower.clone();
 
-    Ok(Transformation::new(
-        VectorDomain::new(InherentNullDomain::new(AllDomain::new())),
-        VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<T>| {
-            arg.iter().map(|v| {
-                if v.is_null() {
-                    T::sample_standard_uniform(false).map(|v| v * &scale + &lower)
-                } else { Ok(v.clone()) }
-            }).collect()
-        }),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(M::Distance::one())))
+    make_row_by_row_fallible(
+        InherentNullDomain::new(AllDomain::new()),
+        AllDomain::new(),
+        move |v| if v.is_null() {
+            T::sample_standard_uniform(false).map(|v| v * &scale + &lower)
+        } else { Ok(v.clone()) })
 }
 
 // utility trait to impute with a constant, regardless of the representation of null
@@ -70,18 +64,14 @@ pub fn make_impute_constant<DA, M>(
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::NonNull>>, M, M>>
     where DA: ImputableDomain,
           DA::NonNull: 'static + Clone,
+          DA::Carrier: 'static,
           M: DatasetMetric {
     if DA::is_null(&constant) { return fallible!(MakeTransformation, "Constant may not be null.") }
 
-    Ok(Transformation::new(
-        VectorDomain::new(DA::new()),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<DA::Carrier>| arg.iter()
-            .map(|v| DA::impute_constant(v, &constant))
-            .cloned().collect()),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(M::Distance::one())))
+    make_row_by_row(
+        DA::new(),
+        AllDomain::new(),
+        move |v| DA::impute_constant(v, &constant).clone())
 }
 
 

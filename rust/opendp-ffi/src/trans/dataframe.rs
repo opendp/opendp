@@ -7,7 +7,7 @@ use std::str::FromStr;
 use opendp::core::DatasetMetric;
 use opendp::dist::{HammingDistance, SymmetricDistance};
 use opendp::err;
-use opendp::trans::{make_create_dataframe, make_parse_column, make_parse_series, make_select_column, make_split_dataframe, make_split_lines, make_split_records};
+use opendp::trans::{make_create_dataframe, make_parse_column, make_select_column, make_split_dataframe, make_split_lines, make_split_records};
 
 use crate::any::{AnyObject, AnyTransformation, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -24,27 +24,6 @@ pub extern "C" fn opendp_trans__make_split_lines(
     }
     let M = try_!(Type::try_from(M));
     dispatch!(monomorphize, [(M, @dist_dataset)], ())
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_trans__make_parse_series(
-    impute: c_bool,
-    M: *const c_char, TO: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<M, TO>(impute: bool) -> FfiResult<*mut AnyTransformation>
-        where M: 'static + DatasetMetric + Clone,
-              TO: 'static + FromStr + Default,
-              TO::Err: Debug {
-        make_parse_series::<M, TO>(impute).into_any()
-    }
-    let M = try_!(Type::try_from(M));
-    let TO = try_!(Type::try_from(TO));
-    let impute = util::to_bool(impute);
-
-    dispatch!(monomorphize, [
-        (M, @dist_dataset),
-        (TO, @primitives)
-    ], (impute))
 }
 
 #[no_mangle]

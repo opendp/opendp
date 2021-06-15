@@ -226,15 +226,6 @@ mod tests {
     }
 
     #[test]
-    fn test_make_parse_series() {
-        let transformation = make_parse_series::<HammingDistance, i32>(true).unwrap_test();
-        let arg = vec!["1".to_owned(), "2".to_owned(), "3".to_owned(), "foo".to_owned()];
-        let ret = transformation.function.eval(&arg).unwrap_test();
-        let expected = vec![1, 2, 3, 0];
-        assert_eq!(ret, expected);
-    }
-
-    #[test]
     fn test_make_split_records() {
         let transformation = make_split_records::<HammingDistance>(None).unwrap_test();
         let arg = vec!["ant, foo".to_owned(), "bat, bar".to_owned(), "cat, baz".to_owned()];

@@ -38,7 +38,7 @@
 //! use opendp::core;
 //! use opendp::meas;
 //! use opendp::trans;
-//! use opendp::trans::{manipulation, sum, make_split_lines, make_parse_series, make_clamp, make_bounded_sum};
+//! use opendp::trans::{manipulation, sum, make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
 //! use opendp::dist::{HammingDistance, L1Sensitivity};
 //! use opendp::error::*;
 //! use opendp::chain::{make_chain_tt, make_chain_mt};
@@ -53,8 +53,8 @@
 //!
 //!     // Construct a Transformation to load the numbers.
 //!     let split_lines = make_split_lines::<HammingDistance>()?;
-//!     let parse_series = make_parse_series::<HammingDistance, f64>(true)?;
-//!     let load_numbers = make_chain_tt(&parse_series, &split_lines, None)?;
+//!     let cast = make_cast_default::<HammingDistance, String, f64>()?;
+//!     let load_numbers = make_chain_tt(&cast, &split_lines, None)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
 //!     let clamp = make_clamp::<VectorDomain<_>, _>(bounds.0, bounds.1)?;

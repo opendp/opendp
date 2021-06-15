@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use indexmap::map::IndexMap;
 use serde::Deserialize;
+use serde_json::Value;
 
 #[cfg(feature="python")]
 pub mod python;
@@ -44,7 +45,8 @@ pub struct Argument {
     // plaintext description of the argument used to generate documentation
     description: Option<String>,
     // default value for the argument
-    default: Option<String>,
+    #[serde(default)]
+    default: Value,
     // set to true if the argument represents a type
     #[serde(default)]
     is_type: bool,

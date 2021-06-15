@@ -138,11 +138,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     >>>
     >>> # chain with more transformations from the trans module
-    >>> from opendp.v1.trans import make_split_lines, make_parse_series
+    >>> from opendp.v1.trans import make_split_lines, make_cast
     >>> from opendp.v1.typing import SymmetricDistance, L1Sensitivity
     >>> chained = (
     >>>     make_split_lines(M=SymmetricDistance) >>
-    >>>     make_parse_series(impute=True, M=SymmetricDistance, TO=int) >>
+    >>>     make_cast(M=SymmetricDistance, TI=str, TO=int) >>
     >>>     count
     >>> )
     >>>

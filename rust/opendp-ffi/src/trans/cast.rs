@@ -10,34 +10,25 @@ use opendp::trans::{make_cast, make_cast_default, make_is_equal, make_cast_inher
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::util::{c_bool, to_bool, Type};
+use crate::util::{Type};
+
+
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast(
-    inherent: c_bool,
     M: *const c_char, TI: *const c_char, TO: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
     let M = try_!(Type::try_from(M));
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    if to_bool(inherent) {
-        fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation> where
-            M: 'static + DatasetMetric,
-            TI: 'static + Clone,
-            TO: 'static + CastFrom<TI> + InherentNull {
-            make_cast::<M, TI, TO>().into_any()
-        }
-        dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @floats)], ())
-    } else {
-        fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation> where
-            M: 'static + DatasetMetric,
-            TI: 'static + Clone,
-            TO: 'static + CastFrom<TI> {
-            make_cast::<M, TI, TO>().into_any()
-        }
-        dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @primitives)], ())
+    fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation> where
+        M: 'static + DatasetMetric,
+        TI: 'static + Clone,
+        TO: 'static + CastFrom<TI> {
+        make_cast::<M, TI, TO>().into_any()
     }
+    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @primitives)], ())
 }
 
 #[no_mangle]
@@ -59,7 +50,7 @@ pub extern "C" fn opendp_trans__make_cast_default(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_is_equal(
-    constant: *const c_void,
+    value: *const c_void,
     M: *const c_char, TI: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let M = try_!(Type::try_from(M));
@@ -71,7 +62,7 @@ pub extern "C" fn opendp_trans__make_is_equal(
         let value = try_as_ref!(value as *const TI).clone();
         make_is_equal::<M, TI>(value).into_any()
     }
-    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives)], (constant))
+    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives)], (value))
 }
 
 #[no_mangle]
@@ -121,14 +112,13 @@ mod tests {
 
     use crate::any::{AnyObject, Downcast};
     use crate::core;
-    use crate::util::{from_bool, ToCharP};
+    use crate::util::ToCharP;
 
     use super::*;
 
     #[test]
     fn test_make_cast_vec() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_cast(
-            from_bool(true),
             "SymmetricDistance".to_char_p(),
             "i32".to_char_p(),
             "f64".to_char_p(),

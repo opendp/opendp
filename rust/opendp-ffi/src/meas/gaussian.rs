@@ -27,7 +27,7 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_meas__make_base_gaussian_vec(
+pub extern "C" fn opendp_meas__make_base_vector_gaussian(
     scale: *const c_void,
     T: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
