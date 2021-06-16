@@ -1,5 +1,8 @@
 use num::{Float};
 
+pub mod analytic;
+pub use self::analytic::*;
+
 use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric};
 use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
@@ -8,7 +11,7 @@ use crate::samplers::SampleGaussian;
 use crate::traits::{InfCast, CheckNull};
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / std::f64::consts::PI).ln();
-const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
+pub const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
 fn make_gaussian_privacy_relation<T, MI>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>>
     where T: 'static + Clone + SampleGaussian + Float + InfCast<f64>,
