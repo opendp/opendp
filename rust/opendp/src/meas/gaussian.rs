@@ -7,9 +7,9 @@ use crate::error::*;
 use crate::samplers::SampleGaussian;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
-const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
+pub(in crate::meas) const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
-fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float>(scale: T) -> PrivacyRelation<L2Sensitivity<T>, SmoothedMaxDivergence<T>> {
+fn make_gaussian_privacy_relation<T: 'static + Clone + Float>(scale: T) -> PrivacyRelation<L2Sensitivity<T>, SmoothedMaxDivergence<T>> {
     PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
         let _2 = num_cast!(2.; T)?;
         let additive_gauss_const = num_cast!(ADDITIVE_GAUSS_CONST; T)?;
