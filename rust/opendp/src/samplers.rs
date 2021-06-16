@@ -312,7 +312,7 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     /// Sample from the censored two-sided geometric distribution with parameter `prob`.
     /// If `bounds` is None, there are no timing protections, and the support is:
     ///     [Self::MIN, Self::MAX]
-    /// If `trials` is Some, execution runs in constant time, and the support is
+    /// If `bounds` is Some, execution runs in constant time, and the support is
     ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
     ///
     /// Tail probabilities of the uncensored two-sided geometric accumulate at the extrema of the support.
