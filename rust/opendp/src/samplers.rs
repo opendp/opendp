@@ -332,14 +332,20 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
 }
 
 impl<T: Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + Bounded + Zero + One + PartialOrd> SampleTwoSidedGeometric for T {
-    fn sample_two_sided_geometric(shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
-        // If bounds are not provided, then the bounds are assumed to be the smallest and largest representable values in T.
-        // Due to the finite nature of computers, this simulation of the geometric distribution censors outputs to values within the bounds.
-        // All values between the bounds need to be reachable from shift + noise,
-        //     so in the worst-case, (upper_bound - lower_bound - 1) bernoulli trials are needed
-        // For example, if bounds are [0, 10], and input is 0,
-        //     the geometric sample needs to run 9 trials to cover the worst-case execution time of having 9 failures
-        // To run the calculation in constant-time, provide tighter lower and upper bounds to limit the worst-case number of trials
+    fn sample_two_sided_geometric(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+        // When no bounds are given, there are no protections against timing attacks.
+        //     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
+        //     The output of this mechanism is as if samples were taken from the
+        //         uncensored two-sided geometric distribution and saturated at the bounds of T.
+        //
+        // When bounds are given, samples are taken from the censored two-sided geometric distribution,
+        //     where the tail probabilities are accumulated in the +/- (upper - lower)th bucket from taking (upper - lower - 1) bernoulli trials.
+        //     This special bucket may at most appear at the clamping bound of the output distribution-
+        //     Should the shift be outside the bounds, this irregular bucket and its zero-neighbor bucket would both be present in the output.
+        //     There is no multiplicative bound on the difference in probabilities between the output probabilities for neighboring datasets.
+        //     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
+        //         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
+        //             the analyst can deduce that the input was greater than or equal to upper
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
             if lower == upper {return Ok(lower)}
@@ -347,6 +353,10 @@ impl<T: Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + 
         } else {None};
 
         let alpha: f64 = (-scale.recip()).exp();
+
+        if let Some((lower, upper)) = &bounds {
+            shift = clamp(shift, lower.clone(), upper.clone());
+        }
 
         // TODO: check MIR for reordering that moves these samples inside the conditional
         // TODO: benchmark execution time on different inputs
