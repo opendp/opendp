@@ -1,9 +1,9 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg, SubAssign};
+use std::ops::{AddAssign, Neg, SubAssign, Sub};
 
 use ieee754::Ieee754;
 
-use num::{One, Zero, CheckedSub, CheckedAdd, Bounded, clamp};
+use num::{One, Zero, Bounded, clamp};
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 
@@ -247,9 +247,12 @@ fn sample_i10_geometric(constant_time: bool) -> Fallible<i16> {
 pub trait SampleGeometric: Sized {
 
     /// Sample from the censored geometric distribution with parameter `prob`.
-    /// If `trials` is none, `trials` is infinite, and the output saturates.
-    /// The support of the distribution is shift += {1, 2, 3, ..., `trials`}, saturated to Self's data bounds.
-    /// "Censored" because the long tail of probability saturates at `trials` or Self's data bounds.
+    /// If `trials` is None, there are no timing protections, and the support is:
+    ///     [Self::MIN, Self::MAX]
+    /// If `trials` is Some, execution runs in constant time, and the support is
+    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    ///
+    /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
     ///
     /// # Arguments
     /// * `shift` - Parameter to shift the output by
@@ -270,7 +273,7 @@ pub trait SampleGeometric: Sized {
     fn sample_geometric(shift: Self, positive: bool, prob: f64, trials: Option<Self>) -> Fallible<Self>;
 }
 
-impl<T: Zero + One + PartialOrd + CheckedAdd + CheckedSub + AddAssign + SubAssign + Clone + Bounded> SampleGeometric for T {
+impl<T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded> SampleGeometric for T {
 
     fn sample_geometric(mut shift: Self, positive: bool, prob: f64, mut trials: Option<Self>) -> Fallible<Self> {
 
@@ -306,15 +309,18 @@ impl<T: Zero + One + PartialOrd + CheckedAdd + CheckedSub + AddAssign + SubAssig
 
 pub trait SampleTwoSidedGeometric: SampleGeometric {
 
-    /// Sample from the two-sided geometric distribution with parameter "prob".
-    /// If `trials` is none, `trials` is Self's max value.
-    /// The support of the distribution is
-    ///     {max(shift - trials, Self::min_value), ..., shift - 1, shift, shift + 1, ..., trials}
-    /// "Censored" because the long tails of probability saturates at the boundaries of the support.
+    /// Sample from the censored two-sided geometric distribution with parameter `prob`.
+    /// If `bounds` is None, there are no timing protections, and the support is:
+    ///     [Self::MIN, Self::MAX]
+    /// If `trials` is Some, execution runs in constant time, and the support is
+    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    ///
+    /// Tail probabilities of the uncensored two-sided geometric accumulate at the extrema of the support.
     ///
     /// # Arguments
-    /// * `prob` - Parameter for the geometric distribution, the probability of success on any given trial.
-    /// * `trials` - If Some, run the algorithm in constant time with exactly this many trials.
+    /// * `shift` - Parameter to shift the output by
+    /// * `scale` - Parameter to scale the output by
+    /// * `bounds` - If Some, run the algorithm in constant time with both inputs and outputs clamped to this value.
     ///
     /// # Return
     /// A draw from the two-sided censored geometric distribution defined above.
@@ -331,21 +337,21 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + Bounded + Zero + One + PartialOrd> SampleTwoSidedGeometric for T {
+impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + PartialOrd> SampleTwoSidedGeometric for T {
+    /// When no bounds are given, there are no protections against timing attacks.
+    ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
+    ///     The output of this mechanism is as if samples were taken from the
+    ///         uncensored two-sided geometric distribution and saturated at the bounds of T.
+    ///
+    /// When bounds are given, samples are taken from the censored two-sided geometric distribution,
+    ///     where the tail probabilities are accumulated in the +/- (upper - lower)th bucket from taking (upper - lower - 1) bernoulli trials.
+    ///     This special bucket may at most appear at the clamping bound of the output distribution-
+    ///     Should the shift be outside the bounds, this irregular bucket and its zero-neighbor bucket would both be present in the output.
+    ///     There is no multiplicative bound on the difference in probabilities between the output probabilities for neighboring datasets.
+    ///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
+    ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
+    ///             the analyst can deduce that the input was greater than or equal to upper
     fn sample_two_sided_geometric(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
-        // When no bounds are given, there are no protections against timing attacks.
-        //     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
-        //     The output of this mechanism is as if samples were taken from the
-        //         uncensored two-sided geometric distribution and saturated at the bounds of T.
-        //
-        // When bounds are given, samples are taken from the censored two-sided geometric distribution,
-        //     where the tail probabilities are accumulated in the +/- (upper - lower)th bucket from taking (upper - lower - 1) bernoulli trials.
-        //     This special bucket may at most appear at the clamping bound of the output distribution-
-        //     Should the shift be outside the bounds, this irregular bucket and its zero-neighbor bucket would both be present in the output.
-        //     There is no multiplicative bound on the difference in probabilities between the output probabilities for neighboring datasets.
-        //     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
-        //         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
-        //             the analyst can deduce that the input was greater than or equal to upper
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
             if lower == upper {return Ok(lower)}
@@ -354,6 +360,8 @@ impl<T: Clone + SampleGeometric + CheckedSub<Output=T> + CheckedAdd<Output=T> + 
 
         let alpha: f64 = (-scale.recip()).exp();
 
+        // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
+        // Thanks for the input @ctcovington (Christian Covington)
         if let Some((lower, upper)) = &bounds {
             shift = clamp(shift, lower.clone(), upper.clone());
         }
