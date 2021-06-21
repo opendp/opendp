@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parallel import DistributedDataParallel as DDP
+import os
+import torch.distributed as dist
+import torch.multiprocessing as mp
+
 
 from functools import wraps
 
@@ -21,42 +26,50 @@ class TestModule(nn.Module):
         return x
 
 
-model = TestModule(4, 3)
+def setup(rank, world_size):
+    os.environ['MASTER_ADDR'] = '127.0.0.1'
+    os.environ['MASTER_PORT'] = '12355'
+    os.environ['GLOO_SOCKET_IFNAME'] = 'lo0'
+
+    # initialize the process group
+    dist.init_process_group("gloo", rank=rank, world_size=world_size)
 
 
-def print_hook(module: nn.Module, _inputs, _outputs):
-    print('hook triggered on', module)
+def cleanup():
+    dist.destroy_process_group()
 
 
-for module in model.modules():
-    if isinstance(module, nn.Linear):
-        module.register_full_backward_hook(print_hook)
-        print('added hook to', module)
+def run_worker(rank, world_size):
+    setup(rank, world_size)
+    model = TestModule(4, 3)
+    model = DDP(model)
 
-def patch_first_hook(model):
-    def set_requires_grad(arg):
-        if isinstance(arg, torch.Tensor):
-            arg.requires_grad = True
-        return arg
+    def print_hook(module: nn.Module, _inputs, _outputs):
+        print('hook triggered on', module)
 
-    old_forward = model.forward
+    for module in model.modules():
+        if isinstance(module, nn.Linear):
+            module.register_full_backward_hook(print_hook)
+            print('added hook to', module)
 
-    @wraps(old_forward)
-    def wrapper(*args, **kwargs):
-        return old_forward(
-            *(set_requires_grad(arg) for arg in args),
-            **{kw: set_requires_grad(arg) for kw, arg in kwargs.items()})
+    from inspect import signature
+    print(signature(model.forward))
 
-    setattr(model, 'forward', wrapper)
+    for i in range(3):
+        x, y = torch.rand(size=(20, 4)), torch.randint(low=0, high=3, size=(20,))
+        loss = F.cross_entropy(model(x), y)
 
-from inspect import signature
-print(signature(model.forward))
+        print('backward started')
+        loss.backward()
+        model.zero_grad()
+    print('backward complete')
+    cleanup()
 
-patch_first_hook(model)
 
-x, y = torch.rand(size=(20, 4)), torch.randint(low=0, high=3, size=(20,))
-loss = F.cross_entropy(model(x), y)
-
-print('backward started')
-loss.backward()
-print('backward complete')
+if __name__ == "__main__":
+    for world_size in range(3, 6):
+        mp.spawn(run_worker,
+                 args=(world_size,),
+                 nprocs=world_size,
+                 join=True)
+        print(f"DDP synchronized tensor grads successfully with {world_size} workers")

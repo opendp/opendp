@@ -25,6 +25,7 @@ from opendp.mod import binary_search
 from opendp.network.layers.bahdanau import DPBahdanauAttention
 from opendp.network.layers.base import InstanceGrad
 from opendp.network.layers.lstm import DPLSTM, DPLSTMCell
+
 from functools import partial
 
 CHECK_CORRECTNESS = False
@@ -36,7 +37,7 @@ REPLACEMENT_MODULES = {
 }
 
 # see https://github.com/pytorch/pytorch/issues/56380
-FULL_BACKWARD_HOOK = False
+FULL_BACKWARD_HOOK = True
 
 
 class PrivacyOdometer(object):
@@ -256,10 +257,13 @@ class PrivacyOdometer(object):
         model.autograd_hooks = []
         for module in self._filter_modules(model, whitelist):
 
+            module_register_backward_hook = module.register_full_backward_hook \
+                if FULL_BACKWARD_HOOK else module.register_backward_hook
+
             # hooks on the module
             model.autograd_hooks.extend([
                 module.register_forward_hook(hook_module_forward),
-                module.register_backward_hook(hook_module_backward)
+                module_register_backward_hook(hook_module_backward)
             ])
 
             # hooks on each of the params. First need to define how to build instance grads for each param
@@ -452,15 +456,22 @@ class PrivacyOdometer(object):
         measurement = self._find_suitable_step_measure(reduction, clipping_norm, n)
         grad = torch.FloatTensor(measurement(grad)).reshape(grad.shape)
 
+        # fill gradient with a constant, if a _fill value is set. Useful for validating DDP
+        if hasattr(self, '_fill') and self._fill is not None:
+            grad.fill_(self._fill)
+
         if device != 'cpu':
             grad = grad.to(device)
         return grad
 
     @staticmethod
-    def _filter_modules(model, whitelist=None):
+    def _filter_modules(model, whitelist=None) -> List[nn.Module]:
         def has_params(module):
             return next(module.parameters(recurse=False), None) is not None
         return [m for m in whitelist or model.modules() if has_params(m)]
+
+    def _set_fill(self, constant):
+        self._fill = constant
 
     def increment_epoch(self):
         if self.steps:
