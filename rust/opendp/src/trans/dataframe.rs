@@ -168,22 +168,6 @@ fn parse_series<T>(col: &[&str], default_on_error: bool) -> Fallible<Vec<T>> whe
     }
 }
 
-pub fn make_parse_series<M, TO>(impute: bool) -> Fallible<Transformation<VectorDomain<AllDomain<String>>, VectorDomain<AllDomain<TO>>, M, M>>
-    where M: Clone + DatasetMetric,
-          TO: FromStr + Default,
-          TO::Err: Debug {
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<String>| -> Fallible<Vec<TO>> {
-            let arg = vec_string_to_str(arg);
-            parse_series(&arg, impute)
-        }),
-        M::default(),
-        M::default(),
-        StabilityRelation::new_from_constant(1_u32)))
-}
-
 fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
     fn split<'a>(line: &'a str, separator: &str) -> Vec<&'a str> {
         line.split(separator).into_iter().map(|e| e.trim()).collect()

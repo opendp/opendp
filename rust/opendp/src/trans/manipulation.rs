@@ -3,7 +3,7 @@ use num::One;
 use crate::core::{Domain, Function, Metric, StabilityRelation, Transformation, DatasetMetric};
 use crate::error::*;
 use crate::traits::{DistanceConstant};
-use crate::dom::VectorDomain;
+use crate::dom::{VectorDomain, AllDomain};
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -57,9 +57,22 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
         StabilityRelation::new_from_constant(M::Distance::one())))
 }
 
+/// A [`Transformation`] that checks equality elementwise with `value`.
+/// Maps a Vec<T> -> Vec<bool>
+pub fn make_is_equal<M, TI>(
+    value: TI
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, M, M>>
+    where M: DatasetMetric,
+          TI: 'static + PartialEq {
+    make_row_by_row(
+        AllDomain::new(),
+        AllDomain::new(),
+        move |v| v == &value)
+}
+
 
 #[cfg(test)]
-mod test_manipulations {
+mod tests {
 
     use super::*;
     use crate::dist::{HammingDistance};
@@ -71,5 +84,15 @@ mod test_manipulations {
         let arg = 99;
         let ret = identity.function.eval(&arg).unwrap_test();
         assert_eq!(ret, 99);
+    }
+
+    #[test]
+    fn test_is_equal() -> Fallible<()> {
+        let is_equal = make_is_equal::<HammingDistance, _>("alpha".to_string())?;
+        let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
+        let ret = is_equal.function.eval(&arg)?;
+        assert_eq!(ret, vec![true, false, false]);
+        assert!(is_equal.stability_relation.eval(&1, &1)?);
+        Ok(())
     }
 }

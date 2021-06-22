@@ -63,9 +63,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_geometric_mechanism() {
+    fn test_make_geometric_mechanism_bounded() {
         let measurement = make_base_geometric::<AllDomain<_>, f64>(10.0, Some((200, 210))).unwrap_test();
         let arg = 205;
+        let _ret = measurement.function.eval(&arg).unwrap_test();
+        println!("{:?}", _ret);
+
+        assert!(measurement.privacy_relation.eval(&1, &0.5).unwrap_test());
+    }
+
+    #[test]
+    fn test_make_vector_geometric_mechanism_bounded() {
+        let measurement = make_base_geometric::<VectorDomain<_>, f64>(10.0, Some((200, 210))).unwrap_test();
+        let arg = vec![1, 2, 3, 4];
+        let _ret = measurement.function.eval(&arg).unwrap_test();
+        println!("{:?}", _ret);
+
+        assert!(measurement.privacy_relation.eval(&1, &0.5).unwrap_test());
+    }
+
+    #[test]
+    fn test_make_geometric_mechanism() {
+        let measurement = make_base_geometric::<AllDomain<_>, f64>(10.0, None).unwrap_test();
+        let arg = 205;
+        let _ret = measurement.function.eval(&arg).unwrap_test();
+        println!("{:?}", _ret);
+
+        assert!(measurement.privacy_relation.eval(&1, &0.5).unwrap_test());
+    }
+
+    #[test]
+    fn test_make_vector_geometric_mechanism() {
+        let measurement = make_base_geometric::<VectorDomain<_>, f64>(10.0, None).unwrap_test();
+        let arg = vec![1, 2, 3, 4];
         let _ret = measurement.function.eval(&arg).unwrap_test();
         println!("{:?}", _ret);
 

@@ -88,7 +88,7 @@ def test_split_dataframe():
     assert query.check(1, 1)
 
 
-def test_clamp_vec():
+def test_vector_clamp():
     from opendp.v1.trans import make_clamp
     query = make_clamp(lower=-1, upper=1, M=HammingDistance)
     assert query([-10, 0, 10]) == [-1, 0, 1]

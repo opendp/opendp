@@ -27,19 +27,6 @@ pub fn make_cast_default<M, TI, TO>() -> Fallible<Transformation<VectorDomain<Al
         |v| TO::cast(v.clone()).unwrap_or_default())
 }
 
-/// A [`Transformation`] that checks equality elementwise with `value`.
-/// Maps a Vec<T> -> Vec<bool>
-pub fn make_is_equal<M, TI>(
-    value: TI
-) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, M, M>>
-    where M: DatasetMetric,
-          TI: 'static + PartialEq {
-    make_row_by_row(
-        AllDomain::new(),
-        AllDomain::new(),
-        move |v| v == &value)
-}
-
 /// A [`Transformation`] that casts elements to a type that has an inherent representation of nullity.
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_inherent<M, TI, TO>(
@@ -53,14 +40,12 @@ pub fn make_cast_inherent<M, TI, TO>(
 }
 
 pub trait DatasetMetricCast {
-    type Distance;
     fn stability_constant() -> u32;
 }
 
 macro_rules! impl_metric_cast {
     ($ty:ty, $constant:literal) => {
          impl DatasetMetricCast for $ty {
-            type Distance = u32;
             fn stability_constant() -> u32 {
                 $constant
             }
@@ -91,14 +76,30 @@ pub fn make_cast_metric<D, MI, MO>(
 }
 
 #[cfg(test)]
-mod test_manipulations {
+mod tests {
     use crate::dist::{HammingDistance, SymmetricDistance};
     use crate::error::ExplainUnwrap;
 
     use super::*;
 
+
     #[test]
-    fn test_cast() {
+    fn test_cast() -> Fallible<()> {
+        let data = vec![1., 1e10, 0.5, f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
+        let caster = make_cast::<SymmetricDistance, f64, i64>()?;
+        assert_eq!(
+            caster.function.eval(&data)?,
+            vec![Some(1), Some(10000000000), Some(0), None, None, None]);
+
+        let caster = make_cast::<SymmetricDistance, f64, u8>()?;
+        assert_eq!(
+            caster.function.eval(&vec![-1., f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
+            vec![None; 4]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_cast_combinations() {
         macro_rules! test_pair {
             ($from:ty, $to:ty) => {
                 let caster = make_cast::<SymmetricDistance, $from, $to>().unwrap_test();
@@ -130,14 +131,14 @@ mod test_manipulations {
     }
 
     #[test]
-    fn test_cast_unsigned() -> Fallible<()> {
+    fn test_cast_default_unsigned() -> Fallible<()> {
         let caster = make_cast_default::<SymmetricDistance, f64, u8>()?;
         assert_eq!(caster.function.eval(&vec![-1.])?, vec![u8::default()]);
         Ok(())
     }
 
     #[test]
-    fn test_cast_parse() -> Fallible<()> {
+    fn test_cast_default_parse() -> Fallible<()> {
         let data = vec!["2".to_string(), "3".to_string(), "a".to_string(), "".to_string()];
 
         let caster = make_cast_default::<SymmetricDistance, String, u8>()?;
@@ -149,7 +150,7 @@ mod test_manipulations {
     }
 
     #[test]
-    fn test_cast_floats() -> Fallible<()> {
+    fn test_cast_default_floats() -> Fallible<()> {
         let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
         let caster = make_cast_default::<SymmetricDistance, f64, String>()?;
         assert_eq!(
@@ -169,12 +170,22 @@ mod test_manipulations {
     }
 
     #[test]
-    fn test_is_equal() -> Fallible<()> {
-        let is_equal = make_is_equal::<HammingDistance, _>("alpha".to_string())?;
-        let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
-        let ret = is_equal.function.eval(&arg)?;
-        assert_eq!(ret, vec![true, false, false]);
-        assert!(is_equal.stability_relation.eval(&1, &1)?);
+    fn test_cast_inherent() -> Fallible<()> {
+        let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
+        let caster = make_cast_inherent::<SymmetricDistance, String, f64>()?;
+        let res = caster.function.eval(&data)?;
+        assert!(res[0].is_nan());
+        assert_eq!(res[1..], vec![1., 1.]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_cast_metric() -> Fallible<()> {
+        let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
+        let caster = make_cast_metric::<VectorDomain<AllDomain<_>>, HammingDistance, SymmetricDistance>(VectorDomain::new_all())?;
+        let _res = caster.function.eval(&data)?;
+        assert!(!caster.stability_relation.eval(&1, &1)?);
+        assert!(caster.stability_relation.eval(&1, &2)?);
         Ok(())
     }
 }

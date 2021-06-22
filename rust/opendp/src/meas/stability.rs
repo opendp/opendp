@@ -98,7 +98,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
 
 
 #[cfg(test)]
-mod test_stability {
+mod tests {
     use super::*;
 
     #[test]

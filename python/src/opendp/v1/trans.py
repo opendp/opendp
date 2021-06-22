@@ -660,7 +660,7 @@ def make_impute_constant(
     :param constant: Value to replace nulls with.
     :param M: dataset metric
     :type M: DatasetMetric
-    :param T: type of data being clamped
+    :param T: type of data being imputed
     :type T: RuntimeTypeDescriptor
     :return: A impute_constant step.
     :rtype: Transformation
@@ -696,7 +696,7 @@ def make_impute_constant_inherent(
     :param constant: Value to replace nulls with.
     :param M: dataset metric
     :type M: DatasetMetric
-    :param T: type of data being clamped
+    :param T: type of data being imputed
     :type T: RuntimeTypeDescriptor
     :return: A impute_constant_inherent step.
     :rtype: Transformation
@@ -733,7 +733,7 @@ def make_impute_uniform_float(
     :param upper: Upper bound of uniform distribution to sample from.
     :param M: dataset metric
     :type M: DatasetMetric
-    :param T: type of data being clamped
+    :param T: type of data being imputed
     :type T: RuntimeTypeDescriptor
     :return: A impute_uniform_float step.
     :rtype: Transformation

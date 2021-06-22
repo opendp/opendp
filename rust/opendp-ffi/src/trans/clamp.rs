@@ -152,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_clamp_vec() -> Fallible<()> {
+    fn test_make_vector_clamp() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_clamp(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(10.0) as *const c_void,

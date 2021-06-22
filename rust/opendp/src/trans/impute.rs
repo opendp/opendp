@@ -76,11 +76,11 @@ pub fn make_impute_constant<DA, M>(
 
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::dist::HammingDistance;
     use crate::error::ExplainUnwrap;
     use crate::trans::{make_impute_constant, make_impute_uniform_float};
-    use crate::dom::OptionNullDomain;
+    use crate::dom::{OptionNullDomain, InherentNullDomain};
 
     #[test]
     fn test_impute_uniform() {
@@ -94,12 +94,23 @@ mod test {
     }
 
     #[test]
-    fn test_impute_constant() {
+    fn test_impute_constant_option() {
         let imputer = make_impute_constant::<OptionNullDomain<_>, HammingDistance>("IMPUTED".to_string()).unwrap_test();
 
         let result = imputer.function.eval(&vec![Some("A".to_string()), None]).unwrap_test();
 
         assert_eq!(result, vec!["A".to_string(), "IMPUTED".to_string()]);
+        assert!(imputer.stability_relation
+            .eval(&1, &1).unwrap_test());
+    }
+
+    #[test]
+    fn test_impute_constant_inherent() {
+        let imputer = make_impute_constant::<InherentNullDomain<_>, HammingDistance>(12.).unwrap_test();
+
+        let result = imputer.function.eval(&vec![f64::NAN, 23.]).unwrap_test();
+
+        assert_eq!(result, vec![12., 23.]);
         assert!(imputer.stability_relation
             .eval(&1, &1).unwrap_test());
     }

@@ -47,7 +47,7 @@ impl<M, T> ClampableDomain<M> for AllDomain<T>
     where M: SensitivityMetric,
           M::Distance: DistanceConstant + One,
           T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T> {
-    type Atom = Self::Carrier;
+    type Atom = T;
     type OutputDomain = IntervalDomain<T>;
 
     fn new_input_domain() -> Self { AllDomain::new() }
@@ -138,19 +138,11 @@ pub fn make_unclamp<DI, M>(lower: Bound<DI::Atom>, upper: Bound<DI::Atom>) -> Fa
 
 
 #[cfg(test)]
-mod test_manipulations {
+mod tests {
 
     use super::*;
-    use crate::dist::{SymmetricDistance, HammingDistance};
+    use crate::dist::{SymmetricDistance, HammingDistance, L1Sensitivity};
     use crate::trans::{make_clamp, make_unclamp};
-
-    #[test]
-    fn test_make_unclamp() -> Fallible<()> {
-        let clamp = make_clamp::<VectorDomain<_>, SymmetricDistance>(2, 3)?;
-        let unclamp = make_unclamp(Bound::Included(2), Bound::Included(3))?;
-
-        (clamp >> unclamp).map(|_| ())
-    }
 
     #[test]
     fn test_make_clamp() {
@@ -159,5 +151,34 @@ mod test_manipulations {
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = vec![0, 0, 0, 5, 10, 10];
         assert_eq!(ret, expected);
+    }
+
+    #[test]
+    fn test_make_unclamp() -> Fallible<()> {
+        let clamp = make_clamp::<VectorDomain<_>, SymmetricDistance>(2, 3)?;
+        let unclamp = make_unclamp(Bound::Included(2), Bound::Included(3))?;
+        let chained = (clamp >> unclamp)?;
+        chained.function.eval(&vec![1, 2, 3])?;
+        assert!(chained.stability_relation.eval(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_clamp_scalar() -> Fallible<()> {
+        let transformation = make_clamp::<AllDomain<_>, L1Sensitivity<_>>(0, 10)?;
+        assert_eq!(transformation.function.eval(&15)?, 10);
+        assert!(!transformation.stability_relation.eval(&15, &9)?);
+        assert!(transformation.stability_relation.eval(&15, &10)?);
+        assert!(!transformation.stability_relation.eval(&5, &4)?);
+        assert!(transformation.stability_relation.eval(&5, &5)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_unclamp_scalar() -> Fallible<()> {
+        let transformation = make_unclamp::<IntervalDomain<_>, L1Sensitivity<_>>(Bound::Included(0), Bound::Included(10))?;
+        assert_eq!(transformation.function.eval(&15)?, 15);
+        assert!(transformation.stability_relation.eval(&15, &15)?);
+        Ok(())
     }
 }

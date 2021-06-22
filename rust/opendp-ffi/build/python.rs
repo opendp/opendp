@@ -154,8 +154,6 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
         Value::Array(array) => Some(format!("{:?}", array)),
         Value::Object(_) => unimplemented!()
     };
-        // .as_ref().cloned()
-        // .or_else(|| generate_public_example(func, arg).map(|_| "None".to_string()));
     (format!(
         r#"{name}{hint}{default}"#,
         name = arg.name(),

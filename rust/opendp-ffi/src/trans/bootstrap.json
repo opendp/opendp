@@ -500,7 +500,7 @@
                 "name": "T",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "type of data being clamped"
+                "description": "type of data being imputed"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -525,7 +525,7 @@
                 "name": "T",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "type of data being clamped"
+                "description": "type of data being imputed"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -556,7 +556,7 @@
                 "name": "T",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "type of data being clamped"
+                "description": "type of data being imputed"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
