@@ -37,7 +37,7 @@ REPLACEMENT_MODULES = {
 }
 
 # see https://github.com/pytorch/pytorch/issues/56380
-FULL_BACKWARD_HOOK = True
+FULL_BACKWARD_HOOK = False
 
 
 class PrivacyOdometer(object):
