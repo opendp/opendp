@@ -28,6 +28,24 @@ pub fn make_count<MI, MO, TI>() -> Fallible<Transformation<VectorDomain<AllDomai
         StabilityRelation::new_from_constant(MO::Distance::one())))
 }
 
+
+pub fn make_count_distinct<MI, MO, TI>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, AllDomain<MO::Distance>, MI, MO>>
+    where MI: DatasetMetric,
+          MO: SensitivityMetric,
+          MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant,
+          TI: Eq + Hash {
+    Ok(Transformation::new(
+        VectorDomain::new_all(),
+        AllDomain::new(),
+        Function::new(move |arg: &Vec<TI>| {
+            let len = arg.iter().collect::<HashSet<_>>().len();
+            MO::Distance::try_from(len).unwrap_or(MO::Distance::max_value())
+        }),
+        MI::default(),
+        MO::default(),
+        StabilityRelation::new_from_constant(MO::Distance::one())))
+}
+
 pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
     fn get_stability_constant() -> Fallible<MO::Distance>;
 }
@@ -133,6 +151,15 @@ mod tests {
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
+        assert_eq!(ret, expected);
+    }
+
+    #[test]
+    fn test_make_count_distinct() {
+        let transformation = make_count_distinct::<SymmetricDistance, L1Sensitivity<i32>, _>().unwrap_test();
+        let arg = vec![1, 1, 3, 4, 4];
+        let ret = transformation.function.eval(&arg).unwrap_test();
+        let expected = 3;
         assert_eq!(ret, expected);
     }
 

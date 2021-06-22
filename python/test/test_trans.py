@@ -194,6 +194,15 @@ def test_count():
     assert transformation.check(1, 1)
 
 
+def test_count_distinct():
+    from opendp.v1.trans import make_count_distinct
+    transformation = make_count_distinct(SymmetricDistance, L1Sensitivity["i32"], int)
+    arg = [1, 2, 3, 2, 7, 3, 4]
+    ret = transformation(arg)
+    assert ret == 5
+    assert transformation.check(1, 1)
+
+
 def test_count_by():
     from opendp.v1.trans import make_count_by
     query = make_count_by(n=9, MI=HammingDistance, MO=L1Sensitivity[float], TI=int)

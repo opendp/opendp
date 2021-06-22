@@ -213,6 +213,32 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
+    "make_count_distinct": {
+        "description": "Make a Transformation that computes a count of the number of unique, distinct records in data.",
+        "args": [
+            {
+                "name": "MI",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "input dataset metric"
+            },
+            {
+                "name": "MO",
+                "c_type": "char *",
+                "hint": "SensitivityMetric",
+                "is_type": true,
+                "description": "output sensitivity metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic type of input data. Input data is expected to be of the form Vec<TI>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
     "make_count_by": {
         "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nUse make_base_stability to release this query.",
         "args": [

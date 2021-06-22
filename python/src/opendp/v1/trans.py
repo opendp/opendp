@@ -303,6 +303,43 @@ def make_count(
     return c_to_py(unwrap(function(MI, MO, TI), Transformation))
 
 
+def make_count_distinct(
+    MI: DatasetMetric,
+    MO: SensitivityMetric,
+    TI: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that computes a count of the number of unique, distinct records in data.
+    
+    :param MI: input dataset metric
+    :type MI: DatasetMetric
+    :param MO: output sensitivity metric
+    :type MO: SensitivityMetric
+    :param TI: atomic type of input data. Input data is expected to be of the form Vec<TI>.
+    :type TI: RuntimeTypeDescriptor
+    :return: A count_distinct step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    MO = RuntimeType.parse(type_name=MO)
+    TI = RuntimeType.parse(type_name=TI)
+    
+    # Convert arguments to c types.
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TI = py_to_c(TI, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_count_distinct
+    function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(MI, MO, TI), Transformation))
+
+
 def make_count_by(
     n: int,
     MI: DatasetMetric,

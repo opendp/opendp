@@ -10,7 +10,7 @@ use opendp::core::{DatasetMetric, SensitivityMetric};
 use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
 use opendp::err;
 use opendp::traits::DistanceConstant;
-use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories};
+use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct};
 
 use crate::any::{AnyObject, AnyTransformation};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -37,6 +37,40 @@ pub extern "C" fn opendp_trans__make_count(
             (MI, [SymmetricDistance, HammingDistance]),
             (MO, [L1Sensitivity<QO>, L2Sensitivity<QO>]),
             (T, @primitives)
+        ], ())
+    }
+    let MI = try_!(Type::try_from(MI));
+    let MO = try_!(Type::try_from(MO));
+    let T = try_!(Type::try_from(T));
+    let QO = try_!(MO.get_sensitivity_distance());
+
+    dispatch!(monomorphize, [
+        (QO, @integers)
+    ], (MI, MO, T))
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_trans__make_count_distinct(
+    MI: *const c_char,
+    MO: *const c_char,
+    T: *const c_char
+) -> FfiResult<*mut AnyTransformation> {
+
+    fn monomorphize<QO: TryFrom<usize> + Bounded + One + DistanceConstant>(
+        MI: Type, MO: Type, T: Type
+    ) -> FfiResult<*mut AnyTransformation> {
+        fn monomorphize2<MI, MO, T: 'static>() -> FfiResult<*mut AnyTransformation>
+            where MI: 'static + DatasetMetric + Clone,
+                  MO: 'static + SensitivityMetric + Clone,
+                  MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant,
+                  T: Hash + Eq {
+            make_count_distinct::<MI, MO, T>().into_any()
+        }
+        dispatch!(monomorphize2, [
+            (MI, [SymmetricDistance, HammingDistance]),
+            (MO, [L1Sensitivity<QO>, L2Sensitivity<QO>]),
+            (T, @hashable)
         ], ())
     }
     let MI = try_!(Type::try_from(MI));
