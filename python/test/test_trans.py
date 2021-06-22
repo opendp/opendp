@@ -4,6 +4,48 @@ INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))
 
 
+def test_cast_impute():
+    from opendp.v1.trans import make_cast, make_impute_constant
+    caster = make_cast(M=HammingDistance, TI=float, TO=int) >> make_impute_constant(-1, M=HammingDistance)
+    assert caster([1., 2., 3.]) == [1, 2, 3]
+
+    caster = make_cast(M=HammingDistance, TI=float, TO=int) \
+             >> make_impute_constant(1, M=HammingDistance)
+    assert caster([float('nan'), 2.]) == [1, 2]
+
+
+def test_cast_inherent():
+    from opendp.v1.trans import make_cast_inherent
+    caster = make_cast_inherent(M=HammingDistance, TI=int, TO=float)
+
+    assert caster([1, 2]) == [1., 2.]
+
+
+def test_impute_constant_inherent():
+    from opendp.v1.trans import make_impute_constant_inherent
+    imputer = make_impute_constant_inherent(-1., M=HammingDistance)
+    assert imputer([float('nan'), 1.]) == [-1., 1.]
+
+
+def test_cast_default():
+    from opendp.v1.trans import make_cast_default
+    caster = make_cast_default(M=HammingDistance, TI=float, TO=int)
+    assert caster([float('nan'), 2.]) == [0, 2]
+
+
+def test_impute_uniform():
+    from opendp.v1.trans import make_impute_uniform_float
+    caster = make_impute_uniform_float(-1., 2., M=HammingDistance)
+    assert -1. <= caster([float('nan')])[0] <= 2.
+
+
+def test_cast_metric():
+    from opendp.v1.trans import make_cast_metric
+    caster = make_cast_metric(HammingDistance, SymmetricDistance, T=float)
+    assert caster([1., 2.]) == [1., 2.]
+    assert not caster.check(1, 1)
+
+
 def test_identity():
     from opendp.v1.trans import make_identity
     # test int
