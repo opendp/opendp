@@ -8,9 +8,9 @@ def test_base_laplace():
     assert meas.check(1., 1.3)
 
 
-def test_base_laplace_vec():
-    from opendp.v1.meas import make_base_laplace_vec
-    meas = make_base_laplace_vec(scale=10.5)
+def test_base_vector_laplace():
+    from opendp.v1.meas import make_base_vector_laplace
+    meas = make_base_vector_laplace(scale=10.5)
     print("base laplace:", meas([80., 90., 100.]))
     assert meas.check(1., 1.3)
 
@@ -22,17 +22,37 @@ def test_base_gaussian():
     assert meas.check(1., (1.3, .000001))
 
 
-def test_base_gaussian_vec():
-    from opendp.v1.meas import make_base_gaussian_vec
-    meas = make_base_gaussian_vec(scale=10.5)
+def test_base_vector_gaussian():
+    from opendp.v1.meas import make_base_vector_gaussian
+    meas = make_base_vector_gaussian(scale=10.5)
     print("base gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (1.3, .000001))
 
 
 def test_base_geometric():
     from opendp.v1.meas import make_base_geometric
-    meas = make_base_geometric(scale=2., lower=0, upper=20)
+    meas = make_base_geometric(scale=2.)
     print("base_geometric:", meas(100))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
+    from opendp.v1.meas import make_constant_time_base_geometric
+    meas = make_constant_time_base_geometric(scale=2., lower=0, upper=20)
+    print("base_geometric:", meas(100))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
+
+def test_base_vector_geometric():
+    from opendp.v1.meas import make_base_vector_geometric
+    meas = make_base_vector_geometric(scale=2.)
+    print("base_geometric:", meas([100, 10, 12]))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
+    from opendp.v1.meas import make_constant_time_base_vector_geometric
+    meas = make_constant_time_base_vector_geometric(scale=2., lower=0, upper=20)
+    print("base_geometric:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 

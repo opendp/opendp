@@ -15,7 +15,7 @@ use crate::traits::DistanceConstant;
 
 
 pub fn make_count<MI, MO, TI>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, AllDomain<MO::Distance>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant {
     Ok(Transformation::new(
@@ -53,7 +53,7 @@ impl<MO: SensitivityMetric> CountByConstant<SymmetricDistance, MO> for (Symmetri
 
 // count with unknown n, known categories
 pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign,
@@ -89,7 +89,7 @@ pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible
 
 // count with known n, unknown categories
 pub fn make_count_by<MI, MO, TI, TO>(n: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           TI: 'static + Eq + Hash + Clone,
           TO: Integer + Zero + One + AddAssign,

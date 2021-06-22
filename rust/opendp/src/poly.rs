@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
-        let op_plain = meas::make_base_laplace(0.0)?;
+        let op_plain = meas::make_base_laplace::<AllDomain<_>>(0.0)?;
         let arg = 99.9;
         let res_plain = op_plain.function.eval(&arg)?;
         assert_eq!(res_plain, arg);

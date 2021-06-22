@@ -1,6 +1,6 @@
 use num::Float;
 
-use crate::core::{Function, Measurement, PrivacyRelation};
+use crate::core::{Function, Measurement, PrivacyRelation, Domain};
 use crate::dist::{L2Sensitivity, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
@@ -29,65 +29,74 @@ fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float>(s
     })
 }
 
-pub fn make_base_gaussian<T>(scale: T) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, L2Sensitivity<T>, SmoothedMaxDivergence<T>>>
-    where T: 'static + Clone + SampleGaussian + Float {
+
+pub trait GaussianDomain: Domain {
+    type Atom;
+    fn new() -> Self;
+    fn noise_function(scale: Self::Atom) -> Function<Self, Self>;
+}
+
+
+impl<T> GaussianDomain for AllDomain<T>
+    where T: 'static + SampleGaussian + Float {
+    type Atom = Self::Carrier;
+
+    fn new() -> Self { AllDomain::new() }
+    fn noise_function(scale: Self::Carrier) -> Function<Self, Self> {
+        Function::new_fallible(move |arg: &Self::Carrier| Self::Carrier::sample_gaussian(*arg, scale, false))
+    }
+}
+
+impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
+    where T: 'static + SampleGaussian + Float {
+    type Atom = T;
+
+    fn new() -> Self { VectorDomain::new_all() }
+    fn noise_function(scale: T) -> Function<Self, Self> {
+        Function::new_fallible(move |arg: &Self::Carrier| arg.iter()
+            .map(|v| T::sample_gaussian(*v, scale, false))
+            .collect())
+    }
+}
+
+
+pub fn make_base_gaussian<DA>(scale: DA::Atom) -> Fallible<Measurement<DA, DA, L2Sensitivity<DA::Atom>, SmoothedMaxDivergence<DA::Atom>>>
+    where DA: GaussianDomain,
+          DA::Atom: 'static + Clone + SampleGaussian + Float {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     Ok(Measurement::new(
-        AllDomain::new(),
-        AllDomain::new(),
-        Function::new_fallible(move |arg: &T| -> Fallible<T> {
-            T::sample_gaussian(*arg, scale, false)
-        }),
+        DA::new(),
+        DA::new(),
+        DA::noise_function(scale.clone()),
         L2Sensitivity::default(),
         SmoothedMaxDivergence::default(),
         make_gaussian_privacy_relation(scale),
     ))
 }
-
-
-pub fn make_base_gaussian_vec<T>(
-    scale: T
-) -> Fallible<Measurement<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, L2Sensitivity<T>, SmoothedMaxDivergence<T>>>
-    where T: 'static + Clone + SampleGaussian + Float {
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale must not be negative")
-    }
-    Ok(Measurement::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<T>| -> Fallible<Vec<T>> {
-            arg.iter()
-                .map(|v| T::sample_gaussian(*v, scale, false))
-                .collect()
-        }),
-        L2Sensitivity::default(),
-        SmoothedMaxDivergence::default(),
-        make_gaussian_privacy_relation(scale),
-    ))
-}
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_make_gaussian_mechanism() {
-        let measurement = make_base_gaussian(1.0).unwrap_test();
+    fn test_make_gaussian_mechanism() -> Fallible<()> {
+        let measurement = make_base_gaussian::<AllDomain<_>>(1.0)?;
         let arg = 0.0;
-        let _ret = measurement.function.eval(&arg).unwrap_test();
+        let _ret = measurement.function.eval(&arg)?;
 
-        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap_test());
+        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001))?);
+        Ok(())
     }
 
     #[test]
-    fn test_make_gaussian_vec_mechanism() {
-        let measurement = make_base_gaussian_vec(1.0).unwrap_test();
+    fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
+        let measurement = make_base_gaussian::<VectorDomain<_>>(1.0)?;
         let arg = vec![0.0, 1.0];
-        let _ret = measurement.function.eval(&arg).unwrap_test();
+        let _ret = measurement.function.eval(&arg)?;
 
-        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001)).unwrap_test());
+        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001))?);
+        Ok(())
     }
 }

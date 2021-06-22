@@ -4,13 +4,14 @@
 //! Most of the implementations are generic, with the type parameter setting the underlying [`Domain::Carrier`]
 //! type.
 
+use std::any::Any;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Bound;
 
 use crate::core::Domain;
-use std::hash::Hash;
-use std::any::Any;
+use crate::error::Fallible;
 
 /// A Domain that contains all members of the carrier type.
 pub struct AllDomain<T> {
@@ -77,12 +78,33 @@ impl<D: Domain> Domain for DataDomain<D> where
 /// A Domain that contains all the values in an interval.
 #[derive(Clone, PartialEq)]
 pub struct IntervalDomain<T> {
-    pub lower: Bound<T>,
-    pub upper: Bound<T>,
+    lower: Bound<T>,
+    upper: Bound<T>,
 }
-impl<T> IntervalDomain<T> {
-    pub fn new(lower: Bound<T>, upper: Bound<T>) -> Self {
-        IntervalDomain { lower, upper }
+impl<T: PartialOrd> IntervalDomain<T> {
+    pub fn new(lower: Bound<T>, upper: Bound<T>) -> Fallible<Self> {
+        fn get<T>(value: &Bound<T>) -> Option<&T> {
+            match value {
+                Bound::Included(value) => Some(value),
+                Bound::Excluded(value) => Some(value),
+                Bound::Unbounded => None
+            }
+        }
+        if let Some((v_lower, v_upper)) = get(&lower).zip(get(&upper)) {
+            if v_lower > v_upper {
+                return fallible!(MakeTransformation, "lower bound may not be greater than upper bound")
+            }
+            if v_lower == v_upper {
+                match (&lower, &upper) {
+                    (Bound::Included(_l), Bound::Excluded(_u)) =>
+                        return fallible!(MakeTransformation, "upper bound excludes inclusive lower bound"),
+                    (Bound::Excluded(_l), Bound::Included(_u)) =>
+                        return fallible!(MakeTransformation, "lower bound excludes inclusive upper bound"),
+                    _ => ()
+                }
+            }
+        }
+        Ok(IntervalDomain { lower, upper })
     }
 }
 impl<T: Clone + PartialOrd> Domain for IntervalDomain<T> {
@@ -180,5 +202,58 @@ impl<D: Domain> Domain for SizedDomain<D> {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> bool {
         self.element_domain.member(val)
+    }
+}
+
+/// A domain with a built-in representation of nullity, that may take on null values at runtime
+#[derive(Clone, PartialEq)]
+pub struct InherentNullDomain<D: Domain>
+    where D::Carrier: InherentNull {
+    pub element_domain: D,
+}
+impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
+    pub fn new(member_domain: D) -> Self {
+        InherentNullDomain { element_domain: member_domain }
+    }
+}
+impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull {
+    type Carrier = D::Carrier;
+    fn member(&self, val: &Self::Carrier) -> bool {
+        if val.is_null() {return true}
+        self.element_domain.member(val)
+    }
+}
+pub trait InherentNull {
+    fn is_null(&self) -> bool;
+    const NULL: Self;
+}
+macro_rules! impl_inherent_null_float {
+    ($($ty:ty),+) => ($(impl InherentNull for $ty {
+        #[inline]
+        fn is_null(&self) -> bool { self.is_nan() }
+        const NULL: Self = Self::NAN;
+    })+)
+}
+impl_inherent_null_float!(f64, f32);
+
+/// A domain that represents nullity via the Option type.
+/// The value inside is non-null by definition.
+/// Transformations should not emit data that can take on null-values at runtime.
+/// For example, it is fine to have an OptionDomain<AllDomain<f64>>, but the f64 should never be nan
+#[derive(Clone, PartialEq)]
+pub struct OptionNullDomain<D: Domain> {
+    pub element_domain: D,
+}
+impl<D: Domain> OptionNullDomain<D> {
+    pub fn new(member_domain: D) -> Self {
+        OptionNullDomain { element_domain: member_domain }
+    }
+}
+impl<D: Domain> Domain for OptionNullDomain<D> {
+    type Carrier = Option<D::Carrier>;
+    fn member(&self, value: &Self::Carrier) -> bool {
+        value.as_ref()
+            .map(|v| self.element_domain.member(v))
+            .unwrap_or(true)
     }
 }

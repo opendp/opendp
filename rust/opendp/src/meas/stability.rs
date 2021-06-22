@@ -17,16 +17,16 @@ pub type CountDomain<TIK, TIC> = SizedDomain<MapDomain<AllDomain<TIK>, AllDomain
 
 // tie metric with distribution
 pub trait BaseStabilityNoise: Metric {
-    fn noise(shift: Self::Distance, scale: Self::Distance, enforce_constant_time: bool) -> Fallible<Self::Distance>;
+    fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance>;
 }
 impl<TOC: SampleLaplace> BaseStabilityNoise for L1Sensitivity<TOC> {
-    fn noise(shift: Self::Distance, scale: Self::Distance, enforce_constant_time: bool) -> Fallible<Self::Distance> {
-        Self::Distance::sample_laplace(shift, scale, enforce_constant_time)
+    fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance> {
+        Self::Distance::sample_laplace(shift, scale, constant_time)
     }
 }
 impl<TOC: SampleGaussian> BaseStabilityNoise for L2Sensitivity<TOC> {
-    fn noise(shift: Self::Distance, scale: Self::Distance, enforce_constant_time: bool) -> Fallible<Self::Distance> {
-        Self::Distance::sample_gaussian(shift, scale, enforce_constant_time)
+    fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance> {
+        Self::Distance::sample_gaussian(shift, scale, constant_time)
     }
 }
 
@@ -98,7 +98,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
 
 
 #[cfg(test)]
-mod test_stability {
+mod tests {
     use super::*;
 
     #[test]

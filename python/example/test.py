@@ -1,6 +1,5 @@
 from opendp.v1.trans import *
 from opendp.v1.meas import *
-from opendp.v1.core import *
 
 from opendp.v1.typing import HammingDistance, L1Sensitivity
 
@@ -8,7 +7,7 @@ from opendp.v1.typing import HammingDistance, L1Sensitivity
 def main():
 
     ### HELLO WORLD
-    identity = make_identity(HammingDistance, str)
+    identity = make_identity(M=HammingDistance, T=str)
     arg = "hello, world!"
     res = identity(arg)
     print(res)
@@ -24,16 +23,16 @@ def main():
     # Noisy sum, col 1
     noisy_sum_1 = (
         make_select_column(key=1, M=HammingDistance, T=int) >>
-        make_clamp_vec(lower=0, upper=10, M=HammingDistance) >>
+        make_clamp(lower=0, upper=10, M=HammingDistance) >>
         make_bounded_sum(lower=0, upper=10, MI=HammingDistance, MO=L1Sensitivity[int]) >>
-        make_base_geometric(scale=1.0, lower=0, upper=1000)
+        make_base_geometric(scale=1.0)
     )
 
     # Count, col 1
     noisy_count_2 = (
         make_select_column(key=2, M=HammingDistance, T=float) >>
         make_count(MI=HammingDistance, MO=L1Sensitivity[int], TI=float) >>
-        make_base_geometric(scale=1.0, lower=0, upper=1000)
+        make_base_geometric(scale=1.0)
     )
 
     arg = "ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3"

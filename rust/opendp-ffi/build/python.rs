@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use indexmap::map::IndexMap;
 
 use crate::{Argument, Function, Module, RuntimeType};
+use serde_json::Value;
 
 /// Top-level function to generate python bindings, including all modules.
 pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf, String> {
@@ -138,8 +139,21 @@ impl Argument {
 /// generate an input argument, complete with name, hint and default.
 /// also returns a bool to make it possible to move arguments with defaults to the end of the signature.
 fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> (String, bool) {
-    let default = arg.default.as_ref().cloned()
-        .or_else(|| generate_public_example(func, arg).map(|_| "None".to_string()));
+    let default = match &arg.default {
+        // if no default value
+        Value::Null => if arg.is_type {
+            // let default value be None if it is a type arg and there is a public example
+            generate_public_example(func, arg).map(|_| "None".to_string())
+        } else {
+            // otherwise, the common path, no default is added to the code
+            None
+        }
+        Value::Bool(value) => Some(if *value {"True"} else {"False"}.to_string()),
+        Value::Number(number) => Some(number.to_string()),
+        Value::String(string) => Some(format!("\"{}\"", string)),
+        Value::Array(array) => Some(format!("{:?}", array)),
+        Value::Object(_) => unimplemented!()
+    };
     (format!(
         r#"{name}{hint}{default}"#,
         name = arg.name(),

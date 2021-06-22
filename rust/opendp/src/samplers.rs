@@ -1,9 +1,9 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg};
+use std::ops::{AddAssign, Neg, SubAssign, Sub};
 
 use ieee754::Ieee754;
 
-use num::{One, Zero};
+use num::{One, Zero, Bounded, clamp};
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 
@@ -54,7 +54,7 @@ pub trait SampleBernoulli: Sized {
     ///
     /// # Arguments
     /// * `prob`- The desired probability of success (bit = 1).
-    /// * `enforce_constant_time` - Whether or not to enforce the algorithm to run in constant time
+    /// * `constant_time` - Whether or not to enforce the algorithm to run in constant time
     ///
     /// # Return
     /// A bit that is 1 with probability "prob"
@@ -82,7 +82,7 @@ pub trait SampleBernoulli: Sized {
     /// # use opendp::error::ExplainUnwrap;
     /// # n.unwrap_test();
     /// ```
-    fn sample_bernoulli(prob: f64, enforce_constant_time: bool) -> Fallible<Self>;
+    fn sample_bernoulli(prob: f64, constant_time: bool) -> Fallible<Self>;
 }
 
 impl SampleBernoulli for bool {
@@ -92,7 +92,7 @@ impl SampleBernoulli for bool {
         Ok(buffer[0] & 1 == 1)
     }
 
-    fn sample_bernoulli(prob: f64, enforce_constant_time: bool) -> Fallible<Self> {
+    fn sample_bernoulli(prob: f64, constant_time: bool) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
         if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
@@ -101,7 +101,7 @@ impl SampleBernoulli for bool {
         let (_sign, exponent, mantissa) = prob.decompose_raw();
 
         // repeatedly flip fair coin (up to 1023 times) and identify index (0-based) of first heads
-        let first_heads_index = sample_i10_geometric(enforce_constant_time)?;
+        let first_heads_index = sample_i10_geometric(constant_time)?;
 
         // if prob == 1., return after retrieving censored_specific_geom, to protect constant time
         if exponent == 1023 { return Ok(true) }
@@ -128,15 +128,15 @@ impl SampleBernoulli for bool {
 
 pub trait SampleRademacher: Sized {
     fn sample_standard_rademacher() -> Fallible<Self>;
-    fn sample_rademacher(prob: f64, enforce_constant_time: bool) -> Fallible<Self>;
+    fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self>;
 }
 
 impl<T: Neg<Output=T> + One> SampleRademacher for T {
     fn sample_standard_rademacher() -> Fallible<Self> {
         Ok(if bool::sample_standard_bernoulli()? {T::one()} else {T::one().neg()})
     }
-    fn sample_rademacher(prob: f64, enforce_constant_time: bool) -> Fallible<Self> {
-        Ok(if bool::sample_bernoulli(prob, enforce_constant_time)? {T::one()} else {T::one().neg()})
+    fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self> {
+        Ok(if bool::sample_bernoulli(prob, constant_time)? {T::one()} else {T::one().neg()})
     }
 }
 
@@ -173,14 +173,14 @@ pub trait SampleUniform: Sized {
     /// # use opendp::error::ExplainUnwrap;
     /// # unif.unwrap_test();
     /// ```
-    fn sample_standard_uniform(enforce_constant_time: bool) -> Fallible<Self>;
+    fn sample_standard_uniform(constant_time: bool) -> Fallible<Self>;
 }
 
 impl SampleUniform for f64 {
-    fn sample_standard_uniform(enforce_constant_time: bool) -> Fallible<Self> {
+    fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
 
         // A saturated mantissa with implicit bit is ~2
-        let exponent: i16 = -(1 + sample_i10_geometric(enforce_constant_time)?);
+        let exponent: i16 = -(1 + sample_i10_geometric(constant_time)?);
 
         let mantissa: u64 = {
             let mut mantissa_buffer = [0u8; 8];
@@ -199,8 +199,8 @@ impl SampleUniform for f64 {
 }
 
 impl SampleUniform for f32 {
-    fn sample_standard_uniform(enforce_constant_time: bool) -> Fallible<Self> {
-        f64::sample_standard_uniform(enforce_constant_time).map(|v| v as f32)
+    fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
+        f64::sample_standard_uniform(constant_time).map(|v| v as f32)
     }
 }
 
@@ -214,8 +214,8 @@ impl SampleUniform for f32 {
 /// The major difference is that this function does not
 /// call sample_geometric itself (whereas sample_geometric does), so having this more specialized
 /// version allows us to avoid an infinite dependence loop.
-fn sample_i10_geometric(enforce_constant_time: bool) -> Fallible<i16> {
-    Ok(if enforce_constant_time {
+fn sample_i10_geometric(constant_time: bool) -> Fallible<i16> {
+    Ok(if constant_time {
         let mut buffer = vec![0_u8; 128];
         fill_bytes(&mut buffer)?;
 
@@ -246,65 +246,146 @@ fn sample_i10_geometric(enforce_constant_time: bool) -> Fallible<i16> {
 
 pub trait SampleGeometric: Sized {
 
-    /// Sample from the censored geometric distribution with parameter "prob" and maximum
-    /// number of trials "max_trials".
+    /// Sample from the censored geometric distribution with parameter `prob`.
+    /// If `trials` is None, there are no timing protections, and the support is:
+    ///     [Self::MIN, Self::MAX]
+    /// If `trials` is Some, execution runs in constant time, and the support is
+    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    ///
+    /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
     ///
     /// # Arguments
-    /// * `prob` - Parameter for the geometric distribution, the probability of success on any given trials.
-    /// * `max_trials` - The maximum number of trials allowed.
-    /// * `enforce_constant_time` - Whether or not to enforce the algorithm to run in constant time; if true,
-    ///                             it will always run for "max_trials" trials.
+    /// * `shift` - Parameter to shift the output by
+    /// * `positive` - If true, positive noise is added, else negative
+    /// * `prob` - Parameter for the geometric distribution, the probability of success on any given trial.
+    /// * `trials` - If Some, run the algorithm in constant time with exactly this many trials.
     ///
     /// # Return
-    /// A draw from the censored geometric distribution.
+    /// A draw from the censored geometric distribution defined above.
     ///
     /// # Example
     /// ```
     /// use opendp::samplers::SampleGeometric;
-    /// let geom = u8::sample_geometric(0.1, 20, false);
+    /// let geom = u8::sample_geometric(0, true, 0.1, Some(20));
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();
     /// ```
-    fn sample_geometric(prob: f64, max_trials: Self, enforce_constant_time: bool) -> Fallible<Self>;
+    fn sample_geometric(shift: Self, positive: bool, prob: f64, trials: Option<Self>) -> Fallible<Self>;
 }
 
-impl<T: Zero + One + PartialOrd + AddAssign + Clone> SampleGeometric for T {
+impl<T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded> SampleGeometric for T {
 
-    fn sample_geometric(prob: f64, max_trials: Self, enforce_constant_time: bool) -> Fallible<Self> {
+    fn sample_geometric(mut shift: Self, positive: bool, prob: f64, mut trials: Option<Self>) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
         if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
-        let mut n_trials: Self = T::zero();
-        let mut geom_return: Self = T::zero();
+        let bound = if positive { Self::max_value() } else { Self::min_value() };
+        let mut success: bool = false;
 
-        // generate bits until we find a 1
-        // if enforcing the runtime of the algorithm to be constant, the while loop
-        // continues after the 1 is found and just stores the first location of a 1 bit.
-        while n_trials < max_trials {
-            n_trials += T::one();
-
-            // If we haven't seen a 1 yet, set the return to the current number of trials
-            if bool::sample_bernoulli(prob, enforce_constant_time)? && geom_return.is_zero() {
-                geom_return = n_trials.clone();
-                if !enforce_constant_time {
-                    return Ok(geom_return);
-                }
+        // loop must increment at least once
+        loop {
+            // make steps on `shift` until there is a successful trial or have reached the boundary
+            if !success && shift != bound {
+                if positive { shift += T::one() } else { shift -= T::one() }
             }
+
+            // stopping criteria
+            if let Some(trials) = trials.as_mut() {
+                // in the constant-time regime, decrement trials until zero
+                if trials.is_zero() { break }
+                *trials -= T::one();
+            } else if success {
+                // otherwise break on first success
+                break
+            }
+
+            // run a trial-- do we stop?
+            success |= bool::sample_bernoulli(prob, trials.is_some())?;
+        }
+        Ok(shift)
+    }
+}
+
+pub trait SampleTwoSidedGeometric: SampleGeometric {
+
+    /// Sample from the censored two-sided geometric distribution with parameter `prob`.
+    /// If `bounds` is None, there are no timing protections, and the support is:
+    ///     [Self::MIN, Self::MAX]
+    /// If `bounds` is Some, execution runs in constant time, and the support is
+    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    ///
+    /// Tail probabilities of the uncensored two-sided geometric accumulate at the extrema of the support.
+    ///
+    /// # Arguments
+    /// * `shift` - Parameter to shift the output by
+    /// * `scale` - Parameter to scale the output by
+    /// * `bounds` - If Some, run the algorithm in constant time with both inputs and outputs clamped to this value.
+    ///
+    /// # Return
+    /// A draw from the two-sided censored geometric distribution defined above.
+    ///
+    /// # Example
+    /// ```
+    /// use opendp::samplers::SampleTwoSidedGeometric;
+    /// let geom = u8::sample_two_sided_geometric(0, 0.1, Some((20, 30)));
+    /// # use opendp::error::ExplainUnwrap;
+    /// # geom.unwrap_test();
+    /// ```
+    fn sample_two_sided_geometric(
+        shift: Self, scale: f64, bounds: Option<(Self, Self)>
+    ) -> Fallible<Self>;
+}
+
+impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + PartialOrd> SampleTwoSidedGeometric for T {
+    /// When no bounds are given, there are no protections against timing attacks.
+    ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
+    ///     The output of this mechanism is as if samples were taken from the
+    ///         uncensored two-sided geometric distribution and saturated at the bounds of T.
+    ///
+    /// When bounds are given, samples are taken from the censored two-sided geometric distribution,
+    ///     where the tail probabilities are accumulated in the +/- (upper - lower)th bucket from taking (upper - lower - 1) bernoulli trials.
+    ///     This special bucket may at most appear at the clamping bound of the output distribution-
+    ///     Should the shift be outside the bounds, this irregular bucket and its zero-neighbor bucket would both be present in the output.
+    ///     There is no multiplicative bound on the difference in probabilities between the output probabilities for neighboring datasets.
+    ///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
+    ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
+    ///             the analyst can deduce that the input was greater than or equal to upper
+    fn sample_two_sided_geometric(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+        let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
+            // if the output interval is a point
+            if lower == upper {return Ok(lower)}
+            Some(upper - lower - T::one())
+        } else {None};
+
+        let alpha: f64 = (-scale.recip()).exp();
+
+        // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
+        // Thanks for the input @ctcovington (Christian Covington)
+        if let Some((lower, upper)) = &bounds {
+            shift = clamp(shift, lower.clone(), upper.clone());
         }
 
-        // set geom_return to max if we never saw a bit equaling 1
-        if geom_return.is_zero() {
-            geom_return = max_trials; // could also set this equal to n_trials - 1.
-        }
+        // TODO: check MIR for reordering that moves these samples inside the conditional
+        // TODO: benchmark execution time on different inputs
+        let uniform = f64::sample_standard_uniform(bounds.is_some())?;
+        let direction = bool::sample_standard_bernoulli()?;
+        let geometric = T::sample_geometric(shift.clone(), direction,1. - alpha, trials)?;
 
-        Ok(geom_return)
+        // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
+        let noised = if uniform < (1. - alpha) / (1. + alpha) { shift } else { geometric };
+
+        Ok(if let Some((lower, upper)) = bounds {
+            clamp(noised, lower, upper)
+        } else {
+            noised
+        })
     }
 }
 
 
 pub trait SampleLaplace: SampleRademacher + Sized {
-    fn sample_laplace(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self>;
+    fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self>;
 }
 
 
@@ -318,7 +399,7 @@ pub trait SampleGaussian: Sized {
     /// # Arguments
     /// * `shift` - The expectation of the Gaussian distribution.
     /// * `scale` - The scaling parameter (standard deviation) of the Gaussian distribution.
-    /// * `enforce_constant_time` - Force underlying computations to run in constant time.
+    /// * `constant_time` - Force underlying computations to run in constant time.
     ///
     /// # Return
     /// Draw from Gaussian(loc, scale)
@@ -328,7 +409,7 @@ pub trait SampleGaussian: Sized {
     /// use opendp::samplers::SampleGaussian;
     /// let gaussian = f64::sample_gaussian(0.0, 1.0, false);
     /// ```
-    fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self>;
+    fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self>;
 }
 
 
@@ -376,8 +457,8 @@ impl CastInternalReal for f32 {
 
 #[cfg(feature = "use-mpfr")]
 impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
-    fn sample_laplace(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
-        if enforce_constant_time {
+    fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        if constant_time {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
 
@@ -395,7 +476,7 @@ impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
 
 #[cfg(not(feature = "use-mpfr"))]
 impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademacher> SampleLaplace for T {
-    fn sample_laplace(shift: Self, scale: Self, _enforce_constant_time: bool) -> Fallible<Self> {
+    fn sample_laplace(shift: Self, scale: Self, _constant_time: bool) -> Fallible<Self> {
         let mut rng = rand::thread_rng();
         let _1_ = T::from(1.0).unwrap();
         let _2_ = T::from(2.0).unwrap();
@@ -407,8 +488,8 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
 #[cfg(feature = "use-mpfr")]
 impl<T: CastInternalReal> SampleGaussian for T {
 
-    fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
-        if enforce_constant_time {
+    fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        if constant_time {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
 
@@ -429,16 +510,16 @@ impl<T: CastInternalReal> SampleGaussian for T {
 
 #[cfg(not(feature = "use-mpfr"))]
 impl SampleGaussian for f64 {
-    fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
-        let uniform_sample = f64::sample_standard_uniform(enforce_constant_time)?;
+    fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        let uniform_sample = f64::sample_standard_uniform(constant_time)?;
         Ok(shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample))
     }
 }
 
 #[cfg(not(feature = "use-mpfr"))]
 impl SampleGaussian for f32 {
-    fn sample_gaussian(shift: Self, scale: Self, enforce_constant_time: bool) -> Fallible<Self> {
-        let uniform_sample = f64::sample_standard_uniform(enforce_constant_time)?;
+    fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        let uniform_sample = f64::sample_standard_uniform(constant_time)?;
         Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
     }
 }

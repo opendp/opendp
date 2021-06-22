@@ -83,7 +83,7 @@ pub trait Measure: Default + Clone + PartialEq {
 }
 
 /// An indicator trait that is only implemented for dataset distances.
-pub trait DatasetMetric: Metric {}
+pub trait DatasetMetric: Metric<Distance=u32> {}
 
 /// An indicator trait that is only implemented for statistic distances.
 pub trait SensitivityMetric: Metric {}

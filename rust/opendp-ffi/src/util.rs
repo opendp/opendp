@@ -73,6 +73,8 @@ impl Type {
     }
 }
 
+pub enum MetricClass { Dataset, Sensitivity }
+
 impl Type {
     pub fn get_sensitivity_distance(&self) -> Fallible<Type> {
         if let TypeContents::GENERIC {args, name} = &self.contents {
@@ -85,6 +87,19 @@ impl Type {
             Type::of_id(&args[0])
         } else {
             fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, L1Sensitivity<u32>")
+        }
+    }
+    pub fn get_metric_class(&self) -> Fallible<MetricClass> {
+        if self == &Type::of::<HammingDistance>() || self == &Type::of::<SymmetricDistance>() {
+            Ok(MetricClass::Dataset)
+        } else if let TypeContents::GENERIC { name, .. } = &self.contents {
+            if name.ends_with("Sensitivity") {
+                Ok(MetricClass::Sensitivity)
+            } else {
+                return fallible!(TypeParse, "Expected a metric type name, received {:?}", name)
+            }
+        } else {
+            fallible!(TypeParse, "Expected a metric type.")
         }
     }
 }

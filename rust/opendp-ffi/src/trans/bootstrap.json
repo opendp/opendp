@@ -1,24 +1,300 @@
 {
-    "make_identity": {
-        "description": "Make a Transformation that simply passes the data through.",
+    "make_cast": {
+        "description": "Make a Transformation that casts a vector of data from type `TI` to type `TO`. \nFailure to parse results in None, else Some<TO>.",
         "args": [
             {
                 "name": "M",
                 "c_type": "char *",
                 "hint": "DatasetMetric",
-                "description": "dataset metric",
-                "is_type": true
+                "is_type": true,
+                "description": "dataset metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "input data type to cast from"
+            },
+            {
+                "name": "TO",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_cast_default": {
+        "description": "Make a Transformation that casts a vector of data from type `TI` to type `TO`. If cast fails, fill with default.",
+        "args": [
+            {
+                "name": "M",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "dataset metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "input data type to cast from"
+            },
+            {
+                "name": "TO",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_is_equal": {
+        "description": "Make a Transformation that checks if each element is equal to `value`.",
+        "args": [
+            {
+                "name": "value",
+                "c_type": "void *",
+                "rust_type": "TI",
+                "description": "value to check against"
+            },
+            {
+                "name": "M",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "dataset metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "input data type"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_cast_inherent": {
+        "description": "Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. \nIf cast fails, fill with `TO`'s null value.",
+        "args": [
+            {
+                "name": "M",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "dataset metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "input data type to cast from"
+            },
+            {
+                "name": "TO",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_cast_metric": {
+        "description": "Make a Transformation that converts the dataset metric from type `MI` to type `MO`.",
+        "args": [
+            {
+                "name": "MI",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "input dataset metric"
+            },
+            {
+                "name": "MO",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "output dataset metric"
             },
             {
                 "name": "T",
                 "c_type": "char *",
-                "description": "Type of data passed to the identity function.",
-                "is_type": true
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_clamp": {
+        "description": "Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.",
+        "args": [
+            {
+                "name": "lower",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "If datum is less than lower, let datum be lower."
+            },
+            {
+                "name": "upper",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "If datum is greater than upper, let datum be upper."
+            },
+            {
+                "name": "M",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "dataset metric"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "type of data being clamped"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_unclamp": {
+        "description": "Make a Transformation that translates an IntervalDomain to an AllDomain",
+        "args": [
+            {
+                "name": "lower",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "Lower bound of the input data."
+            },
+            {
+                "name": "upper",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "Upper bound of the input data."
+            },
+            {
+                "name": "M",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "dataset metric"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "type of data being unclamped"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_count": {
+        "description": "Make a Transformation that computes a count of the number of records in data.",
+        "args": [
+            {
+                "name": "MI",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "input dataset metric"
+            },
+            {
+                "name": "MO",
+                "c_type": "char *",
+                "hint": "SensitivityMetric",
+                "is_type": true,
+                "description": "output sensitivity metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic type of input data. Input data is expected to be of the form Vec<TI>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_count_by": {
+        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nUse make_base_stability to release this query.",
+        "args": [
+            {
+                "name": "n",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "input dataset metric"
+            },
+            {
+                "name": "MO",
+                "c_type": "char *",
+                "hint": "SensitivityMetric",
+                "is_type": true,
+                "description": "output sensitivity metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "categorical/hashable input data type. Input data must be Vec<TI>."
+            },
+            {
+                "name": "TO",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "express counts in terms of this integral type",
+                "default": "i32"
             }
         ],
         "ret": {
-            "c_type": "FfiResult<AnyTransformation *>"
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "The carrier type is HashMap<TI, TO>- the counts for each unique data input."
         }
+    },
+    "make_count_by_categories": {
+        "description": "Make a Transformation that computes the number of times each category appears in the data. \nThis assumes that the category set is known.",
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TI"]
+                },
+                "description": "The set of categories to compute counts for."
+            },
+            {
+                "name": "MI",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "input dataset metric"
+            },
+            {
+                "name": "MO",
+                "c_type": "char *",
+                "hint": "SensitivityMetric",
+                "is_type": true,
+                "description": "output sensitivity metric"
+            },
+            {
+                "name": "TI",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "categorical/hashable input data type. Input data must be Vec<TI>."
+            },
+            {
+                "name": "TO",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "express counts in terms of this integral type",
+                "default": "i32"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_split_lines": {
         "description": "Make a Transformation that takes a string and splits it into a Vec<String> of its lines.",
@@ -29,30 +305,6 @@
                 "hint": "DatasetMetric",
                 "description": "dataset metric",
                 "is_type": true
-            }
-        ],
-        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
-    },
-    "make_parse_series": {
-        "description": "Make a Transformation that parses a Vec<String> into a Vec<T>.",
-        "args": [
-            {
-                "name": "impute",
-                "c_type": "bool",
-                "description": "Enable to impute values that fail to parse. If false, raise an error if parsing fails."
-            },
-            {
-                "name": "M",
-                "c_type": "char *",
-                "hint": "DatasetMetric",
-                "is_type": true,
-                "description": "dataset metric"
-            },
-            {
-                "name": "TO",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "atomic type of the output vector"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -207,20 +459,35 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_clamp_vec": {
-        "description": "Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.",
+    "make_identity": {
+        "description": "Make a Transformation that simply passes the data through.",
         "args": [
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "If datum is less than lower, let datum be lower."
+                "name": "M",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "description": "dataset metric",
+                "is_type": true
             },
             {
-                "name": "upper",
+                "name": "T",
+                "c_type": "char *",
+                "description": "Type of data passed to the identity function.",
+                "is_type": true
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_impute_constant": {
+        "description": "Make a Transformation that replaces null/None data with `constant`.\nInput type is Vec<Option<`T`>>, as emitted by make_cast.",
+        "args": [
+            {
+                "name": "constant",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "If datum is greater than upper, let datum be upper."
+                "description": "Value to replace nulls with."
             },
             {
                 "name": "M",
@@ -233,38 +500,63 @@
                 "name": "T",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "type of data being clamped"
+                "description": "type of data being imputed"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_clamp_sensitivity": {
-        "description": "Make a Transformation that clamps the non-dp result of a query of type `T` between `lower` and `upper`.\nUsed to bound the sensitivity.",
+    "make_impute_constant_inherent": {
+        "description": "Make a Transformation that replaces null/None data with `constant`.\nUse if nullity is represented within `T`, with input Vec<`T`>, as emitted by make_cast_inherent.",
         "args": [
             {
-                "name": "lower",
+                "name": "constant",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "If less than lower, return lower."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "If greater than upper, return upper."
+                "description": "Value to replace nulls with."
             },
             {
                 "name": "M",
                 "c_type": "char *",
-                "hint": "SensitivityMetric",
+                "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "sensitivity metric"
+                "description": "dataset metric"
             },
             {
                 "name": "T",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "type of data being clamped"
+                "description": "type of data being imputed"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_impute_uniform_float": {
+        "description": "Make a Transformation that replaces null/None data in Vec<`T`> with `constant`",
+        "args": [
+            {
+                "name": "lower",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "Lower bound of uniform distribution to sample from."
+            },
+            {
+                "name": "upper",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "Upper bound of uniform distribution to sample from."
+            },
+            {
+                "name": "M",
+                "c_type": "char *",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "description": "dataset metric"
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "type of data being imputed"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -424,7 +716,7 @@
             {
                 "name": "ddof",
                 "c_type": "unsigned int",
-                "default": "1",
+                "default": 1,
                 "description": "Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate."
             },
             {
@@ -454,114 +746,5 @@
         "ret": {
             "c_type": "FfiResult<AnyTransformation *>"
         }
-    },
-    "make_count": {
-        "description": "Make a Transformation that computes a count of the number of records in data.",
-        "args": [
-            {
-                "name": "MI",
-                "c_type": "char *",
-                "hint": "DatasetMetric",
-                "is_type": true,
-                "description": "input dataset metric"
-            },
-            {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity metric"
-            },
-            {
-                "name": "TI",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "atomic type of input data. Input data is expected to be of the form Vec<TI>."
-            }
-        ],
-        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
-    },
-    "make_count_by": {
-        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nUse make_base_stability to release this query.",
-        "args": [
-            {
-                "name": "n",
-                "c_type": "unsigned int",
-                "description": "Number of records in input data."
-            },
-            {
-                "name": "MI",
-                "c_type": "char *",
-                "hint": "DatasetMetric",
-                "is_type": true,
-                "description": "input dataset metric"
-            },
-            {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity metric"
-            },
-            {
-                "name": "TI",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "categorical/hashable input data type. Input data must be Vec<TI>."
-            },
-            {
-                "name": "TO",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "express counts in terms of this integral type",
-                "default": "int"
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyTransformation *>",
-            "description": "The carrier type is HashMap<TI, TO>- the counts for each unique data input."
-        }
-    },
-    "make_count_by_categories": {
-        "description": "Make a Transformation that computes the number of times each category appears in the data. \nThis assumes that the category set is known.",
-        "args": [
-            {
-                "name": "categories",
-                "c_type": "AnyObject *",
-                "rust_type": {
-                    "origin": "Vec",
-                    "args": ["TI"]
-                },
-                "description": "The set of categories to compute counts for."
-            },
-            {
-                "name": "MI",
-                "c_type": "char *",
-                "hint": "DatasetMetric",
-                "is_type": true,
-                "description": "input dataset metric"
-            },
-            {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity metric"
-            },
-            {
-                "name": "TI",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "categorical/hashable input data type. Input data must be Vec<TI>."
-            },
-            {
-                "name": "TO",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "express counts in terms of this integral type",
-                "default": "int"
-            }
-        ],
-        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     }
 }

@@ -69,42 +69,22 @@ impl Metric for HammingDistance {
 
 impl DatasetMetric for HammingDistance {}
 
-pub struct L1Sensitivity<Q>(PhantomData<Q>);
-
-impl<Q> Default for L1Sensitivity<Q> {
-    fn default() -> Self { L1Sensitivity(PhantomData) }
+// Sensitivity in P-space
+pub struct LPSensitivity<Q, const P: usize>(PhantomData<Q>);
+impl<Q, const P: usize> Default for LPSensitivity<Q, P> {
+    fn default() -> Self { LPSensitivity(PhantomData) }
 }
 
-impl<Q> Clone for L1Sensitivity<Q> {
+impl<Q, const P: usize> Clone for LPSensitivity<Q, P> {
     fn clone(&self) -> Self { Self::default() }
 }
-
-impl<Q> PartialEq for L1Sensitivity<Q> {
+impl<Q, const P: usize> PartialEq for LPSensitivity<Q, P> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-
-impl<Q> Metric for L1Sensitivity<Q> {
+impl<Q, const P: usize> Metric for LPSensitivity<Q, P> {
     type Distance = Q;
 }
+impl<Q, const P: usize> SensitivityMetric for LPSensitivity<Q, P> {}
 
-impl<Q> SensitivityMetric for L1Sensitivity<Q> {}
-
-pub struct L2Sensitivity<Q>(PhantomData<Q>);
-
-impl<Q> Default for L2Sensitivity<Q> {
-    fn default() -> Self { L2Sensitivity(PhantomData) }
-}
-
-impl<Q> Clone for L2Sensitivity<Q> {
-    fn clone(&self) -> Self { Self::default() }
-}
-
-impl<Q> PartialEq for L2Sensitivity<Q> {
-    fn eq(&self, _other: &Self) -> bool { true }
-}
-
-impl<Q> Metric for L2Sensitivity<Q> {
-    type Distance = Q;
-}
-
-impl<Q> SensitivityMetric for L2Sensitivity<Q> {}
+pub type L1Sensitivity<Q> = LPSensitivity<Q, 1>;
+pub type L2Sensitivity<Q> = LPSensitivity<Q, 2>;

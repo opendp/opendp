@@ -253,7 +253,7 @@ mod tests {
         // Noisy count
         let measurement1 = (
             make_count()? >>
-            make_base_geometric(1.0 / d_out_query, count_bounds.0, count_bounds.1)?
+            make_base_geometric(1.0 / d_out_query, Some(count_bounds))?
         )?.into_poly();
         let query1 = (measurement1, d_out_query);
         let _result1: i32 = queryable.eval_poly(&query1)?;
@@ -261,7 +261,7 @@ mod tests {
 
         // Noisy sum
         let measurement2 = (
-            make_clamp_vec(val_bounds.0, val_bounds.1)? >>
+            make_clamp(val_bounds.0, val_bounds.1)? >>
             make_bounded_sum(val_bounds.0, val_bounds.1)? >>
             make_base_laplace(1.0 / d_out_query)?
         )?.into_poly();

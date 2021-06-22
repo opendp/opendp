@@ -4,33 +4,33 @@ use std::ops::{Div, Sub, Add};
 
 use num::{Float, One, Zero, NumCast};
 
-use crate::core::{DatasetMetric, Function, Metric, SensitivityMetric, StabilityRelation, Transformation};
-use crate::dist::{HammingDistance, SymmetricDistance};
+use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
+use crate::dist::{HammingDistance, SymmetricDistance, LPSensitivity};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::DistanceConstant;
 
 
-pub trait BoundedVarianceConstant<MI: Metric, MO: Metric> {
-    fn get_stability(lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize) -> Fallible<MO::Distance>;
+pub trait BoundedVarianceConstant<T> {
+    fn get_stability(lower: T, upper: T, length: usize, ddof: usize) -> Fallible<T>;
 }
 
-impl<MO: Metric> BoundedVarianceConstant<HammingDistance, MO> for (HammingDistance, MO)
-    where MO::Distance: Float + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + NumCast + One {
-    fn get_stability(lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = num_cast!(length; MO::Distance)?;
-        let _1 = MO::Distance::one();
-        let _ddof = num_cast!(ddof; MO::Distance)?;
+impl<T, const P: usize> BoundedVarianceConstant<T> for (HammingDistance, LPSensitivity<T, P>)
+    where T: Float + Sub<Output=T> + Div<Output=T> + NumCast + One {
+    fn get_stability(lower: T, upper: T, length: usize, ddof: usize) -> Fallible<T> {
+        let _length = num_cast!(length; T)?;
+        let _1 = T::one();
+        let _ddof = num_cast!(ddof; T)?;
         Ok((upper - lower).powi(2) * (_length - _1) / _length / (_length - _ddof))
     }
 }
 
-impl<MO: Metric> BoundedVarianceConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
-    where MO::Distance: Float + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + NumCast + One {
-    fn get_stability(lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = num_cast!(length; MO::Distance)?;
-        let _1 = MO::Distance::one();
-        let _ddof = num_cast!(ddof; MO::Distance)?;
+impl<T, const P: usize> BoundedVarianceConstant<T> for (SymmetricDistance, LPSensitivity<T, P>)
+    where T: Float + Sub<Output=T> + Div<Output=T> + NumCast + One {
+    fn get_stability(lower: T, upper: T, length: usize, ddof: usize) -> Fallible<T> {
+        let _length = num_cast!(length; T)?;
+        let _1 = T::one();
+        let _ddof = num_cast!(ddof; T)?;
         Ok((upper - lower).powi(2) * _length / (_length + _1) / (_length - _ddof))
     }
 }
@@ -38,18 +38,17 @@ impl<MO: Metric> BoundedVarianceConstant<SymmetricDistance, MO> for (SymmetricDi
 pub fn make_bounded_variance<MI, MO>(
     lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float + Sum<MO::Distance> + for<'a> Sum<&'a MO::Distance>,
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
-          (MI, MO): BoundedVarianceConstant<MI, MO> {
-    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
+          (MI, MO): BoundedVarianceConstant<MO::Distance> {
     let _length = num_cast!(length; MO::Distance)?;
     let _ddof = num_cast!(ddof; MO::Distance)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
-            IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))), length),
+            IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))?), length),
         AllDomain::new(),
         Function::new(move |arg: &Vec<MO::Distance>| {
             let mean = arg.iter().sum::<MO::Distance>() / _length;
@@ -61,26 +60,26 @@ pub fn make_bounded_variance<MI, MO>(
 }
 
 
-pub trait BoundedCovarianceConstant<MI: Metric, MO: Metric> {
-    fn get_stability_constant(lower: (MO::Distance, MO::Distance), upper: (MO::Distance, MO::Distance), length: usize, ddof: usize) -> Fallible<MO::Distance>;
+pub trait BoundedCovarianceConstant<T> {
+    fn get_stability_constant(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> Fallible<T>;
 }
 
-impl<MO: Metric> BoundedCovarianceConstant<HammingDistance, MO> for (HammingDistance, MO)
-    where MO::Distance: Clone + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + NumCast + One {
-    fn get_stability_constant(lower: (MO::Distance, MO::Distance), upper: (MO::Distance, MO::Distance), length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = num_cast!(length; MO::Distance)?;
-        let _1 = MO::Distance::one();
-        let _ddof = num_cast!(ddof; MO::Distance)?;
+impl<T, const P: usize> BoundedCovarianceConstant<T> for (HammingDistance, LPSensitivity<T, P>)
+    where T: Clone + Sub<Output=T> + Div<Output=T> + NumCast + One {
+    fn get_stability_constant(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> Fallible<T> {
+        let _length = num_cast!(length; T)?;
+        let _1 = T::one();
+        let _ddof = num_cast!(ddof; T)?;
         Ok((upper.0 - lower.0) * (upper.1 - lower.1) * (_length.clone() - _1) / _length.clone() / (_length - _ddof))
     }
 }
 
-impl<MO: Metric> BoundedCovarianceConstant<SymmetricDistance, MO> for (SymmetricDistance, MO)
-    where MO::Distance: Clone + Sub<Output=MO::Distance> + Div<Output=MO::Distance> + Add<Output=MO::Distance> + NumCast + One {
-    fn get_stability_constant(lower: (MO::Distance, MO::Distance), upper: (MO::Distance, MO::Distance), length: usize, ddof: usize) -> Fallible<MO::Distance> {
-        let _length = num_cast!(length; MO::Distance)?;
-        let _1 = MO::Distance::one();
-        let _ddof = num_cast!(ddof; MO::Distance)?;
+impl<T, const P: usize> BoundedCovarianceConstant<T> for (SymmetricDistance, LPSensitivity<T, P>)
+    where T: Clone + Sub<Output=T> + Div<Output=T> + Add<Output=T> + NumCast + One {
+    fn get_stability_constant(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> Fallible<T> {
+        let _length = num_cast!(length; T)?;
+        let _1 = T::one();
+        let _ddof = num_cast!(ddof; T)?;
         Ok((upper.0 - lower.0) * (upper.1 - lower.1) * _length.clone() / (_length.clone() + _1) / (_length - _ddof))
     }
 }
@@ -92,21 +91,20 @@ pub fn make_bounded_covariance<MI, MO>(
     upper: (MO::Distance, MO::Distance),
     length: usize, ddof: usize
 ) -> Fallible<Transformation<CovarianceDomain<MO::Distance>, AllDomain<MO::Distance>, MI, MO>>
-    where MI: DatasetMetric<Distance=u32>,
+    where MI: DatasetMetric,
           MO: SensitivityMetric,
           MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Sum<MO::Distance> + Zero,
           for <'a> MO::Distance: Div<&'a MO::Distance, Output=MO::Distance> + Add<&'a MO::Distance, Output=MO::Distance>,
           for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
-          (MI, MO): BoundedCovarianceConstant<MI, MO> {
+          (MI, MO): BoundedCovarianceConstant<MO::Distance> {
 
-    if lower > upper { return fallible!(MakeTransformation, "lower bound may not be greater than upper bound"); }
     let _length = num_cast!(length; MO::Distance)?;
     let _ddof = num_cast!(ddof; MO::Distance)?;
 
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
-            IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))), length),
+            IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))?), length),
         AllDomain::new(),
         Function::new(move |arg: &Vec<(MO::Distance, MO::Distance)>| {
             let (sum_l, sum_r) = arg.iter().fold(
