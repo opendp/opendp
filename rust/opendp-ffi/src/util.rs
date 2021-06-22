@@ -8,9 +8,10 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use opendp::{err, fallible};
-use opendp::dist::{HammingDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
+use opendp::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
 use opendp::error::*;
 use crate::any::AnyObject;
+use opendp::dom::{VectorDomain, AllDomain, IntervalDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -25,13 +26,13 @@ pub enum TypeContents {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Type {
     pub id: TypeId,
-    pub descriptor: &'static str,
+    pub descriptor: String,
     pub contents: TypeContents,
 }
 
 impl Type {
-    pub fn new(id: TypeId, descriptor: &'static str, contents: TypeContents) -> Self {
-        Self { id, descriptor, contents }
+    pub fn new<S: AsRef<str>>(id: TypeId, descriptor: S, contents: TypeContents) -> Self {
+        Self { id, descriptor: descriptor.as_ref().to_string(), contents }
     }
 
     pub fn of<T: 'static + ?Sized>() -> Self {
@@ -76,6 +77,31 @@ impl Type {
 pub enum MetricClass { Dataset, Sensitivity }
 
 impl Type {
+    pub fn get_subtype(&self) -> Fallible<Type> {
+        if let TypeContents::GENERIC {args, ..} = &self.contents {
+            if args.len() != 1 {
+                return fallible!(TypeParse, "Expected one subtype, got {:?} subtypes", args.len())
+            }
+            Type::of_id(&args[0])
+        } else {
+            fallible!(TypeParse, "Failed to extract subtype")
+        }
+    }
+    pub fn get_domain_atom(&self) -> Fallible<Type> {
+        match &self.contents {
+            TypeContents::PLAIN(_) => Ok(self.clone()),
+            TypeContents::GENERIC { name, args } => {
+                if !name.ends_with("Domain") {
+                    return fallible!(TypeParse, "Failed to extract atomic type: {:?} is not a domain", name)
+                }
+                if args.len() != 1 {
+                    return fallible!(TypeParse, "Failed to extract atomic type: expected one argument, got {:?} generic arguments", args.len())
+                }
+                Type::of_id(&args[0])?.get_domain_atom()
+            }
+            _ => fallible!(TypeParse, "Failed to extract atomic type: not a domain")
+        }
+    }
     pub fn get_sensitivity_distance(&self) -> Fallible<Type> {
         if let TypeContents::GENERIC {args, name} = &self.contents {
             if !vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
@@ -90,7 +116,7 @@ impl Type {
         }
     }
     pub fn get_metric_class(&self) -> Fallible<MetricClass> {
-        if self == &Type::of::<HammingDistance>() || self == &Type::of::<SymmetricDistance>() {
+        if self == &Type::of::<SubstituteDistance>() || self == &Type::of::<SymmetricDistance>() {
             Ok(MetricClass::Dataset)
         } else if let TypeContents::GENERIC { name, .. } = &self.contents {
             if vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
@@ -102,6 +128,18 @@ impl Type {
             fallible!(TypeParse, "Expected a metric type.")
         }
     }
+}
+fn get_descriptor<T>() -> String {
+    fn format_type(v: &str) -> String {
+        if let Some((body, rest)) = v.split_once("<") {
+            format!("{}<{}>",
+                    body.split("::").last().unwrap_assert("bodies are non-empty"),
+                    rest[..rest.len() - 1].split(",").map(format_type).collect::<Vec<_>>().join(","))
+        } else {
+            v.to_string()
+        }
+    }
+    format_type(any::type_name::<T>())
 }
 
 /// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].
@@ -117,6 +155,13 @@ macro_rules! t {
             TypeId::of::<Vec<$arg>>(),
             concat!("Vec<", stringify!($arg), ">"),
             TypeContents::VEC(TypeId::of::<$arg>())
+        )
+    };
+    (@aliased, $name:ident<$($args:ty),+>) => {
+        Type::new(
+            TypeId::of::<$name<$($args),+>>(),
+            get_descriptor::<$name<$($args),+>>(),
+            TypeContents::GENERIC { name: stringify!($name), args: vec![$(TypeId::of::<$args>()),+]}
         )
     };
     ($name:ident<$($args:ty),+>) => {
@@ -153,6 +198,7 @@ macro_rules! t {
 }
 /// Builds a vec of [`Type`] from a compact invocation, dispatching to the appropriate flavor of [`t!`].
 macro_rules! type_vec {
+    (@aliased, $name:ident, <$($args:ty),*>) => { vec![$(t!(@aliased, $name<$args>)),*] };
     ($name:ident, <$($args:ty),*>) => { vec![$(t!($name<$args>)),*] };
     ([$($elements:ty),*]) => { vec![$(t!([$elements])),*] };
     ([$($elements:ty),*]; $len:expr) => { vec![$(t!([$elements; $len])),*] };
@@ -160,23 +206,42 @@ macro_rules! type_vec {
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
 
+pub type VectorAllDomain<T> = VectorDomain<AllDomain<T>>;
+pub type VectorIntervalDomain<T> = VectorDomain<IntervalDomain<T>>;
+pub type SizedVectorAllDomain<T> = SizedDomain<VectorDomain<AllDomain<T>>>;
+pub type VectorInherentNullDomain<T> = VectorDomain<InherentNullDomain<AllDomain<T>>>;
+pub type VectorOptionNullDomain<T> = VectorDomain<OptionNullDomain<AllDomain<T>>>;
+
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
     /// (i.e., the ones that appear in FFI function generic args).
     static ref TYPES: Vec<Type> = {
         let types: Vec<Type> = vec![
+            // data types
             vec![t!(())],
             type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject],
             type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject)],
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]],
-            type_vec![HammingDistance, SymmetricDistance],
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            type_vec![Option, <(u8, u8), (u16, u16), (u32, u32), (u64, u64), (u128, u128), (i8, i8), (i16, i16), (i32, i32), (i64, i64), (i128, i128)>],
+
+            // domains
+            type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![IntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![@aliased, VectorAllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![@aliased, VectorIntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![@aliased, VectorInherentNullDomain, <f32, f64>],
+            type_vec![@aliased, VectorOptionNullDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![@aliased, SizedVectorAllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+
+            // metrics
+            type_vec![SubstituteDistance, SymmetricDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
         ].into_iter().flatten().collect();
-        let descriptors: HashSet<_> = types.iter().map(|e| e.descriptor).collect();
+        let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len());
         types
     };
@@ -188,7 +253,7 @@ lazy_static! {
 }
 lazy_static! {
     static ref DESCRIPTOR_TO_TYPE: HashMap<&'static str, Type> = {
-        TYPES.iter().map(|e| (e.descriptor, e.clone())).collect()
+        TYPES.iter().map(|e| (e.descriptor.as_str(), e.clone())).collect()
     };
 }
 

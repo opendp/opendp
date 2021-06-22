@@ -1,6 +1,6 @@
 {
     "make_base_laplace": {
-        "description": "Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.",
+        "description": "Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.\nAdjust D to noise vector-valued data.",
         "proof": "https://www.overleaf.com/read/brvrprjhrhwb",
         "args": [
             {
@@ -10,36 +10,17 @@
                 "description": "Noise scale parameter of the laplace distribution."
             },
             {
-                "name": "T",
+                "name": "D",
                 "c_type": "char *",
-                "description": "Data type to be privatized.",
+                "default": "AllDomain<T>",
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true
             }
         ],
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
-    "make_base_vector_laplace": {
-        "description": "Make a Measurement that adds noise from the multivariate laplace(`scale`) distribution to a vector value.",
-        "args": [
-            {
-                "name": "scale",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Noise scale parameter of the laplace distribution."
-            },
-            {
-                "name": "T",
-                "c_type": "char *",
-                "description": "Data type to be privatized.",
-                "is_type": true
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>"
-        }
-    },
     "make_base_gaussian": {
-        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to a scalar value.",
+        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
         "args": [
             {
                 "name": "scale",
@@ -48,29 +29,10 @@
                 "description": "noise scale parameter to the gaussian distribution"
             },
             {
-                "name": "T",
+                "name": "D",
                 "c_type": "char *",
-                "description": "data type to be privatized",
-                "is_type": true
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>"
-        }
-    },
-    "make_base_vector_gaussian": {
-        "description": "Make a Measurement that adds noise from the multivariate gaussian(`scale`) distribution to a vector value.",
-        "args": [
-            {
-                "name": "scale",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "noise scale parameter to the gaussian distribution"
-            },
-            {
-                "name": "T",
-                "c_type": "char *",
-                "description": "data type to be privatized",
+                "default": "AllDomain<T>",
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true
             }
         ],
@@ -79,7 +41,7 @@
         }
     },
     "make_base_geometric": {
-        "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.",
+        "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
         "args": [
             {
                 "name": "scale",
@@ -88,119 +50,16 @@
                 "description": "noise scale parameter to the geometric distribution"
             },
             {
-                "name": "T",
+                "name": "D",
                 "c_type": "char *",
-                "default": "i32",
-                "description": "Data type to be privatized.",
+                "default": "AllDomain<i32>",
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true
             },
             {
                 "name": "QO",
                 "c_type": "char *",
-                "description": "Data type of the sensitivity space.",
-                "is_type": true
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>"
-        }
-    },
-    "make_base_vector_geometric": {
-        "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to a vector value.",
-        "args": [
-            {
-                "name": "scale",
-                "c_type": "void *",
-                "rust_type": "QO",
-                "description": "noise scale parameter to the geometric distribution"
-            },
-            {
-                "name": "T",
-                "c_type": "char *",
-                "default": "i32",
-                "description": "Data type to be privatized.",
-                "is_type": true
-            },
-            {
-                "name": "QO",
-                "c_type": "char *",
-                "description": "Data type of the sensitivity space.",
-                "is_type": true
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>"
-        }
-    },
-    "make_constant_time_base_geometric": {
-        "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to a scalar value.\n`lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.",
-        "args": [
-            {
-                "name": "scale",
-                "c_type": "void *",
-                "rust_type": "QO",
-                "description": "noise scale parameter to the geometric distribution"
-            },
-            {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Expected lower bound of data."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Expected upper bound of data."
-            },
-            {
-                "name": "T",
-                "c_type": "char *",
-                "description": "Data type to be privatized.",
-                "is_type": true
-            },
-            {
-                "name": "QO",
-                "c_type": "char *",
-                "description": "Data type of the sensitivity space.",
-                "is_type": true
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>"
-        }
-    },
-    "make_constant_time_base_vector_geometric": {
-        "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to a vector value.\n`lower` and `upper` are used to derive the max number of trials necessary when sampling from the geometric distribution.",
-        "args": [
-            {
-                "name": "scale",
-                "c_type": "void *",
-                "rust_type": "QO",
-                "description": "noise scale parameter to the geometric distribution"
-            },
-            {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Expected lower bound of data."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Expected upper bound of data."
-            },
-            {
-                "name": "T",
-                "c_type": "char *",
-                "description": "Data type to be privatized.",
-                "is_type": true
-            },
-            {
-                "name": "QO",
-                "c_type": "char *",
-                "description": "Data type of the sensitivity space.",
+                "description": "Data type of the sensitivity, scale, and budget.",
                 "is_type": true
             }
         ],

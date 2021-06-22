@@ -63,17 +63,17 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 }
 
 
-pub fn make_base_gaussian<DI>(scale: DI::Atom) -> Fallible<Measurement<DI, DI, DI::Metric, SmoothedMaxDivergence<DI::Atom>>>
-    where DI: GaussianDomain,
-          DI::Atom: 'static + Clone + SampleGaussian + Float {
+pub fn make_base_gaussian<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
+    where D: GaussianDomain,
+          D::Atom: 'static + Clone + SampleGaussian + Float {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     Ok(Measurement::new(
-        DI::new(),
-        DI::new(),
-        DI::noise_function(scale.clone()),
-        DI::Metric::default(),
+        D::new(),
+        D::new(),
+        D::noise_function(scale.clone()),
+        D::Metric::default(),
         SmoothedMaxDivergence::default(),
         make_gaussian_privacy_relation(scale),
     ))
