@@ -398,7 +398,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::L1Sensitivity;
+    use crate::dist::L1Distance;
     use crate::dom::AllDomain;
     use crate::error::ExplainUnwrap;
 
@@ -409,8 +409,8 @@ mod tests {
         let input_domain = AllDomain::<i32>::new();
         let output_domain = AllDomain::<i32>::new();
         let function = Function::new(|arg: &i32| arg.clone());
-        let input_metric = L1Sensitivity::<i32>::default();
-        let output_metric = L1Sensitivity::<i32>::default();
+        let input_metric = L1Distance::<i32>::default();
+        let output_metric = L1Distance::<i32>::default();
         let stability_relation = StabilityRelation::new_from_constant(1);
         let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
         let arg = 99;

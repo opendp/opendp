@@ -3,50 +3,40 @@ use std::hash::Hash;
 use std::ops::AddAssign;
 use std::os::raw::{c_char, c_uint};
 
-use num::{Integer, One, Zero, Bounded};
+use num::{Bounded, Integer, One, Zero};
 use num::traits::FloatConst;
 
 use opendp::core::{DatasetMetric, SensitivityMetric};
-use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
+use opendp::dist::{HammingDistance, L1Distance, L2Distance, SymmetricDistance};
 use opendp::err;
 use opendp::traits::DistanceConstant;
 use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct};
 
 use crate::any::{AnyObject, AnyTransformation};
+use crate::any::Downcast;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
-use crate::any::Downcast;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count(
     MI: *const c_char,
-    MO: *const c_char,
-    T: *const c_char
+    TI: *const c_char,
+    TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-
-    fn monomorphize<QO: TryFrom<usize> + Bounded + One + DistanceConstant>(
-        MI: Type, MO: Type, T: Type
-    ) -> FfiResult<*mut AnyTransformation> {
-        fn monomorphize2<MI, MO, T: 'static>() -> FfiResult<*mut AnyTransformation>
-            where MI: 'static + DatasetMetric + Clone,
-                  MO: 'static + SensitivityMetric + Clone,
-                  MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant {
-            make_count::<MI, MO, T>().into_any()
-        }
-        dispatch!(monomorphize2, [
-            (MI, [SymmetricDistance, HammingDistance]),
-            (MO, [L1Sensitivity<QO>, L2Sensitivity<QO>]),
-            (T, @primitives)
-        ], ())
+    fn monomorphize<MI, TI, TO>() -> FfiResult<*mut AnyTransformation>
+        where MI: 'static + DatasetMetric + Clone,
+              TI: 'static,
+              TO: 'static + TryFrom<usize> + Bounded + One + DistanceConstant {
+        make_count::<MI, TI, TO>().into_any()
     }
     let MI = try_!(Type::try_from(MI));
-    let MO = try_!(Type::try_from(MO));
-    let T = try_!(Type::try_from(T));
-    let QO = try_!(MO.get_sensitivity_distance());
-
+    let TI = try_!(Type::try_from(TI));
+    let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
-        (QO, @integers)
-    ], (MI, MO, T))
+        (MI, [SymmetricDistance, HammingDistance]),
+        (TI, @primitives),
+        (TO, @integers)
+    ], ())
 }
 
 
@@ -107,7 +97,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
         }
         dispatch!(monomorphize2, [
             (MI, [HammingDistance, SymmetricDistance]),
-            (MO, [L1Sensitivity<QO>, L2Sensitivity<QO>]),
+            (MO, [L1Distance<QO>, L2Distance<QO>]),
             (TI, @hashable),
             (TO, @integers)
         ], (categories))
@@ -144,7 +134,7 @@ pub extern "C" fn opendp_trans__make_count_by(
         }
         dispatch!(monomorphize2, [
             (MI, [HammingDistance, SymmetricDistance]),
-            (MO, [L1Sensitivity<QO>, L2Sensitivity<QO>]),
+            (MO, [L1Distance<QO>, L2Distance<QO>]),
             (TI, @hashable),
             (TO, @integers)
         ], (n))

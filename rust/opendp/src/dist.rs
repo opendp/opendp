@@ -70,21 +70,38 @@ impl Metric for HammingDistance {
 impl DatasetMetric for HammingDistance {}
 
 // Sensitivity in P-space
-pub struct LPSensitivity<Q, const P: usize>(PhantomData<Q>);
-impl<Q, const P: usize> Default for LPSensitivity<Q, P> {
-    fn default() -> Self { LPSensitivity(PhantomData) }
+pub struct LpDistance<Q, const P: usize>(PhantomData<Q>);
+impl<Q, const P: usize> Default for LpDistance<Q, P> {
+    fn default() -> Self { LpDistance(PhantomData) }
 }
 
-impl<Q, const P: usize> Clone for LPSensitivity<Q, P> {
+impl<Q, const P: usize> Clone for LpDistance<Q, P> {
     fn clone(&self) -> Self { Self::default() }
 }
-impl<Q, const P: usize> PartialEq for LPSensitivity<Q, P> {
+impl<Q, const P: usize> PartialEq for LpDistance<Q, P> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-impl<Q, const P: usize> Metric for LPSensitivity<Q, P> {
+impl<Q, const P: usize> Metric for LpDistance<Q, P> {
     type Distance = Q;
 }
-impl<Q, const P: usize> SensitivityMetric for LPSensitivity<Q, P> {}
+impl<Q, const P: usize> SensitivityMetric for LpDistance<Q, P> {}
 
-pub type L1Sensitivity<Q> = LPSensitivity<Q, 1>;
-pub type L2Sensitivity<Q> = LPSensitivity<Q, 2>;
+pub type L1Distance<Q> = LpDistance<Q, 1>;
+pub type L2Distance<Q> = LpDistance<Q, 2>;
+
+
+pub struct AbsoluteDistance<Q>(PhantomData<Q>);
+impl<Q> Default for AbsoluteDistance<Q> {
+    fn default() -> Self { AbsoluteDistance(PhantomData) }
+}
+
+impl<Q> Clone for AbsoluteDistance<Q> {
+    fn clone(&self) -> Self { Self::default() }
+}
+impl<Q> PartialEq for AbsoluteDistance<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+impl<Q> Metric for AbsoluteDistance<Q> {
+    type Distance = Q;
+}
+impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}

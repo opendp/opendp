@@ -1,4 +1,4 @@
-from opendp.v1.typing import HammingDistance, L1Sensitivity, SymmetricDistance
+from opendp.v1.typing import HammingDistance, L1Distance, SymmetricDistance, AbsoluteDistance
 
 INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))
@@ -139,26 +139,26 @@ def test_vector_clamp():
 
 def test_clamp_sensitivity():
     from opendp.v1.trans import make_clamp
-    query = make_clamp(lower=-1, upper=1, M=L1Sensitivity[int])
+    query = make_clamp(lower=-1, upper=1, M=AbsoluteDistance[int])
     assert query(20) == 1
     assert query.check(20, 2)
 
 
 def test_bounded_mean():
     from opendp.v1.trans import make_bounded_mean
-    query = make_bounded_mean(lower=0., upper=10., n=9, MI=HammingDistance, MO=L1Sensitivity[float])
+    query = make_bounded_mean(lower=0., upper=10., n=9, MI=HammingDistance)
     assert query(FLOAT_DATA) == 5.
     assert query.check(1, 10. / 9.)
 
 
 def test_bounded_sum():
     from opendp.v1.trans import make_bounded_sum
-    query = make_bounded_sum(lower=0., upper=10., MI=HammingDistance, MO=L1Sensitivity[float])
+    query = make_bounded_sum(lower=0., upper=10., MI=HammingDistance)
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten the check
     assert query.check(1, 20.)
 
-    query = make_bounded_sum(lower=0, upper=10, MI=HammingDistance, MO=L1Sensitivity[int])
+    query = make_bounded_sum(lower=0, upper=10, MI=HammingDistance)
     assert query(INT_DATA) == 45
     # TODO: tighten the check
     assert query.check(1, 20)
@@ -172,7 +172,7 @@ def test_bounded_sum():
 
 def test_bounded_sum_n():
     from opendp.v1.trans import make_bounded_sum_n
-    query = make_bounded_sum_n(lower=0., upper=10., n=9, MO=L1Sensitivity[float])
+    query = make_bounded_sum_n(lower=0., upper=10., n=9)
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten this check
     assert query.check(1, 20.)
@@ -180,14 +180,14 @@ def test_bounded_sum_n():
 
 def test_bounded_variance():
     from opendp.v1.trans import make_bounded_variance
-    query = make_bounded_variance(lower=0., upper=10., n=9, MI=HammingDistance, MO=L1Sensitivity[float])
+    query = make_bounded_variance(lower=0., upper=10., n=9, MI=HammingDistance)
     assert query(FLOAT_DATA) == 7.5
     assert query.check(1, 20.)
 
 
 def test_count():
     from opendp.v1.trans import make_count
-    transformation = make_count(SymmetricDistance, L1Sensitivity["i32"], int)
+    transformation = make_count(SymmetricDistance, TI=int, TO=int)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == 3
@@ -205,7 +205,7 @@ def test_count_distinct():
 
 def test_count_by():
     from opendp.v1.trans import make_count_by
-    query = make_count_by(n=9, MI=HammingDistance, MO=L1Sensitivity[float], TI=int)
+    query = make_count_by(n=9, MI=HammingDistance, MO=L1Distance[float], TI=int)
     # TODO: cannot test until hashmap data unloader is added
     # assert query(INT_DATA) == {i + 1: 1 for i in range(9)}
     print('first')
@@ -214,6 +214,6 @@ def test_count_by():
 
 def test_count_by_categories():
     from opendp.v1.trans import make_count_by_categories
-    query = make_count_by_categories(categories=[1, 3, 4], MI=HammingDistance, MO=L1Sensitivity[float])
+    query = make_count_by_categories(categories=[1, 3, 4], MI=HammingDistance, MO=L1Distance[float])
     assert query(INT_DATA) == [1, 1, 1, 6]
     assert query.check(1, 2.)

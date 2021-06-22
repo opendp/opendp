@@ -4,28 +4,26 @@ use std::convert::TryFrom;
 use std::hash::Hash;
 use std::ops::AddAssign;
 
-use num::{Integer, NumCast, One, Zero, Bounded};
+use num::{Bounded, Integer, NumCast, One, Zero};
 use num::traits::FloatConst;
 
 use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
-use crate::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
+use crate::dist::{AbsoluteDistance, HammingDistance, L1Distance, L2Distance, SymmetricDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::DistanceConstant;
 
-
-pub fn make_count<MI, MO, TI>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, AllDomain<MO::Distance>, MI, MO>>
+pub fn make_count<MI, TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, AllDomain<TO>, MI, AbsoluteDistance<TO>>>
     where MI: DatasetMetric,
-          MO: SensitivityMetric,
-          MO::Distance: TryFrom<usize> + Bounded + One + DistanceConstant {
+          TO: TryFrom<usize> + Bounded + One + DistanceConstant {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
         // min(arg.len(), u32::MAX)
-        Function::new(move |arg: &Vec<TI>| MO::Distance::try_from(arg.len()).unwrap_or(MO::Distance::max_value())),
+        Function::new(move |arg: &Vec<TI>| TO::try_from(arg.len()).unwrap_or(TO::max_value())),
         MI::default(),
-        MO::default(),
-        StabilityRelation::new_from_constant(MO::Distance::one())))
+        AbsoluteDistance::default(),
+        StabilityRelation::new_from_constant(TO::one())))
 }
 
 
@@ -50,13 +48,13 @@ pub trait CountByConstant<MI: DatasetMetric, MO: SensitivityMetric> {
     fn get_stability_constant() -> Fallible<MO::Distance>;
 }
 
-impl<QO: NumCast> CountByConstant<HammingDistance, L1Sensitivity<QO>> for (HammingDistance, L1Sensitivity<QO>) {
+impl<QO: NumCast> CountByConstant<HammingDistance, L1Distance<QO>> for (HammingDistance, L1Distance<QO>) {
     fn get_stability_constant() -> Fallible<QO> {
         num_cast!(2.; QO)
     }
 }
 
-impl<QO: FloatConst> CountByConstant<HammingDistance, L2Sensitivity<QO>> for (HammingDistance, L2Sensitivity<QO>) {
+impl<QO: FloatConst> CountByConstant<HammingDistance, L2Distance<QO>> for (HammingDistance, L2Distance<QO>) {
     fn get_stability_constant() -> Fallible<QO> {
         Ok(QO::SQRT_2())
     }
@@ -73,9 +71,9 @@ impl<MO: SensitivityMetric> CountByConstant<SymmetricDistance, MO> for (Symmetri
 pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, MI, MO>>
     where MI: DatasetMetric,
           MO: SensitivityMetric,
+          MO::Distance: DistanceConstant,
           TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign,
-          MO::Distance: DistanceConstant,
           (MI, MO): CountByConstant<MI, MO> {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
@@ -109,9 +107,9 @@ pub fn make_count_by_categories<MI, MO, TI, TO>(categories: Vec<TI>) -> Fallible
 pub fn make_count_by<MI, MO, TI, TO>(n: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, MI, MO>>
     where MI: DatasetMetric,
           MO: SensitivityMetric,
+          MO::Distance: DistanceConstant,
           TI: 'static + Eq + Hash + Clone,
           TO: Integer + Zero + One + AddAssign,
-          MO::Distance: DistanceConstant,
           (MI, MO): CountByConstant<MI, MO> {
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), n),
@@ -131,14 +129,14 @@ pub fn make_count_by<MI, MO, TI, TO>(n: usize) -> Fallible<Transformation<SizedD
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{L1Sensitivity, SymmetricDistance};
+    use crate::dist::SymmetricDistance;
+    use crate::trans::count::make_count_by_categories;
 
     use super::*;
-    use crate::trans::count::make_count_by_categories;
 
     #[test]
     fn test_make_count_l1() {
-        let transformation = make_count::<SymmetricDistance, L1Sensitivity<i32>, _>().unwrap_test();
+        let transformation = make_count::<SymmetricDistance, i64, u32>().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
@@ -147,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_make_count_l2() {
-        let transformation = make_count::<SymmetricDistance, L2Sensitivity<i32>, i32>().unwrap_test();
+        let transformation = make_count::<SymmetricDistance, u32, i32>().unwrap_test();
         let arg = vec![1, 2, 3, 4, 5];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 5;
@@ -165,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_make_count_by_categories() {
-        let transformation = make_count_by_categories::<SymmetricDistance, L2Sensitivity<f64>, i64, i8>(
+        let transformation = make_count_by_categories::<SymmetricDistance, L2Distance<f64>, i64, i8>(
             vec![2, 1, 3]
         ).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
@@ -180,7 +178,7 @@ mod tests {
     #[test]
     fn test_make_count_by() -> Fallible<()> {
         let arg = vec![true, true, true, false, true, false, false, false, true, true];
-        let transformation = make_count_by::<SymmetricDistance, L2Sensitivity<f64>, bool, i8>(arg.len())?;
+        let transformation = make_count_by::<SymmetricDistance, L2Distance<f64>, bool, i8>(arg.len())?;
         let ret = transformation.function.eval(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);

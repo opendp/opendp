@@ -64,11 +64,11 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> from opendp.v1.typing import RuntimeType, L1Sensitivity
+        >>> from opendp.v1.typing import RuntimeType, L1Distance
         >>> assert RuntimeType.parse(int) == "i32"
         >>> assert RuntimeType.parse("i32") == "i32"
-        >>> assert RuntimeType.parse(L1Sensitivity[int]) == "L1Sensitivity<i32>"
-        >>> assert RuntimeType.parse(L1Sensitivity["f32"]) == "L1Sensitivity<f32>"
+        >>> assert RuntimeType.parse(L1Distance[int]) == "L1Distance<i32>"
+        >>> assert RuntimeType.parse(L1Distance["f32"]) == "L1Distance<f32>"
         >>> from typing import List
         >>> assert RuntimeType.parse(List[int]) == "Vec<int>"
         """
@@ -104,8 +104,9 @@ class RuntimeType(object):
             closeness = {
                 'HammingDistance': HammingDistance,
                 'SymmetricDistance': SymmetricDistance,
-                'L1Sensitivity': L1Sensitivity,
-                'L2Sensitivity': L2Sensitivity,
+                'AbsoluteDistance': AbsoluteDistance,
+                'L1Distance': L1Distance,
+                'L2Distance': L2Distance,
                 'MaxDivergence': MaxDivergence,
                 'SmoothedMaxDivergence': SmoothedMaxDivergence
             }.get(origin)
@@ -143,7 +144,7 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> from opendp.v1.typing import RuntimeType, L1Sensitivity
+        >>> from opendp.v1.typing import RuntimeType, L1Distance
         >>> assert RuntimeType.infer(23) == "i32"
         >>> assert RuntimeType.infer(12.) == "f64"
         >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
@@ -247,8 +248,9 @@ class SensitivityMetric(RuntimeType):
         return SensitivityMetric(self.origin, [self.parse(type_name=associated_type)])
 
 
-L1Sensitivity = SensitivityMetric('L1Sensitivity')
-L2Sensitivity = SensitivityMetric('L2Sensitivity')
+AbsoluteDistance = SensitivityMetric('AbsoluteDistance')
+L1Distance = SensitivityMetric('L1Distance')
+L2Distance = SensitivityMetric('L2Distance')
 
 
 class PrivacyMeasure(RuntimeType):

@@ -5,7 +5,7 @@ use std::os::raw::{c_char, c_void};
 use num::One;
 
 use opendp::core::{DatasetMetric, SensitivityMetric, Domain};
-use opendp::dist::{HammingDistance, SymmetricDistance, L1Sensitivity, L2Sensitivity};
+use opendp::dist::{HammingDistance, SymmetricDistance, AbsoluteDistance, L1Distance, L2Distance};
 use opendp::dom::{AllDomain, VectorDomain, IntervalDomain};
 use opendp::err;
 use opendp::traits::{DistanceCast, DistanceConstant};
@@ -48,7 +48,7 @@ pub extern "C" fn opendp_trans__make_clamp(
             ).into_any()
         }
         dispatch!(monomorphize_sensitivity_2, [
-            (M, [L1Sensitivity<Q>, L2Sensitivity<Q>]),
+            (M, [AbsoluteDistance<Q>]),
             (T, @numbers)
         ], (lower, upper))
     }
@@ -106,7 +106,7 @@ pub extern "C" fn opendp_trans__make_unclamp(
             ).into_any()
         }
         dispatch!(monomorphize_sensitivity_2, [
-            (M, [L1Sensitivity<Q>, L2Sensitivity<Q>]),
+            (M, [AbsoluteDistance<Q>, L1Distance<Q>, L2Distance<Q>]),
             (T, @numbers)
         ], (lower, upper))
     }
@@ -141,7 +141,7 @@ mod tests {
         let transformation = Result::from(opendp_trans__make_clamp(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(10.0) as *const c_void,
-            "L2Sensitivity<f64>".to_char_p(),
+            "AbsoluteDistance<f64>".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(-1.0);

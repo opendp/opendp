@@ -88,7 +88,7 @@ pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<D
 #[cfg(test)]
 mod tests {
     use crate::core::*;
-    use crate::dist::{L1Sensitivity, MaxDivergence};
+    use crate::dist::{L1Distance, MaxDivergence};
     use crate::dom::AllDomain;
     use crate::error::ExplainUnwrap;
 
@@ -99,14 +99,14 @@ mod tests {
         let input_domain0 = AllDomain::<u8>::new();
         let output_domain0 = AllDomain::<i32>::new();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
-        let input_metric0 = L1Sensitivity::<i32>::default();
-        let output_metric0 = L1Sensitivity::<i32>::default();
+        let input_metric0 = L1Distance::<i32>::default();
+        let output_metric0 = L1Distance::<i32>::default();
         let stability_relation0 = StabilityRelation::new_from_constant(1);
         let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
-        let input_metric1 = L1Sensitivity::<i32>::default();
+        let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
@@ -121,15 +121,15 @@ mod tests {
         let input_domain0 = AllDomain::<u8>::new();
         let output_domain0 = AllDomain::<i32>::new();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
-        let input_metric0 = L1Sensitivity::<i32>::default();
-        let output_metric0 = L1Sensitivity::<i32>::default();
+        let input_metric0 = L1Distance::<i32>::default();
+        let output_metric0 = L1Distance::<i32>::default();
         let stability_relation0 = StabilityRelation::new_from_constant(1);
         let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
-        let input_metric1 = L1Sensitivity::<i32>::default();
-        let output_metric1 = L1Sensitivity::<i32>::default();
+        let input_metric1 = L1Distance::<i32>::default();
+        let output_metric1 = L1Distance::<i32>::default();
         let stability_relation1 = StabilityRelation::new_from_constant(1);
         let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
         let chain = make_chain_tt(&transformation1, &transformation0, None).unwrap_test();
@@ -143,14 +143,14 @@ mod tests {
         let input_domain0 = AllDomain::<i32>::new();
         let output_domain0 = AllDomain::<f32>::new();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f32);
-        let input_metric0 = L1Sensitivity::<i32>::default();
+        let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
         let privacy_relation0 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement0 = Measurement::new(input_domain0, output_domain0, function0, input_metric0, output_measure0, privacy_relation0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
-        let input_metric1 = L1Sensitivity::<i32>::default();
+        let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);

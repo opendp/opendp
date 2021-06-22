@@ -2,7 +2,7 @@ import sys
 from typing import List, Tuple, Any
 
 from opendp.v1.mod import UnknownTypeException
-from opendp.v1.typing import RuntimeType, L1Sensitivity, SensitivityMetric, L2Sensitivity, DatasetMetric
+from opendp.v1.typing import RuntimeType, L1Distance, SensitivityMetric, L2Distance, DatasetMetric
 
 
 def test_typing_hint():
@@ -21,7 +21,7 @@ def test_typing_hint():
     assert str(RuntimeType.parse(List[List[str]])) == "Vec<Vec<String>>"
     assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
     assert isinstance(RuntimeType.parse('HammingDistance'), DatasetMetric)
-    assert isinstance(RuntimeType.parse('L1Sensitivity<f64>'), SensitivityMetric)
+    assert isinstance(RuntimeType.parse('L1Distance<f64>'), SensitivityMetric)
 
     try:
         RuntimeType.parse(List[Any])
@@ -31,15 +31,15 @@ def test_typing_hint():
 
 
 def test_sensitivity():
-    assert isinstance(L1Sensitivity[int], SensitivityMetric)
+    assert isinstance(L1Distance[int], SensitivityMetric)
     assert not isinstance(RuntimeType.parse('(f32)'), SensitivityMetric)
-    assert str(L1Sensitivity[int]) == "L1Sensitivity<i32>"
+    assert str(L1Distance[int]) == "L1Distance<i32>"
 
 
 def test_tuples():
     assert str(RuntimeType.parse((float, int))) == "(f64, i32)"
-    assert str(RuntimeType.parse(('f32', (int, 'L1Sensitivity<i32>')))) == '(f32, (i32, L1Sensitivity<i32>))'
-    assert str(RuntimeType.parse(('f32', (int, L2Sensitivity[float])))) == '(f32, (i32, L2Sensitivity<f64>))'
+    assert str(RuntimeType.parse(('f32', (int, 'L1Distance<i32>')))) == '(f32, (i32, L1Distance<i32>))'
+    assert str(RuntimeType.parse(('f32', (int, L2Distance[float])))) == '(f32, (i32, L2Distance<f64>))'
 
 
 def test_c():

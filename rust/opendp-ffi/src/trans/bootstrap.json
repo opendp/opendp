@@ -198,17 +198,17 @@
                 "description": "input dataset metric"
             },
             {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity metric"
-            },
-            {
                 "name": "TI",
                 "c_type": "char *",
                 "is_type": true,
                 "description": "atomic type of input data. Input data is expected to be of the form Vec<TI>."
+            },
+            {
+                "name": "TO",
+                "c_type": "char *",
+                "default": "u32",
+                "is_type": true,
+                "description": "type of output integer"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -615,20 +615,10 @@
                 "description": "input metric"
             },
             {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity space"
-            }
-        ],
-        "derived_types": [
-            {
                 "name": "T",
-                "rust_type": {
-                    "root": "MO",
-                    "index": 0
-                }
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic data type"
             }
         ],
         "ret": {
@@ -658,20 +648,10 @@
                 "description": "input dataset metric"
             },
             {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity metric"
-            }
-        ],
-        "derived_types": [
-            {
                 "name": "T",
-                "rust_type": {
-                    "root": "MO",
-                    "index": 0
-                }
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic type of data"
             }
         ],
         "ret": {
@@ -699,20 +679,10 @@
                 "description": "Number of records in input data."
             },
             {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity metric"
-            }
-        ],
-        "derived_types": [
-            {
                 "name": "T",
-                "rust_type": {
-                    "root": "MO",
-                    "index": 0
-                }
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic type of data"
             }
         ],
         "ret": {
@@ -753,20 +723,10 @@
                 "description": "input dataset metric"
             },
             {
-                "name": "MO",
-                "c_type": "char *",
-                "hint": "SensitivityMetric",
-                "is_type": true,
-                "description": "output sensitivity metric"
-            }
-        ],
-        "derived_types": [
-            {
                 "name": "T",
-                "rust_type": {
-                    "root": "MO",
-                    "index": 0
-                }
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic data type"
             }
         ],
         "ret": {

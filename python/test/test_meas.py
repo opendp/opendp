@@ -1,4 +1,3 @@
-from opendp.v1.typing import HammingDistance, L1Sensitivity
 
 
 def test_base_laplace():
@@ -62,8 +61,8 @@ def test_base_vector_geometric():
 #     from opendp.v1.trans import make_count_by
 #     from opendp.v1.meas import make_base_stability
 #     meas = (
-#         make_count_by(n=10, MI=HammingDistance, MO=L1Sensitivity[float], TI=int) >>
-#         make_base_stability(n=10, scale=20., threshold=1., MI=L1Sensitivity[float], TIK=int)
+#         make_count_by(n=10, MI=HammingDistance, MO=L1Distance[float], TI=int) >>
+#         make_base_stability(n=10, scale=20., threshold=1., MI=L1Distance[float], TIK=int)
 #     )
 #     print("base gaussian:", meas([3] * 4 + [5] * 6))
 #     assert meas.check(1., (1.3, .000001))

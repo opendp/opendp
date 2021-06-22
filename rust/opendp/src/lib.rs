@@ -39,7 +39,7 @@
 //! use opendp::meas;
 //! use opendp::trans;
 //! use opendp::trans::{manipulation, sum, make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
-//! use opendp::dist::{HammingDistance, L1Sensitivity};
+//! use opendp::dist::{HammingDistance, L1Distance};
 //! use opendp::error::*;
 //! use opendp::chain::{make_chain_tt, make_chain_mt};
 //! use opendp::meas::make_base_laplace;
@@ -97,14 +97,14 @@
 //! #### Example Transformation Constructor
 //! ```
 //!# use opendp::core::{Transformation, StabilityRelation, Function};
-//!# use opendp::dist::L1Sensitivity;
+//!# use opendp::dist::L1Distance;
 //!# use opendp::dom::AllDomain;
-//! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, L1Sensitivity<i32>, L1Sensitivity<i32>> {
+//! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, L1Distance<i32>, L1Distance<i32>> {
 //!     let input_domain = AllDomain::new();
 //!     let output_domain = AllDomain::new();
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
-//!     let input_metric = L1Sensitivity::default();
-//!     let output_metric = L1Sensitivity::default();
+//!     let input_metric = L1Distance::default();
+//!     let output_metric = L1Distance::default();
 //!     let stability_relation = StabilityRelation::new_from_constant(1);
 //!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
 //! }
