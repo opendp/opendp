@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_make_count_distinct() {
-        let transformation = make_count_distinct::<SymmetricDistance, L1Sensitivity<i32>, _>().unwrap_test();
+        let transformation = make_count_distinct::<SymmetricDistance, L1Distance<i32>, _>().unwrap_test();
         let arg = vec![1, 1, 3, 4, 4];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = 3;

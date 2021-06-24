@@ -59,7 +59,7 @@ pub extern "C" fn opendp_trans__make_count_distinct(
         }
         dispatch!(monomorphize2, [
             (MI, [SymmetricDistance, HammingDistance]),
-            (MO, [L1Sensitivity<QO>, L2Sensitivity<QO>]),
+            (MO, [L1Distance<QO>, L2Distance<QO>]),
             (T, @hashable)
         ], ())
     }

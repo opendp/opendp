@@ -196,7 +196,7 @@ def test_count():
 
 def test_count_distinct():
     from opendp.v1.trans import make_count_distinct
-    transformation = make_count_distinct(SymmetricDistance, L1Sensitivity["i32"], int)
+    transformation = make_count_distinct(SymmetricDistance, L1Distance["i32"], int)
     arg = [1, 2, 3, 2, 7, 3, 4]
     ret = transformation(arg)
     assert ret == 5
