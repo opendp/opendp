@@ -4,8 +4,8 @@ use std::ops::{Div, Sub, Add};
 
 use num::{Float, One, Zero, NumCast};
 
-use crate::core::{DatasetMetric, Function, SensitivityMetric, StabilityRelation, Transformation};
-use crate::dist::{HammingDistance, SymmetricDistance, LPSensitivity};
+use crate::core::{DatasetMetric, Function, StabilityRelation, Transformation};
+use crate::dist::{HammingDistance, SymmetricDistance, AbsoluteDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::DistanceConstant;
@@ -15,7 +15,7 @@ pub trait BoundedVarianceConstant<T> {
     fn get_stability(lower: T, upper: T, length: usize, ddof: usize) -> Fallible<T>;
 }
 
-impl<T, const P: usize> BoundedVarianceConstant<T> for (HammingDistance, LPSensitivity<T, P>)
+impl<T> BoundedVarianceConstant<T> for HammingDistance
     where T: Float + Sub<Output=T> + Div<Output=T> + NumCast + One {
     fn get_stability(lower: T, upper: T, length: usize, ddof: usize) -> Fallible<T> {
         let _length = num_cast!(length; T)?;
@@ -25,7 +25,7 @@ impl<T, const P: usize> BoundedVarianceConstant<T> for (HammingDistance, LPSensi
     }
 }
 
-impl<T, const P: usize> BoundedVarianceConstant<T> for (SymmetricDistance, LPSensitivity<T, P>)
+impl<T> BoundedVarianceConstant<T> for SymmetricDistance
     where T: Float + Sub<Output=T> + Div<Output=T> + NumCast + One {
     fn get_stability(lower: T, upper: T, length: usize, ddof: usize) -> Fallible<T> {
         let _length = num_cast!(length; T)?;
@@ -35,28 +35,27 @@ impl<T, const P: usize> BoundedVarianceConstant<T> for (SymmetricDistance, LPSen
     }
 }
 
-pub fn make_bounded_variance<MI, MO>(
-    lower: MO::Distance, upper: MO::Distance, length: usize, ddof: usize
-) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<MO::Distance>>>, AllDomain<MO::Distance>, MI, MO>>
+pub fn make_bounded_variance<MI, T>(
+    lower: T, upper: T, length: usize, ddof: usize
+) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, MI, AbsoluteDistance<T>>>
     where MI: DatasetMetric,
-          MO: SensitivityMetric,
-          MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Float + Sum<MO::Distance> + for<'a> Sum<&'a MO::Distance>,
-          for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
-          (MI, MO): BoundedVarianceConstant<MO::Distance> {
-    let _length = num_cast!(length; MO::Distance)?;
-    let _ddof = num_cast!(ddof; MO::Distance)?;
+          T: DistanceConstant + Sub<Output=T> + Float + Sum<T> + for<'a> Sum<&'a T>,
+          for<'a> &'a T: Sub<Output=T>,
+          MI: BoundedVarianceConstant<T> {
+    let _length = num_cast!(length; T)?;
+    let _ddof = num_cast!(ddof; T)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
             IntervalDomain::new(Bound::Included(lower), Bound::Included(upper))?), length),
         AllDomain::new(),
-        Function::new(move |arg: &Vec<MO::Distance>| {
-            let mean = arg.iter().sum::<MO::Distance>() / _length;
-            arg.iter().map(|v| (v - &mean).powi(2)).sum::<MO::Distance>() / (_length - _ddof)
+        Function::new(move |arg: &Vec<T>| {
+            let mean = arg.iter().sum::<T>() / _length;
+            arg.iter().map(|v| (v - &mean).powi(2)).sum::<T>() / (_length - _ddof)
         }),
         MI::default(),
-        MO::default(),
-        StabilityRelation::new_from_constant(<(MI, MO)>::get_stability(lower, upper, length, ddof)?)))
+        AbsoluteDistance::default(),
+        StabilityRelation::new_from_constant(MI::get_stability(lower, upper, length, ddof)?)))
 }
 
 
@@ -64,7 +63,7 @@ pub trait BoundedCovarianceConstant<T> {
     fn get_stability_constant(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> Fallible<T>;
 }
 
-impl<T, const P: usize> BoundedCovarianceConstant<T> for (HammingDistance, LPSensitivity<T, P>)
+impl<T> BoundedCovarianceConstant<T> for HammingDistance
     where T: Clone + Sub<Output=T> + Div<Output=T> + NumCast + One {
     fn get_stability_constant(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> Fallible<T> {
         let _length = num_cast!(length; T)?;
@@ -74,7 +73,7 @@ impl<T, const P: usize> BoundedCovarianceConstant<T> for (HammingDistance, LPSen
     }
 }
 
-impl<T, const P: usize> BoundedCovarianceConstant<T> for (SymmetricDistance, LPSensitivity<T, P>)
+impl<T> BoundedCovarianceConstant<T> for SymmetricDistance
     where T: Clone + Sub<Output=T> + Div<Output=T> + Add<Output=T> + NumCast + One {
     fn get_stability_constant(lower: (T, T), upper: (T, T), length: usize, ddof: usize) -> Fallible<T> {
         let _length = num_cast!(length; T)?;
@@ -86,59 +85,57 @@ impl<T, const P: usize> BoundedCovarianceConstant<T> for (SymmetricDistance, LPS
 
 type CovarianceDomain<T> = SizedDomain<VectorDomain<IntervalDomain<(T, T)>>>;
 
-pub fn make_bounded_covariance<MI, MO>(
-    lower: (MO::Distance, MO::Distance),
-    upper: (MO::Distance, MO::Distance),
+pub fn make_bounded_covariance<MI, T>(
+    lower: (T, T),
+    upper: (T, T),
     length: usize, ddof: usize
-) -> Fallible<Transformation<CovarianceDomain<MO::Distance>, AllDomain<MO::Distance>, MI, MO>>
+) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, MI, AbsoluteDistance<T>>>
     where MI: DatasetMetric,
-          MO: SensitivityMetric,
-          MO::Distance: DistanceConstant + Sub<Output=MO::Distance> + Sum<MO::Distance> + Zero,
-          for <'a> MO::Distance: Div<&'a MO::Distance, Output=MO::Distance> + Add<&'a MO::Distance, Output=MO::Distance>,
-          for<'a> &'a MO::Distance: Sub<Output=MO::Distance>,
-          (MI, MO): BoundedCovarianceConstant<MO::Distance> {
+          T: DistanceConstant + Sub<Output=T> + Sum<T> + Zero,
+          for <'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
+          for<'a> &'a T: Sub<Output=T>,
+          MI: BoundedCovarianceConstant<T> {
 
-    let _length = num_cast!(length; MO::Distance)?;
-    let _ddof = num_cast!(ddof; MO::Distance)?;
+    let _length = num_cast!(length; T)?;
+    let _ddof = num_cast!(ddof; T)?;
 
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
             IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))?), length),
         AllDomain::new(),
-        Function::new(move |arg: &Vec<(MO::Distance, MO::Distance)>| {
+        Function::new(move |arg: &Vec<(T, T)>| {
             let (sum_l, sum_r) = arg.iter().fold(
-                (MO::Distance::zero(), MO::Distance::zero()),
+                (T::zero(), T::zero()),
                 |(s_l, s_r), (v_l, v_r)| (s_l + v_l, s_r + v_r));
             let (mean_l, mean_r) = (sum_l / &_length, sum_r / &_length);
 
             arg.iter()
                 .map(|(v_l, v_r)| (v_l - &mean_l) * (v_r - &mean_r))
-                .sum::<MO::Distance>() / (&_length - &_ddof)
+                .sum::<T>() / (&_length - &_ddof)
         }),
         MI::default(),
-        MO::default(),
-        StabilityRelation::new_from_constant(<(MI, MO)>::get_stability_constant(lower, upper, length, ddof)?)))
+        AbsoluteDistance::default(),
+        StabilityRelation::new_from_constant(MI::get_stability_constant(lower, upper, length, ddof)?)))
 }
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dist::{L1Sensitivity};
     use crate::error::ExplainUnwrap;
 
     #[test]
     fn test_make_bounded_variance_hamming() {
         let arg = vec![1., 2., 3., 4., 5.];
 
-        let transformation_sample = make_bounded_variance::<HammingDistance, L1Sensitivity<f64>>(0., 10., 5, 1).unwrap_test();
+        let transformation_sample = make_bounded_variance::<HammingDistance, f64>(0., 10., 5, 1).unwrap_test();
         let ret = transformation_sample.function.eval(&arg).unwrap_test();
         let expected = 2.5;
         assert_eq!(ret, expected);
         assert!(transformation_sample.stability_relation.eval(&1, &(100. / 5.)).unwrap_test());
 
-        let transformation_pop = make_bounded_variance::<HammingDistance, L1Sensitivity<f64>>(0., 10., 5, 0).unwrap_test();
+        let transformation_pop = make_bounded_variance::<HammingDistance, f64>(0., 10., 5, 0).unwrap_test();
         let ret = transformation_pop.function.eval(&arg).unwrap_test();
         let expected = 2.0;
         assert_eq!(ret, expected);
@@ -149,13 +146,13 @@ mod tests {
     fn test_make_bounded_covariance_hamming() {
         let arg = vec![(1., 3.), (2., 4.), (3., 5.), (4., 6.), (5., 7.)];
 
-        let transformation_sample =  make_bounded_covariance::<HammingDistance, L1Sensitivity<f64>>((0., 2.), (10., 12.), 5, 1).unwrap_test();
+        let transformation_sample =  make_bounded_covariance::<HammingDistance, f64>((0., 2.), (10., 12.), 5, 1).unwrap_test();
         let ret = transformation_sample.function.eval(&arg).unwrap_test();
         let expected = 2.5;
         assert_eq!(ret, expected);
         assert!(transformation_sample.stability_relation.eval(&1, &(100. / 5.)).unwrap_test());
 
-        let transformation_pop = make_bounded_covariance::<HammingDistance, L1Sensitivity<f64>>((0., 2.), (10., 12.), 5, 0).unwrap_test();
+        let transformation_pop = make_bounded_covariance::<HammingDistance, f64>((0., 2.), (10., 12.), 5, 0).unwrap_test();
         let ret = transformation_pop.function.eval(&arg).unwrap_test();
         let expected = 2.0;
         assert_eq!(ret, expected);

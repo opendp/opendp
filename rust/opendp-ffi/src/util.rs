@@ -8,7 +8,7 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use opendp::{err, fallible};
-use opendp::dist::{HammingDistance, L1Sensitivity, L2Sensitivity, SymmetricDistance};
+use opendp::dist::{HammingDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
 use opendp::error::*;
 use crate::any::AnyObject;
 
@@ -78,7 +78,7 @@ pub enum MetricClass { Dataset, Sensitivity }
 impl Type {
     pub fn get_sensitivity_distance(&self) -> Fallible<Type> {
         if let TypeContents::GENERIC {args, name} = &self.contents {
-            if !name.ends_with("Sensitivity") {
+            if !vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
                 return fallible!(TypeParse, "Expected a sensitivity type name, received {:?}", name)
             }
             if args.len() != 1 {
@@ -86,14 +86,14 @@ impl Type {
             }
             Type::of_id(&args[0])
         } else {
-            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, L1Sensitivity<u32>")
+            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, AbsoluteDistance<u32>")
         }
     }
     pub fn get_metric_class(&self) -> Fallible<MetricClass> {
         if self == &Type::of::<HammingDistance>() || self == &Type::of::<SymmetricDistance>() {
             Ok(MetricClass::Dataset)
         } else if let TypeContents::GENERIC { name, .. } = &self.contents {
-            if name.ends_with("Sensitivity") {
+            if vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
                 Ok(MetricClass::Sensitivity)
             } else {
                 return fallible!(TypeParse, "Expected a metric type name, received {:?}", name)
@@ -171,8 +171,9 @@ lazy_static! {
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]],
             type_vec![HammingDistance, SymmetricDistance],
-            type_vec![L1Sensitivity, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![L2Sensitivity, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| e.descriptor).collect();
@@ -278,7 +279,7 @@ impl<S: ToString> ToCharP for S {
 mod tests {
     use std::convert::TryInto;
 
-    use opendp::dist::L1Sensitivity;
+    use opendp::dist::L1Distance;
 
     use super::*;
 
@@ -291,7 +292,7 @@ mod tests {
         assert_eq!(Type::of::<(i32, i32)>(), Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
         assert_eq!(Type::of::<[i32; 1]>(), Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
         assert_eq!(Type::of::<[i32]>(), Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
-        assert_eq!(Type::of::<L1Sensitivity<i32>>(), Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
+        assert_eq!(Type::of::<L1Distance<i32>>(), Type::new(TypeId::of::<L1Distance<i32>>(), "L1Distance<i32>", TypeContents::GENERIC { name: "L1Distance", args: vec![i32_t] }));
         assert_eq!(Type::of::<Vec<i32>>(), Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
     }
 
@@ -304,7 +305,7 @@ mod tests {
         assert_eq!(TryInto::<Type>::try_into("(i32, i32)")?, Type::new(TypeId::of::<(i32, i32)>(), "(i32, i32)", TypeContents::TUPLE(vec![i32_t, i32_t])));
         assert_eq!(TryInto::<Type>::try_into("[i32; 1]")?, Type::new(TypeId::of::<[i32; 1]>(), "[i32; 1]", TypeContents::ARRAY { element_id: i32_t, len: 1 }));
         assert_eq!(TryInto::<Type>::try_into("[i32]")?, Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
-        assert_eq!(TryInto::<Type>::try_into("L1Sensitivity<i32>")?, Type::new(TypeId::of::<L1Sensitivity<i32>>(), "L1Sensitivity<i32>", TypeContents::GENERIC { name: "L1Sensitivity", args: vec![i32_t] }));
+        assert_eq!(TryInto::<Type>::try_into("L1Distance<i32>")?, Type::new(TypeId::of::<L1Distance<i32>>(), "L1Distance<i32>", TypeContents::GENERIC { name: "L1Distance", args: vec![i32_t] }));
         assert_eq!(TryInto::<Type>::try_into("Vec<i32>")?, Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
         Ok(())
     }

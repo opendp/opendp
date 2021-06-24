@@ -1,7 +1,7 @@
 use num::Float;
 
-use crate::core::{Function, Measurement, PrivacyRelation, Domain};
-use crate::dist::{L2Sensitivity, SmoothedMaxDivergence};
+use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric};
+use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
@@ -9,7 +9,7 @@ use crate::samplers::SampleGaussian;
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
-fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float>(scale: T) -> PrivacyRelation<L2Sensitivity<T>, SmoothedMaxDivergence<T>> {
+fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float, MI: SensitivityMetric<Distance=T>>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>> {
     PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
         let _2 = num_cast!(2.; T)?;
         let additive_gauss_const = num_cast!(ADDITIVE_GAUSS_CONST; T)?;
@@ -31,6 +31,7 @@ fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float>(s
 
 
 pub trait GaussianDomain: Domain {
+    type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
     type Atom;
     fn new() -> Self;
     fn noise_function(scale: Self::Atom) -> Function<Self, Self>;
@@ -39,7 +40,8 @@ pub trait GaussianDomain: Domain {
 
 impl<T> GaussianDomain for AllDomain<T>
     where T: 'static + SampleGaussian + Float {
-    type Atom = Self::Carrier;
+    type Metric = AbsoluteDistance<T>;
+    type Atom = T;
 
     fn new() -> Self { AllDomain::new() }
     fn noise_function(scale: Self::Carrier) -> Function<Self, Self> {
@@ -49,6 +51,7 @@ impl<T> GaussianDomain for AllDomain<T>
 
 impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
     where T: 'static + SampleGaussian + Float {
+    type Metric = L2Distance<T>;
     type Atom = T;
 
     fn new() -> Self { VectorDomain::new_all() }
@@ -60,17 +63,17 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 }
 
 
-pub fn make_base_gaussian<DA>(scale: DA::Atom) -> Fallible<Measurement<DA, DA, L2Sensitivity<DA::Atom>, SmoothedMaxDivergence<DA::Atom>>>
-    where DA: GaussianDomain,
-          DA::Atom: 'static + Clone + SampleGaussian + Float {
+pub fn make_base_gaussian<DI>(scale: DI::Atom) -> Fallible<Measurement<DI, DI, DI::Metric, SmoothedMaxDivergence<DI::Atom>>>
+    where DI: GaussianDomain,
+          DI::Atom: 'static + Clone + SampleGaussian + Float {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     Ok(Measurement::new(
-        DA::new(),
-        DA::new(),
-        DA::noise_function(scale.clone()),
-        L2Sensitivity::default(),
+        DI::new(),
+        DI::new(),
+        DI::noise_function(scale.clone()),
+        DI::Metric::default(),
         SmoothedMaxDivergence::default(),
         make_gaussian_privacy_relation(scale),
     ))

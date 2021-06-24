@@ -268,17 +268,17 @@ def make_unclamp(
 
 def make_count(
     MI: DatasetMetric,
-    MO: SensitivityMetric,
-    TI: RuntimeTypeDescriptor
+    TI: RuntimeTypeDescriptor,
+    TO: RuntimeTypeDescriptor = "u32"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
     :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric
-    :type MO: SensitivityMetric
     :param TI: atomic type of input data. Input data is expected to be of the form Vec<TI>.
     :type TI: RuntimeTypeDescriptor
+    :param TO: type of output integer
+    :type TO: RuntimeTypeDescriptor
     :return: A count step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -287,20 +287,20 @@ def make_count(
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
-    MO = RuntimeType.parse(type_name=MO)
     TI = RuntimeType.parse(type_name=TI)
+    TO = RuntimeType.parse(type_name=TO)
     
     # Convert arguments to c types.
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     TI = py_to_c(TI, c_type=ctypes.c_char_p)
+    TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_count
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(MI, MO, TI), Transformation))
+    return c_to_py(unwrap(function(MI, TI, TO), Transformation))
 
 
 def make_count_distinct(
@@ -801,7 +801,7 @@ def make_bounded_mean(
     upper,
     n: int,
     MI: DatasetMetric,
-    MO: SensitivityMetric
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the mean of bounded data. 
     Use make_clamp_vec to bound data.
@@ -812,8 +812,8 @@ def make_bounded_mean(
     :type n: int
     :param MI: input metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity space
-    :type MO: SensitivityMetric
+    :param T: atomic data type
+    :type T: RuntimeTypeDescriptor
     :return: A bounded_mean step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -822,29 +822,28 @@ def make_bounded_mean(
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
-    MO = RuntimeType.parse(type_name=MO)
-    T = MO.args[0]
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     n = py_to_c(n, c_type=ctypes.c_uint)
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_mean
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, n, MI, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, n, MI, T), Transformation))
 
 
 def make_bounded_sum(
     lower,
     upper,
     MI: DatasetMetric,
-    MO: SensitivityMetric
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data. 
     Use make_clamp_vec to bound data.
@@ -853,8 +852,8 @@ def make_bounded_sum(
     :param upper: Upper bound of input data.
     :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric
-    :type MO: SensitivityMetric
+    :param T: atomic type of data
+    :type T: RuntimeTypeDescriptor
     :return: A bounded_sum step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -863,28 +862,27 @@ def make_bounded_sum(
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
-    MO = RuntimeType.parse(type_name=MO)
-    T = MO.args[0]
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_sum
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, MI, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, MI, T), Transformation))
 
 
 def make_bounded_sum_n(
     lower,
     upper,
     n: int,
-    MO: SensitivityMetric
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known length. 
     This uses a restricted-sensitivity proof that takes advantage of known N for better utility. 
@@ -894,8 +892,8 @@ def make_bounded_sum_n(
     :param upper: Upper bound of input data.
     :param n: Number of records in input data.
     :type n: int
-    :param MO: output sensitivity metric
-    :type MO: SensitivityMetric
+    :param T: atomic type of data
+    :type T: RuntimeTypeDescriptor
     :return: A bounded_sum_n step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -903,21 +901,20 @@ def make_bounded_sum_n(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    MO = RuntimeType.parse(type_name=MO)
-    T = MO.args[0]
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     n = py_to_c(n, c_type=ctypes.c_uint)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_sum_n
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, n, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, n, T), Transformation))
 
 
 def make_bounded_variance(
@@ -925,8 +922,8 @@ def make_bounded_variance(
     upper,
     n: int,
     MI: DatasetMetric,
-    MO: SensitivityMetric,
-    ddof: int = 1
+    ddof: int = 1,
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the variance of bounded data. 
     Use make_clamp_vec to bound data.
@@ -939,8 +936,8 @@ def make_bounded_variance(
     :type ddof: int
     :param MI: input dataset metric
     :type MI: DatasetMetric
-    :param MO: output sensitivity metric
-    :type MO: SensitivityMetric
+    :param T: atomic data type
+    :type T: RuntimeTypeDescriptor
     :return: A bounded_variance step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -949,8 +946,7 @@ def make_bounded_variance(
     """
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
-    MO = RuntimeType.parse(type_name=MO)
-    T = MO.args[0]
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
@@ -958,11 +954,11 @@ def make_bounded_variance(
     n = py_to_c(n, c_type=ctypes.c_uint)
     ddof = py_to_c(ddof, c_type=ctypes.c_uint)
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_variance
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, n, ddof, MI, MO), Transformation))
+    return c_to_py(unwrap(function(lower, upper, n, ddof, MI, T), Transformation))

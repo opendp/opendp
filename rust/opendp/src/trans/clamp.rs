@@ -2,11 +2,12 @@ use std::collections::Bound;
 
 use num::One;
 
-use crate::core::{DatasetMetric, Function, Metric, StabilityRelation, Transformation, SensitivityMetric, Domain};
+use crate::core::{DatasetMetric, Function, Metric, StabilityRelation, Transformation, Domain};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, DistanceCast};
 use std::ops::Sub;
+use crate::dist::AbsoluteDistance;
 
 
 fn min<T: PartialOrd>(a: T, b: T) -> T { if a < b {a} else {b} }
@@ -43,9 +44,8 @@ impl<M, T> ClampableDomain<M> for VectorDomain<AllDomain<T>>
     }
 }
 
-impl<M, T> ClampableDomain<M> for AllDomain<T>
-    where M: SensitivityMetric,
-          M::Distance: DistanceConstant + One,
+impl<T, Q> ClampableDomain<AbsoluteDistance<Q>> for AllDomain<T>
+    where Q: DistanceConstant + One,
           T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T> {
     type Atom = T;
     type OutputDomain = IntervalDomain<T>;
@@ -57,15 +57,15 @@ impl<M, T> ClampableDomain<M> for AllDomain<T>
     fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain> {
         Function::new(move |arg: &T| clamp(&lower, &upper, arg).clone())
     }
-    fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<M, M> {
+    fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<AbsoluteDistance<Q>, AbsoluteDistance<Q>> {
         // the sensitivity is at most upper - lower
         StabilityRelation::new_all(
             // relation
-            enclose!((lower, upper), move |d_in: &M::Distance, d_out: &M::Distance|
-                Ok(d_out.clone() >= min(d_in.clone(), M::Distance::distance_cast(upper.clone() - lower.clone())?))),
+            enclose!((lower, upper), move |d_in: &Q, d_out: &Q|
+                Ok(d_out.clone() >= min(d_in.clone(), Q::distance_cast(upper.clone() - lower.clone())?))),
             // forward map
-            Some(move |d_in: &M::Distance|
-                Ok(Box::new(min(d_in.clone(), M::Distance::distance_cast(upper.clone() - lower.clone())?)))),
+            Some(move |d_in: &Q|
+                Ok(Box::new(min(d_in.clone(), Q::distance_cast(upper.clone() - lower.clone())?)))),
             // backward map
             None::<fn(&_)->_>
         )
@@ -141,7 +141,7 @@ pub fn make_unclamp<DI, M>(lower: Bound<DI::Atom>, upper: Bound<DI::Atom>) -> Fa
 mod tests {
 
     use super::*;
-    use crate::dist::{SymmetricDistance, HammingDistance, L1Sensitivity};
+    use crate::dist::{SymmetricDistance, HammingDistance};
     use crate::trans::{make_clamp, make_unclamp};
 
     #[test]
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_make_clamp_scalar() -> Fallible<()> {
-        let transformation = make_clamp::<AllDomain<_>, L1Sensitivity<_>>(0, 10)?;
+        let transformation = make_clamp::<AllDomain<_>, _>(0, 10)?;
         assert_eq!(transformation.function.eval(&15)?, 10);
         assert!(!transformation.stability_relation.eval(&15, &9)?);
         assert!(transformation.stability_relation.eval(&15, &10)?);
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_make_unclamp_scalar() -> Fallible<()> {
-        let transformation = make_unclamp::<IntervalDomain<_>, L1Sensitivity<_>>(Bound::Included(0), Bound::Included(10))?;
+        let transformation = make_unclamp::<IntervalDomain<_>, AbsoluteDistance<_>>(Bound::Included(0), Bound::Included(10))?;
         assert_eq!(transformation.function.eval(&15)?, 15);
         assert!(transformation.stability_relation.eval(&15, &15)?);
         Ok(())

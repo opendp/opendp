@@ -517,7 +517,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 mod tests {
     use std::ops::Bound;
 
-    use opendp::dist::{HammingDistance, L2Sensitivity, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
+    use opendp::dist::{HammingDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
     use opendp::dom::{AllDomain, IntervalDomain, VectorDomain};
     use opendp::error::*;
     use opendp::meas;
@@ -588,7 +588,7 @@ mod tests {
         let t2 = trans::make_parse_column::<HammingDistance, _, f64>("a".to_owned(), true)?.into_any();
         let t3 = trans::make_select_column::<HammingDistance, _, f64>("a".to_owned())?.into_any();
         let t4 = trans::make_clamp::<VectorDomain<_>, HammingDistance>(0.0, 10.0)?.into_any();
-        let t5 = trans::make_bounded_sum::<HammingDistance, L2Sensitivity<_>>(0.0, 10.0)?.into_any();
+        let t5 = trans::make_bounded_sum::<HammingDistance, _>(0.0, 10.0)?.into_any();
         let m1 = meas::make_base_gaussian::<AllDomain<_>>(0.0)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());

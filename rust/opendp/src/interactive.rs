@@ -154,7 +154,7 @@ pub fn make_adaptive_composition<DI, DO, MI, MO>(
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{HammingDistance, L1Sensitivity, MaxDivergence};
+    use crate::dist::{HammingDistance, MaxDivergence, AbsoluteDistance};
     use crate::dom::VectorDomain;
     use crate::error::*;
     use crate::meas::*;
@@ -163,12 +163,12 @@ mod tests {
 
     use super::*;
 
-    fn make_dummy_meas<TO: From<i32>>() -> Measurement<AllDomain<i32>, AllDomain<TO>, L1Sensitivity<f64>, MaxDivergence<f64>> {
+    fn make_dummy_meas<TO: From<i32>>() -> Measurement<AllDomain<i32>, AllDomain<TO>, AbsoluteDistance<f64>, MaxDivergence<f64>> {
         Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
             Function::new(|a: &i32| TO::from(a.clone())),
-            L1Sensitivity::<f64>::default(),
+            AbsoluteDistance::<f64>::default(),
             MaxDivergence::<f64>::default(),
             PrivacyRelation::new(|d_in, d_out| d_out <= d_in),
         )

@@ -1,13 +1,14 @@
 use num::Float;
 
-use crate::core::{Measurement, Function, PrivacyRelation, Domain};
-use crate::dist::{L1Sensitivity, MaxDivergence};
+use crate::core::{Measurement, Function, PrivacyRelation, Domain, SensitivityMetric};
+use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::error::*;
 use crate::traits::DistanceCast;
 
 pub trait LaplaceDomain: Domain {
+    type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
     type Atom;
     fn new() -> Self;
     fn noise_function(scale: Self::Atom) -> Function<Self, Self>;
@@ -15,6 +16,7 @@ pub trait LaplaceDomain: Domain {
 
 impl<T> LaplaceDomain for AllDomain<T>
     where T: 'static + SampleLaplace + Float + DistanceCast {
+    type Metric = AbsoluteDistance<T>;
     type Atom = Self::Carrier;
 
     fn new() -> Self { AllDomain::new() }
@@ -25,6 +27,7 @@ impl<T> LaplaceDomain for AllDomain<T>
 
 impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
     where T: 'static + SampleLaplace + Float + DistanceCast {
+    type Metric = L1Distance<T>;
     type Atom = T;
 
     fn new() -> Self { VectorDomain::new_all() }
@@ -35,17 +38,17 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
     }
 }
 
-pub fn make_base_laplace<DA>(scale: DA::Atom) -> Fallible<Measurement<DA, DA, L1Sensitivity<DA::Atom>, MaxDivergence<DA::Atom>>>
-    where DA: LaplaceDomain,
-          DA::Atom: 'static + Clone + SampleLaplace + Float + DistanceCast {
+pub fn make_base_laplace<DI>(scale: DI::Atom) -> Fallible<Measurement<DI, DI, DI::Metric, MaxDivergence<DI::Atom>>>
+    where DI: LaplaceDomain,
+          DI::Atom: 'static + Clone + SampleLaplace + Float + DistanceCast {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     Ok(Measurement::new(
-        DA::new(),
-        DA::new(),
-        DA::noise_function(scale.clone()),
-        L1Sensitivity::default(),
+        DI::new(),
+        DI::new(),
+        DI::noise_function(scale.clone()),
+        DI::Metric::default(),
         MaxDivergence::default(),
         PrivacyRelation::new_from_constant(scale.recip())
     ))

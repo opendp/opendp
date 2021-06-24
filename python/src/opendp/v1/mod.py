@@ -23,14 +23,14 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> base_geometric(100)  # -> 99
     >>>
     >>> # check the measurement's relation at
-    >>> #     (1, 0.5): (L1Sensitivity<u32>, MaxDivergence)
+    >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
     >>> assert base_geometric.check(1, 0.5)
     >>>
     >>> # chain with a transformation from the trans module
     >>> from opendp.v1.trans import make_count
-    >>> from opendp.v1.typing import HammingDistance, L1Sensitivity
+    >>> from opendp.v1.typing import HammingDistance
     >>> chained = (
-    >>>     make_count(MI=HammingDistance, MO=L1Sensitivity[int], TI=int) >>
+    >>>     make_count(MI=HammingDistance, TI=int) >>
     >>>     base_geometric
     >>> )
     >>>
@@ -127,19 +127,19 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>>
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> from opendp.v1.trans import make_count
-    >>> count: Transformation = make_count(MI=SymmetricDistance, MO=L1Sensitivity[int], TI=int)
+    >>> count: Transformation = make_count(MI=SymmetricDistance, TI=int)
     >>>
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])  # -> 3
     >>> count([1, 2, 3])  # -> 3
     >>>
     >>> # check the transformation's relation at
-    >>> #     (1, 1): (SymmetricDistance, L1Sensitivity<u32>)
+    >>> #     (1, 1): (SymmetricDistance, AbsoluteDistance<u32>)
     >>> assert count.check(1, 1)
     >>>
     >>> # chain with more transformations from the trans module
     >>> from opendp.v1.trans import make_split_lines, make_cast
-    >>> from opendp.v1.typing import SymmetricDistance, L1Sensitivity
+    >>> from opendp.v1.typing import SymmetricDistance
     >>> chained = (
     >>>     make_split_lines(M=SymmetricDistance) >>
     >>>     make_cast(M=SymmetricDistance, TI=str, TO=int) >>
