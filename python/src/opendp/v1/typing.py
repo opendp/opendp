@@ -162,6 +162,9 @@ class RuntimeType(object):
                     "cannot infer atomic type of empty list")
             ])
 
+        elif (public_example.__class__.__module__, public_example.__class__.__name__) == ('torch', 'Tensor'):
+            return RuntimeType('Vec', ["f64"])
+
         raise UnknownTypeException(public_example)
 
     @classmethod

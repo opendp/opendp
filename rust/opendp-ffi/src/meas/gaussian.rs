@@ -11,6 +11,9 @@ use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 use opendp::dom::{AllDomain, VectorDomain};
+use opendp::dist::{HammingDistance, SymmetricDistance};
+use opendp::meas::shuffle::{ShuffleAmplificationConstant, ShuffleBound, make_shuffle_amplification};
+use opendp::core::DatasetMetric;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(
@@ -38,6 +41,21 @@ pub extern "C" fn opendp_meas__make_base_vector_gaussian(
     }
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @floats)], (scale))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_meas__make_shuffle_amplification(
+    step_epsilon: f64, step_delta: f64, n: u64, MI: *const c_char
+) -> FfiResult<*mut AnyMeasurement> {
+    fn monomorphize<MI>(step_epsilon: f64, step_delta: f64, n: u64) -> FfiResult<*mut AnyMeasurement>
+        where MI: 'static + DatasetMetric<Distance=u32> + ShuffleAmplificationConstant {
+        make_shuffle_amplification::<MI>(step_epsilon, step_delta, n, ShuffleBound::Theoretical).into_any()
+    }
+
+    let MI = try_!(Type::try_from(MI));
+    dispatch!(monomorphize, [
+        (MI, @dist_dataset)
+    ], (step_epsilon, step_delta, n))
 }
 
 

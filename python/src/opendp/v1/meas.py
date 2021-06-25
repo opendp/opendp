@@ -327,3 +327,42 @@ def make_base_stability(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(n, scale, threshold, MI, TIK, TIC), Measurement))
+
+
+def make_shuffle_amplification(
+    step_epsilon: float,
+    step_delta: float,
+    num_steps: int,
+    MI: DatasetMetric
+) -> Measurement:
+    """Make a Measurement that estimates privacy usage under shuffle amplification.
+    
+    :param step_epsilon: Epsilon usage of each disjoint step.
+    :type step_epsilon: float
+    :param step_delta: Epsilon usage of each disjoint step.
+    :type step_delta: float
+    :param num_steps: Number of disjoint steps taken.
+    :type num_steps: int
+    :param MI: input dataset metric
+    :type MI: DatasetMetric
+    :return: A shuffle_amplification step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    
+    # Convert arguments to c types.
+    step_epsilon = py_to_c(step_epsilon, c_type=ctypes.c_double)
+    step_delta = py_to_c(step_delta, c_type=ctypes.c_double)
+    num_steps = py_to_c(num_steps, c_type=ctypes.c_uint)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_shuffle_amplification
+    function.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_uint, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(step_epsilon, step_delta, num_steps, MI), Measurement))

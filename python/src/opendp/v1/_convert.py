@@ -4,6 +4,7 @@ from opendp.v1._lib import *
 
 from opendp.v1.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
 from opendp.v1.typing import RuntimeType
+import numpy as np
 
 ATOM_MAP = {
     'f32': ctypes.c_float,
@@ -190,11 +191,13 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
 def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     assert type_name[:4] == 'Vec<'
     inner_type_name = type_name[4:-1]
-    if not isinstance(val, list):
-        raise OpenDPException(f"Cannot cast a non-list type to a vector")
-
     if inner_type_name not in ATOM_MAP:
         raise OpenDPException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
+
+    if (val.__class__.__module__, val.__class__.__name__) == ('torch', 'Tensor'):
+        return _wrap_in_slice(val.numpy().astype(np.float64).__array_interface__['data'][0], val.numel())
+    if not isinstance(val, list):
+        raise OpenDPException(f"Cannot cast a non-list type to a vector")
 
     if val:
         # check that actual type can be represented by the inner_type_name

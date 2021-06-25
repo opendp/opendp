@@ -50,9 +50,10 @@ pub fn make_base_stability<MI, TIK, TIC>(
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
         Function::new_fallible(move |data: &HashMap<TIK, TIC>| {
-            data.iter()
+            data.into_iter()
+                .filter(|(_k, c_in)| !c_in.is_zero())
                 .map(|(k, c_in)| {
-                    // cast the value to MI::Distance (output count)
+                    // cast the value to TOC (output count)
                     let c_out = num_cast!(c_in.clone(); MI::Distance)?;
                     // noise output count
                     Ok((k.clone(), MI::noise(c_out, scale, false)?))
@@ -82,7 +83,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
                 return fallible!(FailedRelation, "cause: delta <= 0")
             }
             if del >= _n.recip() {
-                return fallible!(RelationDebug, "cause: del >= n.ln()");
+                return fallible!(RelationDebug, "cause: del >= 1 / n");
             }
             if scale < ideal_scale {
                 return fallible!(RelationDebug, "cause: scale < d_in / (epsilon * n)")

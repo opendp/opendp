@@ -7,6 +7,7 @@ pub mod laplace;
 pub mod gaussian;
 pub mod geometric;
 pub mod stability;
+pub mod shuffle;
 
 pub use crate::meas::laplace::*;
 pub use crate::meas::gaussian::*;
