@@ -173,7 +173,7 @@ def make_cast_metric(
 def make_clamp(
     lower,
     upper,
-    DI: RuntimeTypeDescriptor = "VectorDomain<AllDomain<T>>",
+    DI: RuntimeTypeDescriptor = "VectorDomain<AllDomain<_T>>",
     M: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
     """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`. Set DI to AllDomain<T> for clamping aggregated values.
@@ -193,7 +193,8 @@ def make_clamp(
     # Standardize type arguments.
     DI = RuntimeType.parse(type_name=DI)
     M = RuntimeType.parse(type_name=M)
-    T = get_domain_atom_or_infer(DI,lower)
+    T = get_domain_atom_or_infer(DI, lower)
+    DI = DI.substitute(T=T)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
@@ -253,7 +254,7 @@ def make_count(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
-    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TI>.
+    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: RuntimeTypeDescriptor
     :param TO: type of output integer
     :type TO: RuntimeTypeDescriptor
@@ -280,17 +281,14 @@ def make_count(
 
 
 def make_count_distinct(
-    MI: DatasetMetric,
-    MO: RuntimeTypeDescriptor,
+    TIA: RuntimeTypeDescriptor,
     TO: RuntimeTypeDescriptor = "u32"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
-    :param MI: input dataset metric
-    :type MI: DatasetMetric
-    :param MO: atomic type of input data. Input data is expected to be of the form Vec<TI>.
-    :type MO: RuntimeTypeDescriptor
-    :param TO: type of output integer
+    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+    :type TIA: RuntimeTypeDescriptor
+    :param TO: Output Type. integer
     :type TO: RuntimeTypeDescriptor
     :return: A count_distinct step.
     :rtype: Transformation
@@ -299,21 +297,19 @@ def make_count_distinct(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    MO = RuntimeType.parse(type_name=MO)
+    TIA = RuntimeType.parse(type_name=TIA)
     TO = RuntimeType.parse(type_name=TO)
     
     # Convert arguments to c types.
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_count_distinct
-    function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(MI, MO, TO), Transformation))
+    return c_to_py(unwrap(function(TIA, TO), Transformation))
 
 
 def make_count_by(
@@ -328,11 +324,11 @@ def make_count_by(
     
     :param n: Number of records in input data.
     :type n: int
-    :param MO: output sensitivity metric
+    :param MO: Output Metric.
     :type MO: SensitivityMetric
-    :param TI: categorical/hashable input data type. Input data must be Vec<TI>.
+    :param TI: Input Type. Categorical/hashable input data type. Input data must be Vec<TI>.
     :type TI: RuntimeTypeDescriptor
-    :param TO: express counts in terms of this integral type
+    :param TO: Output Type. express counts in terms of this integral type
     :type TO: RuntimeTypeDescriptor
     :return: The carrier type is HashMap<TI, TO>- the counts for each unique data input.
     :rtype: Transformation
@@ -623,7 +619,7 @@ def make_identity(
 
 def make_impute_constant(
     constant,
-    DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<T>>"
+    DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<_T>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
     By default, the input type is Vec<Option<`T`>>, as emitted by make_cast. 
@@ -640,6 +636,8 @@ def make_impute_constant(
     """
     # Standardize type arguments.
     DA = RuntimeType.parse(type_name=DA)
+    T = get_domain_atom_or_infer(DA, constant)
+    DA = DA.substitute(T=T)
     
     # Convert arguments to c types.
     constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=T)

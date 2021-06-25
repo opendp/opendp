@@ -95,6 +95,8 @@ class RuntimeType(object):
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
             type_name = type_name.strip()
+            if type_name.startswith('_'):
+                return GenericType(type_name[1:])
             if type_name.startswith('(') and type_name.endswith(')'):
                 return RuntimeType('Tuple', cls._parse_args(type_name[1:-1]))
             start, end = type_name.find('<'), type_name.rfind('>')
@@ -215,6 +217,17 @@ class RuntimeType(object):
         else:
             raise AssertionError(f"args are not similar because they have differing depths. Expected: {expected}. Inferred: {inferred}")
 
+    def substitute(self, **kwargs):
+        if isinstance(self, GenericType):
+            return kwargs.get(self.origin, self)
+        if isinstance(self, RuntimeType):
+            return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
+        return self
+
+
+class GenericType(RuntimeType):
+    pass
+
 
 class UnknownType(RuntimeType):
     """Indicator for a type that cannot be inferred. Typically the atomic type of an empty list.
@@ -263,3 +276,15 @@ class PrivacyMeasure(RuntimeType):
 
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
+
+
+def get_domain_atom(domain):
+    while isinstance(domain, RuntimeType):
+        if isinstance(domain, (UnknownType, GenericType)):
+            return
+        domain = domain.args[0]
+    return domain
+
+
+def get_domain_atom_or_infer(domain: RuntimeType, example):
+    return get_domain_atom(domain) or RuntimeType.infer(example)

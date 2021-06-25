@@ -116,7 +116,7 @@
                 "name": "DI",
                 "c_type": "char *",
                 "is_type": true,
-                "default": "VectorDomain<AllDomain<T>>",
+                "default": "VectorDomain<AllDomain<_T>>",
                 "generics": ["T"],
                 "description": "input domain. One of VectorDomain<AllDomain<_>> or AllDomain<_>."
             },
@@ -179,7 +179,7 @@
                 "name": "TIA",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "Atomic Input Type. Input data is expected to be of the form Vec<TI>."
+                "description": "Atomic Input Type. Input data is expected to be of the form Vec<TIA>."
             },
             {
                 "name": "TO",
@@ -195,24 +195,17 @@
         "description": "Make a Transformation that computes a count of the number of unique, distinct records in data.",
         "args": [
             {
-                "name": "MI",
-                "c_type": "char *",
-                "hint": "DatasetMetric",
-                "is_type": true,
-                "description": "input dataset metric"
-            },
-            {
-                "name": "MO",
+                "name": "TIA",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "atomic type of input data. Input data is expected to be of the form Vec<TI>."
+                "description": "Atomic Input Type. Input data is expected to be of the form Vec<TIA>."
             },
             {
                 "name": "TO",
                 "c_type": "char *",
                 "default": "u32",
                 "is_type": true,
-                "description": "type of output integer"
+                "description": "Output Type. integer"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -230,19 +223,19 @@
                 "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
-                "description": "output sensitivity metric"
+                "description": "Output Metric."
             },
             {
                 "name": "TI",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "categorical/hashable input data type. Input data must be Vec<TI>."
+                "description": "Input Type. Categorical/hashable input data type. Input data must be Vec<TI>."
             },
             {
                 "name": "TO",
                 "c_type": "char *",
                 "is_type": true,
-                "description": "express counts in terms of this integral type",
+                "description": "Output Type. express counts in terms of this integral type",
                 "default": "i32"
             }
         ],
@@ -440,8 +433,20 @@
                 "name": "DA",
                 "c_type": "char *",
                 "is_type": true,
-                "default": "OptionNullDomain<AllDomain<T>>",
+                "default": "OptionNullDomain<AllDomain<_T>>",
+                "generics": ["T"],
                 "description": "domain of data being imputed. This is OptionNullDomain<AllDomain<T>> or InherentNullDomain<AllDomain<T>>"
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "DA", "constant"
+                    ]
+                }
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}

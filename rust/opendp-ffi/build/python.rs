@@ -4,9 +4,9 @@ use std::io::Read;
 use std::path::PathBuf;
 
 use indexmap::map::IndexMap;
+use serde_json::Value;
 
 use crate::{Argument, Function, Module, RuntimeType};
-use serde_json::Value;
 
 /// Top-level function to generate python bindings, including all modules.
 pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf, String> {
@@ -294,6 +294,14 @@ fn generate_type_arg_formatter(func: &Function) -> String {
                 format!("{name} = {derivation}",
                         name = type_spec.name(),
                         derivation = type_spec.rust_type.as_ref().unwrap().to_python())))
+        .chain(func.args.iter()
+            .filter(|arg| !arg.generics.is_empty())
+            .map(|arg|
+                format!("{name} = {name}.substitute({args})",
+                        name=arg.name.as_ref().unwrap(),
+                        args=arg.generics.iter()
+                            .map(|generic| format!("{generic}={generic}", generic = generic))
+                            .collect::<Vec<_>>().join(", "))))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -316,11 +324,11 @@ impl RuntimeType {
             Self::Lower { root: arg, index } =>
                 format!("{}.args[{}]", arg.to_python(), index),
             Self::Function { function, params } =>
-                format!("{function}({params})", function = function, params = params.join(",")),
+                format!("{function}({params})", function = function, params = params.join(", ")),
             Self::Raise { origin, args } =>
                 format!("RuntimeType(origin='{origin}', args=[{args}])",
                         origin = origin,
-                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(",")),
+                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(", ")),
         }
     }
 }

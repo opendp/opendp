@@ -84,7 +84,7 @@ def test_split_lines__cast__impute():
 def test_inherent_cast__impute():
     from opendp.v1.trans import make_split_lines, make_cast_inherent, make_impute_constant
     cast = make_split_lines() >> make_cast_inherent(TI=str, TO=float)
-    constant = cast >> make_impute_constant(constant=9., DA="InherentNullDomain<AllDomain<T>>")
+    constant = cast >> make_impute_constant(constant=9., DA="InherentNullDomain<AllDomain<_T>>")
 
     assert constant("a\n23.23\n12") == [9., 23.23, 12.]
     assert constant.check(1, 1)
@@ -138,7 +138,7 @@ def test_vector_clamp():
 
 def test_clamp_sensitivity():
     from opendp.v1.trans import make_clamp
-    query = make_clamp(lower=-1, upper=1, D="AllDomain<i32>", M=AbsoluteDistance[int])
+    query = make_clamp(lower=-1, upper=1, DI="AllDomain<i32>", M=AbsoluteDistance[int])
     assert query(20) == 1
     assert query.check(20, 2)
 
@@ -195,7 +195,7 @@ def test_count():
 
 def test_count_distinct():
     from opendp.v1.trans import make_count_distinct
-    transformation = make_count_distinct(SymmetricDistance, L1Distance["i32"], int)
+    transformation = make_count_distinct("i32", int)
     arg = [1, 2, 3, 2, 7, 3, 4]
     ret = transformation(arg)
     assert ret == 5

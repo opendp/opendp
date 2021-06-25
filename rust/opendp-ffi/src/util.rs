@@ -206,6 +206,7 @@ macro_rules! type_vec {
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
 
+pub type OptionNullAllDomain<T> = OptionNullDomain<AllDomain<T>>;
 pub type VectorAllDomain<T> = VectorDomain<AllDomain<T>>;
 pub type VectorIntervalDomain<T> = VectorDomain<IntervalDomain<T>>;
 pub type SizedVectorAllDomain<T> = SizedDomain<VectorDomain<AllDomain<T>>>;
@@ -229,6 +230,7 @@ lazy_static! {
             // domains
             type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![IntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![@aliased, OptionNullAllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![@aliased, VectorAllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![@aliased, VectorIntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![@aliased, VectorInherentNullDomain, <f32, f64>],

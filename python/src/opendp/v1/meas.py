@@ -7,7 +7,7 @@ from opendp.v1.typing import *
 
 def make_base_laplace(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<T>"
+    D: RuntimeTypeDescriptor = "AllDomain<_T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     Adjust D to noise vector-valued data.
@@ -26,6 +26,8 @@ def make_base_laplace(
     """
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
+    T = get_domain_atom_or_infer(D, scale)
+    D = D.substitute(T=T)
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
@@ -41,7 +43,7 @@ def make_base_laplace(
 
 def make_base_gaussian(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<T>"
+    D: RuntimeTypeDescriptor = "AllDomain<_T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
@@ -57,6 +59,8 @@ def make_base_gaussian(
     """
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
+    T = get_domain_atom_or_infer(D, scale)
+    D = D.substitute(T=T)
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
