@@ -13,7 +13,6 @@ from typing import List, Optional, Union, Dict
 import numpy as np
 
 import torch
-from torch.linalg import norm
 import torch.nn as nn
 from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
 from torch.nn.parameter import Parameter
@@ -367,9 +366,9 @@ class PrivacyOdometer(object):
     @staticmethod
     def _make_base_mechanism_vec(mechanism_name, scale):
         if mechanism_name == 'laplace':
-            return meas.make_base_laplace_vec(scale)
+            return meas.make_base_vector_laplace(scale)
         if mechanism_name == 'gaussian':
-            return meas.make_base_gaussian_vec(scale)
+            return meas.make_base_vector_gaussian(scale)
 
     @staticmethod
     def _get_batch_size(module_):
