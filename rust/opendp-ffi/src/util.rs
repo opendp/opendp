@@ -149,6 +149,8 @@ macro_rules! nest {
     });
 }
 
+macro_rules! replace {($from:ident, $to:literal) => {$to};}
+
 /// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].
 /// * `t!(Foo)` => `TypeContents::PLAIN`
 /// * `t!((Foo, Bar))` => `TypeContents::TUPLE`
@@ -167,7 +169,7 @@ macro_rules! t {
     ([$($name:ident)+], $arg:ty) => {
         Type::new(
             TypeId::of::<nest!([$($name)+] $arg)>(),
-            concat!(stringify!(nest!([$($name)+] $arg))),
+            concat!($(stringify!($name), "<",)+ stringify!($arg), $(replace!($name, ">")),+),
             nest!(@contents [$($name)+] $arg)
         )
     };
@@ -225,15 +227,18 @@ lazy_static! {
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]],
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            // OptionNullDomain<AllDomain<_>>::Carrier
+            type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            // geometric mechanism
             type_vec![Option, <(u8, u8), (u16, u16), (u32, u32), (u64, u64), (u128, u128), (i8, i8), (i16, i16), (i32, i32), (i64, i64), (i128, i128)>],
 
             // domains
             type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![IntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![[InherentNullDomain AllDomain], <f32, f64>],
             type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![[VectorDomain IntervalDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![[VectorDomain InherentNullDomain AllDomain], <f32, f64>],
             type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
 
