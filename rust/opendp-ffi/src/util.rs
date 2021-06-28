@@ -129,17 +129,24 @@ impl Type {
         }
     }
 }
-fn get_descriptor<T>() -> String {
-    fn format_type(v: &str) -> String {
-        if let Some((body, rest)) = v.split_once("<") {
-            format!("{}<{}>",
-                    body.split("::").last().unwrap_assert("bodies are non-empty"),
-                    rest[..rest.len() - 1].split(",").map(format_type).collect::<Vec<_>>().join(","))
-        } else {
-            v.to_string()
-        }
-    }
-    format_type(any::type_name::<T>())
+
+// Convert `[A B C] i8` to `A<B<C<i8>>`
+macro_rules! nest {
+    ([$($all:tt)*] $arg:ty) => (nest!(@[$($all)*] [] $arg));
+
+    // move elements in the left array to the right array, in reversed order
+    (@[$first:ident $($rest:tt)*] [$($reversed:tt)*] $arg:ty) =>
+        (nest!(@[$($rest)*] [$first $($reversed)*] $arg));
+    // left array is empty once reversed. Recursively peel off front ident to construct type
+    (@[] [$first:ident $($name:ident)+] $arg:ty) => (nest!(@[] [$($name)+] $first<$arg>));
+    // base case
+    (@[] [$first:ident] $arg:ty) => ($first<$arg>);
+
+    // make TypeContents
+    (@contents [$first:ident $($rest:ident)*] $arg:ty) => (TypeContents::GENERIC {
+        name: stringify!($first),
+        args: vec![TypeId::of::<nest!([$($rest)*] $arg)>()]
+    });
 }
 
 /// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].
@@ -157,11 +164,11 @@ macro_rules! t {
             TypeContents::VEC(TypeId::of::<$arg>())
         )
     };
-    (@aliased, $name:ident<$($args:ty),+>) => {
+    ([$($name:ident)+], $arg:ty) => {
         Type::new(
-            TypeId::of::<$name<$($args),+>>(),
-            get_descriptor::<$name<$($args),+>>(),
-            TypeContents::GENERIC { name: stringify!($name), args: vec![$(TypeId::of::<$args>()),+]}
+            TypeId::of::<nest!([$($name)+] $arg)>(),
+            concat!(stringify!(nest!([$($name)+] $arg))),
+            nest!(@contents [$($name)+] $arg)
         )
     };
     ($name:ident<$($args:ty),+>) => {
@@ -198,20 +205,13 @@ macro_rules! t {
 }
 /// Builds a vec of [`Type`] from a compact invocation, dispatching to the appropriate flavor of [`t!`].
 macro_rules! type_vec {
-    (@aliased, $name:ident, <$($args:ty),*>) => { vec![$(t!(@aliased, $name<$args>)),*] };
-    ($name:ident, <$($args:ty),*>) => { vec![$(t!($name<$args>)),*] };
+    ($name:ident, <$($arg:ty),*>) => { vec![$(t!($name<$arg>)),*] };
+    ($path:tt, <$($arg:ty),*>) => { vec![$(t!($path, $arg)),*] };
     ([$($elements:ty),*]) => { vec![$(t!([$elements])),*] };
     ([$($elements:ty),*]; $len:expr) => { vec![$(t!([$elements; $len])),*] };
     (($($elements:ty),*)) => { vec![$(t!(($elements,$elements))),*] };
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
-
-pub type OptionNullAllDomain<T> = OptionNullDomain<AllDomain<T>>;
-pub type VectorAllDomain<T> = VectorDomain<AllDomain<T>>;
-pub type VectorIntervalDomain<T> = VectorDomain<IntervalDomain<T>>;
-pub type SizedVectorAllDomain<T> = SizedDomain<VectorDomain<AllDomain<T>>>;
-pub type VectorInherentNullDomain<T> = VectorDomain<InherentNullDomain<AllDomain<T>>>;
-pub type VectorOptionNullDomain<T> = VectorDomain<OptionNullDomain<AllDomain<T>>>;
 
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
@@ -230,12 +230,12 @@ lazy_static! {
             // domains
             type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![IntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![@aliased, OptionNullAllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![@aliased, VectorAllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![@aliased, VectorIntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![@aliased, VectorInherentNullDomain, <f32, f64>],
-            type_vec![@aliased, VectorOptionNullDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![@aliased, SizedVectorAllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[VectorDomain IntervalDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![[VectorDomain InherentNullDomain AllDomain], <f32, f64>],
+            type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
 
             // metrics
             type_vec![SubstituteDistance, SymmetricDistance],
