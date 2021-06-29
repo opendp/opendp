@@ -289,12 +289,20 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .filter(|arg| arg.is_type)
         .map(|type_arg| {
             let name = type_arg.name.as_ref().expect("type args must be named");
-            if let Some(example) = generate_public_example(func, type_arg) {
-                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example})"#,
-                        name = name, example = example)
+            //
+            let generics = if type_arg.generics.is_empty() {
+                "".to_string()
             } else {
-                format!(r#"{name} = RuntimeType.parse(type_name={name})"#,
-                        name = name)
+                format!(", generics=[{}]", type_arg.generics.iter()
+                    .map(|v| format!("\"{}\"", v))
+                    .collect::<Vec<_>>().join(", "))
+            };
+            if let Some(example) = generate_public_example(func, type_arg) {
+                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example}{generics})"#,
+                        name = name, example = example, generics = generics)
+            } else {
+                format!(r#"{name} = RuntimeType.parse(type_name={name}{generics})"#,
+                        name = name, generics = generics)
             }
         })
         // additional types that are constructed by introspecting existing types

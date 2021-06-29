@@ -173,7 +173,7 @@ def make_cast_metric(
 def make_clamp(
     lower,
     upper,
-    DI: RuntimeTypeDescriptor = "VectorDomain<AllDomain<_T>>",
+    DI: RuntimeTypeDescriptor = "VectorDomain<AllDomain<T>>",
     M: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
     """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`. Set DI to AllDomain<T> for clamping aggregated values.
@@ -191,7 +191,7 @@ def make_clamp(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    DI = RuntimeType.parse(type_name=DI)
+    DI = RuntimeType.parse(type_name=DI, generics=["T"])
     M = RuntimeType.parse(type_name=M)
     T = get_domain_atom_or_infer(DI, lower)
     DI = DI.substitute(T=T)
@@ -619,7 +619,7 @@ def make_identity(
 
 def make_impute_constant(
     constant,
-    DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<_T>>"
+    DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<T>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
     By default, the input type is Vec<Option<`T`>>, as emitted by make_cast. 
@@ -635,7 +635,7 @@ def make_impute_constant(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    DA = RuntimeType.parse(type_name=DA)
+    DA = RuntimeType.parse(type_name=DA, generics=["T"])
     T = get_domain_atom_or_infer(DA, constant)
     DA = DA.substitute(T=T)
     

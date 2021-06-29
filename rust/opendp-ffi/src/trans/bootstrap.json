@@ -116,7 +116,7 @@
                 "name": "DI",
                 "c_type": "char *",
                 "is_type": true,
-                "default": "VectorDomain<AllDomain<_T>>",
+                "default": "VectorDomain<AllDomain<T>>",
                 "generics": ["T"],
                 "description": "input domain. One of VectorDomain<AllDomain<_>> or AllDomain<_>."
             },
@@ -433,7 +433,7 @@
                 "name": "DA",
                 "c_type": "char *",
                 "is_type": true,
-                "default": "OptionNullDomain<AllDomain<_T>>",
+                "default": "OptionNullDomain<AllDomain<T>>",
                 "generics": ["T"],
                 "description": "domain of data being imputed. This is OptionNullDomain<AllDomain<T>> or InherentNullDomain<AllDomain<T>>"
             }

@@ -7,7 +7,7 @@ from opendp.v1.typing import *
 
 def make_base_laplace(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<_T>"
+    D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     Adjust D to noise vector-valued data.
@@ -25,7 +25,7 @@ def make_base_laplace(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
+    D = RuntimeType.parse(type_name=D, generics=["T"])
     T = get_domain_atom_or_infer(D, scale)
     D = D.substitute(T=T)
     
@@ -43,7 +43,7 @@ def make_base_laplace(
 
 def make_base_gaussian(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<_T>"
+    D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
@@ -58,7 +58,7 @@ def make_base_gaussian(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
+    D = RuntimeType.parse(type_name=D, generics=["T"])
     T = get_domain_atom_or_infer(D, scale)
     D = D.substitute(T=T)
     

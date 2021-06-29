@@ -12,7 +12,7 @@
             {
                 "name": "D",
                 "c_type": "char *",
-                "default": "AllDomain<_T>",
+                "default": "AllDomain<T>",
                 "generics": ["T"],
                 "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true
@@ -43,7 +43,7 @@
             {
                 "name": "D",
                 "c_type": "char *",
-                "default": "AllDomain<_T>",
+                "default": "AllDomain<T>",
                 "generics": ["T"],
                 "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true

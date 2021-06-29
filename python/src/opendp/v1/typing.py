@@ -1,7 +1,7 @@
 import sys
 import typing
 from collections.abc import Hashable
-from typing import Union, Any, Type
+from typing import Union, Any, Type, List
 
 from opendp.v1.mod import UnknownTypeException
 from opendp.v1._lib import ATOM_EQUIVALENCE_CLASSES
@@ -47,7 +47,7 @@ class RuntimeType(object):
         return result
 
     @classmethod
-    def parse(cls, type_name: RuntimeTypeDescriptor) -> Union["RuntimeType", str]:
+    def parse(cls, type_name: RuntimeTypeDescriptor, generics: List[str] = None) -> Union["RuntimeType", str]:
         """Parse type descriptor into a normalized rust type.
 
         Type descriptor may be expressed as:
@@ -58,6 +58,8 @@ class RuntimeType(object):
         - tuple of type information - for example: (float, float)
 
         :param type_name: type specifier
+        :param generics: For internal use. List of type names to consider generic when parsing.
+        :type: List[str]
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeError: if `type_name` fails to parse
@@ -72,6 +74,7 @@ class RuntimeType(object):
         >>> from typing import List
         >>> assert RuntimeType.parse(List[int]) == "Vec<int>"
         """
+        generics = generics or []
         if isinstance(type_name, RuntimeType):
             return type_name
 
@@ -81,24 +84,24 @@ class RuntimeType(object):
                 raise NotImplementedError("parsing type hint annotations are only supported in python 3.8 and above")
 
             origin = typing.get_origin(type_name)
-            args = list(map(RuntimeType.parse, typing.get_args(type_name))) or None
+            args = [RuntimeType.parse(v, generics=generics) for v in typing.get_args(type_name)] or None
             if origin == tuple:
                 origin = 'Tuple'
             if origin == list:
                 origin = 'Vec'
-            return RuntimeType(RuntimeType.parse(origin), args)
+            return RuntimeType(RuntimeType.parse(origin, generics=generics), args)
 
         # parse a tuple of types-- (int, "f64"); (List[int], (int, bool))
         if isinstance(type_name, tuple):
-            return RuntimeType('Tuple', list(cls.parse(v) for v in type_name))
+            return RuntimeType('Tuple', list(cls.parse(v, generics=generics) for v in type_name))
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
             type_name = type_name.strip()
-            if type_name.startswith('_'):
-                return GenericType(type_name[1:])
+            if type_name in generics:
+                return GenericType(type_name)
             if type_name.startswith('(') and type_name.endswith(')'):
-                return RuntimeType('Tuple', cls._parse_args(type_name[1:-1]))
+                return RuntimeType('Tuple', cls._parse_args(type_name[1:-1], generics=generics))
             start, end = type_name.find('<'), type_name.rfind('>')
 
             # attempt to upgrade strings to the metric/measure instance
@@ -114,7 +117,7 @@ class RuntimeType(object):
             }.get(origin)
             if closeness is not None:
                 if isinstance(closeness, (SensitivityMetric, PrivacyMeasure)):
-                    return closeness[cls._parse_args(type_name[start + 1: end])[0]]
+                    return closeness[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
                 return closeness
 
             domain = {
@@ -127,10 +130,10 @@ class RuntimeType(object):
                 'SmoothedMaxDivergence': SmoothedMaxDivergence
             }.get(origin)
             if domain is not None:
-                return domain[cls._parse_args(type_name[start + 1: end])[0]]
+                return domain[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
 
             if 0 < start < end < len(type_name):
-                return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end]))
+                return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end], generics=generics))
             if start == end < 0:
                 return type_name
 
@@ -143,9 +146,9 @@ class RuntimeType(object):
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
-    def _parse_args(cls, args):
+    def _parse_args(cls, args, generics=None):
         import re
-        return [cls.parse(v) for v in re.split(",\\s*(?![^()<>]*\\))", args)]
+        return [cls.parse(v, generics=generics) for v in re.split(",\\s*(?![^()<>]*\\))", args)]
 
     @classmethod
     def infer(cls, public_example: Any) -> Union["RuntimeType", str]:
@@ -185,7 +188,8 @@ class RuntimeType(object):
     def parse_or_infer(
             cls,
             type_name: RuntimeTypeDescriptor = None,
-            public_example: Any = None
+            public_example: Any = None,
+            generics: List[str] = None
     ) -> Union["RuntimeType", str]:
         """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
 
@@ -193,11 +197,13 @@ class RuntimeType(object):
         :param public_example: data used to infer the type
         :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
         :rtype: Union["RuntimeType", str]
+        :param generics: For internal use. List of type names to consider generic when parsing.
+        :type: List[str]
         :raises ValueError: if `type_name` fails to parse
         :raises UnknownTypeException: if inference fails on `public_example` or no args are supplied
         """
         if type_name is not None:
-            return cls.parse(type_name)
+            return cls.parse(type_name, generics)
         if public_example is not None:
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")
@@ -245,7 +251,8 @@ class RuntimeType(object):
 
 
 class GenericType(RuntimeType):
-    pass
+    def __str__(self):
+        raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
 
 
 class UnknownType(RuntimeType):
