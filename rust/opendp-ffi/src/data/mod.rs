@@ -111,6 +111,20 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
     }
+    fn raw_to_option_tuple<T0: 'static + Clone, T1: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len == 0 {
+            return Ok(AnyObject::new(None::<(T0, T1)>))
+        }
+        if raw.len != 2 {
+            return fallible!(FFI, "The slice length must be two when creating a tuple from FfiSlice");
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 2) };
+
+        let tuple = util::as_ref(slice[0] as *const T0).cloned()
+            .zip(util::as_ref(slice[1] as *const T1).cloned())
+            .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
+        Ok(AnyObject::new(Some(tuple)))
+    }
     let T = try_!(Type::try_from(T));
     let raw = try_as_ref!(raw);
     let obj = match T.contents {
@@ -133,6 +147,19 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
             // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
             // because the only likely way to get a tuple of AnyObjects is as the output of composition.
             dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
+        },
+        TypeContents::GENERIC {name, args} if name == "Option" => {
+            if let TypeContents::TUPLE(ref element_ids) =  try_!(Type::of_id(&args[0])).contents {
+                if element_ids.len() != 2 {
+                    return fallible!(FFI, "Only tuples of length 2 can be loaded as an object").into();
+                }
+                let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
+                // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
+                // because the only likely way to get a tuple of AnyObjects is as the output of composition.
+                dispatch!(raw_to_option_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
+            } else {
+                return fallible!(FFI, "Only Option<(T, T)> can be loaded as an object").into();
+            }
         }
         _ => dispatch!(raw_to_plain, [(T, @primitives)], (raw))
     };
@@ -175,6 +202,16 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
             &tuple.1 as *const T1 as *const c_void
         ]) as *mut c_void, 2))
     }
+    fn option_tuple_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        Ok(if let Some(tuple) = obj.downcast_ref::<Option<(T0, T1)>>()? {
+            FfiSlice::new(util::into_raw([
+                &tuple.0 as *const T0 as *const c_void,
+                &tuple.1 as *const T1 as *const c_void
+            ]) as *mut c_void, 2)
+        } else {
+            FfiSlice::new(std::ptr::null::<()>() as *mut c_void, 0)
+        })
+    }
     let obj = try_as_ref!(obj);
     let raw = match &obj.type_.contents {
         TypeContents::PLAIN("String") => {
@@ -195,6 +232,18 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
             let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
             // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
             dispatch!(tuple_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
+        }
+        TypeContents::GENERIC {name, args} if name == &"Option" => {
+            if let TypeContents::TUPLE(ref element_ids) =  try_!(Type::of_id(&args[0])).contents {
+                if element_ids.len() != 2 {
+                    return fallible!(FFI, "Only tuples of length 2 can be unloaded into a slice.").into();
+                }
+                let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
+                // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
+                dispatch!(option_tuple_to_raw, [(types[0], @primitives), (types[1], @primitives)], (obj))
+            } else {
+                return fallible!(FFI, "Only Option<(T, T)> can be unloaded into a slice.").into();
+            }
         }
         _ => { dispatch!(plain_to_raw, [(&obj.type_, @primitives)], (obj)) }
     };

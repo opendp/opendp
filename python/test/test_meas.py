@@ -30,30 +30,29 @@ def test_base_vector_gaussian():
 
 def test_base_geometric():
     from opendp.v1.meas import make_base_geometric
+    meas = make_base_geometric(scale=2., bounds=(1, 10))
+    print("base_geometric in constant time:", meas(100))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
     meas = make_base_geometric(scale=2.)
     print("base_geometric:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
-    # from opendp.v1.meas import make_constant_time_base_geometric
-    # meas = make_constant_time_base_geometric(scale=2., lower=0, upper=20)
-    # print("base_geometric:", meas(100))
-    # assert meas.check(1, 0.5)
-    # assert not meas.check(1, 0.49999)
-
 
 def test_base_vector_geometric():
     from opendp.v1.meas import make_base_geometric
     meas = make_base_geometric(scale=2., D="VectorDomain<AllDomain<i32>>")
-    print("base_geometric:", meas([100, 10, 12]))
+    print("vector base_geometric:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
-    # from opendp.v1.meas import make_constant_time_base_vector_geometric
-    # meas = make_constant_time_base_vector_geometric(scale=2., lower=0, upper=20)
-    # print("base_geometric:", meas([100, 10, 12]))
-    # assert meas.check(1, 0.5)
-    # assert not meas.check(1, 0.49999)
+    meas = make_base_geometric(scale=2., bounds=(10, 100), D="VectorDomain<AllDomain<i32>>")
+    print("constant time vector base_geometric:", meas([100, 10, 12]))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
 
 
 # TODO: data unloader for hashmaps

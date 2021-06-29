@@ -8,26 +8,25 @@ use opendp::err;
 use opendp::meas::{GeometricDomain, make_base_geometric};
 use opendp::traits::DistanceCast;
 
-use crate::any::{AnyMeasurement};
+use crate::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
     scale: *const c_void,
-    // bounds: *const AnyObject,
+    bounds: *const AnyObject,
     D: *const c_char, QO: *const c_char
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D, QO>(
-        scale: *const c_void //, bounds: *const AnyObject
+        scale: *const c_void, bounds: *const AnyObject
     ) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + GeometricDomain,
               D::Atom: 'static + DistanceCast + PartialOrd,
               QO: 'static + Float + DistanceCast,
               f64: From<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
-        // let bounds = try_!(try_as_ref!(bounds).downcast_ref::<Option<(D::Atom, D::Atom)>>()).clone();
-        let bounds = None;
+        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<Option<(D::Atom, D::Atom)>>()).clone();
         make_base_geometric::<D, QO>(scale, bounds).into_any()
     }
     let D = try_!(Type::try_from(D));
@@ -42,7 +41,7 @@ pub extern "C" fn opendp_meas__make_base_geometric(
             VectorDomain<AllDomain<i128>>
         ]),
         (QO, @floats)
-    ], (scale))
+    ], (scale, bounds))
 }
 
 

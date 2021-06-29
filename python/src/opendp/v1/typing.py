@@ -117,6 +117,18 @@ class RuntimeType(object):
                     return closeness[cls._parse_args(type_name[start + 1: end])[0]]
                 return closeness
 
+            domain = {
+                'AllDomain': AllDomain,
+                'IntervalDomain': IntervalDomain,
+                'VectorDomain': VectorDomain,
+                'OptionNullDomain': OptionNullDomain,
+                'InherentNullDomain': InherentNullDomain,
+                'SizedDomain': SizedDomain,
+                'SmoothedMaxDivergence': SmoothedMaxDivergence
+            }.get(origin)
+            if domain is not None:
+                return domain[cls._parse_args(type_name[start + 1: end])[0]]
+
             if 0 < start < end < len(type_name):
                 return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end]))
             if start == end < 0:
@@ -155,14 +167,17 @@ class RuntimeType(object):
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
 
-        elif isinstance(public_example, tuple):
+        if isinstance(public_example, tuple):
             return RuntimeType('Tuple', list(map(cls.infer, public_example)))
 
-        elif isinstance(public_example, list):
+        if isinstance(public_example, list):
             return RuntimeType('Vec', [
                 cls.infer(public_example[0]) if public_example else UnknownType(
                     "cannot infer atomic type of empty list")
             ])
+
+        if public_example is None:
+            return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
 
         raise UnknownTypeException(public_example)
 
@@ -206,11 +221,15 @@ class RuntimeType(object):
                     f"inferred type is {inferred}, expected {expected}"
 
         elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
+            # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
+            if expected.origin == "Option" and inferred.origin != "Option":
+                expected = expected.args[0]
+
             assert expected.origin == inferred.origin, \
                 f"inferred type is {inferred.origin}, expected {expected.origin}"
 
             assert len(expected.args) == len(inferred.args), \
-                f"inferred type has {len(inferred.args)} args, expected {len(expected.args)} args"
+                f"inferred type has {len(inferred.args)} arg(s), expected {len(expected.args)} arg(s)"
 
             for (arg_par, arg_inf) in zip(expected.args, inferred.args):
                 RuntimeType.assert_is_similar(arg_par, arg_inf)
@@ -276,6 +295,19 @@ class PrivacyMeasure(RuntimeType):
 
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
+
+
+class Domain(RuntimeType):
+    def __getitem__(self, subdomain):
+        return Domain(self.origin, [self.parse(type_name=subdomain)])
+
+
+AllDomain = Domain('AllDomain')
+IntervalDomain = Domain('IntervalDomain')
+VectorDomain = Domain('VectorDomain')
+OptionNullDomain = Domain('OptionNullDomain')
+InherentNullDomain = Domain('InherentNullDomain')
+SizedDomain = Domain('SizedDomain')
 
 
 def get_domain_atom(domain):
