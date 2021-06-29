@@ -152,17 +152,6 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
         // let default value be None if it is a type arg and there is a public example
         generate_public_example(func, arg).map(|_| "None".to_string())
     };
-    // let default = match &arg.default {
-    //     // let default value be None if it is a type arg and there is a public example
-    //     None => arg.is_type.then(|| generate_public_example(func, arg).map(|_| "None".to_string())).and_then(|v| v),
-    //     // if default value is supposed to be empty
-    //     Some(Value::Null) => Some("None".to_string()),
-    //     Some(Value::Bool(value)) => Some(if *value {"True"} else {"False"}.to_string()),
-    //     Some(Value::Number(number)) => Some(number.to_string()),
-    //     Some(Value::String(string)) => Some(format!("\"{}\"", string)),
-    //     Some(Value::Array(array)) => Some(format!("{:?}", array)),
-    //     Some(Value::Object(_)) => unimplemented!()
-    // };
     (format!(
         r#"{name}{hint}{default}"#,
         name = arg.name(),
@@ -289,7 +278,6 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .filter(|arg| arg.is_type)
         .map(|type_arg| {
             let name = type_arg.name.as_ref().expect("type args must be named");
-            //
             let generics = if type_arg.generics.is_empty() {
                 "".to_string()
             } else {

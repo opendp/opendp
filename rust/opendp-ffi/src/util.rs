@@ -77,16 +77,6 @@ impl Type {
 pub enum MetricClass { Dataset, Sensitivity }
 
 impl Type {
-    pub fn get_subtype(&self) -> Fallible<Type> {
-        if let TypeContents::GENERIC {args, ..} = &self.contents {
-            if args.len() != 1 {
-                return fallible!(TypeParse, "Expected one subtype, got {:?} subtypes", args.len())
-            }
-            Type::of_id(&args[0])
-        } else {
-            fallible!(TypeParse, "Failed to extract subtype")
-        }
-    }
     pub fn get_domain_atom(&self) -> Fallible<Type> {
         match &self.contents {
             TypeContents::PLAIN(_) => Ok(self.clone()),
