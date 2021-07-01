@@ -80,11 +80,11 @@ jobs:
 #      - name: Prepare for libs
 #        run: mkdir -p src/opendp/v1/lib
 #
-#      - name: Download libs
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: libs
-#          path: python/src/opendp/v1/lib
+      - name: Download libs
+        uses: actions/download-artifact@v2
+        with:
+          name: libs
+          path: python/src/opendp/v1/lib
 #
 #      - name: Install package
 #        run: python -m pip install -e .
@@ -92,15 +92,31 @@ jobs:
 #      - name: Test
 #        run: pytest -v
 
-#  rust-build-and-test-windows:
+#  rust-pre-publish-windows:
 #    needs: python-test
 #    runs-on: windows-2016
 #    defaults:
 #      run:
 
-  python-publish:
+  python-pre-publish-mac:
     needs: python-test
     runs-on: macos-10.15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Build mac binaries
+        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
+
+      - name: Upload dylib
+        uses: actions/upload-artifact@v2
+        with:
+          name: lib_dylib
+          path: rust/target/debug/libopendp_ffi.dylib
+
+  python-publish-linux:
+    needs: python-test
+    runs-on: ubuntu-20.04
     env:
       DOCKER_IMAGE: quay.io/pypa/manylinux2010_x86_64
       TWINE_USERNAME: ${{ secrets.PYPI_API_TOKEN }}
@@ -117,16 +133,16 @@ jobs:
         run: |
           chmod +x .github/build_manylinux_binaries.sh
           docker run --rm -v `pwd`:/io $DOCKER_IMAGE /io/.github/build_manylinux_binaries.sh
-          cp rust/target/release/libopendp_ffi.so tmp_binaries
+          cp rust/target/release/libopendp_ffi.so python/opendp/v1/lib/
 
-      - name: Build mac binaries
-        run: |
-          cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
+      - name: Download mac lib
+        uses: actions/download-artifact@v2
+        with:
+          name: lib_dylib
+          path: python/src/opendp/v1/lib
 
       - name: Build bdist
         run: |
-          cp python/tmp_binaries/libopendp_ffi.so python/opendp/v1/lib/
-          cp rust/target/release/libopendp_ffi.dylib python/opendp/v1/lib/
           python3 python/setup.py bdist_wheel -d python/wheelhouse
 
       - name: Install dependencies
