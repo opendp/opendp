@@ -1,9 +1,10 @@
 [package]
 name = "opendp-ffi"
 version = "0.1.0"
-authors = ["Andrew Vyrros <6577271+andrewvyrros@users.noreply.github.com>"]
+authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
 build = "build/main.rs"
+readme = "../../README.md"
 
 [dependencies]
 lazy_static = "1.4.0"
@@ -12,6 +13,7 @@ backtrace = "0.3"
 
 [dependencies.opendp]
 path = "../opendp"
+version = "0.1.0"
 default-features = false
 
 [build-dependencies]
