@@ -124,7 +124,7 @@ jobs:
           cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
 
       - name: Build bdist
-      - run: |
+        run: |
           cp python/tmp_binaries/libopendp_ffi.so python/opendp/v1/lib/
           cp rust/target/release/libopendp_ffi.dylib python/opendp/v1/lib/
           python3 python/setup.py bdist_wheel -d python/wheelhouse
