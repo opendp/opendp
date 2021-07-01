@@ -132,7 +132,7 @@ jobs:
       - name: Upload .so
         uses: actions/upload-artifact@v2
         with:
-          name: libs
+          name: lib_so
           path: rust/target/release/libopendp_ffi.so
 
 
@@ -191,7 +191,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Publish Cargo OpenDP
-        run: cargo publish --manifest-path=opendp/Cargo.toml --dry-run
+        run: cargo publish --verbose --manifest-path=opendp/Cargo.toml --dry-run
 
       - name: Publish Cargo OpenDP-FFI
-        run: cargo publish --manifest-path=opendp-ffi/Cargo.toml --dry-run
+        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml --dry-run
