@@ -95,11 +95,18 @@ jobs:
   python-pre-publish-windows:
 #    needs: python-test
     runs-on: windows-2016
-    env:
-      MSYS: winsymlinks:nativestrict
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Checkout patch repository
+        uses: actions/checkout@v2
+        with:
+          repository: opendp/opendp-windows
+          path: ../opendp-windows
+
+      - name: Patch OpenDP
+        run: ../opendp-windows/patch_opendp.sh
 
       - name: Build windows binaries
         run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --no-default-features
@@ -109,12 +116,6 @@ jobs:
         with:
           name: lib_dll
           path: rust/target/release/opendp_ffi.dll
-
-#      - name: Enable developer mode
-#        uses: ilammy/msvc-dev-cmd@v1
-#
-#      - name: Set up MSYS
-#        uses: msys2/setup-msys2@v2
 
 #
 #
@@ -183,6 +184,12 @@ jobs:
 #        uses: actions/download-artifact@v2
 #        with:
 #          name: lib_so
+#          path: python/src/opendp/v1/lib
+#
+#      - name: Download windows lib
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: lib_dll
 #          path: python/src/opendp/v1/lib
 #
 #      - name: Install dependencies
