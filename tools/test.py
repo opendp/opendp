@@ -49,3 +49,45 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+class SimpleMeasurement:
+    def function(self, data):
+        return None
+class Queryable:
+    def eval(self, query):
+        return Queryable()
+class InteractiveMeasurement:
+    def function(self, data):
+        return Queryable()
+
+def make_simple_measurement():
+    return SimpleMeasurement()
+def make_interactive_measurement():
+    return InteractiveMeasurement()
+def make_sequential_comp():
+    return InteractiveMeasurement()
+
+
+# 0. Make a sequential composition and get the outer queryable
+sequential_im = make_sequential_comp()
+data = [1, 2, 3]
+outer_queryable = sequential_im.function(data)
+
+# 1. Spawn the first inner queryable (from an interactive measurement)
+outer_query1 = make_interactive_measurement()
+inner_queryable1 = outer_queryable.eval(outer_query1)
+
+# 1.A. Query the first inner queryable (with some simple measurements)
+inner_query1_1 = make_simple_measurement()
+answer1_1 = inner_queryable1.eval(inner_query1_1)
+inner_query1_2 = make_simple_measurement()
+answer1_2 = inner_queryable1.eval(inner_query1_2)
+
+# 2. Spawn the second inner queryable
+outer_query2 = make_interactive_measurement()
+inner_queryable2 = outer_queryable.eval(outer_query2)
+
+# 2.A Query the first inner queryable (with some simple measurements)
+inner_query2_1 = make_simple_measurement()
+answer2_1 = inner_queryable2.eval(inner_query2_1)
