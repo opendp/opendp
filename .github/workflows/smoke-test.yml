@@ -103,10 +103,12 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: opendp/opendp-windows
-          path: ../opendp-windows
+          path: opendp-windows
 
       - name: Patch OpenDP
-        run: ../opendp-windows/patch_opendp.sh
+        run: |
+          chmod +x opendp-windows/patch_opendp.sh
+          opendp-windows/patch_opendp.sh
 
       - name: Build windows binaries
         run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --no-default-features
