@@ -111,7 +111,7 @@ jobs:
       - name: Patch OpenDP
         run: |
           chmod +x opendp-windows/patch_opendp.sh
-          bash opendp-windows/patch_opendp.sh
+          (cd opendp-windows && bash patch_opendp.sh)
 
       - name: Build windows binaries
         run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
