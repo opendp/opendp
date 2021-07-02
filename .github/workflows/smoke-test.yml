@@ -108,10 +108,10 @@ jobs:
       - name: Patch OpenDP
         run: |
           chmod +x opendp-windows/patch_opendp.sh
-          opendp-windows/patch_opendp.sh
+          bash opendp-windows/patch_opendp.sh
 
       - name: Build windows binaries
-        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --no-default-features
+        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
 
       - name: Upload .dll
         uses: actions/upload-artifact@v2
