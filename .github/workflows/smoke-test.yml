@@ -95,13 +95,16 @@ jobs:
   python-pre-publish-windows:
 #    needs: python-test
     runs-on: windows-2016
-    defaults:
-      run:
-        shell: msys2 {0}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
       - uses: msys2/setup-msys2@v2
+
+      - name: Install Rust
+        run: |
+          rustup self uninstall
+          choco install rust
 
       - name: Checkout patch repository
         uses: actions/checkout@v2
@@ -110,6 +113,7 @@ jobs:
           path: opendp-windows
 
       - name: Patch OpenDP
+        shell: msys2 {0}
         run: |
           chmod +x opendp-windows/patch_opendp.sh
           (cd opendp-windows && bash patch_opendp.sh)
