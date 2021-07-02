@@ -103,7 +103,7 @@ jobs:
 
       - name: Install Rust
         run: |
-          rustup self uninstall
+          rustup self uninstall -y
           choco install rust
 
       - name: Checkout patch repository
