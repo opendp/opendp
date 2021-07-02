@@ -157,3 +157,6 @@ Cargo.lock
 
 /python/docs/
 /python/docs_temp/
+
+# patched build process for windows platforms
+opendp-windows
