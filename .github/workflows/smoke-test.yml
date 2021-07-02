@@ -106,7 +106,9 @@ jobs:
           path: opendp-windows
 
       - name: Install Rust Toolchain
-        run: rustup target add x86_64-pc-windows-gnu
+        run: |
+          rustup toolchain install stable-gnu
+          rustup target add x86_64-pc-windows-gnu
 
       - name: Patch OpenDP
         run: |
