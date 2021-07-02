@@ -105,11 +105,6 @@ jobs:
           repository: opendp/opendp-windows
           path: opendp-windows
 
-      - name: Install Rust Toolchain
-        run: |
-          rustup toolchain install stable-x86_64-pc-windows-gnu
-          rustup default stable-x86_64-pc-windows-gnu
-
       - name: Patch OpenDP
         run: |
           chmod +x opendp-windows/patch_opendp.sh
