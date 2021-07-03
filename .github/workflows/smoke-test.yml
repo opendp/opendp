@@ -112,11 +112,16 @@ jobs:
           repository: opendp/opendp-windows
           path: opendp-windows
 
-      - name: Patch OpenDP
-        shell: msys2 {0}
+      - name: Prepare OpenDP Patch
         run: |
           chmod +x opendp-windows/patch_opendp.sh
           (cd opendp-windows && bash patch_opendp.sh)
+
+      - name: Patch OpenDP
+        shell: msys2 {0}
+        run: |
+          chmod +x opendp-windows/patch_opendp_msys.sh
+          (cd opendp-windows && bash patch_opendp_msys.sh)
 
       - name: Build windows binaries
         run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
