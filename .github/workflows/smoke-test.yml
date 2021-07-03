@@ -95,6 +95,8 @@ jobs:
   python-pre-publish-windows:
 #    needs: python-test
     runs-on: windows-2016
+    env:
+      MSYS: winsymlinks:nativestrict
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -105,6 +107,9 @@ jobs:
         run: |
           rustup self uninstall -y
           choco install rust
+          echo "/usr/bin/core_perl:/c/ProgramData/chocolatey/bin:/c/msys64/mingw64/bin" >> $GITHUB_PATH
+          cargo --version
+          gcc --version
 
       - name: Checkout patch repository
         uses: actions/checkout@v2
