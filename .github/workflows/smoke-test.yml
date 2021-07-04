@@ -105,8 +105,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # rustup self uninstall -y
-          # choco install rust
+          rustup self uninstall -y
+          choco install rust
           rustup toolchain install stable-x86_64-pc-windows-gnu
           rustup default stable-x86_64-pc-windows-gnu
           choco install 7zip
@@ -122,7 +122,7 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
-          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} `rustc --print sysroot`/lib/rustlib/x86_64-pc-windows-gnu/lib
+          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
 
       - name: Prepare OpenDP Patch
         run: |
