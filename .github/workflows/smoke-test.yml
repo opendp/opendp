@@ -120,9 +120,7 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
-          pacman -Sy --noconfirm archlinux-keyring
-          pacman -Su --noconfirm
-          pacman -U --noconfirm https://archive.org/download/archlinux_pkg_mingw-w64-crt/mingw-w64-crt-5.0.0-1-any.pkg.tar.xz https://archive.org/download/archlinux_pkg_mingw-w64-headers/mingw-w64-headers-5.0.0-1-any.pkg.tar.xz https://archive.org/download/archlinux_pkg_mingw-w64-winpthreads/mingw-w64-winpthreads-5.0.0-1-any.pkg.tar.xz
+          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} `rustc --print sysroot`/lib/rustlib/x86_64-pc-windows-gnu/lib
 
       - name: Prepare OpenDP Patch
         run: |
