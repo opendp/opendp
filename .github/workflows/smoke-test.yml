@@ -116,6 +116,13 @@ jobs:
           repository: opendp/opendp-windows
           path: opendp-windows
 
+      - name: Install dependencies
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
+          echo "export PATH=$PATH:/usr/bin/core_perl:/c/ProgramData/chocolatey/bin:/c/msys64/mingw64/bin" >> ~/.bashrc
+          echo 'export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"' >> ~/.bashrc
+
       - name: Prepare OpenDP Patch
         run: |
           chmod +x opendp-windows/patch_opendp.sh
