@@ -129,7 +129,7 @@ jobs:
           (cd opendp-windows && bash patch_opendp.sh)
 
       - name: Patch OpenDP
-        shell: msys2 {0}
+        shell: msys2 -leo pipefail {0}
         run: |
           chmod +x opendp-windows/patch_opendp_msys.sh
           (cd opendp-windows && bash patch_opendp_msys.sh)
