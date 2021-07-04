@@ -108,9 +108,7 @@ jobs:
           rustup self uninstall -y
           choco install rust
           choco install 7zip
-          echo "/usr/bin/core_perl:/c/ProgramData/chocolatey/bin:/c/msys64/mingw64/bin" >> $GITHUB_PATH
-          cargo --version
-          gcc --version
+          choco install curl
 
       - name: Checkout patch repository
         uses: actions/checkout@v2
