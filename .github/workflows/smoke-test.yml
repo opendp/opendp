@@ -94,7 +94,7 @@ jobs:
 
   python-pre-publish-windows:
 #    needs: python-test
-    runs-on: windows-2016
+    runs-on: windows-latest
     env:
       MSYS: winsymlinks:nativestrict
     steps:
@@ -120,8 +120,7 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
-          echo "export PATH=$PATH:/usr/bin/core_perl:/c/ProgramData/chocolatey/bin:/c/msys64/mingw64/bin" >> ~/.bashrc
-          echo 'export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"' >> ~/.bashrc
+          pacman -U https://archive.org/download/archlinux_pkg_mingw-w64-crt/mingw-w64-crt-5.0.0-1-any.pkg.tar.xz https://archive.org/download/archlinux_pkg_mingw-w64-headers/mingw-w64-headers-5.0.0-1-any.pkg.tar.xz https://archive.org/download/archlinux_pkg_mingw-w64-winpthreads/mingw-w64-winpthreads-5.0.0-1-any.pkg.tar.xz
 
       - name: Prepare OpenDP Patch
         run: |
