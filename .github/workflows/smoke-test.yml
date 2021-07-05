@@ -98,12 +98,19 @@ jobs:
     env:
       MSYS: winsymlinks:nativestrict
     steps:
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - uses: msys2/setup-msys2@v2
+      - name: Checkout patch repository
+        uses: actions/checkout@v2
+        with:
+          repository: opendp/opendp-windows
+          path: opendp-windows
 
-      - name: Install dependencies
+      - name: Set up rust, 7zip, curl
         run: |
           rustup self uninstall -y
           choco install rust
@@ -111,12 +118,6 @@ jobs:
           rustup default stable-x86_64-pc-windows-gnu
           choco install 7zip
           choco install curl
-
-      - name: Checkout patch repository
-        uses: actions/checkout@v2
-        with:
-          repository: opendp/opendp-windows
-          path: opendp-windows
 
       - name: Install dependencies
         shell: msys2 {0}
@@ -136,7 +137,7 @@ jobs:
           (cd opendp-windows && bash patch_opendp_msys.sh)
 
       - name: Build windows binaries
-        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
+        run: cargo +stable build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
 
       - name: Upload .dll
         uses: actions/upload-artifact@v2
