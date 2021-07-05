@@ -150,7 +150,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: lib_dll
-          path: rust/target/release/opendp_ffi.dll
+          path: rust/target/x86_64-pc-windows-gnu/release/opendp_ffi.dll
 
 
   python-pre-publish-mac:
