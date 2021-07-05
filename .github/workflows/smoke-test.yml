@@ -36,6 +36,7 @@ jobs:
 #          name: libs
 #          path: rust/target/debug/libopendp_ffi.so
 #
+#
 #  python-test:
 #    needs: rust-build-and-test
 #    runs-on: ubuntu-latest
@@ -92,6 +93,7 @@ jobs:
 #      - name: Test
 #        run: pytest -v
 
+
   python-pre-publish-windows:
 #    needs: python-test
     runs-on: windows-latest
@@ -138,7 +140,9 @@ jobs:
 
       - name: Build windows binaries
         shell: msys2 -leo pipefail {0}
-        run: cargo +stable build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
+        run: |
+          export PATH=$PATH:/c/ProgramData/chocolatey/bin
+          cargo +stable build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
 
       - name: Upload .dll
         uses: actions/upload-artifact@v2
@@ -146,7 +150,6 @@ jobs:
           name: lib_dll
           path: rust/target/release/opendp_ffi.dll
 
-#
 #
 #  python-pre-publish-mac:
 #    needs: python-test
@@ -233,6 +236,7 @@ jobs:
 #      - name: PyPi OpenDP upload
 #        run: |
 #          python3 -m twine upload --repository testpypi --verbose --skip-existing python/wheelhouse/*
+#
 #
 #  rust-publish:
 #    needs: rust-build-and-test
