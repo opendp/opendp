@@ -256,6 +256,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Login
+        run: cargo login $CRATES_IO_TOKEN
+        env:
+          CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+
       - name: Publish Cargo OpenDP
         run: cargo publish --verbose --manifest-path=opendp/Cargo.toml --dry-run
 
