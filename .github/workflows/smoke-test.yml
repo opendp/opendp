@@ -137,6 +137,7 @@ jobs:
           (cd opendp-windows && bash patch_opendp_msys.sh)
 
       - name: Build windows binaries
+        shell: msys2 -leo pipefail {0}
         run: cargo +stable build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
 
       - name: Upload .dll
