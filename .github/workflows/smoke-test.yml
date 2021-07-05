@@ -142,7 +142,7 @@ jobs:
         shell: msys2 -leo pipefail {0}
         run: |
           export PATH=$PATH:/c/ProgramData/chocolatey/bin
-          cargo +stable build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
+          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
 
       - name: Upload .dll
         uses: actions/upload-artifact@v2
