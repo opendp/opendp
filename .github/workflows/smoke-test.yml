@@ -130,18 +130,19 @@ jobs:
       - name: Prepare OpenDP Patch
         run: |
           chmod +x opendp-windows/patch_opendp.sh
-          (cd opendp-windows && bash patch_opendp.sh)
+          (cd opendp-windows && bash 1_download_and_patch.sh)
 
       - name: Patch OpenDP
         shell: msys2 -leo pipefail {0}
         run: |
           chmod +x opendp-windows/patch_opendp_msys.sh
-          (cd opendp-windows && bash patch_opendp_msys.sh)
+          (cd opendp-windows && bash 2_build_dependencies.sh)
 
       - name: Build windows binaries
         shell: msys2 -leo pipefail {0}
         run: |
           export PATH=$PATH:/c/ProgramData/chocolatey/bin
+          export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
           cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
 
       - name: Upload .dll
