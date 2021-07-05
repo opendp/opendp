@@ -129,13 +129,13 @@ jobs:
 
       - name: Prepare OpenDP Patch
         run: |
-          chmod +x opendp-windows/patch_opendp.sh
+          chmod +x opendp-windows/1_download_and_patch.sh
           (cd opendp-windows && bash 1_download_and_patch.sh)
 
       - name: Patch OpenDP
         shell: msys2 -leo pipefail {0}
         run: |
-          chmod +x opendp-windows/patch_opendp_msys.sh
+          chmod +x opendp-windows/2_build_dependencies.sh
           (cd opendp-windows && bash 2_build_dependencies.sh)
 
       - name: Build windows binaries
