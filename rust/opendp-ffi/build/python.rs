@@ -139,20 +139,18 @@ impl Argument {
 /// generate an input argument, complete with name, hint and default.
 /// also returns a bool to make it possible to move arguments with defaults to the end of the signature.
 fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> (String, bool) {
-    let default = match &arg.default {
-        // if no default value
-        Value::Null => if arg.is_type {
-            // let default value be None if it is a type arg and there is a public example
-            generate_public_example(func, arg).map(|_| "None".to_string())
-        } else {
-            // otherwise, the common path, no default is added to the code
-            None
-        }
-        Value::Bool(value) => Some(if *value {"True"} else {"False"}.to_string()),
-        Value::Number(number) => Some(number.to_string()),
-        Value::String(string) => Some(format!("\"{}\"", string)),
-        Value::Array(array) => Some(format!("{:?}", array)),
-        Value::Object(_) => unimplemented!()
+    let default = if let Some(default) = &arg.default {
+        Some(match default {
+            Value::Null => "None".to_string(),
+            Value::Bool(value) => if *value {"True"} else {"False"}.to_string(),
+            Value::Number(number) => number.to_string(),
+            Value::String(string) => format!("\"{}\"", string),
+            Value::Array(array) => format!("{:?}", array),
+            Value::Object(_) => unimplemented!()
+        })
+    } else {
+        // let default value be None if it is a type arg and there is a public example
+        generate_public_example(func, arg).map(|_| "None".to_string())
     };
     (format!(
         r#"{name}{hint}{default}"#,
