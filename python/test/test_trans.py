@@ -23,7 +23,7 @@ def test_cast_inherent():
 def test_impute_constant_inherent():
     from opendp.v1.trans import make_split_lines, make_cast, make_impute_constant
     tester = make_split_lines() >> make_cast(TI=str, TO=float) >> make_impute_constant(-1.)
-    assert tester("nan\n1.") == [-1., 1.]
+    assert tester("nanx\n1.") == [-1., 1.]
 
 
 def test_cast_default():
