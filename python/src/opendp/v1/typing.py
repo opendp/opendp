@@ -126,8 +126,7 @@ class RuntimeType(object):
                 'VectorDomain': VectorDomain,
                 'OptionNullDomain': OptionNullDomain,
                 'InherentNullDomain': InherentNullDomain,
-                'SizedDomain': SizedDomain,
-                'SmoothedMaxDivergence': SmoothedMaxDivergence
+                'SizedDomain': SizedDomain
             }.get(origin)
             if domain is not None:
                 return domain[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]

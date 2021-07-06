@@ -41,16 +41,16 @@ pub fn make_count_distinct<TIA, TO>() -> Fallible<Transformation<VectorDomain<Al
         StabilityRelation::new_from_constant(TO::one())))
 }
 
-pub trait CountByConstant: SensitivityMetric {
-    fn get_stability_constant() -> Self::Distance;
+pub trait CountByConstant<QO> {
+    fn get_stability_constant() -> QO;
 }
-impl<Q: One, const P: usize> CountByConstant for LpDistance<Q, P> {
-    fn get_stability_constant() -> Self::Distance { Q::one() }
+impl<Q: One, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
+    fn get_stability_constant() -> Q { Q::one() }
 }
 
 // count with unknown n, known categories
 pub fn make_count_by_categories<MO, TI, TO>(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, SymmetricDistance, MO>>
-    where MO: CountByConstant,
+    where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant + One,
           TI: 'static + Eq + Hash,
           TO: Integer + Zero + One + AddAssign {
@@ -86,7 +86,7 @@ pub fn make_count_by_categories<MO, TI, TO>(categories: Vec<TI>) -> Fallible<Tra
 // This implementation could be made tighter with the relation in the spreadsheet for known n.
 // Need to double-check if stability-based histograms have any additional stability requirements.
 pub fn make_count_by<MO, TI, TO>(n: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
-    where MO: CountByConstant,
+    where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant,
           TI: 'static + Eq + Hash + Clone,
           TO: Integer + Zero + One + AddAssign {

@@ -40,8 +40,7 @@ pub struct Argument {
     // RuntimeType expressed in terms of rust types with generics.
     // Includes various RuntimeType constructors
     rust_type: Option<RuntimeType>,
-    // RuntimeType expressed in terms of rust types with generics.
-    // Includes various RuntimeType constructors
+    // a list of names in the rust_type that should be considered generics
     #[serde(default)]
     generics: Vec<String>,
     // type hint- a more abstract type that all potential arguments inherit from

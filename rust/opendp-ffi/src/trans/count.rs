@@ -66,7 +66,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
     ) -> FfiResult<*mut AnyTransformation>
         where QO: DistanceConstant + FloatConst + One {
         fn monomorphize2<MO, TI, TO>(categories: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-            where MO: 'static + SensitivityMetric + CountByConstant,
+            where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
                   MO::Distance: DistanceConstant + One,
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign {
@@ -99,7 +99,7 @@ pub extern "C" fn opendp_trans__make_count_by(
     ) -> FfiResult<*mut AnyTransformation>
         where QO: DistanceConstant + FloatConst + One {
         fn monomorphize2<MO, TI, TO>(n: usize) -> FfiResult<*mut AnyTransformation>
-            where MO: 'static + SensitivityMetric + CountByConstant,
+            where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
                   MO::Distance: DistanceConstant + FloatConst + One,
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign {
