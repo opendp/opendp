@@ -38,17 +38,17 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
     }
 }
 
-pub fn make_base_laplace<DI>(scale: DI::Atom) -> Fallible<Measurement<DI, DI, DI::Metric, MaxDivergence<DI::Atom>>>
-    where DI: LaplaceDomain,
-          DI::Atom: 'static + Clone + SampleLaplace + Float + DistanceCast {
+pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
+    where D: LaplaceDomain,
+          D::Atom: 'static + Clone + SampleLaplace + Float + DistanceCast {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     Ok(Measurement::new(
-        DI::new(),
-        DI::new(),
-        DI::noise_function(scale.clone()),
-        DI::Metric::default(),
+        D::new(),
+        D::new(),
+        D::noise_function(scale.clone()),
+        D::Metric::default(),
         MaxDivergence::default(),
         PrivacyRelation::new_from_constant(scale.recip())
     ))
@@ -59,12 +59,11 @@ pub fn make_base_laplace<DI>(scale: DI::Atom) -> Fallible<Measurement<DI, DI, DI
 mod tests {
     use super::*;
     use crate::trans::make_bounded_mean;
-    use crate::dist::HammingDistance;
 
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
         let chain = (
-            make_bounded_mean::<HammingDistance, _>(10.0, 12.0, 3)? >>
+            make_bounded_mean(10.0, 12.0, 3)? >>
             make_base_laplace(1.0)?
         )?;
         let _ret = chain.function.eval(&vec![10.0, 11.0, 12.0])?;

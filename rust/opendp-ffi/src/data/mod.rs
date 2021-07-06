@@ -133,7 +133,7 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
             // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
             // because the only likely way to get a tuple of AnyObjects is as the output of composition.
             dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
-        }
+        },
         _ => dispatch!(raw_to_plain, [(T, @primitives)], (raw))
     };
     obj.into()

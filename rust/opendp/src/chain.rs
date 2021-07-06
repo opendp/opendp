@@ -221,7 +221,6 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Fallible<Tr
 
 #[cfg(test)]
 mod tests_shr {
-    use crate::dist::HammingDistance;
     use crate::meas::geometric::make_base_geometric;
     use crate::trans::{make_bounded_sum, make_cast_default, make_clamp, make_split_lines};
 
@@ -230,7 +229,7 @@ mod tests_shr {
     #[test]
     fn test_shr() -> Fallible<()> {
         (
-            make_split_lines::<HammingDistance>()? >>
+            make_split_lines()? >>
             make_cast_default()? >>
             make_clamp(0, 1)? >>
             make_bounded_sum(0, 1)? >>

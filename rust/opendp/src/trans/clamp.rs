@@ -2,12 +2,12 @@ use std::collections::Bound;
 
 use num::One;
 
-use crate::core::{DatasetMetric, Function, Metric, StabilityRelation, Transformation, Domain};
+use crate::core::{Function, Metric, StabilityRelation, Transformation, Domain};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, DistanceCast};
 use std::ops::Sub;
-use crate::dist::AbsoluteDistance;
+use crate::dist::{AbsoluteDistance, SymmetricDistance};
 
 
 fn min<T: PartialOrd>(a: T, b: T) -> T { if a < b {a} else {b} }
@@ -25,9 +25,8 @@ pub trait ClampableDomain<M>: Domain
     fn stability_relation(lower: Self::Atom, upper: Self::Atom) -> StabilityRelation<M, M>;
 }
 
-impl<M, T> ClampableDomain<M> for VectorDomain<AllDomain<T>>
-    where M: DatasetMetric,
-          T: 'static + PartialOrd + Clone, {
+impl<T> ClampableDomain<SymmetricDistance> for VectorDomain<AllDomain<T>>
+    where T: 'static + PartialOrd + Clone, {
     type Atom = T;
     type OutputDomain = VectorDomain<IntervalDomain<T>>;
 
@@ -39,8 +38,8 @@ impl<M, T> ClampableDomain<M> for VectorDomain<AllDomain<T>>
     fn clamp_function(lower: Self::Atom, upper: Self::Atom) -> Function<Self, Self::OutputDomain> {
         Function::new(move |arg: &Vec<T>| arg.iter().map(|v| clamp(&lower, &upper, v)).cloned().collect())
     }
-    fn stability_relation(_lower: Self::Atom, _upper: Self::Atom) -> StabilityRelation<M, M> {
-        StabilityRelation::new_from_constant(M::Distance::one())
+    fn stability_relation(_lower: Self::Atom, _upper: Self::Atom) -> StabilityRelation<SymmetricDistance, SymmetricDistance> {
+        StabilityRelation::new_from_constant(1)
     }
 }
 
@@ -141,12 +140,12 @@ pub fn make_unclamp<DI, M>(lower: Bound<DI::Atom>, upper: Bound<DI::Atom>) -> Fa
 mod tests {
 
     use super::*;
-    use crate::dist::{SymmetricDistance, HammingDistance};
+    use crate::dist::{SymmetricDistance};
     use crate::trans::{make_clamp, make_unclamp};
 
     #[test]
     fn test_make_clamp() {
-        let transformation = make_clamp::<VectorDomain<_>, HammingDistance>(0, 10).unwrap_test();
+        let transformation = make_clamp::<VectorDomain<_>, SymmetricDistance>(0, 10).unwrap_test();
         let arg = vec![-10, -5, 0, 5, 10, 20];
         let ret = transformation.function.eval(&arg).unwrap_test();
         let expected = vec![0, 0, 0, 5, 10, 10];

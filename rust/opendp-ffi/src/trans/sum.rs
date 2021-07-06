@@ -3,11 +3,9 @@ use std::iter::Sum;
 use std::ops::Sub;
 use std::os::raw::{c_char, c_uint, c_void};
 
-use opendp::core::{DatasetMetric};
-use opendp::dist::{HammingDistance, SymmetricDistance};
 use opendp::err;
 use opendp::traits::{Abs, DistanceConstant};
-use opendp::trans::{BoundedSumConstant, make_bounded_sum, make_bounded_sum_n};
+use opendp::trans::{make_bounded_sum, make_bounded_sum_n};
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -16,22 +14,18 @@ use crate::util::Type;
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_sum(
     lower: *const c_void, upper: *const c_void,
-    MI: *const c_char, T: *const c_char,
+    T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<MI, T>(
+    fn monomorphize<T>(
         lower: *const c_void, upper: *const c_void
     ) -> FfiResult<*mut AnyTransformation>
-        where MI: 'static + DatasetMetric,
-              for<'a> T: DistanceConstant + Sub<Output=T> + Abs + Sum<&'a T>,
-              MI: BoundedSumConstant<T> {
+        where for<'a> T: DistanceConstant + Sub<Output=T> + Abs + Sum<&'a T> {
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
-        make_bounded_sum::<MI, T>(lower, upper).into_any()
+        make_bounded_sum::<T>(lower, upper).into_any()
     }
-    let MI = try_!(Type::try_from(MI));
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [
-        (MI, [HammingDistance, SymmetricDistance]),
         (T, @numbers)
     ], (lower, upper))
 }
@@ -70,7 +64,6 @@ mod tests {
         let transformation = Result::from(opendp_trans__make_bounded_sum(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(10.0) as *const c_void,
-            "SymmetricDistance".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);

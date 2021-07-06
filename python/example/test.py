@@ -15,9 +15,9 @@ def main():
     ### SUMMARY STATS
     # Parse dataframe
     parse_dataframe = (
-        make_split_dataframe(separator=",", col_names=[0, 1, 2], M=HammingDistance) >>
-        make_parse_column(key=1, impute=True, M=HammingDistance, T=int) >>
-        make_parse_column(key=2, impute=True, M=HammingDistance, T=float)
+            make_split_dataframe(separator=",", col_names=[0, 1, 2], M=HammingDistance) >>
+            make_parse_column(key=1, impute=True, M=HammingDistance, T=int) >>
+            make_parse_column(key=2, impute=True, M=HammingDistance, T=float)
     )
 
     # Noisy sum, col 1

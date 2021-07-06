@@ -154,7 +154,7 @@ pub fn make_adaptive_composition<DI, DO, MI, MO>(
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{HammingDistance, MaxDivergence, AbsoluteDistance};
+    use crate::dist::{MaxDivergence, AbsoluteDistance, SymmetricDistance};
     use crate::dom::VectorDomain;
     use crate::error::*;
     use crate::meas::*;
@@ -234,7 +234,7 @@ mod tests {
         // Definitions
         let input_domain = VectorDomain::new(AllDomain::new());
         let output_domain = PolyDomain::new();
-        let input_metric = HammingDistance::default();
+        let input_metric = SymmetricDistance::default();
         let output_measure = MaxDivergence::default();
 
         // Build queryable

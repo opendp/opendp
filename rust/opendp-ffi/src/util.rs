@@ -11,6 +11,7 @@ use opendp::{err, fallible};
 use opendp::dist::{HammingDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
 use opendp::error::*;
 use crate::any::AnyObject;
+use opendp::dom::{VectorDomain, AllDomain, IntervalDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -25,13 +26,13 @@ pub enum TypeContents {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Type {
     pub id: TypeId,
-    pub descriptor: &'static str,
+    pub descriptor: String,
     pub contents: TypeContents,
 }
 
 impl Type {
-    pub fn new(id: TypeId, descriptor: &'static str, contents: TypeContents) -> Self {
-        Self { id, descriptor, contents }
+    pub fn new<S: AsRef<str>>(id: TypeId, descriptor: S, contents: TypeContents) -> Self {
+        Self { id, descriptor: descriptor.as_ref().to_string(), contents }
     }
 
     pub fn of<T: 'static + ?Sized>() -> Self {
@@ -76,6 +77,21 @@ impl Type {
 pub enum MetricClass { Dataset, Sensitivity }
 
 impl Type {
+    pub fn get_domain_atom(&self) -> Fallible<Type> {
+        match &self.contents {
+            TypeContents::PLAIN(_) => Ok(self.clone()),
+            TypeContents::GENERIC { name, args } => {
+                if !name.ends_with("Domain") {
+                    return fallible!(TypeParse, "Failed to extract atomic type: {:?} is not a domain", name)
+                }
+                if args.len() != 1 {
+                    return fallible!(TypeParse, "Failed to extract atomic type: expected one argument, got {:?} generic arguments", args.len())
+                }
+                Type::of_id(&args[0])?.get_domain_atom()
+            }
+            _ => fallible!(TypeParse, "Failed to extract atomic type: not a domain")
+        }
+    }
     pub fn get_sensitivity_distance(&self) -> Fallible<Type> {
         if let TypeContents::GENERIC {args, name} = &self.contents {
             if !vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
@@ -104,6 +120,27 @@ impl Type {
     }
 }
 
+// Convert `[A B C] i8` to `A<B<C<i8>>`
+macro_rules! nest {
+    ([$($all:tt)*] $arg:ty) => (nest!(@[$($all)*] [] $arg));
+
+    // move elements in the left array to the right array, in reversed order
+    (@[$first:ident $($rest:tt)*] [$($reversed:tt)*] $arg:ty) =>
+        (nest!(@[$($rest)*] [$first $($reversed)*] $arg));
+    // left array is empty once reversed. Recursively peel off front ident to construct type
+    (@[] [$first:ident $($name:ident)+] $arg:ty) => (nest!(@[] [$($name)+] $first<$arg>));
+    // base case
+    (@[] [$first:ident] $arg:ty) => ($first<$arg>);
+
+    // make TypeContents
+    (@contents [$first:ident $($rest:ident)*] $arg:ty) => (TypeContents::GENERIC {
+        name: stringify!($first),
+        args: vec![TypeId::of::<nest!([$($rest)*] $arg)>()]
+    });
+}
+
+macro_rules! replace {($from:ident, $to:literal) => {$to};}
+
 /// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].
 /// * `t!(Foo)` => `TypeContents::PLAIN`
 /// * `t!((Foo, Bar))` => `TypeContents::TUPLE`
@@ -117,6 +154,13 @@ macro_rules! t {
             TypeId::of::<Vec<$arg>>(),
             concat!("Vec<", stringify!($arg), ">"),
             TypeContents::VEC(TypeId::of::<$arg>())
+        )
+    };
+    ([$($name:ident)+], $arg:ty) => {
+        Type::new(
+            TypeId::of::<nest!([$($name)+] $arg)>(),
+            concat!($(stringify!($name), "<",)+ stringify!($arg), $(replace!($name, ">")),+),
+            nest!(@contents [$($name)+] $arg)
         )
     };
     ($name:ident<$($args:ty),+>) => {
@@ -153,7 +197,8 @@ macro_rules! t {
 }
 /// Builds a vec of [`Type`] from a compact invocation, dispatching to the appropriate flavor of [`t!`].
 macro_rules! type_vec {
-    ($name:ident, <$($args:ty),*>) => { vec![$(t!($name<$args>)),*] };
+    ($name:ident, <$($arg:ty),*>) => { vec![$(t!($name<$arg>)),*] };
+    ($path:tt, <$($arg:ty),*>) => { vec![$(t!($path, $arg)),*] };
     ([$($elements:ty),*]) => { vec![$(t!([$elements])),*] };
     ([$($elements:ty),*]; $len:expr) => { vec![$(t!([$elements; $len])),*] };
     (($($elements:ty),*)) => { vec![$(t!(($elements,$elements))),*] };
@@ -165,18 +210,33 @@ lazy_static! {
     /// (i.e., the ones that appear in FFI function generic args).
     static ref TYPES: Vec<Type> = {
         let types: Vec<Type> = vec![
+            // data types
             vec![t!(())],
             type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject],
             type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject)],
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]],
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            // OptionNullDomain<AllDomain<_>>::Carrier
+            type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+
+            // domains
+            type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![IntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![[InherentNullDomain AllDomain], <f32, f64>],
+            type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[VectorDomain IntervalDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+
+            // metrics
             type_vec![HammingDistance, SymmetricDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
         ].into_iter().flatten().collect();
-        let descriptors: HashSet<_> = types.iter().map(|e| e.descriptor).collect();
+        let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len());
         types
     };
@@ -188,7 +248,7 @@ lazy_static! {
 }
 lazy_static! {
     static ref DESCRIPTOR_TO_TYPE: HashMap<&'static str, Type> = {
-        TYPES.iter().map(|e| (e.descriptor, e.clone())).collect()
+        TYPES.iter().map(|e| (e.descriptor.as_str(), e.clone())).collect()
     };
 }
 

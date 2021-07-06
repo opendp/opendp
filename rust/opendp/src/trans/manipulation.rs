@@ -4,6 +4,7 @@ use crate::core::{Domain, Function, Metric, StabilityRelation, Transformation, D
 use crate::error::*;
 use crate::traits::{DistanceConstant};
 use crate::dom::{VectorDomain, AllDomain};
+use crate::dist::SymmetricDistance;
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -13,7 +14,7 @@ pub(crate) fn make_row_by_row<'a, DIA, DOA, M, F: 'static + Fn(&DIA::Carrier) ->
     atom_function: F
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
-          DIA::Carrier: 'static, DOA::Carrier: 'static,
+          DIA::Carrier: 'static,
           M: DatasetMetric {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
@@ -32,7 +33,7 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M, F: 'static + Fn(&DIA::Carrie
     atom_function: F
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
-          DIA::Carrier: 'static, DOA::Carrier: 'static,
+          DIA::Carrier: 'static,
           M: DatasetMetric {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
@@ -59,11 +60,10 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
 
 /// A [`Transformation`] that checks equality elementwise with `value`.
 /// Maps a Vec<T> -> Vec<bool>
-pub fn make_is_equal<M, TI>(
+pub fn make_is_equal<TI>(
     value: TI
-) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, M, M>>
-    where M: DatasetMetric,
-          TI: 'static + PartialEq {
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
+    where TI: 'static + PartialEq {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn test_is_equal() -> Fallible<()> {
-        let is_equal = make_is_equal::<HammingDistance, _>("alpha".to_string())?;
+        let is_equal = make_is_equal("alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
         let ret = is_equal.function.eval(&arg)?;
         assert_eq!(ret, vec![true, false, false]);

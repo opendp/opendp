@@ -16,53 +16,47 @@ use crate::util::{Type};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast(
-    M: *const c_char, TI: *const c_char, TO: *const c_char
+    TI: *const c_char, TO: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
-    let M = try_!(Type::try_from(M));
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation> where
-        M: 'static + DatasetMetric,
-        TI: 'static + Clone,
-        TO: 'static + CastFrom<TI> {
-        make_cast::<M, TI, TO>().into_any()
+    fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
+        where TI: 'static + Clone,
+              TO: 'static + CastFrom<TI> {
+        make_cast::<TI, TO>().into_any()
     }
-    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @primitives)], ())
+    dispatch!(monomorphize, [(TI, @primitives), (TO, @primitives)], ())
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast_default(
-    M: *const c_char, TI: *const c_char, TO: *const c_char,
+    TI: *const c_char, TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let M = try_!(Type::try_from(M));
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation> where
-        M: 'static + DatasetMetric,
-        TI: 'static + Clone,
-        TO: 'static + CastFrom<TI> + Default {
-        make_cast_default::<M, TI, TO>().into_any()
+    fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
+        where TI: 'static + Clone,
+              TO: 'static + CastFrom<TI> + Default {
+        make_cast_default::<TI, TO>().into_any()
     }
-    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @primitives)], ())
+    dispatch!(monomorphize, [(TI, @primitives), (TO, @primitives)], ())
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast_inherent(
-    M: *const c_char, TI: *const c_char, TO: *const c_char,
+    TI: *const c_char, TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let M = try_!(Type::try_from(M));
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    fn monomorphize<M, TI, TO>() -> FfiResult<*mut AnyTransformation>
-        where M: 'static + DatasetMetric,
-              TI: 'static + Clone,
+    fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
+        where TI: 'static + Clone,
               TO: 'static + CastFrom<TI> + InherentNull {
-        make_cast_inherent::<M, TI, TO>().into_any()
+        make_cast_inherent::<TI, TO>().into_any()
     }
-    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives), (TO, @floats)], ())
+    dispatch!(monomorphize, [(TI, @primitives), (TO, @floats)], ())
 }
 
 // The scope of this function has been reduced in the FFI layer from accepting any arbitrary domain,
@@ -102,7 +96,6 @@ mod tests {
     #[test]
     fn test_make_cast() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_cast(
-            "SymmetricDistance".to_char_p(),
             "i32".to_char_p(),
             "f64".to_char_p(),
         ))?;
@@ -116,7 +109,6 @@ mod tests {
     #[test]
     fn test_make_cast_default() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_cast_default(
-            "SymmetricDistance".to_char_p(),
             "String".to_char_p(),
             "i32".to_char_p(),
         ))?;
@@ -130,7 +122,6 @@ mod tests {
     #[test]
     fn test_make_cast_inherent() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_cast_inherent(
-            "SymmetricDistance".to_char_p(),
             "String".to_char_p(),
             "f64".to_char_p(),
         ))?;

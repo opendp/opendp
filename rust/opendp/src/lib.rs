@@ -52,8 +52,8 @@
 //!     let sigma = (bounds.1 - bounds.0) / epsilon;
 //!
 //!     // Construct a Transformation to load the numbers.
-//!     let split_lines = make_split_lines::<HammingDistance>()?;
-//!     let cast = make_cast_default::<HammingDistance, String, f64>()?;
+//!     let split_lines = make_split_lines()?;
+//!     let cast = make_cast_default::<String, f64>()?;
 //!     let load_numbers = make_chain_tt(&cast, &split_lines, None)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
