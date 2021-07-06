@@ -17,6 +17,9 @@ use crate::error::Fallible;
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
 }
+impl<T> Default for AllDomain<T> {
+    fn default() -> Self { AllDomain { _marker: PhantomData } }
+}
 impl<T> AllDomain<T> {
     pub fn new() -> Self {
         AllDomain { _marker: PhantomData }
@@ -170,6 +173,9 @@ impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV> where DK::Carrier: Eq 
 pub struct VectorDomain<D: Domain> {
     pub element_domain: D,
 }
+impl<D: Domain + Default> Default for VectorDomain<D> {
+    fn default() -> Self { Self { element_domain: D::default() } }
+}
 impl<D: Domain> VectorDomain<D> {
     pub fn new(element_domain: D) -> Self {
         VectorDomain { element_domain }
@@ -211,6 +217,10 @@ pub struct InherentNullDomain<D: Domain>
     where D::Carrier: InherentNull {
     pub element_domain: D,
 }
+impl<D: Domain + Default> Default for InherentNullDomain<D>
+    where D::Carrier: InherentNull {
+    fn default() -> Self { Self { element_domain: D::default() } }
+}
 impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
     pub fn new(member_domain: D) -> Self {
         InherentNullDomain { element_domain: member_domain }
@@ -243,6 +253,9 @@ impl_inherent_null_float!(f64, f32);
 #[derive(Clone, PartialEq)]
 pub struct OptionNullDomain<D: Domain> {
     pub element_domain: D,
+}
+impl<D: Domain + Default> Default for OptionNullDomain<D> {
+    fn default() -> Self { Self { element_domain: D::default() } }
 }
 impl<D: Domain> OptionNullDomain<D> {
     pub fn new(member_domain: D) -> Self {

@@ -69,6 +69,30 @@ def test_identity():
     assert ret == arg
 
 
+def test_is_equal():
+    from opendp.v1.trans import make_is_equal
+    tester = make_is_equal(3)
+    assert tester([1, 2, 3]) == [False, False, True]
+
+
+def test_is_null():
+    from opendp.v1.trans import make_split_lines, make_cast_inherent, make_is_null
+    tester = (
+        make_split_lines() >>
+        make_cast_inherent(TI=str, TO=float) >>
+        make_is_null(DIA=InherentNullDomain[AllDomain[float]])
+    )
+    assert tester("nan\n1.\ninf") == [True, False, False]
+
+    from opendp.v1.trans import make_split_lines, make_cast, make_is_null
+    tester = (
+        make_split_lines() >>
+        make_cast(TI=str, TO=float) >>
+        make_is_null(DIA=OptionNullDomain[AllDomain[float]])
+    )
+    assert tester("nan\n1.\ninf") == [True, False, False]
+test_is_null()
+
 # TODO: cannot test independently until Vec<String> data loader implemented
 def test_split_lines__cast__impute():
     from opendp.v1.trans import make_split_lines, make_cast, make_impute_constant

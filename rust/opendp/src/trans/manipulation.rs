@@ -2,7 +2,7 @@ use num::One;
 
 use crate::core::{Domain, Function, Metric, StabilityRelation, Transformation, DatasetMetric};
 use crate::error::*;
-use crate::traits::{DistanceConstant};
+use crate::traits::{DistanceConstant, CheckNull};
 use crate::dom::{VectorDomain, AllDomain};
 use crate::dist::SymmetricDistance;
 
@@ -70,13 +70,22 @@ pub fn make_is_equal<TI>(
         move |v| v == &value)
 }
 
+pub fn make_is_null<DIA>() -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
+    where DIA: Domain + Default,
+          DIA::Carrier: 'static + CheckNull {
+    make_row_by_row(
+        DIA::default(),
+        AllDomain::default(),
+        |v| v.is_null())
+}
+
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
     use crate::dist::{HammingDistance};
-    use crate::dom::AllDomain;
+    use crate::dom::{AllDomain, InherentNullDomain};
 
     #[test]
     fn test_identity() {
@@ -90,6 +99,16 @@ mod tests {
     fn test_is_equal() -> Fallible<()> {
         let is_equal = make_is_equal("alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
+        let ret = is_equal.function.eval(&arg)?;
+        assert_eq!(ret, vec![true, false, false]);
+        assert!(is_equal.stability_relation.eval(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_null() -> Fallible<()> {
+        let is_equal = make_is_null::<InherentNullDomain<AllDomain<_>>>()?;
+        let arg = vec![f64::NAN, 1., 2.];
         let ret = is_equal.function.eval(&arg)?;
         assert_eq!(ret, vec![true, false, false]);
         assert!(is_equal.stability_relation.eval(&1, &1)?);

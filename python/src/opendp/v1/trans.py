@@ -100,6 +100,33 @@ def make_is_equal(
     return c_to_py(unwrap(function(value, TI), Transformation))
 
 
+def make_is_null(
+    DIA: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that checks if each element in a vector is null.
+    
+    :param DIA: atomic input domain
+    :type DIA: RuntimeTypeDescriptor
+    :return: A is_null step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    DIA = RuntimeType.parse(type_name=DIA)
+    
+    # Convert arguments to c types.
+    DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_is_null
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(DIA), Transformation))
+
+
 def make_cast_inherent(
     TI: RuntimeTypeDescriptor,
     TO: RuntimeTypeDescriptor
