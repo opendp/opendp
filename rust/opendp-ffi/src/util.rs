@@ -8,7 +8,7 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use opendp::{err, fallible};
-use opendp::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
+use opendp::dist::{HammingDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
 use opendp::error::*;
 use crate::any::AnyObject;
 use opendp::dom::{VectorDomain, AllDomain, IntervalDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
@@ -106,7 +106,7 @@ impl Type {
         }
     }
     pub fn get_metric_class(&self) -> Fallible<MetricClass> {
-        if self == &Type::of::<SubstituteDistance>() || self == &Type::of::<SymmetricDistance>() {
+        if self == &Type::of::<HammingDistance>() || self == &Type::of::<SymmetricDistance>() {
             Ok(MetricClass::Dataset)
         } else if let TypeContents::GENERIC { name, .. } = &self.contents {
             if vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
@@ -233,7 +233,7 @@ lazy_static! {
             type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
 
             // metrics
-            type_vec![SubstituteDistance, SymmetricDistance],
+            type_vec![HammingDistance, SymmetricDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],

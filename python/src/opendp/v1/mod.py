@@ -28,16 +28,16 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>>
     >>> # chain with a transformation from the trans module
     >>> from opendp.v1.trans import make_count
-    >>> from opendp.v1.typing import SubstituteDistance
+    >>> from opendp.v1.typing import HammingDistance
     >>> chained = (
-    >>>     make_count(MI=SubstituteDistance, TI=int) >>
+    >>>     make_count(MI=HammingDistance, TI=int) >>
     >>>     base_geometric
     >>> )
     >>>
     >>> # the resulting measurement has the same features
     >>> chained([1, 2, 3])  # -> 4
     >>> # check the chained measurement's relation at
-    >>> #     (1, 0.5): (SubstituteDistance, MaxDivergence)
+    >>> #     (1, 0.5): (HammingDistance, MaxDivergence)
     >>> assert chained.check(1, 0.5)
     """
     _type_ = AnyMeasurement

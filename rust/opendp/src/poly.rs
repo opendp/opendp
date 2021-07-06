@@ -82,7 +82,7 @@ impl<DI, DO, MI, MO> Transformation<DI, DO, MI, MO>
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::SubstituteDistance;
+    use crate::dist::HammingDistance;
     use crate::dom::AllDomain;
     use crate::error::*;
     use crate::meas;
@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_poly_transformation() -> Fallible<()> {
-        let op_plain = trans::make_identity(AllDomain::new(), SubstituteDistance::default())?;
+        let op_plain = trans::make_identity(AllDomain::new(), HammingDistance::default())?;
         let arg = 99.9;
         let res_plain = op_plain.function.eval(&arg)?;
         assert_eq!(res_plain, arg);

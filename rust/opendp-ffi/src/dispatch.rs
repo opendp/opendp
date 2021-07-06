@@ -95,7 +95,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [SubstituteDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [HammingDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
@@ -131,7 +131,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [SubstituteDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [HammingDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {

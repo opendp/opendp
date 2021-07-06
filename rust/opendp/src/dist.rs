@@ -53,21 +53,21 @@ impl Metric for SymmetricDistance {
 impl DatasetMetric for SymmetricDistance {}
 
 #[derive(Clone)]
-pub struct SubstituteDistance;
+pub struct HammingDistance;
 
-impl Default for SubstituteDistance {
-    fn default() -> Self { SubstituteDistance }
+impl Default for HammingDistance {
+    fn default() -> Self { HammingDistance }
 }
 
-impl PartialEq for SubstituteDistance {
+impl PartialEq for HammingDistance {
     fn eq(&self, _other: &Self) -> bool { true }
 }
 
-impl Metric for SubstituteDistance {
+impl Metric for HammingDistance {
     type Distance = u32;
 }
 
-impl DatasetMetric for SubstituteDistance {}
+impl DatasetMetric for HammingDistance {}
 
 // Sensitivity in P-space
 pub struct LpDistance<Q, const P: usize>(PhantomData<Q>);

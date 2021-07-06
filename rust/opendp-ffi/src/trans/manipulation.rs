@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
 use opendp::core::DatasetMetric;
-use opendp::dist::{SubstituteDistance, SymmetricDistance};
+use opendp::dist::{HammingDistance, SymmetricDistance};
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
 use opendp::trans::{make_identity, make_is_equal};

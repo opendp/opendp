@@ -15,11 +15,11 @@ ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
 
 # all ways of providing type information
 RuntimeTypeDescriptor = Union[
-    "RuntimeType",  # as the normalized type -- SubstituteDistance; RuntimeType.parse("i32")
+    "RuntimeType",  # as the normalized type -- HammingDistance; RuntimeType.parse("i32")
     _GenericAlias,  # a python type hint from the std typing module -- List[int]
     str,  # plaintext string in terms of rust types -- "Vec<i32>"
     Type[Union[typing.List, typing.Tuple, int, float, str, bool]],  # using the python type class itself -- int, float
-    tuple,  # shorthand for tuples -- (float, "f64"); (SubstituteDistance, List[int])
+    tuple,  # shorthand for tuples -- (float, "f64"); (HammingDistance, List[int])
 ]
 
 
@@ -107,7 +107,7 @@ class RuntimeType(object):
             # attempt to upgrade strings to the metric/measure instance
             origin = type_name[:start] if 0 < start else type_name
             closeness = {
-                'SubstituteDistance': SubstituteDistance,
+                'HammingDistance': HammingDistance,
                 'SymmetricDistance': SymmetricDistance,
                 'AbsoluteDistance': AbsoluteDistance,
                 'L1Distance': L1Distance,
@@ -275,7 +275,7 @@ class DatasetMetric(RuntimeType):
     pass
 
 
-SubstituteDistance = DatasetMetric('SubstituteDistance')
+HammingDistance = DatasetMetric('HammingDistance')
 SymmetricDistance = DatasetMetric('SymmetricDistance')
 
 

@@ -40,7 +40,7 @@ def test_impute_uniform():
 
 def test_cast_metric():
     from opendp.v1.trans import make_cast_metric
-    caster = make_cast_metric(SubstituteDistance, SymmetricDistance, T=float)
+    caster = make_cast_metric(HammingDistance, SymmetricDistance, T=float)
     assert caster([1., 2.]) == [1., 2.]
     assert not caster.check(1, 1)
 
@@ -48,22 +48,22 @@ def test_cast_metric():
 def test_identity():
     from opendp.v1.trans import make_identity
     # test int
-    transformation = make_identity(SubstituteDistance, int)
+    transformation = make_identity(HammingDistance, int)
     arg = 123
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(SubstituteDistance, float)
+    transformation = make_identity(HammingDistance, float)
     arg = 123.123
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(SubstituteDistance, str)
+    transformation = make_identity(HammingDistance, str)
     arg = "hello, world"
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(SubstituteDistance, "Vec<i32>")
+    transformation = make_identity(HammingDistance, "Vec<i32>")
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == arg

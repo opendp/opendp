@@ -1,4 +1,4 @@
-from opendp.v1.typing import SubstituteDistance
+from opendp.v1.typing import HammingDistance
 
 
 def test_type_getters():

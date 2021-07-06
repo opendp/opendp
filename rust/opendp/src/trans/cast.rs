@@ -1,5 +1,5 @@
 use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
-use crate::dist::{SubstituteDistance, SymmetricDistance};
+use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{CastFrom};
@@ -49,10 +49,10 @@ macro_rules! impl_metric_cast {
         }
     }
 }
-impl_metric_cast!((SubstituteDistance, SymmetricDistance), 2);
-impl_metric_cast!((SymmetricDistance, SubstituteDistance), 1);
+impl_metric_cast!((HammingDistance, SymmetricDistance), 2);
+impl_metric_cast!((SymmetricDistance, HammingDistance), 1);
 impl_metric_cast!((SymmetricDistance, SymmetricDistance), 1);
-impl_metric_cast!((SubstituteDistance, SubstituteDistance), 1);
+impl_metric_cast!((HammingDistance, HammingDistance), 1);
 
 pub fn make_cast_metric<D, MI, MO>(
     domain: D
@@ -74,7 +74,7 @@ pub fn make_cast_metric<D, MI, MO>(
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{SubstituteDistance, SymmetricDistance};
+    use crate::dist::{HammingDistance, SymmetricDistance};
     use crate::error::ExplainUnwrap;
 
     use super::*;
@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn test_cast_metric() -> Fallible<()> {
         let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
-        let caster = make_cast_metric::<VectorDomain<AllDomain<_>>, SubstituteDistance, SymmetricDistance>(VectorDomain::new_all())?;
+        let caster = make_cast_metric::<VectorDomain<AllDomain<_>>, HammingDistance, SymmetricDistance>(VectorDomain::new_all())?;
         let _res = caster.function.eval(&data)?;
         assert!(!caster.stability_relation.eval(&1, &1)?);
         assert!(caster.stability_relation.eval(&1, &2)?);
