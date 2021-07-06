@@ -39,7 +39,7 @@
 //! use opendp::meas;
 //! use opendp::trans;
 //! use opendp::trans::{manipulation, sum, make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
-//! use opendp::dist::{HammingDistance, L1Distance};
+//! use opendp::dist::{SubstituteDistance, L1Distance};
 //! use opendp::error::*;
 //! use opendp::chain::{make_chain_tt, make_chain_mt};
 //! use opendp::meas::make_base_laplace;

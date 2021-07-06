@@ -84,12 +84,12 @@ pub fn make_is_null<DIA>() -> Fallible<Transformation<VectorDomain<DIA>, VectorD
 mod tests {
 
     use super::*;
-    use crate::dist::{HammingDistance};
+    use crate::dist::{SubstituteDistance};
     use crate::dom::{AllDomain, InherentNullDomain};
 
     #[test]
     fn test_identity() {
-        let identity = make_identity(AllDomain::new(), HammingDistance).unwrap_test();
+        let identity = make_identity(AllDomain::new(), SubstituteDistance).unwrap_test();
         let arg = 99;
         let ret = identity.function.eval(&arg).unwrap_test();
         assert_eq!(ret, 99);

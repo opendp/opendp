@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char};
 
 use opendp::core::DatasetMetric;
-use opendp::dist::{HammingDistance, SymmetricDistance};
+use opendp::dist::{SubstituteDistance, SymmetricDistance};
 use opendp::dom::{InherentNull, AllDomain, VectorDomain};
 use opendp::err;
 use opendp::traits::{CastFrom, CheckNull};
@@ -137,7 +137,7 @@ mod tests {
     fn test_make_cast_metric() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_cast_metric(
             "SymmetricDistance".to_char_p(),
-            "HammingDistance".to_char_p(),
+            "SubstituteDistance".to_char_p(),
             "String".to_char_p()
         ))?;
         let arg = AnyObject::new_raw(vec!["a".to_string(), "b".to_string()]);

@@ -517,7 +517,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 mod tests {
     use std::ops::Bound;
 
-    use opendp::dist::{HammingDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
+    use opendp::dist::{SubstituteDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
     use opendp::dom::{AllDomain, IntervalDomain, VectorDomain};
     use opendp::error::*;
     use opendp::meas;
@@ -553,7 +553,7 @@ mod tests {
 
         let metric1 = AnyMetric::new(SymmetricDistance::default());
         let metric2 = AnyMetric::new(SymmetricDistance::default());
-        let metric3 = AnyMetric::new(HammingDistance::default());
+        let metric3 = AnyMetric::new(SubstituteDistance::default());
         assert!(metric1 == metric2);
         assert!(metric1 != metric3);
 
