@@ -76,7 +76,6 @@ def make_base_gaussian(
 
 def make_base_geometric(
     scale,
-    bounds: Any = None,
     D: RuntimeTypeDescriptor = "AllDomain<i32>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
@@ -84,8 +83,6 @@ def make_base_geometric(
     Adjust D to noise vector-valued data.
     
     :param scale: noise scale parameter to the geometric distribution
-    :param bounds: Set bounds on the count to make the algorithm run in constant-time.
-    :type bounds: Any
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: RuntimeTypeDescriptor
     :param QO: Data type of the sensitivity, scale, and budget.
@@ -99,21 +96,18 @@ def make_base_geometric(
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    T = get_domain_atom(D)
-    OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_geometric
-    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, bounds, D, QO), Measurement))
+    return c_to_py(unwrap(function(scale, D, QO), Measurement))
 
 
 def make_base_stability(

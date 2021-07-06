@@ -143,9 +143,6 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
     if type_name == "String":
         return _slice_to_string(raw)
 
-    if type_name.startswith("Option<(") and type_name.endswith(")>"):
-        return _slice_to_option_tuple(raw, type_name)
-
     raise UnknownTypeException(type_name)
 
 
@@ -169,9 +166,6 @@ def _py_to_slice(value: Any, type_name: str) -> FfiSlicePtr:
 
     if type_name == "String":
         return _string_to_slice(value)
-
-    if type_name.startswith("Option<(") and type_name.endswith(")>"):
-        return _option_tuple_to_slice(value, type_name)
 
     raise UnknownTypeException(type_name)
 
@@ -257,21 +251,6 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: str) -> Tuple[Any, ...]:
     # tuple of instances of python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value
                  for void_p, name in zip(ptr_data, inner_type_names))
-
-
-def _option_tuple_to_slice(val: Optional[Tuple[Any, ...]], type_name: str) -> FfiSlicePtr:
-    if val is None:
-        return _wrap_in_slice((ctypes.c_void_p * 0)(), 0)
-    else:
-        return _tuple_to_slice(val, type_name[7:-1])
-
-
-def _slice_to_option_tuple(raw: FfiSlicePtr, type_name) -> Optional[Tuple[Any, ...]]:
-    if raw.contents.len == 0:
-        return None
-    if raw.contents.len == 2:
-        return _tuple_to_slice(raw, type_name)
-    raise OpenDPException("Option<(_, _)> types must contains tuples of length 2")
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:

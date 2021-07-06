@@ -227,10 +227,6 @@ class RuntimeType(object):
                     f"inferred type is {inferred}, expected {expected}"
 
         elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
-            # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
-            if expected.origin == "Option" and inferred.origin != "Option":
-                expected = expected.args[0]
-
             assert expected.origin == inferred.origin, \
                 f"inferred type is {inferred.origin}, expected {expected.origin}"
 
