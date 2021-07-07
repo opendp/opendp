@@ -18,7 +18,7 @@ pub struct AllDomain<T> {
     _marker: PhantomData<T>,
 }
 impl<T> Default for AllDomain<T> {
-    fn default() -> Self { AllDomain { _marker: PhantomData } }
+    fn default() -> Self { Self::new() }
 }
 impl<T> AllDomain<T> {
     pub fn new() -> Self {
@@ -174,7 +174,7 @@ pub struct VectorDomain<D: Domain> {
     pub element_domain: D,
 }
 impl<D: Domain + Default> Default for VectorDomain<D> {
-    fn default() -> Self { Self { element_domain: D::default() } }
+    fn default() -> Self { Self::new(D::default()) }
 }
 impl<D: Domain> VectorDomain<D> {
     pub fn new(element_domain: D) -> Self {
@@ -219,7 +219,7 @@ pub struct InherentNullDomain<D: Domain>
 }
 impl<D: Domain + Default> Default for InherentNullDomain<D>
     where D::Carrier: InherentNull {
-    fn default() -> Self { Self { element_domain: D::default() } }
+    fn default() -> Self { Self::new(D::default()) }
 }
 impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
     pub fn new(member_domain: D) -> Self {
@@ -255,7 +255,7 @@ pub struct OptionNullDomain<D: Domain> {
     pub element_domain: D,
 }
 impl<D: Domain + Default> Default for OptionNullDomain<D> {
-    fn default() -> Self { Self { element_domain: D::default() } }
+    fn default() -> Self { Self::new(D::default()) }
 }
 impl<D: Domain> OptionNullDomain<D> {
     pub fn new(member_domain: D) -> Self {
