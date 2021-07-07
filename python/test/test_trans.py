@@ -91,7 +91,6 @@ def test_is_null():
         make_is_null(DIA=OptionNullDomain[AllDomain[float]])
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
-test_is_null()
 
 # TODO: cannot test independently until Vec<String> data loader implemented
 def test_split_lines__cast__impute():
