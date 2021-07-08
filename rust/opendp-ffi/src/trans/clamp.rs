@@ -5,7 +5,7 @@ use std::os::raw::{c_char, c_void};
 use num::One;
 
 use opendp::core::{DatasetMetric, Metric};
-use opendp::dist::{HammingDistance, SymmetricDistance, AbsoluteDistance, L1Distance, L2Distance};
+use opendp::dist::{SubstituteDistance, SymmetricDistance, AbsoluteDistance, L1Distance, L2Distance};
 use opendp::dom::{AllDomain, VectorDomain, IntervalDomain};
 use opendp::err;
 use opendp::traits::{DistanceConstant};
