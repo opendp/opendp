@@ -2,17 +2,18 @@ use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transforma
 use crate::dist::{HammingDistance, SymmetricDistance};
 use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{CastFrom};
+use crate::traits::{CastFrom, CheckNull};
 use crate::trans::make_row_by_row;
 
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TI> -> Vec<Option<TO>>
 pub fn make_cast<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone, TO: 'static + CastFrom<TI> {
+    where TI: 'static + Clone, TO: 'static + CastFrom<TI> + CheckNull {
     make_row_by_row(
         AllDomain::new(),
         OptionNullDomain::new(AllDomain::new()),
-        |v| TO::cast(v.clone()).ok())
+        |v| TO::cast(v.clone()).ok()
+            .and_then(|v| if v.is_null() {None} else {Some(v)}))
 }
 
 /// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.

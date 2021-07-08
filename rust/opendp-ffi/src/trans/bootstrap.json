@@ -53,6 +53,18 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
+    "make_is_null": {
+        "description": "Make a Transformation that checks if each element in a vector is null.",
+        "args": [
+            {
+                "name": "DIA",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic input domain"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
     "make_cast_inherent": {
         "description": "Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. \nIf cast fails, fill with `TO`'s null value.",
         "args": [

@@ -23,7 +23,7 @@ def test_cast_inherent():
 def test_impute_constant_inherent():
     from opendp.v1.trans import make_split_lines, make_cast, make_impute_constant
     tester = make_split_lines() >> make_cast(TI=str, TO=float) >> make_impute_constant(-1.)
-    assert tester("nanx\n1.") == [-1., 1.]
+    assert tester("nan\n1.") == [-1., 1.]
 
 
 def test_cast_default():
@@ -68,6 +68,29 @@ def test_identity():
     ret = transformation(arg)
     assert ret == arg
 
+
+def test_is_equal():
+    from opendp.v1.trans import make_is_equal
+    tester = make_is_equal(3)
+    assert tester([1, 2, 3]) == [False, False, True]
+
+
+def test_is_null():
+    from opendp.v1.trans import make_split_lines, make_cast_inherent, make_is_null
+    tester = (
+        make_split_lines() >>
+        make_cast_inherent(TI=str, TO=float) >>
+        make_is_null(DIA=InherentNullDomain[AllDomain[float]])
+    )
+    assert tester("nan\n1.\ninf") == [True, False, False]
+
+    from opendp.v1.trans import make_split_lines, make_cast, make_is_null
+    tester = (
+        make_split_lines() >>
+        make_cast(TI=str, TO=float) >>
+        make_is_null(DIA=OptionNullDomain[AllDomain[float]])
+    )
+    assert tester("nan\n1.\ninf") == [True, False, False]
 
 # TODO: cannot test independently until Vec<String> data loader implemented
 def test_split_lines__cast__impute():

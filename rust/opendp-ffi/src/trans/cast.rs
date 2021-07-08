@@ -5,7 +5,7 @@ use opendp::core::DatasetMetric;
 use opendp::dist::{HammingDistance, SymmetricDistance};
 use opendp::dom::{InherentNull, AllDomain, VectorDomain};
 use opendp::err;
-use opendp::traits::CastFrom;
+use opendp::traits::{CastFrom, CheckNull};
 use opendp::trans::{make_cast, make_cast_default, make_cast_inherent, make_cast_metric, DatasetMetricCast};
 
 use crate::any::AnyTransformation;
@@ -23,7 +23,7 @@ pub extern "C" fn opendp_trans__make_cast(
 
     fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
         where TI: 'static + Clone,
-              TO: 'static + CastFrom<TI> {
+              TO: 'static + CastFrom<TI> + CheckNull {
         make_cast::<TI, TO>().into_any()
     }
     dispatch!(monomorphize, [(TI, @primitives), (TO, @primitives)], ())

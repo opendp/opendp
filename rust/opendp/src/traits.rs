@@ -219,3 +219,32 @@ impl CastFrom<bool> for String {
         Ok(v.to_string())
     }
 }
+
+pub trait CheckNull { fn is_null(&self) -> bool; }
+macro_rules! impl_check_null_for_non_null {
+    ($($ty:ty),+) => {
+        $(impl CheckNull for $ty {
+            #[inline]
+            fn is_null(&self) -> bool {false}
+        })+
+        $(impl CheckNull for Option<$ty> {
+            #[inline]
+            fn is_null(&self) -> bool {self.is_none()}
+        })+
+    }
+}
+impl_check_null_for_non_null!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String);
+macro_rules! impl_check_null_for_float {
+    ($($ty:ty),+) => {
+        $(impl CheckNull for $ty {
+            #[inline]
+            fn is_null(&self) -> bool {self.is_nan()}
+        })+
+        $(impl CheckNull for Option<$ty> {
+            fn is_null(&self) -> bool {
+                if let Some(v) = self {v.is_nan()} else {true}
+            }
+        })+
+    }
+}
+impl_check_null_for_float!(f64, f32);
