@@ -7,10 +7,12 @@ use crate::error::*;
 use crate::samplers::SampleGaussian;
 use crate::traits::InfCast;
 
-// const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
+// const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / std::f64::consts::PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
-fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float + InfCast<f64>, MI: SensitivityMetric<Distance=T>>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>> {
+fn make_gaussian_privacy_relation<T, MI>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>>
+    where T: 'static + Clone + SampleGaussian + Float + InfCast<f64>,
+          MI: SensitivityMetric<Distance=T> {
     PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
         let _2 = T::inf_cast(2.)?;
         let additive_gauss_const = T::inf_cast(ADDITIVE_GAUSS_CONST)?;
