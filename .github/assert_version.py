@@ -3,6 +3,7 @@ import toml
 
 # all version numbers should be:
 version = open("../VERSION", 'r').read()
+print("Checking if all version numbers are synchronized at", version)
 
 # check that python version is set properly
 config = configparser.RawConfigParser()
@@ -22,3 +23,5 @@ assert opendp_ffi_toml['package']['version'] == version, \
 
 assert opendp_ffi_toml['dependencies']['opendp']['version'] == version, \
     "rust/opendp-ffi/Cargo.toml opendp dependency is incorrect"
+
+print("All version numbers are synchronized")
