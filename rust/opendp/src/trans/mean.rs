@@ -14,6 +14,7 @@ pub fn make_bounded_mean<T>(
     where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactCast<usize>, for <'a> T: Sum<&'a T>,
           IntDistance: InfCast<T> {
     let _n = T::exact_cast(n)?;
+    let _2 = T::exact_cast(2)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
@@ -23,7 +24,7 @@ pub fn make_bounded_mean<T>(
         Function::new(move |arg: &Vec<T>| arg.iter().sum::<T>() / _n),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant((upper - lower) / _n / num_cast!(2; T)?)))
+        StabilityRelation::new_from_constant((upper - lower) / _n / _2)))
 }
 
 
