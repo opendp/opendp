@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
 
 // default type for distances between datasets
-pub type IntDistance = u16;
+pub type IntDistance = u32;
 
 /// Measures
 #[derive(Clone)]
