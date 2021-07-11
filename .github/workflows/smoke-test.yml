@@ -17,7 +17,7 @@ jobs:
       - name: Assert version
         run: |
           pip install toml
-          (cd ./.github && python assert_version.py)
+          (cd ../.github && python assert_version.py)
 
       - name: Cache Rust dependencies
         uses: actions/cache@v2
