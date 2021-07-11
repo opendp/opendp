@@ -2,8 +2,9 @@ use num::One;
 
 use crate::core::{Domain, Function, Metric, StabilityRelation, Transformation, DatasetMetric};
 use crate::error::*;
-use crate::traits::{DistanceConstant};
+use crate::traits::{DistanceConstant, CheckNull};
 use crate::dom::{VectorDomain, AllDomain};
+use crate::dist::SymmetricDistance;
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -13,7 +14,7 @@ pub(crate) fn make_row_by_row<'a, DIA, DOA, M, F: 'static + Fn(&DIA::Carrier) ->
     atom_function: F
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
-          DIA::Carrier: 'static, DOA::Carrier: 'static,
+          DIA::Carrier: 'static,
           M: DatasetMetric {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
@@ -32,7 +33,7 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M, F: 'static + Fn(&DIA::Carrie
     atom_function: F
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
-          DIA::Carrier: 'static, DOA::Carrier: 'static,
+          DIA::Carrier: 'static,
           M: DatasetMetric {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
@@ -59,15 +60,23 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
 
 /// A [`Transformation`] that checks equality elementwise with `value`.
 /// Maps a Vec<T> -> Vec<bool>
-pub fn make_is_equal<M, TI>(
+pub fn make_is_equal<TI>(
     value: TI
-) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, M, M>>
-    where M: DatasetMetric,
-          TI: 'static + PartialEq {
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
+    where TI: 'static + PartialEq {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
         move |v| v == &value)
+}
+
+pub fn make_is_null<DIA>() -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
+    where DIA: Domain + Default,
+          DIA::Carrier: 'static + CheckNull {
+    make_row_by_row(
+        DIA::default(),
+        AllDomain::default(),
+        |v| v.is_null())
 }
 
 
@@ -75,12 +84,12 @@ pub fn make_is_equal<M, TI>(
 mod tests {
 
     use super::*;
-    use crate::dist::{HammingDistance};
-    use crate::dom::AllDomain;
+    use crate::dist::{SubstituteDistance};
+    use crate::dom::{AllDomain, InherentNullDomain};
 
     #[test]
     fn test_identity() {
-        let identity = make_identity(AllDomain::new(), HammingDistance).unwrap_test();
+        let identity = make_identity(AllDomain::new(), SubstituteDistance).unwrap_test();
         let arg = 99;
         let ret = identity.function.eval(&arg).unwrap_test();
         assert_eq!(ret, 99);
@@ -88,8 +97,18 @@ mod tests {
 
     #[test]
     fn test_is_equal() -> Fallible<()> {
-        let is_equal = make_is_equal::<HammingDistance, _>("alpha".to_string())?;
+        let is_equal = make_is_equal("alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
+        let ret = is_equal.function.eval(&arg)?;
+        assert_eq!(ret, vec![true, false, false]);
+        assert!(is_equal.stability_relation.eval(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_null() -> Fallible<()> {
+        let is_equal = make_is_null::<InherentNullDomain<AllDomain<_>>>()?;
+        let arg = vec![f64::NAN, 1., 2.];
         let ret = is_equal.function.eval(&arg)?;
         assert_eq!(ret, vec![true, false, false]);
         assert!(is_equal.stability_relation.eval(&1, &1)?);

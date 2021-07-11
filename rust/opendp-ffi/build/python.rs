@@ -4,9 +4,9 @@ use std::io::Read;
 use std::path::PathBuf;
 
 use indexmap::map::IndexMap;
+use serde_json::Value;
 
 use crate::{Argument, Function, Module, RuntimeType};
-use serde_json::Value;
 
 /// Top-level function to generate python bindings, including all modules.
 pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf, String> {
@@ -280,12 +280,19 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .filter(|arg| arg.is_type)
         .map(|type_arg| {
             let name = type_arg.name.as_ref().expect("type args must be named");
-            if let Some(example) = generate_public_example(func, type_arg) {
-                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example})"#,
-                        name = name, example = example)
+            let generics = if type_arg.generics.is_empty() {
+                "".to_string()
             } else {
-                format!(r#"{name} = RuntimeType.parse(type_name={name})"#,
-                        name = name)
+                format!(", generics=[{}]", type_arg.generics.iter()
+                    .map(|v| format!("\"{}\"", v))
+                    .collect::<Vec<_>>().join(", "))
+            };
+            if let Some(example) = generate_public_example(func, type_arg) {
+                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example}{generics})"#,
+                        name = name, example = example, generics = generics)
+            } else {
+                format!(r#"{name} = RuntimeType.parse(type_name={name}{generics})"#,
+                        name = name, generics = generics)
             }
         })
         // additional types that are constructed by introspecting existing types
@@ -294,6 +301,14 @@ fn generate_type_arg_formatter(func: &Function) -> String {
                 format!("{name} = {derivation}",
                         name = type_spec.name(),
                         derivation = type_spec.rust_type.as_ref().unwrap().to_python())))
+        .chain(func.args.iter()
+            .filter(|arg| !arg.generics.is_empty())
+            .map(|arg|
+                format!("{name} = {name}.substitute({args})",
+                        name=arg.name.as_ref().unwrap(),
+                        args=arg.generics.iter()
+                            .map(|generic| format!("{generic}={generic}", generic = generic))
+                            .collect::<Vec<_>>().join(", "))))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -316,11 +331,11 @@ impl RuntimeType {
             Self::Lower { root: arg, index } =>
                 format!("{}.args[{}]", arg.to_python(), index),
             Self::Function { function, params } =>
-                format!("{function}({params})", function = function, params = params.join(",")),
+                format!("{function}({params})", function = function, params = params.join(", ")),
             Self::Raise { origin, args } =>
                 format!("RuntimeType(origin='{origin}', args=[{args}])",
                         origin = origin,
-                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(",")),
+                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(", ")),
         }
     }
 }

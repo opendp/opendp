@@ -6,7 +6,7 @@ import numpy as np
 import opendp
 from opendp.v1.meas import make_base_laplace, make_base_stability
 from opendp.v1.trans import make_count_by
-from opendp.v1.typing import L2Sensitivity, SymmetricDistance
+from opendp.v1.typing import L2Distance, SymmetricDistance
 
 
 def get_bounded_vocabulary(corpus_path, dataset_distance):
@@ -33,7 +33,7 @@ def privatize_vocabulary(word_count, line_count, dataset_distance, budget):
         0., 1000.)
 
     print("chosen scale and threshold:", scale, threshold)
-    # stability_mech = make_base_stability(line_count, scale, threshold, L2Sensitivity[float], str, int)
+    # stability_mech = make_base_stability(line_count, scale, threshold, L2Distance[float], str, int)
     # print("does chosen scale and threshold pass:", stability_mech.check(d_in, d_out))
 
     laplace_mechanism = make_base_laplace(scale, float)
@@ -49,8 +49,8 @@ def privatize_vocabulary(word_count, line_count, dataset_distance, budget):
 
 
 def check_stability(scale, threshold, line_count, dataset_distance, budget):
-    count_by = make_count_by(line_count, SymmetricDistance, L2Sensitivity[float], str, int)
-    base_stability = make_base_stability(line_count, scale, threshold, L2Sensitivity[float], str, int)
+    count_by = make_count_by(line_count, SymmetricDistance, L2Distance[float], str, int)
+    base_stability = make_base_stability(line_count, scale, threshold, L2Distance[float], str, int)
     stability_mech = count_by >> base_stability
 
     # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts

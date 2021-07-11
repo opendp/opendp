@@ -6,7 +6,7 @@ use std::os::raw::{c_char, c_void};
 use num::{Float, Integer, NumCast, One, Zero};
 
 use opendp::core::SensitivityMetric;
-use opendp::dist::{L1Sensitivity, L2Sensitivity};
+use opendp::dist::{L1Distance, L2Distance};
 use opendp::err;
 use opendp::meas::{BaseStabilityNoise, make_base_stability};
 use opendp::samplers::CastInternalReal;
@@ -41,7 +41,7 @@ pub extern "C" fn opendp_meas__make_base_stability(
         let scale = *try_as_ref!(scale as *const TOC);
         let threshold = *try_as_ref!(threshold as *const TOC);
         dispatch!(monomorphize2, [
-            (MI, [L1Sensitivity<TOC>, L2Sensitivity<TOC>]),
+            (MI, [L1Distance<TOC>, L2Distance<TOC>]),
             (TIK, @hashable),
             (TIC, @integers)
         ], (n, scale, threshold))

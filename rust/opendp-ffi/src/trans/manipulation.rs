@@ -1,15 +1,16 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use opendp::core::DatasetMetric;
-use opendp::dist::{HammingDistance, SymmetricDistance};
-use opendp::dom::{AllDomain, VectorDomain};
+use opendp::core::{DatasetMetric};
+use opendp::dist::{SubstituteDistance, SymmetricDistance};
+use opendp::dom::{AllDomain, VectorDomain, OptionNullDomain, InherentNullDomain, InherentNull};
 use opendp::err;
-use opendp::trans::{make_identity, make_is_equal};
+use opendp::trans::{make_identity, make_is_equal, make_is_null};
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
+use opendp::traits::CheckNull;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(
@@ -42,18 +43,42 @@ pub extern "C" fn opendp_trans__make_identity(
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_is_equal(
     value: *const c_void,
-    M: *const c_char, TI: *const c_char,
+    TI: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let M = try_!(Type::try_from(M));
     let TI = try_!(Type::try_from(TI));
 
-    fn monomorphize<M, TI>(value: *const c_void) -> FfiResult<*mut AnyTransformation> where
-        M: 'static + DatasetMetric,
+    fn monomorphize<TI>(value: *const c_void) -> FfiResult<*mut AnyTransformation> where
         TI: 'static + Clone + PartialEq {
         let value = try_as_ref!(value as *const TI).clone();
-        make_is_equal::<M, TI>(value).into_any()
+        make_is_equal::<TI>(value).into_any()
     }
-    dispatch!(monomorphize, [(M, @dist_dataset), (TI, @primitives)], (value))
+    dispatch!(monomorphize, [(TI, @primitives)], (value))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_trans__make_is_null(
+    DIA: *const c_char,
+) -> FfiResult<*mut AnyTransformation> {
+    let DIA = try_!(Type::try_from(DIA));
+    let T = try_!(DIA.get_domain_atom());
+
+    match &DIA.contents {
+        TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
+            fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
+                where Option<T>: 'static + CheckNull {
+                make_is_null::<OptionNullDomain<AllDomain<T>>>().into_any()
+            }
+            dispatch!(monomorphize, [(T, @primitives)], ())
+        }
+        TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
+            fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
+                where T: 'static + CheckNull + InherentNull {
+                make_is_null::<InherentNullDomain<AllDomain<T>>>().into_any()
+            }
+            dispatch!(monomorphize, [(T, [f64, f32])], ())
+        },
+        _ => err!(TypeParse, "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>").into()
+    }
 }
 
 
@@ -85,7 +110,6 @@ mod tests {
     fn test_make_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_is_equal(
             util::into_raw(1) as *const c_void,
-            "SymmetricDistance".to_char_p(),
             "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);

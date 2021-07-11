@@ -2,20 +2,20 @@ use std::ops::{Add, Mul, Sub};
 
 use num::Float;
 
-use crate::core::{DatasetMetric, Domain, Transformation};
+use crate::core::{Domain, Transformation};
 use crate::dom::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::dom::InherentNull;
 use crate::samplers::SampleUniform;
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
+use crate::dist::SymmetricDistance;
 
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
 /// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
-pub fn make_impute_uniform_float<M, T>(
+pub fn make_impute_uniform_float<T>(
     lower: T, upper: T,
-) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, M, M>>
-    where M: DatasetMetric,
-          for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull {
+) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
+    where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull {
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
@@ -59,13 +59,12 @@ impl<T: InherentNull> ImputableDomain for InherentNullDomain<AllDomain<T>> {
 /// Maps a Vec<Option<T>> -> Vec<T> if input domain is AllDomain<Option<T>>,
 ///     or Vec<T> -> Vec<T> if input domain is NullableDomain<AllDomain<T>>
 /// Type argument DA is "Domain of the Atom"; the domain type inside VectorDomain.
-pub fn make_impute_constant<DA, M>(
+pub fn make_impute_constant<DA>(
     constant: DA::NonNull
-) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::NonNull>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::NonNull>>, SymmetricDistance, SymmetricDistance>>
     where DA: ImputableDomain,
           DA::NonNull: 'static + Clone,
-          DA::Carrier: 'static,
-          M: DatasetMetric {
+          DA::Carrier: 'static {
     if DA::is_null(&constant) { return fallible!(MakeTransformation, "Constant may not be null.") }
 
     make_row_by_row(
@@ -77,14 +76,13 @@ pub fn make_impute_constant<DA, M>(
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::HammingDistance;
     use crate::error::ExplainUnwrap;
     use crate::trans::{make_impute_constant, make_impute_uniform_float};
     use crate::dom::{OptionNullDomain, InherentNullDomain};
 
     #[test]
     fn test_impute_uniform() {
-        let imputer = make_impute_uniform_float::<HammingDistance, f64>(2.0, 2.0).unwrap_test();
+        let imputer = make_impute_uniform_float::<f64>(2.0, 2.0).unwrap_test();
 
         let result = imputer.function.eval(&vec![1.0, f64::NAN]).unwrap_test();
 
@@ -95,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_impute_constant_option() {
-        let imputer = make_impute_constant::<OptionNullDomain<_>, HammingDistance>("IMPUTED".to_string()).unwrap_test();
+        let imputer = make_impute_constant::<OptionNullDomain<_>>("IMPUTED".to_string()).unwrap_test();
 
         let result = imputer.function.eval(&vec![Some("A".to_string()), None]).unwrap_test();
 
@@ -106,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_impute_constant_inherent() {
-        let imputer = make_impute_constant::<InherentNullDomain<_>, HammingDistance>(12.).unwrap_test();
+        let imputer = make_impute_constant::<InherentNullDomain<_>>(12.).unwrap_test();
 
         let result = imputer.function.eval(&vec![f64::NAN, 23.]).unwrap_test();
 

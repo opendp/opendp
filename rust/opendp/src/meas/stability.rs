@@ -3,8 +3,8 @@ use std::hash::Hash;
 
 use num::{Integer, Float, NumCast, Zero};
 
-use crate::core::{Measurement, Function, PrivacyRelation, Metric, SensitivityMetric};
-use crate::dist::{L1Sensitivity, L2Sensitivity, SmoothedMaxDivergence};
+use crate::core::{Measurement, Function, PrivacyRelation, SensitivityMetric};
+use crate::dist::{L1Distance, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::samplers::{SampleLaplace, SampleGaussian};
 use crate::error::Fallible;
@@ -16,15 +16,15 @@ use crate::error::Fallible;
 pub type CountDomain<TIK, TIC> = SizedDomain<MapDomain<AllDomain<TIK>, AllDomain<TIC>>>;
 
 // tie metric with distribution
-pub trait BaseStabilityNoise: Metric {
+pub trait BaseStabilityNoise: SensitivityMetric {
     fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance>;
 }
-impl<TOC: SampleLaplace> BaseStabilityNoise for L1Sensitivity<TOC> {
+impl<TOC: SampleLaplace> BaseStabilityNoise for L1Distance<TOC> {
     fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance> {
         Self::Distance::sample_laplace(shift, scale, constant_time)
     }
 }
-impl<TOC: SampleGaussian> BaseStabilityNoise for L2Sensitivity<TOC> {
+impl<TOC: SampleGaussian> BaseStabilityNoise for L2Distance<TOC> {
     fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance> {
         Self::Distance::sample_gaussian(shift, scale, constant_time)
     }
@@ -33,7 +33,7 @@ impl<TOC: SampleGaussian> BaseStabilityNoise for L2Sensitivity<TOC> {
 pub fn make_base_stability<MI, TIK, TIC>(
     n: usize, scale: MI::Distance, threshold: MI::Distance
 ) -> Fallible<Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, MI::Distance>, MI, SmoothedMaxDivergence<MI::Distance>>>
-    where MI: BaseStabilityNoise + SensitivityMetric,
+    where MI: BaseStabilityNoise,
           TIK: Eq + Hash + Clone,
           TIC: Integer + Clone + NumCast,
           MI::Distance: 'static + Float + Clone + PartialOrd + NumCast {
@@ -106,7 +106,7 @@ mod tests {
         let mut arg = HashMap::new();
         arg.insert(true, 6);
         arg.insert(false, 4);
-        let measurement = make_base_stability::<L2Sensitivity<f64>, bool, i8>(10, 0.5, 1.)?;
+        let measurement = make_base_stability::<L2Distance<f64>, bool, i8>(10, 0.5, 1.)?;
         let _ret = measurement.function.eval(&arg)?;
         // println!("stability eval: {:?}", ret);
 
