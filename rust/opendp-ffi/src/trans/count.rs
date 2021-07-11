@@ -9,7 +9,7 @@ use num::traits::FloatConst;
 use opendp::core::{SensitivityMetric};
 use opendp::dist::{L1Distance, L2Distance, IntDistance};
 use opendp::err;
-use opendp::traits::{DistanceConstant, ExactCast, MaxConsecutiveInt, InfCast};
+use opendp::traits::{DistanceConstant, MaxConsecutiveInt, InfCast};
 use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct};
 
 use crate::any::{AnyObject, AnyTransformation};
@@ -24,7 +24,7 @@ pub extern "C" fn opendp_trans__make_count(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<TIA, TO>() -> FfiResult<*mut AnyTransformation>
         where TIA: 'static,
-              TO: 'static + ExactCast<usize> + Bounded + One + DistanceConstant<IntDistance> + MaxConsecutiveInt,
+              TO: 'static + TryFrom<usize> + Bounded + One + DistanceConstant<IntDistance> + MaxConsecutiveInt,
               IntDistance: InfCast<TO> {
         make_count::<TIA, TO>().into_any()
     }
