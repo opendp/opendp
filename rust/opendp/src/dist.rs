@@ -4,6 +4,9 @@ use std::marker::PhantomData;
 
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
 
+// default type for distances between datasets
+pub type IntDistance = u16;
+
 /// Measures
 #[derive(Clone)]
 pub struct MaxDivergence<Q>(PhantomData<Q>);
@@ -45,9 +48,8 @@ impl Default for SymmetricDistance {
 impl PartialEq for SymmetricDistance {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-
 impl Metric for SymmetricDistance {
-    type Distance = u32;
+    type Distance = IntDistance;
 }
 
 impl DatasetMetric for SymmetricDistance {}
@@ -64,7 +66,7 @@ impl PartialEq for SubstituteDistance {
 }
 
 impl Metric for SubstituteDistance {
-    type Distance = u32;
+    type Distance = IntDistance;
 }
 
 impl DatasetMetric for SubstituteDistance {}

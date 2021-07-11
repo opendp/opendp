@@ -23,7 +23,7 @@ pub(crate) fn make_row_by_row<'a, DIA, DOA, M, F: 'static + Fn(&DIA::Carrier) ->
             arg.iter().map(|v| atom_function(v)).collect()),
         M::default(),
         M::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(1)))
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -42,13 +42,13 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M, F: 'static + Fn(&DIA::Carrie
             arg.iter().map(|v| atom_function(v)).collect()),
         M::default(),
         M::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(1)))
 }
 
 /// Constructs a [`Transformation`] representing the identity function.
 pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
     where D: Domain, D::Carrier: Clone,
-          M: Metric, M::Distance: DistanceConstant + One {
+          M: Metric, M::Distance: DistanceConstant<M::Distance> + One {
     Ok(Transformation::new(
         domain.clone(),
         domain,

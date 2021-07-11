@@ -3,8 +3,8 @@ use crate::dist::{MaxDivergence, L1Distance, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleTwoSidedGeometric;
-use crate::traits::DistanceCast;
 use num::Float;
+use crate::traits::{DistanceConstant, InfCast};
 
 
 pub trait GeometricDomain: Domain {
@@ -46,8 +46,8 @@ pub fn make_base_geometric<D, QO>(
     scale: QO, bounds: Option<(D::Atom, D::Atom)>
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
     where D: 'static + GeometricDomain,
-          D::Atom: 'static + DistanceCast + PartialOrd,
-          QO: 'static + Float + DistanceCast,
+          D::Atom: 'static + PartialOrd + Clone + InfCast<QO>,
+          QO: 'static + Float + DistanceConstant<D::Atom>,
           f64: From<QO> {
     if scale.is_sign_negative() { return fallible!(MakeMeasurement, "scale must not be negative") }
     if bounds.as_ref().map(|(lower, upper)| lower > upper).unwrap_or(false) {
