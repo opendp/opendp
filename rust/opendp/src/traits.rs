@@ -249,6 +249,7 @@ cartesian!([f32, f64], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_
 mod test_inf_cast {
     use crate::traits::InfCast;
 
+    #[allow(dead_code)]
     enum Diff { Equal, Prev, Next, Less, Greater }
 
     fn check_rounded_cast(input: f64, diff: Diff) {
@@ -276,6 +277,7 @@ mod test_inf_cast {
     }
 
     #[test]
+    // ignored test because it can take a while to run
     #[ignore]
     fn test_f64_f32() {
         check_rounded_cast(0., Diff::Equal);
