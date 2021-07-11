@@ -55,7 +55,7 @@ pub fn make_create_dataframe<K>(
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1_u32)
+        StabilityRelation::new_from_constant(1)
     ))
 }
 
@@ -77,7 +77,7 @@ pub fn make_split_dataframe<K>(
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(1)))
 }
 
 fn replace_col<K: Eq + Hash + Debug + Clone>(key: &K, df: &DataFrame<K>, col: Column) -> Fallible<DataFrame<K>> {
@@ -109,7 +109,7 @@ pub fn make_parse_column<K, T>(key: K, impute: bool) -> Fallible<Transformation<
         Function::new_fallible(move |arg: &DataFrame<K>| parse_column::<K, T>(&key, impute, arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(1)))
 }
 
 pub fn make_select_column<K, T>(key: K) -> Fallible<Transformation<DataFrameDomain<K>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
@@ -126,7 +126,7 @@ pub fn make_select_column<K, T>(key: K) -> Fallible<Transformation<DataFrameDoma
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(1)))
 }
 
 fn vec_string_to_str(src: &[String]) -> Vec<&str> {
@@ -151,7 +151,7 @@ pub fn make_split_lines() -> Fallible<Transformation<AllDomain<String>, VectorDo
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(1)))
 }
 
 fn parse_series<T>(col: &[&str], default_on_error: bool) -> Fallible<Vec<T>> where
@@ -184,7 +184,7 @@ pub fn make_split_records(separator: Option<&str>) -> Fallible<Transformation<Ve
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1_u32)))
+        StabilityRelation::new_from_constant(1)))
 }
 
 

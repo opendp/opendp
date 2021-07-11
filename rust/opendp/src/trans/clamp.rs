@@ -5,7 +5,7 @@ use num::One;
 use crate::core::{Function, Metric, StabilityRelation, Transformation, Domain};
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{DistanceConstant, DistanceCast};
+use crate::traits::{DistanceConstant, InfCast};
 use std::ops::Sub;
 use crate::dist::{AbsoluteDistance, SymmetricDistance};
 
@@ -44,8 +44,8 @@ impl<T> ClampableDomain<SymmetricDistance> for VectorDomain<AllDomain<T>>
 }
 
 impl<T, Q> ClampableDomain<AbsoluteDistance<Q>> for AllDomain<T>
-    where Q: DistanceConstant + One,
-          T: 'static + Clone + PartialOrd + DistanceCast + Sub<Output=T> {
+    where Q: DistanceConstant<T> + One,
+          T: 'static + Clone + PartialOrd + Sub<Output=T> + InfCast<Q> {
     type Atom = T;
     type OutputDomain = IntervalDomain<T>;
 
@@ -61,10 +61,10 @@ impl<T, Q> ClampableDomain<AbsoluteDistance<Q>> for AllDomain<T>
         StabilityRelation::new_all(
             // relation
             enclose!((lower, upper), move |d_in: &Q, d_out: &Q|
-                Ok(d_out.clone() >= min(d_in.clone(), Q::distance_cast(upper.clone() - lower.clone())?))),
+                Ok(d_out.clone() >= min(d_in.clone(), Q::inf_cast(upper.clone() - lower.clone())?))),
             // forward map
             Some(move |d_in: &Q|
-                Ok(Box::new(min(d_in.clone(), Q::distance_cast(upper.clone() - lower.clone())?)))),
+                Ok(Box::new(min(d_in.clone(), Q::inf_cast(upper.clone() - lower.clone())?)))),
             // backward map
             None::<fn(&_)->_>
         )
@@ -123,7 +123,7 @@ pub fn make_unclamp<DI, M>(lower: Bound<DI::Atom>, upper: Bound<DI::Atom>) -> Fa
           DI::Carrier: Clone,
           M: Metric,
           DI::Atom: 'static + Clone + PartialOrd,
-          M::Distance: DistanceConstant + One {
+          M::Distance: DistanceConstant<M::Distance> + One {
     Ok(Transformation::new(
         DI::new_input_domain(lower.clone(), upper.clone())?,
         DI::new_output_domain(),
