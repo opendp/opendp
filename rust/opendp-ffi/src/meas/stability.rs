@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::ops::AddAssign;
 use std::os::raw::{c_char, c_void};
 
-use num::{Float, Integer, NumCast, One, Zero};
+use num::{Float, Integer, One, Zero};
 
 use opendp::core::SensitivityMetric;
 use opendp::dist::{L1Distance, L2Distance};
@@ -14,6 +14,7 @@ use opendp::samplers::CastInternalReal;
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
+use opendp::traits::{MaxConsecutiveInt, ExactCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_stability(
@@ -24,18 +25,19 @@ pub extern "C" fn opendp_meas__make_base_stability(
     TIK: *const c_char,  // type of input key (hashable)
     TIC: *const c_char,  // type of input count (int)
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<TOC>(
+    fn monomorphize<TIC, TOC>(
         n: usize, scale: *const c_void, threshold: *const c_void,
         MI: Type, TIK: Type, TIC: Type,
     ) -> FfiResult<*mut AnyMeasurement>
-        where TOC: 'static + PartialOrd + Clone + NumCast + Float + CastInternalReal {
+        where TIC: 'static + Integer + Zero + One + AddAssign + Clone,
+              TOC: 'static + PartialOrd + Clone + Float + CastInternalReal + ExactCast<usize> + ExactCast<TIC> + MaxConsecutiveInt {
         fn monomorphize2<MI, TIK, TIC>(
             n: usize, scale: MI::Distance, threshold: MI::Distance,
         ) -> FfiResult<*mut AnyMeasurement>
             where MI: 'static + SensitivityMetric + BaseStabilityNoise,
                   TIK: 'static + Eq + Hash + Clone,
-                  TIC: 'static + Integer + Zero + One + AddAssign + Clone + NumCast,
-                  MI::Distance: 'static + Clone + NumCast + PartialOrd + Float + CastInternalReal {
+                  TIC: 'static + Integer + Zero + One + AddAssign + Clone,
+                  MI::Distance: 'static + Clone + PartialOrd + Float + CastInternalReal + ExactCast<usize> + ExactCast<TIC> + MaxConsecutiveInt {
             make_base_stability::<MI, TIK, TIC>(n, scale, threshold).into_any()
         }
         let scale = *try_as_ref!(scale as *const TOC);
@@ -43,7 +45,7 @@ pub extern "C" fn opendp_meas__make_base_stability(
         dispatch!(monomorphize2, [
             (MI, [L1Distance<TOC>, L2Distance<TOC>]),
             (TIK, @hashable),
-            (TIC, @integers)
+            (TIC, [TIC])
         ], (n, scale, threshold))
     }
     let MI = try_!(Type::try_from(MI));
@@ -52,6 +54,7 @@ pub extern "C" fn opendp_meas__make_base_stability(
 
     let TOC = try_!(MI.get_sensitivity_distance());
     dispatch!(monomorphize, [
+        (TIC, @integers),
         (TOC, @floats)
     ], (n, scale, threshold, MI, TIK, TIC))
 }

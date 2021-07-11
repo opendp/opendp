@@ -5,14 +5,15 @@ use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
+use crate::traits::InfCast;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
-fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float, MI: SensitivityMetric<Distance=T>>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>> {
+fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float + InfCast<f64>, MI: SensitivityMetric<Distance=T>>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>> {
     PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
-        let _2 = num_cast!(2.; T)?;
-        let additive_gauss_const = num_cast!(ADDITIVE_GAUSS_CONST; T)?;
+        let _2 = T::inf_cast(2.)?;
+        let additive_gauss_const = T::inf_cast(ADDITIVE_GAUSS_CONST)?;
 
         if d_in.is_sign_negative() {
             return fallible!(InvalidDistance, "gaussian mechanism: input sensitivity must be non-negative")
@@ -65,7 +66,7 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_gaussian<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
-          D::Atom: 'static + Clone + SampleGaussian + Float {
+          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
