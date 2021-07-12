@@ -1,26 +1,26 @@
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
-use std::convert::TryFrom;
 use std::hash::Hash;
 use std::ops::AddAssign;
 
-use num::{Bounded, Integer, One, Zero};
+use num::{Integer, One, Zero};
 
 use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{DistanceConstant, MaxConsecutiveInt, InfCast};
+use crate::traits::{DistanceConstant, MaxConsecutiveInt, InfCast, ExactCast};
 
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
-    where TO: TryFrom<usize> + One + DistanceConstant<IntDistance> + MaxConsecutiveInt, IntDistance: InfCast<TO> {
+    where TO: ExactCast<usize> + One + DistanceConstant<IntDistance> + MaxConsecutiveInt,
+          IntDistance: InfCast<TO> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>|
-            TO::try_from(arg.len()).unwrap_or(TO::MAX_CONSECUTIVE)),
+            TO::exact_cast(arg.len()).unwrap_or(TO::MAX_CONSECUTIVE)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_constant(TO::one())))
@@ -30,14 +30,14 @@ pub fn make_count<TIA, TO>(
 pub fn make_count_distinct<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Eq + Hash,
-          TO: TryFrom<usize> + Bounded + One + DistanceConstant<IntDistance>,
+          TO: ExactCast<usize> + MaxConsecutiveInt + One + DistanceConstant<IntDistance>,
           IntDistance: InfCast<TO> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
-            TO::try_from(len).unwrap_or(TO::max_value())
+            TO::exact_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
