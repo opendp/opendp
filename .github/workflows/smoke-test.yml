@@ -14,6 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Assert version
+        run: |
+          pip install toml
+          (cd ../.github && python assert_version.py)
+
       - name: Cache Rust dependencies
         uses: actions/cache@v2
         with:
@@ -35,6 +40,7 @@ jobs:
         with:
           name: libs
           path: rust/target/debug/libopendp_ffi.so
+
 
   python-test:
     needs: rust-build-and-test

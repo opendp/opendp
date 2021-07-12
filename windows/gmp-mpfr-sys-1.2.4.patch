@@ -1,0 +1,40 @@
+diff --git a/build.rs b/build.rs
+index 28b847f..a206a87 100644
+--- a/build.rs
++++ b/build.rs
+@@ -555,11 +555,13 @@ fn build_gmp(env: &Environment, lib: &Path, header: &Path) {
+         conf.push_str(" --host ");
+         conf.push_str(cross_target);
+     }
+-    configure(&build_dir, &OsString::from(conf));
+-    make_and_check(env, &build_dir);
+-    let build_lib = build_dir.join(".libs").join("libgmp.a");
++    //configure(&build_dir, &OsString::from(conf));
++    //make_and_check(env, &build_dir);
++    //let build_lib = build_dir.join(".libs").join("libgmp.a");
++    let build_lib = fs::canonicalize(Path::new("..\\gmp-6.2.0\\.libs\\libgmp.a")).unwrap();
+     copy_file_or_panic(&build_lib, &lib);
+-    let build_header = build_dir.join("gmp.h");
++    //let build_header = build_dir.join("gmp.h");
++    let build_header = fs::canonicalize(Path::new("..\\gmp-6.2.0\\gmp.h")).unwrap();
+     copy_file_or_panic(&build_header, &header);
+ }
+ 
+@@ -813,11 +815,13 @@ fn build_mpfr(env: &Environment, lib: &Path, header: &Path) {
+         conf.push_str(" --host ");
+         conf.push_str(cross_target);
+     }
+-    configure(&build_dir, &OsString::from(conf));
+-    make_and_check(env, &build_dir);
+-    let build_lib = build_dir.join("src").join(".libs").join("libmpfr.a");
++    //configure(&build_dir, &OsString::from(conf));
++    //make_and_check(env, &build_dir);
++    //let build_lib = build_dir.join("src").join(".libs").join("libmpfr.a");
++    let build_lib = fs::canonicalize(Path::new("..\\mpfr-4.0.2\\src\\.libs\\libmpfr.a")).unwrap();
+     copy_file_or_panic(&build_lib, &lib);
+-    let src_header = env.build_dir.join("mpfr-src").join("src").join("mpfr.h");
++    //let src_header = env.build_dir.join("mpfr-src").join("src").join("mpfr.h");
++    let src_header = fs::canonicalize(Path::new("..\\mpfr-4.0.2\\src\\mpfr.h")).unwrap();
+     copy_file_or_panic(&src_header, &header);
+ }
+ 
