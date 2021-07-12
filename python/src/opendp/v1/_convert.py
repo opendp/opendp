@@ -90,7 +90,7 @@ def c_to_py(value):
         except UnknownTypeException:
             raise
         except Exception as err:
-            print("MASKED ERROR:", err)
+            # print("MASKED ERROR:", err)
             print("using string fallback")
             # raise err
             # If we fail, resort to string representation.

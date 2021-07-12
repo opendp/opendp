@@ -471,16 +471,15 @@ pub trait IntoAnyMeasurementOutExt {
     fn into_any_out(self) -> AnyMeasurement;
 }
 
-impl<DO: 'static + Domain, MO: 'static + Measure> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DO, AnyMetric, MO>
-    where DO::Carrier: 'static,
-          MO::Distance: 'static + Clone + PartialOrd {
+impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DO, AnyMetric, AnyMeasure>
+    where DO::Carrier: 'static {
     fn into_any_out(self) -> AnyMeasurement {
         AnyMeasurement::new(
-            AnyDomain::new(self.input_domain),
+            self.input_domain,
             AnyDomain::new(self.output_domain),
             self.function.into_any_out(),
-            AnyMetric::new(self.input_metric),
-            AnyMeasure::new(self.output_measure),
+            self.input_metric,
+            self.output_measure,
             self.privacy_relation.into_any(),
         )
     }
