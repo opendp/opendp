@@ -14,7 +14,7 @@ impl PolyDomain {
 
 impl Domain for PolyDomain {
     type Carrier = Box<dyn Any>;
-    fn member(&self, _val: &Self::Carrier) -> bool { true }
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> { Ok(true) }
 }
 
 impl<DI, DO> Function<DI, DO>

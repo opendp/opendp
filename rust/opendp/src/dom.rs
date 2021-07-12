@@ -35,7 +35,7 @@ impl<T> PartialEq for AllDomain<T> {
 }
 impl<T> Domain for AllDomain<T> {
     type Carrier = T;
-    fn member(&self, _val: &Self::Carrier) -> bool { true }
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> { Ok(true) }
 }
 
 
@@ -51,7 +51,7 @@ impl<D: Domain> BoxDomain<D> {
 }
 impl<D: Domain> Domain for BoxDomain<D> {
     type Carrier = Box<D::Carrier>;
-    fn member(&self, val: &Self::Carrier) -> bool {
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         self.element_domain.member(val)
     }
 }
@@ -70,10 +70,10 @@ impl<D: Domain> DataDomain<D> {
 impl<D: Domain> Domain for DataDomain<D> where
     D::Carrier: 'static + Any {
     type Carrier = Box<dyn Any>;
-    fn member(&self, val: &Self::Carrier) -> bool {
-        val.downcast_ref::<D::Carrier>()
-            .map(|v| self.form_domain.member(v))
-            .unwrap_or(false)
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        let val = val.downcast_ref::<D::Carrier>()
+            .ok_or_else(|| err!(FailedCast, "failed to downcast to carrier type"))?;
+        self.form_domain.member(val)
     }
 }
 
@@ -112,17 +112,16 @@ impl<T: PartialOrd> IntervalDomain<T> {
 }
 impl<T: Clone + PartialOrd> Domain for IntervalDomain<T> {
     type Carrier = T;
-    fn member(&self, val: &Self::Carrier) -> bool {
-        let lower_ok = match &self.lower {
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        Ok(match &self.lower {
             Bound::Included(bound) => { val >= bound }
             Bound::Excluded(bound) => { val > bound }
             Bound::Unbounded => { true }
-        };
-        lower_ok && match &self.upper {
+        } && match &self.upper {
             Bound::Included(bound) => { val <= bound }
             Bound::Excluded(bound) => { val < bound }
             Bound::Unbounded => { true }
-        }
+        })
     }
 }
 
@@ -137,8 +136,8 @@ impl<D0: Domain, D1: Domain> PairDomain<D0, D1> {
 }
 impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1> {
     type Carrier = (D0::Carrier, D1::Carrier);
-    fn member(&self, val: &Self::Carrier) -> bool {
-        self.0.member(&val.0) && self.1.member(&val.1)
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        Ok(self.0.member(&val.0)? && self.1.member(&val.1)?)
     }
 }
 
@@ -161,9 +160,13 @@ impl<K, V> MapDomain<AllDomain<K>, AllDomain<V>> where K: Eq + Hash {
 }
 impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
     type Carrier = HashMap<DK::Carrier, DV::Carrier>;
-    fn member(&self, val: &Self::Carrier) -> bool {
-        val.iter().all(|(k, v)|
-            self.key_domain.member( k) && self.value_domain.member(v))
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        for (k, v) in val {
+            if !self.key_domain.member(k)? || !self.value_domain.member(v)? {
+                return Ok(false)
+            }
+        }
+        Ok(true)
     }
 }
 
@@ -188,8 +191,11 @@ impl<T> VectorDomain<AllDomain<T>> {
 }
 impl<D: Domain> Domain for VectorDomain<D> {
     type Carrier = Vec<D::Carrier>;
-    fn member(&self, val: &Self::Carrier) -> bool {
-        val.iter().all(|e| self.element_domain.member(e))
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        for e in val {
+            if !self.element_domain.member(e)? {return Ok(false)}
+        }
+        Ok(true)
     }
 }
 
@@ -206,7 +212,7 @@ impl<D: Domain> SizedDomain<D> {
 }
 impl<D: Domain> Domain for SizedDomain<D> {
     type Carrier = D::Carrier;
-    fn member(&self, val: &Self::Carrier) -> bool {
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         self.element_domain.member(val)
     }
 }
@@ -228,8 +234,8 @@ impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
 }
 impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull {
     type Carrier = D::Carrier;
-    fn member(&self, val: &Self::Carrier) -> bool {
-        if val.is_null() {return true}
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        if val.is_null() {return Ok(true)}
         self.element_domain.member(val)
     }
 }
@@ -264,9 +270,9 @@ impl<D: Domain> OptionNullDomain<D> {
 }
 impl<D: Domain> Domain for OptionNullDomain<D> {
     type Carrier = Option<D::Carrier>;
-    fn member(&self, value: &Self::Carrier) -> bool {
+    fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         value.as_ref()
             .map(|v| self.element_domain.member(v))
-            .unwrap_or(true)
+            .unwrap_or(Ok(true))
     }
 }

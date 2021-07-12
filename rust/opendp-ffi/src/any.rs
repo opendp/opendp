@@ -158,7 +158,7 @@ impl Downcast for AnyObject {
 pub struct AnyDomain {
     pub carrier_type: Type,
     domain: AnyBoxClonePartialEq,
-    member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> bool>,
+    member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>>,
 }
 
 impl AnyDomain {
@@ -167,10 +167,9 @@ impl AnyDomain {
             carrier_type: Type::of::<D::Carrier>(),
             domain: AnyBoxClonePartialEq::new_clone_partial_eq(domain),
             member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
-                let self_ = self_.downcast_ref::<D>().unwrap_assert("downcast of AnyDomain to constructed type will always work");
-                let val = val.downcast_ref::<D::Carrier>();
-                // FIXME: Return a Fallible here for bad downcast (https://github.com/opendp/opendp/issues/87)
-                val.map_or(false, |v| self_.member(v))
+                let self_ = self_.downcast_ref::<D>()
+                    .unwrap_assert("downcast of AnyDomain to constructed type will always work");
+                self_.member(val.downcast_ref::<D::Carrier>()?)
             }),
         }
     }
@@ -187,7 +186,7 @@ impl Downcast for AnyDomain {
 
 impl Domain for AnyDomain {
     type Carrier = AnyObject;
-    fn member(&self, val: &Self::Carrier) -> bool {
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         (self.member_glue)(self, val)
     }
 }
