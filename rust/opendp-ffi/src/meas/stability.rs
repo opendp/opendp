@@ -10,11 +10,11 @@ use opendp::dist::{L1Distance, L2Distance};
 use opendp::err;
 use opendp::meas::{BaseStabilityNoise, make_base_stability};
 use opendp::samplers::CastInternalReal;
+use opendp::traits::ExactIntCast;
 
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
-use opendp::traits::{MaxConsecutiveInt, ExactCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_stability(
@@ -30,14 +30,14 @@ pub extern "C" fn opendp_meas__make_base_stability(
         MI: Type, TIK: Type, TIC: Type,
     ) -> FfiResult<*mut AnyMeasurement>
         where TIC: 'static + Integer + Zero + One + AddAssign + Clone,
-              TOC: 'static + PartialOrd + Clone + Float + CastInternalReal + ExactCast<usize> + ExactCast<TIC> + MaxConsecutiveInt {
+              TOC: 'static + PartialOrd + Clone + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> {
         fn monomorphize2<MI, TIK, TIC>(
             n: usize, scale: MI::Distance, threshold: MI::Distance,
         ) -> FfiResult<*mut AnyMeasurement>
             where MI: 'static + SensitivityMetric + BaseStabilityNoise,
                   TIK: 'static + Eq + Hash + Clone,
                   TIC: 'static + Integer + Zero + One + AddAssign + Clone,
-                  MI::Distance: 'static + Clone + PartialOrd + Float + CastInternalReal + ExactCast<usize> + ExactCast<TIC> + MaxConsecutiveInt {
+                  MI::Distance: 'static + Clone + PartialOrd + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> {
             make_base_stability::<MI, TIK, TIC>(n, scale, threshold).into_any()
         }
         let scale = *try_as_ref!(scale as *const TOC);
