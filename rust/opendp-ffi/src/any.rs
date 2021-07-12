@@ -8,7 +8,6 @@
 use std::any;
 use std::any::Any;
 use std::cmp::Ordering;
-use std::marker::PhantomData;
 use std::rc::Rc;
 
 use opendp::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
@@ -19,23 +18,6 @@ use opendp::traits::{FallibleSub, MeasureDistance, MetricDistance};
 use crate::glue::Glue;
 use crate::util::Type;
 
-/// A marker for compile-time boolean types.
-pub trait Bool {
-    const VALUE: bool;
-}
-
-pub struct True;
-
-impl Bool for True {
-    const VALUE: bool = true;
-}
-
-pub struct False;
-
-impl Bool for False {
-    const VALUE: bool = false;
-}
-
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
     fn downcast<T: 'static>(self) -> Fallible<T>;
@@ -43,16 +25,15 @@ pub trait Downcast {
 }
 
 /// A struct wrapping a Box<dyn Any>, optionally implementing Clone and/or PartialEq.
-pub struct AnyBoxBase<CLONE: Bool, PARTIALEQ: Bool> {
-    _markers: (PhantomData<CLONE>, PhantomData<PARTIALEQ>),
+pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool> {
     pub value: Box<dyn Any>,
     clone_glue: Option<Glue<fn(&Self) -> Self>>,
     eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
 }
 
-impl<CLONE: Bool, PARTIALEQ: Bool> AnyBoxBase<CLONE, PARTIALEQ> {
+impl<const CLONE: bool, const PARTIALEQ: bool> AnyBoxBase<CLONE, PARTIALEQ> {
     fn new_base<T: 'static>(value: T, clone_glue: Option<Glue<fn(&Self) -> Self>>, eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>) -> Self {
-        Self { _markers: (PhantomData, PhantomData), value: Box::new(value), clone_glue, eq_glue }
+        Self { value: Box::new(value), clone_glue, eq_glue }
     }
     fn make_clone_glue<T: 'static + Clone>() -> Option<Glue<fn(&Self) -> Self>> {
         Some(Glue::new(|self_: &Self| {
@@ -71,7 +52,7 @@ impl<CLONE: Bool, PARTIALEQ: Bool> AnyBoxBase<CLONE, PARTIALEQ> {
     }
 }
 
-impl<CLONE: Bool, PARTIALEQ: Bool> Downcast for AnyBoxBase<CLONE, PARTIALEQ> {
+impl<const CLONE: bool, const PARTIALEQ: bool> Downcast for AnyBoxBase<CLONE, PARTIALEQ> {
     fn downcast<T: 'static>(self) -> Fallible<T> {
         self.value.downcast().map_err(|_| err!(FailedCast, "Failed downcast of AnyBox to {}", any::type_name::<T>())).map(|x| *x)
     }
@@ -80,20 +61,20 @@ impl<CLONE: Bool, PARTIALEQ: Bool> Downcast for AnyBoxBase<CLONE, PARTIALEQ> {
     }
 }
 
-impl<PARTIALEQ: Bool> Clone for AnyBoxBase<True, PARTIALEQ> {
+impl<const PARTIALEQ: bool> Clone for AnyBoxBase<true, PARTIALEQ> {
     fn clone(&self) -> Self {
         (self.clone_glue.as_ref().unwrap_assert("No clone_glue for AnyBox"))(&self)
     }
 }
 
-impl<CLONE: Bool> PartialEq for AnyBoxBase<CLONE, True> {
+impl<const CLONE: bool> PartialEq for AnyBoxBase<CLONE, true> {
     fn eq(&self, other: &Self) -> bool {
         (self.eq_glue.as_ref().unwrap_assert("No eq_glue for AnyBox"))(self, other)
     }
 }
 
 /// An AnyBox not implementing optional traits.
-pub type AnyBox = AnyBoxBase<False, False>;
+pub type AnyBox = AnyBoxBase<false, false>;
 
 impl AnyBox {
     pub fn new<T: 'static>(value: T) -> Self {
@@ -102,7 +83,7 @@ impl AnyBox {
 }
 
 /// An AnyBox implementing Clone.
-pub type AnyBoxClone = AnyBoxBase<True, False>;
+pub type AnyBoxClone = AnyBoxBase<true, false>;
 
 impl AnyBoxClone {
     pub fn new_clone<T: 'static + Clone>(value: T) -> Self {
@@ -111,7 +92,7 @@ impl AnyBoxClone {
 }
 
 /// An AnyBox implementing PartialEq.
-pub type AnyBoxPartialEq = AnyBoxBase<False, True>;
+pub type AnyBoxPartialEq = AnyBoxBase<false, true>;
 
 impl AnyBoxPartialEq {
     pub fn new_partial_eq<T: 'static + PartialEq>(value: T) -> Self {
@@ -120,7 +101,7 @@ impl AnyBoxPartialEq {
 }
 
 /// An AnyBox implementing Clone + PartialEq.
-pub type AnyBoxClonePartialEq = AnyBoxBase<True, True>;
+pub type AnyBoxClonePartialEq = AnyBoxBase<true, true>;
 
 impl AnyBoxClonePartialEq {
     pub fn new_clone_partial_eq<T: 'static + Clone + PartialEq>(value: T) -> Self {
@@ -158,7 +139,7 @@ impl Downcast for AnyObject {
 pub struct AnyDomain {
     pub carrier_type: Type,
     domain: AnyBoxClonePartialEq,
-    member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> bool>,
+    member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>>,
 }
 
 impl AnyDomain {
@@ -167,10 +148,9 @@ impl AnyDomain {
             carrier_type: Type::of::<D::Carrier>(),
             domain: AnyBoxClonePartialEq::new_clone_partial_eq(domain),
             member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
-                let self_ = self_.downcast_ref::<D>().unwrap_assert("downcast of AnyDomain to constructed type will always work");
-                let val = val.downcast_ref::<D::Carrier>();
-                // FIXME: Return a Fallible here for bad downcast (https://github.com/opendp/opendp/issues/87)
-                val.map_or(false, |v| self_.member(v))
+                let self_ = self_.downcast_ref::<D>()
+                    .unwrap_assert("downcast of AnyDomain to constructed type will always work");
+                self_.member(val.downcast_ref::<D::Carrier>()?)
             }),
         }
     }
@@ -187,7 +167,7 @@ impl Downcast for AnyDomain {
 
 impl Domain for AnyDomain {
     type Carrier = AnyObject;
-    fn member(&self, val: &Self::Carrier) -> bool {
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         (self.member_glue)(self, val)
     }
 }

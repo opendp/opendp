@@ -33,7 +33,7 @@ pub trait Domain: Clone + PartialEq {
     /// The underlying type that the Domain specializes.
     type Carrier;
     /// Predicate to test an element for membership in the domain.
-    fn member(&self, val: &Self::Carrier) -> bool;
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
