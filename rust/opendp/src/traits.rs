@@ -122,37 +122,38 @@ macro_rules! cartesian {
 }
 
 /// Fallible casting where the casted value is equal to the original value.
-pub trait ExactCast<TI>: Sized {
-    fn exact_cast(v: TI) -> Fallible<Self>;
+/// Casting fails for any value over Self::MAX_CONSECUTIVE.
+pub trait ExactIntCast<TI>: Sized + MaxConsecutiveInt {
+    fn exact_int_cast(v: TI) -> Fallible<Self>;
 }
-macro_rules! impl_exact_cast_from {
-    ($ti:ty, $to:ty) => (impl ExactCast<$ti> for $to {
+macro_rules! impl_exact_int_cast_from {
+    ($ti:ty, $to:ty) => (impl ExactIntCast<$ti> for $to {
         #[inline]
-        fn exact_cast(v: $ti) -> Fallible<Self> {Ok(From::from(v))}
+        fn exact_int_cast(v: $ti) -> Fallible<Self> {Ok(From::from(v))}
     })
 }
-macro_rules! impl_exact_cast_try_from {
-    ($ti:ty, $to:ty) => (impl ExactCast<$ti> for $to {
-        fn exact_cast(v: $ti) -> Fallible<Self> {
+macro_rules! impl_exact_int_cast_try_from {
+    ($ti:ty, $to:ty) => (impl ExactIntCast<$ti> for $to {
+        fn exact_int_cast(v: $ti) -> Fallible<Self> {
             TryFrom::try_from(v).map_err(|e| err!(FailedCast, "{:?}", e))
         }
     })
 }
 // top left
-cartesian!{[u8, u16, u32, u64, u128], impl_exact_cast_try_from, impl_exact_cast_from, impl_exact_cast_from}
+cartesian!{[u8, u16, u32, u64, u128], impl_exact_int_cast_try_from, impl_exact_int_cast_from, impl_exact_int_cast_from}
 // top right
-cartesian!([u8, u16, u32, u64, u128], [i8, i16, i32, i64, i128], impl_exact_cast_try_from, impl_exact_cast_try_from, impl_exact_cast_from);
+cartesian!([u8, u16, u32, u64, u128], [i8, i16, i32, i64, i128], impl_exact_int_cast_try_from, impl_exact_int_cast_try_from, impl_exact_int_cast_from);
 // bottom left
-cartesian!([i8, i16, i32, i64, i128], [u8, u16, u32, u64, u128], impl_exact_cast_try_from);
+cartesian!([i8, i16, i32, i64, i128], [u8, u16, u32, u64, u128], impl_exact_int_cast_try_from);
 // bottom right
-cartesian!{[i8, i16, i32, i64, i128], impl_exact_cast_try_from, impl_exact_cast_from, impl_exact_cast_from}
+cartesian!{[i8, i16, i32, i64, i128], impl_exact_int_cast_try_from, impl_exact_int_cast_from, impl_exact_int_cast_from}
 
-macro_rules! impl_exact_cast_int_float {
-    ($int:ty, $float:ty) => (impl ExactCast<$int> for $float {
-        fn exact_cast(v_int: $int) -> Fallible<Self> {
+macro_rules! impl_exact_int_cast_int_float {
+    ($int:ty, $float:ty) => (impl ExactIntCast<$int> for $float {
+        fn exact_int_cast(v_int: $int) -> Fallible<Self> {
             let v_float = v_int as $float;
             if <$float>::MAX_CONSECUTIVE < v_float {
-                fallible!(FailedCast, "exact_cast: integer is greater than the max consecutive integer and may be subject to rounding")
+                fallible!(FailedCast, "exact_int_cast: integer is greater than the max consecutive integer and may be subject to rounding")
             } else {
                 Ok(v_float)
             }
@@ -160,14 +161,14 @@ macro_rules! impl_exact_cast_int_float {
     })
 }
 
-cartesian!([u8, u16, i8, i16], [f32, f64], impl_exact_cast_from);
-cartesian!([u64, u128, i64, i128, usize], [f32, f64], impl_exact_cast_int_float);
-impl_exact_cast_int_float!(u32, f32);
-impl_exact_cast_from!(u32, f64);
-impl_exact_cast_int_float!(i32, f32);
-impl_exact_cast_from!(i32, f64);
+cartesian!([u8, u16, i8, i16], [f32, f64], impl_exact_int_cast_from);
+cartesian!([u64, u128, i64, i128, usize], [f32, f64], impl_exact_int_cast_int_float);
+impl_exact_int_cast_int_float!(u32, f32);
+impl_exact_int_cast_from!(u32, f64);
+impl_exact_int_cast_int_float!(i32, f32);
+impl_exact_int_cast_from!(i32, f64);
 
-cartesian!([usize], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_exact_cast_try_from);
+cartesian!([usize], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_exact_int_cast_try_from);
 
 /// Fallible casting where the casted value rounds towards infinity.
 /// This preserves the invariant that the casted value is gte the original value.
@@ -178,7 +179,7 @@ pub trait InfCast<TI>: Sized {
 
 macro_rules! impl_inf_cast_exact {
     ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
-        fn inf_cast(v: $ti) -> Fallible<Self> { ExactCast::exact_cast(v) }
+        fn inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
     })
 }
 cartesian!([u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_inf_cast_exact);

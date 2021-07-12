@@ -8,7 +8,7 @@ use crate::dist::{L1Distance, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::samplers::{SampleLaplace, SampleGaussian};
 use crate::error::Fallible;
-use crate::traits::{ExactCast, MaxConsecutiveInt};
+use crate::traits::{ExactIntCast, MaxConsecutiveInt};
 
 // TIK: Type of Input Key
 // TIC: Type of Input Count
@@ -37,15 +37,15 @@ pub fn make_base_stability<MI, TIK, TIC>(
     where MI: BaseStabilityNoise,
           TIK: Eq + Hash + Clone,
           TIC: Integer + Clone,
-          MI::Distance: 'static + Float + Clone + PartialOrd + ExactCast<usize> + ExactCast<TIC> + MaxConsecutiveInt {
+          MI::Distance: 'static + Float + Clone + PartialOrd + ExactIntCast<usize> + ExactIntCast<TIC> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     if threshold.is_sign_negative() {
         return fallible!(MakeMeasurement, "threshold must not be negative")
     }
-    let _n = MI::Distance::exact_cast(n)?;
-    let _2 = MI::Distance::exact_cast(2)?;
+    let _n = MI::Distance::exact_int_cast(n)?;
+    let _2 = MI::Distance::exact_int_cast(2)?;
 
     Ok(Measurement::new(
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
@@ -54,7 +54,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
             data.iter()
                 .map(|(k, c_in)| {
                     // cast the value to MI::Distance (output count)
-                    let c_out = MI::Distance::exact_cast(c_in.clone()).unwrap_or(MI::Distance::MAX_CONSECUTIVE);
+                    let c_out = MI::Distance::exact_int_cast(c_in.clone()).unwrap_or(MI::Distance::MAX_CONSECUTIVE);
                     // noise output count
                     Ok((k.clone(), MI::noise(c_out, scale, false)?))
                 })
