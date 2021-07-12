@@ -1,19 +1,20 @@
 use crate::core::{Transformation, Function, StabilityRelation};
 use std::ops::{Sub};
 use std::iter::Sum;
-use crate::traits::DistanceConstant;
+use crate::traits::{DistanceConstant, ExactIntCast, InfCast};
 use crate::error::Fallible;
 use crate::dom::{VectorDomain, IntervalDomain, AllDomain, SizedDomain};
 use std::collections::Bound;
-use crate::dist::{SymmetricDistance, AbsoluteDistance};
+use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
 use num::{Float};
 
 pub fn make_bounded_mean<T>(
     lower: T, upper: T, n: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant + Sub<Output=T> + Float,
-          for <'a> T: Sum<&'a T> {
-    let _n = num_cast!(n; T)?;
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize>, for <'a> T: Sum<&'a T>,
+          IntDistance: InfCast<T> {
+    let _n = T::exact_int_cast(n)?;
+    let _2 = T::exact_int_cast(2)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
@@ -23,7 +24,7 @@ pub fn make_bounded_mean<T>(
         Function::new(move |arg: &Vec<T>| arg.iter().sum::<T>() / _n),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant((upper - lower) / _n / num_cast!(2; T)?)))
+        StabilityRelation::new_from_constant((upper - lower) / _n / _2)))
 }
 
 

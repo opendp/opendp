@@ -120,7 +120,13 @@ impl Type {
     }
 }
 
-// Convert `[A B C] i8` to `A<B<C<i8>>`
+// Convert `[A B C] i8` -> `A<B<C<i8>>`
+// 1. Reverse the array:
+// `[A B C] [] i8` -> `[B C] [A] i8` -> `[C] [B A] i8` -> `[] [C B A] i8` ->
+// 2. Recursively peel the first element off the reversed array:
+// `[] [B A] C<i8>` -> `[] [A] B<C<i8>>` ->
+// 3. The final step drops the leading arrays:
+// `A<B<C<i8>>`
 macro_rules! nest {
     ([$($all:tt)*] $arg:ty) => (nest!(@[$($all)*] [] $arg));
 
@@ -219,6 +225,8 @@ lazy_static! {
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            // geometric mechanism
+            type_vec![Option, <(u8, u8), (u16, u16), (u32, u32), (u64, u64), (u128, u128), (i8, i8), (i16, i16), (i32, i32), (i64, i64), (i128, i128)>],
 
             // domains
             type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
