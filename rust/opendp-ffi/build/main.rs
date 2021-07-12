@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use indexmap::map::IndexMap;
-use serde::{Deserialize};
+use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
 #[cfg(feature="python")]
@@ -48,8 +48,8 @@ pub struct Argument {
     // plaintext description of the argument used to generate documentation
     description: Option<String>,
     // default value for the argument
-    #[serde(default)]
-    default: Value,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    default: Option<Value>,
     // set to true if the argument represents a type
     #[serde(default)]
     is_type: bool,
@@ -58,6 +58,12 @@ pub struct Argument {
     //  to prevent the returned AnyObject from getting converted back to python
     #[serde(default)]
     do_not_convert: bool
+}
+
+// deserialize "k": null as `Some(Value::Null)` and no key as `None`.
+fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+    where T: Deserialize<'de>, D: Deserializer<'de> {
+    Deserialize::deserialize(deserializer).map(Some)
 }
 
 #[allow(dead_code)]

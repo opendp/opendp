@@ -74,6 +74,13 @@
                 "description": "noise scale parameter to the geometric distribution"
             },
             {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": "OptionT",
+                "default": null,
+                "description": "Set bounds on the count to make the algorithm run in constant-time."
+            },
+            {
                 "name": "D",
                 "c_type": "char *",
                 "default": "AllDomain<i32>",
@@ -85,6 +92,30 @@
                 "c_type": "char *",
                 "description": "Data type of the sensitivity, scale, and budget.",
                 "is_type": true
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom",
+                    "params": [
+                        "D"
+                    ]
+                }
+            },
+            {
+                "name": "OptionT",
+                "rust_type": {
+                    "origin": "Option",
+                    "args": [
+                        {
+                            "origin": "Tuple",
+                            "args": ["T", "T"]
+                        }
+                    ]
+                },
+                "generics": ["T"]
             }
         ],
         "ret": {
