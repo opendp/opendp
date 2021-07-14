@@ -1,8 +1,11 @@
-use std::ops::Shr;
+use std::ops::{Shr, Sub, Div};
 
 use crate::core::{Domain, Function, HintMt, HintTt, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
-use crate::dom::PairDomain;
+use crate::dom::{PairDomain, VectorDomain};
 use crate::error::Fallible;
+use crate::traits::{MetricDistance, MeasureDistance, Midpoint, FallibleSub, Tolerance};
+use num::{Zero, One};
+use crate::dist::{MaxDivergence, SmoothedMaxDivergence, EpsilonDelta};
 
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     measurement1: &Measurement<DX, DO, MX, MO>,
@@ -58,6 +61,150 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
     ))
 }
 
+pub trait BasicComposition<MI: Metric>: Measure {
+    fn basic_composition(
+        &self,
+        relations: &Vec<PrivacyRelation<MI, Self>>,
+        d_in: &MI::Distance, d_out: &Self::Distance
+    ) -> Fallible<bool>;
+}
+
+pub trait BasicCompositionDistance: MeasureDistance + Clone + Midpoint + Zero + Tolerance {
+    type Atom: Sub<Output=Self::Atom> + One + Div<Output=Self::Atom>;
+}
+
+impl BasicCompositionDistance for f64 {type Atom = f64;}
+impl BasicCompositionDistance for f32 {type Atom = f64;}
+impl<T> BasicCompositionDistance for EpsilonDelta<T>
+    where T: for<'a> Sub<&'a T, Output=T> + Sub<Output=T> + One + Div<Output=T> + PartialOrd + Tolerance + Zero + Clone {
+    type Atom = T;
+}
+
+// impl<Q: MeasureDistance + Clone + FallibleSub<Output=Q> + Midpoint + Zero + Tolerance + PartialOrd> BasicCompositionDistance for Q {}
+
+impl<MI: Metric, Q: Clone> BasicComposition<MI> for MaxDivergence<Q>
+    where Q: BasicCompositionDistance<Atom=Q>,
+          MI::Distance: Clone {
+    fn basic_composition(
+        &self, relations: &Vec<PrivacyRelation<MI, Self>>,
+        d_in: &MI::Distance, d_out: &Self::Distance
+    ) -> Fallible<bool> {
+        basic_composition(relations, d_in, d_out)
+    }
+}
+impl<MI: Metric, Q: Clone> BasicComposition<MI> for SmoothedMaxDivergence<Q>
+    where EpsilonDelta<Q>: BasicCompositionDistance<Atom=Q>,
+          MI::Distance: Clone {
+    fn basic_composition(
+        &self, relations: &Vec<PrivacyRelation<MI, Self>>,
+        d_in: &MI::Distance, d_out: &Self::Distance
+    ) -> Fallible<bool> {
+        basic_composition(relations, d_in, d_out)
+    }
+}
+
+fn basic_composition<MI: Metric, MO: Measure>(
+    relations: &Vec<PrivacyRelation<MI, MO>>,
+    d_in: &MI::Distance,
+    d_out: &MO::Distance
+) -> Fallible<bool>
+    where MO::Distance: BasicCompositionDistance,
+          MI::Distance: Clone {
+    let mut d_out = d_out.clone();
+
+    for relation in relations {
+        if let Some(usage) = basic_composition_binary_search(
+            d_in.clone(), d_out.clone(), relation)? {
+
+            d_out = d_out.sub(&usage)?;
+        } else {
+            return Ok(false)
+        }
+    }
+    Ok(true)
+}
+pub fn make_basic_composition_multi<DI, DO, MI, MO>(
+    measurements: &Vec<&Measurement<DI, DO, MI, MO>>
+) -> Fallible<Measurement<DI, VectorDomain<DO>, MI, MO>>
+    where DI: 'static + Domain,
+          DO: 'static + Domain,
+          MI: 'static + Metric,
+          MI::Distance: 'static + MetricDistance + Clone,
+          MO: 'static + Measure + BasicComposition<MI>,
+          MO::Distance: 'static + MeasureDistance + Clone {
+
+    if measurements.is_empty() {
+        return fallible!(MakeMeasurement, "Must have at least one measurement")
+    }
+
+    let input_domain = measurements[0].input_domain.clone();
+    let output_domain = measurements[0].output_domain.clone();
+    let input_metric = measurements[0].input_metric.clone();
+    let output_measure = measurements[0].output_measure.clone();
+
+    if !measurements.iter().all(|v| input_domain == v.input_domain) {
+        return fallible!(DomainMismatch, "All input domains must be the same");
+    }
+    if !measurements.iter().all(|v| output_domain == v.output_domain) {
+        return fallible!(DomainMismatch, "All output domains must be the same");
+    }
+    if !measurements.iter().all(|v| input_metric == v.input_metric) {
+        return fallible!(MetricMismatch, "All input metrics must be the same");
+    }
+    if !measurements.iter().all(|v| output_measure == v.output_measure) {
+        return fallible!(MetricMismatch, "All output measures must be the same");
+    }
+
+    let mut functions = Vec::new();
+    let mut relations = Vec::new();
+    for measurement in measurements {
+        functions.push(measurement.function.clone());
+        relations.push(measurement.privacy_relation.clone());
+    }
+
+    Ok(Measurement::new(
+        input_domain,
+        VectorDomain::new(output_domain),
+        Function::new_fallible(move |arg: &DI::Carrier|
+            functions.iter().map(|f| f.eval(arg)).collect()),
+        input_metric,
+        output_measure.clone(),
+        PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &MO::Distance| {
+            output_measure.basic_composition(&relations, d_in, d_out)
+        })
+    ))
+}
+
+const MAX_ITERATIONS: usize = 100;
+
+fn basic_composition_binary_search<MI, MO>(
+    d_in: MI::Distance, mut d_out: MO::Distance,
+    predicate: &PrivacyRelation<MI, MO>
+) -> Fallible<Option<MO::Distance>>
+    where MI: Metric,
+          MO: Measure,
+          MO::Distance: Midpoint + Zero + Clone + Tolerance + PartialOrd {
+
+    // d_out is d_max, we use binary search to reduce d_out
+    // to the smallest value that still passes the relation
+    if !predicate.eval(&d_in, &d_out)? {
+        return Ok(None)
+    }
+
+    let mut d_min = MO::Distance::zero();
+    for _ in 0..MAX_ITERATIONS {
+        let d_mid = d_min.clone().midpoint(d_out.clone());
+
+        if predicate.eval(&d_in, &d_mid)? {
+            d_out = d_mid;
+        } else {
+            d_min = d_mid;
+        }
+        if d_out <= MO::Distance::TOLERANCE + d_min.clone() { return Ok(Some(d_out)) }
+    }
+    Ok(Some(d_out))
+}
+
 pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, MO>>
     where DI: 'static + Domain,
           DO0: 'static + Domain,
@@ -93,6 +240,7 @@ mod tests {
     use crate::error::ExplainUnwrap;
 
     use super::*;
+    use crate::meas::make_base_laplace;
 
     #[test]
     fn test_make_chain_mt() {
@@ -158,6 +306,33 @@ mod tests {
         let arg = 99;
         let ret = composition.function.eval(&arg).unwrap_test();
         assert_eq!(ret, (100_f32, 98_f64));
+    }
+
+    #[test]
+    fn test_make_basic_composition_multi() -> Fallible<()> {
+        let measurements = vec![
+            make_base_laplace::<AllDomain<_>>(0.)?,
+            make_base_laplace(0.)?
+        ];
+        let composition = make_basic_composition_multi(&measurements.iter().collect())?;
+        let arg = 99.;
+        let ret = composition.function.eval(&arg)?;
+
+        assert_eq!(ret.len(), 2);
+        assert_eq!(ret, vec![99., 99.]);
+
+        let measurements = vec![
+            make_base_laplace::<AllDomain<_>>(1.)?,
+            make_base_laplace(1.)?
+        ];
+        let composition = make_basic_composition_multi(&measurements.iter().collect())?;
+        // runs once because it sits on a power of 2
+        assert!(composition.privacy_relation.eval(&1., &2.)?);
+        // runs a few steps- it will tighten to within TOLERANCE of 1 on the first measurement
+        assert!(composition.privacy_relation.eval(&1., &2.0001)?);
+        // should fail
+        assert!(!composition.privacy_relation.eval(&1., &1.999)?);
+        Ok(())
     }
 }
 

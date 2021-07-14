@@ -4,10 +4,11 @@ use std::hash::Hash;
 use num::{Integer, Float, NumCast, Zero};
 
 use crate::core::{Measurement, Function, PrivacyRelation, SensitivityMetric};
-use crate::dist::{L1Distance, L2Distance, SmoothedMaxDivergence};
+use crate::dist::{L1Distance, L2Distance, SmoothedMaxDivergence, EpsilonDelta};
 use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::samplers::{SampleLaplace, SampleGaussian};
 use crate::error::Fallible;
+use crate::chain::BasicCompositionDistance;
 
 // TIK: Type of Input Key
 // TIC: Type of Input Count
@@ -36,7 +37,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
     where MI: BaseStabilityNoise,
           TIK: Eq + Hash + Clone,
           TIC: Integer + Clone + NumCast,
-          MI::Distance: 'static + Float + Clone + PartialOrd + NumCast {
+          MI::Distance: 'static + Float + Clone + PartialOrd + NumCast + BasicCompositionDistance {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -64,24 +65,23 @@ pub fn make_base_stability<MI, TIK, TIC>(
         }),
         MI::default(),
         SmoothedMaxDivergence::default(),
-        PrivacyRelation::new_fallible(move |&d_in: &MI::Distance, &(eps, del): &(MI::Distance, MI::Distance)|{
-            // let _eps: f64 = NumCast::from(eps).unwrap_test();
-            // let _del: f64 = NumCast::from(del).unwrap_test();
-            // println!("eps, del: {:?}, {:?}", _eps, _del);
-            let ideal_scale = d_in / (eps * _n);
-            let ideal_threshold = (_2 / del).ln() * ideal_scale + _n.recip();
+        PrivacyRelation::new_fallible(move |&d_in: &MI::Distance, d_out: &EpsilonDelta<MI::Distance>|{
+            let EpsilonDelta { epsilon, delta } = d_out.clone();
+
+            let ideal_scale = d_in / (epsilon * _n);
+            let ideal_threshold = (_2 / delta).ln() * ideal_scale + _n.recip();
             // println!("ideal: {:?}, {:?}", ideal_sigma, ideal_threshold);
 
-            if eps.is_sign_negative() || eps.is_zero() {
+            if epsilon.is_sign_negative() || epsilon.is_zero() {
                 return fallible!(FailedRelation, "cause: epsilon <= 0")
             }
-            if eps >= _n.ln() {
+            if epsilon >= _n.ln() {
                 return fallible!(RelationDebug, "cause: epsilon >= n.ln()");
             }
-            if del.is_sign_negative() || del.is_zero() {
+            if delta.is_sign_negative() || delta.is_zero() {
                 return fallible!(FailedRelation, "cause: delta <= 0")
             }
-            if del >= _n.recip() {
+            if delta >= _n.recip() {
                 return fallible!(RelationDebug, "cause: del >= n.ln()");
             }
             if scale < ideal_scale {

@@ -37,9 +37,14 @@ pub trait Domain: Clone + PartialEq {
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct Function<DI: Domain, DO: Domain> {
     pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
+}
+impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+    fn clone(&self) -> Self {
+        Function { function: self.function.clone() }
+    }
 }
 
 impl<DI: Domain, DO: Domain> Function<DI, DO> {

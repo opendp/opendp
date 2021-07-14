@@ -1,8 +1,9 @@
-use std::ops::{Div, Mul, Sub};
+use std::ops::{Div, Mul, Sub, Add};
 
 use num::{NumCast, One, ToPrimitive, Zero};
 
 use crate::error::Fallible;
+use crate::dist::EpsilonDelta;
 
 pub trait CheckContinuous { fn is_continuous() -> bool; }
 pub trait Ceil: Clone { fn ceil(self) -> Self; }
@@ -49,12 +50,10 @@ impl_is_not_continuous!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, isize,
 pub trait DistanceConstant: 'static + Clone + DistanceCast + Div<Output=Self> + Mul<Output=Self> + PartialOrd {}
 impl<T: 'static + Clone + DistanceCast + Div<Output=Self> + Mul<Output=Self> + PartialOrd> DistanceConstant for T {}
 
-// TODO: Maybe this should be renamed to something more specific to budgeting, and add negative checks? -Mike
 pub trait FallibleSub<Rhs = Self> {
     type Output;
     fn sub(self, rhs: Rhs) -> Fallible<Self::Output>;
 }
-
 macro_rules! impl_fallible_sub {
     ($($ty:ty),+) => ($(
         impl<Rhs> FallibleSub<Rhs> for $ty where $ty: Sub<Rhs, Output=$ty> {
@@ -66,20 +65,52 @@ macro_rules! impl_fallible_sub {
     )+)
 }
 impl_fallible_sub!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
-
-impl<T0, T1, Rhs0, Rhs1> FallibleSub<(Rhs0, Rhs1)> for (T0, T1) where T0: Sub<Rhs0>, T1: Sub<Rhs1> {
-    type Output = (T0::Output, T1::Output);
-    fn sub(self, rhs: (Rhs0, Rhs1)) -> Fallible<Self::Output> {
-        Ok((self.0 - rhs.0, self.1 - rhs.1))
+impl<T> FallibleSub<EpsilonDelta<T>> for EpsilonDelta<T> where T: Sub<Output=T> {
+    type Output = EpsilonDelta<T>;
+    fn sub(self, rhs: EpsilonDelta<T>) -> Fallible<Self::Output> {
+        Ok(EpsilonDelta {
+            epsilon: self.epsilon - rhs.epsilon,
+            delta: self.delta - rhs.delta
+        })
+    }
+}
+impl<'a, T> FallibleSub<&'a EpsilonDelta<T>> for EpsilonDelta<T> where T: Sub<&'a T, Output=T> {
+    type Output = EpsilonDelta<T>;
+    fn sub(self, rhs: &'a EpsilonDelta<T>) -> Fallible<Self::Output> {
+        Ok(EpsilonDelta { epsilon: self.epsilon - &rhs.epsilon, delta: self.delta - &rhs.delta })
     }
 }
 
-impl<'a, T0, T1, Rhs0, Rhs1> FallibleSub<&'a (Rhs0, Rhs1)> for (T0, T1) where T0: Sub<&'a Rhs0>, T1: Sub<&'a Rhs1> {
-    type Output = (T0::Output, T1::Output);
-    fn sub(self, rhs: &'a (Rhs0, Rhs1)) -> Fallible<Self::Output> {
-        Ok((self.0 - &rhs.0, self.1 - &rhs.1))
+
+pub trait Midpoint: Sized {
+    fn midpoint(self, rhs: Self) -> Self;
+}
+macro_rules! impl_midpoint {
+    ($($ty:ty),+) => ($(
+        impl Midpoint for $ty {
+            fn midpoint(self, rhs: Self) -> Self {
+                (self + rhs) / (<$ty>::one() + <$ty>::one())
+            }
+        }
+    )+)
+}
+impl_midpoint!(f64, f32);
+impl<T: Clone + PartialOrd + One> Midpoint for EpsilonDelta<T> where T: One + Add<Output=T> + Div<Output=T> + Clone {
+    fn midpoint(self, rhs: Self) -> Self {
+        let two = T::one() + T::one();
+        EpsilonDelta {
+            epsilon: (self.epsilon + rhs.epsilon) / two.clone(),
+            delta: (self.delta + rhs.delta) / two
+        }
     }
 }
+
+pub trait Tolerance { const TOLERANCE: Self; }
+impl<T: Tolerance> Tolerance for EpsilonDelta<T> {
+    const TOLERANCE: Self = EpsilonDelta { epsilon: T::TOLERANCE, delta: T::TOLERANCE };
+}
+impl Tolerance for f64 {const TOLERANCE: Self = 1e-20f64;}
+impl Tolerance for f32 {const TOLERANCE: Self = 1e-20f32;}
 
 /// A type that can be used as a measure distance.
 pub trait MeasureDistance: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}

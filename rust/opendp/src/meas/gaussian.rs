@@ -1,31 +1,33 @@
 use num::Float;
 
 use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric};
-use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
+use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance, EpsilonDelta};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
+use crate::chain::BasicCompositionDistance;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
 fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float, MI: SensitivityMetric<Distance=T>>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>> {
-    PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
+    PrivacyRelation::new_fallible(move |&d_in: &T, d_out: &EpsilonDelta<T>| {
+        let EpsilonDelta { epsilon, delta } = d_out.clone();
         let _2 = num_cast!(2.; T)?;
         let additive_gauss_const = num_cast!(ADDITIVE_GAUSS_CONST; T)?;
 
         if d_in.is_sign_negative() {
             return fallible!(InvalidDistance, "gaussian mechanism: input sensitivity must be non-negative")
         }
-        if eps.is_sign_negative() || eps.is_zero() {
+        if epsilon.is_sign_negative() || epsilon.is_zero() {
             return fallible!(InvalidDistance, "gaussian mechanism: epsilon must be positive")
         }
-        if del.is_sign_negative() || del.is_zero() {
+        if delta.is_sign_negative() || delta.is_zero() {
             return fallible!(InvalidDistance, "gaussian mechanism: delta must be positive")
         }
 
         // TODO: should we error if epsilon > 1., or just waste the budget?
-        Ok(eps.min(T::one()) >= (d_in / scale) * (additive_gauss_const + _2 * del.recip().ln()).sqrt())
+        Ok(epsilon.min(T::one()) >= (d_in / scale) * (additive_gauss_const + _2 * delta.recip().ln()).sqrt())
     })
 }
 
@@ -65,7 +67,7 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_gaussian<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
-          D::Atom: 'static + Clone + SampleGaussian + Float {
+          D::Atom: 'static + Clone + SampleGaussian + Float + BasicCompositionDistance {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }

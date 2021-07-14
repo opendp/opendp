@@ -3,7 +3,7 @@ import typing
 from collections.abc import Hashable
 from typing import Union, Any, Type, List
 
-from opendp.v1.mod import UnknownTypeException
+from opendp.v1.mod import UnknownTypeException, Measurement, Transformation
 from opendp.v1._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
@@ -177,6 +177,12 @@ class RuntimeType(object):
                 cls.infer(public_example[0]) if public_example else UnknownType(
                     "cannot infer atomic type of empty list")
             ])
+
+        if isinstance(public_example, Measurement):
+            return "AnyMeasurementPtr"
+
+        if isinstance(public_example, Transformation):
+            return "const AnyTransformation *"
 
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])

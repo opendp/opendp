@@ -54,6 +54,17 @@ def test_base_vector_geometric():
     assert not meas.check(1, 0.49999)
 
 
+def test_basic_composition_multi():
+    from opendp.v1.core import make_basic_composition_multi
+    from opendp.v1.meas import make_base_geometric
+    composed = make_basic_composition_multi([
+        make_base_geometric(scale=2.),
+        make_base_geometric(scale=2.)
+    ])
+
+    print(composed.check(1, 2.))
+
+test_basic_composition_multi()
 
 # TODO: data unloader for hashmaps
 # def test_base_stability():

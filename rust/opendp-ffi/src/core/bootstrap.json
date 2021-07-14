@@ -202,6 +202,21 @@
             "description": "Transformation representing the chained computation."
         }
     },
+    "make_basic_composition_multi": {
+        "description": "Construct the DP composition [`measurement0`, `measurement1`, ...]. Returns a Measurement.",
+        "args": [
+            {
+                "name": "measurements",
+                "rust_type": "\"Vec<AnyMeasurementPtr>\"",
+                "c_type": "const AnyObject *",
+                "description": "A list of measurements to compose."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "Measurement representing the composed transformations."
+        }
+    },
     "make_basic_composition": {
         "description": "Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.",
         "args": [

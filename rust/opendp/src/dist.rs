@@ -3,6 +3,9 @@
 use std::marker::PhantomData;
 
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
+use num::Zero;
+use std::ops::Add;
+use std::cmp::Ordering;
 
 /// Measures
 #[derive(Clone)]
@@ -31,7 +34,7 @@ impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
 }
 
 impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
-    type Distance = (Q, Q);
+    type Distance = EpsilonDelta<Q>;
 }
 
 /// Metrics
@@ -105,3 +108,42 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
+
+
+
+
+
+pub struct EpsilonDelta<T: Sized>{pub epsilon: T, pub delta: T}
+
+// Derive annotations force traits to be present on the generic
+impl<T: PartialOrd> PartialOrd for EpsilonDelta<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let epsilon_ord = self.epsilon.partial_cmp(&other.epsilon);
+        let delta_ord = self.delta.partial_cmp(&other.delta);
+        if epsilon_ord == delta_ord { epsilon_ord } else { None }
+    }
+}
+impl<T: Clone> Clone for EpsilonDelta<T> {
+    fn clone(&self) -> Self {
+        EpsilonDelta {epsilon: self.epsilon.clone(), delta: self.delta.clone()}
+    }
+}
+impl<T: PartialEq> PartialEq for EpsilonDelta<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.epsilon == other.epsilon && self.delta == other.delta
+    }
+}
+impl<T: Zero + Sized + Add<Output=T> + Clone> Zero for EpsilonDelta<T> {
+    fn zero() -> Self {
+        EpsilonDelta { epsilon: T::zero(), delta: T::zero() }
+    }
+    fn is_zero(&self) -> bool {
+        self.epsilon.is_zero() && self.delta.is_zero()
+    }
+}
+impl<T: Add<Output=T> + Clone> Add<EpsilonDelta<T>> for EpsilonDelta<T> {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        EpsilonDelta {epsilon: self.epsilon + rhs.epsilon, delta: self.delta + rhs.delta}
+    }
+}

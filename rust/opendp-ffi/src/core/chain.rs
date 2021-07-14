@@ -1,7 +1,10 @@
-use opendp::chain::{make_basic_composition, make_chain_mt, make_chain_tt};
+use opendp::chain::{BasicComposition, make_basic_composition, make_basic_composition_multi, make_chain_mt, make_chain_tt};
+use opendp::core::PrivacyRelation;
+use opendp::error::Fallible;
 
-use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
+use crate::any::{AnyMeasure, AnyMeasureDistance, AnyMeasurement, AnyMetric, AnyMetricDistance, AnyObject, AnyTransformation, Downcast, IntoAnyMeasurementOutExt};
 use crate::core::FfiResult;
+use crate::util::AnyMeasurementPtr;
 
 #[no_mangle]
 pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -26,6 +29,34 @@ pub extern "C" fn opendp_core__make_basic_composition(measurement0: *const AnyMe
     // AnyMeasurement, but using IntoAnyMeasurementExt::into_any() would double-wrap the input.
     // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
     make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
+}
+
+
+impl BasicComposition<AnyMetric> for AnyMeasure {
+    fn basic_composition(
+        &self,
+        relations: &Vec<PrivacyRelation<AnyMetric, Self>>,
+        d_in: &AnyMetricDistance,
+        d_out: &AnyMeasureDistance,
+    ) -> Fallible<bool> {
+        self.basic_composition(relations, d_in, d_out)
+    }
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_core__make_basic_composition_multi(
+    measurements: *const AnyObject
+) -> FfiResult<*mut AnyMeasurement> {
+    let measurements: &Vec<AnyMeasurementPtr> = try_!(try_as_ref!(measurements)
+        .downcast_ref::<Vec<AnyMeasurementPtr>>());
+    let measurements: Vec<&AnyMeasurement> = try_!(measurements
+        .into_iter().map(|v| Ok(try_as_ref!(v.clone()))).collect());
+    // This one has a different pattern than most constructors. The result of make_basic_composition()
+    // will be Measurement<AnyDomain, PairDomain, AnyMetric, AnyMeasure>. We need to get back to
+    // AnyMeasurement, but using IntoAnyMeasurementExt::into_any() would double-wrap the input.
+    // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
+    make_basic_composition_multi(&measurements).map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
 
 

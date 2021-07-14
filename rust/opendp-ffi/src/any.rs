@@ -18,6 +18,7 @@ use opendp::traits::{FallibleSub, MeasureDistance, MetricDistance};
 
 use crate::glue::Glue;
 use crate::util::Type;
+use opendp::chain::BasicComposition;
 
 /// A marker for compile-time boolean types.
 pub trait Bool {
@@ -76,7 +77,12 @@ impl<CLONE: Bool, PARTIALEQ: Bool> Downcast for AnyBoxBase<CLONE, PARTIALEQ> {
         self.value.downcast().map_err(|_| err!(FailedCast, "Failed downcast of AnyBox to {}", any::type_name::<T>())).map(|x| *x)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.value.downcast_ref().ok_or_else(|| err!(FailedCast, "Failed downcast_ref of AnyBox to {}", any::type_name::<T>()))
+        self.value.downcast_ref().ok_or_else(|| {
+            let other_type = Type::of_id(&self.value.type_id()).
+                map(|t| format!(" AnyBox contains {:?}.", t))
+                .unwrap_or(String::new());
+            err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+        })
     }
 }
 
@@ -282,15 +288,29 @@ impl PartialOrd for AnyMetricDistance {
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasure {
     pub measure: AnyBoxClonePartialEq,
-    pub distance_type: Type
+    pub distance_type: Type,
+    pub basic_composition: Glue<fn(
+            &Self,
+            &Vec<PrivacyRelation<AnyMetric, AnyMeasure>>,
+            &AnyMetricDistance,
+            &AnyMeasureDistance) -> Fallible<bool>>
 }
 
 impl AnyMeasure {
-    pub fn new<M: 'static + Measure>(measure: M) -> Self {
+    pub fn new<MI: Metric, M: 'static + Measure + BasicComposition<MI>>(measure: M) -> Self {
         Self {
             measure: AnyBoxClonePartialEq::new_clone_partial_eq(measure),
-            distance_type: Type::of::<M::Distance>()
+            distance_type: Type::of::<M::Distance>(),
+            basic_composition: Self::make_basic_composition_glue::<MI, M>()
         }
+    }
+    fn make_basic_composition_glue<MI: Metric, MO: 'static + BasicComposition<MI> + Clone>(
+    ) -> Glue<fn(&Self, &Vec<PrivacyRelation<AnyMetric, AnyMeasure>>, &AnyMetricDistance, &AnyMeasureDistance) -> Fallible<bool>> {
+        Glue::new(|self_: &Self, relations: &Vec<PrivacyRelation<AnyMetric, AnyMeasure>>, d_in: &AnyMetricDistance, d_out: &AnyMeasureDistance| {
+            let measure = self_.measure.value.downcast_ref::<MO>().unwrap_assert("Failed downcast of AnyBox value").clone();
+
+            Ok(true)
+        })
     }
 }
 
@@ -452,6 +472,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
           MI::Distance: 'static + Clone + PartialOrd,
+          MO: BasicComposition<MI>,
           MO::Distance: 'static + Clone + PartialOrd {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
@@ -480,7 +501,7 @@ impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, D
             self.function.into_any_out(),
             self.input_metric,
             self.output_measure,
-            self.privacy_relation.into_any(),
+            self.privacy_relation,
         )
     }
 }
@@ -516,7 +537,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 mod tests {
     use std::ops::Bound;
 
-    use opendp::dist::{SubstituteDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
+    use opendp::dist::{MaxDivergence, SmoothedMaxDivergence, SubstituteDistance, SymmetricDistance};
     use opendp::dom::{AllDomain, IntervalDomain, VectorDomain};
     use opendp::error::*;
     use opendp::meas;

@@ -11,9 +11,10 @@ use opendp::error::Fallible;
 use crate::any::{AnyObject, Downcast, AnyMeasureDistance, AnyMetricDistance};
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::util;
-use crate::util::{c_bool, Type, TypeContents};
+use crate::util::{c_bool, Type, TypeContents, AnyMeasurementPtr, AnyTransformationPtr};
 use opendp::traits::{MeasureDistance, MetricDistance};
 use std::fmt::Formatter;
+use opendp::dist::EpsilonDelta;
 
 
 #[no_mangle]
@@ -28,17 +29,20 @@ pub extern "C" fn opendp_data___slice_as_measure_distance(
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create an object"))?.clone();
         Ok(AnyMeasureDistance::new(plain))
     }
-    fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyMeasureDistance>
-        where (T0, T1): MeasureDistance {
+    fn raw_to_epsilon_delta<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyMeasureDistance>
+        where EpsilonDelta<T>: MeasureDistance {
         if raw.len != 2 {
-            return fallible!(FFI, "The slice length must be two when creating a tuple from FfiSlice");
+            return fallible!(FFI, "The slice length must be two for creating EpsilonDelta from FfiSlice");
         }
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 2) };
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const c_void, 2) };
 
-        let tuple = util::as_ref(slice[0] as *const T0).cloned()
-            .zip(util::as_ref(slice[1] as *const T1).cloned())
-            .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
-        Ok(AnyMeasureDistance::new(tuple))
+        let distance = EpsilonDelta {
+            epsilon: util::as_ref(slice[0] as *const T)
+                .ok_or_else(|| err!(FFI, "Epsilon is a null pointer not be null"))?,
+            delta: util::as_ref(slice[1] as *const T)
+                .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?
+        };
+        Ok(AnyMeasureDistance::new(distance))
     }
 
     let T = try_!(Type::try_from(T));
@@ -49,7 +53,14 @@ pub extern "C" fn opendp_data___slice_as_measure_distance(
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
             let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
-            dispatch!(raw_to_tuple, [(types[0], @numbers), (types[1], @numbers)], (raw))
+            dispatch!(raw_to_tuple, [(types[0], @numbers)], (raw))
+        }
+        TypeContents::GENERIC {name, args} if name == "EpsilonDelta" => {
+            if element_ids.len() != 1 {
+                return fallible!(FFI, "EpsilonDelta has one type argument").into();
+            }
+            let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
+            dispatch!(raw_to_epsilon_delta, [(types[0], @numbers)], (raw))
         }
         TypeContents::PLAIN(_) => dispatch!(raw_to_plain, [(T, @numbers)], (raw)),
         _ => fallible!(FFI, "Metric distances are only expressed in terms of scalars and tuples.")
@@ -124,7 +135,7 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
-            dispatch!(raw_to_vec, [(element, @primitives)], (raw))
+            dispatch!(raw_to_vec, [(element, [u8, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, String, AnyMeasurementPtr, AnyTransformationPtr])], (raw))
         }
         TypeContents::TUPLE(ref element_ids) => {
             if element_ids.len() != 2 {

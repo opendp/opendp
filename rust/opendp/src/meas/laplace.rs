@@ -6,6 +6,7 @@ use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::error::*;
 use crate::traits::DistanceCast;
+use crate::chain::BasicCompositionDistance;
 
 pub trait LaplaceDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -40,7 +41,7 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
-          D::Atom: 'static + Clone + SampleLaplace + Float + DistanceCast {
+          D::Atom: 'static + Clone + SampleLaplace + Float + DistanceCast + BasicCompositionDistance {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }

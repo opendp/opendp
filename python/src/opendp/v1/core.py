@@ -248,6 +248,31 @@ def make_chain_tt(
     return c_to_py(unwrap(function(transformation1, transformation0), Transformation))
 
 
+def make_basic_composition_multi(
+    measurements: Any
+) -> Measurement:
+    """Construct the DP composition [`measurement0`, `measurement1`, ...]. Returns a Measurement.
+    
+    :param measurements: A list of measurements to compose.
+    :type measurements: Any
+    :return: Measurement representing the composed transformations.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurements = py_to_c(measurements, c_type=AnyObjectPtr, type_name="Vec<AnyMeasurementPtr>")
+    
+    # Call library function.
+    function = lib.opendp_core__make_basic_composition_multi
+    function.argtypes = [AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurements), Measurement))
+
+
 def make_basic_composition(
     measurement0: Measurement,
     measurement1: Measurement

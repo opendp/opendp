@@ -11,6 +11,7 @@ use opendp::traits::DistanceCast;
 use crate::any::{AnyMeasurement};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
+use opendp::chain::BasicCompositionDistance;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
@@ -22,7 +23,7 @@ pub extern "C" fn opendp_meas__make_base_geometric(
     ) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + GeometricDomain,
               D::Atom: 'static + DistanceCast + PartialOrd,
-              QO: 'static + Float + DistanceCast,
+              QO: 'static + Float + DistanceCast + BasicCompositionDistance,
               f64: From<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = None;
