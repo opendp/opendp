@@ -25,3 +25,8 @@ OpenDP Core is packaged as a library that can be incorporated into applications.
 OpenDP Core is early in its initial development. We're building out the main concepts of the OpenDP Programming Framework, and providing implementations of several common privacy mechanisms and summary statistics. Our focus is on correctness and developer usability.
 
 The current code is functional, but not ready for general usage. The APIs are unstable and subject to extensive change. Aspects of the library are likely difficult to understand without examining the sources. Documentation and sample code is forthcoming.
+
+## Communication
+- You are very welcome to join us on [GitHub Discussions](https://github.com/opendp/opendp/discussions)!
+- Please use [GitHub Issues](https://github.com/opendp/opendp/issues) for bug reports and feature requests.
+- For other requests, including security issues, please contact us at [info@opendp.org](mailto:info@opendp.org).
