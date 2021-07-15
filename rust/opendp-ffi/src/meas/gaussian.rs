@@ -11,7 +11,7 @@ use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 use opendp::dom::{AllDomain, VectorDomain};
-use opendp::dist::{L2Distance, SmoothedMaxDivergence};
+use opendp::dist::{SmoothedMaxDivergence};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(

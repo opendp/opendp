@@ -589,7 +589,7 @@ mod tests {
         let t3 = trans::make_select_column::<_, f64>("a".to_owned())?.into_any();
         let t4 = trans::make_clamp::<VectorDomain<_>, SymmetricDistance>(0.0, 10.0)?.into_any();
         let t5 = trans::make_bounded_sum(0.0, 10.0)?.into_any();
-        let m1 = meas::make_base_gaussian::<AllDomain<_>>(0.0)?.into_any();
+        let m1 = meas::make_base_gaussian::<AllDomain<_>, SmoothedMaxDivergence<_>>(0.0)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.function.eval(&arg);

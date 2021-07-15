@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_mechanism() -> Fallible<()> {
-        let measurement = make_base_gaussian::<AllDomain<_>>(1.0)?;
+        let measurement = make_base_gaussian::<AllDomain<_>, SmoothedMaxDivergence<_>>(1.0)?;
         let arg = 0.0;
         let _ret = measurement.function.eval(&arg)?;
 
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
-        let measurement = make_base_gaussian::<VectorDomain<_>>(1.0)?;
+        let measurement = make_base_gaussian::<VectorDomain<_>, SmoothedMaxDivergence<_>>(1.0)?;
         let arg = vec![0.0, 1.0];
         let _ret = measurement.function.eval(&arg)?;
 
