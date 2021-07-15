@@ -381,3 +381,49 @@ macro_rules! impl_check_null_for_float {
     }
 }
 impl_check_null_for_float!(f64, f32);
+
+
+/// Performs addition that saturates at the numeric bounds instead of overflowing.
+pub trait SaturatingAdd: Sized {
+    /// Saturating addition. Computes `self + other`,
+    /// saturating at the relevant high or low boundary of the type.
+    fn saturating_add(&self, v: &Self) -> Self;
+}
+/// Performs multiplication that returns none if overflowing.
+pub trait CheckedMul: Sized {
+    /// Checked multiplication.
+    /// Returns `Some(self * other)` if the result does not overflow, else `None`
+    fn checked_mul(&self, v: &Self) -> Option<Self>;
+}
+macro_rules! impl_math_delegation {
+    ($($t:ty),+) => {
+        $(impl SaturatingAdd for $t {
+            #[inline]
+            fn saturating_add(&self, v: &Self) -> Self {
+                <$t>::saturating_add(*self, *v)
+            }
+        })+
+        $(impl CheckedMul for $t {
+            #[inline]
+            fn checked_mul(&self, v: &Self) -> Option<Self> {
+                <$t>::checked_mul(*self, *v)
+            }
+        })+
+    };
+}
+impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+macro_rules! impl_math_float {
+    ($($t:ty),+) => {
+        $(impl SaturatingAdd for $t {
+            fn saturating_add(&self, v: &Self) -> Self {
+                self + v
+            }
+        })+
+        $(impl CheckedMul for $t {
+            fn checked_mul(&self, v: &Self) -> Option<Self> {
+                Some(self * v)
+            }
+        })+
+    }
+}
+impl_math_float!(f32, f64);

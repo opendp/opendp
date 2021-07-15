@@ -3,11 +3,13 @@ use std::collections::Bound;
 use std::iter::Sum;
 use std::ops::Sub;
 
+use num::Zero;
+
 use crate::core::{Function, StabilityRelation, Transformation};
-use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
+use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{Abs, DistanceConstant, InfCast};
+use crate::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, CheckedMul, ExactIntCast};
 
 fn max<T: PartialOrd>(a: T, b: T) -> Option<T> {
     a.partial_cmp(&b).map(|o| if let Ordering::Less = o {b} else {a})
@@ -16,15 +18,14 @@ fn max<T: PartialOrd>(a: T, b: T) -> Option<T> {
 pub fn make_bounded_sum<T>(
     lower: T, upper: T
 ) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs,
-          for <'a> T: Sum<&'a T>,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero,
           IntDistance: InfCast<T> {
 
     Ok(Transformation::new(
         VectorDomain::new(IntervalDomain::new(
             Bound::Included(lower.clone()), Bound::Included(upper.clone()))?),
         AllDomain::new(),
-        Function::new(|arg: &Vec<T>| arg.iter().sum()),
+        Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_constant(max(lower.abs(), upper.abs())
@@ -35,9 +36,13 @@ pub fn make_bounded_sum<T>(
 pub fn make_bounded_sum_n<T>(
     lower: T, upper: T, length: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T>, for <'a> T: Sum<&'a T>,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T>, for <'a> T: Sum<&'a T> + ExactIntCast<usize> + CheckedMul,
           IntDistance: InfCast<T> {
-
+    let length_ = T::exact_int_cast(length)?;
+    if lower.checked_mul(&length_).is_none()
+        || upper.checked_mul(&length_).is_none() {
+        return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
+    }
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(IntervalDomain::new(
             Bound::Included(lower.clone()), Bound::Included(upper.clone()))?), length),
@@ -46,7 +51,7 @@ pub fn make_bounded_sum_n<T>(
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         // d_out >= d_in * (M - m) / 2
-        StabilityRelation::new_from_constant((upper - lower) / T::inf_cast(2)?)))
+        StabilityRelation::new_from_constant((upper - lower) / T::exact_int_cast(2)?)))
 }
 
 
