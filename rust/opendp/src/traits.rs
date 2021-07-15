@@ -416,12 +416,13 @@ macro_rules! impl_math_float {
     ($($t:ty),+) => {
         $(impl SaturatingAdd for $t {
             fn saturating_add(&self, v: &Self) -> Self {
-                self + v
+                (self + v).clamp(<$t>::MIN, <$t>::MAX)
             }
         })+
         $(impl CheckedMul for $t {
             fn checked_mul(&self, v: &Self) -> Option<Self> {
-                Some(self * v)
+                let y = self * v;
+                y.is_finite().then(|| y)
             }
         })+
     }
