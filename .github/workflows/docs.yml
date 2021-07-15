@@ -51,6 +51,7 @@ jobs:
           cp -r /tmp/build/html/* .
           git add --all --force
       - name: Push docs to gh-pages branch
+        if: success() && github.ref == 'refs/heads/main'
         run: |
           echo "Push docs to gh-pages branch"
           git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
