@@ -11,6 +11,7 @@ use opendp::traits::DistanceCast;
 use crate::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
+use crate::util;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
@@ -26,7 +27,9 @@ pub extern "C" fn opendp_meas__make_base_geometric(
               QO: 'static + Float + DistanceCast,
               f64: From<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<Option<(D::Atom, D::Atom)>>()).clone();
+        let bounds = if let Some(bounds) = util::as_ref(bounds) {
+            Some(try_!(bounds.downcast_ref::<(D::Atom, D::Atom)>()).clone())
+        } else {None};
         make_base_geometric::<D, QO>(scale, bounds).into_any()
     }
     let D = try_!(Type::try_from(D));
