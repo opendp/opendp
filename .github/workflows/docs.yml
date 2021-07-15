@@ -18,6 +18,9 @@ jobs:
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    env:
+      # don't attempt to load binaries when sourcing the library
+      OPENDP_HEADLESS: true
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -28,9 +31,6 @@ jobs:
       - name: Run a multi-line script
         run: |
           echo "Install Sphinx and deploy docs..."
-          cd rust
-          cargo build
-          cd ..
           cd docs
           python --version
           python -m venv venv

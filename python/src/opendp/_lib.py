@@ -10,8 +10,8 @@ ATOM_EQUIVALENCE_CLASSES = {
     'bool': ['bool']
 }
 
-
-def _get_lib_dir() -> str:
+lib = None
+if os.environ.get('OPENDP_HEADLESS', "false") == "false":
     lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
     if not os.path.exists(lib_dir):
         # fall back to default location of binaries in a developer install
@@ -19,10 +19,7 @@ def _get_lib_dir() -> str:
         lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
     if not os.path.exists(lib_dir):
         raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
-    return lib_dir
 
-
-def _get_lib_name() -> str:
     platform_to_name = {
         "darwin": "libopendp_ffi.dylib",
         "linux": "libopendp_ffi.so",
@@ -30,11 +27,9 @@ def _get_lib_name() -> str:
     }
     if sys.platform not in platform_to_name:
         raise Exception("Platform not supported", sys.platform)
-    return platform_to_name[sys.platform]
+    lib_name = platform_to_name[sys.platform]
 
-
-lib_path = os.path.join(_get_lib_dir(), _get_lib_name())
-lib = ctypes.cdll.LoadLibrary(lib_path)
+    lib = ctypes.cdll.LoadLibrary(os.path.join(lib_dir, lib_name))
 
 
 class FfiSlice(ctypes.Structure):
