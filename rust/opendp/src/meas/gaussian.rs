@@ -4,7 +4,7 @@ use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMet
 use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::samplers::SampleGaussian;
+use crate::samplers::{SampleGaussian, CastInternalReal};
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
@@ -69,9 +69,17 @@ impl<MI: Metric> GaussianPrivacyRelation<MI> for SmoothedMaxDivergence<MI::Dista
     }
 }
 
-impl<MI: Metric> GaussianPrivacyRelation<MI> for FSmoothedMaxDivergence {
-    fn privacy_relation(_scale: MI::Distance) -> PrivacyRelation<MI, Self> {
+impl<MI: Metric> GaussianPrivacyRelation<MI> for FSmoothedMaxDivergence
+    where MI::Distance: CastInternalReal{
+    fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self> {
+
+        use rug::float::Round;
+        let mut scale_as_rug: rug::Float = scale.into_internal();
+        scale_as_rug.ln_round(Round::Up);
+
+        let _log_scale_in_native_type = MI::Distance::from_internal(scale_as_rug);
         unimplemented!()
+
     }
 }
 
