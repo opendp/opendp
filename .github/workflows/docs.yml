@@ -26,6 +26,7 @@ jobs:
       - name: Run a multi-line script
         run: |
           echo "Install Sphinx and deploy docs..."
+          cd docs
           python --version
           python -m venv venv
           source venv/bin/activate
