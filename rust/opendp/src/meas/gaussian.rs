@@ -1,10 +1,10 @@
 use num::{Float, One, Zero};
 
-use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric, Metric, Measure};
-use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence};
+use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation, SensitivityMetric};
+use crate::dist::{AbsoluteDistance, FSmoothedMaxDivergence, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::samplers::{SampleGaussian, CastInternalReal};
+use crate::samplers::{CastInternalReal, SampleGaussian};
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
@@ -69,17 +69,21 @@ impl<MI: Metric> GaussianPrivacyRelation<MI> for SmoothedMaxDivergence<MI::Dista
     }
 }
 
+#[cfg(feature="use-mpfr")]
 impl<MI: Metric> GaussianPrivacyRelation<MI> for FSmoothedMaxDivergence
-    where MI::Distance: CastInternalReal{
+    where MI::Distance: 'static + Clone + CastInternalReal {
     fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self> {
+        PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &Vec<(rug::Float, rug::Float)>| {
+            use rug::float::Round;
+            let d_in: rug::Float = d_in.clone().into_internal();
+            let mut scale: rug::Float = scale.clone().into_internal();
+            println!("input distance {:?}", d_in);
+            println!("scale {:?}", scale);
 
-        use rug::float::Round;
-        let mut scale_as_rug: rug::Float = scale.into_internal();
-        scale_as_rug.ln_round(Round::Up);
-
-        let _log_scale_in_native_type = MI::Distance::from_internal(scale_as_rug);
-        unimplemented!()
-
+            scale.ln_round(Round::Up);
+            let _ln_scale_back_in_native_type = MI::Distance::from_internal(scale);
+            unimplemented!()
+        })
     }
 }
 
