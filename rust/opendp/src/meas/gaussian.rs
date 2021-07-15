@@ -1,34 +1,13 @@
-use num::Float;
+use num::{Float, One, Zero};
 
-use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric};
-use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
+use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric, Metric, Measure};
+use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
-
-fn make_gaussian_privacy_relation<T: 'static + Clone + SampleGaussian + Float, MI: SensitivityMetric<Distance=T>>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>> {
-    PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
-        let _2 = num_cast!(2.; T)?;
-        let additive_gauss_const = num_cast!(ADDITIVE_GAUSS_CONST; T)?;
-
-        if d_in.is_sign_negative() {
-            return fallible!(InvalidDistance, "gaussian mechanism: input sensitivity must be non-negative")
-        }
-        if eps.is_sign_negative() || eps.is_zero() {
-            return fallible!(InvalidDistance, "gaussian mechanism: epsilon must be positive")
-        }
-        if del.is_sign_negative() || del.is_zero() {
-            return fallible!(InvalidDistance, "gaussian mechanism: delta must be positive")
-        }
-
-        // TODO: should we error if epsilon > 1., or just waste the budget?
-        Ok(eps.min(T::one()) >= (d_in / scale) * (additive_gauss_const + _2 * del.recip().ln()).sqrt())
-    })
-}
-
 
 pub trait GaussianDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -62,10 +41,44 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
     }
 }
 
+pub trait GaussianPrivacyRelation<MI: Metric>: Measure {
+    fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self>;
+}
 
-pub fn make_base_gaussian<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
+impl<MI: Metric> GaussianPrivacyRelation<MI> for SmoothedMaxDivergence<MI::Distance>
+    where MI::Distance: 'static + Clone + SampleGaussian + Float + One,
+          MI: SensitivityMetric {
+    fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self> {
+        PrivacyRelation::new_fallible(move |&d_in: &MI::Distance, &(eps, del): &(MI::Distance, MI::Distance)| {
+            let _2 = num_cast!(2.; MI::Distance)?;
+            let additive_gauss_const = num_cast!(ADDITIVE_GAUSS_CONST; MI::Distance)?;
+
+            if d_in.is_sign_negative() {
+                return fallible!(InvalidDistance, "gaussian mechanism: input sensitivity must be non-negative")
+            }
+            if eps.is_sign_negative() || eps.is_zero() {
+                return fallible!(InvalidDistance, "gaussian mechanism: epsilon must be positive")
+            }
+            if del.is_sign_negative() || del.is_zero() {
+                return fallible!(InvalidDistance, "gaussian mechanism: delta must be positive")
+            }
+
+            // TODO: should we error if epsilon > 1., or just waste the budget?
+            Ok(eps.min(MI::Distance::one()) >= (d_in / scale) * (additive_gauss_const + _2 * del.recip().ln()).sqrt())
+        })
+    }
+}
+
+impl<MI: Metric> GaussianPrivacyRelation<MI> for FSmoothedMaxDivergence {
+    fn privacy_relation(_scale: MI::Distance) -> PrivacyRelation<MI, Self> {
+        unimplemented!()
+    }
+}
+
+pub fn make_base_gaussian<D, MO>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MO>>
     where D: GaussianDomain,
-          D::Atom: 'static + Clone + SampleGaussian + Float {
+          D::Atom: 'static + Clone + SampleGaussian + Float,
+          MO: Measure + GaussianPrivacyRelation<D::Metric> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -74,8 +87,8 @@ pub fn make_base_gaussian<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Me
         D::new(),
         D::noise_function(scale.clone()),
         D::Metric::default(),
-        SmoothedMaxDivergence::default(),
-        make_gaussian_privacy_relation(scale),
+        MO::default(),
+        MO::privacy_relation(scale),
     ))
 }
 

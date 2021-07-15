@@ -3,6 +3,7 @@
 use std::marker::PhantomData;
 
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
+use rug::Float;
 
 /// Measures
 #[derive(Clone)]
@@ -105,3 +106,15 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
+
+// #[cfg(feature="use-mpfr")]
+#[derive(Clone, PartialEq)]
+pub struct FSmoothedMaxDivergence {}
+impl Default for FSmoothedMaxDivergence {
+    fn default() -> Self {
+        FSmoothedMaxDivergence {}
+    }
+}
+impl Measure for FSmoothedMaxDivergence {
+    type Distance = Vec<(Float, Float)>;
+}
