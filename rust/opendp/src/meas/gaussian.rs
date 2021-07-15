@@ -127,4 +127,18 @@ mod tests {
         assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001))?);
         Ok(())
     }
+
+    #[test]
+    fn test_make_gaussian_f_dp() -> Fallible<()> {
+        let measurement = make_base_gaussian::<VectorDomain<_>, FSmoothedMaxDivergence>(1.0)?;
+        let arg = vec![0.0, 1.0];
+        let _ret = measurement.function.eval(&arg)?;
+
+        let d_out = vec![
+            (rug::Float::with_val(53, 1.), rug::Float::with_val(53, 1.0e-8))
+        ];
+
+        assert!(measurement.privacy_relation.eval(&0.1, &d_out)?);
+        Ok(())
+    }
 }
