@@ -63,7 +63,7 @@ mod tests {
     fn test_make_base_simple_geometric() -> Fallible<()> {
         let measurement = Result::from(opendp_meas__make_base_geometric(
             util::into_raw(0.0) as *const c_void,
-            AnyObject::new_raw(None::<(i32, i32)>),
+            std::ptr::null(),
             "AllDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
@@ -78,7 +78,7 @@ mod tests {
     fn test_make_base_simple_constant_time_geometric() -> Fallible<()> {
         let measurement = Result::from(opendp_meas__make_base_geometric(
             util::into_raw(0.0) as *const c_void,
-            util::into_raw(AnyObject::new(Some((0, 100)))),
+            util::into_raw(AnyObject::new((0, 100))),
             "AllDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
