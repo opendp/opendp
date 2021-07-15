@@ -26,6 +26,9 @@ jobs:
       - name: Run a multi-line script
         run: |
           echo "Install Sphinx and deploy docs..."
+          cd rust
+          cargo build
+          cd ..
           cd docs
           python --version
           python -m venv venv
