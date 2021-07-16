@@ -35,6 +35,12 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     if type_name is not None:
         RuntimeType.assert_is_similar(RuntimeType.parse(type_name), RuntimeType.infer(value))
 
+        # exit early with a null pointer if trying to load an Option type with a None value
+        if isinstance(type_name, RuntimeType) and type_name.origin == "Option":
+            if value is None:
+                return
+            type_name = type_name.args[0]
+
     if c_type == ctypes.c_void_p:
         assert type_name is not None
 
@@ -116,7 +122,7 @@ def c_to_py(value):
         return value
 
     if isinstance(value, ctypes.c_void_p):
-        # returned void pointers don't
+        # returned void pointers are interpreted as None
         return
 
     return value
