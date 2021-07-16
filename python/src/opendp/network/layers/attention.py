@@ -4,7 +4,6 @@ from typing import Optional, Tuple, Dict, Callable, Iterable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.modules.linear import _LinearWithBias
 from torch.tensor import Tensor
 
 from opendp.network.layers.base import InstanceGrad
@@ -71,7 +70,7 @@ class DPMultiheadAttention(nn.Module):
         self.k_proj = nn.Linear(embed_dim, self.kdim, bias=bias)
         self.v_proj = nn.Linear(embed_dim, self.vdim, bias=bias)
 
-        self.out_proj = _LinearWithBias(embed_dim, embed_dim)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=True)
 
         if add_bias_kv:
             self.bias_k = DPCatBias(embed_dim)
