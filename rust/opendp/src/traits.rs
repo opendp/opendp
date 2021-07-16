@@ -122,8 +122,8 @@ macro_rules! cartesian {
 }
 
 /// Fallible casting where the casted value is equal to the original value.
-/// Casting fails for any value over Self::MAX_CONSECUTIVE.
-pub trait ExactIntCast<TI>: Sized + MaxConsecutiveInt {
+/// Casting fails for any value not between Self::MIN_CONSECUTIVE and Self::MAX_CONSECUTIVE.
+pub trait ExactIntCast<TI>: Sized + BoundedInt {
     fn exact_int_cast(v: TI) -> Fallible<Self>;
 }
 macro_rules! impl_exact_int_cast_from {
@@ -152,8 +152,8 @@ macro_rules! impl_exact_int_cast_int_float {
     ($int:ty, $float:ty) => (impl ExactIntCast<$int> for $float {
         fn exact_int_cast(v_int: $int) -> Fallible<Self> {
             let v_float = v_int as $float;
-            if <$float>::MAX_CONSECUTIVE < v_float {
-                fallible!(FailedCast, "exact_int_cast: integer is greater than the max consecutive integer and may be subject to rounding")
+            if <$float>::MIN_CONSECUTIVE > v_float || <$float>::MAX_CONSECUTIVE < v_float {
+                fallible!(FailedCast, "exact_int_cast: integer is outside of consecutive integer bounds and may be subject to rounding")
             } else {
                 Ok(v_float)
             }
@@ -192,18 +192,24 @@ macro_rules! impl_inf_cast_from {
     })
 }
 
-pub trait MaxConsecutiveInt {
+pub trait BoundedInt {
     const MAX_CONSECUTIVE: Self;
+    const MIN_CONSECUTIVE: Self;
 }
-macro_rules! impl_max_cons_int {
-    ($($ty:ty),*) => ($(impl MaxConsecutiveInt for $ty {const MAX_CONSECUTIVE: Self = Self::MAX;})*)
+macro_rules! impl_bounded_int {
+    ($($ty:ty),*) => ($(impl BoundedInt for $ty {
+        const MAX_CONSECUTIVE: Self = Self::MAX;
+        const MIN_CONSECUTIVE: Self = Self::MIN;
+    })*)
 }
-impl_max_cons_int!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
-impl MaxConsecutiveInt for f64 {
+impl_bounded_int!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl BoundedInt for f64 {
     const MAX_CONSECUTIVE: Self = 9_007_199_254_740_992.0;
+    const MIN_CONSECUTIVE: Self = -9_007_199_254_740_992.0;
 }
-impl MaxConsecutiveInt for f32 {
+impl BoundedInt for f32 {
     const MAX_CONSECUTIVE: Self = 16_777_216.0;
+    const MIN_CONSECUTIVE: Self = -16_777_216.0;
 }
 
 macro_rules! impl_inf_cast_int_float {
@@ -236,8 +242,8 @@ macro_rules! impl_inf_cast_float_int {
     ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
         fn inf_cast(mut v: $ti) -> Fallible<Self> {
             v = v.ceil();
-            if (Self::MAX as $ti) < v {
-                fallible!(FailedCast, "Failed to cast float to int. Float is too large to represent as int.")
+            if Self::MIN as $ti > v || Self::MAX as $ti < v {
+                fallible!(FailedCast, "Failed to cast float to int. Float value is outside of range.")
             } else {
                 Ok(v as Self)
             }
