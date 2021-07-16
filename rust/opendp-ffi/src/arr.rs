@@ -19,7 +19,7 @@ impl FFI_ArrowArraySchema {
 #[no_mangle]
 pub extern "C" fn opendp__test_arrow(array: *const FFI_ArrowArray, schema: *const FFI_ArrowSchema) -> *const FFI_ArrowArraySchema {
     unsafe { println!("test_arrow({:?}, {:?})", &*array, &*schema); }
-    let array = unsafe { array::make_array_from_raw(array, schema) }.unwrap();
+    // let array = unsafe { array::make_array_from_raw(array, schema) }.unwrap();
     // println!("array = {:?}", array);
     // // let array = array.as_any().downcast_ref::<Int32Array>().unwrap();
     // let sum = compute::sort(&array, None).unwrap();

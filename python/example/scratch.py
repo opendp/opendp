@@ -1,6 +1,5 @@
 import ctypes
 import pyarrow as pa
-import pyarrow.cffi
 
 ARROW_FLAG_DICTIONARY_ORDERED = 1
 ARROW_FLAG_NULLABLE = 2
