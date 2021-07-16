@@ -303,11 +303,9 @@ class PrivacyOdometer(object):
                         for A, B in zip(
                                 torch.chunk(A, chunks=chunk_count, dim=1),
                                 torch.chunk(B, chunks=chunk_count, dim=1)):
-                            grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
-                            yield torch.einsum('n...ij->nij', grad_instance)
+                            yield torch.einsum('n...i,n...j->nij', B, A)
                     else:
-                        grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
-                        yield torch.einsum('n...ij->nij', grad_instance)
+                        yield torch.einsum('n...i,n...j->n...ij', B, A)
 
                 def bias_grad_generator(module_, A, B):
                     if module_.bias is None:
@@ -325,6 +323,8 @@ class PrivacyOdometer(object):
                     module.bias: partial(bias_grad_generator, module),
                 }
 
+            elif isinstance(module, nn.Conv2d):
+                pass
             else:
                 raise NotImplementedError(f"Gradient reconstruction is not implemented for {module}")
 
