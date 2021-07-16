@@ -12,6 +12,7 @@ from opendp.network.layers.base import InstanceGrad
 class DPBahdanauAttentionScale(nn.Module, InstanceGrad):
     def __init__(self, embed_dim, normalize):
         super().__init__()
+        self.embed_dim = embed_dim
         self.v = Parameter(torch.Tensor(embed_dim))
         self.normalize = normalize
         if self.normalize:
