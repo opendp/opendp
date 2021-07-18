@@ -75,7 +75,6 @@ class StochasticPrivacyOdometer(object):
             :param grad: non-private gradient. Only useful for debugging grad correctness.
             :return: private grad
             """
-            print('clipping')
             grad = grad.clone()
             self.clip_grad_(grad)
             return self._noise_grad(measurement, grad)
@@ -140,7 +139,6 @@ class StochasticPrivacyOdometer(object):
 
     @staticmethod
     def _noise_grad(measurement: Measurement, grad):
-        print('starting noising')
         device = grad.device
         if device != 'cpu':
             grad = grad.to('cpu')
@@ -149,7 +147,6 @@ class StochasticPrivacyOdometer(object):
 
         if device != 'cpu':
             grad = grad.to(device)
-        print('finished noising')
         return grad
 
     @staticmethod

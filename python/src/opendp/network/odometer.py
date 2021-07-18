@@ -9,13 +9,13 @@ TODO: after adjusting to work with DDP, need to distribute epsilon among each cl
 """
 import copy
 import math
+from functools import partial as functools_partial
 from functools import wraps
 from typing import List, Optional, Union, Dict
-import numpy as np
 
+import numpy as np
 import torch
 import torch.nn as nn
-from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
 from torch.nn.parameter import Parameter
 
 import opendp.trans as trans
@@ -25,8 +25,10 @@ from opendp.mod import binary_search
 from opendp.network.layers.bahdanau import DPBahdanauAttention
 from opendp.network.layers.base import InstanceGrad
 from opendp.network.layers.lstm import DPLSTM, DPLSTMCell
+from opendp._convert import set_return_mode
+from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
 
-from functools import partial as functools_partial
+set_return_mode('torch')
 
 
 # hack for pytorch 1.4
@@ -312,13 +314,13 @@ class PrivacyOdometer(object):
                         for A, B in zip(
                                 torch.chunk(A, chunks=chunk_count, dim=1),
                                 torch.chunk(B, chunks=chunk_count, dim=1)):
-                            grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
-                            yield torch.einsum('n...ij->nij', grad_instance)
-                            # yield torch.einsum('n...i,n...j->nij', B, A)
+                            # grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
+                            # yield torch.einsum('n...ij->nij', grad_instance)
+                            yield torch.einsum('n...i,n...j->nij', B, A)
                     else:
-                        grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
-                        yield torch.einsum('n...ij->nij', grad_instance)
-                        # yield torch.einsum('n...i,n...j->n...ij', B, A)
+                        # grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
+                        # yield torch.einsum('n...ij->nij', grad_instance)
+                        yield torch.einsum('n...i,n...j->n...ij', B, A)
 
                 def bias_grad_generator(module_, A, B):
                     if module_.bias is None:
@@ -379,9 +381,9 @@ class PrivacyOdometer(object):
     @staticmethod
     def _make_base_mechanism_vec(mechanism_name, scale):
         if mechanism_name == 'laplace':
-            return meas.make_base_vector_laplace(scale)
+            return meas.make_base_vector_laplace(scale, T='f32')
         if mechanism_name == 'gaussian':
-            return meas.make_base_vector_gaussian(scale)
+            return meas.make_base_vector_gaussian(scale, T='f32')
 
     @staticmethod
     def _get_batch_size(module_):
@@ -466,7 +468,7 @@ class PrivacyOdometer(object):
             grad = grad.to('cpu')
 
         measurement = self._find_suitable_step_measure(reduction, clipping_norm, n)
-        grad = torch.FloatTensor(measurement(grad)).reshape(grad.shape)
+        grad = measurement(grad.flatten()).reshape(grad.shape)
 
         # fill gradient with a constant, if a _fill value is set. Useful for validating DDP
         if hasattr(self, '_fill') and self._fill is not None:
