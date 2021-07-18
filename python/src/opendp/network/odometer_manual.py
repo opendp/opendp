@@ -1,13 +1,11 @@
 import math
-from typing import List, Optional
 
 import torch
-import torch.nn as nn
-from opendp.v1.typing import RuntimeType, DatasetMetric, HammingDistance
-from opendp.v1._convert import set_return_mode
+from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
+from opendp._convert import set_return_mode
 
-import opendp.v1.trans as trans
-import opendp.v1.meas as meas
+import opendp.trans as trans
+import opendp.meas as meas
 
 set_return_mode('torch')
 
@@ -19,7 +17,7 @@ class ManualPrivacyOdometer(object):
             step_epsilon, step_delta=0.,
             clipping_norm=1.,
             dataset_distance: int = 1,
-            MI: DatasetMetric = HammingDistance):
+            MI: DatasetMetric = SymmetricDistance):
         """
         Utility for tracking privacy usage
         :param model:
@@ -87,7 +85,7 @@ class ManualPrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        grad = self.measurement(grad).reshape(grad.shape)
+        grad = self.measurement(grad.flatten()).reshape(grad.shape)
 
         if device != 'cpu':
             grad = grad.to(device)

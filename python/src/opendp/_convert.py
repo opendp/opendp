@@ -227,7 +227,7 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
         raise OpenDPException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
 
     if (val.__class__.__module__, val.__class__.__name__) == ('torch', 'Tensor'):
-        return _wrap_in_slice(val.numpy().astype(np.float64).__array_interface__['data'][0], val.numel())
+        return _wrap_in_slice(val.contiguous().numpy().__array_interface__['data'][0], val.numel())
     if not isinstance(val, list):
         raise OpenDPException(f"Cannot cast a non-list type to a vector")
 

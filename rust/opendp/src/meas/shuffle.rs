@@ -6,8 +6,19 @@ use crate::core::{Measurement, Function, PrivacyRelation};
 use std::marker::PhantomData;
 
 
+<<<<<<< HEAD
 pub struct ShuffleAmplification<MI> {
     in_distance: PhantomData<MI>
+=======
+pub trait ShuffleAmplificationConstant {
+    fn get_stability_constant() -> f64;
+}
+impl ShuffleAmplificationConstant for HammingDistance {
+    fn get_stability_constant() -> f64 { 2. }
+}
+impl ShuffleAmplificationConstant for SymmetricDistance {
+    fn get_stability_constant() -> f64 { 1. }
+>>>>>>> 4b98d0b95 (fix laplace sampling; misc fixes)
 }
 
 
@@ -171,10 +182,19 @@ fn binomial_cdf(x: u64, n: u64, p: f64) -> f64 {
 #[cfg(test)]
 mod compositor_tests {
     use super::*;
+<<<<<<< HEAD
 
     #[test]
     fn theoretical() {
         let amplifier = make_shuffle_amplification(
+=======
+    use crate::dist::HammingDistance;
+    use crate::error::ExplainUnwrap;
+
+    #[test]
+    fn theoretical() {
+        let amplifier = make_shuffle_amplification::<HammingDistance>(
+>>>>>>> 4b98d0b95 (fix laplace sampling; misc fixes)
             1.0, 1e-8, 1000, ShuffleBound::Theoretical).unwrap_test();
         let check = amplifier.privacy_relation.eval(&1, &(10., 1e-6)).unwrap_test();
         println!("theoretical {:?}", check);
@@ -182,7 +202,11 @@ mod compositor_tests {
 
     #[test]
     fn empirical() {
+<<<<<<< HEAD
         let amplifier = make_shuffle_amplification(
+=======
+        let amplifier = make_shuffle_amplification::<HammingDistance>(
+>>>>>>> 4b98d0b95 (fix laplace sampling; misc fixes)
             1.0, 1e-8, 1000, ShuffleBound::Empirical).unwrap_test();
         let check = amplifier.privacy_relation.eval(&1, &(10., 1e-6)).unwrap_test();
         println!("empirical {:?}", check);

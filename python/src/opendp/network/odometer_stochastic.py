@@ -3,12 +3,12 @@ from typing import List, Optional
 
 import torch
 import torch.nn as nn
-from opendp.v1.typing import RuntimeType, DatasetMetric, HammingDistance
-from opendp.v1._convert import set_return_mode
+from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
+from opendp._convert import set_return_mode
 
-import opendp.v1.trans as trans
-import opendp.v1.meas as meas
-from opendp.v1.mod import Measurement
+import opendp.trans as trans
+import opendp.meas as meas
+from opendp.mod import Measurement
 
 from functools import partial as functools_partial
 set_return_mode('torch')
@@ -27,7 +27,7 @@ class StochasticPrivacyOdometer(object):
             step_epsilon, step_delta=0.,
             clipping_norm=1.,
             dataset_distance: int = 1,
-            MI: DatasetMetric = HammingDistance):
+            MI: DatasetMetric = SymmetricDistance):
         """
         Utility for tracking privacy usage
         :param step_epsilon:
@@ -145,7 +145,7 @@ class StochasticPrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        grad = measurement(grad).reshape(grad.shape)
+        grad = measurement(grad.flatten()).reshape(grad.shape)
 
         if device != 'cpu':
             grad = grad.to(device)
