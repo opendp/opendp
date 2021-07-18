@@ -5,6 +5,7 @@ Thanks to https://github.com/cybertronai/autograd-hacks for demonstrating gradie
 A, activations: inputs into current module
 B, backprops: backprop values (aka Jacobian-vector product) observed at current module
 
+TODO: after adjusting to work with DDP, need to distribute epsilon among each clipping group
 """
 import copy
 import math
@@ -25,7 +26,15 @@ from opendp.network.layers.bahdanau import DPBahdanauAttention
 from opendp.network.layers.base import InstanceGrad
 from opendp.network.layers.lstm import DPLSTM, DPLSTMCell
 
-from functools import partial
+from functools import partial as functools_partial
+
+
+# hack for pytorch 1.4
+def partial(func, *args, **keywords):
+    result = functools_partial(func, *args, **keywords)
+    result.__name__ = func.__name__
+    return result
+
 
 CHECK_CORRECTNESS = False
 
@@ -303,9 +312,13 @@ class PrivacyOdometer(object):
                         for A, B in zip(
                                 torch.chunk(A, chunks=chunk_count, dim=1),
                                 torch.chunk(B, chunks=chunk_count, dim=1)):
-                            yield torch.einsum('n...i,n...j->nij', B, A)
+                            grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
+                            yield torch.einsum('n...ij->nij', grad_instance)
+                            # yield torch.einsum('n...i,n...j->nij', B, A)
                     else:
-                        yield torch.einsum('n...i,n...j->n...ij', B, A)
+                        grad_instance = torch.einsum('n...i,n...j->n...ij', B, A)
+                        yield torch.einsum('n...ij->nij', grad_instance)
+                        # yield torch.einsum('n...i,n...j->n...ij', B, A)
 
                 def bias_grad_generator(module_, A, B):
                     if module_.bias is None:
