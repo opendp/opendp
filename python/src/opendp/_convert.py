@@ -21,6 +21,16 @@ ATOM_MAP = {
     'bool': ctypes.c_bool,
 }
 
+RETURN_MODE = 'list'
+ACCEPTABLE_RETURN_MODES = ('list', 'numpy', 'torch')
+
+
+def set_return_mode(mode):
+    if mode not in ACCEPTABLE_RETURN_MODES:
+        raise ValueError(f"{mode} is not an acceptable return mode {ACCEPTABLE_RETURN_MODES}")
+    global RETURN_MODE
+    RETURN_MODE = mode
+
 
 def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     """Map from python `value` to ctypes `c_type`.
@@ -239,7 +249,17 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
         return list(map(lambda v: v.decode(), array))
 
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
+    raw_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
+    if RETURN_MODE == 'list':
+        return raw_array[0:raw.contents.len]
+    import numpy as np
+    array = np.ctypeslib.as_array(raw_array, shape=(raw.contents.len,)).copy()
+
+    if RETURN_MODE == 'numpy':
+        return array
+    if RETURN_MODE == 'torch':
+        import torch
+        return torch.from_numpy(array)
 
 
 def _tuple_to_slice(val: Tuple[Any, ...], type_name: str) -> FfiSlicePtr:
