@@ -8,7 +8,7 @@
    :maxdepth: {{ mastertocmaxdepth }}
    :caption: Contents:
 
-   opendp.v1
+   opendp
 
 Indices and tables
 ==================

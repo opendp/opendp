@@ -1,8 +1,8 @@
 # Auto-generated. Do not edit.
-from opendp.v1._convert import *
-from opendp.v1._lib import *
-from opendp.v1.mod import *
-from opendp.v1.typing import *
+from opendp._convert import *
+from opendp._lib import *
+from opendp.mod import *
+from opendp.typing import *
 
 
 def make_cast(

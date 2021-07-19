@@ -16,7 +16,7 @@ def _get_lib_dir() -> str:
     if not os.path.exists(lib_dir):
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-        lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 4, 'rust', 'target', build_dir)
+        lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
     if not os.path.exists(lib_dir):
         raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
     return lib_dir
@@ -113,8 +113,8 @@ def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
 
 
 def unwrap(result, type_) -> Any:
-    from opendp.v1.core import _error_free
-    from opendp.v1.mod import OpenDPException
+    from opendp.core import _error_free
+    from opendp.mod import OpenDPException
 
     if not isinstance(result, FfiResult):
         return result

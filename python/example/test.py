@@ -1,8 +1,8 @@
-from opendp.v1.trans import *
-from opendp.v1.meas import *
-from opendp.v1.core import *
+from opendp.trans import *
+from opendp.meas import *
+from opendp.core import *
 
-from opendp.v1.typing import SubstituteDistance
+from opendp.typing import SubstituteDistance
 
 
 def main():
