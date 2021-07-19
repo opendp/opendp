@@ -97,7 +97,7 @@ html_sidebars = {
 # Whitelist pattern for branches (set to None to ignore all branches)
 # TODO: We would rather have "latest" than "main": https://github.com/Holzhaus/sphinx-multiversion/issues/78
 #smv_branch_whitelist = r'^latest$'
-smv_branch_whitelist = r'^main$'
+#smv_branch_whitelist = r'^main$'
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
