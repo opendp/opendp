@@ -98,6 +98,8 @@ html_sidebars = {
 # TODO: We would rather have "latest" than "main": https://github.com/Holzhaus/sphinx-multiversion/issues/78
 #smv_branch_whitelist = r'^latest$'
 #smv_branch_whitelist = r'^main$'
+# TODO: remove this 148-docs line. Just for previewing the pull request.
+smv_branch_whitelist = r'^148-docs$'
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
