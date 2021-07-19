@@ -1,4 +1,4 @@
 Jupyter Notebooks
 =================
 
-SmartNoise users: Please see :doc:`/smartnoise/overview` for links to Jupyter example notebooks.
+For now, see https://github.com/opendp/opendp/blob/main/python/example/demo.ipynb

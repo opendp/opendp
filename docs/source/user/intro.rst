@@ -26,8 +26,6 @@ Who Should Read This Guide?
 
 This guide is intended primarily for developers or data scientists who want to make programmatic use of the OpenDP library or its Python bindings.
 
-(Because OpenDP is still under development, users who want to get started today should use :doc:`/smartnoise/index`, which will be powered by the OpenDP library, as depicted in the diagram above.)
-
 Data scientists and others who are more interested in a graphical user interface should review the offerings in the :doc:`opendp-commons`.
 
 Potential contributors to OpenDP should read the :doc:`/contrib/index`.

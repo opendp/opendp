@@ -12,9 +12,6 @@ print("*****************************************")
 [print(p) for p in sys.path]
 print("*****************************************")
 
-import opendp.smartnoise
-import opendp.smartnoise.synthesizers
-print(opendp.smartnoise.__spec__)
 print("*****************************************")
 
 extensions = [

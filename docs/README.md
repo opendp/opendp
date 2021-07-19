@@ -5,8 +5,6 @@
 
 Note: The OpenDP documentation, [docs.opendp.org](https://docs.opendp.org), is currently under development.
 
-For users of SmartNoise, please visit: [docs.opendp.org/en/latest/smartnoise](https://docs.opendp.org/en/latest/smartnoise/)
-
 ## Building the Docs
 
 The steps below assume the use of [Homebrew] on a Mac.
@@ -16,9 +14,8 @@ The steps below assume the use of [Homebrew] on a Mac.
 Note that Python 3.8 is required. Python 3.9 is known not to work with the synthesizers packages.
 
 ```
-/usr/local/opt/python\@3.8/bin/python3 -m venv venv
+python3 -m venv venv
 source venv/bin/activate
-python -m pip install --upgrade pip
 pip install -r requirements.txt
 make html
 open build/html/index.html
