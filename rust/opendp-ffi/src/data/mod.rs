@@ -16,6 +16,8 @@ use opendp::traits::{MeasureDistance, MetricDistance};
 use std::fmt::Formatter;
 use std::hash::Hash;
 
+use fixed::types::I16F16;
+
 
 #[no_mangle]
 pub extern "C" fn opendp_data__slice_as_measure_distance(

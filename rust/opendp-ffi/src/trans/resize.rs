@@ -10,6 +10,7 @@ use crate::any::{AnyObject, AnyTransformation};
 use crate::any::Downcast;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
+use fixed::types::{U16F16, I16F16};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_resize(

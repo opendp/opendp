@@ -1,10 +1,13 @@
 use std::convert::TryFrom;
 use std::ops::{Div, Mul, Sub, Shr, Shl, BitAnd};
 
-use num::{NumCast, One, Zero};
+use num::{NumCast, One, Zero, ToPrimitive};
 
 use crate::error::Fallible;
+
 use std::cmp::{Ordering};
+use fixed::types::{U16F16, I16F16};
+use fixed::traits::{ToFixed, LosslessTryFrom};
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.
@@ -35,7 +38,7 @@ macro_rules! impl_fallible_sub {
         }
     )+)
 }
-impl_fallible_sub!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
+impl_fallible_sub!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, U16F16);
 
 impl<T0, T1, Rhs0, Rhs1> FallibleSub<(Rhs0, Rhs1)> for (T0, T1) where T0: Sub<Rhs0>, T1: Sub<Rhs1> {
     type Output = (T0::Output, T1::Output);
@@ -50,7 +53,12 @@ impl<'a, T0, T1, Rhs0, Rhs1> FallibleSub<&'a (Rhs0, Rhs1)> for (T0, T1) where T0
         Ok((self.0 - &rhs.0, self.1 - &rhs.1))
     }
 }
-
+impl<'a> FallibleSub<&'a I16F16> for I16F16 {
+    type Output = I16F16;
+    fn sub(self, rhs: &'a I16F16) -> Fallible<Self::Output> {
+        Ok(self - rhs)
+    }
+}
 /// A type that can be used as a measure distance.
 pub trait MeasureDistance: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
 impl<T> MeasureDistance for T where T: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
@@ -60,29 +68,31 @@ pub trait MetricDistance: PartialOrd {}
 impl<T> MetricDistance for T where T: PartialOrd {}
 
 
-pub trait Abs { fn abs(self) -> Self; }
+pub trait CheckedAbs: Sized { fn checked_abs(self) -> Option<Self>; }
 macro_rules! impl_abs_method {
-    ($($ty:ty),+) => ($(impl Abs for $ty { fn abs(self) -> Self {self.abs()} })+)
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty { fn checked_abs(self) -> Option<Self> {Some(self.abs())} })+)
 }
 impl_abs_method!(f64, f32);
 
 macro_rules! impl_abs_self {
-    ($($ty:ty),+) => ($(impl Abs for $ty { fn abs(self) -> Self {self} })+)
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty { fn checked_abs(self) -> Option<Self> {Some(self)} })+)
 }
 impl_abs_self!(u8, u16, u32, u64, u128);
 
 macro_rules! impl_abs_int {
-    ($($ty:ty),+) => ($(impl Abs for $ty {
-        fn abs(self) -> Self {
-            if self == Self::MIN {
-                Self::MAX
-            } else {
-                self.abs()
-            }
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty {
+        fn checked_abs(self) -> Option<Self> {
+            self.checked_abs()
         }
     })+)
 }
 impl_abs_int!(i8, i16, i32, i64, i128);
+
+impl CheckedAbs for I16F16 {
+    fn checked_abs(self) -> Option<Self> {
+        Some(self)
+    }
+}
 
 // https://docs.google.com/spreadsheets/d/1DJohiOI3EVHjwj8g4IEdFZVf7MMyFk_4oaSyjTfkO_0/edit?usp=sharing
 macro_rules! cartesian {
@@ -169,6 +179,12 @@ impl_exact_int_cast_from!(u32, f64);
 impl_exact_int_cast_int_float!(i32, f32);
 impl_exact_int_cast_from!(i32, f64);
 
+impl ExactIntCast<usize> for I16F16 {
+    fn exact_int_cast(v: usize) -> Fallible<Self> {
+        Ok(v.to_fixed())
+    }
+}
+
 cartesian!([usize], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_exact_int_cast_try_from);
 
 /// Fallible casting where the casted value rounds towards infinity.
@@ -203,7 +219,7 @@ macro_rules! impl_exact_int_bounds {
         const MIN_CONSECUTIVE: Self = Self::MIN;
     })*)
 }
-impl_exact_int_bounds!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl_exact_int_bounds!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, I16F16);
 impl ExactIntBounds for f64 {
     const MAX_CONSECUTIVE: Self = 9_007_199_254_740_992.0;
     const MIN_CONSECUTIVE: Self = -9_007_199_254_740_992.0;
@@ -252,6 +268,39 @@ macro_rules! impl_inf_cast_float_int {
     })
 }
 cartesian!([f32, f64], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_inf_cast_float_int);
+
+impl InfCast<u32> for I16F16 {
+    fn inf_cast(vu32: u32) -> Fallible<Self> {
+        Self::lossless_try_from(vu32).ok_or_else(|| err!(FailedCast))
+    }
+}
+impl InfCast<I16F16> for I16F16 { fn inf_cast(v: I16F16) -> Fallible<Self> { Ok(v) } }
+impl InfCast<I16F16> for u32 {
+    fn inf_cast(v: I16F16) -> Fallible<Self> {
+        v.to_u32().ok_or_else(|| err!(FailedCast))
+    }
+}
+
+impl InfCast<i32> for I16F16 {
+    fn inf_cast(vi32: i32) -> Fallible<Self> {
+        Self::lossless_try_from(vi32).ok_or_else(|| err!(FailedCast))
+    }
+}
+impl InfCast<I16F16> for i32 {
+    fn inf_cast(v: I16F16) -> Fallible<Self> {
+        v.to_i32().ok_or_else(|| err!(FailedCast))
+    }
+}
+impl InfCast<f64> for I16F16 {
+    fn inf_cast(v: f64) -> Fallible<Self> {
+        Ok(v.to_fixed::<I16F16>())
+    }
+}
+impl InfCast<I16F16> for f64 {
+    fn inf_cast(v: I16F16) -> Fallible<Self> {
+        v.to_f64().ok_or_else(|| err!(FailedCast))
+    }
+}
 
 #[cfg(test)]
 mod test_inf_cast {
@@ -423,7 +472,7 @@ macro_rules! impl_math_delegation {
         })+
     };
 }
-impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, I16F16);
 macro_rules! impl_math_float {
     ($($t:ty),+) => {
         $(impl SaturatingAdd for $t {
