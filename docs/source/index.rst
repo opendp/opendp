@@ -8,11 +8,13 @@ OpenDP documentation is organized into the guides below. In addition to browsing
 .. toctree::
   :glob:
   :titlesonly:
-  :maxdepth: 2
+  :maxdepth: 4
 
   quickstart/index
   user/index
-  contrib/index
+  api/index
+  examples/index
+  resources/index
   contact/index
 
 This is version |version| of the guides.

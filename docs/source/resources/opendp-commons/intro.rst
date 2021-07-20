@@ -1,6 +1,8 @@
 OpenDP Commons
 ==============
 
+**Contents:**
+
 .. contents:: |toctitle|
 	:local:
 
@@ -13,7 +15,7 @@ The diagram below illustrates how the OpenDP library is the foundation of the Op
 
 |opendp-cake|
 
-.. |opendp-cake| image:: ../_static/images/opendp-cake.svg
+.. |opendp-cake| image:: ../../_static/images/opendp-cake.svg
    :class: img-responsive
 
 
@@ -31,11 +33,11 @@ It is written in Rust and has bindings for Python.
 
 The OpenDP library is currently under development and the source code can be found at https://github.com/opendp/opendp
 
-DPcreator
-+++++++++
+DP Creator
+++++++++++
 
-DPcreator is a web-based application to budget workloads of statistical queries for public release.
+DP Creator is a web-based application to budget workloads of statistical queries for public release.
 
 Integration with Dataverse repositories will allow researchers with knowledge of their datasets to calculate DP statistics without requiring expert knowledge in programming or differential privacy.
 
-DPcreator is currently under development and the source code can be found at https://github.com/opendp/dpcreator
+DP Creator is currently under development and the source code can be found at https://github.com/opendp/dpcreator

@@ -6,8 +6,7 @@ User Guide
 .. toctree::
 
    intro
-   jupyter-notebooks
-   api-reference/index
-   opendp-commons
-   faq
-   related-projects
+   installation
+   hello-opendp
+   framework-concepts
+   application-structure
