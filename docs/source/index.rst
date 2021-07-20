@@ -8,7 +8,7 @@ OpenDP documentation is organized into the guides below. In addition to browsing
 .. toctree::
   :glob:
   :titlesonly:
-  :maxdepth: 4
+  :maxdepth: 2
 
   quickstart/index
   user/index
