@@ -1,10 +1,14 @@
 use std::convert::TryFrom;
 use std::ops::{Div, Mul, Sub, Shr, Shl, BitAnd};
 
-use num::{NumCast, One, Zero};
+use num::{NumCast, One, Zero, ToPrimitive};
 
 use crate::error::Fallible;
 use std::cmp::{Ordering};
+use fixed::traits::{ToFixed, LosslessTryFrom, FromFixed};
+use crate::types::*;
+use fixed::types::extra::{Unsigned, LeEqU16};
+use crate::types::extra::{LeEqU8, LeEqU32, LeEqU64, LeEqU128};
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.
@@ -19,70 +23,43 @@ pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + Div<Output=Self>
     where TI: InfCast<Self> {}
 impl<TI: InfCast<Self>, TO: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + TotalOrd> DistanceConstant<TI> for TO {}
 
-// TODO: Maybe this should be renamed to something more specific to budgeting, and add negative checks? -Mike
-pub trait FallibleSub<Rhs = Self> {
-    type Output;
-    fn sub(self, rhs: Rhs) -> Fallible<Self::Output>;
-}
-
-macro_rules! impl_fallible_sub {
-    ($($ty:ty),+) => ($(
-        impl<Rhs> FallibleSub<Rhs> for $ty where $ty: Sub<Rhs, Output=$ty> {
-            type Output = $ty;
-            fn sub(self, rhs: Rhs) -> Fallible<Self::Output> {
-                Ok(self - rhs)
-            }
-        }
-    )+)
-}
-impl_fallible_sub!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
-
-impl<T0, T1, Rhs0, Rhs1> FallibleSub<(Rhs0, Rhs1)> for (T0, T1) where T0: Sub<Rhs0>, T1: Sub<Rhs1> {
-    type Output = (T0::Output, T1::Output);
-    fn sub(self, rhs: (Rhs0, Rhs1)) -> Fallible<Self::Output> {
-        Ok((self.0 - rhs.0, self.1 - rhs.1))
-    }
-}
-
-impl<'a, T0, T1, Rhs0, Rhs1> FallibleSub<&'a (Rhs0, Rhs1)> for (T0, T1) where T0: Sub<&'a Rhs0>, T1: Sub<&'a Rhs1> {
-    type Output = (T0::Output, T1::Output);
-    fn sub(self, rhs: &'a (Rhs0, Rhs1)) -> Fallible<Self::Output> {
-        Ok((self.0 - &rhs.0, self.1 - &rhs.1))
-    }
-}
-
-/// A type that can be used as a measure distance.
-pub trait MeasureDistance: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
-impl<T> MeasureDistance for T where T: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
-
-/// A type that can be used as a metric distance.
-pub trait MetricDistance: PartialOrd {}
-impl<T> MetricDistance for T where T: PartialOrd {}
-
-
-pub trait Abs { fn abs(self) -> Self; }
+pub trait CheckedAbs: Sized { fn checked_abs(self) -> Option<Self>; }
 macro_rules! impl_abs_method {
-    ($($ty:ty),+) => ($(impl Abs for $ty { fn abs(self) -> Self {self.abs()} })+)
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty { fn checked_abs(self) -> Option<Self> {Some(self.abs())} })+)
 }
 impl_abs_method!(f64, f32);
 
 macro_rules! impl_abs_self {
-    ($($ty:ty),+) => ($(impl Abs for $ty { fn abs(self) -> Self {self} })+)
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty { fn checked_abs(self) -> Option<Self> {Some(self)} })+)
 }
 impl_abs_self!(u8, u16, u32, u64, u128);
 
 macro_rules! impl_abs_int {
-    ($($ty:ty),+) => ($(impl Abs for $ty {
-        fn abs(self) -> Self {
-            if self == Self::MIN {
-                Self::MAX
-            } else {
-                self.abs()
-            }
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty {
+        fn checked_abs(self) -> Option<Self> {
+            self.checked_abs()
         }
     })+)
 }
 impl_abs_int!(i8, i16, i32, i64, i128);
+
+macro_rules! impl_checked_abs_fixed_u {
+    ($($ty:ident),+) => ($(impl<Frac> CheckedAbs for $ty<Frac> {
+        fn checked_abs(self) -> Option<Self> {
+            Some(self)
+        }
+    })+)
+}
+impl_checked_abs_fixed_u!(FixedU8, FixedU16, FixedU32, FixedU64, FixedU128);
+
+macro_rules! impl_checked_abs_fixed_i {
+    ($($ty:ident),+) => ($(impl<Frac> CheckedAbs for $ty<Frac> {
+        fn checked_abs(self) -> Option<Self> {
+            self.checked_abs()
+        }
+    })+)
+}
+impl_checked_abs_fixed_i!(FixedI8, FixedI16, FixedI32, FixedI64, FixedI128);
 
 // https://docs.google.com/spreadsheets/d/1DJohiOI3EVHjwj8g4IEdFZVf7MMyFk_4oaSyjTfkO_0/edit?usp=sharing
 macro_rules! cartesian {
@@ -169,6 +146,48 @@ impl_exact_int_cast_from!(u32, f64);
 impl_exact_int_cast_int_float!(i32, f32);
 impl_exact_int_cast_from!(i32, f64);
 
+macro_rules! impl_exact_int_cast_fixed {
+    ($ty:ident, $frac:ident) => {
+        impl<Frac> ExactIntBounds for $ty<Frac> {
+            const MAX_CONSECUTIVE: Self = Self::MAX;
+            const MIN_CONSECUTIVE: Self = Self::MIN;
+        }
+
+        // from TI to Fixed
+        impl<Frac: Unsigned + $frac, TI: Clone + FromFixed + ToFixed + PartialEq> ExactIntCast<TI> for $ty<Frac> {
+            fn exact_int_cast(v: TI) -> Fallible<Self> {
+                let casted: FixedI8<Frac> = v.clone().checked_to_fixed().ok_or_else(|| err!(FailedCast))?;
+                if v == casted.to_num() {
+                    Ok(casted)
+                } else {
+                    fallible!(FailedCast, "cast is not exact")
+                }
+            }
+        }
+        impl<Frac: Unsigned + $frac, TO: Clone + FromFixed + ToFixed + PartialEq> ExactIntCast<$ty<Frac>> for TO {
+            fn exact_int_cast(v: $ty<Frac>) -> Fallible<Self> {
+                let casted: TO = v.checked_to_num().ok_or_else(|| err!(FailedCast))?;
+                if v == casted.to_fixed() {
+                    Ok(casted)
+                } else {
+                    fallible!(FailedCast, "cast is not exact")
+                }
+            }
+        }
+    }
+}
+impl_exact_int_cast_fixed!(FixedI8, LeEqU8);
+impl_exact_int_cast_fixed!(FixedU8, LeEqU8);
+impl_exact_int_cast_fixed!(FixedI16, LeEqU16);
+impl_exact_int_cast_fixed!(FixedU16, LeEqU16);
+impl_exact_int_cast_fixed!(FixedI32, LeEqU32);
+impl_exact_int_cast_fixed!(FixedU32, LeEqU32);
+impl_exact_int_cast_fixed!(FixedI64, LeEqU64);
+impl_exact_int_cast_fixed!(FixedU64, LeEqU64);
+impl_exact_int_cast_fixed!(FixedI128, LeEqU128);
+impl_exact_int_cast_fixed!(FixedU128, LeEqU128);
+
+
 cartesian!([usize], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_exact_int_cast_try_from);
 
 /// Fallible casting where the casted value rounds towards infinity.
@@ -203,7 +222,7 @@ macro_rules! impl_exact_int_bounds {
         const MIN_CONSECUTIVE: Self = Self::MIN;
     })*)
 }
-impl_exact_int_bounds!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl_exact_int_bounds!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, I16F16);
 impl ExactIntBounds for f64 {
     const MAX_CONSECUTIVE: Self = 9_007_199_254_740_992.0;
     const MIN_CONSECUTIVE: Self = -9_007_199_254_740_992.0;
@@ -252,6 +271,39 @@ macro_rules! impl_inf_cast_float_int {
     })
 }
 cartesian!([f32, f64], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_inf_cast_float_int);
+
+impl InfCast<u32> for I16F16 {
+    fn inf_cast(vu32: u32) -> Fallible<Self> {
+        Self::lossless_try_from(vu32).ok_or_else(|| err!(FailedCast))
+    }
+}
+impl InfCast<I16F16> for I16F16 { fn inf_cast(v: I16F16) -> Fallible<Self> { Ok(v) } }
+impl InfCast<I16F16> for u32 {
+    fn inf_cast(v: I16F16) -> Fallible<Self> {
+        v.to_u32().ok_or_else(|| err!(FailedCast))
+    }
+}
+
+impl InfCast<i32> for I16F16 {
+    fn inf_cast(vi32: i32) -> Fallible<Self> {
+        Self::lossless_try_from(vi32).ok_or_else(|| err!(FailedCast))
+    }
+}
+impl InfCast<I16F16> for i32 {
+    fn inf_cast(v: I16F16) -> Fallible<Self> {
+        v.to_i32().ok_or_else(|| err!(FailedCast))
+    }
+}
+impl InfCast<f64> for I16F16 {
+    fn inf_cast(v: f64) -> Fallible<Self> {
+        Ok(v.to_fixed::<I16F16>())
+    }
+}
+impl InfCast<I16F16> for f64 {
+    fn inf_cast(v: I16F16) -> Fallible<Self> {
+        v.to_f64().ok_or_else(|| err!(FailedCast))
+    }
+}
 
 #[cfg(test)]
 mod test_inf_cast {
@@ -363,7 +415,7 @@ macro_rules! impl_check_null_for_non_nullable {
         })+
     }
 }
-impl_check_null_for_non_nullable!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize);
+impl_check_null_for_non_nullable!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize, I16F16);
 impl<T: CheckNull> CheckNull for Option<T> {
     #[inline]
     fn is_null(&self) -> bool {
@@ -423,7 +475,7 @@ macro_rules! impl_math_delegation {
         })+
     };
 }
-impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, I16F16);
 macro_rules! impl_math_float {
     ($($t:ty),+) => {
         $(impl SaturatingAdd for $t {
@@ -484,7 +536,7 @@ macro_rules! impl_total_ord_for_ord {
         fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
-impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, I16F16);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {

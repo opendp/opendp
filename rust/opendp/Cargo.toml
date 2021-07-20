@@ -19,6 +19,7 @@ statrs = "0.13.0"
 rug = { version = "1.9.0", default-features = false, features = ["integer", "float", "rand"], optional = true }
 gmp-mpfr-sys = { version = "=1.2.4", default-features = false, features = ["mpfr"], optional = true }
 openssl = { version = "0.10.29", features = ["vendored"], optional = true }
+fixed = {version = "1.9", features = ["num-traits"]}
 
 [features]
 default = ["use-openssl", "use-mpfr"]

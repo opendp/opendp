@@ -11,6 +11,8 @@ use crate::any::Downcast;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
 
+use opendp::types::*;
+
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_resize(
     size: c_uint, bounds: *const AnyObject,

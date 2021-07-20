@@ -4,7 +4,8 @@ use std::rc::Rc;
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation};
 use crate::dom::AllDomain;
 use crate::error::*;
-use crate::traits::{FallibleSub, MeasureDistance, MetricDistance, CheckNull};
+use crate::traits::{CheckNull};
+use std::ops::Sub;
 
 /// A structure tracking the state of an interactive measurement queryable.
 /// It's generic over state (S), query (Q), answer (A), so it can be used for any
@@ -60,7 +61,8 @@ pub struct AcState<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     d_out_budget: MO::Distance,
     data: DI::Carrier,
 }
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> where MO::Distance: MeasureDistance {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO>
+    where MO::Distance: PartialOrd + for <'a> Sub<&'a MO::Distance, Output=MO::Distance> {
     pub fn new(
         input_domain: DI,
         output_domain: DO,
@@ -106,12 +108,12 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> wh
 
     /// Updates this Queryable state by consuming the given amount of budget.
     fn update(self, d_out_query: &MO::Distance) -> Fallible<Self> {
-        Ok(Self { d_out_budget: self.d_out_budget.sub(d_out_query)?, ..self })
+        Ok(Self { d_out_budget: self.d_out_budget - d_out_query, ..self })
     }
 
     /// Processes a query, generating a new Queryable state.
     fn transition(self, (measurement, d_out_query): &AcQuery<DI, DO, MI, MO>) -> Fallible<(Self, DO::Carrier)>
-        where MO::Distance: Clone + MeasureDistance {
+        where MO::Distance: Clone + PartialOrd + for <'a> Sub<&'a MO::Distance, Output=MO::Distance> {
         self.check_types(measurement)?;
         self.check_budget(&measurement.privacy_relation, d_out_query)?;
         let res = measurement.invoke(&self.data)?;
@@ -135,9 +137,9 @@ pub fn make_adaptive_composition<DI, DO, MI, MO>(
           DI::Carrier: Clone,
           DO: 'static + Domain,
           MI: 'static + Metric,
-          MI::Distance: 'static + MetricDistance + Clone,
+          MI::Distance: 'static + PartialOrd + Clone,
           MO: 'static + Measure,
-          MO::Distance: 'static + MeasureDistance + Clone {
+          MO::Distance: 'static + PartialOrd + for <'a> Sub<&'a MO::Distance, Output=MO::Distance> + Clone {
     AcMeasurement::new(
         input_domain.clone(),
         AllDomain::new(),

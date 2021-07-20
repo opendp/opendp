@@ -7,12 +7,12 @@ use crate::core::{Function, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, CheckedMul, ExactIntCast, CheckNull};
+use crate::traits::{DistanceConstant, InfCast, SaturatingAdd, CheckedMul, ExactIntCast, CheckNull, CheckedAbs};
 
 pub fn make_bounded_sum<T>(
     bounds: (T, T)
 ) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero + CheckNull,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + CheckedAbs + SaturatingAdd + Zero + CheckNull,
           IntDistance: InfCast<T> {
     let (lower, upper) = bounds.clone();
 
@@ -22,7 +22,10 @@ pub fn make_bounded_sum<T>(
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(lower.abs().total_max(upper.abs())?)))
+        StabilityRelation::new_from_constant(
+            lower.checked_abs().ok_or_else(|| err!(MakeTransformation, "abs failed for lower"))?
+                .total_max(upper.checked_abs().ok_or_else(|| err!(MakeTransformation, "abs failed for upper"))?)?)
+    ))
 }
 
 

@@ -10,6 +10,8 @@ use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
 
+use opendp::types::*;
+
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_clamp(
     bounds: *const AnyObject,
