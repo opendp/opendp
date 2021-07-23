@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use num::{Integer, Float, NumCast, Zero};
+use num::{Integer, Float, Zero};
 
 use crate::core::{Measurement, Function, PrivacyRelation, SensitivityMetric};
 use crate::dist::{L1Distance, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::samplers::{SampleLaplace, SampleGaussian};
 use crate::error::Fallible;
+use crate::traits::{ExactIntCast, ExactIntBounds};
 
 // TIK: Type of Input Key
 // TIC: Type of Input Count
@@ -35,16 +36,16 @@ pub fn make_base_stability<MI, TIK, TIC>(
 ) -> Fallible<Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, MI::Distance>, MI, SmoothedMaxDivergence<MI::Distance>>>
     where MI: BaseStabilityNoise,
           TIK: Eq + Hash + Clone,
-          TIC: Integer + Clone + NumCast,
-          MI::Distance: 'static + Float + Clone + PartialOrd + NumCast {
+          TIC: Integer + Clone,
+          MI::Distance: 'static + Float + Clone + PartialOrd + ExactIntCast<usize> + ExactIntCast<TIC> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
     if threshold.is_sign_negative() {
         return fallible!(MakeMeasurement, "threshold must not be negative")
     }
-    let _n = num_cast!(n; MI::Distance)?;
-    let _2 = num_cast!(2; MI::Distance)?;
+    let _n = MI::Distance::exact_int_cast(n)?;
+    let _2 = MI::Distance::exact_int_cast(2)?;
 
     Ok(Measurement::new(
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
@@ -53,7 +54,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
             data.iter()
                 .map(|(k, c_in)| {
                     // cast the value to MI::Distance (output count)
-                    let c_out = num_cast!(c_in.clone(); MI::Distance)?;
+                    let c_out = MI::Distance::exact_int_cast(c_in.clone()).unwrap_or(MI::Distance::MAX_CONSECUTIVE);
                     // noise output count
                     Ok((k.clone(), MI::noise(c_out, scale, false)?))
                 })

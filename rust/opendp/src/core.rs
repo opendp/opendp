@@ -24,7 +24,8 @@ use std::rc::Rc;
 
 use crate::dom::PairDomain;
 use crate::error::*;
-use crate::traits::{DistanceCast, DistanceConstant};
+use crate::traits::{DistanceConstant, InfCast};
+use crate::dist::IntDistance;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -83,7 +84,7 @@ pub trait Measure: Default + Clone + PartialEq {
 }
 
 /// An indicator trait that is only implemented for dataset distances.
-pub trait DatasetMetric: Metric<Distance=u32> {}
+pub trait DatasetMetric: Metric<Distance=IntDistance> {}
 
 /// An indicator trait that is only implemented for statistic distances.
 pub trait SensitivityMetric: Metric {}
@@ -152,13 +153,13 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
         }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: Clone + DistanceCast,
-        MO::Distance: DistanceConstant {
+        MI::Distance: InfCast<MO::Distance> + Clone,
+        MO::Distance: DistanceConstant<MI::Distance> {
         PrivacyRelation::new_all(
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::distance_cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())? * c.clone())),
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(Box::new(MI::Distance::distance_cast(d_out.clone() / c.clone())?)))))
+                Ok(Box::new(MI::Distance::inf_cast(d_out.clone() / c.clone())?)))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)
@@ -265,18 +266,18 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
         }
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: Clone + DistanceCast,
-        MO::Distance: DistanceConstant {
+        MI::Distance: InfCast<MO::Distance> + Clone,
+        MO::Distance: DistanceConstant<MI::Distance> {
         StabilityRelation::new_all(
             // relation
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::distance_cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())? * c.clone())),
             // forward map
             Some(enclose!(c, move |d_in: &MI::Distance|
-                Ok(Box::new(MO::Distance::distance_cast(d_in.clone())? * c.clone())))),
+                Ok(Box::new(MO::Distance::inf_cast(d_in.clone())? * c.clone())))),
             // backward map
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(Box::new(MI::Distance::distance_cast(d_out.clone() / c.clone())?)))))
+                Ok(Box::new(MI::Distance::inf_cast(d_out.clone() / c.clone())?)))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)

@@ -120,7 +120,13 @@ impl Type {
     }
 }
 
-// Convert `[A B C] i8` to `A<B<C<i8>>`
+// Convert `[A B C] i8` -> `A<B<C<i8>>`
+// 1. Reverse the array:
+// `[A B C] [] i8` -> `[B C] [A] i8` -> `[C] [B A] i8` -> `[] [C B A] i8` ->
+// 2. Recursively peel the first element off the reversed array:
+// `[] [B A] C<i8>` -> `[] [A] B<C<i8>>` ->
+// 3. The final step drops the leading arrays:
+// `A<B<C<i8>>`
 macro_rules! nest {
     ([$($all:tt)*] $arg:ty) => (nest!(@[$($all)*] [] $arg));
 

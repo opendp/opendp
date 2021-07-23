@@ -1,50 +1,50 @@
 use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
-use crate::dist::{SubstituteDistance, SymmetricDistance};
+use crate::dist::{SubstituteDistance, SymmetricDistance, IntDistance};
 use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{CastFrom, CheckNull};
+use crate::traits::{RoundCast, CheckNull};
 use crate::trans::make_row_by_row;
 
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TI> -> Vec<Option<TO>>
 pub fn make_cast<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone, TO: 'static + CastFrom<TI> + CheckNull {
+    where TI: 'static + Clone, TO: 'static + RoundCast<TI> + CheckNull {
     make_row_by_row(
         AllDomain::new(),
         OptionNullDomain::new(AllDomain::new()),
-        |v| TO::cast(v.clone()).ok()
+        |v| TO::round_cast(v.clone()).ok()
             .and_then(|v| if v.is_null() {None} else {Some(v)}))
 }
 
 /// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_default<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone, TO: 'static + CastFrom<TI> + Default {
+    where TI: 'static + Clone, TO: 'static + RoundCast<TI> + Default {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
-        |v| TO::cast(v.clone()).unwrap_or_default())
+        |v| TO::round_cast(v.clone()).unwrap_or_default())
 }
 
 /// A [`Transformation`] that casts elements to a type that has an inherent representation of nullity.
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_inherent<TI, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InherentNullDomain<AllDomain<TO>>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone, TO: 'static + CastFrom<TI> + InherentNull {
+    where TI: 'static + Clone, TO: 'static + RoundCast<TI> + InherentNull {
     make_row_by_row(
         AllDomain::new(),
         InherentNullDomain::new(AllDomain::new()),
-        |v| TO::cast(v.clone()).unwrap_or(TO::NULL))
+        |v| TO::round_cast(v.clone()).unwrap_or(TO::NULL))
 }
 
 pub trait DatasetMetricCast {
-    fn stability_constant() -> u32;
+    fn stability_constant() -> IntDistance;
 }
 
 macro_rules! impl_metric_cast {
     ($ty:ty, $constant:literal) => {
          impl DatasetMetricCast for $ty {
-            fn stability_constant() -> u32 {
+            fn stability_constant() -> IntDistance {
                 $constant
             }
         }

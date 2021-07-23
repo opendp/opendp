@@ -6,12 +6,12 @@ use num::Float;
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
 use opendp::meas::{GeometricDomain, make_base_geometric};
-use opendp::traits::DistanceCast;
 
 use crate::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 use crate::util;
+use opendp::traits::InfCast;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
@@ -23,8 +23,8 @@ pub extern "C" fn opendp_meas__make_base_geometric(
         scale: *const c_void, bounds: *const AnyObject
     ) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + GeometricDomain,
-              D::Atom: 'static + DistanceCast + PartialOrd,
-              QO: 'static + Float + DistanceCast,
+              D::Atom: 'static + InfCast<QO> + PartialOrd + Clone,
+              QO: 'static + Float + InfCast<D::Atom>,
               f64: From<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = if let Some(bounds) = util::as_ref(bounds) {

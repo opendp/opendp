@@ -1,40 +1,43 @@
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
-use std::convert::TryFrom;
 use std::hash::Hash;
 use std::ops::AddAssign;
 
-use num::{Bounded, Integer, One, Zero};
+use num::{Integer, One, Zero};
 
 use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation};
-use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance};
+use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::DistanceConstant;
+use crate::traits::{DistanceConstant, InfCast, ExactIntCast};
 
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
-    where TO: TryFrom<usize> + Bounded + One + DistanceConstant {
+    where TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance>,
+          IntDistance: InfCast<TO> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
         // think of this as: min(arg.len(), TO::max_value())
-        Function::new(move |arg: &Vec<TIA>| TO::try_from(arg.len()).unwrap_or(TO::max_value())),
+        Function::new(move |arg: &Vec<TIA>|
+            TO::exact_int_cast(arg.len()).unwrap_or(TO::MAX_CONSECUTIVE)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_constant(TO::one())))
 }
 
 
-pub fn make_count_distinct<TIA, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
+pub fn make_count_distinct<TIA, TO>(
+) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Eq + Hash,
-          TO: TryFrom<usize> + Bounded + One + DistanceConstant {
+          TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance>,
+          IntDistance: InfCast<TO> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
-            TO::try_from(len).unwrap_or(TO::max_value())
+            TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
@@ -49,11 +52,14 @@ impl<Q: One, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
 }
 
 // count with unknown n, known categories
-pub fn make_count_by_categories<MO, TI, TO>(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, SymmetricDistance, MO>>
+pub fn make_count_by_categories<MO, TI, TO>(
+    categories: Vec<TI>
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
-          MO::Distance: DistanceConstant + One,
+          MO::Distance: DistanceConstant<IntDistance> + One,
           TI: 'static + Eq + Hash,
-          TO: Integer + Zero + One + AddAssign {
+          TO: Integer + Zero + One + AddAssign,
+          IntDistance: InfCast<MO::Distance>{
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct")
@@ -85,11 +91,14 @@ pub fn make_count_by_categories<MO, TI, TO>(categories: Vec<TI>) -> Fallible<Tra
 // count with known n, unknown categories
 // This implementation could be made tighter with the relation in the spreadsheet for known n.
 // Need to double-check if stability-based histograms have any additional stability requirements.
-pub fn make_count_by<MO, TI, TO>(n: usize) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
+pub fn make_count_by<MO, TI, TO>(
+    n: usize
+) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
-          MO::Distance: DistanceConstant,
+          MO::Distance: DistanceConstant<IntDistance>,
           TI: 'static + Eq + Hash + Clone,
-          TO: Integer + Zero + One + AddAssign {
+          TO: Integer + Zero + One + AddAssign,
+          IntDistance: InfCast<MO::Distance> {
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), n),
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),

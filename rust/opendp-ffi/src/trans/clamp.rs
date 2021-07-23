@@ -5,10 +5,10 @@ use std::os::raw::{c_char, c_void};
 use num::One;
 
 use opendp::core::{DatasetMetric, Metric};
-use opendp::dist::{SubstituteDistance, SymmetricDistance, AbsoluteDistance, L1Distance, L2Distance};
+use opendp::dist::{SubstituteDistance, SymmetricDistance, AbsoluteDistance, L1Distance, L2Distance, IntDistance};
 use opendp::dom::{AllDomain, VectorDomain, IntervalDomain};
 use opendp::err;
-use opendp::traits::{DistanceConstant};
+use opendp::traits::{DistanceConstant, InfCast};
 use opendp::trans::{ClampableDomain, make_clamp, make_unclamp, UnclampableDomain};
 
 use crate::any::AnyTransformation;
@@ -23,6 +23,7 @@ pub extern "C" fn opendp_trans__make_clamp(
     let DI = try_!(Type::try_from(DI));
     let DIA = try_!(DI.get_domain_atom());
     let M = try_!(Type::try_from(M));
+
     match try_!(M.get_metric_class()) {
         MetricClass::Dataset => {
             fn monomorphize_dataset<T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
@@ -42,8 +43,9 @@ pub extern "C" fn opendp_trans__make_clamp(
                 lower: *const c_void, upper: *const c_void
             ) -> FfiResult<*mut AnyTransformation>
                 where AllDomain<T>: ClampableDomain<AbsoluteDistance<Q>, Atom=T>,
-                      Q: DistanceConstant + One,
-                      T: 'static + Clone + PartialOrd {
+                      Q: DistanceConstant<IntDistance> + One,
+                      T: 'static + Clone + PartialOrd,
+                      IntDistance: InfCast<Q> {
                 let lower = try_as_ref!(lower as *const T).clone();
                 let upper = try_as_ref!(upper as *const T).clone();
                 make_clamp::<AllDomain<T>, AbsoluteDistance<Q>>(lower, upper).into_any()
@@ -91,7 +93,7 @@ pub extern "C" fn opendp_trans__make_unclamp(
                 lower: *const c_void, upper: *const c_void, DI: Type, M: Type
             ) -> FfiResult<*mut AnyTransformation>
                 where IntervalDomain<T>: UnclampableDomain<Atom=T, Carrier=T>,
-                      Q: DistanceConstant + One,
+                      Q: DistanceConstant<Q> + One,
                       T: 'static + Clone + PartialOrd {
                 fn monomorphize_sensitivity_2<DI, M>(
                     lower: DI::Atom, upper: DI::Atom,
@@ -100,7 +102,7 @@ pub extern "C" fn opendp_trans__make_unclamp(
                           DI::Carrier: Clone,
                           M: 'static + Metric,
                           DI::Atom: 'static + Clone + PartialOrd,
-                          M::Distance: DistanceConstant + One {
+                          M::Distance: DistanceConstant<M::Distance> + One {
                     make_unclamp::<DI, M>(
                         Bound::Included(lower), Bound::Included(upper),
                     ).into_any()
