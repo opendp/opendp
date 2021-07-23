@@ -8,7 +8,7 @@ use crate::dist::{L1Distance, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::samplers::{SampleLaplace, SampleGaussian};
 use crate::error::Fallible;
-use crate::traits::{ExactIntCast, BoundedInt};
+use crate::traits::{ExactIntCast, ExactIntBounds};
 
 // TIK: Type of Input Key
 // TIC: Type of Input Count

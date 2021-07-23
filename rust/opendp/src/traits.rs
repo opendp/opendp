@@ -123,7 +123,7 @@ macro_rules! cartesian {
 
 /// Fallible casting where the casted value is equal to the original value.
 /// Casting fails for any value not between Self::MIN_CONSECUTIVE and Self::MAX_CONSECUTIVE.
-pub trait ExactIntCast<TI>: Sized + BoundedInt {
+pub trait ExactIntCast<TI>: Sized + ExactIntBounds {
     fn exact_int_cast(v: TI) -> Fallible<Self>;
 }
 macro_rules! impl_exact_int_cast_from {
@@ -192,22 +192,22 @@ macro_rules! impl_inf_cast_from {
     })
 }
 
-pub trait BoundedInt {
+pub trait ExactIntBounds {
     const MAX_CONSECUTIVE: Self;
     const MIN_CONSECUTIVE: Self;
 }
-macro_rules! impl_bounded_int {
-    ($($ty:ty),*) => ($(impl BoundedInt for $ty {
+macro_rules! impl_exact_int_bounds {
+    ($($ty:ty),*) => ($(impl ExactIntBounds for $ty {
         const MAX_CONSECUTIVE: Self = Self::MAX;
         const MIN_CONSECUTIVE: Self = Self::MIN;
     })*)
 }
-impl_bounded_int!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
-impl BoundedInt for f64 {
+impl_exact_int_bounds!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl ExactIntBounds for f64 {
     const MAX_CONSECUTIVE: Self = 9_007_199_254_740_992.0;
     const MIN_CONSECUTIVE: Self = -9_007_199_254_740_992.0;
 }
-impl BoundedInt for f32 {
+impl ExactIntBounds for f32 {
     const MAX_CONSECUTIVE: Self = 16_777_216.0;
     const MIN_CONSECUTIVE: Self = -16_777_216.0;
 }

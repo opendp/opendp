@@ -24,17 +24,6 @@ pub extern "C" fn opendp_trans__make_clamp(
     let DIA = try_!(DI.get_domain_atom());
     let M = try_!(Type::try_from(M));
 
-    // if MetricClass::Dataset = M.get_metric_class() {
-    //     return in here
-    // }
-    //
-    // if MetricClass::Senstivity = M.get_metric_class() {
-    //     return in here
-    // }
-    // unreachable!()
-
-
-
     match try_!(M.get_metric_class()) {
         MetricClass::Dataset => {
             fn monomorphize_dataset<T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
