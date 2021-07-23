@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::hash::Hash;
-use std::ops::AddAssign;
 
 use num::{Integer, One, Zero};
 
@@ -9,7 +8,7 @@ use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation
 use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{DistanceConstant, InfCast, ExactIntCast};
+use crate::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd};
 
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
@@ -58,7 +57,7 @@ pub fn make_count_by_categories<MO, TI, TO>(
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance> + One,
           TI: 'static + Eq + Hash,
-          TO: Integer + Zero + One + AddAssign,
+          TO: Integer + Zero + One + SaturatingAdd,
           IntDistance: InfCast<MO::Distance>{
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
@@ -72,11 +71,13 @@ pub fn make_count_by_categories<MO, TI, TO>(
                 .map(|cat| (cat, TO::zero())).collect::<HashMap<&TI, TO>>();
             let mut null_count = TO::zero();
 
-            data.iter().for_each(|v|
-                *match counts.entry(v) {
+            data.iter().for_each(|v| {
+                let count = match counts.entry(v) {
                     Entry::Occupied(v) => v.into_mut(),
                     Entry::Vacant(_v) => &mut null_count
-                } += TO::one());
+                };
+                *count = TO::one().saturating_add(count)
+            });
 
             categories.iter().map(|cat| counts.remove(cat)
                 .unwrap_assert("categories are distinct and every category is in the map"))
@@ -97,16 +98,17 @@ pub fn make_count_by<MO, TI, TO>(
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance>,
           TI: 'static + Eq + Hash + Clone,
-          TO: Integer + Zero + One + AddAssign,
+          TO: Integer + Zero + One + SaturatingAdd,
           IntDistance: InfCast<MO::Distance> {
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), n),
         SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
         Function::new(move |data: &Vec<TI>| {
             let mut counts = HashMap::new();
-            data.iter().for_each(|v|
-                *counts.entry(v.clone()).or_insert_with(TO::zero) += TO::one()
-            );
+            data.iter().for_each(|v| {
+                let count = counts.entry(v.clone()).or_insert_with(TO::zero);
+                *count = TO::one().saturating_add(count);
+            });
             counts
         }),
         SymmetricDistance::default(),
