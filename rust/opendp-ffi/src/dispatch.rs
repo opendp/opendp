@@ -110,7 +110,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [i32, f64, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u32, i32, f64]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32, f64]), $rt_dispatch_types, $type_args, $args)
     };
     // TODO: remove i32 once we have Vec<String> data loader
     ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
@@ -120,7 +120,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u32, i32]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [SubstituteDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
