@@ -4,12 +4,13 @@ use std::ops::Sub;
 use std::os::raw::{c_char, c_uint, c_void};
 
 use opendp::err;
-use opendp::traits::{Abs, DistanceConstant, InfCast};
+use opendp::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, ExactIntCast, CheckedMul};
 use opendp::trans::{make_bounded_sum, make_bounded_sum_n};
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
+use num::Zero;
 use opendp::dist::IntDistance;
 
 #[no_mangle]
@@ -20,7 +21,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum(
     fn monomorphize<T>(
         lower: *const c_void, upper: *const c_void
     ) -> FfiResult<*mut AnyTransformation>
-        where for<'a> T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + Sum<&'a T>,
+        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero,
               IntDistance: InfCast<T> {
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
@@ -38,7 +39,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum_n(
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(lower: *const c_void, upper: *const c_void, n: usize) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T>,
+        where T: DistanceConstant<IntDistance> + Sub<Output=T> + ExactIntCast<usize> + CheckedMul,
               for<'a> T: Sum<&'a T>,
               IntDistance: InfCast<T> {
         let lower = try_as_ref!(lower as *const T).clone();

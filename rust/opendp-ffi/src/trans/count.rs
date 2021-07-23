@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 use std::hash::Hash;
-use std::ops::AddAssign;
 use std::os::raw::{c_char, c_uint};
 
 use num::{Bounded, Integer, One, Zero};
@@ -9,7 +8,7 @@ use num::traits::FloatConst;
 use opendp::core::{SensitivityMetric};
 use opendp::dist::{L1Distance, L2Distance, IntDistance};
 use opendp::err;
-use opendp::traits::{DistanceConstant, InfCast, ExactIntCast};
+use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd};
 use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct};
 
 use crate::any::{AnyObject, AnyTransformation};
@@ -72,7 +71,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + One,
                   TI: 'static + Eq + Hash + Clone,
-                  TO: 'static + Integer + Zero + One + AddAssign,
+                  TO: 'static + Integer + Zero + One + SaturatingAdd,
                   IntDistance: InfCast<MO::Distance> {
             let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
             make_count_by_categories::<MO, TI, TO>(categories).into_any()
@@ -107,7 +106,7 @@ pub extern "C" fn opendp_trans__make_count_by(
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + FloatConst + One,
                   TI: 'static + Eq + Hash + Clone,
-                  TO: 'static + Integer + Zero + One + AddAssign,
+                  TO: 'static + Integer + Zero + One + SaturatingAdd,
                   IntDistance: InfCast<MO::Distance> {
             make_count_by::<MO, TI, TO>(n).into_any()
         }
