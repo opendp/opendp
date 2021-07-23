@@ -22,3 +22,8 @@ pub use crate::meas::geometric::*;
 pub mod stability;
 #[cfg(all(feature="floating-point", feature="contrib"))]
 pub use crate::meas::stability::*;
+
+#[cfg(feature="contrib")]
+pub mod randomized_response;
+#[cfg(feature="contrib")]
+pub use crate::meas::randomized_response::*;

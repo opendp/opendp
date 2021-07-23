@@ -73,6 +73,9 @@ pub enum ErrorVariant {
     #[error("MeasureMismatch")]
     MeasureMismatch,
 
+    #[error("MakeDomain")]
+    MakeDomain,
+
     #[error("MakeTransformation")]
     MakeTransformation,
 
