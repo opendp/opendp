@@ -309,7 +309,7 @@ def make_count(
 
 def make_count_distinct(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "u32"
+    TO: RuntimeTypeDescriptor = "i32"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
