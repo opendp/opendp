@@ -8,19 +8,24 @@ use crate::core::{Function, StabilityRelation, Transformation};
 use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
 use crate::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{DistanceConstant, ExactIntCast, InfCast};
+use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckedMul};
 
 
 pub fn make_bounded_variance<T>(
     lower: T, upper: T, length: usize, ddof: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Float + One + Sub<Output=T> + Div<Output=T> + Sum<T> + for<'a> Sum<&'a T> + ExactIntCast<usize>,
+    where T: DistanceConstant<IntDistance> + Float + One + Sub<Output=T> + Div<Output=T> + Sum<T> + for<'a> Sum<&'a T> + ExactIntCast<usize> + CheckedMul,
           for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
           IntDistance: InfCast<T> {
     let _length = T::exact_int_cast(length)?;
     let _ddof = T::exact_int_cast(ddof)?;
     let _1 = T::one();
     let _2 = &_1 + &_1;
+
+    let range = (&upper - &lower) / _2.clone();
+    if range.clone().checked_mul(&range).is_none() {
+        return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
+    }
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
@@ -47,7 +52,7 @@ pub fn make_bounded_covariance<T>(
     upper: (T, T),
     length: usize, ddof: usize
 ) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero + One + Sub<Output=T> + Div<Output=T> + Add<Output=T> + Sum<T>,
+    where T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero + One + Sub<Output=T> + Div<Output=T> + Add<Output=T> + Sum<T> + CheckedMul,
           for <'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
           for<'a> &'a T: Sub<Output=T>,
           IntDistance: InfCast<T> {
@@ -56,6 +61,11 @@ pub fn make_bounded_covariance<T>(
     let _ddof = T::exact_int_cast(ddof)?;
     let _1 = T::one();
     let _2 = _1.clone() + &_1;
+
+    if ((&upper.0 - &lower.0) / _2.clone()).checked_mul(
+        &((&upper.1 - &lower.1) / _2.clone())).is_none() {
+        return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
+    }
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(

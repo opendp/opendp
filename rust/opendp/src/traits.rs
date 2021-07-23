@@ -385,15 +385,21 @@ impl_check_null_for_float!(f64, f32);
 
 /// Performs addition that saturates at the numeric bounds instead of overflowing.
 pub trait SaturatingAdd: Sized {
-    /// Saturating addition. Computes `self + other`,
+    /// Saturating addition. Computes `self + v`,
     /// saturating at the relevant high or low boundary of the type.
     fn saturating_add(&self, v: &Self) -> Self;
 }
 /// Performs multiplication that returns none if overflowing.
 pub trait CheckedMul: Sized {
     /// Checked multiplication.
-    /// Returns `Some(self * other)` if the result does not overflow, else `None`
+    /// Returns `Some(self * v)` if the result does not overflow, else `None`
     fn checked_mul(&self, v: &Self) -> Option<Self>;
+}
+/// Performs subtraction that returns none if overflowing.
+pub trait CheckedSub: Sized {
+    /// Checked subtraction.
+    /// Returns `Some(self - v)` if the result does not overflow, else `None`
+    fn checked_sub(&self, v: &Self) -> Option<Self>;
 }
 macro_rules! impl_math_delegation {
     ($($t:ty),+) => {
@@ -409,6 +415,12 @@ macro_rules! impl_math_delegation {
                 <$t>::checked_mul(*self, *v)
             }
         })+
+        $(impl CheckedSub for $t {
+            #[inline]
+            fn checked_sub(&self, v: &Self) -> Option<Self> {
+                <$t>::checked_sub(*self, *v)
+            }
+        })+
     };
 }
 impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
@@ -422,6 +434,12 @@ macro_rules! impl_math_float {
         $(impl CheckedMul for $t {
             fn checked_mul(&self, v: &Self) -> Option<Self> {
                 let y = self * v;
+                y.is_finite().then(|| y)
+            }
+        })+
+        $(impl CheckedSub for $t {
+            fn checked_sub(&self, v: &Self) -> Option<Self> {
+                let y = self - v;
                 y.is_finite().then(|| y)
             }
         })+
