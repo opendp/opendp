@@ -78,10 +78,6 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
     };
-    // TODO: reimplement Signed to cover u* types
-    ($function:ident, ($rt_type:expr, @signed_numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32, i64, f32, f64]), $rt_dispatch_types, $type_args, $args)
-    };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64]), $rt_dispatch_types, $type_args, $args)
     };
@@ -113,10 +109,6 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [i32, f64, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
     };
-    // TODO: reimplement Signed to cover u* types
-    ($function:ident, ($rt_type:expr, @signed_numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32, f64]), $rt_dispatch_types, $type_args, $args)
-    };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u32, i32, f64]), $rt_dispatch_types, $type_args, $args)
     };
@@ -128,7 +120,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, i32]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [SubstituteDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
