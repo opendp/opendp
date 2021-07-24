@@ -15,17 +15,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-#      - name: Check out code
-#        uses: actions/checkout@v2
-#      - name: Configure git
-#        run: |
-#          git config user.name "GitHub Actions"
-#          git config user.email noreply@github.com
-#      - name: Create release branch
-#        run: git checkout -b release/${{ github.event.release.tag_name }}
-#      - name: Push new branch
-#        run: git push -u origin release/${{ github.event.release.tag_name }}
-
   python-pre-publish-windows:
     runs-on: windows-latest
     needs: credential-check
