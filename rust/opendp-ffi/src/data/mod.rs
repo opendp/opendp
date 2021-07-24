@@ -13,6 +13,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::util;
 use crate::util::{c_bool, Type, TypeContents};
 use opendp::traits::{MeasureDistance, MetricDistance};
+use std::fmt::Formatter;
 
 
 #[no_mangle]
@@ -222,27 +223,33 @@ pub extern "C" fn opendp_data___bool_free(this: *mut c_bool) -> FfiResult<*mut (
     util::into_owned(this).map(|_| ()).into()
 }
 
-// TODO: Remove this function once we have data loaders for HashMaps/DataFrames.
+
+impl std::fmt::Debug for AnyObject {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        fn monomorphize<T: 'static + std::fmt::Debug>(this: &AnyObject) -> Fallible<String> {
+            Ok(match this.downcast_ref::<T>() {
+                Ok(v) => format!("{:?}", v),
+                Err(e) => e.to_string()
+            })
+        }
+        let type_arg = &self.type_;
+        f.write_str(dispatch!(monomorphize, [(type_arg, [
+            u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
+            Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Column>, Vec<Vec<String>>,
+            HashMap<String, Column>,
+            // FIXME: The following are for Python demo use of compositions. Need to figure this out!!!
+            (Box<i32>, Box<f64>),
+            (Box<i32>, Box<u32>),
+            (Box<(Box<f64>, Box<f64>)>, Box<f64>),
+            (AnyObject, AnyObject),
+            AnyObject
+        ])], (self)).unwrap_or("[Non-debuggable]".to_string()).as_str())
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn opendp_data___to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
-    fn monomorphize<T: 'static + std::fmt::Debug>(this: &AnyObject) -> Fallible<*mut c_char> {
-        let this = this.downcast_ref::<T>()?;
-        // FIXME: Figure out how to implement general to_string().
-        let string = format!("{:?}", this);
-        // FIXME: Leaks string.
-        util::into_c_char_p(string)
-    }
-    let this = try_as_ref!(this);
-    let type_arg = &this.type_;
-    dispatch!(monomorphize, [(type_arg, [
-        u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
-        Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Column>, Vec<Vec<String>>,
-        HashMap<String, Column>,
-        // FIXME: The following are for Python demo use of compositions. Need to figure this out!!!
-        (Box<i32>, Box<f64>),
-        (Box<i32>, Box<u32>),
-        (Box<(Box<f64>, Box<f64>)>, Box<f64>)
-    ])], (this)).map_or_else(
+    util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
         |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
         FfiResult::Ok)
 }

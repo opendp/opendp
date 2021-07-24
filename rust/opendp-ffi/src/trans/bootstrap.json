@@ -196,7 +196,7 @@
             {
                 "name": "TO",
                 "c_type": "char *",
-                "default": "u32",
+                "default": "i32",
                 "is_type": true,
                 "description": "type of output integer"
             }
@@ -215,7 +215,7 @@
             {
                 "name": "TO",
                 "c_type": "char *",
-                "default": "u32",
+                "default": "i32",
                 "is_type": true,
                 "description": "Output Type. integer"
             }
@@ -370,6 +370,7 @@
             {
                 "name": "impute",
                 "c_type": "bool",
+                "default": true,
                 "description": "Enable to impute values that fail to parse. If false, raise an error if parsing fails."
             },
             {

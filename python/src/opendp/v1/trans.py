@@ -277,7 +277,7 @@ def make_unclamp(
 
 def make_count(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "u32"
+    TO: RuntimeTypeDescriptor = "i32"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
@@ -309,7 +309,7 @@ def make_count(
 
 def make_count_distinct(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "u32"
+    TO: RuntimeTypeDescriptor = "i32"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
@@ -540,8 +540,8 @@ def make_split_dataframe(
 
 def make_parse_column(
     key,
-    impute: bool,
     T: RuntimeTypeDescriptor,
+    impute: bool = True,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that parses the `key` column of a dataframe as `T`.
