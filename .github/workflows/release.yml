@@ -15,6 +15,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Assert version
+        run: |
+          pip install toml
+          (cd ../.github && python assert_version.py)
+
   python-pre-publish-windows:
     runs-on: windows-latest
     needs: credential-check
@@ -109,7 +114,8 @@ jobs:
     needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
     runs-on: ubuntu-20.04
     env:
-      TWINE_USERNAME: ${{ secrets.PYPI_API_TOKEN }}
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
