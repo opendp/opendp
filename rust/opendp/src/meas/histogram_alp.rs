@@ -21,6 +21,7 @@ type SizedHistogramDomain<K, C> = SizedDomain<MapDomain<AllDomain<K>, AllDomain<
 
 type BitVector = Vec<bool>;
 type HashFunctions<K> = Vec<Rc<dyn Fn(&K) -> usize>>;
+#[derive(Clone)]
 pub struct AlpState<K, T>{
     alpha: u32,
     scale: T,
@@ -51,7 +52,7 @@ fn sample_hash_function<K>(l: u32) -> Fallible<Rc<dyn Fn(&K) -> usize>>
 
 fn exponent_next_power_of_two(x: u64) -> u32 {
     let exp = 63 - x.leading_zeros();
-    return if x > (1 << exp) { exp + 1 } else { exp }
+    if x > (1 << exp) { exp + 1 } else { exp }
 }
 
 #[cfg(feature="use-mpfr")]
@@ -150,7 +151,7 @@ pub fn make_alp_histogram<K, C, T>(n: usize, alpha: u32, scale: T, s: usize, h: 
         }),
         L1Distance::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(scale * T::distance_cast(alpha)?)
+        PrivacyRelation::new_from_constant(scale)
     ))
 }
 
@@ -189,6 +190,23 @@ pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K,
             let estimate = compute_estimate(&state, key);
             Ok((state, estimate))
     })
+}
+
+// TODO: Could be refactored to a general post_processing function
+pub fn make_histogram_alp_post_process<K, C, T>(m : Measurement<SizedHistogramDomain<K, C>,AlpDomain<K, T>,L1Distance<C>, MaxDivergence<T>>) 
+        -> Fallible<Measurement<SizedHistogramDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
+    where K: 'static + Eq + Hash + Clone + ToPrimitive,
+          C: 'static + Copy + Integer + DistanceCast,
+          T: 'static + num::Float + DistanceCast + CastInternalReal + FromPrimitive {
+        let f0 = m.function;
+        let f1 = Function::new(move |x : &AlpState<K, T>| post_process(x.clone()));
+        Ok(Measurement::new(
+            m.input_domain, 
+            AllDomain::new(), 
+            Function::make_chain(&f1, &f0),
+            m.input_metric,
+            m.output_measure, 
+            m.privacy_relation))
 }
 
 #[cfg(test)]
@@ -265,7 +283,7 @@ mod tests {
     }
 
     #[test]
-    fn test_alp_construction_err() -> Fallible<()> {
+    fn test_alp_construction_out_of_range() -> Fallible<()> {
         let s = 5;
         // Hash functions return values out of range
         // Handle silently using modulo
@@ -321,6 +339,30 @@ mod tests {
         let state = alp.function.eval(&x)?;
 
         let mut query = post_process(state);
+
+        query.eval(&0)?;
+        query.eval(&42)?;
+        query.eval(&100)?;
+        query.eval(&1000)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_post_process_measurement() -> Fallible<()> {
+        let mut x = HashMap::new();
+        x.insert(0, 7);
+        x.insert(42, 12);
+        x.insert(100, 5);
+
+        let alp = make_alp_histogram_simple::<i32,i32,f64>(24, 2., 24)?;
+
+        let wrapped = make_histogram_alp_post_process(alp)?;
+        
+        assert!(wrapped.privacy_relation.eval(&1, &2.)?);
+        assert!(!wrapped.privacy_relation.eval(&1, &1.999)?);
+
+        let mut query = wrapped.function.eval(&x)?;
 
         query.eval(&0)?;
         query.eval(&42)?;
