@@ -1,8 +1,8 @@
 import sys
 from typing import List, Tuple, Any
 
-from opendp.v1.mod import UnknownTypeException
-from opendp.v1.typing import RuntimeType, L1Distance, SensitivityMetric, L2Distance, DatasetMetric
+from opendp.mod import UnknownTypeException
+from opendp.typing import RuntimeType, L1Distance, SensitivityMetric, L2Distance, DatasetMetric
 
 
 def test_typing_hint():

@@ -1,14 +1,12 @@
-from opendp.v1.typing import SubstituteDistance
-
 
 def test_type_getters():
-    from opendp.v1.trans import make_bounded_mean
+    from opendp.trans import make_bounded_mean
     transformation = make_bounded_mean(lower=0., upper=10., n=9, T=float)
     assert transformation.input_distance_type == "u32"
     assert transformation.output_distance_type == "f64"
     assert transformation.input_carrier_type == "Vec<f64>"
 
-    from opendp.v1.meas import make_base_geometric
+    from opendp.meas import make_base_geometric
     measurement = make_base_geometric(scale=1.5)
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
@@ -16,8 +14,8 @@ def test_type_getters():
 
 
 def test_chain():
-    from opendp.v1.trans import make_count
-    from opendp.v1.meas import make_base_laplace, make_base_geometric
+    from opendp.trans import make_count
+    from opendp.meas import make_base_laplace, make_base_geometric
 
     data = [1, 2, 3, 4, 5]
     count = make_count(TIA=int, TO=int)

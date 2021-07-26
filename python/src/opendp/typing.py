@@ -3,8 +3,8 @@ import typing
 from collections.abc import Hashable
 from typing import Union, Any, Type, List
 
-from opendp.v1.mod import UnknownTypeException
-from opendp.v1._lib import ATOM_EQUIVALENCE_CLASSES
+from opendp.mod import UnknownTypeException
+from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
     from typing import _GenericAlias
@@ -66,7 +66,7 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> from opendp.v1.typing import RuntimeType, L1Distance
+        >>> from opendp.typing import RuntimeType, L1Distance
         >>> assert RuntimeType.parse(int) == "i32"
         >>> assert RuntimeType.parse("i32") == "i32"
         >>> assert RuntimeType.parse(L1Distance[int]) == "L1Distance<i32>"
@@ -160,7 +160,7 @@ class RuntimeType(object):
 
         :examples:
 
-        >>> from opendp.v1.typing import RuntimeType, L1Distance
+        >>> from opendp.typing import RuntimeType, L1Distance
         >>> assert RuntimeType.infer(23) == "i32"
         >>> assert RuntimeType.infer(12.) == "f64"
         >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"

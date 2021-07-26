@@ -1,9 +1,9 @@
 from typing import Sequence, Tuple, List, Union
 
-from opendp.v1._lib import *
+from opendp._lib import *
 
-from opendp.v1.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
-from opendp.v1.typing import RuntimeType
+from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
+from opendp.typing import RuntimeType
 
 ATOM_MAP = {
     'f32': ctypes.c_float,
@@ -54,15 +54,15 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         raise UnknownTypeException(rust_type)
 
     if c_type == AnyObjectPtr:
-        from opendp.v1._data import _slice_as_object
+        from opendp._data import _slice_as_object
         return _slice_as_object(value, type_name)
 
     if c_type == AnyMeasureDistancePtr:
-        from opendp.v1._data import _slice_as_measure_distance
+        from opendp._data import _slice_as_measure_distance
         return _slice_as_measure_distance(value, type_name)
 
     if c_type == AnyMetricDistancePtr:
-        from opendp.v1._data import _slice_as_metric_distance
+        from opendp._data import _slice_as_metric_distance
         return _slice_as_metric_distance(value, type_name)
 
     if c_type == FfiSlicePtr:
@@ -89,7 +89,7 @@ def c_to_py(value):
     :return: copy of data in python representation
     """
     if isinstance(value, AnyObjectPtr):
-        from opendp.v1._data import _object_type, _object_as_slice, _to_string, _slice_free
+        from opendp._data import _object_type, _object_as_slice, _to_string, _slice_free
         ffi_slice = _object_as_slice(value)
         try:
             return _slice_to_py(ffi_slice, _object_type(value))
@@ -106,13 +106,13 @@ def c_to_py(value):
             _slice_free(ffi_slice)
 
     if isinstance(value, ctypes.c_char_p):
-        from opendp.v1._data import _str_free
+        from opendp._data import _str_free
         value_contents = value.value.decode()
         _str_free(value)
         return value_contents
 
     if isinstance(value, BoolPtr):
-        from opendp.v1._data import _bool_free
+        from opendp._data import _bool_free
         value_contents = value.contents.value
         _bool_free(value)
         return value_contents

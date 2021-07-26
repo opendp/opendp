@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union
 
-from opendp.v1._lib import AnyMeasurement, AnyTransformation
+from opendp._lib import AnyMeasurement, AnyTransformation
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -12,10 +12,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     :example:
 
-    >>> from opendp.v1.mod import Measurement
+    >>> from opendp.mod import Measurement
     >>>
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> from opendp.v1.meas import make_base_geometric
+    >>> from opendp.meas import make_base_geometric
     >>> base_geometric: Measurement = make_base_geometric(scale=2., lower=0, upper=20)
     >>>
     >>> # invoke the measurement (invoke and __call__ are equivalent)
@@ -27,8 +27,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> assert base_geometric.check(1, 0.5)
     >>>
     >>> # chain with a transformation from the trans module
-    >>> from opendp.v1.trans import make_count
-    >>> from opendp.v1.typing import SubstituteDistance
+    >>> from opendp.trans import make_count
+    >>> from opendp.typing import SubstituteDistance
     >>> chained = (
     >>>     make_count(MI=SubstituteDistance, TI=int) >>
     >>>     base_geometric
@@ -43,7 +43,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     _type_ = AnyMeasurement
 
     def __call__(self, arg):
-        from opendp.v1.core import measurement_invoke
+        from opendp.core import measurement_invoke
         return measurement_invoke(self, arg)
 
     def invoke(self, arg):
@@ -53,7 +53,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         :return: differentially-private release
         :raises OpenDPException: packaged error from the core OpenDP library
         """
-        from opendp.v1.core import measurement_invoke
+        from opendp.core import measurement_invoke
         return measurement_invoke(self, arg)
 
     def check(self, d_in, d_out, *, debug=False) -> bool:
@@ -65,7 +65,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         :return: If True, a release is differentially private at `d_in`, `d_out`.
         :rtype: bool
         """
-        from opendp.v1.core import measurement_check
+        from opendp.core import measurement_check
 
         if debug:
             return measurement_check(self, d_in, d_out)
@@ -84,8 +84,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         
         :return: distance type
         """
-        from opendp.v1.core import measurement_input_distance_type
-        from opendp.v1.typing import RuntimeType
+        from opendp.core import measurement_input_distance_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
@@ -95,8 +95,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         
         :return: distance type
         """
-        from opendp.v1.typing import RuntimeType
-        from opendp.v1.core import measurement_output_distance_type
+        from opendp.typing import RuntimeType
+        from opendp.core import measurement_output_distance_type
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property
@@ -106,12 +106,12 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         
         :return: carrier type
         """
-        from opendp.v1.core import measurement_input_carrier_type
-        from opendp.v1.typing import RuntimeType
+        from opendp.core import measurement_input_carrier_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
     def __del__(self):
-        from opendp.v1.core import _measurement_free
+        from opendp.core import _measurement_free
         _measurement_free(self)
 
 
@@ -123,10 +123,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     :example:
 
-    >>> from opendp.v1.mod import Transformation
+    >>> from opendp.mod import Transformation
     >>>
     >>> # create an instance of Transformation using a constructor from the trans module
-    >>> from opendp.v1.trans import make_count
+    >>> from opendp.trans import make_count
     >>> count: Transformation = make_count(MI=SymmetricDistance, TI=int)
     >>>
     >>> # invoke the transformation (invoke and __call__ are equivalent)
@@ -138,8 +138,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     >>>
     >>> # chain with more transformations from the trans module
-    >>> from opendp.v1.trans import make_split_lines, make_cast
-    >>> from opendp.v1.typing import SymmetricDistance
+    >>> from opendp.trans import make_split_lines, make_cast
+    >>> from opendp.typing import SymmetricDistance
     >>> chained = (
     >>>     make_split_lines(M=SymmetricDistance) >>
     >>>     make_cast(M=SymmetricDistance, TI=str, TO=int) >>
@@ -159,11 +159,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         :return: non-differentially-private answer
         :raises OpenDPException: packaged error from the core OpenDP library
         """
-        from opendp.v1.core import transformation_invoke
+        from opendp.core import transformation_invoke
         return transformation_invoke(self, arg)
 
     def __call__(self, arg):
-        from opendp.v1.core import transformation_invoke
+        from opendp.core import transformation_invoke
         return transformation_invoke(self, arg)
 
     def check(self, d_in, d_out, *, debug=False):
@@ -176,7 +176,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         :rtype: bool
         :raises OpenDPException: packaged error from the core OpenDP library
         """
-        from opendp.v1.core import transformation_check
+        from opendp.core import transformation_check
 
         if debug:
             return transformation_check(self, d_in, d_out)
@@ -190,11 +190,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     def __rshift__(self, other: Union["Measurement", "Transformation"]):
         if isinstance(other, Measurement):
-            from opendp.v1.core import make_chain_mt
+            from opendp.core import make_chain_mt
             return make_chain_mt(other, self)
 
         if isinstance(other, Transformation):
-            from opendp.v1.core import make_chain_tt
+            from opendp.core import make_chain_tt
             return make_chain_tt(other, self)
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
@@ -206,8 +206,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
         :return: distance type
         """
-        from opendp.v1.core import transformation_input_distance_type
-        from opendp.v1.typing import RuntimeType
+        from opendp.core import transformation_input_distance_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_input_distance_type(self))
 
     @property
@@ -217,8 +217,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
         :return: distance type
         """
-        from opendp.v1.core import transformation_output_distance_type
-        from opendp.v1.typing import RuntimeType
+        from opendp.core import transformation_output_distance_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_output_distance_type(self))
     
     @property
@@ -228,12 +228,12 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
         :return: carrier type
         """
-        from opendp.v1.core import transformation_input_carrier_type
-        from opendp.v1.typing import RuntimeType
+        from opendp.core import transformation_input_carrier_type
+        from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
     def __del__(self):
-        from opendp.v1.core import _transformation_free
+        from opendp.core import _transformation_free
         _transformation_free(self)
 
 

@@ -1,7 +1,7 @@
 [package]
 name = "opendp"
-version = "0.1.0"
-authors = ["Andrew Vyrros <6577271+andrewvyrros@users.noreply.github.com>"]
+version = "0.0.1"
+authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
 
 [dependencies]
@@ -11,23 +11,9 @@ thiserror = "1.0.24"
 backtrace = "0.3"
 ieee754 = "0.2.6"
 statrs = "0.13.0"
-
-[dependencies.openssl]
-version = "0.10.29"
-features = ["vendored"]
-optional = true
-
-[dependencies.rug]
-version = "1.9.0"
-default-features = false
-features = ["integer", "float", "rand"]
-optional = true
-
-[dependencies.gmp-mpfr-sys]
-version = "=1.3.1"
-default-features = false
-features = ["mpfr"]
-optional = true
+rug = { version = "1.9.0", default-features = false, features = ["integer", "float", "rand"], optional = true }
+gmp-mpfr-sys = { version = "=1.2.4", default-features = false, features = ["mpfr"], optional = true }
+openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 
 [features]
 default = ["use-openssl", "use-mpfr"]

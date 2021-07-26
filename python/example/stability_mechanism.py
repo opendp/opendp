@@ -4,9 +4,9 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
 import opendp
-from opendp.v1.meas import make_base_laplace, make_base_stability
-from opendp.v1.trans import make_count_by
-from opendp.v1.typing import L2Distance, SymmetricDistance
+from opendp.meas import make_base_laplace, make_base_stability
+from opendp.trans import make_count_by
+from opendp.typing import L2Distance, SymmetricDistance
 
 
 def get_bounded_vocabulary(corpus_path, dataset_distance):

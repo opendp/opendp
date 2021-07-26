@@ -1,5 +1,5 @@
-from opendp.v1._convert import *
-from opendp.v1._convert import _scalar_to_slice, _slice_to_scalar
+from opendp._convert import *
+from opendp._convert import _scalar_to_slice, _slice_to_scalar
 
 
 def test_data_object_int():

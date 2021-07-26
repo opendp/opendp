@@ -1,11 +1,11 @@
-from opendp.v1.typing import *
+from opendp.typing import *
 
 INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))
 
 
 def test_cast_impute():
-    from opendp.v1.trans import make_cast, make_impute_constant
+    from opendp.trans import make_cast, make_impute_constant
     caster = make_cast(TI=float, TO=int) >> make_impute_constant(-1)
     assert caster([1., 2., 3.]) == [1, 2, 3]
 
@@ -14,39 +14,39 @@ def test_cast_impute():
 
 
 def test_cast_inherent():
-    from opendp.v1.trans import make_cast_inherent
+    from opendp.trans import make_cast_inherent
     caster = make_cast_inherent(TI=int, TO=float)
 
     assert caster([1, 2]) == [1., 2.]
 
 
 def test_impute_constant_inherent():
-    from opendp.v1.trans import make_split_lines, make_cast, make_impute_constant
+    from opendp.trans import make_split_lines, make_cast, make_impute_constant
     tester = make_split_lines() >> make_cast(TI=str, TO=float) >> make_impute_constant(-1.)
     assert tester("nan\n1.") == [-1., 1.]
 
 
 def test_cast_default():
-    from opendp.v1.trans import make_cast_default
+    from opendp.trans import make_cast_default
     caster = make_cast_default(TI=float, TO=int)
     assert caster([float('nan'), 2.]) == [0, 2]
 
 
 def test_impute_uniform():
-    from opendp.v1.trans import make_impute_uniform_float
+    from opendp.trans import make_impute_uniform_float
     caster = make_impute_uniform_float(-1., 2.)
     assert -1. <= caster([float('nan')])[0] <= 2.
 
 
 def test_cast_metric():
-    from opendp.v1.trans import make_cast_metric
+    from opendp.trans import make_cast_metric
     caster = make_cast_metric(SubstituteDistance, SymmetricDistance, T=float)
     assert caster([1., 2.]) == [1., 2.]
     assert not caster.check(1, 1)
 
 
 def test_identity():
-    from opendp.v1.trans import make_identity
+    from opendp.trans import make_identity
     # test int
     transformation = make_identity(SubstituteDistance, int)
     arg = 123
@@ -70,13 +70,13 @@ def test_identity():
 
 
 def test_is_equal():
-    from opendp.v1.trans import make_is_equal
+    from opendp.trans import make_is_equal
     tester = make_is_equal(3)
     assert tester([1, 2, 3]) == [False, False, True]
 
 
 def test_is_null():
-    from opendp.v1.trans import make_split_lines, make_cast_inherent, make_is_null
+    from opendp.trans import make_split_lines, make_cast_inherent, make_is_null
     tester = (
         make_split_lines() >>
         make_cast_inherent(TI=str, TO=float) >>
@@ -84,7 +84,7 @@ def test_is_null():
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
-    from opendp.v1.trans import make_split_lines, make_cast, make_is_null
+    from opendp.trans import make_split_lines, make_cast, make_is_null
     tester = (
         make_split_lines() >>
         make_cast(TI=str, TO=float) >>
@@ -94,7 +94,7 @@ def test_is_null():
 
 # TODO: cannot test independently until Vec<String> data loader implemented
 def test_split_lines__cast__impute():
-    from opendp.v1.trans import make_split_lines, make_cast, make_impute_constant
+    from opendp.trans import make_split_lines, make_cast, make_impute_constant
     query = (
         make_split_lines() >>
         make_cast(TI=str, TO=int) >>
@@ -105,7 +105,7 @@ def test_split_lines__cast__impute():
 
 
 def test_inherent_cast__impute():
-    from opendp.v1.trans import make_split_lines, make_cast_inherent, make_impute_constant
+    from opendp.trans import make_split_lines, make_cast_inherent, make_impute_constant
     cast = make_split_lines() >> make_cast_inherent(TI=str, TO=float)
     constant = cast >> make_impute_constant(constant=9., DA=InherentNullDomain[AllDomain[float]])
 
@@ -114,7 +114,7 @@ def test_inherent_cast__impute():
 
 
 def test_inherent_cast__impute_uniform():
-    from opendp.v1.trans import make_split_lines, make_cast_inherent, make_impute_uniform_float
+    from opendp.trans import make_split_lines, make_cast_inherent, make_impute_uniform_float
     cast = make_split_lines() >> make_cast_inherent(TI=str, TO=float)
     constant = cast >> make_impute_uniform_float(lower=23., upper=32.5)
 
@@ -126,7 +126,7 @@ def test_inherent_cast__impute_uniform():
 
 
 def test_dataframe_pipeline():
-    from opendp.v1.trans import make_split_lines, make_split_records, \
+    from opendp.trans import make_split_lines, make_split_records, \
         make_create_dataframe, make_parse_column, make_select_column
 
     query = (
@@ -141,7 +141,7 @@ def test_dataframe_pipeline():
 
 
 def test_split_dataframe():
-    from opendp.v1.trans import make_split_dataframe, make_parse_column, make_select_column
+    from opendp.trans import make_split_dataframe, make_parse_column, make_select_column
 
     query = (
             make_split_dataframe(separator=",", col_names=[23, 17]) >>
@@ -153,28 +153,28 @@ def test_split_dataframe():
 
 
 def test_vector_clamp():
-    from opendp.v1.trans import make_clamp
+    from opendp.trans import make_clamp
     query = make_clamp(lower=-1, upper=1)
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
 
 
 def test_clamp_sensitivity():
-    from opendp.v1.trans import make_clamp
+    from opendp.trans import make_clamp
     query = make_clamp(lower=-1, upper=1, DI="AllDomain<i32>", M=AbsoluteDistance[int])
     assert query(20) == 1
     assert query.check(20, 2)
 
 
 def test_bounded_mean():
-    from opendp.v1.trans import make_bounded_mean
+    from opendp.trans import make_bounded_mean
     query = make_bounded_mean(lower=0., upper=10., n=9)
     assert query(FLOAT_DATA) == 5.
     assert query.check(1, 10. / 9.)
 
 
 def test_bounded_sum():
-    from opendp.v1.trans import make_bounded_sum
+    from opendp.trans import make_bounded_sum
     query = make_bounded_sum(lower=0., upper=10.)
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten the check
@@ -193,7 +193,7 @@ def test_bounded_sum():
 
 
 def test_bounded_sum_n():
-    from opendp.v1.trans import make_bounded_sum_n
+    from opendp.trans import make_bounded_sum_n
     query = make_bounded_sum_n(lower=0., upper=10., n=9)
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten this check
@@ -201,14 +201,14 @@ def test_bounded_sum_n():
 
 
 def test_bounded_variance():
-    from opendp.v1.trans import make_bounded_variance
+    from opendp.trans import make_bounded_variance
     query = make_bounded_variance(lower=0., upper=10., n=9)
     assert query(FLOAT_DATA) == 7.5
     assert query.check(1, 20.)
 
 
 def test_count():
-    from opendp.v1.trans import make_count
+    from opendp.trans import make_count
     transformation = make_count(TIA=int, TO=int)
     arg = [1, 2, 3]
     ret = transformation(arg)
@@ -217,7 +217,7 @@ def test_count():
 
 
 def test_count_distinct():
-    from opendp.v1.trans import make_count_distinct
+    from opendp.trans import make_count_distinct
     transformation = make_count_distinct("i32", int)
     arg = [1, 2, 3, 2, 7, 3, 4]
     ret = transformation(arg)
@@ -226,7 +226,7 @@ def test_count_distinct():
 
 
 def test_count_by():
-    from opendp.v1.trans import make_count_by
+    from opendp.trans import make_count_by
     query = make_count_by(n=9, MO=L1Distance[float], TI=int)
     # TODO: cannot test until hashmap data unloader is added
     # assert query(INT_DATA) == {i + 1: 1 for i in range(9)}
@@ -235,7 +235,7 @@ def test_count_by():
 
 
 def test_count_by_categories():
-    from opendp.v1.trans import make_count_by_categories
+    from opendp.trans import make_count_by_categories
     query = make_count_by_categories(categories=[1, 3, 4], MO=L1Distance[float])
     assert query(INT_DATA) == [1, 1, 1, 6]
     assert query.check(1, 2.)
