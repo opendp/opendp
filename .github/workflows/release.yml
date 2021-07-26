@@ -151,7 +151,7 @@ jobs:
 
       - name: PyPi OpenDP upload
         run: |
-          python3 -m twine upload --verbose --skip-existing python/wheelhouse/*
+          python3 -m twine --repository testpypi upload --verbose --skip-existing python/wheelhouse/*
 
 
   rust-publish:
@@ -172,7 +172,7 @@ jobs:
           CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
 
       - name: Publish Cargo OpenDP
-        run: cargo publish --verbose --manifest-path=opendp/Cargo.toml
+        run: cargo publish --dry-run --verbose --manifest-path=opendp/Cargo.toml
 
       - name: Publish Cargo OpenDP-FFI
-        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml
+        run: cargo publish --dry-run --verbose --manifest-path=opendp-ffi/Cargo.toml
