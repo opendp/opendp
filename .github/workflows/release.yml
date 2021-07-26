@@ -151,7 +151,7 @@ jobs:
 
       - name: PyPi OpenDP upload
         run: |
-          python3 -m twine --repository testpypi upload --verbose --skip-existing python/wheelhouse/*
+          python3 -m twine upload --repository testpypi --verbose --skip-existing python/wheelhouse/*
 
 
   rust-publish:
