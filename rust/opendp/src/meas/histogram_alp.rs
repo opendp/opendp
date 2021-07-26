@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::rc::Rc;
 
-use num::Integer;
+use num::{Integer, FromPrimitive};
 #[cfg(feature="use-mpfr")]
 use rug::{Float, ops::DivAssignRound, float::Round};
 
@@ -94,7 +94,7 @@ fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: u
 
     for (k, v) in x.iter() {
         let round = scale_and_round(*v, alpha, scale)?; 
-        h.iter().take(round).for_each(|f| z[f(k) % s] = true); // TODO: Hash collisions can be handled using OR or XOR
+        h.iter().take(round).for_each(|f| z[f(k) % s] = true); // ^= true TODO: Hash collisions can be handled using OR or XOR
     }
 
     let p = compute_prob(alpha);
@@ -102,8 +102,25 @@ fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: u
     z.iter().map(|b| bool::sample_bernoulli(p , false).map(|flip| b ^ flip)).collect::<Fallible<Vec<bool>>>()
 }
 
-fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T {
-    unimplemented!()
+fn estimate_unary(v: &Vec<bool>) -> f64 {
+    let mut prefix_sum = Vec::with_capacity(v.len() + 1 as usize);
+    prefix_sum.push(0);
+
+    v.iter().map(|b| if *b {1} else {-1}).for_each(|x| prefix_sum.push(prefix_sum.last().unwrap() + x));
+    
+    let high = prefix_sum.iter().max().unwrap();
+    let peaks = prefix_sum.iter().enumerate()
+            .filter_map(|(idx, height)| if high == height {Some(idx)} else {None}).collect::<Vec<_>>();
+    
+    // Return the average position
+    peaks.iter().sum::<usize>() as f64 / peaks.len() as f64
+}
+
+fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T 
+    where T: FromPrimitive + num::Float {
+    let v = state.h.iter().map(|f| state.z[f(key) % state.z.len()]).collect::<Vec<_>>();
+
+    T::from_f64(estimate_unary(&v) * state.alpha as f64).unwrap() / state.scale
 }
 
 pub fn make_alp_histogram<K, C, T>(n: usize, alpha: u32, scale: T, s: usize, h: HashFunctions<K>) 
@@ -164,7 +181,8 @@ pub fn make_alp_histogram_simple<K, C, T>(n: usize, scale: T, beta: C)
     make_alp_histogram_parameterized(n, ALPHA_DEFAULT, scale, beta, SIZE_FACTOR_DEFAULT)
 }
 
-pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T> {
+pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T> 
+    where T: num::Float + FromPrimitive {
     Queryable::new(
         state,
         move |state: AlpState<K, T>, key: &K| {
@@ -259,6 +277,34 @@ mod tests {
         x.insert(42, 3);
 
         alp.function.eval(&x.clone())?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_estimate_unary() -> Fallible<()> {
+        let z1 = vec![true, true, true, false, true, false, false, true];
+        assert!(estimate_unary(&z1) == 4.0);
+
+        let z2 = vec![true, false, false, false, true, false, false, true];
+        assert!(estimate_unary(&z2) == 1.0);
+
+        let z3 = vec![false, true, true, false, false, true, false, true];
+        assert!(estimate_unary(&z3) == 3.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_compute_estimate() -> Fallible<()> {
+        let z1 = vec![true, true, true, false, true, false, false, true];
+        assert!(compute_estimate(&AlpState {alpha:3, scale:1.0, h:index_identify_functions(8), z:z1}, &0) == 12.0);
+
+        let z2 = vec![true, false, false, false, true, false, false, true];
+        assert!(compute_estimate(&AlpState {alpha:1, scale:2.0, h:index_identify_functions(8), z:z2}, &0) == 0.5);
+
+        let z3 = vec![false, true, true, false, false, true, false, true];
+        assert!(compute_estimate(&AlpState {alpha:1, scale:0.5, h:index_identify_functions(8), z:z3}, &0) == 6.0);
 
         Ok(())
     }
