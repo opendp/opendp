@@ -15,6 +15,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Assert version
         run: |
           pip install toml
