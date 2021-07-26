@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::rc::Rc;
 
-use num::{Integer, FromPrimitive};
+use num::{Integer, FromPrimitive, ToPrimitive};
 #[cfg(feature="use-mpfr")]
 use rug::{Float, ops::DivAssignRound, float::Round};
 
@@ -40,13 +40,13 @@ fn hash(x: u64, a: u64, b:u64, l: u32) -> usize {
 }
 
 fn sample_hash_function<K>(l: u32) -> Fallible<Rc<dyn Fn(&K) -> usize>> 
-    where K: Clone + Into<u64> {
+    where K: Clone + ToPrimitive {
     let mut buf = [0u8; 8];
     fill_bytes(&mut buf)?;
     let a = u64::from_be_bytes(buf) | 1u64;
     fill_bytes(&mut buf)?;
     let b = u64::from_be_bytes(buf);
-    Ok(Rc::new(move |x: &K| hash(x.clone().into(), a, b, l)))
+    Ok(Rc::new(move |x: &K| hash(x.to_u64().unwrap_or_default(), a, b, l)))
 }
 
 fn exponent_next_power_of_two(x: u64) -> u32 {
@@ -158,7 +158,7 @@ pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: u32, scale: T,
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + Into<u64>,
+    where K: 'static + Eq + Hash + Clone + ToPrimitive,
           C: 'static + Copy + Integer + DistanceCast,
           T: 'static + num::Float + DistanceCast + CastInternalReal {
     
@@ -174,7 +174,7 @@ pub fn make_alp_histogram_simple<K, C, T>(n: usize, scale: T, beta: C)
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + Into<u64>,
+    where K: 'static + Eq + Hash + Clone + ToPrimitive,
           C: 'static + Copy + Integer + DistanceCast,
           T: 'static + num::Float + DistanceCast + CastInternalReal {
     
@@ -305,6 +305,27 @@ mod tests {
 
         let z3 = vec![false, true, true, false, false, true, false, true];
         assert!(compute_estimate(&AlpState {alpha:1, scale:0.5, h:index_identify_functions(8), z:z3}, &0) == 6.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_construct_and_post_process() -> Fallible<()> {
+        let mut x = HashMap::new();
+        x.insert(0, 7);
+        x.insert(42, 12);
+        x.insert(100, 5);
+
+        let alp = make_alp_histogram_simple::<i32,i32,f64>(24, 2., 24)?;
+
+        let state = alp.function.eval(&x)?;
+
+        let mut query = post_process(state);
+
+        query.eval(&0)?;
+        query.eval(&42)?;
+        query.eval(&100)?;
+        query.eval(&1000)?;
 
         Ok(())
     }
