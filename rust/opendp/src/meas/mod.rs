@@ -7,8 +7,10 @@ pub mod laplace;
 pub mod gaussian;
 pub mod geometric;
 pub mod stability;
+pub mod histogram_alp;
 
 pub use crate::meas::laplace::*;
 pub use crate::meas::gaussian::*;
 pub use crate::meas::geometric::*;
 pub use crate::meas::stability::*;
+pub use crate::meas::histogram_alp::*;
