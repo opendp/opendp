@@ -60,8 +60,9 @@ fn scale_and_round<C, T>(x : C, alpha: u32, scale: T) -> Fallible<usize>
     where C: Integer + ToPrimitive,
           T: num::Float {
     // TODO: Precision is currently simply chosen to be very high
-    let mut invalpha = Float::with_val(150, 1);
-    invalpha.div_assign_round(Float::with_val(150, alpha), Round::Down);
+    let mut invalpha = 1f64.into_internal();
+    invalpha.div_assign_round((alpha as f64).into_internal(), Round::Down);
+    invalpha.set_prec(150);
     let r = Float::with_val(150, x.to_i64().unwrap()) * Float::with_val(150, scale.to_f64().unwrap()) * invalpha;
     let floored = f64::from_internal(r.clone().floor()) as usize;
     // TODO: Potential rounding when casting to f64
@@ -78,8 +79,8 @@ fn scale_and_round<C, T>(x : C, alpha: &u32, scale: &T) -> Fallible<usize> {
 
 #[cfg(feature="use-mpfr")]
 fn compute_prob(alpha: u32) -> f64 {
-    let mut p = Float::with_val(53, 1.0);
-    p.div_assign_round( Float::with_val(53, alpha + 2), Round::Up); // Round up to preserve privacy
+    let mut p = 1f64.into_internal();
+    p.div_assign_round( (alpha as f64 + 2.).into_internal(), Round::Up); // Round up to preserve privacy
     f64::from_internal(p)
 }
 
@@ -105,7 +106,7 @@ fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: u
 
 fn estimate_unary<T>(v: &Vec<bool>) -> T
     where T : FromPrimitive + num::Float {
-    let mut prefix_sum = Vec::with_capacity(v.len() + 1 as usize);
+    let mut prefix_sum = Vec::with_capacity(v.len() + 1usize);
     prefix_sum.push(0);
 
     v.iter().map(|b| if *b {1} else {-1}).for_each(|x| prefix_sum.push(prefix_sum.last().unwrap() + x));
