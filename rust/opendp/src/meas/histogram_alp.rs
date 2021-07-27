@@ -32,10 +32,10 @@ type AlpDomain<K, T> = AllDomain<AlpState<K, T>>;
 
 // hash function with type: [2^64] -> [2^l]
 // Computes ((a*x + b) mod 2^64) div 2^(64-l)
-// The hash function is 2-approximate universal and uniform
-// See http://hjemmesider.diku.dk/~jyrki/Paper/CP-11.4.1997.pdf
 // a and b are sampled uniformly at random from [2^64]
 // a must be odd
+// The hash function is 2-approximate universal and uniform
+// See http://hjemmesider.diku.dk/~jyrki/Paper/CP-11.4.1997.pdf
 fn hash(x: u64, a: u64, b:u64, l: u32) -> usize {
     (a.wrapping_mul(x).wrapping_add(b) >> (64 - l)) as usize
 }
@@ -44,9 +44,9 @@ fn sample_hash_function<K>(l: u32) -> Fallible<Rc<dyn Fn(&K) -> usize>>
     where K: Clone + ToPrimitive {
     let mut buf = [0u8; 8];
     fill_bytes(&mut buf)?;
-    let a = u64::from_be_bytes(buf) | 1u64;
+    let a = u64::from_ne_bytes(buf) | 1u64;
     fill_bytes(&mut buf)?;
-    let b = u64::from_be_bytes(buf);
+    let b = u64::from_ne_bytes(buf);
     Ok(Rc::new(move |x: &K| hash(x.to_u64().unwrap_or_default(), a, b, l)))
 }
 
@@ -57,12 +57,12 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
 
 #[cfg(feature="use-mpfr")]
 fn scale_and_round<C, T>(x : C, alpha: u32, scale: T) -> Fallible<usize> 
-    where C: Copy + DistanceCast,
-          T: Copy + DistanceCast {
+    where C: Integer + ToPrimitive,
+          T: num::Float {
     // TODO: Precision is currently simply chosen to be very high
     let mut invalpha = Float::with_val(150, 1);
     invalpha.div_assign_round(Float::with_val(150, alpha), Round::Down);
-    let r = Float::with_val(150, f64::distance_cast(x)?) * Float::with_val(150, f64::distance_cast(scale)?) * invalpha;
+    let r = Float::with_val(150, x.to_i64().unwrap()) * Float::with_val(150, scale.to_f64().unwrap()) * invalpha;
     let floored = f64::from_internal(r.clone().floor()) as usize;
     // TODO: Potential rounding when casting to f64
     match bool::sample_bernoulli(f64::from_internal(r.fract()), false)? {
@@ -89,8 +89,8 @@ fn compute_prob(alpha: &u32) -> f64 {
 }
 
 fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: u32, scale: T, s: usize) -> Fallible<BitVector> 
-    where C: Copy + DistanceCast,
-          T: Copy + CastInternalReal + DistanceCast {
+    where C: Copy + Integer + ToPrimitive,
+          T: Copy + num::Float {
     let mut z = vec![false; s];
 
     for (k, v) in x.iter() {
@@ -100,10 +100,11 @@ fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: u
 
     let p = compute_prob(alpha);
 
-    z.iter().map(|b| bool::sample_bernoulli(p , false).map(|flip| b ^ flip)).collect::<Fallible<Vec<bool>>>()
+    z.iter().map(|b| bool::sample_bernoulli(p , false).map(|flip| b ^ flip)).collect()
 }
 
-fn estimate_unary(v: &Vec<bool>) -> f64 {
+fn estimate_unary<T>(v: &Vec<bool>) -> T
+    where T : FromPrimitive + num::Float {
     let mut prefix_sum = Vec::with_capacity(v.len() + 1 as usize);
     prefix_sum.push(0);
 
@@ -114,14 +115,14 @@ fn estimate_unary(v: &Vec<bool>) -> f64 {
             .filter_map(|(idx, height)| if high == height {Some(idx)} else {None}).collect::<Vec<_>>();
     
     // Return the average position
-    peaks.iter().sum::<usize>() as f64 / peaks.len() as f64
+    T::from(peaks.iter().sum::<usize>()).unwrap() / T::from(peaks.len()).unwrap()
 }
 
 fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T 
     where T: FromPrimitive + num::Float {
     let v = state.h.iter().map(|f| state.z[f(key) % state.z.len()]).collect::<Vec<_>>();
 
-    T::from_f64(estimate_unary(&v) * state.alpha as f64).unwrap() / state.scale
+    estimate_unary::<T>(&v) * T::from(state.alpha).unwrap() / state.scale
 }
 
 pub fn make_alp_histogram<K, C, T>(n: usize, alpha: u32, scale: T, s: usize, h: HashFunctions<K>) 
@@ -130,7 +131,7 @@ pub fn make_alp_histogram<K, C, T>(n: usize, alpha: u32, scale: T, s: usize, h: 
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash,
           C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast + CastInternalReal {
+          T: 'static + num::Float + DistanceCast {
     
     if alpha == 0 {
         return fallible!(MakeMeasurement, "alpha must be positive")
@@ -161,11 +162,11 @@ pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: u32, scale: T,
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + Clone + ToPrimitive,
           C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast + CastInternalReal {
+          T: 'static + num::Float + DistanceCast {
     
-    let m = (f64::distance_cast(beta)? * f64::distance_cast(scale)? / alpha as f64).ceil() as usize;
-
-    let exp = exponent_next_power_of_two(u64::distance_cast(size_factor as f64 * f64::distance_cast(beta)? * f64::distance_cast(scale)? / alpha as f64)?);
+    let m = (beta.to_f64().unwrap() * scale.to_f64().unwrap() / alpha as f64).ceil() as usize;
+    
+    let exp = exponent_next_power_of_two(u64::distance_cast(size_factor as f64 * n as f64 * scale.to_f64().unwrap() / alpha as f64)?);
     let h = (0..m).map(|_| sample_hash_function(exp)).collect::<Fallible<HashFunctions<K>>>()?;
 
     make_alp_histogram(n, alpha, scale, 1 << exp, h)
@@ -177,7 +178,7 @@ pub fn make_alp_histogram_simple<K, C, T>(n: usize, scale: T, beta: C)
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + Clone + ToPrimitive,
           C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast + CastInternalReal {
+          T: 'static + num::Float + DistanceCast {
     
     make_alp_histogram_parameterized(n, ALPHA_DEFAULT, scale, beta, SIZE_FACTOR_DEFAULT)
 }
@@ -195,9 +196,9 @@ pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K,
 // TODO: Could be refactored to a general post_processing function
 pub fn make_histogram_alp_post_process<K, C, T>(m : Measurement<SizedHistogramDomain<K, C>,AlpDomain<K, T>,L1Distance<C>, MaxDivergence<T>>) 
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + ToPrimitive,
-          C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast + CastInternalReal + FromPrimitive {
+    where K: 'static + Eq + Hash + Clone,
+          C: 'static,
+          T: 'static + num::Float + FromPrimitive {
         let f0 = m.function;
         let f1 = Function::new(move |x : &AlpState<K, T>| post_process(x.clone()));
         Ok(Measurement::new(
@@ -302,13 +303,13 @@ mod tests {
     #[test]
     fn test_estimate_unary() -> Fallible<()> {
         let z1 = vec![true, true, true, false, true, false, false, true];
-        assert!(estimate_unary(&z1) == 4.0);
+        assert!(estimate_unary::<f64>(&z1) == 4.0);
 
         let z2 = vec![true, false, false, false, true, false, false, true];
-        assert!(estimate_unary(&z2) == 1.0);
+        assert!(estimate_unary::<f64>(&z2) == 1.0);
 
         let z3 = vec![false, true, true, false, false, true, false, true];
-        assert!(estimate_unary(&z3) == 3.0);
+        assert!(estimate_unary::<f64>(&z3) == 3.0);
 
         Ok(())
     }
