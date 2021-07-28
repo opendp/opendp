@@ -61,13 +61,10 @@ fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize>
           T: CastInternalReal {
     let mut scalar = scale.into_internal();
     scalar.div_assign_round(alpha.into_internal(), Round::Down);
-    if scalar.get_exp().unwrap() < -52 {
-        return fallible!(FailedFunction, "scale div alpha must be above 2^-53")
-    }
-    // Remove bits that represents values below 2^-53
+    // Truncate bits that represents values below 2^-53
     scalar.set_prec_round((f64::MANTISSA_DIGITS as i32 - scalar.get_exp().unwrap()).max(1) as u32, Round::Down);
 
-    let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.to_i64().unwrap()) * scalar;
+    let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.max(C::zero()).to_u64().unwrap()) * scalar;
     let floored = f64::from_internal(r.clone().floor()) as usize;
     
     match bool::sample_bernoulli(f64::from_internal(r.fract()), false)? {
@@ -91,7 +88,17 @@ fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
 }
 
 #[cfg(not(feature="use-mpfr"))]
-fn compute_prob(alpha: &u32) -> f64 {
+fn compute_prob<T>(alpha: T) -> f64 {
+    unimplemented!()
+}
+
+#[cfg(feature="use-mpfr")]
+fn check_parameters<T : CastInternalReal>(alpha: T, scale: T) -> bool {
+    scale.into_internal() * Float::with_val(53, 52).exp2() < alpha.into_internal()
+}
+
+#[cfg(not(feature="use-mpfr"))]
+fn check_parameters(alpha: T, scale: T) -> bool {
     unimplemented!()
 }
 
@@ -148,6 +155,9 @@ pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: Ha
     }
     if s == 0 {
         return fallible!(MakeMeasurement, "s can not be zero")
+    }
+    if check_parameters(alpha, scale) {
+        return fallible!(MakeMeasurement, "scale divided by alpha must be above 2^-52")
     }
     
     Ok(Measurement::new(
