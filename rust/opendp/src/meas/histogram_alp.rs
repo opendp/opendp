@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use num::{Integer, FromPrimitive, ToPrimitive};
 #[cfg(feature="use-mpfr")]
-use rug::{Float, ops::DivAssignRound, float::Round};
+use rug::{Float, ops::DivAssignRound, ops::AddAssignRound, float::Round};
 
 use crate::core::{Measurement, Function, PrivacyRelation};
 use crate::dist::{L1Distance, MaxDivergence};
@@ -23,7 +23,7 @@ type BitVector = Vec<bool>;
 type HashFunctions<K> = Vec<Rc<dyn Fn(&K) -> usize>>;
 #[derive(Clone)]
 pub struct AlpState<K, T>{
-    alpha: u32,
+    alpha: T,
     scale: T,
     h: HashFunctions<K>,
     z: BitVector 
@@ -56,16 +56,20 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
 }
 
 #[cfg(feature="use-mpfr")]
-fn scale_and_round<C, T>(x : C, alpha: u32, scale: T) -> Fallible<usize> 
+fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> 
     where C: Integer + ToPrimitive,
-          T: num::Float {
-    // TODO: Precision is currently simply chosen to be very high
-    let mut invalpha = 1f64.into_internal();
-    invalpha.div_assign_round((alpha as f64).into_internal(), Round::Down);
-    invalpha.set_prec(150);
-    let r = Float::with_val(150, x.to_i64().unwrap()) * Float::with_val(150, scale.to_f64().unwrap()) * invalpha;
+          T: CastInternalReal {
+    let mut scalar = scale.into_internal();
+    scalar.div_assign_round(alpha.into_internal(), Round::Down);
+    if scalar.get_exp().unwrap() < -52 {
+        return fallible!(FailedFunction, "scale div alpha must be above 2^-53")
+    }
+    // Remove bits that represents values below 2^-53
+    scalar.set_prec_round((f64::MANTISSA_DIGITS as i32 - scalar.get_exp().unwrap()).max(1) as u32, Round::Down);
+
+    let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.to_i64().unwrap()) * scalar;
     let floored = f64::from_internal(r.clone().floor()) as usize;
-    // TODO: Potential rounding when casting to f64
+    
     match bool::sample_bernoulli(f64::from_internal(r.fract()), false)? {
         true => Ok(floored + 1),
         false => Ok(floored)
@@ -73,14 +77,16 @@ fn scale_and_round<C, T>(x : C, alpha: u32, scale: T) -> Fallible<usize>
 }
 
 #[cfg(not(feature="use-mpfr"))]
-fn scale_and_round<C, T>(x : C, alpha: &u32, scale: &T) -> Fallible<usize> {
+fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> {
     unimplemented!()
 }
 
 #[cfg(feature="use-mpfr")]
-fn compute_prob(alpha: u32) -> f64 {
+fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
+    let mut a = alpha.into_internal();
+    a.add_assign_round(2, Round::Down);
     let mut p = 1f64.into_internal();
-    p.div_assign_round( (alpha as f64 + 2.).into_internal(), Round::Up); // Round up to preserve privacy
+    p.div_assign_round( a, Round::Up); // Round up to preserve privacy
     f64::from_internal(p)
 }
 
@@ -89,9 +95,9 @@ fn compute_prob(alpha: &u32) -> f64 {
     unimplemented!()
 }
 
-fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: u32, scale: T, s: usize) -> Fallible<BitVector> 
+fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T, scale: T, s: usize) -> Fallible<BitVector> 
     where C: Copy + Integer + ToPrimitive,
-          T: Copy + num::Float {
+          T: Copy + CastInternalReal {
     let mut z = vec![false; s];
 
     for (k, v) in x.iter() {
@@ -126,15 +132,15 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
     estimate_unary::<T>(&v) * T::from(state.alpha).unwrap() / state.scale
 }
 
-pub fn make_alp_histogram<K, C, T>(n: usize, alpha: u32, scale: T, s: usize, h: HashFunctions<K>) 
+pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: HashFunctions<K>) 
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash,
           C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast {
+          T: 'static + num::Float + DistanceCast + CastInternalReal {
     
-    if alpha == 0 {
+    if alpha.is_sign_negative() || alpha.is_zero() {
         return fallible!(MakeMeasurement, "alpha must be positive")
     }
     if scale.is_sign_negative() || scale.is_zero() {
@@ -157,17 +163,17 @@ pub fn make_alp_histogram<K, C, T>(n: usize, alpha: u32, scale: T, s: usize, h: 
     ))
 }
 
-pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: u32, scale: T, beta: C, size_factor: u32) 
+pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: T, scale: T, beta: C, size_factor: u32) 
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + Clone + ToPrimitive,
           C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast {
+          T: 'static + num::Float + DistanceCast + CastInternalReal {
     
-    let m = (beta.to_f64().unwrap() * scale.to_f64().unwrap() / alpha as f64).ceil() as usize;
+    let m = (beta.to_f64().unwrap() * (scale / alpha).to_f64().unwrap()).ceil() as usize;
     
-    let exp = exponent_next_power_of_two(u64::distance_cast(size_factor as f64 * n as f64 * scale.to_f64().unwrap() / alpha as f64)?);
+    let exp = exponent_next_power_of_two(u64::distance_cast(size_factor as f64 * n as f64 * (scale / alpha).to_f64().unwrap())?);
     let h = (0..m).map(|_| sample_hash_function(exp)).collect::<Fallible<HashFunctions<K>>>()?;
 
     make_alp_histogram(n, alpha, scale, 1 << exp, h)
@@ -179,9 +185,9 @@ pub fn make_alp_histogram_simple<K, C, T>(n: usize, scale: T, beta: C)
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + Clone + ToPrimitive,
           C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast {
+          T: 'static + num::Float + DistanceCast + CastInternalReal {
     
-    make_alp_histogram_parameterized(n, ALPHA_DEFAULT, scale, beta, SIZE_FACTOR_DEFAULT)
+    make_alp_histogram_parameterized(n, T::from(ALPHA_DEFAULT).unwrap(), scale, beta, SIZE_FACTOR_DEFAULT)
 }
 
 pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T> 
@@ -267,7 +273,7 @@ mod tests {
     #[test]
     fn test_alp_construction() -> Fallible<()> {
         let beta = 10;
-        let alp = make_alp_histogram::<u32, u32, f64>(10, 1, 1.0, beta, index_identify_functions(beta))?;
+        let alp = make_alp_histogram::<u32, u32, f64>(10, 1., 1.0, beta, index_identify_functions(beta))?;
 
         assert!(alp.privacy_relation.eval(&1, &1.)?);
         assert!(!alp.privacy_relation.eval(&1, &0.999)?);
@@ -291,7 +297,7 @@ mod tests {
         // Handle silently using modulo
         // Returning an error would violate privacy
         let h = index_identify_functions(20);
-        let alp = make_alp_histogram::<u32, u32, f64>(3, 1, 1.0, s, h)?;
+        let alp = make_alp_histogram::<u32, u32, f64>(3, 1., 1.0, s, h)?;
 
         let mut x = HashMap::new();
         x.insert(42, 3);
@@ -318,13 +324,13 @@ mod tests {
     #[test]
     fn test_compute_estimate() -> Fallible<()> {
         let z1 = vec![true, true, true, false, true, false, false, true];
-        assert!(compute_estimate(&AlpState {alpha:3, scale:1.0, h:index_identify_functions(8), z:z1}, &0) == 12.0);
+        assert!(compute_estimate(&AlpState {alpha:3., scale:1.0, h:index_identify_functions(8), z:z1}, &0) == 12.0);
 
         let z2 = vec![true, false, false, false, true, false, false, true];
-        assert!(compute_estimate(&AlpState {alpha:1, scale:2.0, h:index_identify_functions(8), z:z2}, &0) == 0.5);
+        assert!(compute_estimate(&AlpState {alpha:1., scale:2.0, h:index_identify_functions(8), z:z2}, &0) == 0.5);
 
         let z3 = vec![false, true, true, false, false, true, false, true];
-        assert!(compute_estimate(&AlpState {alpha:1, scale:0.5, h:index_identify_functions(8), z:z3}, &0) == 6.0);
+        assert!(compute_estimate(&AlpState {alpha:1., scale:0.5, h:index_identify_functions(8), z:z3}, &0) == 6.0);
 
         Ok(())
     }
