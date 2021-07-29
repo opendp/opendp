@@ -27,3 +27,8 @@ pub use crate::meas::stability::*;
 pub mod randomized_response;
 #[cfg(feature="contrib")]
 pub use crate::meas::randomized_response::*;
+
+#[cfg(feature="contrib")]
+pub mod discrete_gaussian;
+#[cfg(feature="contrib")]
+pub use crate::meas::discrete_gaussian::*;

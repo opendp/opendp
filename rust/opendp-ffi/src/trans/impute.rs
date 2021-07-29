@@ -6,7 +6,7 @@ use num::Float;
 
 use opendp::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain};
 use opendp::err;
-use opendp::samplers::SampleUniform;
+use opendp::samplers::SampleContinuousUniform;
 use opendp::trans::{ImputeConstantDomain, make_impute_constant, make_impute_uniform_float, make_drop_null, DropNullDomain};
 
 use crate::any::{AnyTransformation, AnyObject, Downcast};
