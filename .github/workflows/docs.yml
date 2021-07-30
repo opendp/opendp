@@ -44,7 +44,8 @@ jobs:
           git config --global user.name "$GITHUB_ACTOR"
           git checkout gh-pages
           rm -rf *
-          echo docs.opendp.org > CNAME
+          # TODO: Revert this when we change repos.
+          echo docz.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
           git add --all --force
