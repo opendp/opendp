@@ -18,11 +18,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Update latest
-        if: ${{ github.ref == "refs/heads/main" }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: git branch -f latest ${{ github.ref }}
 
       - name: Update stable
         # TODO: Fix this logic to fire only if this is highest semantic version.
         # Can probably do this just by hard-wiring the major number.
-        if: ${{ startsWith(github.ref, "refs/tags/v") && ! contains(github.ref, "-rc.") }}
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && ! contains(github.ref, '-rc.') }}
         run: git branch -f stable ${{ github.ref }}
