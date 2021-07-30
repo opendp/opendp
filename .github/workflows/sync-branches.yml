@@ -1,3 +1,7 @@
+# This keeps the tracking branches latest and stable in sync with their targets:
+# * Whenever there's a push to main, it updates latest to match.
+# * Whenever there's a release, it updates stable to match.
+
 name: Sync Branches
 
 on:
