@@ -1,0 +1,57 @@
+name: Documentation
+
+# Controls when the action will run. 
+on:
+  # Triggers whenever latest is updated or a release is done
+  workflow_run:
+    workflows: ["Sync Branches"]
+    types: [completed]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    env:
+      # don't attempt to load binaries when sourcing the library
+      OPENDP_HEADLESS: true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      # Runs a set of commands using the runners shell
+      - name: Run a multi-line script
+        run: |
+          echo "Install Sphinx and deploy docs..."
+          cd docs
+          python --version
+          python -m venv venv
+          source venv/bin/activate
+          echo "Upgrade pip and install requirements."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "Create docs."
+          make versions
+          cp -r build /tmp
+          cd ..
+          git fetch
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+          git checkout gh-pages
+          rm -rf *
+          echo docs.opendp.org > CNAME
+          echo "for underscore directories" > .nojekyll
+          cp -r /tmp/build/html/* .
+          git add --all --force
+      - name: Push docs to gh-pages branch
+        #if: success() && github.ref == 'refs/heads/main'
+        run: |
+          echo "Push docs to gh-pages branch"
+          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+          git push --force origin gh-pages
+        continue-on-error: true
