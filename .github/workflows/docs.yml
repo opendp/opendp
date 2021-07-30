@@ -2,9 +2,6 @@ name: Documentation
 
 # Controls when the action will run. 
 on:
-  # TODO: Remove this temporary trigger
-  push:
-    branches: [148-docs]
   # Triggers whenever latest is updated or a release is done
   workflow_run:
     workflows: ["Sync Branches"]
