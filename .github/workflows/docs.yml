@@ -18,7 +18,7 @@ jobs:
       OPENDP_HEADLESS: true
 
     # Run only if sync-branches workflow succeeded.
-    if: ${{ github.event.workflow_run.conclusion == "success" }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
