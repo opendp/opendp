@@ -3,14 +3,12 @@
 import sys
 import os
 from datetime import datetime
-sys.path.insert(0, os.path.abspath('../../'))
 
-rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default=os.getcwd()), "..")
-sys.path.insert(0, rootdir)
+# We're inside source when this runs.
 sys.path.append(os.path.abspath('../../python/src'))
-print("*****************************************")
-[print(p) for p in sys.path]
-print("*****************************************")
+# print("*****************************************")
+# [print(p) for p in sys.path]
+# print("*****************************************")
 
 print("*****************************************")
 
@@ -44,7 +42,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = '0.0.1'
+version = '0.0.0-development'
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
@@ -91,15 +89,30 @@ html_sidebars = {
    '**': ['search-field.html', 'sidebar-nav-bs.html', 'versioning.html'],
 }
 
-# Whitelist pattern for branches (set to None to ignore all branches)
-# TODO: We would rather have "latest" than "main": https://github.com/Holzhaus/sphinx-multiversion/issues/78
-#smv_branch_whitelist = r'^latest$'
-#smv_branch_whitelist = r'^main$'
-# TODO: remove this 148-docs line. Just for previewing the pull request.
-smv_branch_whitelist = r'^148-docs$'
+# SPHINX-MULTIVERSION STUFF
+# Whitelist pattern for tags (set to None to ignore all tags)
+smv_tag_whitelist = r'^v.*$'
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+# Whitelist pattern for branches (set to None to ignore all branches)
+smv_branch_whitelist = r'(stable|latest)'
+
+# Whitelist pattern for remotes (set to None to use local branches only)
+smv_remote_whitelist = None
+
+# Pattern for released versions
+smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
+
+# Command that sphinx-multiversion runs for each version. Requires patch from https://github.com/Holzhaus/sphinx-multiversion/pull/62
+# We use this to generate the templates for the Python API docs.
+# Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
+version_cmd = 'VERSION=`cat ../VERSION`'
+sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
+rustdoc_cmd = '(cd ../rust && cargo doc --no-deps --target-dir ../docs/source/api/rust)'
+# Building the Rust docs locally takes forever, and is only necessary for latest branch (releases are automatically published to https://docs.rs).
+# TODO: Figure out how to use locally generated Rust docs for latest branch only.
+#smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd, rustdoc_cmd])
+smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd])
+
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
 #html_file_suffix = None

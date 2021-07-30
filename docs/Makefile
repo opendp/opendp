@@ -2,11 +2,14 @@
 #
 
 # You can set these variables from the command line.
+SPHINXAPIDOC  = sphinx-apidoc
+CARGODOC      = cargo doc
 SPHINXOPTS    = -W
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
 BUILDDIR      = build
+VERSION       = $(shell cat ../VERSION)
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -17,13 +20,17 @@ endif
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
-	@echo "  html       to make standalone HTML files"
+	@echo "  html       to make HTML files for current workspace (FOR TESTING, NOT USED IN RELEASE BUILDS)"
+	@echo "  versions   to make HTML files for all committed versions"
 
 clean:
-	rm -rf $(BUILDDIR)/*
+	rm -rf $(BUILDDIR)/* source/api/python source/api/rust
 
 html:
-	$(SPHINXBUILD) $(SPHINXOPTS) -D 'html_sidebars.**'=search-field.html,sidebar-nav-bs.html source $(BUILDDIR)/html
+	$(SPHINXAPIDOC) -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
+# TODO: Figure out how to link locally generated Rust docs into sphinx structure.
+# 	cd ../rust && $(CARGODOC) --no-deps --target-dir ../docs/source/api/rust
+	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=search-field.html,sidebar-nav-bs.html source $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

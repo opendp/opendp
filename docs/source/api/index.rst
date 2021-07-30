@@ -1,10 +1,9 @@
 API
 ===
 
-**Contents:**
-
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 1
+   :caption: Contents:
 
-   python/index
-   rust/index
+   Python <python/index>
+   Rust <https://docs.rs/opendp>

@@ -2,14 +2,10 @@ name: Documentation
 
 # Controls when the action will run. 
 on:
-  # Triggers the workflow on push events but only for the latest branch
-  push:
-    branches:
-      - main
-      - 148-docs
-  pull_request:
-    branches:
-      - '**'
+  # Triggers whenever latest is updated or a release is done
+  workflow_run:
+    workflows: ["Sync Branches"]
+    types: [completed]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -48,8 +44,7 @@ jobs:
           git config --global user.name "$GITHUB_ACTOR"
           git checkout gh-pages
           rm -rf *
-          # TODO: Update to final hostname.
-          echo docz.opendp.org > CNAME
+          echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
           git add --all --force
