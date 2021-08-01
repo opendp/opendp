@@ -39,13 +39,13 @@ mod tests {
     #[test]
     fn test_make_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_resize_constant(
-            util::into_raw(0) as *const c_void,
+            util::into_raw(0i32) as *const c_void,
             4 as c_uint,
-            "u8".to_char_p(),
+            "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = opendp_core__transformation_invoke(&transformation, arg);
-        let res: f64 = Fallible::from(res)?.downcast()?;
+        let res: Vec<i32> = Fallible::from(res)?.downcast()?;
         assert_eq!(res, vec![1, 2, 3, 0]);
         Ok(())
     }
