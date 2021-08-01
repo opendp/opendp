@@ -542,7 +542,7 @@
         ],
         "ret": {
             "c_type": "FfiResult<AnyTransformation *>",
-            "description": "The carrier type is HashMap<TI, TO>- the counts for each unique data input."
+            "description": "A vector of the same type `TA`, but with the provided `length`."
         }
     },
     "make_bounded_sum": {

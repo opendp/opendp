@@ -5,16 +5,16 @@ use crate::dom::{VectorDomain, AllDomain, SizedDomain};
 use std::cmp::Ordering;
 use crate::traits::CheckNull;
 
-pub fn make_resize_constant<T: 'static + Clone + CheckNull>(
-    constant: T, length: usize
-) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, SizedDomain<VectorDomain<AllDomain<T>>>, SymmetricDistance, SymmetricDistance>> {
+pub fn make_resize_constant<TA: 'static + Clone + CheckNull>(
+    constant: TA, length: usize
+) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, SizedDomain<VectorDomain<AllDomain<TA>>>, SymmetricDistance, SymmetricDistance>> {
     if length == 0 { return fallible!(MakeTransformation, "length must be greater than zero") }
     if constant.is_null() { return fallible!(MakeTransformation, "constant may not be null") }
 
     Ok(Transformation::new(
         VectorDomain::new_all(),
         SizedDomain::new(VectorDomain::new_all(), length),
-        Function::new(move |arg: &Vec<T>| match arg.len().cmp(&length) {
+        Function::new(move |arg: &Vec<TA>| match arg.len().cmp(&length) {
             Ordering::Less => arg.iter().chain(vec![&constant; length - arg.len()]).cloned().collect(),
             Ordering::Equal => arg.clone(),
             Ordering::Greater => arg[..length].to_vec()

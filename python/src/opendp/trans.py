@@ -761,7 +761,7 @@ def make_resize_constant(
     :type length: int
     :param TA: Atomic type.
     :type TA: RuntimeTypeDescriptor
-    :return: The carrier type is HashMap<TI, TO>- the counts for each unique data input.
+    :return: A vector of the same type `TA`, but with the provided `length`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
