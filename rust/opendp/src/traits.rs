@@ -354,29 +354,28 @@ impl RoundCast<String> for bool { fn round_cast(v: String) -> Fallible<Self> { O
 impl RoundCast<bool> for String { fn round_cast(v: bool) -> Fallible<Self> { Ok(v.to_string()) } }
 
 pub trait CheckNull { fn is_null(&self) -> bool; }
-macro_rules! impl_check_null_for_non_null {
+macro_rules! impl_check_null_for_non_nullable {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
             #[inline]
             fn is_null(&self) -> bool {false}
         })+
-        $(impl CheckNull for Option<$ty> {
-            #[inline]
-            fn is_null(&self) -> bool {self.is_none()}
-        })+
     }
 }
-impl_check_null_for_non_null!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String);
+impl_check_null_for_non_nullable!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String);
+impl<T: CheckNull> CheckNull for Option<T> {
+    #[inline]
+    fn is_null(&self) -> bool {
+        if let Some(v) = self {
+            v.is_null()
+        } else {true}
+    }
+}
 macro_rules! impl_check_null_for_float {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
             #[inline]
             fn is_null(&self) -> bool {self.is_nan()}
-        })+
-        $(impl CheckNull for Option<$ty> {
-            fn is_null(&self) -> bool {
-                if let Some(v) = self {v.is_nan()} else {true}
-            }
         })+
     }
 }
