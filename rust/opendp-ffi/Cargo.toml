@@ -4,7 +4,7 @@ description = "Foreign function interfaces for the OpenDP library."
 license-file = "../../LICENSE"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
-version = "0.0.0-development"
+version = "0.1.0-rc.3"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
 build = "build/main.rs"
@@ -17,7 +17,7 @@ backtrace = "0.3"
 
 [dependencies.opendp]
 path = "../opendp"
-version = "0.1.0-rc.2"
+version = "0.1.0-rc.3"
 default-features = false
 
 [build-dependencies]
