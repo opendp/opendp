@@ -199,6 +199,12 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     if not isinstance(val, list):
         raise OpenDPException(f"Cannot cast a non-list type to a vector")
 
+    if inner_type_name == "String":
+        def str_to_slice(val):
+            return FfiSlice(ctypes.cast(ctypes.c_char_p(val.encode()), ctypes.c_void_p), len(val) + 1)
+        array = (FfiSlice * len(val))(*map(str_to_slice, val))
+        return _wrap_in_slice(array, len(val))
+
     if inner_type_name not in ATOM_MAP:
         raise OpenDPException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
 
@@ -215,6 +221,12 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
 def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
     assert type_name[:3] == 'Vec'
     inner_type_name = type_name[4:-1]
+
+    if inner_type_name == 'String':
+        def slice_to_string(val):
+            return ctypes.cast(val.ptr, ctypes.c_char_p).value.decode()
+        return list(map(slice_to_string, ctypes.cast(raw.contents.ptr, FfiSlicePtr)[0:raw.contents.len]))
+
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 

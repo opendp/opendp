@@ -1,5 +1,5 @@
 from opendp._convert import *
-from opendp._convert import _scalar_to_slice, _slice_to_scalar
+from opendp._convert import _scalar_to_slice, _slice_to_scalar, _vector_to_slice, _slice_to_vector
 
 
 def test_data_object_int():
@@ -73,3 +73,15 @@ def test_roundtrip_ffisliceptr_int_lib():
     out = _slice_to_scalar(ffi_slice_ptr, 'i32')
     print(out)
     assert out == in_
+
+
+def test_vec_str():
+    data = ["a", "bbb", "c"]
+    # partial roundtrip
+    slice = _vector_to_slice(data, type_name="Vec<String>")
+    print(_slice_to_vector(slice, type_name="Vec<String>"))
+
+    # complete roundtrip
+    any = py_to_c(data, c_type=AnyObjectPtr)
+    print('data in!')
+    print(c_to_py(any))

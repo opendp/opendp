@@ -91,6 +91,13 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
         let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
         Ok(AnyObject::new(string))
     }
+    fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const FfiSlice, raw.len) };
+        let vec = slice.iter()
+            .map(|str_ffislice| Ok(util::to_str(str_ffislice.ptr as *const c_char)?.to_owned()))
+            .collect::<Fallible<Vec<String>>>()?;
+        Ok(AnyObject::new(vec))
+    }
     fn raw_to_slice<T: Clone>(_raw: &FfiSlice) -> Fallible<AnyObject> {
         // TODO: Need to do some extra wrapping to own the slice here.
         unimplemented!()
@@ -124,7 +131,11 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
-            dispatch!(raw_to_vec, [(element, @primitives)], (raw))
+            if element.descriptor == "String" {
+                raw_to_vec_string(raw)
+            } else {
+                dispatch!(raw_to_vec, [(element, @primitives)], (raw))
+            }
         }
         TypeContents::TUPLE(ref element_ids) => {
             if element_ids.len() != 2 {
@@ -161,6 +172,18 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
         // FIXME: There's no way to get a CString without copying, so this leaks.
         Ok(FfiSlice::new(util::into_c_char_p(string.clone())? as *mut c_void, string.len() + 1))
     }
+    fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let vec_str: &Vec<String> = obj.downcast_ref()?;
+        let vec = vec_str.iter()
+            .map(|s| Ok(FfiSlice::new(
+                util::into_c_char_p(s.clone())? as *mut c_void, s.len() + 1)
+            ))
+            .collect::<Fallible<Vec<FfiSlice>>>()?;
+
+        let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
+        util::into_raw(vec);
+        res
+    }
     fn slice_to_raw<T>(_obj: &AnyObject) -> Fallible<FfiSlice> {
         // TODO: Need to get a reference to the slice here.
         unimplemented!()
@@ -187,7 +210,11 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(element_id));
-            dispatch!(vec_to_raw, [(element, @primitives)], (obj))
+            if element.descriptor == "String" {
+                vec_string_to_raw(obj)
+            } else {
+                dispatch!(vec_to_raw, [(element, @primitives)], (obj))
+            }
         }
         TypeContents::TUPLE(element_ids) => {
             if element_ids.len() != 2 {

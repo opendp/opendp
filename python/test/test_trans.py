@@ -2,6 +2,7 @@ from opendp.typing import *
 
 INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))
+STR_DATA = list(map(str, INT_DATA))
 
 
 def test_cast_impute():
@@ -92,14 +93,16 @@ def test_is_null():
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
-# TODO: cannot test independently until Vec<String> data loader implemented
+
 def test_split_lines__cast__impute():
     from opendp.trans import make_split_lines, make_cast, make_impute_constant
+    assert make_split_lines()("1\n2\n3") == ["1", "2", "3"]
     query = (
         make_split_lines() >>
         make_cast(TI=str, TO=int) >>
         make_impute_constant(constant=2)
     )
+
     assert query("1\n2\n3") == [1, 2, 3]
     assert query.check(1, 1)
 
@@ -124,7 +127,6 @@ def test_inherent_cast__impute_uniform():
     assert constant.check(1, 1)
 
 
-
 def test_dataframe_pipeline():
     from opendp.trans import make_split_lines, make_split_records, \
         make_create_dataframe, make_parse_column, make_select_column
@@ -132,9 +134,9 @@ def test_dataframe_pipeline():
     query = (
         make_split_lines() >>
         make_split_records(separator=",") >>
-        make_create_dataframe(col_names=[1, 2]) >>
-        make_parse_column(key=1, impute=True, T=int) >>
-        make_select_column(key=1, T=int)
+        make_create_dataframe(col_names=["A", "B"]) >>
+        make_parse_column(key="A", impute=False, T=int) >>
+        make_select_column(key="A", T=int)
     )
     assert query("1,1.\n2,2.\n3,3.") == [1, 2, 3]
     assert query.check(1, 1)
@@ -248,3 +250,11 @@ def test_resize():
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 2)
+    
+
+def test_count_by_categories_str():
+    from opendp.trans import make_count_by_categories
+    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[float])
+    assert query(STR_DATA) == [1, 1, 1, 6]
+    assert query.check(1, 2.)
+

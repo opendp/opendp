@@ -539,7 +539,7 @@ def make_split_dataframe(
 
 
 def make_parse_column(
-    key,
+    key: Any,
     T: RuntimeTypeDescriptor,
     impute: bool = True,
     K: RuntimeTypeDescriptor = None
@@ -547,6 +547,7 @@ def make_parse_column(
     """Make a Transformation that parses the `key` column of a dataframe as `T`.
     
     :param key: name of column to select from dataframe and parse
+    :type key: Any
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
     :param K: categorical/hashable data type of the key/column name
@@ -564,27 +565,28 @@ def make_parse_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
     impute = py_to_c(impute, c_type=ctypes.c_bool)
     K = py_to_c(K, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_parse_column
-    function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(key, impute, K, T), Transformation))
 
 
 def make_select_column(
-    key,
+    key: Any,
     T: RuntimeTypeDescriptor,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`T`>.
     
     :param key: categorical/hashable data type of the key/column name
+    :type key: Any
     :param K: data type of the key
     :type K: RuntimeTypeDescriptor
     :param T: data type to downcast to
@@ -600,13 +602,13 @@ def make_select_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
     K = py_to_c(K, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_select_column
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(key, K, T), Transformation))

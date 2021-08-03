@@ -363,7 +363,7 @@
         "args": [
             {
                 "name": "key",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "K",
                 "description": "name of column to select from dataframe and parse"
             },
@@ -393,7 +393,7 @@
         "args": [
             {
                 "name": "key",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "K",
                 "description": "categorical/hashable data type of the key/column name"
             },
