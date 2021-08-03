@@ -20,7 +20,7 @@ gmp-mpfr-sys = { version = "=1.2.4", default-features = false, features = ["mpfr
 openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 
 [features]
-default = ["use-openssl", "use-mpfr"]
+default = ["use-openssl", "use-mpfr", "use-system-libs"]
 
 use-openssl = ["openssl"]
 use-mpfr = ["gmp-mpfr-sys", "rug"]
