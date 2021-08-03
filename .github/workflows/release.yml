@@ -189,4 +189,4 @@ jobs:
         run: sleep 60
 
       - name: Publish Cargo OpenDP-FFI
-        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml --no-default-features --features use-openssl,use-mpfr
+        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml
