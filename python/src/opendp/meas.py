@@ -24,6 +24,8 @@ def make_base_laplace(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("floating-point")
+    
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
     T = get_domain_atom_or_infer(D, scale)
@@ -57,6 +59,8 @@ def make_base_gaussian(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("floating-point")
+    
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
     T = get_domain_atom_or_infer(D, scale)
@@ -142,6 +146,8 @@ def make_base_stability(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("floating-point")
+    
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
     TIK = RuntimeType.parse(type_name=TIK)
