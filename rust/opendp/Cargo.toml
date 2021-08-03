@@ -22,9 +22,17 @@ openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 [features]
 default = ["use-openssl", "use-mpfr"]
 
+floating-point = []
+contrib = []
+untrusted = ["floating-point", "contrib"]
+
 use-openssl = ["openssl"]
 use-mpfr = ["gmp-mpfr-sys", "rug"]
 # re-export use-system-libs from mpfr
 use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 
 [lib]
+
+[dev-dependencies]
+# this enables the "untrusted" feature flag by default when doing tests
+opendp = { path = ".", features = ["untrusted"] }

@@ -1,7 +1,7 @@
 import ctypes
 import os
 import sys
-from typing import Optional, Any
+from typing import Optional, Any, List
 
 # list all acceptable alternative types for each default type
 ATOM_EQUIVALENCE_CLASSES = {
@@ -127,4 +127,3 @@ def unwrap(result, type_) -> Any:
         raise OpenDPException("Failed to free error.")
 
     raise OpenDPException(variant, message, backtrace)
-

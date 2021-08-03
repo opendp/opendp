@@ -21,6 +21,9 @@ pub struct Function {
     // metadata for return type
     #[serde(default)]
     ret: Argument,
+    // required feature flags to execute function
+    #[serde(default)]
+    features: Vec<String>,
     // metadata for constructing new types based on existing types or introspection
     #[serde(default)]
     derived_types: Vec<Argument>,

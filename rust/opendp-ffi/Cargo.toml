@@ -28,6 +28,11 @@ indexmap = {version = "1.6.2", features = ["serde"] }
 [features]
 default = ["use-openssl", "use-mpfr", "python"]
 python = []
+
+floating-point = ["opendp/floating-point"]
+contrib = ["opendp/contrib"]
+untrusted = ["floating-point", "contrib"]
+
 use-openssl = ["opendp/use-openssl"]
 use-mpfr = ["opendp/use-mpfr"]
 # re-export features from opendp
@@ -35,3 +40,8 @@ use-system-libs = ["opendp/use-system-libs"]
 
 [lib]
 crate-type = ["rlib", "cdylib"]
+
+
+[dev-dependencies]
+# this enables the "untrusted" feature flag by default when doing tests
+opendp-ffi = { path = ".", features = ["untrusted"] }
