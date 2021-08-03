@@ -2,6 +2,7 @@
 name = "opendp"
 description = "A library of differential privacy algorithms for the statistical analysis of sensitive private data."
 license-file = "../../LICENSE"
+readme = "../../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
 version = "0.0.0-development"

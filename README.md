@@ -30,3 +30,15 @@ The current code is functional, but not ready for general usage. The APIs are un
 - You are very welcome to join us on [GitHub Discussions](https://github.com/opendp/opendp/discussions)!
 - Please use [GitHub Issues](https://github.com/opendp/opendp/issues) for bug reports and feature requests.
 - For other requests, including security issues, please contact us at [info@opendp.org](mailto:info@opendp.org).
+
+
+## Install
+- [From PyPI](https://pypi.org/project/opendp/)
+- [From Crates.io](https://crates.io/crates/opendp)
+- [From Source](https://docs.opendp.org/en/latest/resources/dev-guide/general-logistics/dev-environment.html)
+
+## Documentation
+- [Overview](https://docs.opendp.org)
+- [Python API](https://docs.opendp.org/en/latest/api/python/index.html)
+- [Rust API](https://docs.rs/opendp/)
+    

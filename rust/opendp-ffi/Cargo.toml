@@ -2,13 +2,13 @@
 name = "opendp-ffi"
 description = "Foreign function interfaces for the OpenDP library."
 license-file = "../../LICENSE"
+readme = "../../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
 version = "0.0.0-development"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
 build = "build/main.rs"
-readme = "../../README.md"
 
 [dependencies]
 lazy_static = "1.4.0"
@@ -21,12 +21,12 @@ version = "0.0.0-development"
 default-features = false
 
 [build-dependencies]
-serde_json = {version = "1.0.64", features = ["preserve_order"] }
+serde_json = { version = "1.0.64", features = ["preserve_order"] }
 serde = { version = "1.0.126", features = ["derive"] }
-indexmap = {version = "1.6.2", features = ["serde"] }
+indexmap = { version = "1.6.2", features = ["serde"] }
 
 [features]
-default = ["use-openssl", "use-mpfr", "python"]
+default = ["use-openssl", "use-mpfr"]
 python = []
 
 floating-point = ["opendp/floating-point"]
