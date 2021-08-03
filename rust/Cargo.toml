@@ -9,7 +9,7 @@ edition = "2021"
 rust-version = "1.64.0" # MSRV via `cargo intall msrv && cargo msrv -- cargo check --features=untrusted,bindings-python`
 
 [workspace]
-members = [".", "opendp_derive", "opendp_tooling"]
+members = [".", "opendp_derive", "opendp_tooling", "example"]
 
 [workspace.dependencies]
 syn = { version = "1.0", features = ["full", "parsing"] }
