@@ -127,4 +127,3 @@ def unwrap(result, type_) -> Any:
         raise OpenDPException("Failed to free error.")
 
     raise OpenDPException(variant, message, backtrace)
-

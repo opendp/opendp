@@ -66,7 +66,7 @@ jobs:
         run: |
           export PATH=$PATH:/c/ProgramData/chocolatey/bin
           export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
-          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
+          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
 
       - name: Upload .dll
         uses: actions/upload-artifact@v2
@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build mac binaries
-        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
+        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v2
@@ -154,6 +154,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install twine wheel
+
+      - name: Copy README.md
+        run: cp README.md python/README.md
 
       - name: Build bdist
         run: |
