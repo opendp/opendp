@@ -155,6 +155,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install twine wheel
 
+      - name: Copy README.md
+        run: cp README.md python/README.md
+
       - name: Build bdist
         run: |
           (cd python && python3 setup.py bdist_wheel -d wheelhouse)

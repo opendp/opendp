@@ -87,6 +87,9 @@ jobs:
           name: libs
           path: python/src/opendp/lib
 
+      - name: Copy README.md
+        run: cp ../README.md README.md
+
       - name: Install package
         run: python -m pip install -e .
 
