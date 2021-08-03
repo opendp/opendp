@@ -1,7 +1,7 @@
 import ctypes
 import os
 import sys
-from typing import Optional, Any, List
+from typing import Optional, Any
 
 # list all acceptable alternative types for each default type
 ATOM_EQUIVALENCE_CLASSES = {
