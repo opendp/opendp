@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_make_parse_column() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_parse_column(
-            util::into_raw("A".to_owned()) as *const c_void,
+            util::into_raw(AnyObject::new("A".to_owned())),
             util::from_bool(true),
             "String".to_char_p(),
             "i32".to_char_p(),
