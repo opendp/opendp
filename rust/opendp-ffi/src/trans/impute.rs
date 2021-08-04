@@ -9,7 +9,7 @@ use opendp::err;
 use opendp::samplers::SampleUniform;
 use opendp::trans::{ImputableDomain, make_impute_constant, make_impute_uniform_float};
 
-use crate::any::AnyTransformation;
+use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
 
@@ -35,7 +35,7 @@ pub extern "C" fn opendp_trans__make_impute_uniform_float(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_impute_constant(
-    constant: *const c_void,
+    constant: *const AnyObject,
     DA: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
     let DA = try_!(Type::try_from(DA));
@@ -44,22 +44,22 @@ pub extern "C" fn opendp_trans__make_impute_constant(
     match &DA.contents {
         TypeContents::GENERIC {name, ..} if name == &"OptionNullDomain" => {
             fn monomorphize<T>(
-                constant: *const c_void
+                constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
                 where OptionNullDomain<AllDomain<T>>: ImputableDomain<NonNull=T>,
                       T: 'static + Clone {
-                let constant = try_as_ref!(constant as *const T).clone();
+                let constant: T = try_!(try_as_ref!(constant).downcast_ref::<T>()).clone();
                 make_impute_constant::<OptionNullDomain<AllDomain<T>>>(constant).into_any()
             }
             dispatch!(monomorphize, [(T, @primitives)], (constant))
         }
         TypeContents::GENERIC {name, ..} if name == &"InherentNullDomain" => {
             fn monomorphize<T>(
-                constant: *const c_void
+                constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
                 where InherentNullDomain<AllDomain<T>>: ImputableDomain<NonNull=T>,
                       T: 'static + InherentNull + Clone {
-                let constant = try_as_ref!(constant as *const T).clone();
+                let constant: T = try_!(try_as_ref!(constant).downcast_ref::<T>()).clone();
                 make_impute_constant::<InherentNullDomain<AllDomain<T>>>(constant).into_any()
             }
             dispatch!(monomorphize, [(T, [f64, f32])], (constant))

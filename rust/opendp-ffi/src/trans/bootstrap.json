@@ -40,7 +40,7 @@
         "args": [
             {
                 "name": "value",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "TI",
                 "description": "value to check against"
             },
@@ -438,7 +438,7 @@
         "args": [
             {
                 "name": "constant",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "T",
                 "description": "Value to replace nulls with."
             },
