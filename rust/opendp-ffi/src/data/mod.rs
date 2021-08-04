@@ -14,6 +14,7 @@ use crate::util;
 use crate::util::{c_bool, Type, TypeContents};
 use opendp::traits::{MeasureDistance, MetricDistance};
 use std::fmt::Formatter;
+use std::hash::Hash;
 
 
 #[no_mangle]
@@ -92,9 +93,9 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
         Ok(AnyObject::new(string))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const FfiSlice, raw.len) };
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
         let vec = slice.iter()
-            .map(|str_ffislice| Ok(util::to_str(str_ffislice.ptr as *const c_char)?.to_owned()))
+            .map(|str_ptr| Ok(util::to_str(*str_ptr)?.to_owned()))
             .collect::<Fallible<Vec<String>>>()?;
         Ok(AnyObject::new(vec))
     }
@@ -118,6 +119,21 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
             .zip(util::as_ref(slice[1] as *const T1).cloned())
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
+    }
+    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const FfiSlice, raw.len) };
+
+        // unpack keys and values into slices
+        if slice.len() != 2 {return fallible!(FFI, "HashMap FfiSlice must have length 2")}
+        let keys =  unsafe { slice::from_raw_parts(slice[0].ptr as *const K, raw.len) };
+        let values = unsafe { slice::from_raw_parts(slice[1].ptr as *const V, raw.len) };
+
+        // construct the hashmap
+        if keys.len() != values.len() {return fallible!(FFI, "HashMap FfiSlice must have an equivalent number of keys and values")};
+        let map = keys.iter().cloned()
+            .zip(values.iter().cloned())
+            .collect::<HashMap<K, V>>();
+        Ok(AnyObject::new(map))
     }
     let T = try_!(Type::try_from(T));
     let raw = try_as_ref!(raw);
@@ -146,6 +162,14 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
             // because the only likely way to get a tuple of AnyObjects is as the output of composition.
             dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
         },
+        TypeContents::GENERIC { name, args } => {
+            if name == "HashMap" {
+                if args.len() != 2 {return err!(FFI, "HashMaps should have 2 type arguments").into()}
+                let K = try_!(Type::of_id(&args[0]));
+                let V = try_!(Type::of_id(&args[1]));
+                dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
+            } else {fallible!(FFI, "unrecognized generic {:?}", name)}
+        }
         _ => dispatch!(raw_to_plain, [(T, @primitives)], (raw))
     };
     obj.into()
@@ -175,10 +199,8 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
     fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec_str: &Vec<String> = obj.downcast_ref()?;
         let vec = vec_str.iter()
-            .map(|s| Ok(FfiSlice::new(
-                util::into_c_char_p(s.clone())? as *mut c_void, s.len() + 1)
-            ))
-            .collect::<Fallible<Vec<FfiSlice>>>()?;
+            .cloned().map(util::into_c_char_p)
+            .collect::<Fallible<Vec<*mut c_char>>>()?;
 
         let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
         util::into_raw(vec);
@@ -198,6 +220,25 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
             &tuple.0 as *const T0 as *const c_void,
             &tuple.1 as *const T1 as *const c_void
         ]) as *mut c_void, 2))
+    }
+    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let data: &HashMap<K, V> = obj.downcast_ref()?;
+
+        // wrap keys up in an FfiSlice
+        let keys = data.keys().cloned().collect::<Vec<_>>();
+        let keys_slice = FfiSlice::new(keys.as_ptr() as *mut c_void, keys.len());
+        util::into_raw(keys);
+
+        // wrap values up in an FfiSlice
+        let vals = data.values().cloned().collect::<Vec<_>>();
+        let vals_slice = FfiSlice::new(vals.as_ptr() as *mut c_void, vals.len());
+        util::into_raw(vals);
+
+        // wrap the whole map up together in an FfiSlice
+        let map = vec![keys_slice, vals_slice];
+        let map_slice = FfiSlice::new(map.as_ptr() as *mut c_void, map.len());
+        util::into_raw(map);
+        Ok(map_slice)
     }
     let obj = try_as_ref!(obj);
     let raw = match &obj.type_.contents {
@@ -223,6 +264,14 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
             let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
             // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
             dispatch!(tuple_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
+        }
+        TypeContents::GENERIC { name, args } => {
+            if name == &"HashMap" {
+                if args.len() != 2 {return err!(FFI, "HashMaps should have 2 type arguments").into()}
+                let K = try_!(Type::of_id(&args[0]));
+                let V = try_!(Type::of_id(&args[1]));
+                dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
+            } else {fallible!(FFI, "unrecognized generic {:?}", name)}
         }
         _ => { dispatch!(plain_to_raw, [(&obj.type_, @primitives)], (obj)) }
     };

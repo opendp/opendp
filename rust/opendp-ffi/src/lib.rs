@@ -86,6 +86,9 @@
 
 #![allow(clippy::upper_case_acronyms)]
 #![allow(non_snake_case)]
+#![recursion_limit="1024"]
+// #![feature(trace_macros)]
+// trace_macros!(true);
 
 #[macro_use]
 extern crate lazy_static;

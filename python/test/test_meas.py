@@ -1,4 +1,6 @@
 from opendp.mod import enable_features
+from opendp.typing import L1Distance
+
 enable_features("floating-point")
 
 
@@ -56,14 +58,12 @@ def test_base_vector_geometric():
     assert not meas.check(1, 0.49999)
 
 
-
-# TODO: data unloader for hashmaps
-# def test_base_stability():
-#     from opendp.trans import make_count_by
-#     from opendp.meas import make_base_stability
-#     meas = (
-#         make_count_by(n=10, MI=SubstituteDistance, MO=L1Distance[float], TI=int) >>
-#         make_base_stability(n=10, scale=20., threshold=1., MI=L1Distance[float], TIK=int)
-#     )
-#     print("base gaussian:", meas([3] * 4 + [5] * 6))
-#     assert meas.check(1., (1.3, .000001))
+def test_base_stability():
+    from opendp.trans import make_count_by
+    from opendp.meas import make_base_stability
+    meas = (
+        make_count_by(n=10, MO=L1Distance[float], TI=int) >>
+        make_base_stability(n=10, scale=20., threshold=1., MI=L1Distance[float], TIK=int)
+    )
+    print("base stability:", meas([3] * 4 + [5] * 6))
+    assert meas.check(1, (2.3, .000001))

@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple, List, Union
+from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
@@ -143,6 +143,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
     if type_name.startswith("Vec<") and type_name.endswith('>'):
         return _slice_to_vector(raw, type_name)
 
+    if type_name.startswith("HashMap<") and type_name.endswith('>'):
+        return _slice_to_hashmap(raw, type_name)
+
     if type_name.startswith('(') and type_name.endswith(')'):
         return _slice_to_tuple(raw, type_name)
 
@@ -166,6 +169,9 @@ def _py_to_slice(value: Any, type_name: str) -> FfiSlicePtr:
 
     if type_name.startswith("Vec<") and type_name.endswith('>'):
         return _vector_to_slice(value, type_name)
+
+    if type_name.startswith("HashMap<") and type_name.endswith('>'):
+        return _hashmap_to_slice(value, type_name)
 
     if type_name.startswith('(') and type_name.endswith(')'):
         return _tuple_to_slice(value, type_name)
@@ -201,8 +207,8 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
 
     if inner_type_name == "String":
         def str_to_slice(val):
-            return FfiSlice(ctypes.cast(ctypes.c_char_p(val.encode()), ctypes.c_void_p), len(val) + 1)
-        array = (FfiSlice * len(val))(*map(str_to_slice, val))
+            return ctypes.c_char_p(val.encode())
+        array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
         return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
@@ -223,9 +229,8 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
     inner_type_name = type_name[4:-1]
 
     if inner_type_name == 'String':
-        def slice_to_string(val):
-            return ctypes.cast(val.ptr, ctypes.c_char_p).value.decode()
-        return list(map(slice_to_string, ctypes.cast(raw.contents.ptr, FfiSlicePtr)[0:raw.contents.len]))
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
+        return list(map(lambda v: v.decode(), array))
 
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
@@ -269,6 +274,21 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: str) -> Tuple[Any, ...]:
     # tuple of instances of python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value
                  for void_p, name in zip(ptr_data, inner_type_names))
+
+
+def _hashmap_to_slice(val: Dict[Any, Any], type_name: str) -> FfiSlicePtr:
+    key_type, val_type = [i.strip() for i in type_name[8:-1].split(",")]
+    keys: FfiSlice = _vector_to_slice(list(val.keys()), f"Vec<{key_type}>").contents
+    vals: FfiSlice = _vector_to_slice(list(val.values()), f"Vec<{val_type}>").contents
+    return _wrap_in_slice(ctypes.pointer((FfiSlice * 2)(keys, vals)), 2)
+
+
+def _slice_to_hashmap(raw: FfiSlicePtr, type_name: str) -> Dict[Any, Any]:
+    key_type, val_type = [i.strip() for i in type_name[8:-1].split(",")]
+    key_slice, val_slice = ctypes.cast(raw.contents.ptr, FfiSlicePtr)[0:2]
+    keys = _slice_to_vector(FfiSlicePtr(key_slice), f"Vec<{key_type}>")
+    vals = _slice_to_vector(FfiSlicePtr(val_slice), f"Vec<{val_type}>")
+    return dict(zip(keys, vals))
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:

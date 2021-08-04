@@ -1,5 +1,9 @@
 from opendp._convert import *
-from opendp._convert import _scalar_to_slice, _slice_to_scalar, _vector_to_slice, _slice_to_vector
+from opendp._convert import (
+    _scalar_to_slice, _slice_to_scalar,
+    _vector_to_slice, _slice_to_vector,
+    _hashmap_to_slice, _slice_to_hashmap,
+)
 
 
 def test_data_object_int():
@@ -79,9 +83,15 @@ def test_vec_str():
     data = ["a", "bbb", "c"]
     # partial roundtrip
     slice = _vector_to_slice(data, type_name="Vec<String>")
-    print(_slice_to_vector(slice, type_name="Vec<String>"))
+    assert _slice_to_vector(slice, type_name="Vec<String>") == data
 
     # complete roundtrip
     any = py_to_c(data, c_type=AnyObjectPtr)
-    print('data in!')
-    print(c_to_py(any))
+    assert c_to_py(any) == data
+
+
+def test_hashmap():
+    data = {"A": 23, "B": 12, "C": 23489}
+    slice = _hashmap_to_slice(data, "HashMap<String, i32>")
+    assert _slice_to_hashmap(slice, "HashMap<String, i32>") == data
+
