@@ -186,7 +186,7 @@ jobs:
         run: cargo publish --verbose --manifest-path=opendp/Cargo.toml
 
       - name: Let crates.io index settle
-        run: sleep 15
+        run: sleep 60
 
       - name: Publish Cargo OpenDP-FFI
         run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml
