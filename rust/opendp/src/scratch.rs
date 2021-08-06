@@ -1,65 +1,94 @@
 #[allow(unused_variables)]
 use std::marker::PhantomData;
 
+pub type Privacy = f64;
 
-pub struct Measurement<DI, DO>(PhantomData<DI>, PhantomData<DO>);
-
-impl<DI, DO> Measurement<DI, DO> {
-    pub fn eval(_data: &DI) -> DO {
+pub struct Measurement<I, O> {
+    privacy_loss: Privacy,
+    // IGNORE THE FOLLOWING, RUST IMPL QUIRK.
+    _input_type: PhantomData<I>,
+    _output_type: PhantomData<O>,
+}
+impl<I, O> Measurement<I, O> {
+    pub fn new(privacy_loss: Privacy) -> Self {
+        Self { privacy_loss, _input_type: PhantomData, _output_type: PhantomData }
+    }
+    pub fn eval(&self, _input: &I) -> O {
         unimplemented!()
     }
 }
 
-pub fn make_sum<DI>() -> Measurement<Vec<DI>, DI> {
-    todo!()
+pub type Any = Box<dyn std::any::Any>;
+
+pub struct Queryable<P, S, Q, A> {
+    parameters: P,
+    state: S,
+    transition: Box<dyn Fn(&P, &S, &Q) -> (S, A)>,
+    // IGNORE THE FOLLOWING, RUST IMPL QUIRK.
+    _query_type: PhantomData<Q>,
+    _answer_type: PhantomData<A>,
 }
-
-
-pub struct Queryable<Q, A>(PhantomData<Q>, PhantomData<A>);
-impl<Q, A> Queryable<Q, A> {
-    pub fn eval(&self, _query: &Q) -> A {
-        unimplemented!()
+impl<P, S, Q, A> Queryable<P, S, Q, A> {
+    pub fn new(parameters: P, initial_state: S, transition: impl Fn(&P, &S, &Q) -> (S, A) + 'static) -> Self {
+        Self { parameters, state: initial_state, _query_type: PhantomData, _answer_type: PhantomData, transition: Box::new(transition) }
+    }
+    pub fn eval(&mut self, query: &Q) -> A {
+        let (new_state, answer) = (self.transition)(&self.parameters, &self.state, query);
+        self.state = new_state;
+        answer
     }
 }
 
-
-pub struct InteractiveMeasurement<DI, DO, Q>(PhantomData<DI>, PhantomData<DO>, PhantomData<Q>);
-
-impl<DI, DO, Q> InteractiveMeasurement<DI, DO, Q> {
-    pub fn eval(&self, _arg: &DI) -> Queryable<Q, DO> {
-        unimplemented!()
+pub struct InteractiveMeasurement<I, O, P, S, Q> {
+    function: Box<dyn Fn(I) -> Queryable<P, S, Q, O>>,
+}
+impl<I, O, P, S, Q> InteractiveMeasurement<I, O, P, S, Q> {
+    pub fn new(function: impl Fn(I) -> Queryable<P, S, Q, O> + 'static) -> Self {
+        Self { function: Box::new(function) }
+    }
+    pub fn eval(&self, input: I) -> Queryable<P, S, Q, O> {
+        (self.function)(input)
     }
 }
 
-
-fn make_plain_adaptive<DI, DO>() -> InteractiveMeasurement<DI, DO, Measurement<DI, DO>> {
+pub fn make_some_non_interactive<I>() -> Measurement<I, I> {
     todo!()
 }
 
-fn make_parallel_adaptive<DI, DO>() -> InteractiveMeasurement<DI, DO, InteractiveMeasurement<DI, DO, Measurement<DI, DO>>> {
-    todo!()
+pub fn make_plain_adaptive_composition<I, O>(budget: Privacy) -> InteractiveMeasurement<I, O, I, Privacy, Measurement<I, O>> {
+    let function = move |data| {
+        let parameters = data;
+        let initial_state = budget;
+        let transition = |parameters: &I, state: &Privacy, query: &Measurement<I, O>| -> (Privacy, O) {
+            let new_state = state - query.privacy_loss;
+            if new_state < 0.0 {
+                panic!("Not enough privacy budget left!!!")
+            }
+            let answer = query.eval(parameters);
+            (new_state, answer)
+        };
+        Queryable::new(parameters, initial_state, transition)
+    };
+    InteractiveMeasurement::new(function)
 }
 
-fn make_sequential_adaptive<DI, DO, Q>() -> InteractiveMeasurement<DI, DO, InteractiveMeasurement<DI, DO, Q>> {
-    todo!()
+pub fn make_sequential_adaptive<I, O, Q>(budget: Privacy) -> InteractiveMeasurement<I, Queryable<I, Privacy, Measurement<I, O>, O>, I, Privacy, InteractiveMeasurement<I, O, I, Privacy, Q>> {
+    let function = move |data| {
+        let parameters = data;
+        let initial_state = budget;
+        let transition = |parameters: &I, state: &Privacy, query: &Measurement<I, O>| -> (Privacy, O) {
+            let new_state = state - query.privacy_loss;
+            if new_state < 0.0 {
+                panic!("Not enough privacy budget left!!!")
+            }
+            let answer = query.eval(parameters);
+            (new_state, answer)
+        };
+        Queryable::new(parameters, initial_state, transition)
+    };
+    InteractiveMeasurement::new(function)
 }
 
-#[cfg(test)]
-#[test]
-fn scratch() {
-    let data = vec![1.0, 2.0, 3.0];
-
-    let im = make_plain_adaptive::<Vec<f64>, f64>();
-    let queryable = im.eval(&data);
-    let query1 = make_sum();
-    let _answer = queryable.eval(&query1);
-    let query2 = make_sum();
-    let _answer = queryable.eval(&query2);
-
-    let im = make_parallel_adaptive::<Vec<f64>, f64>();
-    let query1 = make_plain_adaptive::<Vec<f64>, f64>();
-    let answer1 = query1.eval(&data);
-    let query1_1 = make_sum();
-    let answer1_1 = answer1.eval(&query1_1);
-
+pub fn make_concurrent_composition<I, O>() -> InteractiveMeasurement<I, O, (), (), InteractiveMeasurement<I, O, (), (), Measurement<I, O>>> {
+    todo!()
 }
