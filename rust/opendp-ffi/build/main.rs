@@ -7,7 +7,6 @@ use indexmap::map::IndexMap;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
-#[cfg(feature="python")]
 pub mod python;
 
 // a module contains functions by name
@@ -21,6 +20,9 @@ pub struct Function {
     // metadata for return type
     #[serde(default)]
     ret: Argument,
+    // required feature flags to execute function
+    #[serde(default)]
+    features: Vec<String>,
     // metadata for constructing new types based on existing types or introspection
     #[serde(default)]
     derived_types: Vec<Argument>,
@@ -100,6 +102,9 @@ impl<S: Into<String>> From<S> for RuntimeType {
 }
 
 fn main() {
+    // only build the bindings if you're in dev mode
+    if env::var("CARGO_PKG_VERSION").unwrap().as_str() != "0.0.0-development" { return }
+
     let module_names = vec!["core", "meas", "trans", "data"];
 
     let get_bootstrap_path = |val: &str|
@@ -123,14 +128,12 @@ fn main() {
         })
         .collect::<IndexMap<String, Module>>();
 
-    #[cfg(feature="python")] write_bindings(python::generate_bindings(_modules));
+    write_bindings(python::generate_bindings(_modules));
 }
-
 
 #[allow(dead_code)]
 fn write_bindings(files: IndexMap<PathBuf, String>) {
-    let base_dir = env::var("OPENDP_PYTHON_SRC_DIR").map(PathBuf::from)
-        .unwrap_or_else(|_| canonicalize("../../python/src/opendp").unwrap());
+    let base_dir = canonicalize("../../python/src/opendp").unwrap();
     for (file_path, file_contents) in files {
         File::create(base_dir.join(file_path)).unwrap()
             .write_all(file_contents.as_ref()).unwrap();
