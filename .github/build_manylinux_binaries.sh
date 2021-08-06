@@ -14,4 +14,4 @@ if ! [ -x "$(command -v cargo)" ]; then
 fi
 
 echo ">>> build the binaries";
-cargo +stable build --verbose --release --manifest-path=io/rust/Cargo.toml
+cargo +stable build --verbose --release --manifest-path=io/rust/Cargo.toml --features=untrusted

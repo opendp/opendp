@@ -66,7 +66,7 @@ jobs:
         run: |
           export PATH=$PATH:/c/ProgramData/chocolatey/bin
           export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
-          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml
+          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
 
       - name: Upload .dll
         uses: actions/upload-artifact@v2
@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build mac binaries
-        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml
+        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v2
@@ -155,13 +155,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install twine wheel
 
+      - name: Copy README.md
+        run: cp README.md python/README.md
+
       - name: Build bdist
         run: |
           (cd python && python3 setup.py bdist_wheel -d wheelhouse)
 
       - name: PyPi OpenDP upload
         run: |
-          python3 -m twine upload --repository testpypi --verbose --skip-existing python/wheelhouse/*
+          python3 -m twine upload --verbose --skip-existing python/wheelhouse/*
 
 
   rust-publish:
@@ -180,7 +183,10 @@ jobs:
         run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
 
       - name: Publish Cargo OpenDP
-        run: cargo publish --dry-run --verbose --manifest-path=opendp/Cargo.toml
+        run: cargo publish --verbose --manifest-path=opendp/Cargo.toml
+
+      - name: Let crates.io index settle
+        run: sleep 60
 
       - name: Publish Cargo OpenDP-FFI
-        run: cargo publish --dry-run --verbose --manifest-path=opendp-ffi/Cargo.toml
+        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml

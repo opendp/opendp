@@ -1,3 +1,2 @@
-# OpenDP
-
-Python bindings for the OpenDP Library.
+Placeholder README.md for developer installs.   
+Refer to the root-level README.md.

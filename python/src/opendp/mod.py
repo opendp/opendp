@@ -260,3 +260,19 @@ class OpenDPException(Exception):
         if self.inner_traceback:
             response += "\n" + '\n'.join('\t' + line for line in self.inner_traceback.split('\n'))
         return response
+
+
+GLOBAL_FEATURES = set()
+
+
+def enable_features(*features: str) -> None:
+    GLOBAL_FEATURES.update(set(features))
+
+
+def disable_features(*features: str) -> None:
+    GLOBAL_FEATURES.difference_update(set(features))
+
+
+def assert_features(*features: str) -> None:
+    for feature in features:
+        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. Check the documentation for the feature, then call enable_features(\"{feature}\")"

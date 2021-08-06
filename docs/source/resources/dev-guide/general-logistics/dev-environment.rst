@@ -4,7 +4,7 @@ Development Environment
 Follow the steps below to get an OpenDP development environment set up, including the ability to run tests in both Rust and Python.
 
 .. contents:: Contents:
-	:local:
+    :local:
 
 Install Rust
 ------------
@@ -38,12 +38,12 @@ Change to the ``rust`` directory before attempting a build, run the tests, and t
 .. code-block:: bash
 
     cd rust
-    cargo build --features=python
+    cargo build
     cargo test
     cd ..
 
-If you are on Windows, use ``cargo build --no-default-features --features=python``.
-Be aware that this also disables floating-point protections.
+Add `--features=untrusted` to the `cargo` commands to include non-secure floating-point and contrib features like `make_base_laplace`.
+If you are on Windows, [check the windows build instructions](https://github.com/opendp/opendp/tree/main/windows).
 
 Install Python Dependencies
 ---------------------------
@@ -58,6 +58,8 @@ Change to the ``python`` directory, create a Python virtual environment, activat
     pip install flake8 pytest
     mkdir src/opendp/lib
     pip install -e .
+
+The developer install will not work if you don't use the `-e` flag when installing with pip!
 
 Run the Tests
 -------------
