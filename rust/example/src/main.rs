@@ -1,30 +1,34 @@
 use opendp::error::Fallible;
 use opendp::dom::AllDomain;
 use opendp::meas::{make_base_laplace, make_base_gaussian};
-
+use opendp::chain::make_basic_composition;
+use opendp::bcm::bc_measurement;
 
 fn main() -> Fallible<()> {
     println!("OpenDP example");
 
     laplace_example();
-    laplace_and_gaussian_example();
+    gaussian_comp_example();
     return Ok(());
 }
 
 fn laplace_example() -> Fallible<()> {
     println!("Laplace example");
-    let measurement = make_base_laplace::<AllDomain<f64>>(1.0)?;
+    let measurement = bc_measurement(make_base_laplace::<AllDomain<f64>>(1.0)?);
     let _ret = measurement.function.eval(&0.0)?;
     println!("{:?}", _ret);
     println!("{:?}", (measurement.privacy_relation.relation)(&1.0, &0.01));
     return Ok(());
 }
 
-fn laplace_and_gaussian_example() -> Fallible<()> {
+fn gaussian_comp_example() -> Fallible<()> {
     println!("Laplace and Gauussian example");
-    let laplace_meas = make_base_laplace::<AllDomain<f64>>(1.0)?;
-    let gaussian_meas = make_base_gaussian::<AllDomain<f64>>(1.0)?;
-    println!("Laplace {:?}", (laplace_meas.privacy_relation.relation)(&1.0, &1.));
-    println!("Gaussian {:?}", (gaussian_meas.privacy_relation.relation)(&0.1, &(1., 0.01)));
+    let meas_0 = make_base_gaussian::<AllDomain<f64>>(1.0)?;
+    let meas_1 = make_base_gaussian::<AllDomain<f64>>(1.0)?;
+    println!("meas_0 {:?}", (meas_0.privacy_relation.relation)(&0.1, &(1., 0.01)));
+    println!("meas_1 {:?}", (meas_1.privacy_relation.relation)(&0.1, &(1., 0.01)));
+
+    let comp_meas = make_basic_composition(&meas_0, &meas_1)?;
+    println!("Composed {:?}", (comp_meas.privacy_relation.relation)(&0.1, &(1., 0.02)));
     return Ok(());
 }
