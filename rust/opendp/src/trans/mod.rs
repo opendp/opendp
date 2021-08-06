@@ -12,6 +12,7 @@ pub mod variance;
 pub mod impute;
 pub mod clamp;
 pub mod cast;
+pub mod resize;
 
 pub use crate::trans::dataframe::*;
 pub use crate::trans::manipulation::*;
@@ -22,3 +23,4 @@ pub use crate::trans::variance::*;
 pub use crate::trans::impute::*;
 pub use crate::trans::clamp::*;
 pub use crate::trans::cast::*;
+pub use crate::trans::resize::*;

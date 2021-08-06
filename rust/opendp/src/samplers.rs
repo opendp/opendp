@@ -216,12 +216,12 @@ impl SampleUniform for f32 {
 /// version allows us to avoid an infinite dependence loop.
 fn sample_i10_geometric(constant_time: bool) -> Fallible<i16> {
     Ok(if constant_time {
-        let mut buffer = vec![0_u8; 128];
+        let mut buffer = [0_u8; 128];
         fill_bytes(&mut buffer)?;
 
-        cmp::min(buffer.into_iter().enumerate()
+        cmp::min(buffer.iter().enumerate()
                      // ignore samples that contain no events
-                     .filter(|(_, sample)| sample > &0)
+                     .filter(|(_, &sample)| sample > 0)
                      // compute the index of the smallest event in the batch
                      .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
                      // retrieve the smallest index

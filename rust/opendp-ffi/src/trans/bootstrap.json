@@ -519,6 +519,32 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
+    "make_resize_constant": {
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.",
+        "args": [
+            {
+                "name": "constant",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "description": "Value to impute with."
+            },
+            {
+                "name": "length",
+                "c_type": "unsigned int",
+                "description": "Number of records in output data."
+            },
+            {
+                "name": "TA",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "Atomic type."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A vector of the same type `TA`, but with the provided `length`."
+        }
+    },
     "make_bounded_sum": {
         "description": "Make a Transformation that computes the sum of bounded data. \nUse make_clamp to bound data.",
         "args": [
