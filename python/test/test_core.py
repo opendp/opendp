@@ -1,3 +1,5 @@
+from opendp.mod import enable_features
+
 
 def test_type_getters():
     from opendp.trans import make_bounded_mean
@@ -16,6 +18,7 @@ def test_type_getters():
 def test_chain():
     from opendp.trans import make_count
     from opendp.meas import make_base_laplace, make_base_geometric
+    enable_features("floating-point")
 
     data = [1, 2, 3, 4, 5]
     count = make_count(TIA=int, TO=int)

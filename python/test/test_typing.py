@@ -1,7 +1,8 @@
+import pytest
 import sys
 from typing import List, Tuple, Any
 
-from opendp.mod import UnknownTypeException
+from opendp.mod import *
 from opendp.typing import RuntimeType, L1Distance, SensitivityMetric, L2Distance, DatasetMetric
 
 
@@ -47,3 +48,16 @@ def test_c():
     rt_type = RuntimeType.parse('FfiResult<void *>')
     assert str(rt_type) == 'FfiResult<void *>'
     assert rt_type.args[0] == 'void *'
+
+
+def test_feature_fails():
+    with pytest.raises(AssertionError):
+        assert_features("A")
+
+
+def test_set_feature():
+    enable_features("A")
+    assert_features("A")
+
+    disable_features("A")
+    assert "A" not in GLOBAL_FEATURES

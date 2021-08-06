@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -236,12 +237,25 @@ fn generate_body(
     func_name: &String, func: &Function,
     typemap: &HashMap<String, String>,
 ) -> String {
-    format!(r#"{type_arg_formatter}
+    format!(r#"{flag_checker}{type_arg_formatter}
 {data_converter}
 {make_call}"#,
+            flag_checker = generate_flag_check(&func.features),
             type_arg_formatter = generate_type_arg_formatter(func),
             data_converter = generate_data_converter(func, typemap),
             make_call = generate_call(module_name, func_name, func, typemap))
+}
+
+// generate code that checks that a set of feature flags are enabled
+fn generate_flag_check(features: &Vec<String>) -> String {
+    if features.is_empty() {
+        String::default()
+    } else {
+        format!("assert_features({:?})\n\n", features.iter()
+            .map(|f| format!("{}", f))
+            .collect::<Vec<_>>()
+            .join(", "))
+    }
 }
 
 /// generate code that provides an example of the type of the type_arg

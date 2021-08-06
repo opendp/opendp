@@ -2,6 +2,7 @@
 name = "opendp"
 description = "A library of differential privacy algorithms for the statistical analysis of sensitive private data."
 license-file = "../../LICENSE"
+readme = "../../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
 version = "0.0.0-development"
@@ -22,9 +23,17 @@ openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 [features]
 default = ["use-openssl", "use-mpfr", "use-system-libs"]
 
+floating-point = []
+contrib = []
+untrusted = ["floating-point", "contrib"]
+
 use-openssl = ["openssl"]
 use-mpfr = ["gmp-mpfr-sys", "rug"]
 # re-export use-system-libs from mpfr
 use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 
 [lib]
+
+[dev-dependencies]
+# this enables the "untrusted" feature flag by default when doing tests
+opendp = { path = ".", features = ["untrusted"] }

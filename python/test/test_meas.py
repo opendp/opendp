@@ -1,3 +1,5 @@
+from opendp.mod import enable_features
+enable_features("floating-point")
 
 
 def test_base_laplace():
