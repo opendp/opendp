@@ -7,14 +7,10 @@ use opendp::chain::make_basic_composition;
 fn main() -> Fallible<()> {
     println!("OpenDP example");
 
-    let q = ExtendedRational::from("27893.149 5");
+    let q = ExtendedRational::from("0.14957");
     println!("{}", q);
-
-    println!("{}", ExtendedRational::from("+inf"));
-    println!("{}", ExtendedRational::from("-Inf"));
-    println!("{}", ExtendedRational::from("hjkjkl+inf"));
-    println!("{}", ExtendedRational::from("hjkjkl"));
-    println!("{}", ExtendedRational::from("hj123k.45jkl"));
+    println!("{}", q.clone()*q.clone());
+    println!("{}", q*ExtendedRational::NegativeInfinity);
 
     // let plm_dom = PLMOutputDomain::new(vec! [((-1,2), (2,0))]);
 
