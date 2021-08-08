@@ -14,6 +14,8 @@ pub enum ExtendedRational {
     Number(Rational),
 }
 
+pub type QBar = ExtendedRational;
+
 use ExtendedRational::*;
 
 impl ExtendedRational {
@@ -211,5 +213,26 @@ impl From<&str> for ExtendedRational {
             }
         });
         ExtendedRational::new(sign*numerator,denominator).unwrap_or(ExtendedRational::zero())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_str_eq() -> Fallible<()> {
+        let q = ExtendedRational::from("0.14957");
+        let r = ExtendedRational::from("1.4957")/10.into();
+        assert_eq!(q, r);
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_str_eq_inf() -> Fallible<()> {
+        let q = ExtendedRational::from("5678.90");
+        let r = q.clone()*ExtendedRational::NegativeInfinity;
+        assert_eq!(r, ExtendedRational::NegativeInfinity);
+        Ok(())
     }
 }

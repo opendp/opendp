@@ -12,8 +12,7 @@ use crate::core::{
 };
 
 /// Privacy Loss Measurement (PLM) inspired from PLD http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
-
-type PLMInputDomain = AtomDomain<bool>;
+pub type PLMInputDomain = AtomDomain<bool>;
 
 /// A privacy loss value (log-likelihood)
 
