@@ -1,11 +1,12 @@
 use opendp::error::Fallible;
 use opendp::dom::AllDomain;
-use opendp::meas::{make_base_laplace, make_base_gaussian};
+use opendp::meas::{make_base_laplace, make_base_gaussian, privacy_loss, PLMOutputDomain};
 use opendp::chain::make_basic_composition;
-use opendp::bcm::bc_measurement;
 
 fn main() -> Fallible<()> {
     println!("OpenDP example");
+
+    let plm_dom = PLMOutputDomain::new(vec! [((-1,2), (2,5))]);
 
     laplace_example();
     gaussian_comp_example();
@@ -14,7 +15,7 @@ fn main() -> Fallible<()> {
 
 fn laplace_example() -> Fallible<()> {
     println!("Laplace example");
-    let measurement = bc_measurement(make_base_laplace::<AllDomain<f64>>(1.0)?);
+    let measurement = make_base_laplace::<AllDomain<f64>>(1.0)?;
     let _ret = measurement.function.eval(&0.0)?;
     println!("{:?}", _ret);
     println!("{:?}", (measurement.privacy_relation.relation)(&1.0, &0.01));
