@@ -1,6 +1,5 @@
 use std::ops::{Add, Sub, Mul, Div, Rem};
 use std::cmp::Ordering;
-use std::error::Error;
 use std::fmt;
 use std::iter::Iterator;
 use std::convert::TryFrom;
@@ -22,13 +21,23 @@ impl ExtendedRational {
 
     pub fn positive_infinity() -> ExtendedRational {ExtendedRational::new(1,0)}
     pub fn negative_infinity() -> ExtendedRational {ExtendedRational::new(-1,0)}
+    pub fn indeterminate() -> ExtendedRational {ExtendedRational::new(0,0)}
+    pub fn is_number(&self) -> bool {self.denominator == 0}
+    pub fn is_positive_infinity(&self) -> bool {self.numerator == 1 && self.denominator == 0}
+    pub fn is_negative_infinity(&self) -> bool {self.numerator == -1 && self.denominator == 0}
+    pub fn is_indeterminate(&self) -> bool {self.numerator == 0 && self.denominator == 0}
     /// Simplify the fraction
     fn simplify(&self) -> ExtendedRational {
-        let gcd = self.numerator.clone().gcd(&self.denominator);
-        ExtendedRational::new(
-            self.numerator.clone()/&gcd,
-            self.denominator.clone()/&gcd
-        )
+        if self.denominator!=0 {
+            let gcd = self.numerator.clone().gcd(&self.denominator);
+            ExtendedRational::new(
+                self.numerator.clone()/&gcd,
+                self.denominator.clone()/&gcd
+            )
+        } else {
+            // Does nothing
+            self.clone()
+        }
     }
 }
 
@@ -38,7 +47,7 @@ impl Zero for ExtendedRational {
     }
 
     fn is_zero(&self) -> bool {
-        return self.numerator == 0;
+        return self.numerator == 0 && self.denominator != 0;
     }
 }
 
@@ -52,10 +61,19 @@ impl One for ExtendedRational {
 impl Add for ExtendedRational {
     type Output = ExtendedRational;
     fn add(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational::new(
-            self.numerator*&other.denominator + &self.denominator*other.numerator,
-            self.denominator * other.denominator,
-        ).simplify()
+        if self.denominator > 0 {
+            if other.denominator > 0 {
+                ExtendedRational::new(
+                    self.numerator*&other.denominator + &self.denominator*other.numerator,
+                    self.denominator * other.denominator,
+                ).simplify()
+            } else {other}
+        } else {
+            if other.denominator > 0 {self}
+            else if self.numerator == other.denominator {
+                self
+            } else {ExtendedRational::indeterminate()}
+        }
     }
 }
 
@@ -63,10 +81,19 @@ impl Add for ExtendedRational {
 impl Sub for ExtendedRational {
     type Output = ExtendedRational;
     fn sub(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational::new(
-             self.numerator*&other.denominator + &self.denominator*other.numerator,
-             self.denominator * other.denominator,
-        ).simplify()
+        if self.denominator > 0 {
+            if other.denominator > 0 {
+                ExtendedRational::new(
+                    self.numerator*&other.denominator + &self.denominator*other.numerator,
+                    self.denominator * other.denominator,
+               ).simplify()
+            } else {ExtendedRational::new(-other.numerator, other.denominator)}
+        } else {
+            if other.denominator > 0 {self}
+            else if self.numerator == -other.denominator {
+                self
+            } else {ExtendedRational::indeterminate()}
+        }
     }
 }
 
@@ -74,10 +101,14 @@ impl Sub for ExtendedRational {
 impl Mul for ExtendedRational {
     type Output = ExtendedRational;
     fn mul(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational::new(
-             self.numerator * other.numerator,
-             self.denominator * other.denominator,
-        ).simplify()
+        if self.denominator > 0 {
+            if other.denominator > 0 {
+                ExtendedRational::new(
+                    self.numerator * other.numerator,
+                    self.denominator * other.denominator,
+               ).simplify()
+            } else {ExtendedRational::new((self.numerator*other.numerator).signum(), 0)}
+        } else {ExtendedRational::new((self.numerator*other.numerator).signum(), self.denominator)}
     }
 }
 
@@ -133,33 +164,39 @@ impl From<Integer> for ExtendedRational {
     }
 }
 
-#[derive(Debug)]
-struct ParsingError;
-impl fmt::Display for ParsingError {fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "Parsing error")
-}}
-impl Error for ParsingError {}
+impl fmt::Display for ExtendedRational {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.denominator {
+            d if *d==0 => match &self.numerator {
+                n if *n==-1 => write!(f, "-inf"),
+                n if *n==0 => write!(f, "indeterminate"),
+                n if *n==1 => write!(f, "+inf"),
+                _ => write!(f, "invalid"),
+            },
+            _ => write!(f, "{}/{}", self.numerator, self.denominator),
+        }
+    }
+}
 
 /// Simple conversion from a string
-impl TryFrom<String> for ExtendedRational {
-    type Error = Box<dyn Error>;
-    fn try_from(privacy_loss_string: String) -> Result<ExtendedRational, Self::Error> {
-        let (read, sign, numerator, denominator, decimal, infinite) = privacy_loss_string.chars().try_fold::<_,_,Result<_, Self::Error>>((0,0,0,1,false,false), |state, char| {
+impl From<&str> for ExtendedRational {
+    fn from(privacy_loss_string: &str) -> ExtendedRational {
+        let (read, sign, numerator, denominator, decimal) = privacy_loss_string.chars().fold((0,0,0,0,false), |state, char| {
             match (state, char) {
-                ((0,0,0,1,false,false),'-') => Ok((1,-1,0,1,false,false)),
-                ((0,0,0,1,false,false),'+') => Ok((1, 1,0,1,false,false)),
-                ((0,0,0,1,false,false),'i'|'I') => Ok((2, 1,1,0,false,false)),
-                ((1,-1,0,1,false,false),'i'|'I') => Ok((2,-1,1,0,false,true)),
-                ((1, 1,0,1,false,false),'i'|'I') => Ok((2, 1,1,0,false,true)),
-                ((read,0,0,1,false,false),'0'..='9') => Ok((read+1,1,0,1,false,true)),
-                ((read,sign,num,1,false,false),'0'..='9') => Ok((read+1,sign, num*10 + i32::try_from(char.to_digit(10).ok_or(Box::new(ParsingError{}))?)?,1,false,false)),
-                ((read,sign,num,1,false,false),'.') => Ok((read+1,sign,num,1,true,false)),
-                ((read,sign,num,denom,true,false),'0'..='9') => Ok((read+1,sign,num*10 + i32::try_from(char.to_digit(10).ok_or(Box::new(ParsingError{}))?)?,denom*10,true,false)),
-                ((2,sign,1,0,false,true),'n'|'N') => Ok((3,sign,1,0,false,true)),
-                ((3,sign,1,0,false,true),'f'|'F') => Ok((4,sign,1,0,false,true)),
-                (_,_) => Err(Box::new(ParsingError{}))
+                ((0,0,0,0,false),'-') => (1,-1,0,0,false),
+                ((0,0,0,0,false),'+') => (1, 1,0,0,false),
+                ((0,0,0,0,false),'i'|'I') => (2, 1,1,0,false),
+                ((1,-1,0,0,false),'i'|'I') => (2,-1,1,0,false),
+                ((1, 1,0,0,false),'i'|'I') => (2, 1,1,0,false),
+                ((0,0,0,0,false),'0'..='9') => (1,1,i32::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),1,false),
+                ((read,sign,num,1,false),'0'..='9') => (read+1,sign, num*10 + i32::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),1,false),
+                ((read,sign,num,1,false),'.') => (read+1,sign,num,1,true),
+                ((read,sign,num,denom,true),'0'..='9') => (read+1,sign,num*10 + i32::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),denom*10,true),
+                ((2,sign,1,0,false),'n'|'N') => (3,sign,1,0,false),
+                ((3,sign,1,0,false),'f'|'F') => (4,sign,1,0,false),
+                (state,_) => state,
             }
-        })?;
-        Ok(ExtendedRational::new(sign*numerator,denominator))
+        });
+        ExtendedRational::new(sign*numerator,denominator).simplify()
     }
 }
