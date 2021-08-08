@@ -1,20 +1,17 @@
 use opendp::error::Fallible;
 use opendp::dom::AllDomain;
 use opendp::meas::{make_base_laplace, make_base_gaussian};
-use opendp::sarus::{ExtendedRational, PLMOutputDomain};
+use opendp::sarus::{ExtendedRational, PLMInputDomain, PLMOutputDomain};
 use opendp::chain::make_basic_composition;
 
 fn main() -> Fallible<()> {
     println!("OpenDP example");
 
-    let q = ExtendedRational::from("0.14957");
-    println!("{}", q);
-    println!("{}", q.clone()*q.clone());
-    println!("{}", q*ExtendedRational::NegativeInfinity);
+    
 
-    // let plm_dom = PLMOutputDomain::new(vec! [((-1,2), (2,0))]);
+    let plm_dom = PLMOutputDomain::new(vec! [("-inf", "0.5"), ("3", "0.5")]);
 
-    // print!("{:#?}", plm_dom.privacy_loss_probabilitiies);
+    print!("{:#?}", plm_dom.privacy_loss_probabilitiies);
 
     laplace_example();
     gaussian_comp_example();
