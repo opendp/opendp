@@ -1,6 +1,7 @@
 use std::iter::{FromIterator, IntoIterator};
 use std::collections::BTreeMap;
-use rug::Rational;
+
+use crate::sarus::extended_rational::ExtendedRational;
 use crate::error::Fallible;
 use crate::dom::AllDomain;
 use crate::core::{
@@ -14,13 +15,16 @@ use crate::core::{
 
 type PLMInputDomain = AllDomain<bool>;
 
+/// A privacy loss value (log-likelihood)
+
+
 #[derive(Clone, PartialEq)]
 pub struct PLMOutputDomain {
-    privacy_loss_probabilitiies: BTreeMap<Rational, Rational>
+    pub privacy_loss_probabilitiies: BTreeMap<ExtendedRational, ExtendedRational>
 }
 
 impl PLMOutputDomain {
-    pub fn new<Q: Into<Rational>>(privacy_loss_probabilitiies:Vec<(Q, Q)>) -> PLMOutputDomain {
+    pub fn new<Q: Into<ExtendedRational>>(privacy_loss_probabilitiies:Vec<(Q, Q)>) -> PLMOutputDomain {
         PLMOutputDomain {privacy_loss_probabilitiies:
             BTreeMap::from_iter(privacy_loss_probabilitiies.into_iter().map(
                 |(q,r)| (q.into(), r.into())))
@@ -29,6 +33,6 @@ impl PLMOutputDomain {
 }
 
 impl Domain for PLMOutputDomain {
-    type Carrier = Rational;
+    type Carrier = ExtendedRational;
     fn member(&self, privacy_loss: &Self::Carrier) -> Fallible<bool> { Ok(self.privacy_loss_probabilitiies.contains_key(privacy_loss)) }
 }

@@ -1,12 +1,15 @@
 use opendp::error::Fallible;
 use opendp::dom::AllDomain;
-use opendp::meas::{make_base_laplace, make_base_gaussian, privacy_loss, PLMOutputDomain};
+use opendp::meas::{make_base_laplace, make_base_gaussian}
+use opendp::sarus::{privacy_loss, PLMOutputDomain};
 use opendp::chain::make_basic_composition;
 
 fn main() -> Fallible<()> {
     println!("OpenDP example");
 
-    let plm_dom = PLMOutputDomain::new(vec! [((-1,2), (2,5))]);
+    let plm_dom = PLMOutputDomain::new(vec! [((-1,2), (2,0))]);
+
+    print!("{:#?}", plm_dom.privacy_loss_probabilitiies);
 
     laplace_example();
     gaussian_comp_example();

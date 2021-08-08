@@ -18,6 +18,3 @@ pub use crate::meas::gaussian::*;
 pub use crate::meas::geometric::*;
 #[cfg(feature="floating-point")]
 pub use crate::meas::stability::*;
-
-pub mod privacy_loss;
-pub use crate::meas::privacy_loss::*;
