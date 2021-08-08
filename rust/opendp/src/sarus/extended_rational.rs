@@ -16,19 +16,19 @@ pub struct ExtendedRational {
 
 impl ExtendedRational {
     /// Constructor
-    fn new<N:Into<Integer>,D:Into<Integer>>(numerator:N, denominator:D) -> ExtendedRational {
+    pub fn new<N:Into<Integer>,D:Into<Integer>>(numerator:N, denominator:D) -> ExtendedRational {
         ExtendedRational {numerator:numerator.into(), denominator:denominator.into()}
     }
 
-    fn positive_infinity() -> ExtendedRational {ExtendedRational::new(1,0)}
-    fn negative_infinity() -> ExtendedRational {ExtendedRational::new(-1,0)}
+    pub fn positive_infinity() -> ExtendedRational {ExtendedRational::new(1,0)}
+    pub fn negative_infinity() -> ExtendedRational {ExtendedRational::new(-1,0)}
     /// Simplify the fraction
     fn simplify(&self) -> ExtendedRational {
-        let gcd = self.numerator.gcd(&self.denominator);
-        ExtendedRational {
-            numerator: self.numerator/gcd,
-            denominator: self.denominator/gcd,
-        }
+        let gcd = self.numerator.clone().gcd(&self.denominator);
+        ExtendedRational::new(
+            self.numerator.clone()/&gcd,
+            self.denominator.clone()/&gcd
+        )
     }
 }
 
@@ -52,10 +52,10 @@ impl One for ExtendedRational {
 impl Add for ExtendedRational {
     type Output = ExtendedRational;
     fn add(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational {
-            numerator: other.denominator*self.numerator + self.denominator*other.numerator,
-            denominator: self.denominator * other.denominator,
-        }.simplify()
+        ExtendedRational::new(
+            self.numerator*&other.denominator + &self.denominator*other.numerator,
+            self.denominator * other.denominator,
+        ).simplify()
     }
 }
 
@@ -63,10 +63,10 @@ impl Add for ExtendedRational {
 impl Sub for ExtendedRational {
     type Output = ExtendedRational;
     fn sub(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational {
-            numerator: other.denominator*self.numerator - self.denominator*other.numerator,
-            denominator: self.denominator * other.denominator,
-        }.simplify()
+        ExtendedRational::new(
+             self.numerator*&other.denominator + &self.denominator*other.numerator,
+             self.denominator * other.denominator,
+        ).simplify()
     }
 }
 
@@ -74,10 +74,10 @@ impl Sub for ExtendedRational {
 impl Mul for ExtendedRational {
     type Output = ExtendedRational;
     fn mul(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational {
-            numerator: self.numerator * other.numerator,
-            denominator: self.denominator * other.denominator,
-        }.simplify()
+        ExtendedRational::new(
+             self.numerator * other.numerator,
+             self.denominator * other.denominator,
+        ).simplify()
     }
 }
 
@@ -85,10 +85,10 @@ impl Mul for ExtendedRational {
 impl Div for ExtendedRational {
     type Output = ExtendedRational;
     fn div(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational {
-            numerator: self.numerator * other.denominator,
-            denominator: self.denominator * other.numerator,
-        }.simplify()
+        ExtendedRational::new( 
+             self.numerator / other.denominator,
+             self.denominator / other.numerator,
+        ).simplify()
     }
 }
 
@@ -96,23 +96,22 @@ impl Div for ExtendedRational {
 impl Rem for ExtendedRational {
     type Output = ExtendedRational;
     fn rem(self, other: ExtendedRational) -> ExtendedRational {
-        ExtendedRational {
-            numerator: self.numerator * other.denominator,
-            denominator: self.denominator * other.numerator,
-        }.simplify()
+        ExtendedRational::new(0, 1).simplify()
     }
 }
 
 /// Order relation of extended rationals
 impl PartialOrd for ExtendedRational {
     fn partial_cmp(&self, other: &ExtendedRational) -> Option<Ordering> {
-        (self.numerator*other.denominator).partial_cmp(&(self.denominator*other.numerator))
+        let copy = self.clone();
+        (copy.numerator*&other.denominator).partial_cmp(&(copy.denominator*&other.numerator))
     }
 }
 
 impl PartialEq for ExtendedRational {
     fn eq(&self, other: &ExtendedRational) -> bool {
-        return self.numerator*other.denominator == self.denominator*other.numerator;
+        let copy = self.clone();
+        return copy.numerator*&other.denominator == copy.denominator*&other.numerator;
     }
 }
 
@@ -122,7 +121,8 @@ impl Eq for ExtendedRational {}
 /// Order relation of extended rationals
 impl Ord for ExtendedRational {
     fn cmp(&self, other: &ExtendedRational) -> Ordering {
-        (self.numerator*other.denominator).cmp(&(self.denominator*other.numerator))
+        let copy = self.clone();
+        (copy.numerator*&other.denominator).cmp(&(copy.denominator*&other.numerator))
     }
 }
 
