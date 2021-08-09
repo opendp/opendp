@@ -4,7 +4,7 @@ use std::iter::Iterator;
 use std::convert::TryFrom;
 use std::fmt;
 use rug::Rational;
-use num::{One, Zero};
+use num::{One, Zero, Num};
 use crate::error::*;
 
 #[derive(Clone,Debug)]
@@ -20,13 +20,21 @@ use ExtendedRational::*;
 
 impl ExtendedRational {
     /// Constructor
-    pub fn new(numerator:i128, denominator:i128) -> Fallible<ExtendedRational> {
+    pub fn new(numerator:i128, denominator:u128) -> Fallible<ExtendedRational> {
         match (numerator,denominator) {
             (n,d) if d>0 => Ok(Number(Rational::from((n, d)))),
             (-1, 0) => Ok(NegativeInfinity),
             ( 1, 0) => Ok(PositiveInfinity),
             _ => fallible!(DomainMismatch),
         }
+    }
+}
+
+impl Num for ExtendedRational {
+    type FromStrRadixErr = Error;
+
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+        ExtendedRational::new(i128::from_str_radix(str, radix).unwrap_or_default(), 1)
     }
 }
 
@@ -37,15 +45,14 @@ impl PartialOrd for ExtendedRational {
     fn partial_cmp(&self, other: &ExtendedRational) -> Option<Ordering> {
         match (self, other) {
             (Number(r), Number(s)) => r.partial_cmp(s),
-            (NegativeInfinity, Number(s)) => Some(Less),
-            (PositiveInfinity, Number(s)) => Some(Greater),
-            (Number(r), NegativeInfinity) => Some(Greater),
-            (Number(r), PositiveInfinity) => Some(Less),
             (NegativeInfinity, NegativeInfinity) => Some(Equal),
             (NegativeInfinity, PositiveInfinity) => Some(Less),
             (PositiveInfinity, NegativeInfinity) => Some(Greater),
             (PositiveInfinity, PositiveInfinity) => Some(Equal),
-            _ => None,
+            (NegativeInfinity, _) => Some(Less),
+            (PositiveInfinity, _) => Some(Greater),
+            (_, NegativeInfinity) => Some(Greater),
+            (_, PositiveInfinity) => Some(Less),
         }
     }
 }
@@ -55,15 +62,14 @@ impl Ord for ExtendedRational {
     fn cmp(&self, other: &ExtendedRational) -> Ordering {
         match (self, other) {
             (Number(r), Number(s)) => r.cmp(s),
-            (NegativeInfinity, Number(s)) => Less,
-            (PositiveInfinity, Number(s)) => Greater,
-            (Number(r), NegativeInfinity) => Greater,
-            (Number(r), PositiveInfinity) => Less,
             (NegativeInfinity, NegativeInfinity) => Equal,
             (NegativeInfinity, PositiveInfinity) => Less,
             (PositiveInfinity, NegativeInfinity) => Greater,
             (PositiveInfinity, PositiveInfinity) => Equal,
-            _ => Less,
+            (NegativeInfinity, _) => Less,
+            (PositiveInfinity, _) => Greater,
+            (_, NegativeInfinity) => Greater,
+            (_, PositiveInfinity) => Less,
         }
     }
 }
@@ -111,11 +117,11 @@ impl Add for ExtendedRational {
     fn add(self, other: ExtendedRational) -> ExtendedRational {
         match (self, other) {
             (Number(r), Number(s)) => Number(r+s),
-            (NegativeInfinity, Number(s)) => NegativeInfinity,
-            (PositiveInfinity, Number(s)) => PositiveInfinity,
-            (Number(r), NegativeInfinity) => NegativeInfinity,
-            (Number(r), PositiveInfinity) => PositiveInfinity,
-            (s,_) => s,
+            // Left is stronger than right in case of indeterminate
+            (NegativeInfinity, _) => NegativeInfinity,
+            (PositiveInfinity, _) => PositiveInfinity,
+            (_, NegativeInfinity) => NegativeInfinity,
+            (_, PositiveInfinity) => PositiveInfinity,
         }
     }
 }
@@ -126,11 +132,10 @@ impl Sub for ExtendedRational {
     fn sub(self, other: ExtendedRational) -> ExtendedRational {
         match (self, other) {
             (Number(r), Number(s)) => Number(r-s),
-            (NegativeInfinity, Number(s)) => NegativeInfinity,
-            (PositiveInfinity, Number(s)) => PositiveInfinity,
-            (Number(r), NegativeInfinity) => PositiveInfinity,
-            (Number(r), PositiveInfinity) => NegativeInfinity,
-            (s,_) => s,
+            (NegativeInfinity, _) => NegativeInfinity,
+            (PositiveInfinity, _) => PositiveInfinity,
+            (_, NegativeInfinity) => PositiveInfinity,
+            (_, PositiveInfinity) => NegativeInfinity,
         }
     }
 }
@@ -166,10 +171,8 @@ impl Div for ExtendedRational {
             (PositiveInfinity, s) if s>0.into() => PositiveInfinity,
             (NegativeInfinity, s) if s<0.into() => PositiveInfinity,
             (PositiveInfinity, s) if s<0.into() => NegativeInfinity,
-            (r, NegativeInfinity) if r>0.into() => NegativeInfinity,
-            (r, PositiveInfinity) if r>0.into() => PositiveInfinity,
-            (r, NegativeInfinity) if r<0.into() => PositiveInfinity,
-            (r, PositiveInfinity) if r<0.into() => NegativeInfinity,
+            (_, NegativeInfinity) => Number(0.into()),
+            (_, PositiveInfinity) => Number(0.into()),
             (s,_) => s,
         }
     }
@@ -178,7 +181,7 @@ impl Div for ExtendedRational {
 /// Modulo of extended rationals
 impl Rem for ExtendedRational {
     type Output = ExtendedRational;
-    fn rem(self, other: ExtendedRational) -> ExtendedRational {
+    fn rem(self, _: ExtendedRational) -> ExtendedRational {
         ExtendedRational::from(0)
     }
 }
@@ -204,6 +207,8 @@ impl From<&str> for ExtendedRational {
                 ((1,-1,0,0,false),'i'|'I') => (2,-1,1,0,false),
                 ((1, 1,0,0,false),'i'|'I') => (2, 1,1,0,false),
                 ((0,0,0,0,false),'0'..='9') => (1,1,i128::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),1,false),
+                ((1,-1,0,0,false),'0'..='9') => (1,-1,i128::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),1,false),
+                ((1, 1,0,0,false),'0'..='9') => (1, 1,i128::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),1,false),
                 ((read,sign,num,1,false),'0'..='9') => (read+1,sign, num*10 + i128::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),1,false),
                 ((read,sign,num,1,false),'.') => (read+1,sign,num,1,true),
                 ((read,sign,num,denom,true),'0'..='9') => (read+1,sign,num*10 + i128::try_from(char.to_digit(10).unwrap_or_default()).unwrap_or_default(),denom*10,true),
@@ -233,6 +238,16 @@ mod tests {
         let q = ExtendedRational::from("5678.90");
         let r = q.clone()*ExtendedRational::NegativeInfinity;
         assert_eq!(r, ExtendedRational::NegativeInfinity);
+        Ok(())
+    }
+
+    #[test]
+    fn test_div_zero_inf() -> Fallible<()> {
+        let q = ExtendedRational::from("87678.90");
+        let r = ExtendedRational::from("-0.001");
+        assert_eq!(q.clone()/0.into(), ExtendedRational::PositiveInfinity);
+        assert_eq!(r.clone()/0.into(), ExtendedRational::NegativeInfinity);
+        assert_eq!((ExtendedRational::from(0)-q.clone())/ExtendedRational::NegativeInfinity, 0.into());
         Ok(())
     }
 }
