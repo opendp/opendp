@@ -11,7 +11,7 @@ fn main() -> Fallible<()> {
     // let plm_dom = PLMOutputDomain::new(
     //     &vec! [(0.0, 0.1), (0.5, 0.2), (2., 0.2), (5., 0.01)]).simplify(100);
     let plm_dom = PLMOutputDomain::new(
-            &vec! [((0,1), (1,100)), ((1,2), (1,2)), ((2,1), (1,2))]);
+            &vec! [((0,1), (1,100)), ((1,2), (1,2))]);
     
     println!("{:#?}", plm_dom.exp_privacy_loss_probabilitiies);
     

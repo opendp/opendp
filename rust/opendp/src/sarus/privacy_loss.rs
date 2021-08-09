@@ -1,19 +1,13 @@
-use std::clone;
-use std::convert::{TryFrom, TryInto};
+use std::clone::Clone;
+use std::convert::TryFrom;
 use std::iter::{FromIterator, IntoIterator};
 use std::collections::BTreeMap;
 
-use crate::sarus::positive_rational::PositiveRational;
 use crate::error::Fallible;
 use crate::dom::AllDomain;
-use crate::core::{
-    Domain,
-    Metric,
-    Measure,
-    Measurement,
-};
-use rug::rand::RandGen;
-use rug::{Float, Rational};
+use crate::dist::{IntDistance, SymmetricDistance, SmoothedMaxDivergence};
+use crate::core::{Domain, Function, Measurement, PrivacyRelation};
+use rug::Rational;
 
 /// Privacy Loss Measurement (PLM) inspired from PLD http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
@@ -31,9 +25,8 @@ pub struct PLMOutputDomain {
 }
 
 impl PLMOutputDomain {
-    pub fn new<L,P>(exp_privacy_loss_probabilitiies:&[(L, P)]) -> PLMOutputDomain
-    where L: Clone, P: Clone,
-    Rational: TryFrom<L>+TryFrom<P> {
+    pub fn new<Q>(exp_privacy_loss_probabilitiies:&[(Q, Q)]) -> PLMOutputDomain
+    where Q: Clone, Rational: TryFrom<Q> {
         let p_y_x_p_x = exp_privacy_loss_probabilitiies.iter().map(|(l,p)| {
             (Rational::try_from(l.clone()).unwrap_or_default(), Rational::try_from(p.clone()).unwrap_or_default())
         }).collect::<Vec<(Rational, Rational)>>();
@@ -63,11 +56,10 @@ impl PLMOutputDomain {
         let (delta_x_y, delta_y_x) = self.exp_privacy_loss_probabilitiies.iter().fold((Rational::from(0),Rational::from(0)), 
         |(delta_x_y, delta_y_x),(l_y_x,p_x)| {
             (
-                delta_x_y + if l_y_x<=e_x_y_inv {(Rational::from(1)-l_y_x.clone()/e_x_y_inv)*p_x} else {Rational::from(0)},
-                delta_y_x + if l_y_x>=e_y_x {(Rational::from(1)-e_y_x.clone()/l_y_x)*p_x*l_y_x} else {Rational::from(0)},
+                delta_x_y + if l_y_x<e_x_y_inv {(Rational::from(1)-l_y_x.clone()/e_x_y_inv)*p_x} else {Rational::from(0)},
+                delta_y_x + if l_y_x>e_y_x {(Rational::from(1)-e_y_x.clone()/l_y_x)*p_x*l_y_x} else {Rational::from(0)},
             )
         });
-        println!("{:?} <-> {:?}", delta_x_y, delta_y_x);
         if delta_x_y > delta_y_x {delta_x_y} else {delta_y_x}
     }
 }
@@ -75,4 +67,23 @@ impl PLMOutputDomain {
 impl Domain for PLMOutputDomain {
     type Carrier = Rational;
     fn member(&self, privacy_loss: &Self::Carrier) -> Fallible<bool> { Ok(self.exp_privacy_loss_probabilitiies.contains_key(privacy_loss)) }
+}
+
+pub fn make_plm<Q>(exp_privacy_loss_probabilitiies:&[(Q, Q)]) -> Fallible<Measurement<PLMInputDomain, PLMOutputDomain, SymmetricDistance, SmoothedMaxDivergence<Rational>>>
+    where Q: Clone, Rational: From<Q> {
+    Ok(Measurement::new(
+        PLMInputDomain::new(),
+        PLMOutputDomain::new(exp_privacy_loss_probabilitiies),
+        Function::new_fallible(|&b| fallible!(NotImplemented)),
+        SymmetricDistance::default(),
+        SmoothedMaxDivergence::default(),
+        make_plm_privacy_relation(),
+    ))
+}
+
+fn make_plm_privacy_relation() -> PrivacyRelation<SymmetricDistance, SmoothedMaxDivergence<Rational>> {
+    PrivacyRelation::new_fallible( |d_in: &IntDistance, (eps, del): (&Rational, &Rational)| {
+        // TODO: should we error if epsilon > 1., or just waste the budget?
+        Ok(false)
+    })
 }
