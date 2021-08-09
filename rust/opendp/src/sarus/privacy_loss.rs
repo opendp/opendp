@@ -1,5 +1,5 @@
 use std::clone::Clone;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::iter::{FromIterator, IntoIterator};
 use std::collections::BTreeMap;
 
@@ -7,7 +7,8 @@ use crate::error::Fallible;
 use crate::dom::AllDomain;
 use crate::dist::{IntDistance, SymmetricDistance, SmoothedMaxDivergence};
 use crate::core::{Domain, Function, Measurement, PrivacyRelation};
-use rug::Rational;
+use rug::ops::DivRounding;
+use rug::{Integer, Float, Rational, float::Round};
 
 /// Privacy Loss Measurement (PLM) inspired from PLD http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
@@ -71,19 +72,28 @@ impl Domain for PLMOutputDomain {
 
 pub fn make_plm<Q>(exp_privacy_loss_probabilitiies:&[(Q, Q)]) -> Fallible<Measurement<PLMInputDomain, PLMOutputDomain, SymmetricDistance, SmoothedMaxDivergence<Rational>>>
     where Q: Clone, Rational: From<Q> {
+    let out_dom = PLMOutputDomain::new(exp_privacy_loss_probabilitiies);
+    let priv_rel = make_plm_privacy_relation(out_dom.clone());
     Ok(Measurement::new(
         PLMInputDomain::new(),
-        PLMOutputDomain::new(exp_privacy_loss_probabilitiies),
-        Function::new_fallible(|&b| fallible!(NotImplemented)),
+        out_dom,
+        Function::new_fallible(|&_| fallible!(NotImplemented)),
         SymmetricDistance::default(),
         SmoothedMaxDivergence::default(),
-        make_plm_privacy_relation(),
+        priv_rel,
     ))
 }
 
-fn make_plm_privacy_relation() -> PrivacyRelation<SymmetricDistance, SmoothedMaxDivergence<Rational>> {
-    PrivacyRelation::new_fallible( |d_in: &IntDistance, (eps, del): (&Rational, &Rational)| {
-        // TODO: should we error if epsilon > 1., or just waste the budget?
-        Ok(false)
+fn make_plm_privacy_relation(out_dom: PLMOutputDomain) -> PrivacyRelation<SymmetricDistance, SmoothedMaxDivergence<Rational>> {
+    PrivacyRelation::new_fallible( move |d_in: &IntDistance, (epsilon, delta): &(Rational, Rational)| {
+        if d_in<&0 {
+            return fallible!(InvalidDistance, "Privacy Loss Mechanism: input sensitivity must be non-negative")
+        }
+        if delta<=&0 {
+            return fallible!(InvalidDistance, "Privacy Loss Mechanism: delta must be positive")
+        }
+        let mut exp_epsilon = Float::with_val_round(64, epsilon, Round::Down).0;
+        exp_epsilon.exp_round(Round::Down);
+        Ok(delta >= &(out_dom.delta(exp_epsilon)))
     })
 }
