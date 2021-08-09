@@ -37,9 +37,13 @@ pub trait Domain: Clone + PartialEq {
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-#[derive(Clone)]
 pub struct Function<DI: Domain, DO: Domain> {
     pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
+}
+impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+    fn clone(&self) -> Self {
+        Function { function: self.function.clone() }
+    }
 }
 
 impl<DI: Domain, DO: Domain> Function<DI, DO> {
@@ -123,11 +127,16 @@ impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct PrivacyRelation<MI: Metric, MO: Measure> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<Box<MI::Distance>>>>,
 }
+impl<MI: Metric, MO: Measure> Clone for PrivacyRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        PrivacyRelation { relation: self.relation.clone(), backward_map: self.backward_map.clone() }
+    }
+}
+
 
 impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
     pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {

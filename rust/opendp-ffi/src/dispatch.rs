@@ -122,7 +122,7 @@ macro_rules! disp_expand {
     };
     // TODO: remove i32 once we have Vec<String> data loader
     ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [bool, i32, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @floats),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [f64]), $rt_dispatch_types, $type_args, $args)
@@ -136,7 +136,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => opendp::err!(FFI, "No match for concrete type {} ({:?})", $rt_type.descriptor, $rt_type.id).into()
+            _ => opendp::err!(FFI, "No match of {} for concrete type {} ({:?})", stringify!($rt_type), $rt_type.descriptor, $rt_type.id).into()
         }
     };
 }

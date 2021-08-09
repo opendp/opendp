@@ -161,3 +161,56 @@ def make_base_stability(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(n, scale, threshold, MI, TIK, TIC), Measurement))
+
+
+def make_alp_histogram(
+    n: int,
+    scale,
+    beta,
+    K: RuntimeTypeDescriptor,
+    alpha = 4.0,
+    size_factor: int = 30,
+    C: RuntimeTypeDescriptor = None,
+    T: RuntimeTypeDescriptor = None
+):
+    """Make a Measurement that returns an approximate laplace projection queryable.
+    
+    :param n: Number of records in the input vector.
+    :type n: int
+    :param alpha: Parameter for sampling hash functions.
+    :param scale: Noise scale parameter.
+    :param beta: Noise scale parameter.
+    :param size_factor: Number of records in the input vector.
+    :type size_factor: int
+    :param K: Type of input query.
+    :type K: RuntimeTypeDescriptor
+    :param C: Type to collect counts.
+    :type C: RuntimeTypeDescriptor
+    :param T: Type to represent budget.
+    :type T: RuntimeTypeDescriptor
+    :return: A alp_histogram step.
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    K = RuntimeType.parse(type_name=K)
+    C = RuntimeType.parse_or_infer(type_name=C, public_example=beta)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=alpha)
+    
+    # Convert arguments to c types.
+    n = py_to_c(n, c_type=ctypes.c_uint)
+    alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    beta = py_to_c(beta, c_type=ctypes.c_void_p, type_name=C)
+    size_factor = py_to_c(size_factor, c_type=ctypes.c_uint32)
+    K = py_to_c(K, c_type=ctypes.c_char_p)
+    C = py_to_c(C, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_alp_histogram
+    function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(n, alpha, scale, beta, size_factor, K, C, T), Measurement))

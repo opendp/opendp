@@ -97,10 +97,10 @@ pub extern "C" fn opendp_trans__make_count_by(
     fn monomorphize<QO>(
         n: usize, MO: Type, TI: Type, TO: Type,
     ) -> FfiResult<*mut AnyTransformation>
-        where QO: DistanceConstant + FloatConst + One {
+        where QO: DistanceConstant + One {
         fn monomorphize2<MO, TI, TO>(n: usize) -> FfiResult<*mut AnyTransformation>
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
-                  MO::Distance: DistanceConstant + FloatConst + One,
+                  MO::Distance: DistanceConstant + One,
                   TI: 'static + Eq + Hash + Clone,
                   TO: 'static + Integer + Zero + One + AddAssign {
             make_count_by::<MO, TI, TO>(n).into_any()
@@ -117,5 +117,5 @@ pub extern "C" fn opendp_trans__make_count_by(
     let TO = try_!(Type::try_from(TO));
 
     let QO = try_!(MO.get_sensitivity_distance());
-    dispatch!(monomorphize, [(QO, @floats)], (n, MO, TI, TO))
+    dispatch!(monomorphize, [(QO, @numbers)], (n, MO, TI, TO))
 }

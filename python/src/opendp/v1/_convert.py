@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union
 
 from opendp.v1._lib import *
 
-from opendp.v1.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
+from opendp.v1.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, Queryable
 from opendp.v1.typing import RuntimeType
 
 ATOM_MAP = {
@@ -149,6 +149,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
     if type_name == "String":
         return _slice_to_string(raw)
 
+    if type_name == "AnyQueryable":
+        return _slice_to_queryable(raw)
+
     raise UnknownTypeException(type_name)
 
 
@@ -192,6 +195,8 @@ def _string_to_slice(val: str) -> FfiSlicePtr:
 def _slice_to_string(raw: FfiSlicePtr) -> str:
     return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode()
 
+def _slice_to_queryable(raw: FfiSlicePtr) -> Queryable:
+    return ctypes.cast(raw.contents.ptr, Queryable)
 
 def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     assert type_name[:4] == 'Vec<'

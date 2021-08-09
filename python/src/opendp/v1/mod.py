@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union
 
-from opendp.v1._lib import AnyMeasurement, AnyTransformation
+from opendp.v1._lib import AnyMeasurement, AnyTransformation, AnyQueryable
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -235,6 +235,42 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def __del__(self):
         from opendp.v1.core import _transformation_free
         _transformation_free(self)
+
+
+class Queryable(ctypes.POINTER(AnyQueryable)):
+    """A queryable that tracks a stateful differential privacy algorithm.
+    Queryables can answer queries!
+    """
+    _type_ = AnyQueryable
+
+    def __call__(self, arg):
+        from opendp.v1.core import queryable_invoke
+        return queryable_invoke(self, arg)
+
+    def invoke(self, query):
+        """Submit a `query` to the queryable.
+
+        :param query: Input to the queryable.
+        :return: differentially-private release
+        :raises OpenDPException: packaged error from the core OpenDP library
+        """
+        from opendp.v1.core import queryable_invoke
+        return queryable_invoke(self, query)
+
+    @property
+    def query_type(self):
+        """Retrieve the carrier type of the input domain.
+        Any member of the input domain is a member of the carrier type.
+
+        :return: carrier type
+        """
+        from opendp.v1.core import queryable_query_type
+        from opendp.v1.typing import RuntimeType
+        return RuntimeType.parse(queryable_query_type(self))
+
+    def __del__(self):
+        from opendp.v1.core import _queryable_free
+        _queryable_free(self)
 
 
 class UnknownTypeException(Exception):

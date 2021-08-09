@@ -12,10 +12,19 @@ use crate::traits::{FallibleSub, MeasureDistance, MetricDistance};
 pub struct Queryable<S, Q, A> {
     /// The state of the Queryable. It is wrapped in an option so that ownership can be moved out
     /// temporarily, during transitions.
-    state: Option<S>,
+    pub state: Option<S>,
     /// The transition function of the Queryable. Takes the current state and a query, returns
     /// the new state and the answer.
-    transition: Rc<dyn Fn(S, &Q) -> Fallible<(S, A)>>,
+    pub transition: Rc<dyn Fn(S, &Q) -> Fallible<(S, A)>>,
+}
+
+impl<S: Clone, Q, A> Clone for Queryable<S, Q, A> {
+    fn clone(&self) -> Self {
+        Queryable {
+            state: self.state.clone(),
+            transition: self.transition.clone()
+        }
+    }
 }
 
 impl<S, Q, A> Queryable<S, Q, A> {

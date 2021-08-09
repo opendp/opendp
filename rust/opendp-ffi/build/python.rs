@@ -143,7 +143,11 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
         Some(match default {
             Value::Null => "None".to_string(),
             Value::Bool(value) => if *value {"True"} else {"False"}.to_string(),
-            Value::Number(number) => number.to_string(),
+            Value::Number(number) => if number.is_f64() {
+                format!("{:?}", number.as_f64().unwrap())
+            } else {
+                number.to_string()
+            },
             Value::String(string) => format!("\"{}\"", string),
             Value::Array(array) => format!("{:?}", array),
             Value::Object(_) => unimplemented!()

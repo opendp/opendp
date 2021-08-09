@@ -166,5 +166,61 @@
         "ret": {
             "c_type": "FfiResult<AnyMeasurement *>"
         }
+    },
+    "make_alp_histogram": {
+        "description": "Make a Measurement that returns an approximate laplace projection queryable.",
+        "args": [
+            {
+                "name": "n",
+                "c_type": "unsigned int",
+                "description": "Number of records in the input vector."
+            },
+            {
+                "name": "alpha",
+                "c_type": "void *",
+                "rust_type": "T",
+                "default": 4.0,
+                "description": "Parameter for sampling hash functions."
+            },
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "Noise scale parameter."
+            },
+            {
+                "name": "beta",
+                "c_type": "void *",
+                "rust_type": "C",
+                "description": "Noise scale parameter."
+            },
+            {
+                "name": "size_factor",
+                "c_type": "uint32_t",
+                "default": 30,
+                "description": "Number of records in the input vector."
+            },
+            {
+                "name": "K",
+                "c_type": "char *",
+                "description": "Type of input query.",
+                "is_type": true
+            },
+            {
+                "name": "C",
+                "c_type": "char *",
+                "description": "Type to collect counts.",
+                "is_type": true
+            },
+            {
+                "name": "T",
+                "c_type": "char *",
+                "description": "Type to represent budget.",
+                "is_type": true
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyQueryableMeasurement *>"
+        }
     }
 }

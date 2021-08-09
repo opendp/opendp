@@ -64,6 +64,10 @@ class AnyTransformation(ctypes.Structure):
     pass  # Opaque struct
 
 
+class AnyQueryable(ctypes.Structure):
+    pass  # Opaque struct
+
+
 class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
     _type_ = ctypes.c_bool
 

@@ -41,6 +41,16 @@ def test_base_geometric():
     assert not meas.check(1, 0.49999)
 
 
+def test_base_alp_queryable():
+    from opendp.v1.trans import make_count_by
+    from opendp.v1.meas import make_alp_histogram
+    from opendp.v1.typing import L1Distance
+    alp = make_count_by(n=24, MO=L1Distance[int], TI=bool) >> make_alp_histogram(n=24, scale=2., beta=24, K=bool)
+    queryable = alp([True] * 20 + [False] * 4)
+    print(queryable(True))
+    print(queryable(False))
+
+
 def test_base_vector_geometric():
     from opendp.v1.meas import make_base_geometric
     meas = make_base_geometric(scale=2., D="VectorDomain<AllDomain<i32>>")

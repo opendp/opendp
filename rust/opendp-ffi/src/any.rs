@@ -11,8 +11,10 @@ use std::cmp::Ordering;
 use std::rc::Rc;
 
 use opendp::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
+use opendp::dom::AllDomain;
 use opendp::err;
 use opendp::error::*;
+use opendp::interactive::Queryable;
 use opendp::traits::{FallibleSub, MeasureDistance, MetricDistance};
 
 use crate::glue::Glue;
@@ -492,12 +494,82 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
         )
     }
 }
+pub trait IntoAnyFunctionQueryableExt {
+    fn into_any_queryable(self) -> Function<AnyDomain, AnyDomain>;
+}
+
+impl<DI, S: 'static, Q: 'static, A: 'static> IntoAnyFunctionQueryableExt for Function<DI, AllDomain<Queryable<S, Q, A>>>
+    where DI: 'static + Domain,
+          DI::Carrier: 'static,
+          Queryable<S, Q, A>: IntoAnyQueryableExt {
+    fn into_any_queryable(self) -> Function<AnyDomain, AnyDomain> {
+        Function::new_fallible(move |arg: &<AnyDomain as Domain>::Carrier| -> Fallible<AnyObject> {
+            self.eval(arg.downcast_ref()?).map(|o| AnyObject::new(o.into_any_queryable()))
+        })
+    }
+}
+
+pub trait IntoAnyMeasurementQueryableExt {
+    fn into_any_queryable(self) -> AnyMeasurement;
+}
+
+impl<DI, S: 'static, Q: 'static, A: 'static, MI, MO> IntoAnyMeasurementQueryableExt for Measurement<DI, AllDomain<Queryable<S, Q, A>>, MI, MO>
+    where DI: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure,
+          MI::Distance: 'static + Clone + PartialOrd,
+          MO::Distance: 'static + Clone + PartialOrd {
+    fn into_any_queryable(self) -> AnyMeasurement {
+        Measurement::new(
+            AnyDomain::new(self.input_domain),
+            AnyDomain::new(self.output_domain),
+            self.function.into_any_queryable(),
+            AnyMetric::new(self.input_metric),
+            AnyMeasure::new(self.output_measure),
+            self.privacy_relation.into_any(),
+        )
+    }
+}
+
+pub struct AnyQueryableState {
+    pub type_q: Type,
+    pub type_a: Type,
+    state: AnyObject
+}
+
+pub type AnyQueryableMeasurement = Measurement<AnyDomain, AllDomain<AnyQueryable>, AnyMetric, AnyMeasure>;
+pub type AnyQueryable = Queryable<AnyQueryableState, AnyObject, AnyObject>;
+pub trait IntoAnyQueryableExt {
+    fn into_any_queryable(self) -> AnyQueryable;
+}
+
+impl<S, Q, A> IntoAnyQueryableExt for Queryable<S, Q, A>
+    where S: 'static, Q: 'static, A: 'static {
+    fn into_any_queryable(self) -> AnyQueryable {
+        let Queryable { state, transition } = self;
+        Queryable {
+            state: state.map(|s| AnyQueryableState {
+                type_q: Type::of::<Q>(),
+                type_a: Type::of::<A>(),
+                state: AnyObject::new(s)
+            }),
+            transition: Rc::new(move |s: AnyQueryableState, q: &AnyObject| {
+                let AnyQueryableState { type_q, type_a, state } = s;
+                transition(
+                    state.downcast::<S>().unwrap_assert("the type of state is always S"),
+                    q.downcast_ref::<Q>()?,
+                ).map(|(s_inner, a)| (
+                    AnyQueryableState {type_q, type_a, state: AnyObject::new(s_inner)},
+                    AnyObject::new(a)
+                ))
+            })
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use std::ops::Bound;
 
-    use opendp::dist::{SubstituteDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
+    use opendp::dist::{MaxDivergence, SmoothedMaxDivergence, SubstituteDistance, SymmetricDistance};
     use opendp::dom::{AllDomain, IntervalDomain, VectorDomain};
     use opendp::error::*;
     use opendp::meas;

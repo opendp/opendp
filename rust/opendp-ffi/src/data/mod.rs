@@ -8,7 +8,7 @@ use opendp::{err, fallible};
 use opendp::data::Column;
 use opendp::error::Fallible;
 
-use crate::any::{AnyObject, Downcast, AnyMeasureDistance, AnyMetricDistance};
+use crate::any::{AnyObject, Downcast, AnyMeasureDistance, AnyMetricDistance, AnyQueryable};
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::util;
 use crate::util::{c_bool, Type, TypeContents};
@@ -114,6 +114,9 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
     let T = try_!(Type::try_from(T));
     let raw = try_as_ref!(raw);
     let obj = match T.contents {
+        TypeContents::PLAIN("AnyQueryable") => {
+            fallible!(FFI, "AnyQueryable cannot be turned into an AnyObject")
+        },
         TypeContents::PLAIN("String") => {
             raw_to_string(raw)
         }
@@ -177,6 +180,7 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
     }
     let obj = try_as_ref!(obj);
     let raw = match &obj.type_.contents {
+        TypeContents::PLAIN("AnyQueryable") => plain_to_raw::<AnyQueryable>(obj),
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
         }

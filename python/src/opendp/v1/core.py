@@ -419,3 +419,74 @@ def measurement_output_distance_type(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement), ctypes.c_char_p))
+
+
+def queryable_query_type(
+    queryable
+) -> str:
+    """Get the data type of a query to `queryable`.
+    
+    :param queryable: The queryable to retrieve the type from.
+    :rtype: str
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    queryable = py_to_c(queryable, c_type=Queryable)
+    
+    # Call library function.
+    function = lib.opendp_core__queryable_query_type
+    function.argtypes = [Queryable]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(queryable), ctypes.c_char_p))
+
+
+def queryable_invoke(
+    queryable,
+    query: Any
+) -> Any:
+    """Invoke the `queryable` with `query`. Returns a differentially private release.
+    
+    :param queryable: Queryable to invoke.
+    :param query: Input data to supply to the queryable.
+    :type query: Any
+    :return: Differentially private release.
+    :rtype: Any
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    queryable = py_to_c(queryable, c_type=Queryable)
+    query = py_to_c(query, c_type=AnyObjectPtr, type_name=queryable_query_type(queryable))
+    
+    # Call library function.
+    function = lib.opendp_core__queryable_invoke
+    function.argtypes = [Queryable, AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(queryable, query), AnyObjectPtr))
+
+
+def _queryable_free(
+    queryable
+):
+    """Internal function. Free the memory associated with `queryable`.
+    
+    :param queryable: 
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # No arguments to convert to c types.
+    # Call library function.
+    function = lib.opendp_core___queryable_free
+    function.argtypes = [Queryable]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(queryable), ctypes.c_void_p))

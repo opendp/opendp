@@ -5,11 +5,12 @@ use std::os::raw::c_char;
 
 use opendp::error::*;
 
-use crate::any::{AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+use crate::any::{AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, IntoAnyMeasurementQueryableExt};
 use crate::util;
 use crate::util::{c_bool, into_c_char_p};
 
 pub mod chain;
+pub mod queryable;
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -141,6 +142,16 @@ pub trait IntoAnyTransformationFfiResultExt {
 impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible<T> {
     fn into_any(self) -> FfiResult<*mut AnyTransformation> {
         self.map(IntoAnyTransformationExt::into_any).into()
+    }
+}
+
+pub trait IntoAnyQueryableMeasurementFfiResultExt {
+    fn into_any_queryable(self) -> FfiResult<*mut AnyMeasurement>;
+}
+
+impl<T: IntoAnyMeasurementQueryableExt> IntoAnyQueryableMeasurementFfiResultExt for Fallible<T> {
+    fn into_any_queryable(self) -> FfiResult<*mut AnyMeasurement> {
+        self.map(IntoAnyMeasurementQueryableExt::into_any_queryable).into()
     }
 }
 

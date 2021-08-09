@@ -298,5 +298,56 @@
         "ret": {
             "c_type": "FfiResult<const char *>"
         }
+    },
+    "queryable_query_type": {
+        "description": "Get the data type of a query to `queryable`.",
+        "args": [
+            {
+                "name": "queryable",
+                "c_type": "const AnyQueryable *",
+                "description": "The queryable to retrieve the type from."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const char *>"
+        }
+    },
+    "queryable_invoke": {
+        "description": "Invoke the `queryable` with `query`. Returns a differentially private release.",
+        "args": [
+            {
+                "name": "queryable",
+                "c_type": "const AnyQueryable *",
+                "description": "Queryable to invoke."
+            },
+            {
+                "name": "query",
+                "c_type": "const AnyObject *",
+                "rust_type": {
+                    "function": "queryable_query_type",
+                    "params": [
+                        "queryable"
+                    ]
+                },
+                "description": "Input data to supply to the queryable."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyObject *>",
+            "description": "Differentially private release."
+        }
+    },
+    "_queryable_free": {
+        "description": "Internal function. Free the memory associated with `queryable`.",
+        "args": [
+            {
+                "name": "queryable",
+                "c_type": "AnyQueryable *",
+                "do_not_convert": true
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<void *>"
+        }
     }
 }

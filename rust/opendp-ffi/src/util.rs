@@ -10,7 +10,7 @@ use std::str::Utf8Error;
 use opendp::{err, fallible};
 use opendp::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
 use opendp::error::*;
-use crate::any::AnyObject;
+use crate::any::{AnyObject, AnyQueryable};
 use opendp::dom::{VectorDomain, AllDomain, IntervalDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -211,7 +211,7 @@ lazy_static! {
     static ref TYPES: Vec<Type> = {
         let types: Vec<Type> = vec![
             // data types
-            vec![t!(())],
+            vec![t!(()), t!(AnyQueryable)],
             type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject],
             type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject)],
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
@@ -279,6 +279,10 @@ pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
 
 pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
+}
+
+pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
+    (!p.is_null()).then(|| unsafe { &mut *p })
 }
 
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {

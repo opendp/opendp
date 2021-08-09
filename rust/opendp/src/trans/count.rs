@@ -49,7 +49,9 @@ impl<Q: One, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
 }
 
 // count with unknown n, known categories
-pub fn make_count_by_categories<MO, TI, TO>(categories: Vec<TI>) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, SizedDomain<VectorDomain<AllDomain<TO>>>, SymmetricDistance, MO>>
+pub fn make_count_by_categories<MO, TI, TO>(
+    categories: Vec<TI>
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant + One,
           TI: 'static + Eq + Hash,
@@ -60,7 +62,7 @@ pub fn make_count_by_categories<MO, TI, TO>(categories: Vec<TI>) -> Fallible<Tra
     }
     Ok(Transformation::new(
         VectorDomain::new_all(),
-        SizedDomain::new(VectorDomain::new_all(), categories.len() + 1),
+        VectorDomain::new_all(),
         Function::new(move |data: &Vec<TI>| {
             let mut counts = categories.iter()
                 .map(|cat| (cat, TO::zero())).collect::<HashMap<&TI, TO>>();
