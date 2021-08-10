@@ -71,12 +71,13 @@ def make_cast_default(
 
 
 def make_is_equal(
-    value,
+    value: Any,
     TI: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that checks if each element is equal to `value`.
     
     :param value: value to check against
+    :type value: Any
     :param TI: input data type
     :type TI: RuntimeTypeDescriptor
     :return: A is_equal step.
@@ -89,12 +90,12 @@ def make_is_equal(
     TI = RuntimeType.parse_or_infer(type_name=TI, public_example=value)
     
     # Convert arguments to c types.
-    value = py_to_c(value, c_type=ctypes.c_void_p, type_name=TI)
+    value = py_to_c(value, c_type=AnyObjectPtr, type_name=TI)
     TI = py_to_c(TI, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_is_equal
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(value, TI), Transformation))
@@ -539,7 +540,7 @@ def make_split_dataframe(
 
 
 def make_parse_column(
-    key,
+    key: Any,
     T: RuntimeTypeDescriptor,
     impute: bool = True,
     K: RuntimeTypeDescriptor = None
@@ -547,6 +548,7 @@ def make_parse_column(
     """Make a Transformation that parses the `key` column of a dataframe as `T`.
     
     :param key: name of column to select from dataframe and parse
+    :type key: Any
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
     :param K: categorical/hashable data type of the key/column name
@@ -564,27 +566,28 @@ def make_parse_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
     impute = py_to_c(impute, c_type=ctypes.c_bool)
     K = py_to_c(K, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_parse_column
-    function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(key, impute, K, T), Transformation))
 
 
 def make_select_column(
-    key,
+    key: Any,
     T: RuntimeTypeDescriptor,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`T`>.
     
     :param key: categorical/hashable data type of the key/column name
+    :type key: Any
     :param K: data type of the key
     :type K: RuntimeTypeDescriptor
     :param T: data type to downcast to
@@ -600,13 +603,13 @@ def make_select_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
     K = py_to_c(K, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_select_column
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(key, K, T), Transformation))
@@ -645,7 +648,7 @@ def make_identity(
 
 
 def make_impute_constant(
-    constant,
+    constant: Any,
     DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<T>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
@@ -653,6 +656,7 @@ def make_impute_constant(
     Set DA to InherentNullDomain<AllDomain<T>> for imputing on types that have an inherent representation of nullity, like floats.
     
     :param constant: Value to replace nulls with.
+    :type constant: Any
     :param DA: domain of data being imputed. This is OptionNullDomain<AllDomain<T>> or InherentNullDomain<AllDomain<T>>
     :type DA: RuntimeTypeDescriptor
     :return: A impute_constant step.
@@ -667,12 +671,12 @@ def make_impute_constant(
     DA = DA.substitute(T=T)
     
     # Convert arguments to c types.
-    constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=T)
+    constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=T)
     DA = py_to_c(DA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_impute_constant
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(constant, DA), Transformation))

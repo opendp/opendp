@@ -203,6 +203,19 @@ macro_rules! t {
 }
 /// Builds a vec of [`Type`] from a compact invocation, dispatching to the appropriate flavor of [`t!`].
 macro_rules! type_vec {
+    // 2-arg generic: base case   --   out, a, b, init_b
+    (@$name:ident [$(($a1:ty, $a2:ty))*] [] $b:tt $init_b:tt) =>
+        (vec![$(t!($name<$a1, $a2>)),*]);
+    // 2-arg generic: when b empty, strip off an "a" and refill b from init_b
+    (@$name:ident $out:tt [$a:tt $(,$at:tt)*] [] $init_b:tt) =>
+        (type_vec!{@$name $out [$($at),*] $init_b $init_b});
+    // 2-arg generic: strip off a "b" and add a pair to $out that consists of the first "a" and first "b"
+    (@$name:ident [$($out:tt)*] [$a:tt $(,$at:tt)*] [$b:tt $(,$bt:tt)*] $init_b:tt) =>
+        (type_vec!{@$name [$($out)* ($a, $b)] [$a $(,$at)*] [$($bt),*] $init_b});
+    // 2-arg generic: friendly public interface
+    ($name:ident, <$($arg1:tt),*>, <$($arg2:tt),*>) =>
+        (type_vec!{@$name [] [$($arg1),*] [$($arg2),*] [$($arg2),*]});
+
     ($name:ident, <$($arg:ty),*>) => { vec![$(t!($name<$arg>)),*] };
     ($path:tt, <$($arg:ty),*>) => { vec![$(t!($path, $arg)),*] };
     ([$($elements:ty),*]) => { vec![$(t!([$elements])),*] };
@@ -223,6 +236,7 @@ lazy_static! {
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]],
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
 

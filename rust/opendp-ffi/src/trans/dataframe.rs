@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::c_char;
 use std::str::FromStr;
 
 use opendp::err;
@@ -56,14 +56,14 @@ pub extern "C" fn opendp_trans__make_split_dataframe(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_parse_column(
-    key: *const c_void, impute: c_bool,
+    key: *const AnyObject, impute: c_bool,
     K: *const c_char, T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K, T>(key: *const c_void, impute: bool) -> FfiResult<*mut AnyTransformation> where
+    fn monomorphize<K, T>(key: *const AnyObject, impute: bool) -> FfiResult<*mut AnyTransformation> where
         K: 'static + Hash + Eq + Debug + Clone,
         T: 'static + Debug + Clone + PartialEq + FromStr + Default,
         T::Err: Debug {
-        let key = try_as_ref!(key as *const K).clone();
+        let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
         make_parse_column::<K, T>(key, impute).into_any()
     }
     let K = try_!(Type::try_from(K));
@@ -78,12 +78,12 @@ pub extern "C" fn opendp_trans__make_parse_column(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_select_column(
-    key: *const c_void, K: *const c_char, T: *const c_char,
+    key: *const AnyObject, K: *const c_char, T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K, T>(key: *const c_void) -> FfiResult<*mut AnyTransformation> where
+    fn monomorphize<K, T>(key: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
         K: 'static + Hash + Eq + Debug + Clone,
         T: 'static + Debug + Clone + PartialEq {
-        let key = try_as_ref!(key as *const K).clone();
+        let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
         make_select_column::<K, T>(key).into_any()
     }
     let K = try_!(Type::try_from(K));
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_make_parse_column() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_parse_column(
-            util::into_raw("A".to_owned()) as *const c_void,
+            util::into_raw(AnyObject::new("A".to_owned())),
             util::from_bool(true),
             "String".to_char_p(),
             "i32".to_char_p(),

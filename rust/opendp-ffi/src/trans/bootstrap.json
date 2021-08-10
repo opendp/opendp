@@ -40,7 +40,7 @@
         "args": [
             {
                 "name": "value",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "TI",
                 "description": "value to check against"
             },
@@ -363,7 +363,7 @@
         "args": [
             {
                 "name": "key",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "K",
                 "description": "name of column to select from dataframe and parse"
             },
@@ -393,7 +393,7 @@
         "args": [
             {
                 "name": "key",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "K",
                 "description": "categorical/hashable data type of the key/column name"
             },
@@ -438,7 +438,7 @@
         "args": [
             {
                 "name": "constant",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "T",
                 "description": "Value to replace nulls with."
             },

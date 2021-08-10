@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple, List, Union
+from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
@@ -96,8 +96,8 @@ def c_to_py(value):
         except UnknownTypeException:
             raise
         except Exception as err:
-            # print("MASKED ERROR:", err)
-            # print("using string fallback")
+            print("MASKED ERROR:", err)
+            print("using string fallback")
             # raise err
             # If we fail, resort to string representation.
             # TODO: Remove this fallback once we have composition and/or tuples sorted out.
@@ -143,6 +143,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
     if type_name.startswith("Vec<") and type_name.endswith('>'):
         return _slice_to_vector(raw, type_name)
 
+    if type_name.startswith("HashMap<") and type_name.endswith('>'):
+        return _slice_to_hashmap(raw)
+
     if type_name.startswith('(') and type_name.endswith(')'):
         return _slice_to_tuple(raw, type_name)
 
@@ -166,6 +169,9 @@ def _py_to_slice(value: Any, type_name: str) -> FfiSlicePtr:
 
     if type_name.startswith("Vec<") and type_name.endswith('>'):
         return _vector_to_slice(value, type_name)
+
+    if type_name.startswith("HashMap<") and type_name.endswith('>'):
+        return _hashmap_to_slice(value, type_name)
 
     if type_name.startswith('(') and type_name.endswith(')'):
         return _tuple_to_slice(value, type_name)
@@ -199,6 +205,12 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     if not isinstance(val, list):
         raise OpenDPException(f"Cannot cast a non-list type to a vector")
 
+    if inner_type_name == "String":
+        def str_to_slice(val):
+            return ctypes.c_char_p(val.encode())
+        array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
+        return _wrap_in_slice(array, len(val))
+
     if inner_type_name not in ATOM_MAP:
         raise OpenDPException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
 
@@ -215,6 +227,11 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
 def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
     assert type_name[:3] == 'Vec'
     inner_type_name = type_name[4:-1]
+
+    if inner_type_name == 'String':
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
+        return list(map(lambda v: v.decode(), array))
+
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
@@ -257,6 +274,18 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: str) -> Tuple[Any, ...]:
     # tuple of instances of python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value
                  for void_p, name in zip(ptr_data, inner_type_names))
+
+
+def _hashmap_to_slice(val: Dict[Any, Any], type_name: str) -> FfiSlicePtr:
+    key_type, val_type = [i.strip() for i in type_name[8:-1].split(",")]
+    keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr)
+    vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr)
+    return _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)
+
+
+def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
+    keys_obj, vals_obj = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:2]
+    return dict(zip(c_to_py(keys_obj), c_to_py(vals_obj)))
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
