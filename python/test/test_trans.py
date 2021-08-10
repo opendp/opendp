@@ -146,9 +146,9 @@ def test_split_dataframe():
     from opendp.trans import make_split_dataframe, make_parse_column, make_select_column
 
     query = (
-            make_split_dataframe(separator=",", col_names=[23, 17]) >>
-            make_parse_column(key=23, impute=True, T=int) >>
-            make_select_column(key=23, T=int)
+            make_split_dataframe(separator=",", col_names=["23", "17"]) >>
+            make_parse_column(key="23", impute=True, T=int) >>
+            make_select_column(key="23", T=int)
     )
     assert query("1,1.\n2,2.\n3,3.") == [1, 2, 3]
     assert query.check(1, 1)
@@ -220,8 +220,8 @@ def test_count():
 
 def test_count_distinct():
     from opendp.trans import make_count_distinct
-    transformation = make_count_distinct("i32", int)
-    arg = [1, 2, 3, 2, 7, 3, 4]
+    transformation = make_count_distinct(str, int)
+    arg = list(map(str, [1, 2, 3, 2, 7, 3, 4]))
     ret = transformation(arg)
     assert ret == 5
     assert transformation.check(1, 1)
@@ -229,17 +229,16 @@ def test_count_distinct():
 
 def test_count_by():
     from opendp.trans import make_count_by
-    query = make_count_by(n=9, MO=L1Distance[float], TI=int)
-    # TODO: cannot test until hashmap data unloader is added
-    # assert query(INT_DATA) == {i + 1: 1 for i in range(9)}
+    query = make_count_by(n=9, MO=L1Distance[float], TI=str)
+    assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
     print('first')
     assert query.check(1, 2.)
 
 
 def test_count_by_categories():
     from opendp.trans import make_count_by_categories
-    query = make_count_by_categories(categories=[1, 3, 4], MO=L1Distance[float])
-    assert query(INT_DATA) == [1, 1, 1, 6]
+    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[float])
+    assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 2.)
 
 
@@ -250,7 +249,7 @@ def test_resize():
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 2)
-    
+
 
 def test_count_by_categories_str():
     from opendp.trans import make_count_by_categories

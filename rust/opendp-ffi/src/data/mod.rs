@@ -80,6 +80,8 @@ pub extern "C" fn opendp_data___slice_as_metric_distance(
 
 #[no_mangle]
 pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
+    let raw = try_as_ref!(raw);
+    let T = try_!(Type::try_from(T));
     fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 1 {
             return fallible!(FFI, "The slice length must be one when creating a scalar from FfiSlice");
@@ -121,23 +123,21 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
         Ok(AnyObject::new(tuple))
     }
     fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const FfiSlice, raw.len) };
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
 
         // unpack keys and values into slices
         if slice.len() != 2 {return fallible!(FFI, "HashMap FfiSlice must have length 2")}
-        let keys =  unsafe { slice::from_raw_parts(slice[0].ptr as *const K, raw.len) };
-        let values = unsafe { slice::from_raw_parts(slice[1].ptr as *const V, raw.len) };
+        let keys = try_as_ref!(slice[0]).downcast_ref::<Vec<K>>()?;
+        let vals = try_as_ref!(slice[1]).downcast_ref::<Vec<V>>()?;
 
         // construct the hashmap
-        if keys.len() != values.len() {return fallible!(FFI, "HashMap FfiSlice must have an equivalent number of keys and values")};
+        if keys.len() != vals.len() {return fallible!(FFI, "HashMap FfiSlice must have an equivalent number of keys and values")};
         let map = keys.iter().cloned()
-            .zip(values.iter().cloned())
+            .zip(vals.iter().cloned())
             .collect::<HashMap<K, V>>();
         Ok(AnyObject::new(map))
     }
-    let T = try_!(Type::try_from(T));
-    let raw = try_as_ref!(raw);
-    let obj = match T.contents {
+    match T.contents {
         TypeContents::PLAIN("String") => {
             raw_to_string(raw)
         }
@@ -171,8 +171,7 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
             } else {fallible!(FFI, "unrecognized generic {:?}", name)}
         }
         _ => dispatch!(raw_to_plain, [(T, @primitives)], (raw))
-    };
-    obj.into()
+    }.into()
 }
 
 #[no_mangle]
@@ -187,6 +186,7 @@ pub extern "C" fn opendp_data___object_type(this: *mut AnyObject) -> FfiResult<*
 
 #[no_mangle]
 pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
+    let obj = try_as_ref!(obj);
     fn plain_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let plain: &T = obj.downcast_ref()?;
         Ok(FfiSlice::new(plain as *const T as *mut c_void, 1))
@@ -224,24 +224,17 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
     fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let data: &HashMap<K, V> = obj.downcast_ref()?;
 
-        // wrap keys up in an FfiSlice
-        let keys = data.keys().cloned().collect::<Vec<_>>();
-        let keys_slice = FfiSlice::new(keys.as_ptr() as *mut c_void, keys.len());
-        util::into_raw(keys);
-
-        // wrap values up in an FfiSlice
-        let vals = data.values().cloned().collect::<Vec<_>>();
-        let vals_slice = FfiSlice::new(vals.as_ptr() as *mut c_void, vals.len());
-        util::into_raw(vals);
+        // wrap keys and values up in an AnyObject
+        let keys = AnyObject::new(data.keys().cloned().collect::<Vec<K>>());
+        let vals = AnyObject::new(data.values().cloned().collect::<Vec<V>>());
 
         // wrap the whole map up together in an FfiSlice
-        let map = vec![keys_slice, vals_slice];
+        let map = vec![util::into_raw(keys), util::into_raw(vals)];
         let map_slice = FfiSlice::new(map.as_ptr() as *mut c_void, map.len());
         util::into_raw(map);
         Ok(map_slice)
     }
-    let obj = try_as_ref!(obj);
-    let raw = match &obj.type_.contents {
+    match &obj.type_.contents {
         TypeContents::PLAIN("String") => {
             string_to_raw(obj)
         }
@@ -274,8 +267,7 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
             } else {fallible!(FFI, "unrecognized generic {:?}", name)}
         }
         _ => { dispatch!(plain_to_raw, [(&obj.type_, @primitives)], (obj)) }
-    };
-    raw.into()
+    }.into()
 }
 
 #[no_mangle]

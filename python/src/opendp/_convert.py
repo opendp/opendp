@@ -96,8 +96,8 @@ def c_to_py(value):
         except UnknownTypeException:
             raise
         except Exception as err:
-            # print("MASKED ERROR:", err)
-            # print("using string fallback")
+            print("MASKED ERROR:", err)
+            print("using string fallback")
             # raise err
             # If we fail, resort to string representation.
             # TODO: Remove this fallback once we have composition and/or tuples sorted out.
@@ -144,7 +144,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
         return _slice_to_vector(raw, type_name)
 
     if type_name.startswith("HashMap<") and type_name.endswith('>'):
-        return _slice_to_hashmap(raw, type_name)
+        return _slice_to_hashmap(raw)
 
     if type_name.startswith('(') and type_name.endswith(')'):
         return _slice_to_tuple(raw, type_name)
@@ -278,17 +278,14 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: str) -> Tuple[Any, ...]:
 
 def _hashmap_to_slice(val: Dict[Any, Any], type_name: str) -> FfiSlicePtr:
     key_type, val_type = [i.strip() for i in type_name[8:-1].split(",")]
-    keys: FfiSlice = _vector_to_slice(list(val.keys()), f"Vec<{key_type}>").contents
-    vals: FfiSlice = _vector_to_slice(list(val.values()), f"Vec<{val_type}>").contents
-    return _wrap_in_slice(ctypes.pointer((FfiSlice * 2)(keys, vals)), 2)
+    keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr)
+    vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr)
+    return _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)
 
 
-def _slice_to_hashmap(raw: FfiSlicePtr, type_name: str) -> Dict[Any, Any]:
-    key_type, val_type = [i.strip() for i in type_name[8:-1].split(",")]
-    key_slice, val_slice = ctypes.cast(raw.contents.ptr, FfiSlicePtr)[0:2]
-    keys = _slice_to_vector(FfiSlicePtr(key_slice), f"Vec<{key_type}>")
-    vals = _slice_to_vector(FfiSlicePtr(val_slice), f"Vec<{val_type}>")
-    return dict(zip(keys, vals))
+def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
+    keys_obj, vals_obj = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:2]
+    return dict(zip(c_to_py(keys_obj), c_to_py(vals_obj)))
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:

@@ -86,7 +86,7 @@
 
 #![allow(clippy::upper_case_acronyms)]
 #![allow(non_snake_case)]
-#![recursion_limit="1024"]
+#![recursion_limit="512"]
 // #![feature(trace_macros)]
 // trace_macros!(true);
 

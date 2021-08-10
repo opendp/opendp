@@ -91,7 +91,10 @@ def test_vec_str():
 
 
 def test_hashmap():
-    data = {"A": 23, "B": 12, "C": 23489}
+    data = {"A": 23, "B": 12, "C": 234}
     slice = _hashmap_to_slice(data, "HashMap<String, i32>")
-    assert _slice_to_hashmap(slice, "HashMap<String, i32>") == data
+    assert _slice_to_hashmap(slice) == data
 
+    # complete roundtrip
+    any = py_to_c(data, c_type=AnyObjectPtr)
+    assert c_to_py(any) == data
