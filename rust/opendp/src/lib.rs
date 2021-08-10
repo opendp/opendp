@@ -142,7 +142,6 @@ macro_rules! enclose {
 #[macro_use]
 pub mod error;
 
-pub mod chain;
 pub mod core;
 pub mod data;
 pub mod dist;

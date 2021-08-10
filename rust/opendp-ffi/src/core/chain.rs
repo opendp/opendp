@@ -1,4 +1,4 @@
-use opendp::chain::{make_basic_composition, make_chain_mt, make_chain_tt};
+use opendp::core::{make_basic_composition, make_chain_mt, make_chain_tt};
 
 use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
 use crate::core::FfiResult;

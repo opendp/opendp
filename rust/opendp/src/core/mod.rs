@@ -20,13 +20,15 @@
 // Ordering of generic arguments
 // DI, DO, MI, MO, TI, TO, QI, QO
 
+pub mod chain;
+pub use crate::core::chain::*;
+
 use std::rc::Rc;
 
 use crate::dom::PairDomain;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast};
 use crate::dist::IntDistance;
-
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
