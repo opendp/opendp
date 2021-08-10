@@ -105,7 +105,7 @@ fn main() {
     // only build the bindings if you're in dev mode
     if env::var("CARGO_PKG_VERSION").unwrap().as_str() != "0.0.0-development" { return }
 
-    let module_names = vec!["core", "meas", "trans", "data"];
+    let module_names = vec!["comb", "meas", "trans", "data", "core"];
 
     let get_bootstrap_path = |val: &str|
         Path::new("src").join(val).join("bootstrap.json");

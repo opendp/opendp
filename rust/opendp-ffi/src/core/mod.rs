@@ -9,7 +9,6 @@ use crate::any::{AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObjec
 use crate::util;
 use crate::util::{c_bool, into_c_char_p};
 
-pub mod chain;
 
 #[repr(C)]
 pub struct FfiSlice {
