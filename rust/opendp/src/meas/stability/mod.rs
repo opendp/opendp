@@ -8,7 +8,7 @@ use crate::dist::{L1Distance, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::samplers::{SampleLaplace, SampleGaussian};
 use crate::error::Fallible;
-use crate::traits::{ExactIntCast, ExactIntBounds};
+use crate::traits::{ExactIntCast, ExactIntBounds, CheckNull, TotalOrd};
 
 // TIK: Type of Input Key
 // TIC: Type of Input Count
@@ -35,9 +35,9 @@ pub fn make_base_stability<MI, TIK, TIC>(
     n: usize, scale: MI::Distance, threshold: MI::Distance
 ) -> Fallible<Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, MI::Distance>, MI, SmoothedMaxDivergence<MI::Distance>>>
     where MI: BaseStabilityNoise,
-          TIK: Eq + Hash + Clone,
-          TIC: Integer + Clone,
-          MI::Distance: 'static + Float + Clone + PartialOrd + ExactIntCast<usize> + ExactIntCast<TIC> {
+          TIK: Eq + Hash + Clone + CheckNull,
+          TIC: Integer + Clone + CheckNull,
+          MI::Distance: 'static + Float + Clone + TotalOrd + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }

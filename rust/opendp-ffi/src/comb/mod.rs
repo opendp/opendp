@@ -42,9 +42,10 @@ mod tests {
     use crate::util;
 
     use super::*;
+    use opendp::traits::CheckNull;
 
     // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_measurement<T: Clone>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
+    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
         Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
@@ -56,7 +57,7 @@ mod tests {
     }
 
     // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_transformation<T: Clone>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
+    pub fn make_test_transformation<T: Clone + CheckNull>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
         trans::make_identity(AllDomain::<T>::new(), SymmetricDistance::default()).unwrap_test()
     }
 

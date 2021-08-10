@@ -4,7 +4,7 @@ use std::rc::Rc;
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation};
 use crate::dom::AllDomain;
 use crate::error::*;
-use crate::traits::{FallibleSub, MeasureDistance, MetricDistance};
+use crate::traits::{FallibleSub, MeasureDistance, MetricDistance, CheckNull};
 
 /// A structure tracking the state of an interactive measurement queryable.
 /// It's generic over state (S), query (Q), answer (A), so it can be used for any
@@ -45,6 +45,8 @@ impl<S, Q> Queryable<S, Q, Box<dyn Any>> {
         self.eval(query)?.downcast().map_err(|_| err!(FailedCast)).map(|b| *b)
     }
 }
+
+impl<S, Q, A> CheckNull for Queryable<S, Q, A> { fn is_null(&self) -> bool { false } }
 
 pub type InteractiveMeasurement<DI, DO, MI, MO, S, Q> = Measurement<DI, AllDomain<Queryable<S, Q, <DO as Domain>::Carrier>>, MI, MO>;
 
@@ -163,7 +165,7 @@ mod tests {
 
     use super::*;
 
-    fn make_dummy_meas<TO: From<i32>>() -> Measurement<AllDomain<i32>, AllDomain<TO>, AbsoluteDistance<f64>, MaxDivergence<f64>> {
+    fn make_dummy_meas<TO: From<i32> + CheckNull>() -> Measurement<AllDomain<i32>, AllDomain<TO>, AbsoluteDistance<f64>, MaxDivergence<f64>> {
         Measurement::new(
             AllDomain::new(),
             AllDomain::new(),

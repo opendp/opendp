@@ -12,6 +12,7 @@ use opendp::trans::{ImputableDomain, make_impute_constant, make_impute_uniform_f
 use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
+use opendp::traits::CheckNull;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_impute_uniform_float(
@@ -46,8 +47,8 @@ pub extern "C" fn opendp_trans__make_impute_constant(
             fn monomorphize<T>(
                 constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
-                where OptionNullDomain<AllDomain<T>>: ImputableDomain<NonNull=T>,
-                      T: 'static + Clone {
+                where OptionNullDomain<AllDomain<T>>: ImputableDomain<Imputed=T>,
+                      T: 'static + Clone + CheckNull{
                 let constant: T = try_!(try_as_ref!(constant).downcast_ref::<T>()).clone();
                 make_impute_constant::<OptionNullDomain<AllDomain<T>>>(constant).into_any()
             }
@@ -57,7 +58,7 @@ pub extern "C" fn opendp_trans__make_impute_constant(
             fn monomorphize<T>(
                 constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
-                where InherentNullDomain<AllDomain<T>>: ImputableDomain<NonNull=T>,
+                where InherentNullDomain<AllDomain<T>>: ImputableDomain<Imputed=T>,
                       T: 'static + InherentNull + Clone {
                 let constant: T = try_!(try_as_ref!(constant).downcast_ref::<T>()).clone();
                 make_impute_constant::<InherentNullDomain<AllDomain<T>>>(constant).into_any()
