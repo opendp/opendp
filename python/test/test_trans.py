@@ -161,12 +161,6 @@ def test_vector_clamp():
     assert query.check(1, 1)
 
 
-def test_clamp_sensitivity():
-    from opendp.trans import make_clamp
-    query = make_clamp(lower=-1, upper=1, DI="AllDomain<i32>", M=AbsoluteDistance[int])
-    assert query(20) == 1
-    assert query.check(20, 2)
-
 
 def test_bounded_mean():
     from opendp.trans import make_bounded_mean
