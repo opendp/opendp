@@ -8,7 +8,7 @@ use crate::trans::make_row_by_row;
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TI> -> Vec<Option<TO>>
 pub fn make_cast<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone, TO: 'static + RoundCast<TI> + CheckNull {
+    where TI: 'static + Clone + CheckNull, TO: 'static + RoundCast<TI> + CheckNull {
     make_row_by_row(
         AllDomain::new(),
         OptionNullDomain::new(AllDomain::new()),
@@ -19,7 +19,7 @@ pub fn make_cast<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>
 /// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_default<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone, TO: 'static + RoundCast<TI> + Default {
+    where TI: 'static + Clone + CheckNull, TO: 'static + RoundCast<TI> + Default + CheckNull {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
@@ -30,7 +30,7 @@ pub fn make_cast_default<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDo
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_inherent<TI, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InherentNullDomain<AllDomain<TO>>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone, TO: 'static + RoundCast<TI> + InherentNull {
+    where TI: 'static + Clone + CheckNull, TO: 'static + RoundCast<TI> + InherentNull + CheckNull {
     make_row_by_row(
         AllDomain::new(),
         InherentNullDomain::new(AllDomain::new()),

@@ -154,18 +154,11 @@ def test_split_dataframe():
     assert query.check(1, 1)
 
 
-def test_vector_clamp():
+def test_clamp():
     from opendp.trans import make_clamp
     query = make_clamp(lower=-1, upper=1)
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
-
-
-def test_clamp_sensitivity():
-    from opendp.trans import make_clamp
-    query = make_clamp(lower=-1, upper=1, DI="AllDomain<i32>", M=AbsoluteDistance[int])
-    assert query(20) == 1
-    assert query.check(20, 2)
 
 
 def test_bounded_mean():
@@ -243,9 +236,9 @@ def test_count_by_categories():
 
 
 def test_resize():
-    from opendp.trans import make_resize_constant
-    query = make_resize_constant(True, 4)
-    assert query([True, True, False]) == [True, True, False, True]
+    from opendp.trans import make_resize_constant_bounded
+    query = make_resize_constant_bounded(constant=0, length=4, lower=0, upper=10)
+    assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 2)
