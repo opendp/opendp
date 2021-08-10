@@ -190,7 +190,7 @@ pub fn make_split_records(separator: Option<&str>) -> Fallible<Transformation<Ve
 
 #[cfg(test)]
 mod tests {
-    use crate::chain::make_chain_tt;
+    use crate::comb::make_chain_tt;
     use crate::error::ExplainUnwrap;
 
     use super::*;

@@ -41,7 +41,7 @@
 //! use opendp::trans::{manipulation, sum, make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
 //! use opendp::dist::{SubstituteDistance, L1Distance};
 //! use opendp::error::*;
-//! use opendp::chain::{make_chain_tt, make_chain_mt};
+//! use opendp::comb::{make_chain_tt, make_chain_mt};
 //! use opendp::meas::make_base_laplace;
 //! use opendp::dom::VectorDomain;
 //!
@@ -152,3 +152,4 @@ pub mod poly;
 pub mod samplers;
 pub mod traits;
 pub mod trans;
+pub mod comb;

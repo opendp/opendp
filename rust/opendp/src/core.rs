@@ -20,9 +20,6 @@
 // Ordering of generic arguments
 // DI, DO, MI, MO, TI, TO, QI, QO
 
-pub mod chain;
-pub use crate::core::chain::*;
-
 use std::rc::Rc;
 
 use crate::dom::PairDomain;
