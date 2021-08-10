@@ -201,17 +201,14 @@ def make_cast_metric(
 def make_clamp(
     lower,
     upper,
-    DI: RuntimeTypeDescriptor = "VectorDomain<AllDomain<T>>",
-    M: RuntimeTypeDescriptor = "SymmetricDistance"
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`. Set DI to AllDomain<T> for clamping aggregated values.
+    """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.
     
     :param lower: If datum is less than lower, let datum be lower.
     :param upper: If datum is greater than upper, let datum be upper.
-    :param DI: input domain. One of VectorDomain<AllDomain<_>> or AllDomain<_>.
-    :type DI: RuntimeTypeDescriptor
-    :param M: metric. Set to SymmetricDistance when clamping datasets, or AbsoluteDistance<_> when clamping aggregated scalars
-    :type M: RuntimeTypeDescriptor
+    :param T: atomic data type
+    :type T: RuntimeTypeDescriptor
     :return: A clamp step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -219,39 +216,32 @@ def make_clamp(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    DI = RuntimeType.parse(type_name=DI, generics=["T"])
-    M = RuntimeType.parse(type_name=M)
-    T = get_domain_atom_or_infer(DI, lower)
-    DI = DI.substitute(T=T)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    DI = py_to_c(DI, c_type=ctypes.c_char_p)
-    M = py_to_c(M, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_clamp
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, DI, M), Transformation))
+    return c_to_py(unwrap(function(lower, upper, T), Transformation))
 
 
 def make_unclamp(
     lower,
     upper,
-    M: RuntimeTypeDescriptor,
-    T: RuntimeTypeDescriptor = "VectorDomain<IntervalDomain<T>>"
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>. Set DI to IntervalDomain<T> to work on scalars.
+    """Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>.
     
     :param lower: Lower bound of the input data.
     :param upper: Upper bound of the input data.
-    :param T: domain of data being unclamped
+    :param T: atomic data type
     :type T: RuntimeTypeDescriptor
-    :param M: metric to use on the input and output spaces
-    :type M: RuntimeTypeDescriptor
     :return: A unclamp step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -260,20 +250,18 @@ def make_unclamp(
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
-    M = RuntimeType.parse(type_name=M)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     T = py_to_c(T, c_type=ctypes.c_char_p)
-    M = py_to_c(M, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_unclamp
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, T, M), Transformation))
+    return c_to_py(unwrap(function(lower, upper, T), Transformation))
 
 
 def make_count(

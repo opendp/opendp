@@ -57,7 +57,7 @@
 //!     let load_numbers = make_chain_tt(&cast, &split_lines, None)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = make_clamp::<VectorDomain<_>, _>(bounds.0, bounds.1)?;
+//!     let clamp = make_clamp(bounds.0, bounds.1)?;
 //!     let bounded_sum = make_bounded_sum(bounds.0, bounds.1)?;
 //!     let laplace = make_base_laplace(sigma)?;
 //!     let intermediate = make_chain_tt(&bounded_sum, &clamp, None)?;
