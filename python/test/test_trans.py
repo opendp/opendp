@@ -154,12 +154,11 @@ def test_split_dataframe():
     assert query.check(1, 1)
 
 
-def test_vector_clamp():
+def test_clamp():
     from opendp.trans import make_clamp
     query = make_clamp(lower=-1, upper=1)
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
-
 
 
 def test_bounded_mean():

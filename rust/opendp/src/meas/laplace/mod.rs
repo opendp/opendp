@@ -5,7 +5,7 @@ use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::error::*;
-use crate::traits::{InfCast};
+use crate::traits::{InfCast, CheckNull, TotalOrd};
 
 pub trait LaplaceDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -15,7 +15,7 @@ pub trait LaplaceDomain: Domain {
 }
 
 impl<T> LaplaceDomain for AllDomain<T>
-    where T: 'static + SampleLaplace + Float {
+    where T: 'static + SampleLaplace + Float + CheckNull {
     type Metric = AbsoluteDistance<T>;
     type Atom = Self::Carrier;
 
@@ -26,7 +26,7 @@ impl<T> LaplaceDomain for AllDomain<T>
 }
 
 impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
-    where T: 'static + SampleLaplace + Float {
+    where T: 'static + SampleLaplace + Float + CheckNull {
     type Metric = L1Distance<T>;
     type Atom = T;
 
@@ -40,7 +40,7 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
-          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> {
+          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + CheckNull + TotalOrd {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }

@@ -3,6 +3,7 @@
 use std::any::Any;
 use std::fmt::Debug;
 use crate::error::*;
+use crate::traits::CheckNull;
 
 pub trait IsVec: Debug {
     // Not sure if we need into_any() (which consumes the Form), keeping it for now.
@@ -30,6 +31,9 @@ impl<T> From<Vec<T>> for Column
 
 #[derive(Debug)]
 pub struct Column(Box<dyn IsVec>);
+impl CheckNull for Column {
+    fn is_null(&self) -> bool { false }
+}
 
 impl Column {
     pub fn new<T: 'static + Debug>(form: Vec<T>) -> Self where Vec<T>: IsVec {

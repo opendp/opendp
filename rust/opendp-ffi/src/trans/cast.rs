@@ -22,7 +22,7 @@ pub extern "C" fn opendp_trans__make_cast(
     let TO = try_!(Type::try_from(TO));
 
     fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
-        where TI: 'static + Clone,
+        where TI: 'static + Clone + CheckNull,
               TO: 'static + RoundCast<TI> + CheckNull {
         make_cast::<TI, TO>().into_any()
     }
@@ -37,8 +37,8 @@ pub extern "C" fn opendp_trans__make_cast_default(
     let TO = try_!(Type::try_from(TO));
 
     fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
-        where TI: 'static + Clone,
-              TO: 'static + RoundCast<TI> + Default {
+        where TI: 'static + Clone + CheckNull,
+              TO: 'static + RoundCast<TI> + Default + CheckNull {
         make_cast_default::<TI, TO>().into_any()
     }
     dispatch!(monomorphize, [(TI, @primitives), (TO, @primitives)], ())
@@ -52,7 +52,7 @@ pub extern "C" fn opendp_trans__make_cast_inherent(
     let TO = try_!(Type::try_from(TO));
 
     fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
-        where TI: 'static + Clone,
+        where TI: 'static + Clone + CheckNull,
               TO: 'static + RoundCast<TI> + InherentNull {
         make_cast_inherent::<TI, TO>().into_any()
     }
@@ -74,7 +74,7 @@ pub extern "C" fn opendp_trans__make_cast_metric(
         where MI: 'static + DatasetMetric,
               MO: 'static + DatasetMetric,
               (MI, MO): DatasetMetricCast,
-              T: 'static + Clone {
+              T: 'static + Clone + CheckNull {
         make_cast_metric::<VectorDomain<AllDomain<T>>, MI, MO>(
             VectorDomain::new_all()
         ).into_any()

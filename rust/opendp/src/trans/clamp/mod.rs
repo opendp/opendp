@@ -4,19 +4,19 @@ use crate::core::Transformation;
 use crate::dist::SymmetricDistance;
 use crate::dom::{AllDomain, IntervalDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{CheckNull};
-use crate::trans::make_row_by_row;
+use crate::traits::{CheckNull, TotalOrd};
+use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 
-pub fn make_clamp<T: 'static + Clone + PartialOrd + CheckNull>(
+pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull>(
     lower: T, upper: T,
 ) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<IntervalDomain<T>>, SymmetricDistance, SymmetricDistance>> {
-    make_row_by_row(
+    make_row_by_row_fallible(
         AllDomain::new(),
         IntervalDomain::new(Bound::Included(lower.clone()), Bound::Included(upper.clone()))?,
-        move |arg: &T| if arg < &lower { lower.clone() } else if arg > &upper { upper.clone() } else { arg.clone() })
+        move |arg: &T| arg.clone().total_clamp(lower.clone(), upper.clone()))
 }
 
-pub fn make_unclamp<T: 'static + Clone + PartialOrd + CheckNull>(
+pub fn make_unclamp<T: 'static + Clone + TotalOrd + CheckNull>(
     lower: Bound<T>, upper: Bound<T>,
 ) -> Fallible<Transformation<VectorDomain<IntervalDomain<T>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row(

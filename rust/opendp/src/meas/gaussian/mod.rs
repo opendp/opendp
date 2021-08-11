@@ -5,7 +5,7 @@ use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
-use crate::traits::InfCast;
+use crate::traits::{InfCast, CheckNull};
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / std::f64::consts::PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
@@ -42,7 +42,7 @@ pub trait GaussianDomain: Domain {
 
 
 impl<T> GaussianDomain for AllDomain<T>
-    where T: 'static + SampleGaussian + Float {
+    where T: 'static + SampleGaussian + Float + CheckNull {
     type Metric = AbsoluteDistance<T>;
     type Atom = T;
 
@@ -53,7 +53,7 @@ impl<T> GaussianDomain for AllDomain<T>
 }
 
 impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
-    where T: 'static + SampleGaussian + Float {
+    where T: 'static + SampleGaussian + Float + CheckNull {
     type Metric = L2Distance<T>;
     type Atom = T;
 
@@ -68,7 +68,7 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_gaussian<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
-          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> {
+          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
