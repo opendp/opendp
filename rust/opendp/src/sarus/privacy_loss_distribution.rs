@@ -60,12 +60,12 @@ impl<'a> PLDistribution {
     }
 
     /// Compute the alphas and the betas
-    pub fn tradeoff<I>(&self, exp_epsilons:I) -> Vec<(Rational, Rational)>
-    where I: 'a + IntoIterator, I::Item:'a + Clone, Rational: TryFrom<I::Item> {
+    pub fn tradeoff<I,Q>(&self, exp_epsilons:I) -> Vec<(Rational, Rational)>
+    where I: 'a + IntoIterator<Item=&'a Q>, Q: 'a + Clone, Rational: TryFrom<Q> {
         let mut result: Vec<(Rational, Rational)> = Vec::new();
         let mut last: (Rational, Rational) = (0.into(),0.into());
         for exp_eps in exp_epsilons {
-            let exp_epsilon = Rational::try_from(exp_eps).unwrap_or_default();
+            let exp_epsilon = Rational::try_from(exp_eps.clone()).unwrap_or_default();
             let delta = self.delta::<Rational>(exp_epsilon.clone());
             result.push((
                 (last.1.clone()-&delta)/(exp_epsilon.clone()-&last.0),
