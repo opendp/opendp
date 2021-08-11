@@ -9,9 +9,10 @@ fn main() -> Fallible<()> {
 
     let priv_loss_meas = make_plm(&[(0.00, 0.01), (0.5, 0.5), (2., 0.5)]).unwrap();
     
-    let priv_loss_dist = PLDistribution::new(&[(0.01, 0.1), (0.5, 0.2), (2., 0.2), (5., 0.01)]);
-    
-    println!("{:#?}", priv_loss_meas.f(10) );
+    let priv_loss_comp_meas = make_basic_composition(&priv_loss_meas, &priv_loss_meas);
+
+    println!("{:#?}", priv_loss_meas.f() );
+    println!("{:#?}", (&priv_loss_meas*&priv_loss_meas).f() );
 
     laplace_example();
     gaussian_comp_example();
