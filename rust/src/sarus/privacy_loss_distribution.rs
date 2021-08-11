@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Mul;
 
 use rug::Rational;
+use num::Num;
 
 /// Privacy Loss Distribution from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
@@ -109,5 +110,11 @@ impl Mul for &PLDistribution {
             }
         }
         result
+    }
+}
+
+impl Default for PLDistribution {
+    fn default() -> Self {
+        PLDistribution::new(&[(1.0,1.0)])
     }
 }
