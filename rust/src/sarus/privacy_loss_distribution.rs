@@ -64,7 +64,7 @@ impl<'a> PLDistribution {
     }
 
     /// Compute the alphas and the betas
-    pub fn tradeoff(&self, n:usize) -> Vec<(Rational, Rational)> {
+    pub fn tradeoff(&self) -> Vec<(Rational, Rational)> {
         let mut result = Vec::new();
         let mut exp_epsilons_set:BTreeSet<Rational> = BTreeSet::new();
         // Initialize the set of possible exp_eps
