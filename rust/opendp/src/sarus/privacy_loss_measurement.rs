@@ -22,12 +22,12 @@ impl Domain for PLMOutputDomain {
 }
 
 pub trait FDifferentialPrivacy {
-    fn f(&self, n:usize) -> Vec<(f64, f64)>;
+    fn f(&self) -> Vec<(f64, f64)>;
 }
 
 impl FDifferentialPrivacy for PLMMeasurement {
-    fn f(&self, n:usize) -> Vec<(f64, f64)> {
-        self.output_domain.tradeoff(n).into_iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect()
+    fn f(&self) -> Vec<(f64, f64)> {
+        self.output_domain.tradeoff().into_iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect()
     }
 }
 
@@ -59,17 +59,4 @@ fn make_plm_privacy_relation(out_dom: PLMOutputDomain) -> PrivacyRelation<Symmet
         exp_epsilon.exp_round(Round::Down);
         Ok(delta >= &out_dom.delta(exp_epsilon))
     })
-}
-
-
-// Measurement<PLMInputDomain, PLMOutputDomain, SymmetricDistance, SmoothedMaxDivergence<Rational>>
-pub fn make_basic_composition(measurement0: &PLMMeasurement, measurement1: &PLMMeasurement) -> Fallible<PLMMeasurement> {
-        if measurement0.input_domain != measurement1.input_domain {
-            return fallible!(DomainMismatch, "Input domain mismatch");
-        } else if measurement0.input_metric != measurement1.input_metric {
-            return fallible!(MetricMismatch, "Input metric mismatch");
-        } else if measurement0.output_measure != measurement1.output_measure {
-            return fallible!(MeasureMismatch, "Output measure mismatch");
-        }
-        Ok(make_plm(&measurement0.output_domain.exp_privacy_loss_probabilities.clone().into_iter().collect::<Vec<(Rational, Rational)>>())?)
 }
