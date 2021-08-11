@@ -16,16 +16,26 @@ pub type PLMInputDomain = AllDomain<bool>;
 
 pub type PLMOutputDomain = PLDistribution;
 
-impl Domain for PLDistribution {
+impl Domain for PLMOutputDomain {
     type Carrier = Rational;
     fn member(&self, privacy_loss: &Self::Carrier) -> Fallible<bool> { Ok(self.exp_privacy_loss_probabilities.contains_key(privacy_loss)) }
+}
+
+pub trait FDifferentialPrivacy {
+    fn f(&self, n:usize) -> Vec<(f64, f64)>;
+}
+
+impl FDifferentialPrivacy for PLMMeasurement {
+    fn f(&self, n:usize) -> Vec<(f64, f64)> {
+        self.output_domain.tradeoff(n).into_iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect()
+    }
 }
 
 pub type PLMMeasurement = Measurement<PLMInputDomain, PLMOutputDomain, SymmetricDistance, SmoothedMaxDivergence<Rational>>;
 
 pub fn make_plm<'a,I,Q>(exp_privacy_loss_probabilitiies:I) -> Fallible<PLMMeasurement>
 where I: 'a + IntoIterator<Item=&'a (Q, Q)>, Q: 'a + Clone, Rational: TryFrom<Q> {
-    let out_dom = PLDistribution::new(exp_privacy_loss_probabilitiies);
+    let out_dom = PLMOutputDomain::new(exp_privacy_loss_probabilitiies);
     let priv_rel = make_plm_privacy_relation(out_dom.clone());
     Ok(Measurement::new(
         PLMInputDomain::new(),
