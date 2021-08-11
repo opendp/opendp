@@ -1,11 +1,10 @@
 use std::clone::Clone;
 use std::convert::TryFrom;
 use std::iter::{FromIterator, IntoIterator};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Mul;
 
 use rug::Rational;
-
 
 /// Privacy Loss Distribution from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
@@ -65,34 +64,33 @@ impl<'a> PLDistribution {
     }
 
     /// Compute the alphas and the betas
-    pub fn tradeoff(&self) -> Vec<(Rational, Rational)> {
-        let mut result: Vec<(Rational, Rational)> = Vec::new();
-        let mut exp_epsilons = self.exp_privacy_loss_probabilities.keys();
-        let mut exp_epsilon = exp_epsilons.next().unwrap();
-        let mut last: (Rational, Rational) = (exp_epsilon.clone(), self.delta(exp_epsilon.clone()));
-        // Process the first value
-        if exp_epsilon.eq(&Rational::from(0)) {
-            result.push((0.into(),1.into()));
-            result.push((0.into(),self.delta::<Rational>(0.into())));
-            exp_epsilon = exp_epsilons.next().unwrap();
-            last = (exp_epsilon.clone(), self.delta(exp_epsilon.clone()));
-        } else {
-            result.push((0.into(),self.delta::<Rational>(0.into())));
-            exp_epsilon = exp_epsilons.next().unwrap();
-            last = (exp_epsilon.clone(), self.delta(exp_epsilon.clone()));
-        }
-        // Process the next
-        for exp_eps in self.exp_privacy_loss_probabilities.keys() {
-            let exp_epsilon = exp_eps.clone();
-            let delta = self.delta::<Rational>(exp_epsilon.clone());
-            if exp_epsilon>0 {
-                result.push((
-                    (last.1.clone()-&delta)/(exp_epsilon.clone().recip()-&last.0),
-                    ((Rational::from(1)-last.1)*&exp_epsilon-(Rational::from(1)-&delta)*&last.0)/(exp_epsilon.clone()-&last.0),
-               ));
+    pub fn tradeoff(&self, n:usize) -> Vec<(Rational, Rational)> {
+        let mut result = Vec::new();
+        let mut exp_epsilons_set:BTreeSet<Rational> = BTreeSet::new();
+        // Initialize the set of possible exp_eps
+        for exp_epsilon in self.exp_privacy_loss_probabilities.keys() {
+            exp_epsilons_set.insert(exp_epsilon.clone());
+            if exp_epsilon>&Rational::from(0) {
+                exp_epsilons_set.insert(exp_epsilon.clone().recip());
             }
-            last = (exp_epsilon.clone(), delta)
         }
+        let exp_epsilons: Vec<Rational> = exp_epsilons_set.into_iter().collect();
+        let mut last_exp_epsilon = exp_epsilons[0].clone();
+        let mut last_delta = self.delta(last_exp_epsilon.clone());
+        for i in 1..exp_epsilons.len() {
+            let exp_epsilon = exp_epsilons[i].clone();
+            let delta = self.delta(exp_epsilon.clone());
+            result.push((
+                (last_delta.clone()-&delta)/(exp_epsilon.clone()-&last_exp_epsilon),
+                ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/(exp_epsilon.clone()-&last_exp_epsilon),
+            ));
+            last_exp_epsilon = exp_epsilon.clone();
+            last_delta = delta.clone();
+        }
+        result.push((
+            Rational::from(0),
+            Rational::from(1)-&last_delta,
+        ));
         result
     }
 }

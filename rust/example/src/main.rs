@@ -1,17 +1,17 @@
 use opendp::error::Fallible;
 use opendp::dom::AllDomain;
 use opendp::meas::{make_base_laplace, make_base_gaussian};
-use opendp::sarus::{PLDistribution, make_plm};
+use opendp::sarus::{FDifferentialPrivacy, PLDistribution, make_plm};
 use opendp::chain::make_basic_composition;
 
 fn main() -> Fallible<()> {
     println!("OpenDP example");
 
-    let priv_loss_meas = make_plm(&[((0,1), (1,100)), ((1,2), (1,2))]);
+    let priv_loss_meas = make_plm(&[(0.00, 0.01), (0.5, 0.5), (2., 0.5)]).unwrap();
     
-    let priv_loss_dist = PLDistribution::new(&[(0.0, 0.1), (0.5, 0.2), (2., 0.2), (5., 0.01)]);
+    let priv_loss_dist = PLDistribution::new(&[(0.01, 0.1), (0.5, 0.2), (2., 0.2), (5., 0.01)]);
     
-    println!("{:#?}", priv_loss_dist.tradeoff(&[0.1, 0.2, 0.5, 0.8, 0.9]));
+    println!("{:#?}", priv_loss_meas.f(10) );
 
     laplace_example();
     gaussian_comp_example();
