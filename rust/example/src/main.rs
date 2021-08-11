@@ -7,12 +7,11 @@ use opendp::chain::make_basic_composition;
 fn main() -> Fallible<()> {
     println!("OpenDP example");
 
+    let priv_loss_dist = PLDistribution::new(&[(0.5, 1.0), (0.5, 1.0)]);
     let priv_loss_meas = make_plm(&[(0.00, 0.01), (0.5, 0.5), (2., 0.5)]).unwrap();
-    
     let priv_loss_comp_meas = make_basic_composition(&priv_loss_meas, &priv_loss_meas);
 
     println!("{:#?}", priv_loss_meas.f() );
-    println!("{:#?}", (&priv_loss_meas*&priv_loss_meas).f() );
 
     laplace_example();
     gaussian_comp_example();
