@@ -46,31 +46,51 @@ impl<'a> PLDistribution {
     /// Use the formula from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
     pub fn delta<Q>(&self, exp_epsilon: Q) -> Rational
     where Q: Clone, Rational: TryFrom<Q> {
-
-        let e_x_y_inv = &Rational::try_from(exp_epsilon.clone()).unwrap_or_default().recip();
         let e_y_x = &Rational::try_from(exp_epsilon.clone()).unwrap_or_default();
-        let (delta_x_y, delta_y_x) = self.exp_privacy_loss_probabilities.iter().fold((Rational::from(0),Rational::from(0)), 
-        |(delta_x_y, delta_y_x),(l_y_x,p_x)| {
-            (
-                delta_x_y + if l_y_x<e_x_y_inv {(Rational::from(1)-l_y_x.clone()/e_x_y_inv)*p_x} else {Rational::from(0)},
-                delta_y_x + if l_y_x>e_y_x {(Rational::from(1)-e_y_x.clone()/l_y_x)*p_x*l_y_x} else {Rational::from(0)},
-            )
-        });
+        let delta_x_y:Rational;
+        let delta_y_x = self.exp_privacy_loss_probabilities.iter().fold(Rational::from(0), 
+            |delta_y_x,(l_y_x,p_x)| {
+                    delta_y_x + if l_y_x>e_y_x {(Rational::from(1)-e_y_x.clone()/l_y_x)*p_x*l_y_x} else {Rational::from(0)}
+            });
+        if e_y_x>&Rational::from(0) {
+            let e_x_y_inv = &Rational::try_from(exp_epsilon.clone()).unwrap_or_default().recip();
+            delta_x_y = self.exp_privacy_loss_probabilities.iter().fold(Rational::from(0), 
+            |delta_x_y,(l_y_x,p_x)| {
+                    delta_x_y + if l_y_x<e_x_y_inv {(Rational::from(1)-l_y_x.clone()/e_x_y_inv)*p_x} else {Rational::from(0)}
+            });
+        } else {
+            delta_x_y = Rational::from(1)
+        }
         if delta_x_y > delta_y_x {delta_x_y} else {delta_y_x}
     }
 
     /// Compute the alphas and the betas
-    pub fn tradeoff<I,Q>(&self, exp_epsilons:I) -> Vec<(Rational, Rational)>
-    where I: 'a + IntoIterator<Item=&'a Q>, Q: 'a + Clone, Rational: TryFrom<Q> {
+    pub fn tradeoff(&self) -> Vec<(Rational, Rational)> {
         let mut result: Vec<(Rational, Rational)> = Vec::new();
-        let mut last: (Rational, Rational) = (0.into(),0.into());
-        for exp_eps in exp_epsilons {
-            let exp_epsilon = Rational::try_from(exp_eps.clone()).unwrap_or_default();
+        let mut exp_epsilons = self.exp_privacy_loss_probabilities.keys();
+        let mut exp_epsilon = exp_epsilons.next().unwrap();
+        let mut last: (Rational, Rational) = (exp_epsilon.clone(), self.delta(exp_epsilon.clone()));
+        // Process the first value
+        if exp_epsilon.eq(&Rational::from(0)) {
+            result.push((0.into(),1.into()));
+            result.push((0.into(),self.delta::<Rational>(0.into())));
+            exp_epsilon = exp_epsilons.next().unwrap();
+            last = (exp_epsilon.clone(), self.delta(exp_epsilon.clone()));
+        } else {
+            result.push((0.into(),self.delta::<Rational>(0.into())));
+            exp_epsilon = exp_epsilons.next().unwrap();
+            last = (exp_epsilon.clone(), self.delta(exp_epsilon.clone()));
+        }
+        // Process the next
+        for exp_eps in self.exp_privacy_loss_probabilities.keys() {
+            let exp_epsilon = exp_eps.clone();
             let delta = self.delta::<Rational>(exp_epsilon.clone());
-            result.push((
-                (last.1.clone()-&delta)/(exp_epsilon.clone()-&last.0),
-                ((Rational::from(1)-last.1)*&exp_epsilon-(Rational::from(1)-&delta)*&last.0)/(exp_epsilon.clone()-&last.0),
-            ));
+            if exp_epsilon>0 {
+                result.push((
+                    (last.1.clone()-&delta)/(exp_epsilon.clone().recip()-&last.0),
+                    ((Rational::from(1)-last.1)*&exp_epsilon-(Rational::from(1)-&delta)*&last.0)/(exp_epsilon.clone()-&last.0),
+               ));
+            }
             last = (exp_epsilon.clone(), delta)
         }
         result
