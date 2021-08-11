@@ -23,7 +23,7 @@ pub fn make_bounded_sum<T>(
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(lower.abs().total_max(upper.abs()))))
+        StabilityRelation::new_from_constant(lower.abs().total_max(upper.abs())?)))
 }
 
 

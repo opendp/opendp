@@ -447,41 +447,41 @@ macro_rules! impl_math_float {
 }
 impl_math_float!(f32, f64);
 
-pub fn max_by<T, F: FnOnce(&T, &T) -> Ordering>(v1: T, v2: T, compare: F) -> T {
-    match compare(&v1, &v2) {
+pub fn max_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
+    compare(&v1, &v2).map(|cmp| match cmp {
         Ordering::Less | Ordering::Equal => v2,
         Ordering::Greater => v1,
-    }
+    })
 }
-pub fn min_by<T, F: FnOnce(&T, &T) -> Ordering>(v1: T, v2: T, compare: F) -> T {
-    match compare(&v1, &v2) {
+pub fn min_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
+    compare(&v1, &v2).map(|cmp| match cmp {
         Ordering::Less | Ordering::Equal => v1,
         Ordering::Greater => v2,
-    }
+    })
 }
 
 /// TotalOrd is well-defined on types that are Ord on their non-null values.
 /// The framework provides a way to ensure values are non-null at runtime.
 /// This trait should only be used when the framework can rely on these assurances.
 pub trait TotalOrd: PartialOrd + Sized {
-    fn total_cmp(&self, other: &Self) -> Ordering;
-    fn total_max(self, other: Self) -> Self { max_by(self, other, TotalOrd::total_cmp) }
-    fn total_min(self, other: Self) -> Self { min_by(self, other, TotalOrd::total_cmp) }
-    fn total_clamp(self, min: Self, max: Self) -> Self {
-        assert!(min <= max);
-        if self < min {
+    fn total_cmp(&self, other: &Self) -> Fallible<Ordering>;
+    fn total_max(self, other: Self) -> Fallible<Self> { max_by(self, other, TotalOrd::total_cmp) }
+    fn total_min(self, other: Self) -> Fallible<Self> { min_by(self, other, TotalOrd::total_cmp) }
+    fn total_clamp(self, min: Self, max: Self) -> Fallible<Self> {
+        if min > max { return fallible!(FailedFunction, "min cannot be greater than max") }
+        Ok(if let Ordering::Less = self.total_cmp(&min)? {
             min
-        } else if self > max {
+        } else if let Ordering::Greater = self.total_cmp(&max)? {
             max
         } else {
             self
-        }
+        })
     }
 }
 
 macro_rules! impl_total_ord_for_ord {
     ($($ty:ty),*) => {$(impl TotalOrd for $ty {
-        fn total_cmp(&self, other: &Self) -> Ordering {Ord::cmp(self, other)}
+        fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
 impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
@@ -489,8 +489,9 @@ impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {
         $(impl TotalOrd for $ty {
-            fn total_cmp(&self, other: &Self) -> Ordering {
-                PartialOrd::partial_cmp(self, other).expect(concat!(stringify!($ty), " cannot not be null when clamping."))
+            fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
+                PartialOrd::partial_cmp(self, other)
+                    .ok_or_else(|| err!(FailedFunction, concat!(stringify!($ty), " cannot not be null when clamping.")))
             }
         })*
     }
@@ -498,12 +499,12 @@ macro_rules! impl_total_ord_for_float {
 impl_total_ord_for_float!(f64, f32);
 
 impl<T1: TotalOrd, T2: TotalOrd> TotalOrd for (T1, T2) {
-    fn total_cmp(&self, other: &Self) -> Ordering {
-        let cmp = self.0.total_cmp(&other.0);
+    fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
+        let cmp = self.0.total_cmp(&other.0)?;
         if Ordering::Equal == cmp {
             self.1.total_cmp(&other.1)
         } else {
-            cmp
+            Ok(cmp)
         }
     }
 }
