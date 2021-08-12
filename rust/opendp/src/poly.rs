@@ -82,7 +82,7 @@ impl<DI, DO, MI, MO> Transformation<DI, DO, MI, MO>
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::SubstituteDistance;
+    use crate::dist::{SubstituteDistance, MaxDivergence};
     use crate::dom::AllDomain;
     use crate::error::*;
     use crate::meas;
@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
-        let op_plain = meas::make_base_laplace::<AllDomain<_>>(0.0)?;
+        let op_plain = meas::make_base_laplace::<AllDomain<_>, MaxDivergence<_>>(0.0)?;
         let arg = 99.9;
         let res_plain = op_plain.function.eval(&arg)?;
         assert_eq!(res_plain, arg);

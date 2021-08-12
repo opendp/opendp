@@ -37,6 +37,20 @@ impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
 
+#[derive(Clone)]
+pub struct FSmoothedMaxDivergence<Q>(PhantomData<Q>);
+impl<Q> Default for FSmoothedMaxDivergence<Q> {
+    fn default() -> Self { FSmoothedMaxDivergence(PhantomData) }
+}
+
+impl<Q> PartialEq for FSmoothedMaxDivergence<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+
+impl<Q: Clone> Measure for FSmoothedMaxDivergence<Q> {
+    type Distance = Vec<EpsilonDelta<Q>>;
+}
+
 /// Metrics
 #[derive(Clone)]
 pub struct SymmetricDistance;
@@ -107,3 +121,19 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
+
+#[derive(Debug)]
+pub struct EpsilonDelta<T: Sized>{pub epsilon: T, pub delta: T}
+
+// Derive annotations force traits to be present on the generic
+impl<T: Clone> Clone for EpsilonDelta<T> {
+    fn clone(&self) -> Self {
+        EpsilonDelta {epsilon: self.epsilon.clone(), delta: self.delta.clone()}
+    }
+}
+impl<T: PartialEq> PartialEq for EpsilonDelta<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.epsilon == other.epsilon && self.delta == other.delta
+    }
+}
+

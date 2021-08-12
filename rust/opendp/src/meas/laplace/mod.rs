@@ -1,11 +1,52 @@
-use num::Float;
+use num::{Float, One};
 
-use crate::core::{Measurement, Function, PrivacyRelation, Domain, SensitivityMetric};
-use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
+use crate::core::{Measurement, Function, PrivacyRelation, Measure, Metric, Domain, SensitivityMetric};
+use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence, EpsilonDelta};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::error::*;
 use crate::traits::{InfCast, CheckNull, TotalOrd};
+
+
+pub trait LaplacePrivacyRelation<MI: Metric>: Measure {
+    fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self>;
+}
+
+impl<MI: Metric> LaplacePrivacyRelation<MI> for MaxDivergence<MI::Distance>
+    where MI::Distance: 'static + Clone + Float + SampleLaplace + InfCast<<MI as Metric>::Distance> + TotalOrd {
+    fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self>{
+        PrivacyRelation::new_from_constant(scale.recip())
+    }
+}
+
+impl<MI: Metric> LaplacePrivacyRelation<MI> for FSmoothedMaxDivergence<MI::Distance>
+    where MI::Distance: 'static + Clone + Float + One + SampleLaplace { // + CastInternalReal
+
+    fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self> {
+        PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &Vec<EpsilonDelta<MI::Distance>>| {
+            if d_in.is_sign_negative() {
+                return fallible!(InvalidDistance, "laplace mechanism: input sensitivity must be non-negative")
+            }
+
+            let mut result = true;
+            for EpsilonDelta { epsilon, delta } in d_out {
+                if epsilon.is_sign_negative() {
+                    return fallible!(InvalidDistance, "laplace mechanism: epsilon must be positive or 0")
+                }
+                if delta.is_sign_negative() {
+                    return fallible!(InvalidDistance, "laplace mechanism: delta must be positive or 0")
+                }
+
+                let delta_dual = MI::Distance::one() - ((*epsilon - scale.recip()) / (MI::Distance::one() + MI::Distance::one())).exp();
+                result = result & (delta >= &delta_dual);
+                if result == false {
+                    break;
+                }
+            }
+            Ok(result)
+        })
+       }
+}
 
 pub trait LaplaceDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -38,9 +79,10 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
     }
 }
 
-pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
+pub fn make_base_laplace<D, MO>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MO>>
     where D: LaplaceDomain,
-          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + CheckNull + TotalOrd {
+          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + CheckNull + TotalOrd,
+          MO: Measure + LaplacePrivacyRelation<D::Metric> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -49,8 +91,8 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
         D::new(),
         D::noise_function(scale.clone()),
         D::Metric::default(),
-        MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(scale.recip())
+        MO::default(),
+        MO::privacy_relation(scale),
     ))
 }
 
@@ -64,7 +106,7 @@ mod tests {
     fn test_chain_laplace() -> Fallible<()> {
         let chain = (
             make_bounded_mean(10.0, 12.0, 3)? >>
-            make_base_laplace(1.0)?
+            make_base_laplace::<AllDomain<_>, MaxDivergence<_>>(1.0)?
         )?;
         let _ret = chain.function.eval(&vec![10.0, 11.0, 12.0])?;
         Ok(())
@@ -73,20 +115,33 @@ mod tests {
 
     #[test]
     fn test_make_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace::<AllDomain<_>>(1.0)?;
+        let measurement = make_base_laplace::<AllDomain<_>, MaxDivergence<_>>(1.0)?;
         let _ret = measurement.function.eval(&0.0)?;
 
         assert!(measurement.privacy_relation.eval(&1., &1.)?);
+
+        let measurement = make_base_laplace::<AllDomain<_>, FSmoothedMaxDivergence<_>>(1.0)?;
+        let _ret = measurement.function.eval(&0.0)?;
+
+        let d_out = vec!(EpsilonDelta{epsilon: 1., delta: 0.});
+        assert!(measurement.privacy_relation.eval(&1., &d_out)?);
         Ok(())
     }
 
     #[test]
     fn test_make_vector_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace::<VectorDomain<_>>(1.0)?;
+        let measurement = make_base_laplace::<VectorDomain<_>, MaxDivergence<_>>(1.0)?;
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.function.eval(&arg)?;
 
         assert!(measurement.privacy_relation.eval(&1., &1.)?);
+
+        let measurement = make_base_laplace::<VectorDomain<_>, FSmoothedMaxDivergence<_>>(1.0)?;
+        let arg = vec![1.0, 2.0, 3.0];
+        let _ret = measurement.function.eval(&arg)?;
+
+        let d_out = vec!(EpsilonDelta{epsilon: 1., delta: 0.});
+        assert!(measurement.privacy_relation.eval(&1., &d_out)?);
         Ok(())
     }
 }
