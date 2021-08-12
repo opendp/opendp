@@ -11,7 +11,7 @@ use opendp::trans::{make_cast, make_cast_default, make_cast_inherent, make_cast_
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type};
-
+use std::fmt::Debug;
 
 
 #[no_mangle]
@@ -22,8 +22,8 @@ pub extern "C" fn opendp_trans__make_cast(
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + Clone + CheckNull,
-              TOA: 'static + RoundCast<TIA> + CheckNull {
+        where TIA: 'static + Clone + CheckNull + Debug,
+              TOA: 'static + RoundCast<TIA> + CheckNull + Debug {
         make_cast::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
@@ -37,8 +37,8 @@ pub extern "C" fn opendp_trans__make_cast_default(
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + Clone + CheckNull,
-              TOA: 'static + RoundCast<TIA> + Default + CheckNull {
+        where TIA: 'static + Clone + CheckNull + Debug,
+              TOA: 'static + RoundCast<TIA> + Default + CheckNull + Debug {
         make_cast_default::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
@@ -52,8 +52,8 @@ pub extern "C" fn opendp_trans__make_cast_inherent(
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + Clone + CheckNull,
-              TOA: 'static + RoundCast<TIA> + InherentNull {
+        where TIA: 'static + Clone + CheckNull + Debug,
+              TOA: 'static + RoundCast<TIA> + InherentNull + Debug {
         make_cast_inherent::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @floats)], ())
@@ -74,7 +74,7 @@ pub extern "C" fn opendp_trans__make_cast_metric(
         where MI: 'static + DatasetMetric,
               MO: 'static + DatasetMetric,
               (MI, MO): DatasetMetricCast,
-              TA: 'static + Clone + CheckNull {
+              TA: 'static + Clone + CheckNull + Debug {
         make_cast_metric::<VectorDomain<AllDomain<TA>>, MI, MO>(
             VectorDomain::new_all()
         ).into_any()

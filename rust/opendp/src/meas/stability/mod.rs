@@ -9,6 +9,7 @@ use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::samplers::{SampleLaplace, SampleGaussian};
 use crate::error::Fallible;
 use crate::traits::{ExactIntCast, ExactIntBounds, CheckNull, TotalOrd};
+use std::fmt::Debug;
 
 // TIK: Type of Input Key
 // TIC: Type of Input Count
@@ -20,12 +21,12 @@ pub type CountDomain<TIK, TIC> = SizedDomain<MapDomain<AllDomain<TIK>, AllDomain
 pub trait BaseStabilityNoise: SensitivityMetric {
     fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance>;
 }
-impl<TOC: SampleLaplace> BaseStabilityNoise for L1Distance<TOC> {
+impl<TOC: SampleLaplace + Debug> BaseStabilityNoise for L1Distance<TOC> {
     fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance> {
         Self::Distance::sample_laplace(shift, scale, constant_time)
     }
 }
-impl<TOC: SampleGaussian> BaseStabilityNoise for L2Distance<TOC> {
+impl<TOC: SampleGaussian + Debug> BaseStabilityNoise for L2Distance<TOC> {
     fn noise(shift: Self::Distance, scale: Self::Distance, constant_time: bool) -> Fallible<Self::Distance> {
         Self::Distance::sample_gaussian(shift, scale, constant_time)
     }
@@ -35,8 +36,8 @@ pub fn make_base_stability<MI, TIK, TIC>(
     size: usize, scale: MI::Distance, threshold: MI::Distance
 ) -> Fallible<Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, MI::Distance>, MI, SmoothedMaxDivergence<MI::Distance>>>
     where MI: BaseStabilityNoise,
-          TIK: Eq + Hash + Clone + CheckNull,
-          TIC: Integer + Clone + CheckNull,
+          TIK: Eq + Hash + Clone + CheckNull + Debug,
+          TIC: Integer + Clone + CheckNull + Debug,
           MI::Distance: 'static + Float + Clone + TotalOrd + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")

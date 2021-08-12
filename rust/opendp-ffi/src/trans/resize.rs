@@ -10,6 +10,7 @@ use crate::any::{AnyObject, AnyTransformation};
 use crate::any::Downcast;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_resize(
@@ -21,7 +22,7 @@ pub extern "C" fn opendp_trans__make_bounded_resize(
         size: usize, bounds: *const AnyObject,
         constant: *const c_void,
     ) -> FfiResult<*mut AnyTransformation>
-        where TA: 'static + Clone + CheckNull + TotalOrd {
+        where TA: 'static + Clone + CheckNull + TotalOrd + Debug {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
         let atom_domain = try_!(BoundedDomain::new_closed(bounds));
         let constant = try_as_ref!(constant as *const TA).clone();
@@ -40,7 +41,7 @@ pub extern "C" fn opendp_trans__make_resize(
     fn monomorphize<TA>(
         size: usize, constant: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where TA: 'static + Clone + CheckNull + TotalOrd {
+        where TA: 'static + Clone + CheckNull + TotalOrd + Debug {
         let constant = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
         make_resize_constant::<AllDomain<TA>>(size, AllDomain::new(), constant).into_any()
     }

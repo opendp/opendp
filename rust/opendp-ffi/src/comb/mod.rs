@@ -2,6 +2,9 @@ use opendp::comb::{make_basic_composition, make_chain_mt, make_chain_tt};
 
 use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
 use crate::core::FfiResult;
+use crate::util::Type;
+use num::Float;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -27,7 +30,6 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
     // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
     make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
-
 
 #[cfg(test)]
 mod tests {

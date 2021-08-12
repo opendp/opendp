@@ -16,9 +16,9 @@ pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
           MX: 'static + Metric,
           MO: 'static + Measure {
     if transformation0.output_domain != measurement1.input_domain {
-        return fallible!(DomainMismatch, "Intermediate domain mismatch");
+        return fallible!(DomainMismatch, "Intermediate domain mismatch: {:?} != {:?}", transformation0.output_domain, measurement1.input_domain);
     } else if transformation0.output_metric != measurement1.input_metric {
-        return fallible!(MetricMismatch, "Intermediate metric mismatch");
+        return fallible!(MetricMismatch, "Intermediate metric mismatch: {:?} != {:?}", transformation0.output_metric, measurement1.input_metric);
     }
 
     Ok(Measurement::new(
@@ -43,9 +43,9 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
           MX: 'static + Metric,
           MO: 'static + Metric {
     if transformation0.output_domain != transformation1.input_domain {
-        return fallible!(DomainMismatch, "Intermediate domain mismatch");
+        return fallible!(DomainMismatch, "Intermediate domain mismatch: {:?} != {:?}", transformation0.output_domain, transformation1.input_domain);
     } else if transformation0.output_metric != transformation1.input_metric {
-        return fallible!(MetricMismatch, "Intermediate metric mismatch");
+        return fallible!(MetricMismatch, "Intermediate metric mismatch: {:?} != {:?}", transformation0.output_metric, transformation1.input_metric);
     }
 
     Ok(Transformation::new(

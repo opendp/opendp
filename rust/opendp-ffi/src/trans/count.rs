@@ -14,7 +14,7 @@ use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_ca
 use crate::any::{AnyObject, AnyTransformation};
 use crate::any::Downcast;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::util::Type;
+use crate::util::Type;use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count(
@@ -22,8 +22,8 @@ pub extern "C" fn opendp_trans__make_count(
     TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<TIA, TO>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + CheckNull,
-              TO: 'static + ExactIntCast<usize> + Bounded + One + DistanceConstant<IntDistance> + CheckNull,
+        where TIA: 'static + CheckNull + Debug,
+              TO: 'static + ExactIntCast<usize> + Bounded + One + DistanceConstant<IntDistance> + CheckNull + Debug,
               IntDistance: InfCast<TO> {
         make_count::<TIA, TO>().into_any()
     }
@@ -42,8 +42,8 @@ pub extern "C" fn opendp_trans__make_count_distinct(
     TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<TIA, TO: 'static>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + Eq + Hash + CheckNull,
-              TO: 'static + ExactIntCast<usize> + Bounded + One + DistanceConstant<IntDistance> + CheckNull,
+        where TIA: 'static + Eq + Hash + CheckNull + Debug,
+              TO: 'static + ExactIntCast<usize> + Bounded + One + DistanceConstant<IntDistance> + CheckNull + Debug,
               IntDistance: InfCast<TO> {
         make_count_distinct::<TIA, TO>().into_any()
     }
@@ -65,13 +65,13 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
         categories: *const AnyObject,
         MO: Type, TI: Type, TO: Type,
     ) -> FfiResult<*mut AnyTransformation>
-        where QO: DistanceConstant<IntDistance> + FloatConst + One,
+        where QO: DistanceConstant<IntDistance> + FloatConst + One + Debug,
               IntDistance: InfCast<QO> {
         fn monomorphize2<MO, TI, TO>(categories: *const AnyObject) -> FfiResult<*mut AnyTransformation>
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + One,
-                  TI: 'static + Eq + Hash + Clone + CheckNull,
-                  TO: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
+                  TI: 'static + Eq + Hash + Clone + CheckNull + Debug,
+                  TO: 'static + Integer + Zero + One + SaturatingAdd + CheckNull + Debug,
                   IntDistance: InfCast<MO::Distance> {
             let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
             make_count_by_categories::<MO, TI, TO>(categories).into_any()
@@ -100,13 +100,13 @@ pub extern "C" fn opendp_trans__make_count_by(
     fn monomorphize<QO>(
         size: usize, MO: Type, TIA: Type, TOA: Type,
     ) -> FfiResult<*mut AnyTransformation>
-        where QO: DistanceConstant<IntDistance> + FloatConst + One,
+        where QO: DistanceConstant<IntDistance> + FloatConst + One + Debug,
               IntDistance: InfCast<QO> {
         fn monomorphize2<MO, TIA, TOA>(size: usize) -> FfiResult<*mut AnyTransformation>
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + FloatConst + One,
-                  TIA: 'static + Eq + Hash + Clone + CheckNull,
-                  TOA: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
+                  TIA: 'static + Eq + Hash + Clone + CheckNull + Debug,
+                  TOA: 'static + Integer + Zero + One + SaturatingAdd + CheckNull + Debug,
                   IntDistance: InfCast<MO::Distance> {
             make_count_by::<MO, TIA, TOA>(size).into_any()
         }

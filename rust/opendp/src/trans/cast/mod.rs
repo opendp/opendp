@@ -4,11 +4,13 @@ use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, 
 use crate::error::Fallible;
 use crate::traits::{RoundCast, CheckNull};
 use crate::trans::make_row_by_row;
+use std::fmt::Debug;
 
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TIA> -> Vec<Option<TOA>>
 pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<OptionNullDomain<AllDomain<TOA>>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + Clone + CheckNull, TOA: 'static + RoundCast<TIA> + CheckNull {
+    where TIA: 'static + Clone + CheckNull + Debug,
+          TOA: 'static + RoundCast<TIA> + CheckNull + Debug {
     make_row_by_row(
         AllDomain::new(),
         OptionNullDomain::new(AllDomain::new()),
@@ -19,7 +21,8 @@ pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<T
 /// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.
 /// Maps a Vec<TIA> -> Vec<TOA>
 pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + Clone + CheckNull, TOA: 'static + RoundCast<TIA> + Default + CheckNull {
+    where TIA: 'static + Clone + CheckNull + Debug,
+          TOA: 'static + RoundCast<TIA> + Default + CheckNull + Debug {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
@@ -30,7 +33,8 @@ pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<All
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_inherent<TIA, TOA>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<InherentNullDomain<AllDomain<TOA>>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + Clone + CheckNull, TOA: 'static + RoundCast<TIA> + InherentNull + CheckNull {
+    where TIA: 'static + Clone + CheckNull + Debug,
+          TOA: 'static + RoundCast<TIA> + InherentNull + CheckNull + Debug {
     make_row_by_row(
         AllDomain::new(),
         InherentNullDomain::new(AllDomain::new()),

@@ -6,8 +6,9 @@ use crate::dom::{AllDomain, BoundedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
+use std::fmt::Debug;
 
-pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull>(
+pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull + Debug>(
     bounds: (T, T)
 ) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<BoundedDomain<T>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row_fallible(
@@ -16,7 +17,7 @@ pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull>(
         move |arg: &T| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
 }
 
-pub fn make_unclamp<T: 'static + Clone + TotalOrd + CheckNull>(
+pub fn make_unclamp<T: 'static + Clone + TotalOrd + CheckNull + Debug>(
     bounds: (Bound<T>, Bound<T>)
 ) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row(

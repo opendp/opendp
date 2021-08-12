@@ -14,7 +14,7 @@ use opendp::traits::{ExactIntCast, CheckNull, TotalOrd};
 
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::util::Type;
+use crate::util::Type;use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_stability(
@@ -29,15 +29,15 @@ pub extern "C" fn opendp_meas__make_base_stability(
         size: usize, scale: *const c_void, threshold: *const c_void,
         MI: Type, TIK: Type, TIC: Type,
     ) -> FfiResult<*mut AnyMeasurement>
-        where TIC: 'static + Integer + Zero + One + AddAssign + Clone + CheckNull,
-              TOC: 'static + TotalOrd + Clone + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull {
+        where TIC: 'static + Integer + Zero + One + AddAssign + Clone + CheckNull + Debug,
+              TOC: 'static + TotalOrd + Clone + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull + Debug {
         fn monomorphize2<MI, TIK, TIC>(
             size: usize, scale: MI::Distance, threshold: MI::Distance,
         ) -> FfiResult<*mut AnyMeasurement>
             where MI: 'static + SensitivityMetric + BaseStabilityNoise,
-                  TIK: 'static + Eq + Hash + Clone + CheckNull,
-                  TIC: 'static + Integer + Zero + One + AddAssign + Clone + CheckNull,
-                  MI::Distance: 'static + Clone + TotalOrd + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull {
+                  TIK: 'static + Eq + Hash + Clone + CheckNull + Debug,
+                  TIC: 'static + Integer + Zero + One + AddAssign + Clone + CheckNull + Debug,
+                  MI::Distance: 'static + Clone + TotalOrd + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull + Debug {
             make_base_stability::<MI, TIK, TIC>(size, scale, threshold).into_any()
         }
         let scale = *try_as_ref!(scale as *const TOC);

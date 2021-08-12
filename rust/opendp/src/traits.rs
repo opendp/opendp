@@ -5,6 +5,7 @@ use num::{NumCast, One, Zero};
 
 use crate::error::Fallible;
 use std::cmp::{Ordering};
+use std::fmt::Debug;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.
@@ -52,12 +53,12 @@ impl<'a, T0, T1, Rhs0, Rhs1> FallibleSub<&'a (Rhs0, Rhs1)> for (T0, T1) where T0
 }
 
 /// A type that can be used as a measure distance.
-pub trait MeasureDistance: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
-impl<T> MeasureDistance for T where T: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> {}
+pub trait MeasureDistance: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> + Debug {}
+impl<T> MeasureDistance for T where T: PartialOrd + for<'a> FallibleSub<&'a Self, Output=Self> + Debug {}
 
 /// A type that can be used as a metric distance.
-pub trait MetricDistance: PartialOrd {}
-impl<T> MetricDistance for T where T: PartialOrd {}
+pub trait MetricDistance: PartialOrd + Debug {}
+impl<T> MetricDistance for T where T: PartialOrd + Debug {}
 
 
 pub trait Abs { fn abs(self) -> Self; }

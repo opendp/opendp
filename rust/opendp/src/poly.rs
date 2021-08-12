@@ -5,7 +5,7 @@ use crate::core::{Domain, Function, Measure, Measurement, Metric, Transformation
 use crate::error::*;
 
 /// A polymorphic Domain. This admits any value of any type (represented as a Box<dyn Any>).
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct PolyDomain {}
 
 impl PolyDomain {

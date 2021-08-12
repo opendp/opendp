@@ -26,20 +26,31 @@ use crate::dom::PairDomain;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast};
 use crate::dist::IntDistance;
+use std::fmt::{Debug, Formatter};
+
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
-pub trait Domain: Clone + PartialEq {
+pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
-    type Carrier;
+    type Carrier: Debug;
     /// Predicate to test an element for membership in the domain.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-#[derive(Clone)]
 pub struct Function<DI: Domain, DO: Domain> {
     pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
+}
+impl<DI: Domain, DO: Domain> Debug for Function<DI, DO> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Function(|&DI::Carrier| -> DO::Carrier)")
+    }
+}
+impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+    fn clone(&self) -> Self {
+        Function {function: self.function.clone()}
+    }
 }
 
 impl<DI: Domain, DO: Domain> Function<DI, DO> {
@@ -73,13 +84,13 @@ impl<DI: 'static + Domain, DO0: 'static + Domain, DO1: 'static + Domain> Functio
 }
 
 /// A representation of the distance between two elements in a set.
-pub trait Metric: Default + Clone + PartialEq {
-    type Distance;
+pub trait Metric: Default + Clone + PartialEq + Debug {
+    type Distance: Debug;
 }
 
 /// A representation of the distance between two distributions.
-pub trait Measure: Default + Clone + PartialEq {
-    type Distance;
+pub trait Measure: Default + Clone + PartialEq + Debug {
+    type Distance: Debug;
 }
 
 /// An indicator trait that is only implemented for dataset distances.
@@ -123,10 +134,23 @@ impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct PrivacyRelation<MI: Metric, MO: Measure> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<Box<MI::Distance>>>>,
+}
+
+impl<MI: Metric, MO: Measure> Clone for PrivacyRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        PrivacyRelation {
+            relation: self.relation.clone(),
+            backward_map: self.backward_map.clone()
+        }
+    }
+}
+impl<MI: Metric, MO: Measure> Debug for PrivacyRelation<MI, MO> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "PrivacyRelation(|&MI::Distance, &MO::Distance| -> bool)")
+    }
 }
 
 impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
@@ -336,6 +360,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityRelation<MI, MO> {
 
 
 /// A randomized mechanism with certain privacy characteristics.
+#[derive(Clone, Debug)]
 pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
     pub output_domain: DO,
@@ -366,6 +391,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
 }
 
 /// A data transformation with certain stability characteristics.
+#[derive(Clone, Debug)]
 pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,
     pub output_domain: DO,

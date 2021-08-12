@@ -3,12 +3,13 @@
 use std::marker::PhantomData;
 
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
+use std::fmt::Debug;
 
 // default type for distances between datasets
 pub type IntDistance = u32;
 
 /// Measures
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MaxDivergence<Q>(PhantomData<Q>);
 impl<Q> Default for MaxDivergence<Q> {
     fn default() -> Self { MaxDivergence(PhantomData) }
@@ -18,11 +19,11 @@ impl<Q> PartialEq for MaxDivergence<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
 
-impl<Q: Clone> Measure for MaxDivergence<Q> {
+impl<Q: Clone + Debug> Measure for MaxDivergence<Q> {
     type Distance = Q;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
 
 impl<Q> Default for SmoothedMaxDivergence<Q> {
@@ -33,12 +34,12 @@ impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
 
-impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
+impl<Q: Clone + Debug> Measure for SmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
 
 /// Metrics
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SymmetricDistance;
 
 impl Default for SymmetricDistance {
@@ -54,7 +55,7 @@ impl Metric for SymmetricDistance {
 
 impl DatasetMetric for SymmetricDistance {}
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SubstituteDistance;
 
 impl Default for SubstituteDistance {
@@ -72,6 +73,7 @@ impl Metric for SubstituteDistance {
 impl DatasetMetric for SubstituteDistance {}
 
 // Sensitivity in P-space
+#[derive(Debug)]
 pub struct LpDistance<Q, const P: usize>(PhantomData<Q>);
 impl<Q, const P: usize> Default for LpDistance<Q, P> {
     fn default() -> Self { LpDistance(PhantomData) }
@@ -83,15 +85,16 @@ impl<Q, const P: usize> Clone for LpDistance<Q, P> {
 impl<Q, const P: usize> PartialEq for LpDistance<Q, P> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-impl<Q, const P: usize> Metric for LpDistance<Q, P> {
+impl<Q: Debug, const P: usize> Metric for LpDistance<Q, P> {
     type Distance = Q;
 }
-impl<Q, const P: usize> SensitivityMetric for LpDistance<Q, P> {}
+impl<Q: Debug, const P: usize> SensitivityMetric for LpDistance<Q, P> {}
 
 pub type L1Distance<Q> = LpDistance<Q, 1>;
 pub type L2Distance<Q> = LpDistance<Q, 2>;
 
 
+#[derive(Debug)]
 pub struct AbsoluteDistance<Q>(PhantomData<Q>);
 impl<Q> Default for AbsoluteDistance<Q> {
     fn default() -> Self { AbsoluteDistance(PhantomData) }
@@ -103,7 +106,7 @@ impl<Q> Clone for AbsoluteDistance<Q> {
 impl<Q> PartialEq for AbsoluteDistance<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-impl<Q> Metric for AbsoluteDistance<Q> {
+impl<Q: Debug> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
-impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
+impl<Q: Debug> SensitivityMetric for AbsoluteDistance<Q> {}

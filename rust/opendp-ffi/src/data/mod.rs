@@ -13,7 +13,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::util;
 use crate::util::{c_bool, Type, TypeContents};
 use opendp::traits::{MeasureDistance, MetricDistance};
-use std::fmt::Formatter;
+use std::fmt::{Formatter, Debug};
 use std::hash::Hash;
 
 
@@ -82,7 +82,7 @@ pub extern "C" fn opendp_data___slice_as_metric_distance(
 pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
     let T = try_!(Type::try_from(T));
-    fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_plain<T: 'static + Clone + Debug>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 1 {
             return fallible!(FFI, "The slice length must be one when creating a scalar from FfiSlice");
         }
@@ -106,12 +106,12 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
         unimplemented!()
     }
     #[allow(clippy::unnecessary_wraps)]
-    fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_vec<T: 'static + Clone + Debug>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
         let vec = slice.to_vec();
         Ok(AnyObject::new(vec))
     }
-    fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_tuple<T0: 'static + Clone + Debug, T1: 'static + Clone + Debug>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 2 {
             return fallible!(FFI, "The slice length must be two when creating a tuple from FfiSlice");
         }
@@ -122,7 +122,7 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
     }
-    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+    fn raw_to_hashmap<K: 'static + Clone + Debug + Hash + Eq, V: 'static + Clone + Debug>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
 
         // unpack keys and values into slices
@@ -221,7 +221,7 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
             &tuple.1 as *const T1 as *const c_void
         ]) as *mut c_void, 2))
     }
-    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(obj: &AnyObject) -> Fallible<FfiSlice> {
+    fn hashmap_to_raw<K: 'static + Clone + Debug + Hash + Eq, V: 'static + Clone + Debug>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let data: &HashMap<K, V> = obj.downcast_ref()?;
 
         // wrap keys and values up in an AnyObject

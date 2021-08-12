@@ -6,11 +6,12 @@ use crate::error::Fallible;
 use crate::dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain};
 use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
 use num::{Float};
+use std::fmt::Debug;
 
 pub fn make_sized_bounded_mean<T>(
     size: usize, bounds: (T, T)
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize>, for <'a> T: Sum<&'a T> + CheckedMul + CheckNull,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize>, for <'a> T: Sum<&'a T> + CheckedMul + CheckNull + Debug,
           IntDistance: InfCast<T> {
     let _size = T::exact_int_cast(size)?;
     let _2 = T::exact_int_cast(2)?;

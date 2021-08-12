@@ -17,6 +17,7 @@ use opendp::traits::{FallibleSub, MeasureDistance, MetricDistance};
 
 use crate::glue::Glue;
 use crate::util::Type;
+use std::fmt::{Formatter, Debug};
 
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
@@ -29,26 +30,37 @@ pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool> {
     pub value: Box<dyn Any>,
     clone_glue: Option<Glue<fn(&Self) -> Self>>,
     eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+    debug_glue: Glue<fn(&Self) -> String>
 }
 
 impl<const CLONE: bool, const PARTIALEQ: bool> AnyBoxBase<CLONE, PARTIALEQ> {
-    fn new_base<T: 'static>(value: T, clone_glue: Option<Glue<fn(&Self) -> Self>>, eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>) -> Self {
-        Self { value: Box::new(value), clone_glue, eq_glue }
+    fn new_base<T: 'static>(
+        value: T,
+        clone_glue: Option<Glue<fn(&Self) -> Self>>,
+        eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+        debug_glue: Glue<fn(&Self) -> String>
+    ) -> Self {
+        Self { value: Box::new(value), clone_glue, eq_glue, debug_glue }
     }
-    fn make_clone_glue<T: 'static + Clone>() -> Option<Glue<fn(&Self) -> Self>> {
-        Some(Glue::new(|self_: &Self| {
+    fn make_clone_glue<T: 'static + Clone>() -> Glue<fn(&Self) -> Self> {
+        Glue::new(|self_: &Self| {
             Self::new_base(
                 self_.value.downcast_ref::<T>().unwrap_assert("Failed downcast of AnyBox value").clone(),
                 self_.clone_glue.clone(),
                 self_.eq_glue.clone(),
+                self_.debug_glue.clone()
             )
-        }))
+        })
     }
-    fn make_eq_glue<T: 'static + PartialEq>() -> Option<Glue<fn(&Self, &Self) -> bool>> {
-        Some(Glue::new(|self_: &Self, other: &Self| {
+    fn make_eq_glue<T: 'static + PartialEq>() -> Glue<fn(&Self, &Self) -> bool> {
+        Glue::new(|self_: &Self, other: &Self| {
             // The first downcast will always succeed, so equality check is all that's necessary.
             self_.value.downcast_ref::<T>() == other.value.downcast_ref::<T>()
-        }))
+        })
+    }
+    fn make_debug_glue<T: 'static + Debug>() -> Glue<fn(&Self) -> String> {
+        Glue::new(|self_: &Self| format!("{:?}", self_.value.downcast_ref::<T>()
+            .unwrap_assert("Failed downcast of AnyBox value")))
     }
 }
 
@@ -72,13 +84,18 @@ impl<const CLONE: bool> PartialEq for AnyBoxBase<CLONE, true> {
         (self.eq_glue.as_ref().unwrap_assert("No eq_glue for AnyBox"))(self, other)
     }
 }
+impl<const CLONE: bool, const PARTIALEQ: bool> Debug for AnyBoxBase<CLONE, PARTIALEQ> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", (self.debug_glue)(self))
+    }
+}
 
 /// An AnyBox not implementing optional traits.
 pub type AnyBox = AnyBoxBase<false, false>;
 
 impl AnyBox {
-    pub fn new<T: 'static>(value: T) -> Self {
-        Self::new_base(value, None, None)
+    pub fn new<T: 'static + Debug>(value: T) -> Self {
+        Self::new_base(value, None, None, Self::make_debug_glue::<T>())
     }
 }
 
@@ -86,8 +103,8 @@ impl AnyBox {
 pub type AnyBoxClone = AnyBoxBase<true, false>;
 
 impl AnyBoxClone {
-    pub fn new_clone<T: 'static + Clone>(value: T) -> Self {
-        Self::new_base(value, Self::make_clone_glue::<T>(), None)
+    pub fn new_clone<T: 'static + Clone + Debug>(value: T) -> Self {
+        Self::new_base(value, Some(Self::make_clone_glue::<T>()), None, Self::make_debug_glue::<T>())
     }
 }
 
@@ -95,8 +112,8 @@ impl AnyBoxClone {
 pub type AnyBoxPartialEq = AnyBoxBase<false, true>;
 
 impl AnyBoxPartialEq {
-    pub fn new_partial_eq<T: 'static + PartialEq>(value: T) -> Self {
-        Self::new_base(value, None, Self::make_eq_glue::<T>())
+    pub fn new_partial_eq<T: 'static + PartialEq + Debug>(value: T) -> Self {
+        Self::new_base(value, None, Some(Self::make_eq_glue::<T>()), Self::make_debug_glue::<T>())
     }
 }
 
@@ -104,8 +121,8 @@ impl AnyBoxPartialEq {
 pub type AnyBoxClonePartialEq = AnyBoxBase<true, true>;
 
 impl AnyBoxClonePartialEq {
-    pub fn new_clone_partial_eq<T: 'static + Clone + PartialEq>(value: T) -> Self {
-        Self::new_base(value, Self::make_clone_glue::<T>(), Self::make_eq_glue::<T>())
+    pub fn new_clone_partial_eq<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
+        Self::new_base(value, Some(Self::make_clone_glue::<T>()), Some(Self::make_eq_glue::<T>()), Self::make_debug_glue::<T>())
     }
 }
 
@@ -116,7 +133,7 @@ pub struct AnyObject {
 }
 
 impl AnyObject {
-    pub fn new<T: 'static>(value: T) -> Self {
+    pub fn new<T: 'static + Debug>(value: T) -> Self {
         Self { type_: Type::of::<T>(), value: AnyBox::new(value) }
     }
 
@@ -172,6 +189,12 @@ impl Domain for AnyDomain {
     }
 }
 
+impl Debug for AnyDomain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.domain.fmt(f)
+    }
+}
+
 // TODO: If/when we remove the clone of the budget from make_adaptive_composition(), then remove Clone from AnyXXXDistance.
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasureDistance {
@@ -181,7 +204,7 @@ pub struct AnyMeasureDistance {
 }
 
 impl AnyMeasureDistance {
-    pub fn new<Q: 'static + Clone + MeasureDistance>(distance: Q) -> Self {
+    pub fn new<Q: 'static + Clone + MeasureDistance + Debug>(distance: Q) -> Self {
         Self {
             distance: AnyBoxClonePartialEq::new_clone_partial_eq(distance),
             partial_cmp_glue: Glue::new(|self_: &Self, other: &Self| -> Option<Ordering> {
@@ -214,6 +237,11 @@ impl PartialOrd for AnyMeasureDistance {
         (self.partial_cmp_glue)(self, other)
     }
 }
+impl Debug for AnyMeasureDistance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.distance.fmt(f)
+    }
+}
 
 impl FallibleSub<&Self> for AnyMeasureDistance {
     type Output = Self;
@@ -231,7 +259,7 @@ pub struct AnyMetricDistance {
 }
 
 impl AnyMetricDistance {
-    pub fn new<Q: 'static + Clone + MetricDistance>(distance: Q) -> Self {
+    pub fn new<Q: 'static + Clone + MetricDistance + Debug>(distance: Q) -> Self {
         Self {
             distance: AnyBoxClonePartialEq::new_clone_partial_eq(distance),
             partial_cmp_glue: Glue::new(|self_: &Self, other: &Self| -> Option<Ordering> {
@@ -256,6 +284,11 @@ impl Downcast for AnyMetricDistance {
 impl PartialOrd for AnyMetricDistance {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         (self.partial_cmp_glue)(self, other)
+    }
+}
+impl Debug for AnyMetricDistance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.distance.fmt(f)
     }
 }
 
@@ -290,6 +323,11 @@ impl Default for AnyMeasure {
 impl Measure for AnyMeasure {
     type Distance = AnyMeasureDistance;
 }
+impl Debug for AnyMeasure {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.measure.fmt(f)
+    }
+}
 
 #[derive(Clone, PartialEq)]
 pub struct AnyMetric {
@@ -321,6 +359,12 @@ impl Default for AnyMetric {
 
 impl Metric for AnyMetric {
     type Distance = AnyMetricDistance;
+}
+
+impl Debug for AnyMetric {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.metric.fmt(f)
+    }
 }
 
 type AnyFunction = Function<AnyDomain, AnyDomain>;
@@ -371,7 +415,7 @@ fn make_any_relation<QI: 'static, QO: 'static, AQI: Downcast, AQO: Downcast>(rel
 
 fn make_any_map<QI, QO, AQI>(map: &Option<Rc<dyn Fn(&QI) -> Fallible<Box<QO>>>>) -> Option<impl Fn(&AQI) -> Fallible<Box<AnyMetricDistance>>>
     where QI: 'static + PartialOrd,
-          QO: 'static + PartialOrd + Clone,
+          QO: 'static + PartialOrd + Clone + Debug,
           AQI: Downcast {
     map.as_ref().map(|map| {
         let map = map.clone();

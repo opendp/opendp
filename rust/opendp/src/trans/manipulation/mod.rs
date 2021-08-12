@@ -5,6 +5,7 @@ use crate::error::*;
 use crate::traits::{DistanceConstant, CheckNull};
 use crate::dom::{VectorDomain, AllDomain};
 use crate::dist::SymmetricDistance;
+use std::fmt::Debug;
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -63,7 +64,7 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
 pub fn make_is_equal<TIA>(
     value: TIA
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + PartialEq + CheckNull {
+    where TIA: 'static + PartialEq + CheckNull + Debug {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),

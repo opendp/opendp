@@ -9,11 +9,12 @@ use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
+use std::fmt::Debug;
 
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
-    where TIA: CheckNull,
-          TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance> + CheckNull,
+    where TIA: CheckNull + Debug,
+          TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance> + CheckNull + Debug,
           IntDistance: InfCast<TO> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
@@ -29,8 +30,8 @@ pub fn make_count<TIA, TO>(
 
 pub fn make_count_distinct<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
-    where TIA: Eq + Hash + CheckNull,
-          TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance> + CheckNull,
+    where TIA: Eq + Hash + CheckNull + Debug,
+          TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance> + CheckNull + Debug,
           IntDistance: InfCast<TO> {
     Ok(Transformation::new(
         VectorDomain::new_all(),
@@ -57,8 +58,8 @@ pub fn make_count_by_categories<MO, TI, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance> + One,
-          TI: 'static + Eq + Hash + CheckNull,
-          TO: Integer + Zero + One + SaturatingAdd + CheckNull,
+          TI: 'static + Eq + Hash + CheckNull + Debug,
+          TO: Integer + Zero + One + SaturatingAdd + CheckNull + Debug,
           IntDistance: InfCast<MO::Distance>{
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
@@ -98,8 +99,8 @@ pub fn make_count_by<MO, TI, TO>(
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance>,
-          TI: 'static + Eq + Hash + Clone + CheckNull,
-          TO: Integer + Zero + One + SaturatingAdd + CheckNull,
+          TI: 'static + Eq + Hash + Clone + CheckNull + Debug,
+          TO: Integer + Zero + One + SaturatingAdd + CheckNull + Debug,
           IntDistance: InfCast<MO::Distance> {
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), size),

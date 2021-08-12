@@ -8,11 +8,12 @@ use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, CheckedMul, ExactIntCast, CheckNull};
+use std::fmt::Debug;
 
 pub fn make_bounded_sum<T>(
     bounds: (T, T)
 ) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero + CheckNull,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero + CheckNull + Debug,
           IntDistance: InfCast<T> {
     let (lower, upper) = bounds.clone();
 
@@ -29,7 +30,7 @@ pub fn make_bounded_sum<T>(
 pub fn make_sized_bounded_sum<T>(
     size: usize, bounds: (T, T)
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T>, for <'a> T: Sum<&'a T> + ExactIntCast<usize> + CheckedMul + CheckNull,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T>, for <'a> T: Sum<&'a T> + ExactIntCast<usize> + CheckedMul + CheckNull + Debug,
           IntDistance: InfCast<T> {
     let size_ = T::exact_int_cast(size)?;
     let (lower, upper) = bounds.clone();

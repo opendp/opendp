@@ -13,6 +13,7 @@ use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
 use opendp::traits::CheckNull;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_impute_uniform_float(
@@ -24,7 +25,7 @@ pub extern "C" fn opendp_trans__make_impute_uniform_float(
     fn monomorphize<TA>(
         bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where for<'a> TA: 'static + Float + SampleUniform + Clone + Sub<Output=TA> + Mul<&'a TA, Output=TA> + Add<&'a TA, Output=TA> + InherentNull {
+        where for<'a> TA: 'static + Float + SampleUniform + Clone + Sub<Output=TA> + Mul<&'a TA, Output=TA> + Add<&'a TA, Output=TA> + InherentNull + Debug {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
         make_impute_uniform_float::<TA>(bounds).into_any()
     }
@@ -45,7 +46,7 @@ pub extern "C" fn opendp_trans__make_impute_constant(
                 constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
                 where OptionNullDomain<AllDomain<TA>>: ImputableDomain<Imputed=TA>,
-                      TA: 'static + Clone + CheckNull{
+                      TA: 'static + Clone + CheckNull + Debug {
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
                 make_impute_constant::<OptionNullDomain<AllDomain<TA>>>(constant).into_any()
             }
@@ -56,7 +57,7 @@ pub extern "C" fn opendp_trans__make_impute_constant(
                 constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
                 where InherentNullDomain<AllDomain<TA>>: ImputableDomain<Imputed=TA>,
-                      TA: 'static + InherentNull + Clone {
+                      TA: 'static + InherentNull + Clone + Debug {
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
                 make_impute_constant::<InherentNullDomain<AllDomain<TA>>>(constant).into_any()
             }

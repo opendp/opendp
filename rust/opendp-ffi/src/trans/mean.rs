@@ -13,6 +13,7 @@ use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
 use opendp::dist::IntDistance;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_sized_bounded_mean(
@@ -20,7 +21,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_mean(
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize> + CheckedMul + CheckNull,
+        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize> + CheckedMul + CheckNull + Debug,
               for<'a> T: Sum<&'a T>,
               IntDistance: InfCast<T> {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
