@@ -138,7 +138,7 @@ impl AnyObject {
     }
 
     #[cfg(test)]
-    pub fn new_raw<T: 'static>(value: T) -> *mut Self {
+    pub fn new_raw<T: 'static + Debug>(value: T) -> *mut Self {
         crate::util::into_raw(Self::new(value))
     }
 }

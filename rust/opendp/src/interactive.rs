@@ -172,7 +172,7 @@ mod tests {
 
     use super::*;
 
-    fn make_dummy_meas<TO: From<i32> + CheckNull>() -> Measurement<AllDomain<i32>, AllDomain<TO>, AbsoluteDistance<f64>, MaxDivergence<f64>> {
+    fn make_dummy_meas<TO: From<i32> + CheckNull + Debug>() -> Measurement<AllDomain<i32>, AllDomain<TO>, AbsoluteDistance<f64>, MaxDivergence<f64>> {
         Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
