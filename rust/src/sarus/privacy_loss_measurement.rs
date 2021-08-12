@@ -27,7 +27,7 @@ pub trait FDifferentialPrivacy {
 
 impl FDifferentialPrivacy for PLMMeasurement {
     fn f(&self) -> Vec<(f64, f64)> {
-        self.output_domain.tradeoff().into_iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect()
+        self.output_domain.f()
     }
 }
 
