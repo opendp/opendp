@@ -152,7 +152,7 @@ impl Downcast for AnyObject {
 #[derive(Clone, PartialEq)]
 pub struct AnyDomain {
     pub carrier_type: Type,
-    domain: AnyBoxClonePartialEqDebug,
+    pub domain: AnyBoxClonePartialEqDebug,
     member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>>,
 }
 

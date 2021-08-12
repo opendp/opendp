@@ -39,9 +39,13 @@ pub trait Domain: Clone + PartialEq + Debug {
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-#[derive(Clone)]
 pub struct Function<DI: Domain, DO: Domain> {
     pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
+}
+impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+    fn clone(&self) -> Self {
+        Function {function: self.function.clone()}
+    }
 }
 
 impl<DI: Domain, DO: Domain> Function<DI, DO> {
@@ -125,10 +129,18 @@ impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct PrivacyRelation<MI: Metric, MO: Measure> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
+}
+
+impl<MI: Metric, MO: Measure> Clone for PrivacyRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        PrivacyRelation {
+            relation: self.relation.clone(),
+            backward_map: self.backward_map.clone()
+        }
+    }
 }
 
 impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
@@ -237,11 +249,20 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
 ///
 /// A `StabilityRelation` is implemented as a function that takes an input and output [`Metric::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct StabilityRelation<MI: Metric, MO: Metric> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub forward_map: Option<Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
+}
+
+impl<MI: Metric, MO: Metric> Clone for StabilityRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        StabilityRelation {
+            relation: self.relation.clone(),
+            forward_map: self.forward_map.clone(),
+            backward_map: self.backward_map.clone()
+        }
+    }
 }
 
 impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
@@ -338,6 +359,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityRelation<MI, MO> {
 
 
 /// A randomized mechanism with certain privacy characteristics.
+#[derive(Clone)]
 pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
     pub output_domain: DO,
@@ -376,6 +398,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
 }
 
 /// A data transformation with certain stability characteristics.
+#[derive(Clone)]
 pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,
     pub output_domain: DO,
