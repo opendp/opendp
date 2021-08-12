@@ -25,10 +25,13 @@ impl<'a> PLDistribution {
         |s,(_,p)| {s+p});
         let sum_p_y = p_y_x_p_x.iter().fold(Rational::from(0),
         |s,(l,p)| {s+p.clone()*l});
-        PLDistribution {exp_privacy_loss_probabilities:
-            BTreeMap::from_iter(p_y_x_p_x.into_iter().map(
-                |(p_y_x,p_x)| (p_y_x*&sum_p_x/&sum_p_y, p_x/&sum_p_x) ))
+        let mut p_y_x_p_x_map:BTreeMap<Rational, Rational> = BTreeMap::new();
+        for (p_y_x, p_x) in p_y_x_p_x {
+            p_y_x_p_x_map.entry(p_y_x*&sum_p_x/&sum_p_y)
+                    .and_modify(|p| { *p += p_x.clone()/&sum_p_x })
+                    .or_insert(p_x/&sum_p_x);
         }
+        PLDistribution {exp_privacy_loss_probabilities:p_y_x_p_x_map}
     }
 
     pub fn probabilities(&self) -> &BTreeMap<Rational, Rational> {
@@ -44,6 +47,15 @@ impl<'a> PLDistribution {
     pub fn delta<Q>(&self, exp_epsilon: Q) -> Rational
     where Q: Clone, Rational: TryFrom<Q> {
         let exp_epsilon = Rational::try_from(exp_epsilon).unwrap_or_default();
+
+        // DEBUG
+        let mut spx = 0.0;
+        let mut spy = 0.0;
+        for (eyx,px ) in &self.exp_privacy_loss_probabilities {
+            spx += px.to_f64();
+            spy += px.to_f64()*eyx.to_f64();
+        }
+
         let (delta_x_y, delta_y_x) = if &exp_epsilon>&Rational::from(0) {
             self.exp_privacy_loss_probabilities.iter().fold((Rational::from(0), Rational::from(0)), 
             |(delta_x_y,delta_y_x),(l_y_x,p_x)| {
@@ -53,7 +65,6 @@ impl<'a> PLDistribution {
         } else {
             (Rational::from(1), Rational::from(1))
         };
-        println!("exp_epsilon: {:?}, delta_x_y: {:?} - delta_y_x: {:?}", exp_epsilon.to_f64(), delta_x_y.to_f64(), delta_y_x.to_f64());
         Rational::max(delta_x_y,delta_y_x)
     }
 
@@ -62,13 +73,13 @@ impl<'a> PLDistribution {
         let mut result = Vec::new();
         let mut exp_epsilons_set:BTreeSet<Rational> = BTreeSet::new();
         // Initialize the set of possible exp_eps
-        // for exp_epsilon in self.exp_privacy_loss_probabilities.keys() {
-        //     exp_epsilons_set.insert(exp_epsilon.clone());
-        //     // if exp_epsilon>&Rational::from(0) {
-        //     //     exp_epsilons_set.insert(exp_epsilon.clone().recip());
-        //     // }
-        // }
-        let exp_epsilons: Vec<Rational> = self.exp_privacy_loss_probabilities.keys().rev().map(|k| k.clone()).collect();
+        for exp_epsilon in self.exp_privacy_loss_probabilities.keys() {
+            exp_epsilons_set.insert(exp_epsilon.clone());
+            if exp_epsilon>&Rational::from(0) {
+                exp_epsilons_set.insert(exp_epsilon.clone().recip());
+            }
+        }
+        let exp_epsilons: Vec<Rational> = exp_epsilons_set.into_iter().rev().collect();
         let mut last_exp_epsilon = exp_epsilons[0].clone();
         let mut last_delta= self.delta(last_exp_epsilon.clone());
         result.push((Rational::from(0), Rational::from(1)-&last_delta));
@@ -80,7 +91,6 @@ impl<'a> PLDistribution {
                 (last_delta.clone()-&delta)/&denom,
                 ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
             ));
-            println!("exp_epsilon: {:?}, delta: {:?}, alpha: {:?}, beta {:?}", exp_epsilon.to_f64(), delta.to_f64(), result.last().unwrap().0.to_f64(), result.last().unwrap().1.to_f64());
             last_exp_epsilon = exp_epsilon.clone();
             last_delta = delta.clone();
         }
@@ -91,7 +101,6 @@ impl<'a> PLDistribution {
             (last_delta.clone()-&delta)/&denom,
             ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
         ));
-        println!("{:?}", exp_epsilons.into_iter().map(|e| (e.clone().to_f64(), self.delta(e.clone()).to_f64())).collect::<Vec<(f64,f64)>>());
         result
     }
 
@@ -109,7 +118,7 @@ impl Mul for &PLDistribution {
             for (o_epl,o_prob) in &other.exp_privacy_loss_probabilities {
                 let epl = s_epl.clone() * o_epl;
                 result.exp_privacy_loss_probabilities.entry(epl)
-                    .and_modify(|prob| { *prob *= s_prob.clone() * o_prob })
+                    .and_modify(|prob| { *prob += s_prob.clone() * o_prob })
                     .or_insert(s_prob.clone() * o_prob);
             }
         }

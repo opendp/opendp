@@ -2,11 +2,12 @@ use std::rc::Rc;
 
 use rug::{Float, float::Round};
 
-use crate::{core::{Measure, Measurement, Metric, PrivacyRelation}, error::Fallible, meas::{GaussianDomain, LaplaceDomain}};
+use crate::{core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation}, dom::PairDomain, error::Fallible, meas::{GaussianDomain, LaplaceDomain}};
 
 use super::PLDistribution;
 
 const PREC:u32 = 64;
+const GRID_SIZE:usize = 100;
 
 /// A Measure that comes with a privacy loss distribution.
 #[derive(Clone)]
@@ -94,7 +95,7 @@ pub fn make_pld_gaussian<D>(scale: f64) -> Fallible<Measurement<D, D, D::Metric,
     if scale<0.0 {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
-    let privacy_loss_distribution = Rc::new(gaussian_pld(scale.clone(), 100));
+    let privacy_loss_distribution = Rc::new(gaussian_pld(scale.clone(), GRID_SIZE));
     Ok(Measurement::new(
         D::new(),
         D::new(),
@@ -159,12 +160,41 @@ pub fn make_pld_laplace<D>(scale: f64) -> Fallible<Measurement<D, D, D::Metric, 
     if scale<0.0 {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
-    let privacy_loss_distribution = Rc::new(laplace_pld(scale.clone(), 100));
+    let privacy_loss_distribution = Rc::new(laplace_pld(scale.clone(), GRID_SIZE));
     Ok(Measurement::new(
         D::new(),
         D::new(),
         D::noise_function(scale.clone()),
         D::Metric::default(),
+        PLDSmoothedMaxDivergence::new(privacy_loss_distribution.clone()),
+        make_pld_privacy_relation(privacy_loss_distribution),
+    ))
+}
+
+pub fn make_pld_composition<DI, DO0, DO1, MI>(
+    measurement0: &Measurement<DI, DO0, MI, PLDSmoothedMaxDivergence<MI>>,
+    measurement1: &Measurement<DI, DO1, MI, PLDSmoothedMaxDivergence<MI>>)
+    -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, PLDSmoothedMaxDivergence<MI>>>
+    where DI: 'static + Domain,
+          DO0: 'static + Domain,
+          DO1: 'static + Domain,
+          MI: 'static + Metric,
+          MI::Distance: Clone {
+    if measurement0.input_domain != measurement1.input_domain {
+        return fallible!(DomainMismatch, "Input domain mismatch");
+    } else if measurement0.input_metric != measurement1.input_metric {
+        return fallible!(MetricMismatch, "Input metric mismatch");
+    }
+    let pld_0 = measurement0.output_measure.privacy_loss_distribution.clone();
+    let pld_1 = measurement1.output_measure.privacy_loss_distribution.clone();
+    let privacy_loss_distribution: Rc<dyn Fn(&MI::Distance) -> Fallible<PLDistribution>> = Rc::new(move |d_in:&MI::Distance| {
+        Ok(&(pld_0)(d_in)? * &(pld_1)(d_in)?)
+    });
+    Ok(Measurement::new(
+        measurement0.input_domain.clone(),
+        PairDomain::new(measurement0.output_domain.clone(), measurement1.output_domain.clone()),
+        Function::make_basic_composition(&measurement0.function, &measurement1.function),
+        measurement0.input_metric.clone(),
         PLDSmoothedMaxDivergence::new(privacy_loss_distribution.clone()),
         make_pld_privacy_relation(privacy_loss_distribution),
     ))
