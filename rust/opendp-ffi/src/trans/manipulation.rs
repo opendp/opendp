@@ -60,7 +60,7 @@ pub extern "C" fn opendp_trans__make_is_null(
     DIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let DIA = try_!(Type::try_from(DIA));
-    let T = try_!(DIA.get_domain_atom());
+    let T = try_!(DIA.get_atom());
 
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {

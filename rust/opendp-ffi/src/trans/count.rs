@@ -86,7 +86,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    let QO = try_!(MO.get_sensitivity_distance());
+    let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [
         (QO, @floats)
     ], (categories, MO, TI, TO))
@@ -121,6 +121,6 @@ pub extern "C" fn opendp_trans__make_count_by(
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    let QO = try_!(MO.get_sensitivity_distance());
+    let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [(QO, @floats)], (n, MO, TI, TO))
 }
