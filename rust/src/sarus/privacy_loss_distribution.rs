@@ -1,6 +1,6 @@
 use std::clone::Clone;
 use std::convert::TryFrom;
-use std::iter::{FromIterator, IntoIterator};
+use std::iter::IntoIterator;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Mul;
 
