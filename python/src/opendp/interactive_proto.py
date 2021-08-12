@@ -1,10 +1,11 @@
-# Prototype of interactive measurements with facility for enforcing sequentiality across queryables.
+# Prototype of interactive measurements with facilities for enforcing constraints across queryables.
 #
 # This is a sort of synthesis of Salil's method of hook functions, and Michael's approach of using an index
-# to target specific child queryables. What I like about it is the natural interface: You can operate on a child
-# queryable directly, using the same interace as originally, and the right housekeeping happens behind the scenes.
-# Also, it doesn't require any special accomodation inside queryables. Everything is achieved by wrapping our
-# existing entities, without "injecting" any logic.
+# to target specific child queryables. What I like about it is the natural interface: You operate on a child
+# queryable directly, using the same interface as originally, and the right housekeeping happens behind the scenes.
+# In the case of sequential composition, a sub-queryable is implicitly "retired" whenever a new sibling is spawned.
+# Also, it doesn't require any special knowledge of the hierarchy inside child queryables. Everything is achieved
+# by wrapping our existing entities, without "injecting" any logic.
 #
 # This works by putting state that must be shared across queryables in a coordinating state machine
 # (also implemented as a queryable, though this isn't necesary). Then queries on the parent queryable,
