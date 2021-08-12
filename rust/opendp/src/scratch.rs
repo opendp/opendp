@@ -1,5 +1,8 @@
 #[allow(unused_variables)]
 use std::marker::PhantomData;
+use crate::core::{Domain, PrivacyRelation, Measure, Metric, Function};
+use crate::error::Fallible;
+
 
 pub type Privacy = f64;
 
@@ -20,17 +23,21 @@ impl<I, O> Measurement<I, O> {
 
 pub type Any = Box<dyn std::any::Any>;
 
-pub struct Queryable<P, S, Q, A> {
-    parameters: P,
+pub struct Queryable<S, Q, A> {
+    // parameters: P,
     state: S,
-    transition: Box<dyn Fn(&P, &S, &Q) -> (S, A)>,
+    transition: Box<dyn Fn(&S, &Q) -> (S, A)>,
     // IGNORE THE FOLLOWING, RUST IMPL QUIRK.
     _query_type: PhantomData<Q>,
     _answer_type: PhantomData<A>,
 }
-impl<P, S, Q, A> Queryable<P, S, Q, A> {
-    pub fn new(parameters: P, initial_state: S, transition: impl Fn(&P, &S, &Q) -> (S, A) + 'static) -> Self {
-        Self { parameters, state: initial_state, _query_type: PhantomData, _answer_type: PhantomData, transition: Box::new(transition) }
+impl<S, Q, A> Queryable<S, Q, A> {
+    pub fn new(
+        // parameters: P,
+        initial_state: S, transition: impl Fn(&P, &S, &Q) -> (S, A) + 'static) -> Self {
+        Self {
+            // parameters,
+            state: initial_state, _query_type: PhantomData, _answer_type: PhantomData, transition: Box::new(transition) }
     }
     pub fn eval(&mut self, query: &Q) -> A {
         let (new_state, answer) = (self.transition)(&self.parameters, &self.state, query);
@@ -39,7 +46,104 @@ impl<P, S, Q, A> Queryable<P, S, Q, A> {
     }
 }
 
-pub struct InteractiveMeasurement<I, O, P, S, Q> {
+
+pub struct InteractiveMeasurement2<DI: Domain, DO: Domain, MI: Metric, MO: Measure, S, Q, A> {
+    pub input_domain: DI,
+    pub output_domain: DO,
+    pub function: Function<DI, Queryable<S, Q, A>>,
+    pub input_metric: MI,
+    pub output_measure: MO,
+    pub privacy_relation: PrivacyRelation<MI, MO>,
+}
+
+type Measurement2<DI, DO, MI, MO> = InteractiveMeasurement2<DI, DO, MI, MO, (), <DI as Domain>::Carrier, <DO as Domain>::Carrier>;
+
+// fn make_non_interactive_data_in_state<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
+//     input_domain: DI,
+//     output_domain: DO,
+//     function: impl Fn(&DI::Carrier) -> DO::Carrier,
+//     input_metric: MI,
+//     output_measure: MO,
+//     privacy_relation: PrivacyRelation<MI, MO>
+// ) -> Measurement2<DI, DO, MI, MO> {
+//     let transition = |state: DI::Carrier, query: ()| -> (DI::Carrier, DO::Carrier) {
+//         function(state)
+//     };
+//     let outer_function = |arg: &DI::Carrier| -> Queryable<DI::Carrier, (), DO::Carrier> {
+//         Queryable::new(arg.clone(), transition)
+//     };
+//     Measurement2 {
+//         input_domain,
+//         output_domain,
+//         function: Function::new_fallible(outer_function),
+//         input_metric,
+//         output_measure,
+//         privacy_relation
+//     }
+// }
+//
+// fn make_non_interactive_data_in_query<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
+//     input_domain: DI,
+//     output_domain: DO,
+//     function: impl Fn(&DI::Carrier) -> DO::Carrier,
+//     input_metric: MI,
+//     output_measure: MO,
+//     privacy_relation: PrivacyRelation<MI, MO>
+// ) -> Measurement2<DI, DO, MI, MO> {
+//     let transition = |state: (), query: DI::Carrier| -> (DI::Carrier, DO::Carrier) {
+//         function(query)
+//     };
+//     let outer_function = |arg: &DI::Carrier| -> Queryable<(), DI::Carrier, DO::Carrier> {
+//         Queryable::new((), transition)
+//     };
+//     Measurement2 {
+//         input_domain,
+//         output_domain,
+//         function: Function::new_fallible(outer_function),
+//         input_metric,
+//         output_measure,
+//         privacy_relation
+//     }
+// }
+
+
+
+// fn invoke1<DI, DO, MI, MO>(this: Measurement2<DI, DO, MI, MO>, data: &<DI as Domain>::Carrier) -> <DO as Domain>::Carrier {
+//     // STORE DATA IN STATE:
+//     this.function.eval(data)(())
+// }
+
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement2<DI, DO, MI, MO> {
+    fn invoke1(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+        (self.function.eval(&()).transition)(arg)
+    }
+
+    fn new(
+        input_domain: DI,
+        output_domain: DO,
+        function: impl Fn(&DI::Carrier) -> DO::Carrier,
+        input_metric: MI,
+        output_measure: MO,
+        privacy_relation: PrivacyRelation<MI, MO>
+    ) -> Self {
+        let transition = |state: (), query: DI::Carrier| -> (DI::Carrier, DO::Carrier) {
+            function(query)
+        };
+        let outer_function = |arg: &DI::Carrier| -> Queryable<(), DI::Carrier, DO::Carrier> {
+            Queryable::new((), transition)
+        };
+        Measurement2 {
+            input_domain,
+            output_domain,
+            function: Function::new_fallible(outer_function),
+            input_metric,
+            output_measure,
+            privacy_relation
+        }
+    }
+}
+
+pub struct InteractiveMeasurement<DI: Domain, DO: Domain, P, S, Q> {
     function: Box<dyn Fn(I) -> Queryable<P, S, Q, O>>,
 }
 impl<I, O, P, S, Q> InteractiveMeasurement<I, O, P, S, Q> {
