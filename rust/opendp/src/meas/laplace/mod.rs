@@ -1,9 +1,10 @@
 use num::{Float, One};
+use rug::float::Round;
 
 use crate::core::{Measurement, Function, PrivacyRelation, Measure, Metric, Domain, SensitivityMetric};
 use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence, EpsilonDelta};
 use crate::dom::{AllDomain, VectorDomain};
-use crate::samplers::{SampleLaplace};
+use crate::samplers::{SampleLaplace, CastInternalReal};
 use crate::error::*;
 use crate::traits::{InfCast, CheckNull, TotalOrd};
 
@@ -20,7 +21,7 @@ impl<MI: Metric> LaplacePrivacyRelation<MI> for MaxDivergence<MI::Distance>
 }
 
 impl<MI: Metric> LaplacePrivacyRelation<MI> for FSmoothedMaxDivergence<MI::Distance>
-    where MI::Distance: 'static + Clone + Float + One + SampleLaplace { // + CastInternalReal
+    where MI::Distance: 'static + Clone + Float + One + SampleLaplace + CastInternalReal {
 
     fn privacy_relation(scale: MI::Distance) -> PrivacyRelation<MI, Self> {
         PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &Vec<EpsilonDelta<MI::Distance>>| {
@@ -37,7 +38,18 @@ impl<MI: Metric> LaplacePrivacyRelation<MI> for FSmoothedMaxDivergence<MI::Dista
                     return fallible!(InvalidDistance, "laplace mechanism: delta must be positive or 0")
                 }
 
-                let delta_dual = MI::Distance::one() - ((*epsilon - scale.recip()) / (MI::Distance::one() + MI::Distance::one())).exp();
+                // Compute delta_dual = 1 - exp((epsilon - 1. / scale ) / 2) with rounding up
+                //let epsilon_float: rug::Float = epsilon.into_internal();
+                let mut delta_dual: rug::Float = scale.into_internal();
+                delta_dual.recip_round(Round::Up);
+                delta_dual = epsilon.into_internal() - delta_dual;
+                delta_dual.div_assign_round(( MI::Distance::one() +  MI::Distance::one()).into_internal(), Round::Down)
+                delta_dual.exp_round(Round::Down);
+                delta_dual = (MI::Distance::one().into_internal()) - delta_dual;
+
+
+
+                //let delta_dual = MI::Distance::one() - ((*epsilon - scale.recip()) / (MI::Distance::one() + MI::Distance::one())).exp();
                 result = result & (delta >= &delta_dual);
                 if result == false {
                     break;
