@@ -43,14 +43,11 @@ impl<MI: Metric> LaplacePrivacyRelation<MI> for FSmoothedMaxDivergence<MI::Dista
                 let mut delta_dual: rug::Float = scale.into_internal();
                 delta_dual.recip_round(Round::Up);
                 delta_dual = epsilon.into_internal() - delta_dual;
-                delta_dual.div_assign_round(( MI::Distance::one() +  MI::Distance::one()).into_internal(), Round::Down)
                 delta_dual.exp_round(Round::Down);
+                delta_dual.sqrt_round(Round::Down);
                 delta_dual = (MI::Distance::one().into_internal()) - delta_dual;
 
-
-
-                //let delta_dual = MI::Distance::one() - ((*epsilon - scale.recip()) / (MI::Distance::one() + MI::Distance::one())).exp();
-                result = result & (delta >= &delta_dual);
+                result = result & (delta >= &MI::Distance::from_internal(delta_dual));
                 if result == false {
                     break;
                 }

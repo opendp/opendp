@@ -12,7 +12,7 @@ pub mod geometric;
 pub mod stability;
 
 #[cfg(feature="floating-point")]
-pub use crate::meas::laplace::*;
+pub use crate::meas::laplace::make_base_laplace;
 #[cfg(feature="floating-point")]
 pub use crate::meas::gaussian::*;
 pub use crate::meas::geometric::*;

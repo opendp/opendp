@@ -280,3 +280,72 @@ impl<T: PartialEq> PartialEq for EpsilonDelta<T> {
     }
 }
 
+
+// Tradeoff
+#[derive(Debug)]
+pub struct Tradeoff {
+    pub alphas: Vec<rug::Rational>,
+    pub betas: Vec<rug::Rational>,
+}
+
+impl Clone for Tradeoff {
+    fn clone(&self) -> Self {
+        Tradeoff {alphas: self.alphas.clone(), betas: self.betas.clone()}
+    }
+}
+
+impl Tradeoff {
+    pub fn new (alphas: Vec<rug::Rational>, betas: Vec<rug::Rational>) -> Self {
+        Tradeoff {
+            alphas: alphas,
+            betas: betas,
+        }
+    }
+
+    pub fn new_from_vec_epsilon_delta <Q> (mut vec_epsilon_delta: Vec<EpsilonDelta<Q>>) -> Self
+        where Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug {
+        let one = Q::one().into_internal().to_rational().unwrap();
+        let zero = Q::zero().into_internal().to_rational().unwrap();
+
+        vec_epsilon_delta.sort_by(|a, b| b.delta.partial_cmp(&a.delta).unwrap());
+        let rational_vec_exp_epsilon_delta: Vec<(rug::Rational, rug::Rational)> = vec_epsilon_delta.iter()
+            .map(|x| {
+                let mut exp_epsilon = x.epsilon.clone().into_internal();
+                exp_epsilon.exp_round(rug::float::Round::Up);
+                (exp_epsilon.to_rational().unwrap(), x.delta.clone().into_internal().to_rational().unwrap())
+            })
+            .collect();
+
+        let mut alphas = vec![zero.clone(), one.clone() - rational_vec_exp_epsilon_delta[0].1.clone()];
+        let mut betas = vec![one.clone() - rational_vec_exp_epsilon_delta[0].1.clone(), zero.clone()];
+
+        let size = vec_epsilon_delta.iter().len();
+        for i in 1..size {
+            let alpha =
+                (rational_vec_exp_epsilon_delta[i-1].1.clone() - rational_vec_exp_epsilon_delta[i].1.clone())
+                /
+                (rational_vec_exp_epsilon_delta[i].0.clone() - rational_vec_exp_epsilon_delta[i-1].0.clone());
+
+            let beta = (
+                    rational_vec_exp_epsilon_delta[i].0.clone() *(one.clone() - rational_vec_exp_epsilon_delta[i-1].1.clone())
+                    -
+                    rational_vec_exp_epsilon_delta[i-1].0.clone() *(one.clone() - rational_vec_exp_epsilon_delta[i].1.clone())
+                )
+                /
+                (rational_vec_exp_epsilon_delta[i].0.clone() - rational_vec_exp_epsilon_delta[i-1].0.clone());
+            alphas.push(alpha.clone());
+            betas.push(beta.clone());
+            alphas.push(beta);
+            betas.push(alpha);
+        }
+
+        alphas.sort();
+        betas.sort();
+        betas.reverse();
+        Self::new(alphas, betas)
+    }
+
+}
+
+
+
