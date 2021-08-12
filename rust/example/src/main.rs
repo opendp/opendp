@@ -33,7 +33,7 @@ fn laplace_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("Plot Laplace examples");
     let lap_meas = make_pld_laplace::<AllDomain<f64>>(1.0)?;
     plot_fs(vec![
-        lap_meas.output_measure.f(&1.0),
+        lap_meas.output_measure.f(&0.5),
         // lap_meas.output_measure.f(&2.0),
     ])?;
     // let values: Vec<Point> = meas_0.output_measure.f(&1.0).into_iter().map(|(x,y)| Point {x,y}).collect();
