@@ -741,7 +741,42 @@ def make_bounded_mean(
     return c_to_py(unwrap(function(lower, upper, n, T), Transformation))
 
 
-def make_resize_constant_bounded(
+def make_resize(
+    constant: Any,
+    length: int,
+    TA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains
+    
+    :param constant: Value to impute with.
+    :type constant: Any
+    :param length: Number of records in output data.
+    :type length: int
+    :param TA: Atomic type.
+    :type TA: RuntimeTypeDescriptor
+    :return: A vector of the same type `TA`, but with the provided `length`.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=constant)
+    
+    # Convert arguments to c types.
+    constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=TA)
+    length = py_to_c(length, c_type=ctypes.c_uint)
+    TA = py_to_c(TA, c_type=ctypes.c_void_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_resize
+    function.argtypes = [AnyObjectPtr, ctypes.c_uint, ctypes.c_void_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(constant, length, TA), Transformation))
+
+
+def make_resize_bounded(
     constant,
     length: int,
     lower,
@@ -774,7 +809,7 @@ def make_resize_constant_bounded(
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_resize_constant_bounded
+    function = lib.opendp_trans__make_resize_bounded
     function.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
