@@ -11,6 +11,7 @@ use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
 use opendp::traits::CheckNull;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(
@@ -18,12 +19,12 @@ pub extern "C" fn opendp_trans__make_identity(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize_scalar<M, T>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              T: 'static + Clone + CheckNull {
+              T: 'static + Clone + CheckNull + Debug {
         make_identity::<AllDomain<T>, M>(AllDomain::<T>::new(), M::default()).into_any()
     }
     fn monomorphize_vec<M, T>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              T: 'static + Clone + CheckNull {
+              T: 'static + Clone + CheckNull + Debug {
         make_identity::<VectorDomain<AllDomain<T>>, M>(VectorDomain::new(AllDomain::<T>::new()), M::default()).into_any()
     }
     let M = try_!(Type::try_from(M));
@@ -48,7 +49,7 @@ pub extern "C" fn opendp_trans__make_is_equal(
     let TI = try_!(Type::try_from(TI));
 
     fn monomorphize<TI>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
-        TI: 'static + Clone + PartialEq + CheckNull {
+        TI: 'static + Clone + PartialEq + CheckNull + Debug {
         let value: TI = try_!(try_as_ref!(value).downcast_ref::<TI>()).clone();
         make_is_equal::<TI>(value).into_any()
     }
@@ -65,14 +66,14 @@ pub extern "C" fn opendp_trans__make_is_null(
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
             fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
-                where T: 'static + CheckNull {
+                where T: 'static + CheckNull + Debug {
                 make_is_null::<OptionNullDomain<AllDomain<T>>>().into_any()
             }
             dispatch!(monomorphize, [(T, @primitives)], ())
         }
         TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
             fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
-                where T: 'static + InherentNull {
+                where T: 'static + InherentNull + Debug {
                 make_is_null::<InherentNullDomain<AllDomain<T>>>().into_any()
             }
             dispatch!(monomorphize, [(T, [f64, f32])], ())

@@ -7,11 +7,12 @@ use crate::dom::{VectorDomain, IntervalDomain, AllDomain, SizedDomain};
 use std::collections::Bound;
 use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
 use num::{Float};
+use std::fmt::Debug;
 
 pub fn make_bounded_mean<T>(
     lower: T, upper: T, n: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<IntervalDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize>, for <'a> T: Sum<&'a T> + CheckedMul + CheckNull,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize>, for <'a> T: Sum<&'a T> + CheckedMul + CheckNull + Debug,
           IntDistance: InfCast<T> {
     let _n = T::exact_int_cast(n)?;
     let _2 = T::exact_int_cast(2)?;

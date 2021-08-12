@@ -31,7 +31,7 @@ pub extern "C" fn opendp_trans__make_create_dataframe(
     col_names: *const AnyObject, K: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<K>(col_names: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where K: 'static + Eq + Hash + Clone + CheckNull {
+        where K: 'static + Eq + Hash + Clone + CheckNull + Debug {
         let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
         make_create_dataframe::<K>(col_names).into_any()
     }

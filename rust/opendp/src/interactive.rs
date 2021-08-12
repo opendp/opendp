@@ -5,6 +5,7 @@ use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelatio
 use crate::dom::AllDomain;
 use crate::error::*;
 use crate::traits::{FallibleSub, MeasureDistance, MetricDistance, CheckNull};
+use std::fmt::{Formatter, Debug};
 
 /// A structure tracking the state of an interactive measurement queryable.
 /// It's generic over state (S), query (Q), answer (A), so it can be used for any
@@ -16,6 +17,11 @@ pub struct Queryable<S, Q, A> {
     /// The transition function of the Queryable. Takes the current state and a query, returns
     /// the new state and the answer.
     transition: Rc<dyn Fn(S, &Q) -> Fallible<(S, A)>>,
+}
+impl<S, Q, A> Debug for Queryable<S, Q, A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Queryable {{state, transition}}")
+    }
 }
 
 impl<S, Q, A> Queryable<S, Q, A> {
@@ -51,6 +57,7 @@ impl<S, Q, A> CheckNull for Queryable<S, Q, A> { fn is_null(&self) -> bool { fal
 pub type InteractiveMeasurement<DI, DO, MI, MO, S, Q> = Measurement<DI, AllDomain<Queryable<S, Q, <DO as Domain>::Carrier>>, MI, MO>;
 
 /// The state of an adaptive composition Queryable.
+#[derive(Debug)]
 pub struct AcState<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     input_domain: DI,
     output_domain: DO,

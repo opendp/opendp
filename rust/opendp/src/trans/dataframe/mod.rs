@@ -39,14 +39,14 @@ fn create_dataframe<K: Eq + Hash>(col_names: Vec<K>, records: &[Vec<&str>]) -> D
         .collect()
 }
 
-fn create_dataframe_domain<K: Eq + Hash + CheckNull>() -> DataFrameDomain<K> {
+fn create_dataframe_domain<K: Eq + Hash + CheckNull + Debug>() -> DataFrameDomain<K> {
     MapDomain::new(AllDomain::new(), AllDomain::new())
 }
 
 pub fn make_create_dataframe<K>(
     col_names: Vec<K>
 ) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Eq + Hash + Clone + CheckNull {
+    where K: 'static + Eq + Hash + Clone + CheckNull + Debug {
     Ok(Transformation::new(
         VectorDomain::new(VectorDomain::new_all()),
         create_dataframe_domain(),
@@ -70,7 +70,7 @@ fn split_dataframe<K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str) ->
 pub fn make_split_dataframe<K>(
     separator: Option<&str>, col_names: Vec<K>
 ) -> Fallible<Transformation<AllDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Hash + Eq + Clone + CheckNull {
+    where K: 'static + Hash + Eq + Clone + CheckNull + Debug {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
         AllDomain::new(),

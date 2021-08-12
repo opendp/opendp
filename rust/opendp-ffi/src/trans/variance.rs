@@ -13,6 +13,7 @@ use crate::any::{AnyObject, AnyTransformation, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
 use opendp::dist::IntDistance;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_variance(
@@ -23,7 +24,7 @@ pub extern "C" fn opendp_trans__make_bounded_variance(
     fn monomorphize2<T>(
         lower: *const c_void, upper: *const c_void, length: usize, ddof: usize,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + CheckedMul + CheckNull,
+        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + CheckedMul + CheckNull + Debug,
               for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
               IntDistance: InfCast<T> {
         let lower = *try_as_ref!(lower as *const T);
@@ -52,7 +53,7 @@ pub extern "C" fn opendp_trans__make_bounded_covariance(
         upper: *const AnyObject,
         length: usize, ddof: usize,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Sum<T> + Zero + One + ExactIntCast<usize> + CheckedMul + CheckNull,
+        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Sum<T> + Zero + One + ExactIntCast<usize> + CheckedMul + CheckNull + Debug,
               for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
               for<'a> &'a T: Sub<Output=T>,
               IntDistance: InfCast<T> {

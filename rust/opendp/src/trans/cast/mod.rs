@@ -4,11 +4,13 @@ use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, 
 use crate::error::Fallible;
 use crate::traits::{RoundCast, CheckNull};
 use crate::trans::make_row_by_row;
+use std::fmt::Debug;
 
 /// A [`Transformation`] that casts elements between types
 /// Maps a Vec<TI> -> Vec<Option<TO>>
 pub fn make_cast<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<OptionNullDomain<AllDomain<TO>>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone + CheckNull, TO: 'static + RoundCast<TI> + CheckNull {
+    where TI: 'static + Clone + CheckNull + Debug,
+          TO: 'static + RoundCast<TI> + CheckNull + Debug {
     make_row_by_row(
         AllDomain::new(),
         OptionNullDomain::new(AllDomain::new()),
@@ -19,7 +21,8 @@ pub fn make_cast<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>
 /// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_default<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone + CheckNull, TO: 'static + RoundCast<TI> + Default + CheckNull {
+    where TI: 'static + Clone + CheckNull + Debug,
+          TO: 'static + RoundCast<TI> + Default + CheckNull + Debug {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
@@ -30,7 +33,8 @@ pub fn make_cast_default<TI, TO>() -> Fallible<Transformation<VectorDomain<AllDo
 /// Maps a Vec<TI> -> Vec<TO>
 pub fn make_cast_inherent<TI, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<InherentNullDomain<AllDomain<TO>>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + Clone + CheckNull, TO: 'static + RoundCast<TI> + InherentNull + CheckNull {
+    where TI: 'static + Clone + CheckNull + Debug,
+          TO: 'static + RoundCast<TI> + InherentNull + CheckNull + Debug {
     make_row_by_row(
         AllDomain::new(),
         InherentNullDomain::new(AllDomain::new()),

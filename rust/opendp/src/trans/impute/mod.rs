@@ -10,13 +10,14 @@ use crate::samplers::SampleUniform;
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 use crate::dist::SymmetricDistance;
 use crate::traits::CheckNull;
+use std::fmt::Debug;
 
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
 /// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
 pub fn make_impute_uniform_float<T>(
     lower: T, upper: T,
 ) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
-    where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull + CheckNull {
+    where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull + CheckNull + Debug {
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
@@ -37,7 +38,7 @@ pub trait ImputableDomain: Domain {
     fn new() -> Self;
 }
 // how to impute, when null represented as Option<T>
-impl<T: Clone + CheckNull> ImputableDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: Clone + CheckNull + Debug> ImputableDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         default.as_ref().unwrap_or(constant)
@@ -45,7 +46,7 @@ impl<T: Clone + CheckNull> ImputableDomain for OptionNullDomain<AllDomain<T>> {
     fn new() -> Self { OptionNullDomain::new(AllDomain::new()) }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: InherentNull + CheckNull> ImputableDomain for InherentNullDomain<AllDomain<T>> {
+impl<T: InherentNull + CheckNull + Debug> ImputableDomain for InherentNullDomain<AllDomain<T>> {
     type Imputed = Self::Carrier;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         if default.is_null() { constant } else { default }
@@ -61,7 +62,7 @@ pub fn make_impute_constant<DA>(
     constant: DA::Imputed
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
     where DA: ImputableDomain,
-          DA::Imputed: 'static + Clone + CheckNull,
+          DA::Imputed: 'static + Clone + CheckNull + Debug,
           DA::Carrier: 'static {
     if constant.is_null() { return fallible!(MakeTransformation, "Constant may not be null.") }
 

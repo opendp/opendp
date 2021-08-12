@@ -5,19 +5,20 @@ use crate::error::Fallible;
 use num::Float;
 use crate::traits::ExactIntCast;
 use std::ops::Div;
+use std::fmt::Debug;
 
 pub trait AmplifiableMeasure: Measure {
     type Atom;
     fn amplify(budget: Self::Distance, sampling_rate: Self::Atom) -> Self::Distance;
 }
 
-impl<Q: Float> AmplifiableMeasure for MaxDivergence<Q> {
+impl<Q: Float + Debug> AmplifiableMeasure for MaxDivergence<Q> {
     type Atom = Q;
     fn amplify(epsilon: Q, sampling_rate: Q) -> Q {
         (epsilon.exp_m1() / sampling_rate).ln_1p()
     }
 }
-impl<Q: Float> AmplifiableMeasure for SmoothedMaxDivergence<Q> {
+impl<Q: Float + Debug> AmplifiableMeasure for SmoothedMaxDivergence<Q> {
     type Atom = Q;
     fn amplify((epsilon, delta): (Q, Q), sampling_rate: Q) -> (Q, Q) {
         ((epsilon.exp_m1() / sampling_rate).ln_1p(), delta / sampling_rate)

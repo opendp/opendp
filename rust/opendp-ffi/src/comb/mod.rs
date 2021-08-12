@@ -13,6 +13,7 @@ use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt, An
 use crate::core::FfiResult;
 use crate::util::Type;
 use num::Float;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -55,7 +56,7 @@ pub extern "C" fn opendp_comb__make_population_amplification(
         measurement: &AnyMeasurement, n_population: usize,
         DIA: Type, MO: Type,
     ) -> FfiResult<*mut AnyMeasurement>
-        where TIA: 'static + Clone + TotalOrd + CheckNull,
+        where TIA: 'static + Clone + TotalOrd + CheckNull + Debug,
               QO: 'static + ExactIntCast<usize> + Div<Output=QO> + Clone + Float + ExactIntCast<usize> + MeasureDistance + for<'a> Sub<&'a QO, Output=QO> {
         fn monomorphize2<DIA: Domain, MO: Measure>(
             measurement: &AnyMeasurement, n_population: usize,

@@ -9,6 +9,7 @@ use opendp::trans::{make_clamp, make_unclamp};
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
+use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_clamp(
@@ -18,7 +19,7 @@ pub extern "C" fn opendp_trans__make_clamp(
     let T = try_!(Type::try_from(T));
 
     fn monomorphize_dataset<T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
-        where T: 'static + Clone + TotalOrd + CheckNull {
+        where T: 'static + Clone + TotalOrd + CheckNull + Debug {
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
         make_clamp::<T>(lower, upper).into_any()
@@ -36,7 +37,7 @@ pub extern "C" fn opendp_trans__make_unclamp(
 ) -> FfiResult<*mut AnyTransformation> {
     let T = try_!(Type::try_from(T));
     fn monomorphize_dataset<T>(lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
-        where T: 'static + Clone + TotalOrd + CheckNull {
+        where T: 'static + Clone + TotalOrd + CheckNull + Debug {
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
         make_unclamp::<T>(Bound::Included(lower), Bound::Included(upper)).into_any()
