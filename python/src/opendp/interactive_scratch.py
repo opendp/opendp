@@ -1,3 +1,28 @@
+# Prototype of interactive measurements with facility for enforcing sequentiality across queryables.
+#
+# This is a sort of synthesis of Salil's method of hook functions, and Michael's approach of using an index
+# to target specific child queryables. What I like about it is the natural interface: You can operate on a child
+# queryable directly, using the same interace as originally, and the right housekeeping happens behind the scenes.
+# Also, it doesn't require any special accomodation inside queryables. Everything is achieved by wrapping our
+# existing entities, without "injecting" any logic.
+#
+# This works by putting state that must be shared across queryables in a coordinating state machine
+# (also implemented as a queryable, though this isn't necesary). Then queries on the parent queryable,
+# as well as any child queryables, are dispatched through this coordinator. The coordinator can then
+# to enforce constraints like sequential access to children, or consumption of shared budget. After
+# the constraints are checked, the operation is forwarded to the destination entity.
+#
+# NOTES:
+# * For simplicity, this omits domains, and uses a static privacy loss instead of a relation.
+# * I've split queryable state into two components: static context, and varying state. I think this helps clarity, but it's not necessary.
+# * This retains the original taxonomy of InteractiveMeasurement being the general case, with Measurement a subtype.
+# * The packing and unpacking of queryable elements is a bit wordy; I've written it this way to be very explicit about what I'm storing where.
+# * This only supports a single level of sub-queryables. I think it could be generalized to support arbitrary levels of recursion, but it'll be tricky.
+# * I've only implemented sequential composition, but concurrent composition should be straighforward. I think odometers should be doable too.
+# * The code could use some rework; there would likely be a lot of duplication in other forms of composition that could be refactored out.
+# (I think just supplying a coordinator queryable would be enough to have a generic make_composition() function.)
+
+
 class Queryable:
     def __init__(self, context, initial_state, transition):
         self.context = context        # Static context data (the part of "state" that doesn't change)
