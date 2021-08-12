@@ -43,22 +43,18 @@ impl<'a> PLDistribution {
     /// Use the formula from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
     pub fn delta<Q>(&self, exp_epsilon: Q) -> Rational
     where Q: Clone, Rational: TryFrom<Q> {
-        let e_y_x = &Rational::try_from(exp_epsilon.clone()).unwrap_or_default();
-        let delta_x_y:Rational;
-        let delta_y_x = self.exp_privacy_loss_probabilities.iter().fold(Rational::from(0), 
-            |delta_y_x,(l_y_x,p_x)| {
-                    delta_y_x + if l_y_x>e_y_x {(Rational::from(1)-e_y_x.clone()/l_y_x)*p_x*l_y_x} else {Rational::from(0)}
-            });
-        if e_y_x>&Rational::from(0) {
-            let e_x_y_inv = &Rational::try_from(exp_epsilon.clone()).unwrap_or_default().recip();
-            delta_x_y = self.exp_privacy_loss_probabilities.iter().fold(Rational::from(0), 
-            |delta_x_y,(l_y_x,p_x)| {
-                    delta_x_y + if l_y_x<e_x_y_inv {(Rational::from(1)-l_y_x.clone()/e_x_y_inv)*p_x} else {Rational::from(0)}
-            });
+        let exp_epsilon = Rational::try_from(exp_epsilon).unwrap_or_default();
+        let (delta_x_y, delta_y_x) = if &exp_epsilon>&Rational::from(0) {
+            self.exp_privacy_loss_probabilities.iter().fold((Rational::from(0), Rational::from(0)), 
+            |(delta_x_y,delta_y_x),(l_y_x,p_x)| {
+                    (if l_y_x<&exp_epsilon.clone().recip() {delta_x_y + (Rational::from(1)-l_y_x.clone()*exp_epsilon.clone())*p_x} else {delta_x_y},
+                    if l_y_x>&exp_epsilon {delta_y_x + (Rational::from(1)-exp_epsilon.clone()/l_y_x)*p_x*l_y_x} else {delta_y_x})
+            })
         } else {
-            delta_x_y = Rational::from(1)
-        }
-        if delta_x_y > delta_y_x {delta_x_y} else {delta_y_x}
+            (Rational::from(1), Rational::from(1))
+        };
+        println!("exp_epsilon: {:?}, delta_x_y: {:?} - delta_y_x: {:?}", exp_epsilon.to_f64(), delta_x_y.to_f64(), delta_y_x.to_f64());
+        Rational::max(delta_x_y,delta_y_x)
     }
 
     /// Compute the alphas and the betas
@@ -85,21 +81,22 @@ impl<'a> PLDistribution {
             last_exp_epsilon = exp_epsilon.clone();
             last_delta = delta.clone();
         }
-        result.push((
-            Rational::from(0),
-            Rational::from(1)-&last_delta,
-        ));
+        result.push((Rational::from(0),Rational::from(1)-&last_delta));
         result
+    }
+
+    pub fn f(&self) -> Vec<(f64, f64)> {
+        self.tradeoff().into_iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect()
     }
 }
 
-/// Compute the cartesian product of output domains
+/// Compute the composition of PLDs
 impl Mul for &PLDistribution {
     type Output = PLDistribution;
     fn mul(self, other: &PLDistribution) -> PLDistribution {
         let mut result = PLDistribution {exp_privacy_loss_probabilities:BTreeMap::new()};
         for (s_epl,s_prob) in &self.exp_privacy_loss_probabilities {
-            for (o_epl,o_prob) in &self.exp_privacy_loss_probabilities {
+            for (o_epl,o_prob) in &other.exp_privacy_loss_probabilities {
                 let epl = s_epl.clone() * o_epl;
                 result.exp_privacy_loss_probabilities.entry(epl)
                     .and_modify(|prob| { *prob *= s_prob.clone() * o_prob })

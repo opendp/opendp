@@ -8,5 +8,7 @@ edition = "2018"
 
 [dependencies]
 opendp = { path = "../opendp" }
-num = "0.3.1"
-rug = "1.9.0"
+num = "*"
+rug = "*"
+vega_lite_4 = "*"
+serde = "*"
