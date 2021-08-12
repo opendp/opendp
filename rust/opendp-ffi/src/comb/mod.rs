@@ -9,7 +9,7 @@ use opendp::dist::{MaxDivergence, SmoothedMaxDivergence};
 use opendp::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use opendp::traits::{ExactIntCast, CheckNull, TotalOrd, MeasureDistance};
 
-use crate::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementOutExt, AnyMetricDistance, AnyMeasureDistance, Downcast};
+use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt, AnyMetricDistance, AnyMeasureDistance, Downcast};
 use crate::core::FfiResult;
 use crate::util::Type;
 use num::Float;
@@ -72,12 +72,7 @@ pub extern "C" fn opendp_comb__make_population_amplification(
                     .downcast_ref::<SizedDomain<VectorDomain<DIA>>>()
                     .ok_or_else(|| err!(FFI, "failed to downcast AnyDomain to SizedDomain<VectorDomain<{}>>", Type::of::<DIA>().to_string()))).clone(),
                 measurement.output_domain.clone(),
-                {
-                    let function = measurement.function.clone();
-                    Function::new_fallible(
-                        move |arg: &Vec<DIA::Carrier>|
-                            function.eval(&AnyObject::new(arg.clone())))
-                },
+                Function::new(|_| unreachable!()),
                 measurement.input_metric.clone(),
                 try_!(measurement.output_measure.measure.value
                     .downcast_ref::<MO>()
