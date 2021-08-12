@@ -90,3 +90,43 @@ def make_basic_composition(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement0, measurement1), Measurement))
+
+
+def make_population_amplification(
+    measurement: Measurement,
+    n_population: int,
+    DIA: RuntimeTypeDescriptor,
+    MO: RuntimeTypeDescriptor
+) -> Measurement:
+    """Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
+    
+    :param measurement: The measurement to amplify.
+    :type measurement: Measurement
+    :param n_population: Number of records in population.
+    :type n_population: int
+    :param DIA: atomic input domain
+    :type DIA: RuntimeTypeDescriptor
+    :param MO: output measure
+    :type MO: RuntimeTypeDescriptor
+    :return: New measurement with the same function, but an adjusted privacy relation.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    DIA = RuntimeType.parse(type_name=DIA)
+    MO = RuntimeType.parse(type_name=MO)
+    
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement)
+    n_population = py_to_c(n_population, c_type=ctypes.c_uint)
+    DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_comb__make_population_amplification
+    function.argtypes = [Measurement, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement, n_population, DIA, MO), Measurement))

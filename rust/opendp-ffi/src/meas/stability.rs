@@ -52,7 +52,7 @@ pub extern "C" fn opendp_meas__make_base_stability(
     let TIK = try_!(Type::try_from(TIK));
     let TIC = try_!(Type::try_from(TIC));
 
-    let TOC = try_!(MI.get_sensitivity_distance());
+    let TOC = try_!(MI.get_atom());
     dispatch!(monomorphize, [
         (TIC, @integers),
         (TOC, @floats)
