@@ -33,9 +33,9 @@ impl FDifferentialPrivacy for PLMMeasurement {
 
 pub type PLMMeasurement = Measurement<PLMInputDomain, PLMOutputDomain, SymmetricDistance, SmoothedMaxDivergence<Rational>>;
 
-pub fn make_plm<'a,I,Q>(exp_privacy_loss_probabilitiies:I) -> Fallible<PLMMeasurement>
-where I: 'a + IntoIterator<Item=&'a (Q, Q)>, Q: 'a + Clone, Rational: TryFrom<Q> {
-    let out_dom = PLMOutputDomain::new(exp_privacy_loss_probabilitiies);
+pub fn make_plm<'a,Q>(exp_privacy_loss_probabilities:Vec<(Q,Q)>) -> Fallible<PLMMeasurement>
+where Q: Clone, Rational: TryFrom<Q> {
+    let out_dom = PLMOutputDomain::from(exp_privacy_loss_probabilities);
     let priv_rel = make_plm_privacy_relation(out_dom.clone());
     Ok(Measurement::new(
         PLMInputDomain::new(),

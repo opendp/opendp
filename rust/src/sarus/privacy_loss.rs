@@ -1,123 +1,75 @@
-use std::clone::Clone;
-use std::convert::TryFrom;
-use std::iter::{FromIterator, IntoIterator};
-use std::collections::BTreeMap;
-use std::ops::Mul;
+use std::{marker::PhantomData, rc::Rc};
 
-use crate::error::Fallible;
-use crate::domains::AtomDomain;
-use crate::metrics::{IntDistance, SymmetricDistance};
-use crate::measures::SmoothedMaxDivergence;
-use crate::core::{Domain, Function, Measurement, PrivacyRelation};
-use rug::{Float, Rational, float::Round};
+use rug::Rational;
 
-/// Privacy Loss Measurement (PLM) inspired from PLD http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
-pub type PLMInputDomain = AtomDomain<bool>;
+use crate::{core::Measure, error::Fallible};
 
-/// A privacy loss value (log-likelihood)
+use super::PLDistribution;
 
-
-#[derive(Clone, PartialEq)]
-pub struct PLMOutputDomain {
-    /// We represent PLD as p_y/p_x -> p_x
-    /// contrary to http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf (p_x/p_y -> p_x)
-    /// so we don't need +infinity in the number representation
-    pub exp_privacy_loss_probabilitiies: BTreeMap<Rational, Rational>
+/// A Measure that comes with a privacy loss distribution.
+#[derive(Clone)]
+pub struct PLDSmoothedMaxDivergence<MI,Q> where MI:Clone, Q:Clone {
+    _marker: PhantomData<Q>,
+    privacy_loss_distribution: Rc<dyn Fn(&MI) -> Fallible<PLDistribution>>,
 }
 
-impl PLMOutputDomain {
-    pub fn new<Q>(exp_privacy_loss_probabilitiies:&[(Q, Q)]) -> PLMOutputDomain
-    where Q: Clone, Rational: TryFrom<Q> {
-        let p_y_x_p_x = exp_privacy_loss_probabilitiies.iter().map(|(l,p)| {
-            (Rational::try_from(l.clone()).unwrap_or_default(), Rational::try_from(p.clone()).unwrap_or_default())
-        }).collect::<Vec<(Rational, Rational)>>();
-        let sum_p_x = p_y_x_p_x.iter().fold(Rational::from(0),
-        |s,(_,p)| {s+p});
-        let sum_p_y = p_y_x_p_x.iter().fold(Rational::from(0),
-        |s,(l,p)| {s+p.clone()*l});
-        PLMOutputDomain {exp_privacy_loss_probabilitiies:
-            BTreeMap::from_iter(p_y_x_p_x.into_iter().map(
-                |(p_y_x,p_x)| (p_y_x*&sum_p_x/&sum_p_y, p_x/&sum_p_x) ))
+impl<MI,Q> PLDSmoothedMaxDivergence<MI,Q> where MI:Clone, Q:Clone {
+    pub fn new(privacy_loss_distribution: impl Fn(&MI) -> Fallible<PLDistribution> + 'static) -> Self {
+        PLDSmoothedMaxDivergence {
+            _marker: PhantomData::<Q>::default(),
+            privacy_loss_distribution: Rc::new(privacy_loss_distribution)
         }
     }
+}
 
-    /// This is not a correct version of the simplify function
-    pub fn simplify(self, precision:u64) -> PLMOutputDomain {
-        PLMOutputDomain::new(&self.exp_privacy_loss_probabilitiies.into_iter().map(|(l,p)| {
-            (Rational::round(l*precision)/precision,Rational::round(p*precision)/precision)
-        }).collect::<Vec<(Rational, Rational)>>())
-    }
-
-    /// Use the formula from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
-    pub fn delta<Q>(&self, exp_epsilon:Q) -> Rational
-    where Q: Clone, Rational: TryFrom<Q> {
-
-        let e_x_y_inv = &Rational::try_from(exp_epsilon.clone()).unwrap_or_default().recip();
-        let e_y_x = &Rational::try_from(exp_epsilon.clone()).unwrap_or_default();
-        let (delta_x_y, delta_y_x) = self.exp_privacy_loss_probabilitiies.iter().fold((Rational::from(0),Rational::from(0)), 
-        |(delta_x_y, delta_y_x),(l_y_x,p_x)| {
-            (
-                delta_x_y + if l_y_x<e_x_y_inv {(Rational::from(1)-l_y_x.clone()/e_x_y_inv)*p_x} else {Rational::from(0)},
-                delta_y_x + if l_y_x>e_y_x {(Rational::from(1)-e_y_x.clone()/l_y_x)*p_x*l_y_x} else {Rational::from(0)},
-            )
-        });
-        if delta_x_y > delta_y_x {delta_x_y} else {delta_y_x}
+impl<MI,Q> Default for PLDSmoothedMaxDivergence<MI,Q> where MI:Clone, Q:Clone {
+    fn default() -> Self {
+        PLDSmoothedMaxDivergence::new(|m:&MI| Ok(PLDistribution::default()))
     }
 }
 
-/// Compute the cartesian product of output domains
-impl Mul for &PLMOutputDomain {
-    type Output = PLMOutputDomain;
-    fn mul(self, other: &PLMOutputDomain) -> PLMOutputDomain {
-        self.clone()
-    }
+impl<MI,Q> PartialEq for PLDSmoothedMaxDivergence<MI,Q> where MI:Clone, Q:Clone {
+    fn eq(&self, _other: &Self) -> bool { true }
 }
 
-impl Domain for PLMOutputDomain {
-    type Carrier = Rational;
-    fn member(&self, privacy_loss: &Self::Carrier) -> Fallible<bool> { Ok(self.exp_privacy_loss_probabilitiies.contains_key(privacy_loss)) }
+impl<MI,Q> Measure for PLDSmoothedMaxDivergence<MI,Q> where MI:Clone, Q:Clone {
+    type Distance = (Q, Q);
 }
 
-pub type PLMMeasurement = Measurement<PLMInputDomain, PLMOutputDomain, SymmetricDistance, SmoothedMaxDivergence<Rational>>;
+// A way to build privacy relations from privacy loss distribution approximation
 
-pub fn make_plm<Q>(exp_privacy_loss_probabilitiies:&[(Q, Q)]) -> Fallible<PLMMeasurement>
-    where Q: Clone, Rational: From<Q> {
-    let out_dom = PLMOutputDomain::new(exp_privacy_loss_probabilitiies);
-    let priv_rel = make_plm_privacy_relation(out_dom.clone());
-    Ok(Measurement::new(
-        PLMInputDomain::new(),
-        out_dom,
-        Function::new_fallible(|&_| fallible!(NotImplemented)),
-        SymmetricDistance::default(),
-        SmoothedMaxDivergence::default(),
-        priv_rel,
-    ))
-}
+// fn make_pl_privacy_relation<MI>(out_dom: PLDomain<D>) -> PrivacyRelation<SymmetricDistance, SmoothedMaxDivergence<Rational>> {
+//     PrivacyRelation::new_fallible( move |d_in: &IntDistance, (epsilon, delta): &(Rational, Rational)| {
+//         if d_in<&0 {
+//             return fallible!(InvalidDistance, "Privacy Loss Mechanism: input sensitivity must be non-negative")
+//         }
+//         if delta<=&0 {
+//             return fallible!(InvalidDistance, "Privacy Loss Mechanism: delta must be positive")
+//         }
+//         let mut exp_epsilon = Float::with_val_round(64, epsilon, Round::Down).0;
+//         exp_epsilon.exp_round(Round::Down);
+//         Ok(delta >= &out_dom.delta(exp_epsilon))
+//     })
+// }
 
-fn make_plm_privacy_relation(out_dom: PLMOutputDomain) -> PrivacyRelation<SymmetricDistance, SmoothedMaxDivergence<Rational>> {
-    PrivacyRelation::new_fallible( move |d_in: &IntDistance, (epsilon, delta): &(Rational, Rational)| {
-        if d_in<&0 {
-            return fallible!(InvalidDistance, "Privacy Loss Mechanism: input sensitivity must be non-negative")
-        }
-        if delta<=&0 {
-            return fallible!(InvalidDistance, "Privacy Loss Mechanism: delta must be positive")
-        }
-        let mut exp_epsilon = Float::with_val_round(64, epsilon, Round::Down).0;
-        exp_epsilon.exp_round(Round::Down);
-        Ok(delta >= &(out_dom.delta(exp_epsilon)))
-    })
-}
+// fn make_gaussian_privacy_relation<T, MI>(scale: T) -> PrivacyRelation<MI, SmoothedMaxDivergence<T>>
+//     where T: 'static + Clone + SampleGaussian + Float + InfCast<f64>,
+//           MI: SensitivityMetric<Distance=T> {
+//     PrivacyRelation::new_fallible(move |&d_in: &T, &(eps, del): &(T, T)| {
+//         let _2 = T::inf_cast(2.)?;
+//         let additive_gauss_const = T::inf_cast(ADDITIVE_GAUSS_CONST)?;
 
+//         if d_in.is_sign_negative() {
+//             return fallible!(InvalidDistance, "gaussian mechanism: input sensitivity must be non-negative")
+//         }
+//         if eps.is_sign_negative() || eps.is_zero() {
+//             return fallible!(InvalidDistance, "gaussian mechanism: epsilon must be positive")
+//         }
+//         if del.is_sign_negative() || del.is_zero() {
+//             return fallible!(InvalidDistance, "gaussian mechanism: delta must be positive")
+//         }
 
-// Measurement<PLMInputDomain, PLMOutputDomain, SymmetricDistance, SmoothedMaxDivergence<Rational>>
-pub fn make_basic_composition(measurement0: &PLMMeasurement, measurement1: &PLMMeasurement) -> Fallible<PLMMeasurement> {
-        if measurement0.input_domain != measurement1.input_domain {
-            return fallible!(DomainMismatch, "Input domain mismatch");
-        } else if measurement0.input_metric != measurement1.input_metric {
-            return fallible!(MetricMismatch, "Input metric mismatch");
-        } else if measurement0.output_measure != measurement1.output_measure {
-            return fallible!(MeasureMismatch, "Output measure mismatch");
-        }
-
-        Ok(make_plm(&measurement0.output_domain.exp_privacy_loss_probabilitiies.clone().into_iter().collect::<Vec<(Rational, Rational)>>())?)
-}
+//         // TODO: should we error if epsilon > 1., or just waste the budget?
+//         Ok(eps.min(T::one()) >= (d_in / scale) * (additive_gauss_const + _2 * del.recip().ln()).sqrt())
+//     })
+// }

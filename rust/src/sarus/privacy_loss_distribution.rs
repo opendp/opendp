@@ -5,7 +5,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Mul;
 
 use rug::Rational;
-use num::Num;
 
 /// Privacy Loss Distribution from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
@@ -19,11 +18,9 @@ pub struct PLDistribution {
 }
 
 impl<'a> PLDistribution {
-    pub fn new<I,Q>(exp_privacy_loss_probabilitiies:I) -> PLDistribution
-    where I: 'a + IntoIterator<Item=&'a (Q, Q)>, Q: 'a + Clone, Rational: TryFrom<Q> {
-        let p_y_x_p_x: Vec<(Rational,Rational)> = exp_privacy_loss_probabilitiies.into_iter().map(|(l,p)| {
-            (Rational::try_from(l.clone()).unwrap_or_default(), Rational::try_from(p.clone()).unwrap_or_default())
-        }).collect();
+    pub fn new<I>(exp_privacy_loss_probabilitiies:I) -> PLDistribution
+    where I: IntoIterator<Item=(Rational, Rational)> {
+        let p_y_x_p_x: Vec<(Rational,Rational)> = exp_privacy_loss_probabilitiies.into_iter().collect();
         let sum_p_x = p_y_x_p_x.iter().fold(Rational::from(0),
         |s,(_,p)| {s+p});
         let sum_p_y = p_y_x_p_x.iter().fold(Rational::from(0),
@@ -115,6 +112,16 @@ impl Mul for &PLDistribution {
 
 impl Default for PLDistribution {
     fn default() -> Self {
-        PLDistribution::new(&[(1.0,1.0)])
+        PLDistribution::new([(Rational::from(1),Rational::from(1))])
+    }
+}
+
+impl<Q> From<Vec<(Q,Q)>> for PLDistribution
+where Rational: TryFrom<Q> {
+    fn from(exp_privacy_loss_probabilities: Vec<(Q,Q)>) -> PLDistribution {
+        let rational_exp_privacy_loss_probabilities: Vec<(Rational,Rational)> = exp_privacy_loss_probabilities.into_iter().map(|(epl, p)| 
+            (Rational::try_from(epl).unwrap_or_default(), Rational::try_from(p).unwrap_or_default())
+        ).collect();
+        PLDistribution::new(rational_exp_privacy_loss_probabilities)
     }
 }
