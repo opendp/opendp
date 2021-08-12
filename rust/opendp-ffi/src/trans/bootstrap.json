@@ -4,13 +4,11 @@
         "args": [
             {
                 "name": "TI",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "input data type to cast from"
             },
             {
                 "name": "TO",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "data type to cast into"
             }
@@ -22,13 +20,11 @@
         "args": [
             {
                 "name": "TI",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "input data type to cast from"
             },
             {
                 "name": "TO",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "data type to cast into"
             }
@@ -46,7 +42,6 @@
             },
             {
                 "name": "TI",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "input data type"
             }
@@ -58,7 +53,6 @@
         "args": [
             {
                 "name": "DIA",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic input domain"
             }
@@ -70,13 +64,11 @@
         "args": [
             {
                 "name": "TI",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "input data type to cast from"
             },
             {
                 "name": "TO",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "data type to cast into"
             }
@@ -88,21 +80,18 @@
         "args": [
             {
                 "name": "MI",
-                "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
                 "description": "input dataset metric"
             },
             {
                 "name": "MO",
-                "c_type": "char *",
                 "hint": "DatasetMetric",
                 "is_type": true,
                 "description": "output dataset metric"
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic type of data"
             }
@@ -126,7 +115,6 @@
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic data type"
             }
@@ -150,7 +138,6 @@
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic data type"
             }
@@ -162,13 +149,11 @@
         "args": [
             {
                 "name": "TIA",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "Atomic Input Type. Input data is expected to be of the form Vec<TIA>."
             },
             {
                 "name": "TO",
-                "c_type": "char *",
                 "default": "i32",
                 "is_type": true,
                 "description": "type of output integer"
@@ -181,13 +166,11 @@
         "args": [
             {
                 "name": "TIA",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "Atomic Input Type. Input data is expected to be of the form Vec<TIA>."
             },
             {
                 "name": "TO",
-                "c_type": "char *",
                 "default": "i32",
                 "is_type": true,
                 "description": "Output Type. integer"
@@ -205,20 +188,17 @@
             },
             {
                 "name": "MO",
-                "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
                 "description": "Output Metric."
             },
             {
                 "name": "TI",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "Input Type. Categorical/hashable input data type. Input data must be Vec<TI>."
             },
             {
                 "name": "TO",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "Output Type. express counts in terms of this integral type",
                 "default": "i32"
@@ -243,20 +223,17 @@
             },
             {
                 "name": "MO",
-                "c_type": "char *",
                 "hint": "SensitivityMetric",
                 "is_type": true,
                 "description": "output sensitivity metric"
             },
             {
                 "name": "TI",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "categorical/hashable input data type. Input data must be Vec<TI>."
             },
             {
                 "name": "TO",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "express counts in terms of this integral type",
                 "default": "i32"
@@ -296,7 +273,6 @@
             },
             {
                 "name": "K",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "categorical/hashable data type of column names"
             }
@@ -322,7 +298,6 @@
             },
             {
                 "name": "K",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "categorical/hashable data type of column names"
             }
@@ -348,13 +323,11 @@
             },
             {
                 "name": "K",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "categorical/hashable data type of the key/column name"
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "data type to parse into"
             }
@@ -372,13 +345,11 @@
             },
             {
                 "name": "K",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "data type of the key"
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "data type to downcast to"
             }
@@ -390,14 +361,12 @@
         "args": [
             {
                 "name": "M",
-                "c_type": "char *",
                 "hint": "DatasetMetric",
                 "description": "dataset metric",
                 "is_type": true
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "description": "Type of data passed to the identity function.",
                 "is_type": true
             }
@@ -417,7 +386,6 @@
             },
             {
                 "name": "DA",
-                "c_type": "char *",
                 "is_type": true,
                 "default": "OptionNullDomain<AllDomain<T>>",
                 "generics": ["T"],
@@ -454,7 +422,6 @@
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "type of data being imputed"
             }
@@ -483,7 +450,6 @@
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic data type"
             }
@@ -508,7 +474,6 @@
             },
             {
                 "name": "TA",
-                "c_type": "void *",
                 "is_type": true,
                 "description": "Atomic type."
             }
@@ -546,7 +511,6 @@
             },
             {
                 "name": "TA",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "Atomic type."
             }
@@ -573,7 +537,6 @@
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic type of data"
             }
@@ -604,7 +567,6 @@
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic type of data"
             }
@@ -641,7 +603,6 @@
             },
             {
                 "name": "T",
-                "c_type": "char *",
                 "is_type": true,
                 "description": "atomic data type"
             }

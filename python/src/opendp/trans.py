@@ -766,11 +766,11 @@ def make_resize(
     # Convert arguments to c types.
     constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=TA)
     length = py_to_c(length, c_type=ctypes.c_uint)
-    TA = py_to_c(TA, c_type=ctypes.c_void_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_resize
-    function.argtypes = [AnyObjectPtr, ctypes.c_uint, ctypes.c_void_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_uint, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(constant, length, TA), Transformation))
