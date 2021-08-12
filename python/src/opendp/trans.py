@@ -741,16 +741,20 @@ def make_bounded_mean(
     return c_to_py(unwrap(function(lower, upper, n, T), Transformation))
 
 
-def make_resize_constant(
+def make_resize_constant_bounded(
     constant,
     length: int,
+    lower,
+    upper,
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.
+    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\nWARNING: This function is temporary. It will be replaced by a more general make_resize_constant that accepts domains
     
     :param constant: Value to impute with.
     :param length: Number of records in output data.
     :type length: int
+    :param lower: Lower bound of data in input domain
+    :param upper: Upper bound of data in input domain
     :param TA: Atomic type.
     :type TA: RuntimeTypeDescriptor
     :return: A vector of the same type `TA`, but with the provided `length`.
@@ -765,14 +769,16 @@ def make_resize_constant(
     # Convert arguments to c types.
     constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=TA)
     length = py_to_c(length, c_type=ctypes.c_uint)
+    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=TA)
+    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=TA)
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_resize_constant
-    function.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p]
+    function = lib.opendp_trans__make_resize_constant_bounded
+    function.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(constant, length, TA), Transformation))
+    return c_to_py(unwrap(function(constant, length, lower, upper, TA), Transformation))
 
 
 def make_bounded_sum(

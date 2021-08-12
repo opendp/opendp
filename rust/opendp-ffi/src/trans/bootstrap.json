@@ -492,8 +492,8 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
-    "make_resize_constant": {
-        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.",
+    "make_resize_constant_bounded": {
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize_constant that accepts domains",
         "args": [
             {
                 "name": "constant",
@@ -505,6 +505,18 @@
                 "name": "length",
                 "c_type": "unsigned int",
                 "description": "Number of records in output data."
+            },
+            {
+                "name": "lower",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "description": "Lower bound of data in input domain"
+            },
+            {
+                "name": "upper",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "description": "Upper bound of data in input domain"
             },
             {
                 "name": "TA",
