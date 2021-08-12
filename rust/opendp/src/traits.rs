@@ -1,10 +1,11 @@
 use std::convert::TryFrom;
-use std::ops::{Div, Mul, Sub};
+use std::ops::{Div, Mul, Sub, Add};
 
 use num::{NumCast, One, Zero};
 
 use crate::error::Fallible;
 use std::cmp::{Ordering};
+use crate::dist::{EpsilonDelta};
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.
@@ -508,3 +509,33 @@ impl<T1: TotalOrd, T2: TotalOrd> TotalOrd for (T1, T2) {
         }
     }
 }
+
+pub trait Midpoint: Sized {
+    fn midpoint(self, rhs: Self) -> Self;
+}
+macro_rules! impl_midpoint {
+    ($($ty:ty),+) => ($(
+        impl Midpoint for $ty {
+            fn midpoint(self, rhs: Self) -> Self {
+                (self + rhs) / (<$ty>::one() + <$ty>::one())
+            }
+        }
+    )+)
+}
+impl_midpoint!(f64, f32);
+impl<T: Clone + PartialOrd + One> Midpoint for EpsilonDelta<T> where T: One + Add<Output=T> + Div<Output=T> + Clone {
+    fn midpoint(self, rhs: Self) -> Self {
+        let two = T::one() + T::one();
+        EpsilonDelta {
+            epsilon: (self.epsilon + rhs.epsilon) / two.clone(),
+            delta: (self.delta + rhs.delta) / two
+        }
+    }
+}
+
+pub trait Tolerance { const TOLERANCE: Self; }
+impl<T: Tolerance> Tolerance for EpsilonDelta<T> {
+    const TOLERANCE: Self = EpsilonDelta { epsilon: T::TOLERANCE, delta: T::TOLERANCE };
+}
+impl Tolerance for f64 {const TOLERANCE: Self = 1e-20f64;}
+impl Tolerance for f32 {const TOLERANCE: Self = 1e-20f32;}

@@ -1,8 +1,12 @@
 //! Various implementations of Metric/Measure (and associated Distance).
 
 use std::marker::PhantomData;
+use num::{One, Zero, Float};
 
-use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
+use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric, PrivacyRelation};
+use crate::error::Fallible;
+use crate::traits::{Tolerance, Midpoint};
+use crate::samplers::CastInternalReal;
 
 // default type for distances between datasets
 pub type IntDistance = u32;
@@ -49,6 +53,145 @@ impl<Q> PartialEq for FSmoothedMaxDivergence<Q> {
 
 impl<Q: Clone> Measure for FSmoothedMaxDivergence<Q> {
     type Distance = Vec<EpsilonDelta<Q>>;
+}
+
+const MAX_ITERATIONS: usize = 100;
+use core::fmt::Debug;
+
+impl<MI, Q> PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>
+     where MI: Metric,
+           Q: Clone + Zero + One + Float + Midpoint + Tolerance + CastInternalReal,// + Float + One + Zero + Tolerance + Midpoint + PartialOrd + CastInternalReal,
+           MI::Distance: Clone {
+
+    pub fn find_epsilon (&self, d_in: &MI::Distance, delta: Q) -> Fallible<Q> {
+        let mut eps_min = Q::zero();
+        let mut eps = Q::one();
+
+        for _ in 0..MAX_ITERATIONS {
+            let dout = vec![EpsilonDelta {
+                epsilon: eps.clone(),
+                delta: delta.clone(),
+            }];
+            let eval = match self.eval(&d_in, &dout) {
+                Ok(result) => result,
+                Err(_) => {return Ok(Q::one() / Q::zero())}
+            };
+
+            if !eval {
+                eps = eps.clone() * (Q::one() + Q::one());
+            }
+
+            else {
+                let eps_mid = eps_min.clone().midpoint(eps);
+                let dout = vec![EpsilonDelta {
+                    epsilon: eps_mid.clone(),
+                    delta: delta.clone(),
+                }];
+                if self.eval(&d_in, &dout)? {
+                    eps = eps_mid.clone();
+                } else {
+                    eps_min = eps_mid.clone();
+                }
+                if eps <= Q::TOLERANCE.clone() + eps_min.clone() {
+                    return Ok(eps)
+                }
+            }
+        }
+        let dout = vec![EpsilonDelta {
+            epsilon: eps.clone(),
+            delta: delta.clone(),
+        }];
+        if !self.eval(&d_in, &dout)? {
+            return Ok(Q::one() / Q::zero())
+        }
+        Ok(eps)
+    }
+
+    pub fn find_delta (&self, d_in: &MI::Distance, epsilon: Q) -> Fallible<Q> {
+        let mut delta_min = Q::zero();
+        let mut delta = Q::one();
+
+        for _ in 0..MAX_ITERATIONS {
+            let dout = vec![EpsilonDelta {
+                epsilon: epsilon.clone(),
+                delta: delta.clone(),
+            }];
+            let eval = match self.eval(&d_in, &dout) {
+                Ok(result) => result,
+                Err(_) => {return Ok(Q::one())}
+            };
+            if !eval {
+                delta = delta.clone() * (Q::one() + Q::one());
+            }
+
+            else {
+                let delta_mid = delta_min.midpoint(delta);
+                let dout = vec![EpsilonDelta {
+                    epsilon: epsilon.clone(),
+                    delta: delta_mid.clone(),
+                }];
+                if self.eval(&d_in, &dout)? {
+                    delta = delta_mid.clone();
+                } else {
+                    delta_min = delta_mid.clone();
+                }
+                if delta <= Q::TOLERANCE + delta_min.clone() {
+                    return Ok(delta)
+                }
+            }
+        }
+        let dout = vec![EpsilonDelta {
+            epsilon: epsilon.clone(),
+            delta: delta.clone(),
+        }];
+        if !self.eval(&d_in, &dout)? {
+            return Ok(Q::one())
+        }
+        Ok(delta)
+    }
+
+    pub fn find_epsilon_delta_family (
+        &self,
+        d_in: &MI::Distance,
+        npoints: u8,
+        delta_min: Q
+    ) -> Vec<EpsilonDelta<Q>> {
+        let max_epsilon = self.find_epsilon(&d_in, delta_min).unwrap();
+        let mut min_epsilon = self.find_epsilon(&d_in, Q::one()).unwrap();
+        if min_epsilon < Q::zero() {
+            min_epsilon = Q::zero();
+        }
+
+        if max_epsilon == (Q::one() / Q::zero()) {
+            return vec![EpsilonDelta{
+                epsilon: Q::one() / Q::zero(),
+                delta: Q::one(),
+            }]
+        }
+
+        let step = (max_epsilon.clone() - min_epsilon.clone())
+            / Q::from_internal(rug::Float::with_val(53, npoints - 1));
+        (0..npoints)
+            .map(|i| min_epsilon.clone() + step.clone() * Q::from_internal(rug::Float::with_val(53, i)))
+            .map(|eps| EpsilonDelta{
+                epsilon: eps.clone(),
+                delta: self.find_delta(&d_in, eps.clone()).unwrap()
+            })
+            .rev()
+            .collect()
+
+        // let step = (max_epsilon.clone().exp() - min_epsilon.clone().exp()) / rug::Float::with_val(53, npoints - 1);
+        // (0..npoints)
+        //     .map(|i| Q::from_internal(
+        //         (min_epsilon.clone().exp() + step.clone() * rug::Float::with_val(4, i)).ln()
+        //     ))
+        //     .map(|eps| EpsilonDelta{
+        //         epsilon: eps.clone(),
+        //         delta: self.find_delta(&d_in, eps.clone()).unwrap()
+        //     })
+        //     .rev()
+        //     .collect()
+    }
 }
 
 /// Metrics
