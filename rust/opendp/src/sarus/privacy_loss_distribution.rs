@@ -62,26 +62,36 @@ impl<'a> PLDistribution {
         let mut result = Vec::new();
         let mut exp_epsilons_set:BTreeSet<Rational> = BTreeSet::new();
         // Initialize the set of possible exp_eps
-        for exp_epsilon in self.exp_privacy_loss_probabilities.keys() {
-            exp_epsilons_set.insert(exp_epsilon.clone());
-            if exp_epsilon>&Rational::from(0) {
-                exp_epsilons_set.insert(exp_epsilon.clone().recip());
-            }
-        }
-        let exp_epsilons: Vec<Rational> = exp_epsilons_set.into_iter().collect();
+        // for exp_epsilon in self.exp_privacy_loss_probabilities.keys() {
+        //     exp_epsilons_set.insert(exp_epsilon.clone());
+        //     // if exp_epsilon>&Rational::from(0) {
+        //     //     exp_epsilons_set.insert(exp_epsilon.clone().recip());
+        //     // }
+        // }
+        let exp_epsilons: Vec<Rational> = self.exp_privacy_loss_probabilities.keys().rev().map(|k| k.clone()).collect();
         let mut last_exp_epsilon = exp_epsilons[0].clone();
-        let mut last_delta = self.delta(last_exp_epsilon.clone());
+        let mut last_delta= self.delta(last_exp_epsilon.clone());
+        result.push((Rational::from(0), Rational::from(1)-&last_delta));
         for i in 1..exp_epsilons.len() {
             let exp_epsilon = exp_epsilons[i].clone();
             let delta = self.delta(exp_epsilon.clone());
+            let denom = exp_epsilon.clone()-&last_exp_epsilon;
             result.push((
-                (last_delta.clone()-&delta)/(exp_epsilon.clone()-&last_exp_epsilon),
-                ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/(exp_epsilon.clone()-&last_exp_epsilon),
+                (last_delta.clone()-&delta)/&denom,
+                ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
             ));
+            println!("exp_epsilon: {:?}, delta: {:?}, alpha: {:?}, beta {:?}", exp_epsilon.to_f64(), delta.to_f64(), result.last().unwrap().0.to_f64(), result.last().unwrap().1.to_f64());
             last_exp_epsilon = exp_epsilon.clone();
             last_delta = delta.clone();
         }
-        result.push((Rational::from(0),Rational::from(1)-&last_delta));
+        let exp_epsilon = Rational::from(0);
+        let delta = Rational::from(1);
+        let denom = exp_epsilon.clone()-&last_exp_epsilon;
+        result.push((
+            (last_delta.clone()-&delta)/&denom,
+            ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
+        ));
+        println!("{:?}", exp_epsilons.into_iter().map(|e| (e.clone().to_f64(), self.delta(e.clone()).to_f64())).collect::<Vec<(f64,f64)>>());
         result
     }
 
