@@ -1,24 +1,24 @@
-use opendp::chain::{make_basic_composition, make_chain_mt, make_chain_tt};
+use opendp::comb::{make_basic_composition, make_chain_mt, make_chain_tt};
 
 use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
 use crate::core::FfiResult;
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
+pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
     let transformation0 = try_as_ref!(transformation0);
     let measurement1 = try_as_ref!(measurement1);
     make_chain_mt(measurement1, transformation0, None).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_chain_tt(transformation1: *const AnyTransformation, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyTransformation> {
+pub extern "C" fn opendp_comb__make_chain_tt(transformation1: *const AnyTransformation, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyTransformation> {
     let transformation0 = try_as_ref!(transformation0);
     let transformation1 = try_as_ref!(transformation1);
     make_chain_tt(transformation1, transformation0, None).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_basic_composition(measurement0: *const AnyMeasurement, measurement1: *const AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
+pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMeasurement, measurement1: *const AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
     let measurement0 = try_as_ref!(measurement0);
     let measurement1 = try_as_ref!(measurement1);
     // This one has a different pattern than most constructors. The result of make_basic_composition()
@@ -42,9 +42,10 @@ mod tests {
     use crate::util;
 
     use super::*;
+    use opendp::traits::CheckNull;
 
     // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_measurement<T: Clone>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
+    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
         Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
@@ -56,7 +57,7 @@ mod tests {
     }
 
     // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_transformation<T: Clone>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
+    pub fn make_test_transformation<T: Clone + CheckNull>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
         trans::make_identity(AllDomain::<T>::new(), SymmetricDistance::default()).unwrap_test()
     }
 
@@ -64,7 +65,7 @@ mod tests {
     fn test_make_chain_mt() -> Fallible<()> {
         let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
         let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
-        let chain = Result::from(opendp_core__make_chain_mt(measurement1, transformation0))?;
+        let chain = Result::from(opendp_comb__make_chain_mt(measurement1, transformation0))?;
         let arg = AnyObject::new_raw(999);
         let res = core::opendp_core__measurement_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
@@ -76,7 +77,7 @@ mod tests {
     fn test_make_chain_tt() -> Fallible<()> {
         let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
         let transformation1 = util::into_raw(make_test_transformation::<i32>().into_any());
-        let chain = Result::from(opendp_core__make_chain_tt(transformation1, transformation0))?;
+        let chain = Result::from(opendp_comb__make_chain_tt(transformation1, transformation0))?;
         let arg = AnyObject::new_raw(999);
         let res = core::opendp_core__transformation_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
@@ -88,7 +89,7 @@ mod tests {
     fn test_make_basic_composition() -> Fallible<()> {
         let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
         let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
-        let basic_composition = Result::from(opendp_core__make_basic_composition(measurement0, measurement1))?;
+        let basic_composition = Result::from(opendp_comb__make_basic_composition(measurement0, measurement1))?;
         let arg = AnyObject::new_raw(999);
         let res = core::opendp_core__measurement_invoke(&basic_composition, arg);
         let res: (AnyObject, AnyObject) = Fallible::from(res)?.downcast()?;

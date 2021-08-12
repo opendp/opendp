@@ -10,6 +10,7 @@ use crate::data::Column;
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::dist::SymmetricDistance;
+use crate::traits::CheckNull;
 
 pub type DataFrame<K> = HashMap<K, Column>;
 pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
@@ -38,14 +39,14 @@ fn create_dataframe<K: Eq + Hash>(col_names: Vec<K>, records: &[Vec<&str>]) -> D
         .collect()
 }
 
-fn create_dataframe_domain<K: Eq + Hash>() -> DataFrameDomain<K> {
+fn create_dataframe_domain<K: Eq + Hash + CheckNull>() -> DataFrameDomain<K> {
     MapDomain::new(AllDomain::new(), AllDomain::new())
 }
 
 pub fn make_create_dataframe<K>(
     col_names: Vec<K>
 ) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Eq + Hash + Clone {
+    where K: 'static + Eq + Hash + Clone + CheckNull {
     Ok(Transformation::new(
         VectorDomain::new(VectorDomain::new_all()),
         create_dataframe_domain(),
@@ -69,7 +70,7 @@ fn split_dataframe<K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str) ->
 pub fn make_split_dataframe<K>(
     separator: Option<&str>, col_names: Vec<K>
 ) -> Fallible<Transformation<AllDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Hash + Eq + Clone {
+    where K: 'static + Hash + Eq + Clone + CheckNull {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
         AllDomain::new(),
@@ -100,7 +101,7 @@ fn parse_column<K, T>(key: &K, impute: bool, df: &DataFrame<K>) -> Fallible<Data
 }
 
 pub fn make_parse_column<K, T>(key: K, impute: bool) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Hash + Eq + Debug + Clone,
+    where K: 'static + Hash + Eq + Debug + Clone + CheckNull,
           T: 'static + Debug + FromStr + Clone + Default + PartialEq,
           T::Err: Debug {
     Ok(Transformation::new(
@@ -113,8 +114,8 @@ pub fn make_parse_column<K, T>(key: K, impute: bool) -> Fallible<Transformation<
 }
 
 pub fn make_select_column<K, T>(key: K) -> Fallible<Transformation<DataFrameDomain<K>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Eq + Hash + Debug,
-          T: 'static + Debug + Clone + PartialEq {
+    where K: 'static + Eq + Hash + Debug + CheckNull,
+          T: 'static + Debug + Clone + PartialEq + CheckNull {
     Ok(Transformation::new(
         create_dataframe_domain(),
         VectorDomain::new_all(),
@@ -190,7 +191,7 @@ pub fn make_split_records(separator: Option<&str>) -> Fallible<Transformation<Ve
 
 #[cfg(test)]
 mod tests {
-    use crate::chain::make_chain_tt;
+    use crate::comb::make_chain_tt;
     use crate::error::ExplainUnwrap;
 
     use super::*;

@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::{c_char};
 
 use opendp::core::{DatasetMetric};
 use opendp::dist::{SubstituteDistance, SymmetricDistance};
@@ -7,7 +7,7 @@ use opendp::dom::{AllDomain, VectorDomain, OptionNullDomain, InherentNullDomain,
 use opendp::err;
 use opendp::trans::{make_identity, make_is_equal, make_is_null};
 
-use crate::any::AnyTransformation;
+use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
 use opendp::traits::CheckNull;
@@ -18,12 +18,12 @@ pub extern "C" fn opendp_trans__make_identity(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize_scalar<M, T>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              T: 'static + Clone {
+              T: 'static + Clone + CheckNull {
         make_identity::<AllDomain<T>, M>(AllDomain::<T>::new(), M::default()).into_any()
     }
     fn monomorphize_vec<M, T>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              T: 'static + Clone {
+              T: 'static + Clone + CheckNull {
         make_identity::<VectorDomain<AllDomain<T>>, M>(VectorDomain::new(AllDomain::<T>::new()), M::default()).into_any()
     }
     let M = try_!(Type::try_from(M));
@@ -42,14 +42,14 @@ pub extern "C" fn opendp_trans__make_identity(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_is_equal(
-    value: *const c_void,
+    value: *const AnyObject,
     TI: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let TI = try_!(Type::try_from(TI));
 
-    fn monomorphize<TI>(value: *const c_void) -> FfiResult<*mut AnyTransformation> where
-        TI: 'static + Clone + PartialEq {
-        let value = try_as_ref!(value as *const TI).clone();
+    fn monomorphize<TI>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
+        TI: 'static + Clone + PartialEq + CheckNull {
+        let value: TI = try_!(try_as_ref!(value).downcast_ref::<TI>()).clone();
         make_is_equal::<TI>(value).into_any()
     }
     dispatch!(monomorphize, [(TI, @primitives)], (value))
@@ -65,14 +65,14 @@ pub extern "C" fn opendp_trans__make_is_null(
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
             fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
-                where Option<T>: 'static + CheckNull {
+                where T: 'static + CheckNull {
                 make_is_null::<OptionNullDomain<AllDomain<T>>>().into_any()
             }
             dispatch!(monomorphize, [(T, @primitives)], ())
         }
         TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
             fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
-                where T: 'static + CheckNull + InherentNull {
+                where T: 'static + InherentNull {
                 make_is_null::<InherentNullDomain<AllDomain<T>>>().into_any()
             }
             dispatch!(monomorphize, [(T, [f64, f32])], ())
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn test_make_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_is_equal(
-            util::into_raw(1) as *const c_void,
+            util::into_raw(AnyObject::new(1)) as *const AnyObject,
             "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);

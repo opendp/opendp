@@ -26,7 +26,6 @@ use crate::dom::PairDomain;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast};
 use crate::dist::IntDistance;
-
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.

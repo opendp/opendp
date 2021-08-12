@@ -63,7 +63,7 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
 pub fn make_is_equal<TI>(
     value: TI
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + PartialEq {
+    where TI: 'static + PartialEq + CheckNull {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),

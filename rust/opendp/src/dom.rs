@@ -12,8 +12,9 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
+use crate::traits::{CheckNull, TotalOrd};
 
-/// A Domain that contains all members of the carrier type.
+/// A Domain that contains all non-null members of the carrier type.
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
 }
@@ -33,9 +34,9 @@ impl<T> Clone for AllDomain<T> {
 impl<T> PartialEq for AllDomain<T> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-impl<T> Domain for AllDomain<T> {
+impl<T: CheckNull> Domain for AllDomain<T> {
     type Carrier = T;
-    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> { Ok(true) }
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> { Ok(!val.is_null()) }
 }
 
 
@@ -84,7 +85,7 @@ pub struct IntervalDomain<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: PartialOrd> IntervalDomain<T> {
+impl<T: TotalOrd> IntervalDomain<T> {
     pub fn new(lower: Bound<T>, upper: Bound<T>) -> Fallible<Self> {
         fn get<T>(value: &Bound<T>) -> Option<&T> {
             match value {
@@ -110,7 +111,7 @@ impl<T: PartialOrd> IntervalDomain<T> {
         Ok(IntervalDomain { lower, upper })
     }
 }
-impl<T: Clone + PartialOrd> Domain for IntervalDomain<T> {
+impl<T: Clone + TotalOrd> Domain for IntervalDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         Ok(match &self.lower {
@@ -153,7 +154,7 @@ impl<DK: Domain, DV: Domain> MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
         MapDomain { key_domain, value_domain: element_domain }
     }
 }
-impl<K, V> MapDomain<AllDomain<K>, AllDomain<V>> where K: Eq + Hash {
+impl<K: CheckNull, V: CheckNull> MapDomain<AllDomain<K>, AllDomain<V>> where K: Eq + Hash {
     pub fn new_all() -> Self {
         Self::new(AllDomain::<K>::new(), AllDomain::<V>::new())
     }
@@ -184,7 +185,7 @@ impl<D: Domain> VectorDomain<D> {
         VectorDomain { element_domain }
     }
 }
-impl<T> VectorDomain<AllDomain<T>> {
+impl<T: CheckNull> VectorDomain<AllDomain<T>> {
     pub fn new_all() -> Self {
         Self::new(AllDomain::<T>::new())
     }
@@ -239,14 +240,11 @@ impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull 
         self.element_domain.member(val)
     }
 }
-pub trait InherentNull {
-    fn is_null(&self) -> bool;
+pub trait InherentNull: CheckNull {
     const NULL: Self;
 }
 macro_rules! impl_inherent_null_float {
     ($($ty:ty),+) => ($(impl InherentNull for $ty {
-        #[inline]
-        fn is_null(&self) -> bool { self.is_nan() }
         const NULL: Self = Self::NAN;
     })+)
 }

@@ -178,6 +178,12 @@ class RuntimeType(object):
                     "cannot infer atomic type of empty list")
             ])
 
+        if isinstance(public_example, dict):
+            return RuntimeType('HashMap', [
+                cls.infer(next(iter(public_example.keys()))),
+                cls.infer(next(iter(public_example.values())))
+            ])
+
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
 

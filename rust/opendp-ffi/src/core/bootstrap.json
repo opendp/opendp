@@ -164,63 +164,6 @@
             "description": "Non-differentially private answer to the query."
         }
     },
-    "make_chain_mt": {
-        "description": "Construct the functional composition (`measurement` ○ `transformation`). Returns a Measurement.",
-        "args": [
-            {
-                "name": "measurement",
-                "c_type": "const AnyMeasurement *",
-                "description": "outer privatizer"
-            },
-            {
-                "name": "transformation",
-                "c_type": "const AnyTransformation *",
-                "description": "inner query"
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>",
-            "description": "Measurement representing the chained computation."
-        }
-    },
-    "make_chain_tt": {
-        "description": "Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Tranformation.",
-        "args": [
-            {
-                "name": "transformation1",
-                "c_type": "const AnyTransformation *",
-                "description": "outer transformation"
-            },
-            {
-                "name": "transformation0",
-                "c_type": "const AnyTransformation *",
-                "description": "inner transformation"
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyTransformation *>",
-            "description": "Transformation representing the chained computation."
-        }
-    },
-    "make_basic_composition": {
-        "description": "Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.",
-        "args": [
-            {
-                "name": "measurement0",
-                "c_type": "const AnyMeasurement *",
-                "description": "The left member of the resulting 2-tuple."
-            },
-            {
-                "name": "measurement1",
-                "c_type": "const AnyMeasurement *",
-                "description": "The right member of the resulting 2-tuple."
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>",
-            "description": "Measurement representing the composed transformations."
-        }
-    },
     "transformation_input_carrier_type": {
         "description": "Get the input (carrier) data type of `transformation`.",
         "args": [

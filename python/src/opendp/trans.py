@@ -71,12 +71,13 @@ def make_cast_default(
 
 
 def make_is_equal(
-    value,
+    value: Any,
     TI: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that checks if each element is equal to `value`.
     
     :param value: value to check against
+    :type value: Any
     :param TI: input data type
     :type TI: RuntimeTypeDescriptor
     :return: A is_equal step.
@@ -89,12 +90,12 @@ def make_is_equal(
     TI = RuntimeType.parse_or_infer(type_name=TI, public_example=value)
     
     # Convert arguments to c types.
-    value = py_to_c(value, c_type=ctypes.c_void_p, type_name=TI)
+    value = py_to_c(value, c_type=AnyObjectPtr, type_name=TI)
     TI = py_to_c(TI, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_is_equal
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(value, TI), Transformation))
@@ -200,17 +201,14 @@ def make_cast_metric(
 def make_clamp(
     lower,
     upper,
-    DI: RuntimeTypeDescriptor = "VectorDomain<AllDomain<T>>",
-    M: RuntimeTypeDescriptor = "SymmetricDistance"
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`. Set DI to AllDomain<T> for clamping aggregated values.
+    """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.
     
     :param lower: If datum is less than lower, let datum be lower.
     :param upper: If datum is greater than upper, let datum be upper.
-    :param DI: input domain. One of VectorDomain<AllDomain<_>> or AllDomain<_>.
-    :type DI: RuntimeTypeDescriptor
-    :param M: metric. Set to SymmetricDistance when clamping datasets, or AbsoluteDistance<_> when clamping aggregated scalars
-    :type M: RuntimeTypeDescriptor
+    :param T: atomic data type
+    :type T: RuntimeTypeDescriptor
     :return: A clamp step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -218,39 +216,32 @@ def make_clamp(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    DI = RuntimeType.parse(type_name=DI, generics=["T"])
-    M = RuntimeType.parse(type_name=M)
-    T = get_domain_atom_or_infer(DI, lower)
-    DI = DI.substitute(T=T)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
-    DI = py_to_c(DI, c_type=ctypes.c_char_p)
-    M = py_to_c(M, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_clamp
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, DI, M), Transformation))
+    return c_to_py(unwrap(function(lower, upper, T), Transformation))
 
 
 def make_unclamp(
     lower,
     upper,
-    M: RuntimeTypeDescriptor,
-    T: RuntimeTypeDescriptor = "VectorDomain<IntervalDomain<T>>"
+    T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>. Set DI to IntervalDomain<T> to work on scalars.
+    """Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>.
     
     :param lower: Lower bound of the input data.
     :param upper: Upper bound of the input data.
-    :param T: domain of data being unclamped
+    :param T: atomic data type
     :type T: RuntimeTypeDescriptor
-    :param M: metric to use on the input and output spaces
-    :type M: RuntimeTypeDescriptor
     :return: A unclamp step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -259,20 +250,18 @@ def make_unclamp(
     """
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
-    M = RuntimeType.parse(type_name=M)
     
     # Convert arguments to c types.
     lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
     upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
     T = py_to_c(T, c_type=ctypes.c_char_p)
-    M = py_to_c(M, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_unclamp
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, T, M), Transformation))
+    return c_to_py(unwrap(function(lower, upper, T), Transformation))
 
 
 def make_count(
@@ -539,7 +528,7 @@ def make_split_dataframe(
 
 
 def make_parse_column(
-    key,
+    key: Any,
     T: RuntimeTypeDescriptor,
     impute: bool = True,
     K: RuntimeTypeDescriptor = None
@@ -547,6 +536,7 @@ def make_parse_column(
     """Make a Transformation that parses the `key` column of a dataframe as `T`.
     
     :param key: name of column to select from dataframe and parse
+    :type key: Any
     :param impute: Enable to impute values that fail to parse. If false, raise an error if parsing fails.
     :type impute: bool
     :param K: categorical/hashable data type of the key/column name
@@ -564,27 +554,28 @@ def make_parse_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
     impute = py_to_c(impute, c_type=ctypes.c_bool)
     K = py_to_c(K, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_parse_column
-    function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(key, impute, K, T), Transformation))
 
 
 def make_select_column(
-    key,
+    key: Any,
     T: RuntimeTypeDescriptor,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`T`>.
     
     :param key: categorical/hashable data type of the key/column name
+    :type key: Any
     :param K: data type of the key
     :type K: RuntimeTypeDescriptor
     :param T: data type to downcast to
@@ -600,13 +591,13 @@ def make_select_column(
     T = RuntimeType.parse(type_name=T)
     
     # Convert arguments to c types.
-    key = py_to_c(key, c_type=ctypes.c_void_p, type_name=K)
+    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
     K = py_to_c(K, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_select_column
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(key, K, T), Transformation))
@@ -645,7 +636,7 @@ def make_identity(
 
 
 def make_impute_constant(
-    constant,
+    constant: Any,
     DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<T>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
@@ -653,6 +644,7 @@ def make_impute_constant(
     Set DA to InherentNullDomain<AllDomain<T>> for imputing on types that have an inherent representation of nullity, like floats.
     
     :param constant: Value to replace nulls with.
+    :type constant: Any
     :param DA: domain of data being imputed. This is OptionNullDomain<AllDomain<T>> or InherentNullDomain<AllDomain<T>>
     :type DA: RuntimeTypeDescriptor
     :return: A impute_constant step.
@@ -667,12 +659,12 @@ def make_impute_constant(
     DA = DA.substitute(T=T)
     
     # Convert arguments to c types.
-    constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=T)
+    constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=T)
     DA = py_to_c(DA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_impute_constant
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(constant, DA), Transformation))
@@ -747,6 +739,40 @@ def make_bounded_mean(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(lower, upper, n, T), Transformation))
+
+
+def make_resize_constant(
+    constant,
+    length: int,
+    TA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.
+    
+    :param constant: Value to impute with.
+    :param length: Number of records in output data.
+    :type length: int
+    :param TA: Atomic type.
+    :type TA: RuntimeTypeDescriptor
+    :return: A vector of the same type `TA`, but with the provided `length`.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=constant)
+    
+    # Convert arguments to c types.
+    constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=TA)
+    length = py_to_c(length, c_type=ctypes.c_uint)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_resize_constant
+    function.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(constant, length, TA), Transformation))
 
 
 def make_bounded_sum(

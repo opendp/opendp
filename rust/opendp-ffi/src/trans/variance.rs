@@ -6,7 +6,7 @@ use std::os::raw::{c_char, c_uint, c_void};
 use num::{Float, One, Zero};
 
 use opendp::err;
-use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckedMul};
+use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckedMul, CheckNull};
 use opendp::trans::{make_bounded_covariance, make_bounded_variance};
 
 use crate::any::{AnyObject, AnyTransformation, Downcast};
@@ -23,7 +23,7 @@ pub extern "C" fn opendp_trans__make_bounded_variance(
     fn monomorphize2<T>(
         lower: *const c_void, upper: *const c_void, length: usize, ddof: usize,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + CheckedMul,
+        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + CheckedMul + CheckNull,
               for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
               IntDistance: InfCast<T> {
         let lower = *try_as_ref!(lower as *const T);
@@ -52,7 +52,7 @@ pub extern "C" fn opendp_trans__make_bounded_covariance(
         upper: *const AnyObject,
         length: usize, ddof: usize,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Sum<T> + Zero + One + ExactIntCast<usize> + CheckedMul,
+        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Sum<T> + Zero + One + ExactIntCast<usize> + CheckedMul + CheckNull,
               for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
               for<'a> &'a T: Sub<Output=T>,
               IntDistance: InfCast<T> {

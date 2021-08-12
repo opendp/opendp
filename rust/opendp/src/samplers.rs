@@ -12,6 +12,7 @@ use crate::error::Fallible;
 use statrs::function::erf;
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
+use crate::traits::TotalOrd;
 
 #[cfg(feature="use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
@@ -216,12 +217,12 @@ impl SampleUniform for f32 {
 /// version allows us to avoid an infinite dependence loop.
 fn sample_i10_geometric(constant_time: bool) -> Fallible<i16> {
     Ok(if constant_time {
-        let mut buffer = vec![0_u8; 128];
+        let mut buffer = [0_u8; 128];
         fill_bytes(&mut buffer)?;
 
-        cmp::min(buffer.into_iter().enumerate()
+        cmp::min(buffer.iter().enumerate()
                      // ignore samples that contain no events
-                     .filter(|(_, sample)| sample > &0)
+                     .filter(|(_, &sample)| sample > 0)
                      // compute the index of the smallest event in the batch
                      .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
                      // retrieve the smallest index
@@ -337,7 +338,7 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + PartialOrd> SampleTwoSidedGeometric for T {
+impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd> SampleTwoSidedGeometric for T {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the

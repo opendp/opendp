@@ -86,6 +86,9 @@
 
 #![allow(clippy::upper_case_acronyms)]
 #![allow(non_snake_case)]
+#![recursion_limit="512"]
+// #![feature(trace_macros)]
+// trace_macros!(true);
 
 #[macro_use]
 extern crate lazy_static;
@@ -122,3 +125,4 @@ mod glue;
 mod meas;
 mod trans;
 pub(crate) mod util;
+mod comb;

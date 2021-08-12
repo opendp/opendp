@@ -4,6 +4,7 @@ use std::ops::{Div, Mul, Sub};
 use num::{NumCast, One, Zero};
 
 use crate::error::Fallible;
+use std::cmp::{Ordering};
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.
@@ -14,9 +15,9 @@ use crate::error::Fallible;
 /// - QO also clearly needs to support Mul and PartialOrd used in the general form above.
 /// - Div is used for the backward map:
 ///     How do you translate d_out to a d_in that can be used as a hint? |d_out| d_out / c
-pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + PartialOrd
+pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + TotalOrd
     where TI: InfCast<Self> {}
-impl<TI: InfCast<Self>, TO: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + PartialOrd> DistanceConstant<TI> for TO {}
+impl<TI: InfCast<Self>, TO: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + TotalOrd> DistanceConstant<TI> for TO {}
 
 // TODO: Maybe this should be renamed to something more specific to budgeting, and add negative checks? -Mike
 pub trait FallibleSub<Rhs = Self> {
@@ -354,29 +355,28 @@ impl RoundCast<String> for bool { fn round_cast(v: String) -> Fallible<Self> { O
 impl RoundCast<bool> for String { fn round_cast(v: bool) -> Fallible<Self> { Ok(v.to_string()) } }
 
 pub trait CheckNull { fn is_null(&self) -> bool; }
-macro_rules! impl_check_null_for_non_null {
+macro_rules! impl_check_null_for_non_nullable {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
             #[inline]
             fn is_null(&self) -> bool {false}
         })+
-        $(impl CheckNull for Option<$ty> {
-            #[inline]
-            fn is_null(&self) -> bool {self.is_none()}
-        })+
     }
 }
-impl_check_null_for_non_null!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String);
+impl_check_null_for_non_nullable!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize);
+impl<T: CheckNull> CheckNull for Option<T> {
+    #[inline]
+    fn is_null(&self) -> bool {
+        if let Some(v) = self {
+            v.is_null()
+        } else {true}
+    }
+}
 macro_rules! impl_check_null_for_float {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
             #[inline]
             fn is_null(&self) -> bool {self.is_nan()}
-        })+
-        $(impl CheckNull for Option<$ty> {
-            fn is_null(&self) -> bool {
-                if let Some(v) = self {v.is_nan()} else {true}
-            }
         })+
     }
 }
@@ -446,3 +446,65 @@ macro_rules! impl_math_float {
     }
 }
 impl_math_float!(f32, f64);
+
+pub fn max_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
+    compare(&v1, &v2).map(|cmp| match cmp {
+        Ordering::Less | Ordering::Equal => v2,
+        Ordering::Greater => v1,
+    })
+}
+pub fn min_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
+    compare(&v1, &v2).map(|cmp| match cmp {
+        Ordering::Less | Ordering::Equal => v1,
+        Ordering::Greater => v2,
+    })
+}
+
+/// TotalOrd is well-defined on types that are Ord on their non-null values.
+/// The framework provides a way to ensure values are non-null at runtime.
+/// This trait should only be used when the framework can rely on these assurances.
+pub trait TotalOrd: PartialOrd + Sized {
+    fn total_cmp(&self, other: &Self) -> Fallible<Ordering>;
+    fn total_max(self, other: Self) -> Fallible<Self> { max_by(self, other, TotalOrd::total_cmp) }
+    fn total_min(self, other: Self) -> Fallible<Self> { min_by(self, other, TotalOrd::total_cmp) }
+    fn total_clamp(self, min: Self, max: Self) -> Fallible<Self> {
+        if min > max { return fallible!(FailedFunction, "min cannot be greater than max") }
+        Ok(if let Ordering::Less = self.total_cmp(&min)? {
+            min
+        } else if let Ordering::Greater = self.total_cmp(&max)? {
+            max
+        } else {
+            self
+        })
+    }
+}
+
+macro_rules! impl_total_ord_for_ord {
+    ($($ty:ty),*) => {$(impl TotalOrd for $ty {
+        fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
+    })*}
+}
+impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+
+macro_rules! impl_total_ord_for_float {
+    ($($ty:ty),*) => {
+        $(impl TotalOrd for $ty {
+            fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
+                PartialOrd::partial_cmp(self, other)
+                    .ok_or_else(|| err!(FailedFunction, concat!(stringify!($ty), " cannot not be null when clamping.")))
+            }
+        })*
+    }
+}
+impl_total_ord_for_float!(f64, f32);
+
+impl<T1: TotalOrd, T2: TotalOrd> TotalOrd for (T1, T2) {
+    fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
+        let cmp = self.0.total_cmp(&other.0)?;
+        if Ordering::Equal == cmp {
+            self.1.total_cmp(&other.1)
+        } else {
+            Ok(cmp)
+        }
+    }
+}

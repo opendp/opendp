@@ -40,7 +40,7 @@
         "args": [
             {
                 "name": "value",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "TI",
                 "description": "value to check against"
             },
@@ -110,7 +110,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_clamp": {
-        "description": "Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`. Set DI to AllDomain<T> for clamping aggregated values.",
+        "description": "Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.",
         "args": [
             {
                 "name": "lower",
@@ -125,36 +125,16 @@
                 "description": "If datum is greater than upper, let datum be upper."
             },
             {
-                "name": "DI",
-                "c_type": "char *",
-                "is_type": true,
-                "default": "VectorDomain<AllDomain<T>>",
-                "generics": ["T"],
-                "description": "input domain. One of VectorDomain<AllDomain<_>> or AllDomain<_>."
-            },
-            {
-                "name": "M",
-                "c_type": "char *",
-                "is_type": true,
-                "default": "SymmetricDistance",
-                "description": "metric. Set to SymmetricDistance when clamping datasets, or AbsoluteDistance<_> when clamping aggregated scalars"
-            }
-        ],
-        "derived_types": [
-            {
                 "name": "T",
-                "rust_type": {
-                    "function": "get_domain_atom_or_infer",
-                    "params": [
-                        "DI", "lower"
-                    ]
-                }
+                "c_type": "char *",
+                "is_type": true,
+                "description": "atomic data type"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_unclamp": {
-        "description": "Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>. Set DI to IntervalDomain<T> to work on scalars.",
+        "description": "Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>.",
         "args": [
             {
                 "name": "lower",
@@ -172,14 +152,7 @@
                 "name": "T",
                 "c_type": "char *",
                 "is_type": true,
-                "default": "VectorDomain<IntervalDomain<T>>",
-                "description": "domain of data being unclamped"
-            },
-            {
-                "name": "M",
-                "c_type": "char *",
-                "is_type": true,
-                "description": "metric to use on the input and output spaces"
+                "description": "atomic data type"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -363,7 +336,7 @@
         "args": [
             {
                 "name": "key",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "K",
                 "description": "name of column to select from dataframe and parse"
             },
@@ -393,7 +366,7 @@
         "args": [
             {
                 "name": "key",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "K",
                 "description": "categorical/hashable data type of the key/column name"
             },
@@ -438,7 +411,7 @@
         "args": [
             {
                 "name": "constant",
-                "c_type": "void *",
+                "c_type": "AnyObject *",
                 "rust_type": "T",
                 "description": "Value to replace nulls with."
             },
@@ -517,6 +490,32 @@
         ],
         "ret": {
             "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_resize_constant": {
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.",
+        "args": [
+            {
+                "name": "constant",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "description": "Value to impute with."
+            },
+            {
+                "name": "length",
+                "c_type": "unsigned int",
+                "description": "Number of records in output data."
+            },
+            {
+                "name": "TA",
+                "c_type": "char *",
+                "is_type": true,
+                "description": "Atomic type."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A vector of the same type `TA`, but with the provided `length`."
         }
     },
     "make_bounded_sum": {

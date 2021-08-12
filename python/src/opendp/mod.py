@@ -190,11 +190,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     def __rshift__(self, other: Union["Measurement", "Transformation"]):
         if isinstance(other, Measurement):
-            from opendp.core import make_chain_mt
+            from opendp.comb import make_chain_mt
             return make_chain_mt(other, self)
 
         if isinstance(other, Transformation):
-            from opendp.core import make_chain_tt
+            from opendp.comb import make_chain_tt
             return make_chain_tt(other, self)
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")

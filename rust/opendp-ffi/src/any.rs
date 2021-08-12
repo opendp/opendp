@@ -497,7 +497,7 @@ mod tests {
     use std::ops::Bound;
 
     use opendp::dist::{SubstituteDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
-    use opendp::dom::{AllDomain, IntervalDomain, VectorDomain};
+    use opendp::dom::{AllDomain, IntervalDomain};
     use opendp::error::*;
     use opendp::meas;
     use opendp::trans;
@@ -566,7 +566,7 @@ mod tests {
         let t1 = trans::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?.into_any();
         let t2 = trans::make_parse_column::<_, f64>("a".to_owned(), true)?.into_any();
         let t3 = trans::make_select_column::<_, f64>("a".to_owned())?.into_any();
-        let t4 = trans::make_clamp::<VectorDomain<_>, SymmetricDistance>(0.0, 10.0)?.into_any();
+        let t4 = trans::make_clamp(0.0, 10.0)?.into_any();
         let t5 = trans::make_bounded_sum(0.0, 10.0)?.into_any();
         let m1 = meas::make_base_gaussian::<AllDomain<_>>(0.0)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;

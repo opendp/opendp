@@ -9,13 +9,14 @@ use crate::dom::InherentNull;
 use crate::samplers::SampleUniform;
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 use crate::dist::SymmetricDistance;
+use crate::traits::CheckNull;
 
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
 /// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
 pub fn make_impute_uniform_float<T>(
     lower: T, upper: T,
 ) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
-    where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull {
+    where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull + CheckNull {
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
@@ -31,27 +32,24 @@ pub fn make_impute_uniform_float<T>(
 
 // utility trait to impute with a constant, regardless of the representation of null
 pub trait ImputableDomain: Domain {
-    type NonNull;
-    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull;
-    fn is_null(constant: &Self::NonNull) -> bool;
+    type Imputed;
+    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed;
     fn new() -> Self;
 }
 // how to impute, when null represented as Option<T>
-impl<T: Clone> ImputableDomain for OptionNullDomain<AllDomain<T>> {
-    type NonNull = T;
-    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
+impl<T: Clone + CheckNull> ImputableDomain for OptionNullDomain<AllDomain<T>> {
+    type Imputed = T;
+    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         default.as_ref().unwrap_or(constant)
     }
-    fn is_null(_constant: &Self::NonNull) -> bool { false }
     fn new() -> Self { OptionNullDomain::new(AllDomain::new()) }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: InherentNull> ImputableDomain for InherentNullDomain<AllDomain<T>> {
-    type NonNull = Self::Carrier;
-    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::NonNull) -> &'a Self::NonNull {
+impl<T: InherentNull + CheckNull> ImputableDomain for InherentNullDomain<AllDomain<T>> {
+    type Imputed = Self::Carrier;
+    fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         if default.is_null() { constant } else { default }
     }
-    fn is_null(constant: &Self::NonNull) -> bool { constant.is_null() }
     fn new() -> Self { InherentNullDomain::new(AllDomain::new()) }
 }
 
@@ -60,12 +58,12 @@ impl<T: InherentNull> ImputableDomain for InherentNullDomain<AllDomain<T>> {
 ///     or Vec<T> -> Vec<T> if input domain is NullableDomain<AllDomain<T>>
 /// Type argument DA is "Domain of the Atom"; the domain type inside VectorDomain.
 pub fn make_impute_constant<DA>(
-    constant: DA::NonNull
-) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::NonNull>>, SymmetricDistance, SymmetricDistance>>
+    constant: DA::Imputed
+) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
     where DA: ImputableDomain,
-          DA::NonNull: 'static + Clone,
+          DA::Imputed: 'static + Clone + CheckNull,
           DA::Carrier: 'static {
-    if DA::is_null(&constant) { return fallible!(MakeTransformation, "Constant may not be null.") }
+    if constant.is_null() { return fallible!(MakeTransformation, "Constant may not be null.") }
 
     make_row_by_row(
         DA::new(),

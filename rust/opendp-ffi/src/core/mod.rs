@@ -9,7 +9,6 @@ use crate::any::{AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObjec
 use crate::util;
 use crate::util::{c_bool, into_c_char_p};
 
-pub mod chain;
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -288,6 +287,7 @@ mod tests {
     use crate::util::ToCharP;
 
     use super::*;
+    use opendp::traits::CheckNull;
 
     #[test]
     fn test_ffi_error_from_error() {
@@ -354,7 +354,7 @@ mod tests {
     }
 
     // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_measurement<T: Clone>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
+    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
         Measurement::new(
             AllDomain::new(),
             AllDomain::new(),
@@ -366,7 +366,7 @@ mod tests {
     }
 
     // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_transformation<T: Clone>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
+    pub fn make_test_transformation<T: Clone + CheckNull>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
         trans::make_identity(AllDomain::<T>::new(), SymmetricDistance::default()).unwrap_test()
     }
 
