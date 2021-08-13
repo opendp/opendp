@@ -3,6 +3,7 @@ use std::ops::Shr;
 use crate::core::{Domain, Function, HintMt, HintTt, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
 use crate::dom::PairDomain;
 use crate::error::Fallible;
+use crate::dist::FSmoothedMaxDivergence;
 
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     measurement1: &Measurement<DX, DO, MX, MO>,
@@ -84,6 +85,148 @@ pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<D
 }
 
 
+pub fn bounded_complexity_composition_privacy_relation <MI: Metric>(
+    relation1: PrivacyRelation<MI, FSmoothedMaxDivergence<MI::Distance>>,
+    relation2: PrivacyRelation<MI, FSmoothedMaxDivergence<MI::Distance>>,
+    npoints: u8,
+    delta_min: MI::Distance,
+) -> PrivacyRelation<MI, FSmoothedMaxDivergence<MI::Distance>> {
+    //where MI::Distance: Clone + CastInternalReal + One + Zero + Tolerance + Midpoint + PartialOrd + Float + Debug {
+        // J'en suis ici: il faut que j'écrive la composition
+    let proba_log_ratio1 = ProbabilitiesLogRatios::from_relation(&relation1, npoints.clone(), delta_min.clone());
+    if proba_log_ratio1 == ProbabilitiesLogRatios::new_empty() {
+        return relation2.clone()
+    }
+    let proba_log_ratio2 = ProbabilitiesLogRatios::from_relation(&relation2, npoints.clone(), delta_min.clone());
+    if proba_log_ratio2 == ProbabilitiesLogRatios::new_empty() {
+        return relation1.clone()
+    }
+    let compo_proba_log_ratio = proba_log_ratio1.compose(proba_log_ratio2);
+
+    let alphas_betas_compo = TradeoffFunc::from_alpha_beta_vec(compo_proba_log_ratio.to_alpha_beta_vec());
+
+    PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &Vec<EpsilonDelta<MI::Distance>>| {
+        if d_in.is_sign_negative() {
+            return fallible!(InvalidDistance, "input sensitivity must be non-negative")
+        }
+
+        let mut result = true;
+        for EpsilonDelta { epsilon, delta } in d_out {
+            if epsilon.is_sign_negative() {
+                return fallible!(InvalidDistance, "epsilon must be positive or 0")
+            }
+            if delta.is_sign_negative() {
+                return fallible!(InvalidDistance, "delta must be positive or 0")
+            }
+
+            let delta_dual = alphas_betas_compo.to_epsilon_delta(epsilon.clone()).delta;
+            result = result & (delta >= &delta_dual);
+            if result == false {
+                break;
+            }
+        }
+        Ok(result)
+    })
+}
+
+pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, FSmoothedMaxDivergence<MI::Distance>>>(
+    measurement0: &Measurement<DI, DO0, MI, FSmoothedMaxDivergence<MI::Distance>>>,
+    measurement1: &Measurement<DI, DO1, MI, FSmoothedMaxDivergence<MI::Distance>>>,
+    npoints: u8,
+    delta_min: MI::Distance,
+) -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, MO>>
+    where DI: 'static + Domain,
+          DO0: 'static + Domain,
+          DO1: 'static + Domain,
+          MI: 'static + Metric {
+    //MI::Distance: 'static + MetricDistance + Clone + CastInternalReal + Tolerance + Midpoint + Float + Debug {
+
+    if measurement0.input_domain != measurement1.input_domain {
+        return fallible!(DomainMismatch, "Input domain mismatch");
+    } else if measurement0.input_metric != measurement1.input_metric {
+        return fallible!(MetricMismatch, "Input metric mismatch");
+    } else if measurement0.output_measure != measurement1.output_measure {
+        return fallible!(MeasureMismatch, "Output measure mismatch");
+    }
+
+    let functions = vec![measurement1.function.clone(), measurement2.function.clone()];
+
+    Ok(Measurement::new(
+        measurement0.input_domain.clone(),
+        PairDomain::new(measurement0.output_domain.clone(), measurement1.output_domain.clone()),
+        Function::make_basic_composition(&measurement0.function, &measurement1.function), // TODO: check that
+        measurement0.input_metric.clone(),
+        measurement0.output_measure.clone(),
+        bounded_complexity_composition_privacy_relation(
+            measurement1.privacy_relation.clone(),
+            measurement2.privacy_relation.clone(),
+            npoints,
+            delta_min,
+        )
+    ))
+}
+
+// pub fn make_bounded_complexity_composition_multi<DI, DO, MI>(
+//     measurements: &Vec<&Measurement<DI, DO, MI, FSmoothedMaxDivergence<MI::Distance>>>,
+//     npoints: u8,
+//     delta_min: MI::Distance,
+// ) -> Fallible<Measurement<DI, VectorDomain<DO>, MI, FSmoothedMaxDivergence<MI::Distance>>>
+//     where DI: 'static + Domain,
+//           DO: 'static + Domain,
+//           MI: 'static + Metric,
+//           MI::Distance: 'static + MetricDistance + Clone + CastInternalReal + Tolerance + Midpoint + Float + Debug {
+
+//     if measurements.is_empty() {
+//         return fallible!(MakeMeasurement, "Must have at least one measurement")
+//     }
+
+//     let input_domain = measurements[0].input_domain.clone();
+//     let output_domain = measurements[0].output_domain.clone();
+//     let input_metric = measurements[0].input_metric.clone();
+//     let output_measure = measurements[0].output_measure.clone();
+
+//     if !measurements.iter().all(|v| input_domain == v.input_domain) {
+//         return fallible!(DomainMismatch, "All input domains must be the same");
+//     }
+//     if !measurements.iter().all(|v| output_domain == v.output_domain) {
+//         return fallible!(DomainMismatch, "All output domains must be the same");
+//     }
+//     if !measurements.iter().all(|v| input_metric == v.input_metric) {
+//         return fallible!(MetricMismatch, "All input metrics must be the same");
+//     }
+//     if !measurements.iter().all(|v| output_measure == v.output_measure) {
+//         return fallible!(MetricMismatch, "All output measures must be the same");
+//     }
+
+//     let mut functions = Vec::new();
+//     let mut relations = Vec::new();
+//     for measurement in measurements {
+//         functions.push(measurement.function.clone());
+//         relations.push(measurement.privacy_relation.clone());
+//     }
+
+//     let mut composed_privacy_relation = measurements[0].privacy_relation.clone();
+
+//     let size = relations.iter().len();
+//     for i in 1..size {
+//         composed_privacy_relation = bounded_complexity_composition_privacy_relation(
+//             composed_privacy_relation,
+//             relations[i].clone(),
+//             npoints,
+//             delta_min
+//         )
+//     }
+
+//     Ok(Measurement::new(
+//         input_domain,
+//         VectorDomain::new(output_domain),
+//         Function::new_fallible(move |arg: &DI::Carrier|
+//             functions.iter().map(|f| f.eval(arg)).collect()),
+//         input_metric,
+//         output_measure.clone(),
+//         composed_privacy_relation,
+//     ))
+// }
 
 
 // UNIT TESTS
