@@ -1,9 +1,13 @@
 use std::ops::Shr;
+use std::fmt::Debug;
+use num::{One, Zero, Float};
 
 use crate::core::{Domain, Function, HintMt, HintTt, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
 use crate::dom::PairDomain;
 use crate::error::Fallible;
-use crate::dist::FSmoothedMaxDivergence;
+use crate::traits::{Tolerance, Midpoint};
+use crate::samplers::{CastRational, CastInternalReal};
+use crate::dist::{FSmoothedMaxDivergence, ProbabilitiesRatios, EpsilonDelta};
 
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     measurement1: &Measurement<DX, DO, MX, MO>,
@@ -85,42 +89,44 @@ pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<D
 }
 
 
-pub fn bounded_complexity_composition_privacy_relation <MI: Metric>(
-    relation1: PrivacyRelation<MI, FSmoothedMaxDivergence<MI::Distance>>,
-    relation2: PrivacyRelation<MI, FSmoothedMaxDivergence<MI::Distance>>,
+pub fn bounded_complexity_composition_privacy_relation <MI, Q>(
+    relation1: &PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>,
+    relation2: &PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>,
     npoints: u8,
-    delta_min: MI::Distance,
-) -> PrivacyRelation<MI, FSmoothedMaxDivergence<MI::Distance>> {
-    //where MI::Distance: Clone + CastInternalReal + One + Zero + Tolerance + Midpoint + PartialOrd + Float + Debug {
-        // J'en suis ici: il faut que j'écrive la composition
-    let proba_log_ratio1 = ProbabilitiesLogRatios::from_relation(&relation1, npoints.clone(), delta_min.clone());
-    if proba_log_ratio1 == ProbabilitiesLogRatios::new_empty() {
+    delta_min: Q,
+) -> PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>
+    where MI: Metric,
+          Q: 'static + One + Zero + PartialOrd + CastRational + CastInternalReal + Clone + Debug + Float + Midpoint + Tolerance,
+          MI::Distance: Clone + One + Zero + PartialOrd {
+
+    let probas_ratios1 = ProbabilitiesRatios::from_privacy_relation(relation1, npoints.clone(), delta_min.clone());
+    if probas_ratios1.len() == 0 {
         return relation2.clone()
     }
-    let proba_log_ratio2 = ProbabilitiesLogRatios::from_relation(&relation2, npoints.clone(), delta_min.clone());
-    if proba_log_ratio2 == ProbabilitiesLogRatios::new_empty() {
+    let probas_ratios2 = ProbabilitiesRatios::from_privacy_relation(relation2, npoints.clone(), delta_min.clone());
+    if probas_ratios2.len() == 0 {
         return relation1.clone()
     }
-    let compo_proba_log_ratio = proba_log_ratio1.compose(proba_log_ratio2);
 
-    let alphas_betas_compo = TradeoffFunc::from_alpha_beta_vec(compo_proba_log_ratio.to_alpha_beta_vec());
+    let compo_probas_ratios = probas_ratios1.compose(&probas_ratios2);
+    let compo_alphas_betas = compo_probas_ratios.to_alphas_betas();
 
-    PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &Vec<EpsilonDelta<MI::Distance>>| {
-        if d_in.is_sign_negative() {
+    PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &Vec<EpsilonDelta<Q>>| {
+        if d_in <= &MI::Distance::zero() {
             return fallible!(InvalidDistance, "input sensitivity must be non-negative")
         }
 
         let mut result = true;
         for EpsilonDelta { epsilon, delta } in d_out {
-            if epsilon.is_sign_negative() {
+            if epsilon <= &Q::zero() {
                 return fallible!(InvalidDistance, "epsilon must be positive or 0")
             }
-            if delta.is_sign_negative() {
+            if delta <= &Q::zero() {
                 return fallible!(InvalidDistance, "delta must be positive or 0")
             }
 
-            let delta_dual = alphas_betas_compo.to_epsilon_delta(epsilon.clone()).delta;
-            result = result & (delta >= &delta_dual);
+            let delta_dual = compo_alphas_betas.to_delta(epsilon.clone().exp().into_rational());
+            result = result & (delta >= &Q::from_rational(delta_dual));
             if result == false {
                 break;
             }
@@ -129,17 +135,18 @@ pub fn bounded_complexity_composition_privacy_relation <MI: Metric>(
     })
 }
 
-pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, FSmoothedMaxDivergence<MI::Distance>>>(
-    measurement0: &Measurement<DI, DO0, MI, FSmoothedMaxDivergence<MI::Distance>>>,
-    measurement1: &Measurement<DI, DO1, MI, FSmoothedMaxDivergence<MI::Distance>>>,
+pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, Q>(
+    measurement0: &Measurement<DI, DO0, MI, FSmoothedMaxDivergence<Q>>,
+    measurement1: &Measurement<DI, DO1, MI, FSmoothedMaxDivergence<Q>>,
     npoints: u8,
-    delta_min: MI::Distance,
-) -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, MO>>
+    delta_min: Q,
+) -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, FSmoothedMaxDivergence<Q>>>
     where DI: 'static + Domain,
           DO0: 'static + Domain,
           DO1: 'static + Domain,
-          MI: 'static + Metric {
-    //MI::Distance: 'static + MetricDistance + Clone + CastInternalReal + Tolerance + Midpoint + Float + Debug {
+          MI: 'static + Metric,
+          MI::Distance: Clone + One + Zero + PartialOrd,
+          Q:'static + One + Zero + PartialOrd + CastRational + CastInternalReal + Clone + Debug + Float + Midpoint + Tolerance {
 
     if measurement0.input_domain != measurement1.input_domain {
         return fallible!(DomainMismatch, "Input domain mismatch");
@@ -149,7 +156,6 @@ pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, FSmoothedMaxDiverge
         return fallible!(MeasureMismatch, "Output measure mismatch");
     }
 
-    let functions = vec![measurement1.function.clone(), measurement2.function.clone()];
 
     Ok(Measurement::new(
         measurement0.input_domain.clone(),
@@ -158,8 +164,8 @@ pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, FSmoothedMaxDiverge
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
         bounded_complexity_composition_privacy_relation(
-            measurement1.privacy_relation.clone(),
-            measurement2.privacy_relation.clone(),
+            &measurement0.privacy_relation,
+            &measurement1.privacy_relation,
             npoints,
             delta_min,
         )

@@ -524,3 +524,34 @@ impl SampleGaussian for f32 {
         Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
     }
 }
+
+// Cast to rational numbers
+#[cfg(feature = "use-mpfr")]
+pub trait CastRational: MantissaDigits + Sized {
+    fn from_rational(v: rug::Rational) -> Self;
+    fn into_rational(self) -> rug::Rational;
+}
+
+#[cfg(feature = "use-mpfr")]
+impl CastRational for f64 {
+    fn from_rational(v: rug::Rational) -> Self { v.to_f64() }
+    fn into_rational(self) -> rug::Rational {rug::Float::with_val(Self::MANTISSA_DIGITS, self).to_rational().unwrap()}
+}
+
+#[cfg(feature = "use-mpfr")]
+impl CastRational for f32 {
+    fn from_rational(v: rug::Rational) -> Self { v.to_f32() }
+    fn into_rational(self) -> rug::Rational {rug::Float::with_val(Self::MANTISSA_DIGITS, self).to_rational().unwrap()}
+}
+
+#[cfg(not(feature = "use-mpfr"))]
+impl CastRational for f64 {
+    fn from_rational(v: f64) -> Self { v }
+    fn into_rational(self) -> Self { self }
+}
+
+#[cfg(not(feature = "use-mpfr"))]
+impl CastRational for f32 {
+    fn from_rational(v: f32) -> Self { v }
+    fn into_rational(self) -> Self { self }
+}

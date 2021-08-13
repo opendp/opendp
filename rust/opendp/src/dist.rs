@@ -1,7 +1,6 @@
 //! Various implementations of Metric/Measure (and associated Distance).
 
 use std::marker::PhantomData;
-use std::ops::Div;
 use num::{One, Zero, Float};
 
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric, PrivacyRelation};
@@ -61,7 +60,7 @@ use core::fmt::Debug;
 
 impl<MI, Q> PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>
      where MI: Metric,
-           Q: Clone + Zero + One + Float + Midpoint + Tolerance + CastInternalReal,// + Float + One + Zero + Tolerance + Midpoint + PartialOrd + CastInternalReal,
+           Q: Clone + Zero + One + Float + Midpoint + Tolerance + CastInternalReal,
            MI::Distance: Clone {
 
     pub fn find_epsilon (&self, d_in: &MI::Distance, delta: Q) -> Fallible<Q> {
@@ -314,7 +313,6 @@ impl AlphasBetas {
         let mut vec_epsilon_delta = epsilons_deltas.clone();
         vec_epsilon_delta.sort_by(|a, b| a.delta.partial_cmp(&b.delta).unwrap());
         vec_epsilon_delta.dedup();
-        println!("epsilon_delta = {:?}", vec_epsilon_delta);
 
         let rational_vec_exp_epsilon_delta: Vec<(rug::Rational, rug::Rational)> = vec_epsilon_delta.iter()
             .map(|x| {
@@ -354,6 +352,18 @@ impl AlphasBetas {
         alphas_betas
     }
 
+    pub fn from_privacy_relation <MI, Q> (
+        predicate: &PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>,
+        npoints: u8,
+        delta_min: Q
+    ) -> Self
+        where MI: Metric,
+              Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug + Float + Midpoint + Tolerance,
+              MI::Distance: Clone + One {
+        let epsilons_deltas = predicate.find_epsilon_delta_family(&MI::Distance::one(), npoints, delta_min);
+        Self::from_vec_epsilon_delta(epsilons_deltas)
+        }
+
     pub fn to_probabilities_ratios (&self) -> ProbabilitiesRatios {
         let mut alphas_betas = self.clone();
         alphas_betas.sort();
@@ -372,6 +382,15 @@ impl AlphasBetas {
         let mut probas_ratios = ProbabilitiesRatios::new(probas, ratios);
         probas_ratios.normalize();
         probas_ratios
+    }
+
+    pub fn to_delta(&self, exp_epsilon: rug::Rational) -> rug::Rational {
+        // sup(1 - alphas * exp(epsilon) - betas)
+        self.alphas.clone().iter()
+            .zip(self.betas.clone().iter())
+            .map(|(a,b)| rug::Rational::from(1) - a.clone() * exp_epsilon.clone() - b.clone())
+            .max()
+            .unwrap()
     }
 
 
@@ -457,6 +476,18 @@ impl ProbabilitiesRatios {
     where Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug {
         let alphas_betas = AlphasBetas::from_vec_epsilon_delta(epsilons_deltas);
         alphas_betas.to_probabilities_ratios()
+    }
+
+    pub fn from_privacy_relation <MI, Q> (
+        predicate: &PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>,
+        npoints: u8,
+        delta_min: Q
+    ) -> Self
+        where MI: Metric,
+              Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug + Float + Midpoint + Tolerance,
+              MI::Distance: Clone + One {
+        let epsilons_deltas = predicate.find_epsilon_delta_family(&MI::Distance::one(), npoints, delta_min);
+        Self::from_vec_epsilon_delta(epsilons_deltas)
     }
 
     pub fn compose (&self, other: &Self) -> Self {
