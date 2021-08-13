@@ -236,9 +236,16 @@ def test_count_by_categories():
 
 
 def test_resize():
-    from opendp.trans import make_resize_constant
-    query = make_resize_constant(True, 4)
-    assert query([True, True, False]) == [True, True, False, True]
+    from opendp.trans import make_resize_bounded
+    query = make_resize_bounded(constant=0, length=4, lower=0, upper=10)
+    assert query([-1, 2, 5]) == [-1, 2, 5, 0]
+    assert not query.check(1, 1)
+    assert query.check(1, 2)
+    assert query.check(2, 2)
+
+    from opendp.trans import make_resize
+    query = make_resize(constant=0, length=4)
+    assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 2)
