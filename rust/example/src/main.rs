@@ -6,11 +6,9 @@ use vega_lite_4::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("OpenDP example");
-    // gaussian_plot_example()?;
     laplace_plot_example()?;
     laplace_comp_plot_example()?;
-
-    // gaussian_comp_example()?;
+    gaussian_plot_example()?;
     return Ok(());
 }
 
@@ -20,39 +18,37 @@ fn gaussian_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     plot_fs(vec![
         gauss_meas.output_measure.f(&1.0),
         gauss_meas.output_measure.f(&2.0),
-    ])?;
-    // let values: Vec<Point> = meas_0.output_measure.f(&1.0).into_iter().map(|(x,y)| Point {x,y}).collect();
-    // the chart
+    ], false)?;
     Ok(())
 }
 
 fn laplace_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("Plot Laplace examples");
-    let lap_meas = make_pld_laplace::<AllDomain<f64>>(0.1)?;
+    let lap_meas = make_pld_laplace::<AllDomain<f64>>(1.0)?;
     plot_fs(vec![
-        lap_meas.output_measure.f(&0.1),
         lap_meas.output_measure.f(&1.0),
-    ])?;
-    // let values: Vec<Point> = meas_0.output_measure.f(&1.0).into_iter().map(|(x,y)| Point {x,y}).collect();
-    // the chart
+        lap_meas.output_measure.f(&1.5),
+    ], false)?;
     Ok(())
 }
 
 fn laplace_comp_plot_example() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Laplace and Gauussian example");
+    println!("Laplace composition example");
     let meas_0 = make_pld_laplace::<AllDomain<f64>>(1.0)?;
     let meas_1 = make_pld_laplace::<AllDomain<f64>>(1.0)?;
-    let comp_meas = make_pld_composition(&meas_0, &meas_1)?;
+    let comp_meas_0 = make_pld_composition(&meas_0, &meas_1)?;
+    let meas_2 = make_pld_laplace::<AllDomain<f64>>(1.0)?;
+    let comp_meas_1 = make_pld_composition(&comp_meas_0, &meas_2)?;
     plot_fs(vec![
-        comp_meas.output_measure.f(&0.5),
-        meas_0.output_measure.f(&1.0),
-    ])?;
+        comp_meas_1.output_measure.f(&0.2),
+        comp_meas_0.output_measure.f(&0.2),
+        meas_0.output_measure.f(&0.2),
+    ], false)?;
     Ok(())
 }
 
-fn plot_fs(fs: Vec<Vec<(f64,f64)>>) -> Result<(), Box<dyn std::error::Error>> {
-    #[derive(Serialize, Deserialize)]
-
+fn plot_fs(fs: Vec<Vec<(f64,f64)>>, debug: bool) -> Result<(), Box<dyn std::error::Error>> {
+    #[derive(Serialize, Deserialize, Debug)]
     pub struct Point {
         pub x: f64,
         pub y: f64,
@@ -91,7 +87,7 @@ fn plot_fs(fs: Vec<Vec<(f64,f64)>>) -> Result<(), Box<dyn std::error::Error>> {
 
     // display the chart using `showata`
     chart.show()?;
-    // // print the vega lite spec
-    // eprint!("{}", chart.to_string()?);
+    // print the vega lite spec
+    if debug {eprint!("{}", chart.to_string()?);}
     Ok(())
 }

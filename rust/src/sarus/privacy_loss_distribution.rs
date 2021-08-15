@@ -6,61 +6,50 @@ use std::ops::Mul;
 
 use rug::Rational;
 
+use crate::error::Fallible;
+
 /// Privacy Loss Distribution from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
 /// A privacy loss value (log-likelihood)
 #[derive(Clone, PartialEq)]
 pub struct PLDistribution {
-    /// We represent PLD as p_y/p_x -> p_x
-    /// contrary to http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf (p_x/p_y -> p_x)
-    /// so we don't need +infinity in the number representation
-    pub exp_privacy_loss_probabilities: BTreeMap<Rational, Rational>
+    /// We represent PLD as p_x/p_y -> p_x
+    /// similarly to http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
+    /// ratio 0 and +infinity are treated separately
+    pub exp_privacy_loss_probabilities: BTreeMap<Rational, Rational>,
+    pub infinite_privacy_loss_probability: Rational,
 }
 
 impl<'a> PLDistribution {
-    pub fn new<I>(exp_privacy_loss_probabilitiies:I) -> PLDistribution
+    /// Build a new PLDistribution and renormalize probabilities so that they sum exactly to 1
+    pub fn new<I>(exp_privacy_loss_probabilitiies:I, infinite_privacy_loss_probability:Rational) -> PLDistribution
     where I: IntoIterator<Item=(Rational, Rational)> {
-        let p_y_x_p_x: Vec<(Rational,Rational)> = exp_privacy_loss_probabilitiies.into_iter().collect();
-        let sum_p_x = p_y_x_p_x.iter().fold(Rational::from(0),
-        |s,(_,p)| {s+p});
-        let sum_p_y = p_y_x_p_x.iter().fold(Rational::from(0),
-        |s,(l,p)| {s+p.clone()*l});
-        let mut p_y_x_p_x_map:BTreeMap<Rational, Rational> = BTreeMap::new();
-        for (p_y_x, p_x) in p_y_x_p_x {
-            p_y_x_p_x_map.entry(p_y_x*&sum_p_x/&sum_p_y)
-                    .and_modify(|p| { *p += p_x.clone()/&sum_p_x })
-                    .or_insert(p_x/&sum_p_x);
+        let l_x_y_p_x: Vec<(Rational,Rational)> = exp_privacy_loss_probabilitiies.into_iter().collect();
+        let sum_p_x = l_x_y_p_x.iter()
+            .filter(|(l,p)| l>0)
+            .fold(Rational::from(0), |s,(_,p)| {s+p});
+        let sum_p_y = l_x_y_p_x.iter()
+            .filter(|(l,p)| l>0)
+            .fold(Rational::from(0), |s,(l,p)| {s+p.clone()/l});
+        let mut l_x_y_p_x_map:BTreeMap<Rational, Rational> = BTreeMap::new();
+        for (l_x_y, p_x) in l_x_y_p_x {
+            if l_x_y > 0 {
+                l_x_y_p_x_map.entry((Rational::from(1)-&infinite_privacy_loss_probability)*&l_x_y*&sum_p_y/&sum_p_x)
+                    .and_modify(|p| { *p += (Rational::from(1)-&infinite_privacy_loss_probability)*&p_x/&sum_p_x })
+                    .or_insert((Rational::from(1)-&infinite_privacy_loss_probability)*&p_x/&sum_p_x);
+            }
         }
-        PLDistribution {exp_privacy_loss_probabilities:p_y_x_p_x_map}
-    }
-
-    pub fn probabilities(&self) -> &BTreeMap<Rational, Rational> {
-        &self.exp_privacy_loss_probabilities
-    }
-
-    pub fn probability<Q>(&self, exp_privacy_loss: Q) -> &Rational
-    where Rational: TryFrom<Q> {
-        &self.exp_privacy_loss_probabilities[&Rational::try_from(exp_privacy_loss).unwrap_or_default()]
+        PLDistribution {exp_privacy_loss_probabilities:l_x_y_p_x_map, infinite_privacy_loss_probability}
     }
 
     /// Use the formula from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
-    pub fn delta<Q>(&self, exp_epsilon: Q) -> Rational
-    where Q: Clone, Rational: TryFrom<Q> {
-        let exp_epsilon = Rational::try_from(exp_epsilon).unwrap_or_default();
-
-        // DEBUG
-        let mut spx = 0.0;
-        let mut spy = 0.0;
-        for (eyx,px ) in &self.exp_privacy_loss_probabilities {
-            spx += px.to_f64();
-            spy += px.to_f64()*eyx.to_f64();
-        }
-
+    pub fn delta(&self, exp_epsilon: Rational) -> Rational {
+        // todo add inf proba
         let (delta_x_y, delta_y_x) = if &exp_epsilon>&Rational::from(0) {
             self.exp_privacy_loss_probabilities.iter().fold((Rational::from(0), Rational::from(0)), 
-            |(delta_x_y,delta_y_x),(l_y_x,p_x)| {
-                    (if l_y_x<&exp_epsilon.clone().recip() {delta_x_y + (Rational::from(1)-l_y_x.clone()*exp_epsilon.clone())*p_x} else {delta_x_y},
-                    if l_y_x>&exp_epsilon {delta_y_x + (Rational::from(1)-exp_epsilon.clone()/l_y_x)*p_x*l_y_x} else {delta_y_x})
+            |(delta_x_y,delta_y_x),(l_x_y,p_x)| {
+                    (if l_x_y>&exp_epsilon {delta_x_y + (Rational::from(1)-exp_epsilon.clone()/l_x_y)*p_x} else {delta_x_y},
+                    if l_x_y<&exp_epsilon.clone().recip() {delta_y_x + (Rational::from(1)-l_x_y.clone()*&exp_epsilon)*p_x/l_x_y} else {delta_y_x})
             })
         } else {
             (Rational::from(1), Rational::from(1))
@@ -70,6 +59,7 @@ impl<'a> PLDistribution {
 
     /// Compute the alphas and the betas
     pub fn tradeoff(&self) -> Vec<(Rational, Rational)> {
+        // todo add inf proba
         let mut result = Vec::new();
         let mut exp_epsilons_set:BTreeSet<Rational> = BTreeSet::new();
         // Initialize the set of possible exp_eps
@@ -97,10 +87,12 @@ impl<'a> PLDistribution {
         let exp_epsilon = Rational::from(0);
         let delta = Rational::from(1);
         let denom = exp_epsilon.clone()-&last_exp_epsilon;
-        result.push((
-            (last_delta.clone()-&delta)/&denom,
-            ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
-        ));
+        if denom>Rational::from(0) {
+            result.push((
+                (last_delta.clone()-&delta)/&denom,
+                ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
+            ));
+        }
         result
     }
 
@@ -111,6 +103,7 @@ impl<'a> PLDistribution {
 
 /// Compute the composition of PLDs
 impl Mul for &PLDistribution {
+    // todo add inf proba
     type Output = PLDistribution;
     fn mul(self, other: &PLDistribution) -> PLDistribution {
         let mut result = PLDistribution {exp_privacy_loss_probabilities:BTreeMap::new()};
@@ -128,16 +121,21 @@ impl Mul for &PLDistribution {
 
 impl Default for PLDistribution {
     fn default() -> Self {
-        PLDistribution::new([(Rational::from(1),Rational::from(1))])
+        PLDistribution::new([(Rational::from(1),Rational::from(1))], Rational::from(0))
     }
 }
 
 impl<Q> From<Vec<(Q,Q)>> for PLDistribution
 where Rational: TryFrom<Q> {
     fn from(exp_privacy_loss_probabilities: Vec<(Q,Q)>) -> PLDistribution {
-        let rational_exp_privacy_loss_probabilities: Vec<(Rational,Rational)> = exp_privacy_loss_probabilities.into_iter().map(|(epl, p)| 
-            (Rational::try_from(epl).unwrap_or_default(), Rational::try_from(p).unwrap_or_default())
-        ).collect();
-        PLDistribution::new(rational_exp_privacy_loss_probabilities)
+        let mut rational_exp_privacy_loss_probabilities: Vec<(Rational,Rational)>;
+        let mut rational_infinite_privacy_loss_probability = Rational::from(0);
+        for (epl, p) in exp_privacy_loss_probabilities {
+            let rat_epl = Rational::try_from(epl).unwrap_or_default();
+            let rat_p = Rational::try_from(p).unwrap_or_default();
+            if rat_epl == 0 {rational_infinite_privacy_loss_probability += rat_p;}
+            else {rational_exp_privacy_loss_probabilities.push((rat_epl, rat_p))}
+        }
+        PLDistribution::new(rational_exp_privacy_loss_probabilities, rational_infinite_privacy_loss_probability)
     }
 }
