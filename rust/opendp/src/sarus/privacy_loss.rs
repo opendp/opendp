@@ -62,8 +62,8 @@ fn gaussian_cdf(x:Float, mu:Float, sigma:Float) -> Float {
 
 /// Gaussian pld
 fn gaussian_pld<'a>(scale: f64, grid_size: usize) -> impl Fn(&f64) -> Fallible<PLDistribution> + 'a {
-    let min = Float::with_val(PREC, -3.0)*scale.clone();
-    let max = Float::with_val(PREC, 3.0)*scale.clone();
+    let min = Float::with_val(PREC, -5.0)*scale.clone();
+    let max = Float::with_val(PREC, 5.0)*scale.clone();
     let sigma = Float::with_val(PREC, scale);
     move |d_in| {
         let mu = Float::with_val(PREC, d_in);
@@ -115,10 +115,10 @@ fn laplace_cdf(x:Float, mu:Float, sigma:Float) -> Float {
     )
 }
 
-fn laplace_pdf(x:Float, mu:Float, sigma:Float) -> Float {
-    let y = (x.clone()-mu.clone())/sigma.clone();
-    Float::exp(-(y.clone().abs()))/sigma.clone()
-}
+// fn laplace_pdf(x:Float, mu:Float, sigma:Float) -> Float {
+//     let y = (x.clone()-mu.clone())/sigma.clone();
+//     Float::exp(-(y.clone().abs()))/sigma.clone()
+// }
 
 fn laplace_exp_eps(x:Float, mu:Float, sigma:Float) -> Float {
     Float::exp((x.clone()/sigma.clone()).abs()-((x.clone()-mu.clone())/sigma.clone()).abs())
@@ -126,8 +126,8 @@ fn laplace_exp_eps(x:Float, mu:Float, sigma:Float) -> Float {
 
 /// Laplace pld
 fn laplace_pld<'a>(scale: f64, grid_size: usize) -> impl Fn(&f64) -> Fallible<PLDistribution> + 'a {
-    let min = Float::with_val(PREC, -5.0)*scale.clone();
-    let max = Float::with_val(PREC, 5.0)*scale.clone();
+    let min = Float::with_val(PREC, -10.0)*scale.clone();
+    let max = Float::with_val(PREC, 10.0)*scale.clone();
     let sigma = Float::with_val(PREC, scale);
     move |d_in| {
         let mu = Float::with_val(PREC, d_in);

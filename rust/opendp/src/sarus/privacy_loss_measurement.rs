@@ -1,6 +1,5 @@
 use std::clone::Clone;
 use std::convert::TryFrom;
-use std::iter::IntoIterator;
 
 use crate::error::Fallible;
 use crate::dom::AllDomain;
