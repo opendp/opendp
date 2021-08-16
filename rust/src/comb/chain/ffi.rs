@@ -1,6 +1,9 @@
-use crate::comb::{make_basic_composition, make_chain_mt, make_chain_tt};
+use crate::comb::{make_chain_mt, make_chain_tt, make_sequential_composition_static_distances};
 use crate::core::FfiResult;
-use crate::ffi::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
+
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementOutExt};
+use crate::ffi::any::Downcast;
+use crate::ffi::util::AnyMeasurementPtr;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -16,15 +19,18 @@ pub extern "C" fn opendp_comb__make_chain_tt(transformation1: *const AnyTransfor
     make_chain_tt(transformation1, transformation0).into()
 }
 
+
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMeasurement, measurement1: *const AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
-    let measurement0 = try_as_ref!(measurement0);
-    let measurement1 = try_as_ref!(measurement1);
-    // This one has a different pattern than most constructors. The result of make_basic_composition()
-    // will be Measurement<AnyDomain, PairDomain, AnyMetric, AnyMeasure>. We need to get back to
-    // AnyMeasurement, but using IntoAnyMeasurementExt::into_any() would double-wrap the input.
-    // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
-    make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
+pub extern "C" fn opendp_comb__make_sequential_composition_static_distances(
+    measurements: *const AnyObject,
+) -> FfiResult<*mut AnyMeasurement> {
+    let meas_ptrs = try_!(try_as_ref!(measurements)
+        .downcast_ref::<Vec<AnyMeasurementPtr>>());
+    
+    let measurements: Vec<&AnyMeasurement> = try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
+
+    make_sequential_composition_static_distances(measurements)
+        .map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
 
 #[cfg(test)]
@@ -84,10 +90,11 @@ mod tests {
     }
 
     #[test]
-    fn test_make_basic_composition() -> Fallible<()> {
+    fn test_make_sequential_composition_static_distances() -> Fallible<()> {
         let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
         let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
-        let basic_composition = Result::from(opendp_comb__make_basic_composition(measurement0, measurement1))?;
+        let measurements = vec![measurement0, measurement1];
+        let basic_composition = Result::from(opendp_comb__make_sequential_composition_static_distances(AnyObject::new_raw(measurements)))?;
         let arg = AnyObject::new_raw(999);
         let res = core::opendp_core__measurement_invoke(&basic_composition, arg);
         let res: (AnyObject, AnyObject) = Fallible::from(res)?.downcast()?;
