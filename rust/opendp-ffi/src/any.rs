@@ -552,14 +552,13 @@ mod tests {
     fn test_any_domain() -> Fallible<()> {
         let domain1 = IntervalDomain::new(Bound::Included(0), Bound::Included(1))?;
         let domain2 = IntervalDomain::new(Bound::Included(0), Bound::Included(1))?;
-        // TODO: Add Debug to Domain so we can use assert_eq!.
-        assert!(domain1 == domain2);
+        assert_eq!(domain1, domain2);
 
         let domain1 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1))?);
         let domain2 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1))?);
         let domain3 = AnyDomain::new(AllDomain::<i32>::new());
-        assert!(domain1 == domain2);
-        assert!(domain1 != domain3);
+        assert_eq!(domain1, domain2);
+        assert_ne!(domain1, domain3);
 
         let _domain1: IntervalDomain<i32> = domain1.downcast()?;
         let domain3: Fallible<IntervalDomain<i32>> = domain3.downcast();
@@ -572,13 +571,13 @@ mod tests {
         let metric1 = SymmetricDistance::default();
         let metric2 = SymmetricDistance::default();
         // TODO: Add Debug to Metric so we can use assert_eq!.
-        assert!(metric1 == metric2);
+        assert_eq!(metric1, metric2);
 
         let metric1 = AnyMetric::new(SymmetricDistance::default());
         let metric2 = AnyMetric::new(SymmetricDistance::default());
         let metric3 = AnyMetric::new(SubstituteDistance::default());
-        assert!(metric1 == metric2);
-        assert!(metric1 != metric3);
+        assert_eq!(metric1, metric2);
+        assert_ne!(metric1, metric3);
 
         let _metric1: SymmetricDistance = metric1.downcast()?;
         let metric3: Fallible<SymmetricDistance> = metric3.downcast();
@@ -590,14 +589,13 @@ mod tests {
     fn test_any_measure() -> Fallible<()> {
         let measure1 = MaxDivergence::<f64>::default();
         let measure2 = MaxDivergence::<f64>::default();
-        // TODO: Add Debug to Measure so we can use assert_eq!.
-        assert!(measure1 == measure2);
+        assert_eq!(measure1, measure2);
 
         let measure1 = AnyMeasure::new(MaxDivergence::<f64>::default());
         let measure2 = AnyMeasure::new(MaxDivergence::<f64>::default());
         let measure3 = AnyMeasure::new(SmoothedMaxDivergence::<f64>::default());
-        assert!(measure1 == measure2);
-        assert!(measure1 != measure3);
+        assert_eq!(measure1, measure2);
+        assert_ne!(measure1, measure3);
 
         let _measure1: MaxDivergence<f64> = measure1.downcast()?;
         let measure3: Fallible<MaxDivergence<f64>> = measure3.downcast();
