@@ -135,7 +135,9 @@ fn main() {
         })
         .collect::<IndexMap<String, Module>>();
 
-    write_bindings(python::generate_bindings(_modules));
+    if cfg!(feature="bindings-python") {
+        write_bindings(python::generate_bindings(_modules));
+    }
 }
 
 #[allow(dead_code)]
