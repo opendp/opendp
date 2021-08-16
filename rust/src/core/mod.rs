@@ -49,7 +49,7 @@ pub struct Function<DI: Domain, DO: Domain> {
 }
 impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
     fn clone(&self) -> Self {
-        Function {function: self.function.clone()}
+        Function { function: self.function.clone() }
     }
 }
 

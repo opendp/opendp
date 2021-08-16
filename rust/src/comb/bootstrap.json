@@ -20,7 +20,7 @@
         }
     },
     "make_chain_tt": {
-        "description": "Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Tranformation.",
+        "description": "Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Transformation.",
         "features": ["contrib"],
         "args": [
             {
@@ -39,19 +39,26 @@
             "description": "Transformation representing the chained computation."
         }
     },
-    "make_basic_composition": {
-        "description": "Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.",
-        "features": ["contrib"],
+    "make_sequential_composition_static_distances": {
+        "description": "Construct the DP composition [`measurement0`, `measurement1`, ...]. Returns a Measurement.",
         "args": [
             {
-                "name": "measurement0",
-                "c_type": "const AnyMeasurement *",
-                "description": "The left member of the resulting 2-tuple."
+                "name": "measurement_pairs",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": [{
+                        "origin": "Tuple",
+                        "args": ["\"AnyMeasurementPtr\"", "QO"]
+                    }]
+                },
+                "c_type": "const AnyObject *",
+                "description": "A list of measurements to compose."
             },
             {
-                "name": "measurement1",
-                "c_type": "const AnyMeasurement *",
-                "description": "The right member of the resulting 2-tuple."
+                "name": "QO",
+                "default": "f64",
+                "description": "Type of output distance.",
+                "is_type": true
             }
         ],
         "ret": {

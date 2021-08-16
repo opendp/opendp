@@ -1,6 +1,9 @@
-use crate::comb::{make_basic_composition, make_chain_mt, make_chain_tt};
+use std::os::raw::c_char;
+use crate::comb::{make_basic_composition, make_chain_mt, make_chain_tt, make_sequential_composition_static_distances};
 use crate::core::FfiResult;
-use crate::ffi::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
+
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementOutExt};
+use crate::ffi::any::Downcast;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -25,6 +28,24 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
     // AnyMeasurement, but using IntoAnyMeasurementExt::into_any() would double-wrap the input.
     // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
     make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_comb__make_sequential_composition_static_distances(
+    d_in: *const AnyObject,
+    measurement_pairs: *const AnyObject,
+    _QO: *const c_char
+) -> FfiResult<*mut AnyMeasurement> {
+    let d_in: &AnyObject = try_as_ref!(d_in);
+    let measurement_pairs: Vec<(&AnyMeasurement, AnyObject)> = try_!(try_!(try_as_ref!(measurement_pairs)
+        .downcast_ref::<Vec<AnyObject>>())
+        .into_iter().map(|pair| pair.downcast_ref::<(AnyObject, AnyObject)>()
+            .and_then(|(meas, dist)| Ok((meas.downcast_ref::<AnyMeasurement>()?, dist.clone()))))
+        .collect());
+
+    make_sequential_composition_static_distances(d_in.clone(), measurement_pairs)
+        .map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
 
 #[cfg(test)]

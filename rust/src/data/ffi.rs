@@ -12,7 +12,7 @@ use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, Downcast};
 use crate::ffi::util;
-use crate::ffi::util::{c_bool, Type, TypeContents};
+use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, c_bool, Type, TypeContents};
 
 #[no_mangle]
 pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
@@ -83,10 +83,15 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
-            if element.descriptor == "String" {
-                raw_to_vec_string(raw)
-            } else {
-                dispatch!(raw_to_vec, [(element, @primitives)], (raw))
+            println!("raw_to_hashmap: {:?}", element.descriptor);
+            match element.descriptor.as_str() {
+                "String" => raw_to_vec_string(raw),
+                "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
+                "AnyObject" => raw_to_vec::<AnyObject>(raw),
+                // "(AnyMeasurementPtr, f32)" => raw_to_vec::<(AnyMeasurementPtr, f32)>(raw),
+                // "(AnyMeasurementPtr, f64)" => raw_to_vec::<AnyObjectPtr>(raw),
+                "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
+                _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw))
             }
         }
         TypeContents::TUPLE(ref element_ids) => {
@@ -94,9 +99,14 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
             let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
-            // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
-            // because the only likely way to get a tuple of AnyObjects is as the output of composition.
-            dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
+            println!("from rust, dispatching types: {:?}", types);
+            if types.first() == Some(&Type::of::<AnyMeasurementPtr>()) {
+                dispatch!(raw_to_tuple, [(types[0], [AnyMeasurementPtr]), (types[1], [f64, f32])], (raw))
+            } else {
+                // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
+                // because the only likely way to get a tuple of AnyObjects is as the output of composition.
+                dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
+            }
         }
         TypeContents::GENERIC { name, args } => {
             if name == "HashMap" {

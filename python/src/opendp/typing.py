@@ -3,7 +3,7 @@ import typing
 from collections.abc import Hashable
 from typing import Union, Any, Type, List
 
-from opendp.mod import UnknownTypeException
+from opendp.mod import UnknownTypeException, Measurement, Transformation
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
@@ -11,7 +11,14 @@ if sys.version_info >= (3, 7):
 else:
     from typing import GenericMeta as _GenericAlias
 
-ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
+ELEMENTARY_TYPES = {
+    int: 'i32',
+    float: 'f64',
+    str: 'String',
+    bool: 'bool',
+    Measurement: 'AnyMeasurementPtr',
+    Transformation: 'AnyTransformationPtr'
+}
 try:
     import numpy as np
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
@@ -61,6 +68,8 @@ class RuntimeType(object):
     def __eq__(self, other):
         if isinstance(other, str):
             other = RuntimeType.parse(other)
+        if isinstance(other, str):
+            return False
         return self.origin == other.origin and self.args == other.args
 
     def __str__(self):
@@ -219,6 +228,12 @@ class RuntimeType(object):
                 cls.infer(next(iter(public_example.values())))
             ])
 
+        if isinstance(public_example, Measurement):
+            return "AnyMeasurementPtr"
+
+        if isinstance(public_example, Transformation):
+            return "AnyTransformationPtr"
+
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
 
@@ -256,6 +271,10 @@ class RuntimeType(object):
         :param inferred: the type inferred from data
         :raises AssertionError: if `expected` type differs significantly from `inferred` type
         """
+
+        # TODO: this is ugly!
+        if expected == "AnyObject":
+            return
 
         ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
         if isinstance(inferred, UnknownType):

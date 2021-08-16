@@ -23,6 +23,9 @@ ATOM_MAP = {
     'i64': ctypes.c_int64,
     'usize': ctypes.c_size_t,
     'bool': ctypes.c_bool,
+    'AnyMeasurementPtr': Measurement,
+    'AnyTransformationPtr': Transformation,
+    'AnyObjectPtr': AnyObjectPtr,
 }
 
 
@@ -35,9 +38,13 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     :return: value converted to ctypes representation
     """
 
+    if isinstance(type_name, str):
+        type_name = RuntimeType.parse(type_name)
+
     if isinstance(value, c_type):
         return value
 
+    # check that the type name is consistent with the value
     if type_name is not None:
         RuntimeType.assert_is_similar(RuntimeType.parse(type_name), RuntimeType.infer(value))
 
@@ -61,11 +68,18 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     if c_type == AnyObjectPtr:
         from opendp._data import slice_as_object
+
+        # TODO: This is ugly!
+        # the nested type will be different than the type_name, because it is now AnyObject
+        if type_name.origin.startswith("Vec") and isinstance(type_name.args[0], RuntimeType):
+            type_name.args[0] = "AnyObject"
+
         return slice_as_object(value, type_name)
 
     if c_type == FfiSlicePtr:
         assert type_name is not None
-        return _py_to_slice(value, str(type_name))
+        print("TAG", type_name, value)
+        return _py_to_slice(value, type_name)
 
     if isinstance(value, RuntimeType):
         value = str(value)
@@ -126,7 +140,7 @@ def c_to_py(value):
     return value
 
 
-def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
+def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     """Convert from `raw` FfiSlicePtr to python type.
     This is the postprocessing step after _object_to_slice that unloads data from a ctypes representation.
     External checks allow this function to assume that `raw` is compatible with the type_name type.
@@ -153,7 +167,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: str) -> Any:
     raise UnknownTypeException(type_name)
 
 
-def _py_to_slice(value: Any, type_name: str) -> FfiSlicePtr:
+def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     """Convert from python `value` to FfiSlicePtr.
     The initial preprocessing step for _slice_to_object that loads data into a ctypes representation.
     External checks allow this function to assume that `value` is compatible with the type_name type.
@@ -162,20 +176,20 @@ def _py_to_slice(value: Any, type_name: str) -> FfiSlicePtr:
     :param type_name: rust type name to load value into.
     :return: pointer to an FfiSlice owned by python.
     """
-    if type_name in ATOM_MAP:
+    if str(type_name) in ATOM_MAP:
         return _scalar_to_slice(value, type_name)
-
-    if type_name.startswith("Vec<") and type_name.endswith('>'):
-        return _vector_to_slice(value, type_name)
-
-    if type_name.startswith("HashMap<") and type_name.endswith('>'):
-        return _hashmap_to_slice(value, type_name)
-
-    if type_name.startswith('(') and type_name.endswith(')'):
-        return _tuple_to_slice(value, type_name)
 
     if type_name == "String":
         return _string_to_slice(value)
+
+    if type_name.origin == "Vec":
+        return _vector_to_slice(value, type_name)
+
+    if type_name.origin == "HashMap":
+        return _hashmap_to_slice(value, type_name)
+
+    if type_name.origin == "Tuple":
+        return _tuple_to_slice(value, type_name)
 
     raise UnknownTypeException(type_name)
 
@@ -201,9 +215,10 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
     return ctypes.cast(raw.contents.ptr, ctypes.c_char_p).value.decode()
 
 
-def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
-    assert type_name[:4] == 'Vec<'
-    inner_type_name = type_name[4:-1]
+def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
+    assert type_name.origin == 'Vec'
+    assert len(type_name.args) == 1, "Vec only has one generic argument"
+    inner_type_name = type_name.args[0]
 
     if np is not None and isinstance(val, np.ndarray):
         val = val.tolist()
@@ -215,6 +230,12 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
         def str_to_slice(val):
             return ctypes.c_char_p(val.encode())
         array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
+        return _wrap_in_slice(array, len(val))
+
+    if isinstance(inner_type_name, RuntimeType):
+        print("TAG2", inner_type_name)
+        converted = (py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val)
+        array = (AnyObjectPtr * len(val))(*converted)
         return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
@@ -230,9 +251,10 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     return _wrap_in_slice(array, len(val))
 
 
-def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
-    assert type_name[:3] == 'Vec'
-    inner_type_name = type_name[4:-1]
+def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> List[Any]:
+    assert type_name.origin == 'Vec'
+    assert len(type_name.args) == 1, "Vec only has one generic argument"
+    inner_type_name = type_name.args[0]
 
     if inner_type_name == 'String':
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
@@ -241,22 +263,20 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
-def _tuple_to_slice(val: Tuple[Any, ...], type_name: str) -> FfiSlicePtr:
-    inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
+def _tuple_to_slice(val: Tuple[Any, ...], type_name: RuntimeType) -> FfiSlicePtr:
+    inner_type_names = type_name.args
     if not isinstance(val, tuple):
-        raise OpenDPException("Cannot cast a non-tuple type to a tuple")
+        raise OpenDPException("Cannot coerce a non-tuple type to a tuple")
     # TODO: temporary check
     if len(inner_type_names) != 2:
         raise OpenDPException("Only 2-tuples are currently supported.")
-    # TODO: temporary check
-    if len(set(inner_type_names)) > 1:
-        raise OpenDPException("Only homogeneously-typed tuples are currently supported.")
 
     if len(inner_type_names) != len(val):
         raise OpenDPException("type_name members must have same length as tuple")
 
-    if any(t not in ATOM_MAP for t in inner_type_names):
-        raise OpenDPException(f"Tuple members must be one of {ATOM_MAP.keys()}")
+    for t in inner_type_names:
+        if t not in ATOM_MAP:
+            raise OpenDPException(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")
 
     # check that actual type can be represented by the inner_type_name
     for v, inner_type_name in zip(val, inner_type_names):
@@ -264,15 +284,21 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: str) -> FfiSlicePtr:
         if inner_type_name not in equivalence_class:
             raise OpenDPException("Data cannot be represented by the suggested type_name")
 
+    def scalar_to_c(v, name):
+        print("TAG3", name)
+        # no need to put measurements behind a pointer, they are already a pointer
+        if name == "AnyMeasurementPtr":
+            return v
+        return ctypes.pointer(ATOM_MAP[name](v))
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
-    ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)
+    ptr_data = (ctypes.cast(scalar_to_c(v, name), ctypes.c_void_p)
                 for v, name in zip(val, inner_type_names))
     array = (ctypes.c_void_p * len(val))(*ptr_data)
     return _wrap_in_slice(ctypes.pointer(array), len(val))
 
 
-def _slice_to_tuple(raw: FfiSlicePtr, type_name: str) -> Tuple[Any, ...]:
-    inner_type_names = [i.strip() for i in type_name[1:-1].split(",")]
+def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]:
+    inner_type_names = type_name.args
     # typed pointer
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     # list of void*
@@ -282,8 +308,8 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: str) -> Tuple[Any, ...]:
                  for void_p, name in zip(ptr_data, inner_type_names))
 
 
-def _hashmap_to_slice(val: Dict[Any, Any], type_name: str) -> FfiSlicePtr:
-    key_type, val_type = [i.strip() for i in type_name[8:-1].split(",")]
+def _hashmap_to_slice(val: Dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
+    key_type, val_type = type_name.args
     keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr)
     vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr)
     ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)

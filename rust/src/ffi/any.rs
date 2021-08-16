@@ -7,12 +7,18 @@
 
 use std::any;
 use std::any::Any;
+use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::rc::Rc;
 
+use num::Zero;
+
+use crate::comb::ComposableMeasure;
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
+use crate::dist::{MaxDivergence, SmoothedMaxDivergence};
 use crate::err;
 use crate::error::*;
+use crate::traits::InfAdd;
 
 use super::glue::Glue;
 use super::util::Type;
@@ -67,7 +73,12 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for A
         self.value.downcast().map_err(|_| err!(FailedCast, "Failed downcast of AnyBox to {}", any::type_name::<T>())).map(|x| *x)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.value.downcast_ref().ok_or_else(|| err!(FailedCast, "Failed downcast_ref of AnyBox to {}", any::type_name::<T>()))
+        self.value.downcast_ref().ok_or_else(|| {
+            let other_type = Type::of_id(&self.value.type_id()).
+                map(|t| format!(" AnyBox contains {:?}.", t))
+                .unwrap_or(String::new());
+            err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+        })
     }
 }
 
@@ -98,19 +109,6 @@ impl AnyBox {
     }
 }
 
-/// An AnyBox implementing Clone + PartialEq.
-pub type AnyBoxClonePartialEq = AnyBoxBase<true, true, false>;
-
-impl AnyBoxClonePartialEq {
-    pub fn new_clone_partial_eq<T: 'static + Clone + PartialEq>(value: T) -> Self {
-        Self::new_base(
-            value,
-            Some(Self::make_clone_glue::<T>()),
-            Some(Self::make_eq_glue::<T>()),
-            None)
-    }
-}
-
 pub type AnyBoxClonePartialEqDebug = AnyBoxBase<true, true, true>;
 
 impl AnyBoxClonePartialEqDebug {
@@ -127,12 +125,35 @@ impl AnyBoxClonePartialEqDebug {
 pub struct AnyObject {
     pub type_: Type,
     value: AnyBox,
+    pub partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+    pub partial_cmp_glue: Option<Glue<fn(&Self, &Self) -> Option<Ordering>>>,
+    pub clone_glue: Option<Glue<fn(&Self) -> Self>>,
 }
 
 impl AnyObject {
     pub fn new<T: 'static>(value: T) -> Self {
+        fn monomorphize_partial_eq<T: 'static + PartialEq>() -> Fallible<fn(&AnyObject, &AnyObject) -> bool> {
+            Ok(|self_, other|
+                self_.downcast_ref::<T>().ok().zip(other.downcast_ref().ok())
+                    .map(|(self_, other)| self_.eq(other)).unwrap_or(false))
+        }
+        fn monomorphize_partial_cmp<T: 'static + PartialOrd>() -> Fallible<fn(&AnyObject, &AnyObject) -> Option<Ordering>> {
+            Ok(|self_, other|
+                self_.downcast_ref::<T>().ok().zip(other.downcast_ref().ok())
+                    .map(|(self_, other)| self_.partial_cmp(other)).unwrap_or(None))
+        }
+        fn monomorphize_clone<T: 'static + Clone>() -> Fallible<fn(&AnyObject) -> AnyObject> {
+            Ok(|self_| AnyObject::new(self_.downcast_ref::<T>()
+                .expect("Clone called on non-cloneable AnyObject").clone()))
+        }
+
+        let type_ = Type::of::<T>();
+
         Self {
-            type_: Type::of::<T>(),
+            partial_eq_glue: dispatch!(monomorphize_partial_eq, [(type_, @hashable)], ()).ok().map(Glue::new),
+            partial_cmp_glue: dispatch!(monomorphize_partial_cmp, [(type_, @hashable)], ()).ok().map(Glue::new),
+            clone_glue: dispatch!(monomorphize_clone, [(type_, @primitives)], ()).ok().map(Glue::new),
+            type_,
             value: AnyBox::new(value),
         }
     }
@@ -149,6 +170,22 @@ impl Downcast for AnyObject {
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.value.downcast_ref()
+    }
+}
+
+impl PartialEq for AnyObject {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_eq_glue.as_ref().map(|glue| glue(self, other)).unwrap_or(false)
+    }
+}
+impl PartialOrd for AnyObject {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.partial_cmp_glue.as_ref().map(|glue| glue(self, other)).unwrap_or(None)
+    }
+}
+impl Clone for AnyObject {
+    fn clone(&self) -> Self {
+        self.clone_glue.as_ref().map(|glue| glue(self)).unwrap()
     }
 }
 
@@ -198,15 +235,41 @@ impl Debug for AnyDomain {
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasure {
     pub measure: AnyBoxClonePartialEqDebug,
+    pub type_: Type,
     pub distance_type: Type,
 }
 
 impl AnyMeasure {
-    pub fn new<M: 'static + Measure>(measure: M) -> Self {
+    pub fn new<M: 'static + Measure>(measure: M) -> Self
+        where M::Distance: Clone {
         Self {
             measure: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(measure),
-            distance_type: Type::of::<M::Distance>(),
+            type_: Type::of::<M>(),
+            distance_type: Type::of::<M::Distance>()
         }
+    }
+}
+
+impl ComposableMeasure for AnyMeasure {
+    fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
+            self_: &AnyMeasure, d_i: &Vec<AnyObject>
+        ) -> Fallible<AnyObject> {
+
+            fn monomorphize2<M: 'static + ComposableMeasure>(
+                self_: &AnyMeasure, d_i: &Vec<AnyObject>
+            ) -> Fallible<AnyObject>
+                where M::Distance: Clone {
+                self_.downcast_ref::<M>()?.compose(&d_i.iter()
+                    .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
+                    .collect::<Fallible<Vec<M::Distance>>>()?).map(AnyObject::new)
+            }
+            dispatch!(monomorphize2, [
+                (self_.type_, [MaxDivergence<Q>, SmoothedMaxDivergence<Q>])
+            ], (self_, d_i))
+        }
+
+        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, d_i))
     }
 }
 
@@ -375,8 +438,8 @@ pub trait IntoAnyMeasurementExt {
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
-          MI::Distance: 'static + Clone + PartialOrd,
-          MO::Distance: 'static + Clone + PartialOrd {
+          MI::Distance: 'static + Clone,
+          MO::Distance: 'static + Clone {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),

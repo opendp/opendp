@@ -338,7 +338,6 @@ impl RoundCast<String> for bool { fn round_cast(v: String) -> Fallible<Self> { O
 
 impl RoundCast<bool> for String { fn round_cast(v: bool) -> Fallible<Self> { Ok(v.to_string()) } }
 
-
 #[cfg(feature = "use-mpfr")]
 impl CastInternalReal for f64 {
     const MANTISSA_DIGITS: u32 = Self::MANTISSA_DIGITS;

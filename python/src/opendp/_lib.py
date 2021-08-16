@@ -7,7 +7,9 @@ from typing import Optional, Any
 ATOM_EQUIVALENCE_CLASSES = {
     'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
-    'bool': ['bool']
+    'bool': ['bool'],
+    'AnyMeasurementPtr': ['AnyMeasurementPtr'],
+    'AnyTransformationPtr': ['AnyTransformationPtr']
 }
 
 lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
