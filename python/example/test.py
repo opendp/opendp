@@ -42,7 +42,7 @@ def main():
     arg = "ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3"
 
     # Compose & chain
-    everything = parse_dataframe >> make_basic_composition(noisy_sum_1, noisy_count_2)
+    everything = parse_dataframe >> make_sequential_composition_static_distances([noisy_sum_1, noisy_count_2])
     print(everything(arg))
 
     # TODO: update data unloaders to work recursively, to avoid needing the cast to a string
