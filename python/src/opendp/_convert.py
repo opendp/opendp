@@ -17,6 +17,8 @@ ATOM_MAP = {
     'i32': ctypes.c_int32,
     'i64': ctypes.c_int64,
     'bool': ctypes.c_bool,
+    'AnyMeasurementPtr': Measurement,
+    'const AnyTransformation *': Transformation
 }
 
 

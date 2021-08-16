@@ -11,7 +11,10 @@ use crate::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 use crate::util;
-use opendp::traits::{InfCast, TotalOrd};
+use opendp::traits::{InfCast, TotalOrd, MeasureDistance};
+use opendp::dist::MaxDivergence;
+use opendp::comb::ComposableMeasure;
+use opendp::core::Measure;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
@@ -25,7 +28,9 @@ pub extern "C" fn opendp_meas__make_base_geometric(
         where D: 'static + GeometricDomain,
               D::Atom: 'static + InfCast<QO> + TotalOrd + Clone,
               QO: 'static + Float + InfCast<D::Atom> + TotalOrd,
-              f64: From<QO> {
+              f64: From<QO>,
+              MaxDivergence<QO>: ComposableMeasure,
+              <MaxDivergence<QO> as Measure>::Distance: Clone + MeasureDistance {
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             Some(try_!(bounds.downcast_ref::<(D::Atom, D::Atom)>()).clone())

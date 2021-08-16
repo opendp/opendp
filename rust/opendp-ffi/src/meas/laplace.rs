@@ -11,7 +11,10 @@ use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 use opendp::dom::{VectorDomain, AllDomain};
-use opendp::traits::{InfCast, CheckNull, TotalOrd};
+use opendp::traits::{InfCast, CheckNull, TotalOrd, MeasureDistance};
+use opendp::comb::ComposableMeasure;
+use opendp::dist::MaxDivergence;
+use opendp::core::Measure;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(
@@ -20,7 +23,9 @@ pub extern "C" fn opendp_meas__make_base_laplace(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + LaplaceDomain,
-              D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + CheckNull + TotalOrd {
+              D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + CheckNull + TotalOrd,
+              MaxDivergence<D::Atom>: ComposableMeasure,
+              <MaxDivergence<D::Atom> as Measure>::Distance: Clone + MeasureDistance {
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_laplace::<D>(scale).into_any()
     }

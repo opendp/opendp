@@ -3,8 +3,8 @@ import typing
 from collections.abc import Hashable
 from typing import Union, Any, Type, List
 
-from opendp.mod import UnknownTypeException
-from opendp._lib import ATOM_EQUIVALENCE_CLASSES
+from opendp.v1.mod import UnknownTypeException, Measurement, Transformation
+from opendp.v1._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
     from typing import _GenericAlias
@@ -183,6 +183,12 @@ class RuntimeType(object):
                 cls.infer(next(iter(public_example.keys()))),
                 cls.infer(next(iter(public_example.values())))
             ])
+
+        if isinstance(public_example, Measurement):
+            return "AnyMeasurementPtr"
+
+        if isinstance(public_example, Transformation):
+            return "AnyTransformationPtr"
 
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])

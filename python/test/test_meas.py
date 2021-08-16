@@ -67,3 +67,16 @@ def test_base_stability():
     )
     print("base stability:", meas(["CAT_A"] * 4 + ["CAT_B"] * 6))
     assert meas.check(1, (2.3, .000001))
+
+
+def test_basic_composition_multi():
+    from opendp.comb import make_basic_composition_multi
+    from opendp.meas import make_base_geometric
+    composed = make_basic_composition_multi([
+        make_base_geometric(scale=2.),
+        make_base_geometric(scale=2.)
+    ])
+
+    print(composed.check(1, 2.))
+
+test_basic_composition_multi()

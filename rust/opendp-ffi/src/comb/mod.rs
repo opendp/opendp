@@ -1,7 +1,9 @@
-use opendp::comb::{make_basic_composition, make_chain_mt, make_chain_tt};
+use opendp::comb::{make_basic_composition, make_chain_mt, make_chain_tt, ComposableMeasure, make_sequential_composition_static_distances};
+use opendp::error::Fallible;
 
-use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
+use crate::any::{AnyMeasure, AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObject, AnyTransformation, Downcast, IntoAnyMeasurementOutExt};
 use crate::core::FfiResult;
+use crate::util::AnyMeasurementPtr;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -26,6 +28,32 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
     // AnyMeasurement, but using IntoAnyMeasurementExt::into_any() would double-wrap the input.
     // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
     make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
+}
+
+
+impl ComposableMeasure for AnyMeasure {
+    fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        (self.compose_linear)(self, d_i)
+    }
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_core__make_sequential_composition_static_distances(
+    d_in: *const AnyMetricDistance,
+    measurements: *const AnyObject,
+    _d_mids: *const AnyObject
+) -> FfiResult<*mut AnyMeasurement> {
+    let d_in: &AnyMetricDistance = try_as_ref!(d_in);
+    let measurements: &Vec<AnyMeasurementPtr> = try_!(try_as_ref!(measurements)
+        .downcast_ref::<Vec<AnyMeasurementPtr>>());
+    let measurements: Vec<&AnyMeasurement> = try_!(measurements
+        .into_iter().map(|v| Ok(try_as_ref!(v.clone()))).collect());
+    let d_mids: Vec<AnyMeasureDistance> = vec!();
+    let measurement_pairs = measurements.into_iter().zip(d_mids.into_iter()).collect();
+
+    make_sequential_composition_static_distances(d_in.clone(), measurement_pairs)
+        .map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
 
 

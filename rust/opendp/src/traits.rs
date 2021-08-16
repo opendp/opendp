@@ -19,7 +19,6 @@ pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + Div<Output=Self>
     where TI: InfCast<Self> {}
 impl<TI: InfCast<Self>, TO: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + TotalOrd> DistanceConstant<TI> for TO {}
 
-// TODO: Maybe this should be renamed to something more specific to budgeting, and add negative checks? -Mike
 pub trait FallibleSub<Rhs = Self> {
     type Output;
     fn sub(self, rhs: Rhs) -> Fallible<Self::Output>;
@@ -401,6 +400,12 @@ pub trait CheckedSub: Sized {
     /// Returns `Some(self - v)` if the result does not overflow, else `None`
     fn checked_sub(&self, v: &Self) -> Option<Self>;
 }
+/// Performs addition that returns none if overflowing.
+pub trait CheckedAdd: Sized {
+    /// Checked addition.
+    /// Returns `Some(self + v)` if the result does not overflow, else `None`
+    fn checked_add(&self, v: &Self) -> Option<Self>;
+}
 macro_rules! impl_math_delegation {
     ($($t:ty),+) => {
         $(impl SaturatingAdd for $t {
@@ -419,6 +424,12 @@ macro_rules! impl_math_delegation {
             #[inline]
             fn checked_sub(&self, v: &Self) -> Option<Self> {
                 <$t>::checked_sub(*self, *v)
+            }
+        })+
+        $(impl CheckedAdd for $t {
+            #[inline]
+            fn checked_add(&self, v: &Self) -> Option<Self> {
+                <$t>::checked_add(*self, *v)
             }
         })+
     };
@@ -440,6 +451,12 @@ macro_rules! impl_math_float {
         $(impl CheckedSub for $t {
             fn checked_sub(&self, v: &Self) -> Option<Self> {
                 let y = self - v;
+                y.is_finite().then(|| y)
+            }
+        })+
+        $(impl CheckedAdd for $t {
+            fn checked_add(&self, v: &Self) -> Option<Self> {
+                let y = self + v;
                 y.is_finite().then(|| y)
             }
         })+

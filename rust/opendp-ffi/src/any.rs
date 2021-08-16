@@ -17,6 +17,7 @@ use opendp::traits::{FallibleSub, MeasureDistance, MetricDistance};
 
 use crate::glue::Glue;
 use crate::util::Type;
+use opendp::comb::ComposableMeasure;
 
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
@@ -57,7 +58,12 @@ impl<const CLONE: bool, const PARTIALEQ: bool> Downcast for AnyBoxBase<CLONE, PA
         self.value.downcast().map_err(|_| err!(FailedCast, "Failed downcast of AnyBox to {}", any::type_name::<T>())).map(|x| *x)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.value.downcast_ref().ok_or_else(|| err!(FailedCast, "Failed downcast_ref of AnyBox to {}", any::type_name::<T>()))
+        self.value.downcast_ref().ok_or_else(|| {
+            let other_type = Type::of_id(&self.value.type_id()).
+                map(|t| format!(" AnyBox contains {:?}.", t))
+                .unwrap_or(String::new());
+            err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+        })
     }
 }
 
@@ -262,15 +268,28 @@ impl PartialOrd for AnyMetricDistance {
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasure {
     pub measure: AnyBoxClonePartialEq,
-    pub distance_type: Type
+    pub distance_type: Type,
+    pub compose_linear: Glue<fn(&Self, &Vec<AnyMeasureDistance>) -> Fallible<AnyMeasureDistance>>
 }
 
 impl AnyMeasure {
-    pub fn new<M: 'static + Measure>(measure: M) -> Self {
+    pub fn new<M: 'static + ComposableMeasure>(measure: M) -> Self
+        where M::Distance: Clone + MeasureDistance {
         Self {
             measure: AnyBoxClonePartialEq::new_clone_partial_eq(measure),
-            distance_type: Type::of::<M::Distance>()
+            distance_type: Type::of::<M::Distance>(),
+            compose_linear: Self::make_compose_linear_glue::<M>()
         }
+    }
+    fn make_compose_linear_glue<M: 'static + ComposableMeasure>(
+    ) -> Glue<fn(&Self, &Vec<AnyMeasureDistance>) -> Fallible<AnyMeasureDistance>>
+        where M::Distance: Clone + MeasureDistance {
+        Glue::new(|self_: &Self, d_mids: &Vec<AnyMeasureDistance>| {
+            self_.downcast_ref::<M>().unwrap_assert("Failed downcast of AnyBox value").compose(&d_mids.iter()
+                .map(Downcast::downcast_ref::<M::Distance>)
+                .map(|v| v.unwrap_assert("Failed downcast of AnyBox value"))
+                .cloned().collect::<Vec<_>>()).map(AnyMeasureDistance::new)
+        })
     }
 }
 
@@ -428,11 +447,11 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + ComposableMeasure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
           MI::Distance: 'static + Clone + PartialOrd,
-          MO::Distance: 'static + Clone + PartialOrd {
+          MO::Distance: 'static + Clone + MeasureDistance {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),
@@ -460,7 +479,7 @@ impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, D
             self.function.into_any_out(),
             self.input_metric,
             self.output_measure,
-            self.privacy_relation.into_any(),
+            self.privacy_relation,
         )
     }
 }
@@ -497,7 +516,7 @@ mod tests {
     use std::ops::Bound;
 
     use opendp::dist::{SubstituteDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
-    use opendp::dom::{AllDomain, IntervalDomain};
+    use opendp::dom::{AllDomain, IntervalDomain, VectorDomain};
     use opendp::error::*;
     use opendp::meas;
     use opendp::trans;

@@ -11,7 +11,7 @@ use opendp::error::Fallible;
 use crate::any::{AnyObject, Downcast, AnyMeasureDistance, AnyMetricDistance};
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::util;
-use crate::util::{c_bool, Type, TypeContents};
+use crate::util::{c_bool, Type, TypeContents, AnyMeasurementPtr, AnyTransformationPtr};
 use opendp::traits::{MeasureDistance, MetricDistance};
 use std::fmt::Formatter;
 use std::hash::Hash;
@@ -147,10 +147,11 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
-            if element.descriptor == "String" {
-                raw_to_vec_string(raw)
-            } else {
-                dispatch!(raw_to_vec, [(element, @primitives)], (raw))
+            match element.descriptor.as_str() {
+                "String" => raw_to_vec_string(raw),
+                "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
+                "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
+                _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw))
             }
         }
         TypeContents::TUPLE(ref element_ids) => {

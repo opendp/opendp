@@ -10,7 +10,7 @@ use std::str::Utf8Error;
 use opendp::{err, fallible};
 use opendp::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
 use opendp::error::*;
-use crate::any::AnyObject;
+use crate::any::{AnyObject, AnyTransformation, AnyMeasurement};
 use opendp::dom::{VectorDomain, AllDomain, IntervalDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -224,6 +224,9 @@ macro_rules! type_vec {
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
 
+pub type AnyMeasurementPtr = *const AnyMeasurement;
+pub type AnyTransformationPtr = *const AnyTransformation;
+
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
     /// (i.e., the ones that appear in FFI function generic args).
@@ -239,6 +242,8 @@ lazy_static! {
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
 
             // domains
             type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
