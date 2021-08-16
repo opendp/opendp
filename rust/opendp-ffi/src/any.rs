@@ -568,7 +568,6 @@ mod tests {
     fn test_any_metric() -> Fallible<()> {
         let metric1 = SymmetricDistance::default();
         let metric2 = SymmetricDistance::default();
-        // TODO: Add Debug to Metric so we can use assert_eq!.
         assert_eq!(metric1, metric2);
 
         let metric1 = AnyMetric::new(SymmetricDistance::default());
