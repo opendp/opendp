@@ -18,7 +18,7 @@ ATOM_MAP = {
     'i64': ctypes.c_int64,
     'bool': ctypes.c_bool,
     'AnyMeasurementPtr': Measurement,
-    'const AnyTransformation *': Transformation
+    'AnyTransformationPtr': Transformation
 }
 
 
@@ -259,6 +259,12 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: str) -> FfiSlicePtr:
         equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(v))]
         if inner_type_name not in equivalence_class:
             raise OpenDPException("Data cannot be represented by the suggested type_name")
+
+    if inner_type_names[0] == 'AnyMeasurementPtr':
+        array = (ctypes.c_void_p * len(val))(
+            ctypes.cast(val[0], ctypes.c_void_p),
+            ctypes.cast(py_to_c(val[1], AnyMeasureDistancePtr, inner_type_names[1]), ctypes.c_void_p))
+        return _wrap_in_slice(ctypes.pointer(array), len(val))
 
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)

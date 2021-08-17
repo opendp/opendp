@@ -39,20 +39,18 @@ impl ComposableMeasure for AnyMeasure {
 
 
 #[no_mangle]
-pub extern "C" fn opendp_core__make_sequential_composition_static_distances(
+pub extern "C" fn opendp_core__make_composition_static_distances(
     d_in: *const AnyMetricDistance,
-    measurements: *const AnyObject,
-    _d_mids: *const AnyObject
+    measurement_pairs: *const AnyObject
 ) -> FfiResult<*mut AnyMeasurement> {
     let d_in: &AnyMetricDistance = try_as_ref!(d_in);
-    let measurements: &Vec<AnyMeasurementPtr> = try_!(try_as_ref!(measurements)
-        .downcast_ref::<Vec<AnyMeasurementPtr>>());
-    let measurements: Vec<&AnyMeasurement> = try_!(measurements
-        .into_iter().map(|v| Ok(try_as_ref!(v.clone()))).collect());
-    let d_mids: Vec<AnyMeasureDistance> = vec!();
-    let measurement_pairs = measurements.into_iter().zip(d_mids.into_iter()).collect();
+    let vec_pair = try_!(try_!(
+        try_as_ref!(measurement_pairs).downcast_ref::<Vec<AnyObject>>()).into_iter()
+        .map(Downcast::downcast_ref::<(AnyMeasurementPtr, AnyMeasureDistance)>)
+        .map(|v| v.and_then(|v| Ok((try_as_ref!(v.0), v.1.clone()))))
+        .collect::<Fallible<Vec<(&AnyMeasurement, AnyMeasureDistance)>>>());
 
-    make_sequential_composition_static_distances(d_in.clone(), measurement_pairs)
+    make_sequential_composition_static_distances(d_in.clone(), vec_pair)
         .map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
 

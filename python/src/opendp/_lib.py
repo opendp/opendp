@@ -9,7 +9,7 @@ ATOM_EQUIVALENCE_CLASSES = {
     'f64': ['f32', 'f64'],
     'bool': ['bool'],
     'AnyMeasurementPtr': ['AnyMeasurementPtr'],
-    'const AnyTransformation *': ['const AnyTransformation *']
+    'AnyTransformationPtr': ['AnyTransformationPtr'],
 }
 
 lib = None
