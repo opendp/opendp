@@ -82,7 +82,8 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
 }
 
 pub trait ComposableMeasure: Measure {
-    fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance>;
+    fn compose(&self, d_i: &Vec<Self::Distance>)
+        -> Fallible<Self::Distance>;
 }
 
 impl<Q: InfAdd + Zero + Clone> ComposableMeasure for MaxDivergence<Q> {
