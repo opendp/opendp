@@ -17,7 +17,8 @@ fn gaussian_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     let gauss_meas = make_pld_gaussian::<AllDomain<f64>>(1.0)?;
     plot_fs(vec![
         gauss_meas.output_measure.f(&1.0),
-        gauss_meas.output_measure.f(&2.0),
+        gauss_meas.output_measure.f(&0.2),
+        gauss_meas.output_measure.simplified_f(&1.0),
     ], false)?;
     Ok(())
 }
@@ -27,7 +28,8 @@ fn laplace_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     let lap_meas = make_pld_laplace::<AllDomain<f64>>(1.0)?;
     plot_fs(vec![
         lap_meas.output_measure.f(&1.0),
-        lap_meas.output_measure.f(&1.5),
+        lap_meas.output_measure.f(&2.0),
+        lap_meas.output_measure.simplified_f(&2.0),
     ], false)?;
     Ok(())
 }
