@@ -278,6 +278,53 @@ impl<T: PartialEq> PartialEq for EpsilonDelta<T> {
     }
 }
 
+// ExpEpsilonDelta
+#[derive(Debug)]
+pub struct ExpEpsilonDelta{pub exp_epsilon: rug::Rational, pub delta: rug::Rational}
+
+// Derive annotations force traits to be present on the generic
+impl Clone for ExpEpsilonDelta {
+    fn clone(&self) -> Self {
+        ExpEpsilonDelta {exp_epsilon: self.exp_epsilon.clone(), delta: self.delta.clone()}
+    }
+}
+impl PartialEq for ExpEpsilonDelta {
+    fn eq(&self, other: &Self) -> bool {
+        self.exp_epsilon == other.exp_epsilon && self.delta == other.delta
+    }
+}
+
+impl ExpEpsilonDelta {
+    pub fn new (exp_epsilon: rug::Rational, delta: rug::Rational) -> Self {
+        ExpEpsilonDelta {
+            exp_epsilon: exp_epsilon,
+            delta: delta,
+        }
+    }
+
+    pub fn from_epsilon_delta <Q> (epsilon_delta: EpsilonDelta<Q>) -> Self
+    where Q: CastInternalReal {
+        let mut exp_epsilon = epsilon_delta.epsilon.into_internal();
+        exp_epsilon.exp_round(rug::float::Round::Up);
+        Self::new(
+            exp_epsilon.to_rational().unwrap(),
+            epsilon_delta.delta.into_internal().to_rational().unwrap()
+        )
+    }
+
+    pub fn to_epsilon_delta <Q> (&self) -> EpsilonDelta<Q>
+    where Q: CastInternalReal {
+        let mut epsilon = rug::Float::with_val(53, self.exp_epsilon.to_f64());
+        epsilon.ln_round(rug::float::Round::Up);
+        EpsilonDelta{
+            epsilon: Q::from_internal(epsilon),
+            delta: Q::from_internal(rug::Float::with_val(53, self.delta.clone()))
+        }
+    }
+}
+
+
+
 // Tradeoff function
 #[derive(Debug)]
 pub struct AlphasBetas {
@@ -305,40 +352,31 @@ impl AlphasBetas {
         self.betas.reverse();
     }
 
-    pub fn from_vec_epsilon_delta <Q> (epsilons_deltas: Vec<EpsilonDelta<Q>>) -> Self
-        where Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug {
-        let one = Q::one().into_internal().to_rational().unwrap();
-        let zero = Q::zero().into_internal().to_rational().unwrap();
+    pub fn from_vec_exp_epsilon_delta (exp_epsilons_deltas: Vec<ExpEpsilonDelta>) -> Self {
+        let one = rug::Rational::from(1);
+        let zero = rug::Rational::from(0);
 
-        let mut vec_epsilon_delta = epsilons_deltas.clone();
-        vec_epsilon_delta.sort_by(|a, b| a.delta.partial_cmp(&b.delta).unwrap());
-        vec_epsilon_delta.dedup();
+        let mut vec_exp_epsilon_delta = exp_epsilons_deltas.clone();
+        vec_exp_epsilon_delta.sort_by(|a, b| a.delta.partial_cmp(&b.delta).unwrap());
+        vec_exp_epsilon_delta.dedup();
 
-        let rational_vec_exp_epsilon_delta: Vec<(rug::Rational, rug::Rational)> = vec_epsilon_delta.iter()
-            .map(|x| {
-                let mut exp_epsilon = x.epsilon.clone().into_internal();
-                exp_epsilon.exp_round(rug::float::Round::Up);
-                (exp_epsilon.to_rational().unwrap(), x.delta.clone().into_internal().to_rational().unwrap())
-            })
-            .collect();
+        let mut alphas = vec![zero.clone(), one.clone() - vec_exp_epsilon_delta[0].delta.clone()];
+        let mut betas = vec![one.clone() - vec_exp_epsilon_delta[0].delta.clone(), zero.clone()];
 
-        let mut alphas = vec![zero.clone(), one.clone() - rational_vec_exp_epsilon_delta[0].1.clone()];
-        let mut betas = vec![one.clone() - rational_vec_exp_epsilon_delta[0].1.clone(), zero.clone()];
-
-        let size = vec_epsilon_delta.iter().len();
+        let size = vec_exp_epsilon_delta.iter().len();
         for i in 1..size {
             let alpha =
-                (rational_vec_exp_epsilon_delta[i-1].1.clone() - rational_vec_exp_epsilon_delta[i].1.clone())
+                (vec_exp_epsilon_delta[i-1].delta.clone() - vec_exp_epsilon_delta[i].delta.clone())
                 /
-                (rational_vec_exp_epsilon_delta[i].0.clone() - rational_vec_exp_epsilon_delta[i-1].0.clone());
+                (vec_exp_epsilon_delta[i].exp_epsilon.clone() - vec_exp_epsilon_delta[i-1].exp_epsilon.clone());
 
             let beta = (
-                    rational_vec_exp_epsilon_delta[i].0.clone() *(one.clone() - rational_vec_exp_epsilon_delta[i-1].1.clone())
+                    vec_exp_epsilon_delta[i].exp_epsilon.clone() *(one.clone() - vec_exp_epsilon_delta[i-1].delta.clone())
                     -
-                    rational_vec_exp_epsilon_delta[i-1].0.clone() *(one.clone() - rational_vec_exp_epsilon_delta[i].1.clone())
+                    vec_exp_epsilon_delta[i-1].exp_epsilon.clone() *(one.clone() - vec_exp_epsilon_delta[i].delta.clone())
                 )
                 /
-                (rational_vec_exp_epsilon_delta[i].0.clone() - rational_vec_exp_epsilon_delta[i-1].0.clone());
+                (vec_exp_epsilon_delta[i].exp_epsilon.clone() - vec_exp_epsilon_delta[i-1].exp_epsilon.clone());
 
             if !alphas.clone().iter().any(|i| i==&alpha) {
                 alphas.push(alpha.clone());
@@ -352,6 +390,20 @@ impl AlphasBetas {
         alphas_betas
     }
 
+    pub fn to_vec_exp_epsilon_delta (&self) -> Vec<ExpEpsilonDelta> {
+        let mut alphas_betas = self.clone();
+        alphas_betas.sort();
+        let mut vec_exp_epsilon_delta: Vec<ExpEpsilonDelta> = Vec::new();
+        let size = (alphas_betas.alphas.iter().len() + 2) / 2;
+        for i in 1..size {
+            let exp_epsilon = (alphas_betas.betas[i].clone() - alphas_betas.betas[i-1].clone())
+                / (alphas_betas.alphas[i-1].clone() - alphas_betas.alphas[i].clone());
+            let delta = rug::Rational::from(1) - alphas_betas.alphas[i].clone() * exp_epsilon.clone() - alphas_betas.betas[i].clone();
+            vec_exp_epsilon_delta.push(ExpEpsilonDelta::new(exp_epsilon, delta))
+        }
+        vec_exp_epsilon_delta
+    }
+
     pub fn from_privacy_relation <MI, Q> (
         predicate: &PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>,
         npoints: u8,
@@ -361,7 +413,10 @@ impl AlphasBetas {
               Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug + Float + Midpoint + Tolerance,
               MI::Distance: Clone + One {
         let epsilons_deltas = predicate.find_epsilon_delta_family(&MI::Distance::one(), npoints, delta_min);
-        Self::from_vec_epsilon_delta(epsilons_deltas)
+        let exp_epsilons_deltas: Vec<ExpEpsilonDelta> = epsilons_deltas.iter()
+            .map(|ed| ExpEpsilonDelta::from_epsilon_delta(ed.clone()))
+            .collect();
+        Self::from_vec_exp_epsilon_delta(exp_epsilons_deltas)
         }
 
     pub fn to_probabilities_ratios (&self) -> ProbabilitiesRatios {
@@ -472,9 +527,8 @@ impl ProbabilitiesRatios {
         self.ratios = ratios;
     }
 
-    pub fn from_vec_epsilon_delta <Q> (epsilons_deltas: Vec<EpsilonDelta<Q>>) -> Self
-    where Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug {
-        let alphas_betas = AlphasBetas::from_vec_epsilon_delta(epsilons_deltas);
+    pub fn from_vec_exp_epsilon_delta (exp_epsilons_deltas: Vec<ExpEpsilonDelta>) -> Self {
+        let alphas_betas = AlphasBetas::from_vec_exp_epsilon_delta(exp_epsilons_deltas);
         alphas_betas.to_probabilities_ratios()
     }
 
@@ -487,18 +541,25 @@ impl ProbabilitiesRatios {
               Q: 'static + One + Zero + PartialOrd + CastInternalReal + Clone + Debug + Float + Midpoint + Tolerance,
               MI::Distance: Clone + One {
         let epsilons_deltas = predicate.find_epsilon_delta_family(&MI::Distance::one(), npoints, delta_min);
-        Self::from_vec_epsilon_delta(epsilons_deltas)
+        let exp_epsilons_deltas: Vec<ExpEpsilonDelta> = epsilons_deltas.iter()
+            .map(|ed| ExpEpsilonDelta::from_epsilon_delta(ed.clone()))
+            .collect();
+        Self::from_vec_exp_epsilon_delta(exp_epsilons_deltas)
     }
 
     pub fn compose (&self, other: &Self) -> Self {
-        let probas: Vec<rug::Rational> = self.probas.iter()
-            .zip(other.probas.iter())
-            .map(|(p1, p2)| rug::Rational::from(p1 * p2))
-            .collect();
-        let ratios: Vec<rug::Rational> = self.ratios.iter()
-            .zip(other.ratios.iter())
-            .map(|(r1, r2)| rug::Rational::from(r1 * r2))
-            .collect();
+
+        let mut probas: Vec<rug::Rational> = Vec::new();
+        let mut ratios: Vec<rug::Rational> = Vec::new();
+
+        let size1 = self.probas.iter().len();
+        let size2 = other.probas.iter().len();
+        for i in 0..size1 {
+            for j in 0..size2 {
+                probas.push(rug::Rational::from(self.probas[i].clone() * other.probas[j].clone()));
+                ratios.push(rug::Rational::from(self.ratios[i].clone() * other.ratios[j].clone()));
+            }
+        }
         Self::new(probas, ratios)
     }
 
