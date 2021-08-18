@@ -34,3 +34,14 @@ def test_chain():
     print("chained measurement check:", chain.check(d_in=1, d_out=1000., debug=True))
 
     print("evaluate chain:", chain(data))
+
+
+def test_binary_search():
+    from opendp.mod import binary_search
+
+    for i in range(100):
+        assert binary_search(lambda x: x < i + 1, (0, 100)) == i
+        assert binary_search(lambda x: x > i, (0, 100)) == i + 1
+
+        assert -(binary_search(lambda x: x < i, (0, 100)) - i) < 1e-8
+        assert binary_search(lambda x: x > i, (0, 100)) - i < 1e-8

@@ -1,5 +1,5 @@
 import ctypes
-from typing import Union
+from typing import Union, Tuple, Any, Callable
 
 from opendp._lib import AnyMeasurement, AnyTransformation
 
@@ -233,8 +233,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
     def __del__(self):
-        from opendp.core import _transformation_free
-        _transformation_free(self)
+        try:
+            from opendp.core import _transformation_free
+            _transformation_free(self)
+        except ImportError:
+            pass
 
 
 class UnknownTypeException(Exception):
@@ -276,3 +279,99 @@ def disable_features(*features: str) -> None:
 def assert_features(*features: str) -> None:
     for feature in features:
         assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. Check the documentation for the feature, then call enable_features(\"{feature}\")"
+
+
+def binary_search_chain(
+        make_chain: Callable[[Any], Union[Transformation, Measurement]],
+        bounds: Tuple[Any, Any], *,
+        d_in, d_out, tolerance=1e-8) -> Union[Transformation, Measurement]:
+    """Optimizes a parameterized chain `make_chain` within `bounds`,
+    subject to the chained relation being (`d_in`, `d_out`)-close.
+    The discovered parameter differs by at most `tolerance` from the ideal parameter.
+
+    :param make_chain: a function with one parameter that constructs a Transformation or Measurement
+    :param bounds: the parameter's lower and upper bounds
+    :param d_in:
+    :param d_out:
+    :param tolerance:
+    :return: A chain parameterized at the decision point of the relation.
+    """
+    return make_chain(binary_search(lambda p: make_chain(p).check(d_in, d_out), bounds, tolerance))
+
+
+def binary_search(predicate, bounds, tolerance=1e-8):
+    assert len(bounds) == 2, "lower and upper bound must be provided"
+    assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
+    if isinstance(bounds[0], int):
+        return _integer_binary_search(predicate, bounds)
+    if isinstance(bounds[0], float):
+        return _float_binary_search(predicate, bounds, tolerance)
+    raise TypeError("bounds must be either int or float")
+
+
+def _float_binary_search(predicate, bounds, tolerance=1e-8):
+    """Find the decision point of the `predicate` within `bounds`.
+    The discovered parameter differs by at most `tolerance` from the ideal parameter.
+
+    :param predicate: a function with one parameter that returns a boolean
+    :param bounds: the parameter's lower and upper bounds
+    :param tolerance:
+    :return: the discovered parameter within the bounds
+    """
+    print('float')
+    lower, upper = sorted(bounds)
+    if lower == upper:
+        return lower
+
+    should_maximize = predicate(lower)
+    should_minimize = predicate(upper)
+
+    if should_maximize == should_minimize:
+        raise ValueError("the decision point of the predicate is outside the bounds")
+
+    while True:
+        mid = (lower + upper) / 2.
+        passes = predicate(mid)
+
+        if passes and upper - lower < tolerance:
+            return mid
+
+        if passes == should_minimize:
+            upper = mid
+        else:
+            lower = mid
+
+
+def _integer_binary_search(predicate, bounds):
+    """Find the decision point of the `predicate` within `bounds`.
+
+    :param predicate: a function with one parameter that returns a boolean
+    :param bounds: the parameter's lower and upper bounds
+    :return: the discovered parameter within the bounds
+    """
+    lower, upper = sorted(bounds)
+    if lower == upper:
+        return lower
+
+    should_maximize = predicate(lower)
+    should_minimize = predicate(upper)
+
+    if should_maximize == should_minimize:
+        raise ValueError("the decision point of the predicate is outside the bounds")
+
+    while True:
+        mid = (lower + upper) // 2
+        passes = predicate(mid)
+
+        if passes == should_minimize:
+            upper = mid
+        else:
+            lower = mid + 1
+            
+        if lower == upper:
+            if not passes:
+                if should_minimize:
+                    mid += 1
+                else:
+                    mid -= 1
+            return mid
