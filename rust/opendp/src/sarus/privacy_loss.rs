@@ -1,12 +1,12 @@
-use std::rc::Rc;
+use std::{convert::TryFrom, rc::Rc};
 
-use rug::{Float, float::Round};
+use rug::{Float, float::Round, Rational};
 
 use crate::{core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation}, dom::PairDomain, error::Fallible, meas::{GaussianDomain, LaplaceDomain}};
 
 use super::PLDistribution;
 
-const PREC:u32 = 64;
+const PREC:u32 = 128;
 const GRID_SIZE:usize = 100;
 
 /// A Measure that comes with a privacy loss distribution.
@@ -24,6 +24,10 @@ impl<MI> PLDSmoothedMaxDivergence<MI> where MI: Metric {
 
     pub fn f(&self, d_in: &MI::Distance) -> Vec<(f64, f64)> {
         (self.privacy_loss_distribution)(d_in).unwrap_or_default().f()
+    }
+
+    pub fn simplified_f(&self, d_in: &MI::Distance) -> Vec<(f64, f64)> {
+        (self.privacy_loss_distribution)(d_in).unwrap_or_default().simplified().f()
     }
 }
 
@@ -51,7 +55,7 @@ pub fn make_pld_privacy_relation<MI>(privacy_loss_distribution: Rc<dyn Fn(&MI::D
         }
         let mut exp_epsilon = rug::Float::with_val_round(64, epsilon, Round::Down).0;
         exp_epsilon.exp_round(Round::Down);
-        Ok(delta >= &privacy_loss_distribution(d_in)?.delta(exp_epsilon))
+        Ok(delta >= &privacy_loss_distribution(d_in)?.delta(Rational::try_from(exp_epsilon).unwrap_or_default()))
     })
 }
 
@@ -62,8 +66,8 @@ fn gaussian_cdf(x:Float, mu:Float, sigma:Float) -> Float {
 
 /// Gaussian pld
 fn gaussian_pld<'a>(scale: f64, grid_size: usize) -> impl Fn(&f64) -> Fallible<PLDistribution> + 'a {
-    let min = Float::with_val(PREC, -5.0)*scale.clone();
-    let max = Float::with_val(PREC, 5.0)*scale.clone();
+    let min = Float::with_val(PREC, -3.0)*scale.clone();
+    let max = Float::with_val(PREC, 3.0)*scale.clone();
     let sigma = Float::with_val(PREC, scale);
     move |d_in| {
         let mu = Float::with_val(PREC, d_in);
@@ -121,13 +125,19 @@ fn laplace_cdf(x:Float, mu:Float, sigma:Float) -> Float {
 // }
 
 fn laplace_exp_eps(x:Float, mu:Float, sigma:Float) -> Float {
-    Float::exp((x.clone()/sigma.clone()).abs()-((x.clone()-mu.clone())/sigma.clone()).abs())
+    if x.clone()-&mu< Float::with_val(PREC, -5)*&sigma {
+        Float::with_val(PREC, 0)
+    } else if x.clone()-&mu > Float::with_val(PREC, 5)*&sigma {
+        Float::with_val(PREC, 1)
+    } else {
+        Float::exp((x.clone()/sigma.clone()).abs()-((x.clone()-mu.clone())/sigma.clone()).abs())
+    }
 }
 
 /// Laplace pld
 fn laplace_pld<'a>(scale: f64, grid_size: usize) -> impl Fn(&f64) -> Fallible<PLDistribution> + 'a {
-    let min = Float::with_val(PREC, -10.0)*scale.clone();
-    let max = Float::with_val(PREC, 10.0)*scale.clone();
+    let min = Float::with_val(PREC, -5.0)*scale.clone();
+    let max = Float::with_val(PREC, 5.0)*scale.clone();
     let sigma = Float::with_val(PREC, scale);
     move |d_in| {
         let mu = Float::with_val(PREC, d_in);

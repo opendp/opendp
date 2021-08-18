@@ -56,6 +56,6 @@ fn make_plm_privacy_relation(out_dom: PLMOutputDomain) -> PrivacyRelation<Symmet
         }
         let mut exp_epsilon = Float::with_val_round(64, epsilon, Round::Down).0;
         exp_epsilon.exp_round(Round::Down);
-        Ok(delta >= &out_dom.delta(exp_epsilon))
+        Ok(delta >= &out_dom.delta(Rational::try_from(exp_epsilon).unwrap_or_default()))
     })
 }
