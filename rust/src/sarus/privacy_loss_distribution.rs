@@ -68,11 +68,10 @@ impl<'a> PLDistribution {
         // Initialize the set of possible exp_eps
         for exp_epsilon in self.exp_privacy_loss_probabilities.keys() {
             exp_epsilons_set.insert(exp_epsilon.clone());
-            if exp_epsilon>&Rational::from(0) {
-                exp_epsilons_set.insert(exp_epsilon.clone().recip());
-            }
+            // if exp_epsilon>&Rational::from(0) {
+            //     exp_epsilons_set.insert(exp_epsilon.clone().recip());
+            // }
         }
-        
         // Reverse the exp epsilons to have them by decreasing order
         let exp_epsilons: Vec<Rational> = exp_epsilons_set.into_iter().rev().collect();
         // Insert the first points
@@ -143,7 +142,6 @@ impl<'a> PLDistribution {
         result.windows(2).map(|window| {(window[0].0.clone(), window[1].1.clone()-window[0].1.clone())}).collect()
     }
 
-    /// TODO
     pub fn simplified(&self) -> PLDistribution {
         let exp_epsilons: Vec<Rational> = self.exp_privacy_loss_probabilities.iter().map(|(l,_)| l.clone()).collect();
         let mut result_exp_epsilons: Vec<Rational> = Vec::new();
