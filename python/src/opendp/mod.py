@@ -307,7 +307,6 @@ def binary_search_chain(
     >>> )
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # `make_chain` returns the complete computation chain when given a single numeric parameter.
-    >>> # The function `binary_search_chain` returns the parameterized computation chain.
     >>> chain = binary_search_chain(
     >>>     make_chain=lambda s: pre >> make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
@@ -342,7 +341,6 @@ def binary_search_param(
     >>>
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # `make_chain` returns the complete computation chain when given a single numeric parameter
-    >>> # The function `binary_search_param` returns the discovered parameter.
     >>> scale = binary_search_param(
     >>>     make_chain=lambda s: make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=0.1, d_out=1.)
