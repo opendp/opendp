@@ -74,12 +74,8 @@ def test_bisect_chain():
         make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
         make_bounded_mean(lower=0., upper=1., n=10)
     )
-    chain = binary_search_chain(
-        lambda s: pre >> make_base_laplace(scale=s),
-        bounds=(0., 10.), d_in=1, d_out=1.)
+    chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
     assert chain.check(1, 1.)
 
-    scale = binary_search_param(
-        lambda s: pre >> make_base_laplace(scale=s),
-        bounds=(0., 10.), d_in=1, d_out=1.)
+    scale = binary_search_param(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
     assert scale - 0.1 < 1e-8

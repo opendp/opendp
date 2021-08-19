@@ -283,11 +283,13 @@ def assert_features(*features: str) -> None:
 
 def binary_search_chain(
         make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
-        bounds: Union[Tuple[float, float], Tuple[int, int]],
-        d_in, d_out, tolerance=None) -> Union[Transformation, Measurement]:
+        d_in, d_out,
+        bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
+        tolerance=None) -> Union[Transformation, Measurement]:
     """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
+    `bounds` defaults to (0., 1.0e8).
     If `bounds` are float, `tolerance` defaults to 1e-8.
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
@@ -306,31 +308,31 @@ def binary_search_chain(
     >>> )
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
-    >>> chain = binary_search_chain(
-    >>>     lambda s: pre >> make_base_laplace(scale=s),
-    >>>     bounds=(0., 10.), d_in=1, d_out=1.)
+    >>> chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
     >>> assert chain.check(1, 1.)
 
 
     :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
-    return make_chain(binary_search_param(make_chain, bounds, d_in, d_out, tolerance))
+    return make_chain(binary_search_param(make_chain, d_in, d_out, bounds, tolerance))
 
 
 def binary_search_param(
         make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
-        bounds: Union[Tuple[float, float], Tuple[int, int]],
-        d_in, d_out, tolerance=None) -> Union[float, int]:
+        d_in, d_out,
+        bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
+        tolerance=None) -> Union[float, int]:
     """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
+    `bounds` defaults to (0., 1.0e8).
     If `bounds` are float, `tolerance` defaults to 1e-8.
 
     :example:
@@ -341,20 +343,22 @@ def binary_search_param(
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # The first argument is any function that returns your complete computation chain
     >>> #     when passed a single numeric parameter.
-    >>> scale = binary_search_param(make_base_laplace, bounds=(0., 10.), d_in=0.1, d_out=1.)
+    >>> scale = binary_search_param(make_base_laplace, d_in=0.1, d_out=1.)
     >>> # The discovered scale differs by at most `tolerance` from the ideal scale (0.1).
     >>> assert scale - 0.1 < 1e-8
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
     >>> assert make_base_laplace(scale).check(0.1, 1.)
 
     :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: the nearest passing value to the decision point of the relation
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
+    if bounds is None:
+        bounds = (0., 1e8)
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, tolerance)
 
 
