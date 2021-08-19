@@ -310,7 +310,7 @@ def binary_search_chain(
     >>> chain = binary_search_chain(
     >>>     lambda s: pre >> make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
-    >>> # We can double-check that the resulting computation chain obeys the provided `d_in`, `d_out`.
+    >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
     >>> assert chain.check(1, 1.)
 
 
@@ -346,6 +346,8 @@ def binary_search_param(
     >>>     bounds=(0., 10.), d_in=0.1, d_out=1.)
     >>> # The discovered scale differs by at most `tolerance` from the ideal scale (0.1).
     >>> assert scale - 0.1 < 1e-8
+    >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
+    >>> assert make_base_laplace(scale).check(0.1, 1.)
 
     :param make_chain: a unary function that maps from a number to a Transformation or Measurement
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
