@@ -320,6 +320,7 @@ def binary_search_chain(
     :param d_out: desired output distance of the computation chain
     :param tolerance: if float bounds, the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
+    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
     return make_chain(binary_search_param(make_chain, bounds, d_in, d_out, tolerance))
 
@@ -340,10 +341,9 @@ def binary_search_param(
     >>> from opendp.meas import make_base_laplace
     >>>
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
-    >>> # `make_chain` returns the complete computation chain when given a single numeric parameter
-    >>> scale = binary_search_param(
-    >>>     make_chain=lambda s: make_base_laplace(scale=s),
-    >>>     bounds=(0., 10.), d_in=0.1, d_out=1.)
+    >>> # The first argument is any function that returns your complete computation chain
+    >>> #     when passed a single numeric parameter.
+    >>> scale = binary_search_param(make_base_laplace, bounds=(0., 10.), d_in=0.1, d_out=1.)
     >>> # The discovered scale differs by at most `tolerance` from the ideal scale (0.1).
     >>> assert scale - 0.1 < 1e-8
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
@@ -355,15 +355,16 @@ def binary_search_param(
     :param d_out: desired output distance of the computation chain
     :param tolerance: if float bounds, the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: the nearest passing value to the decision point of the relation
+    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
-    return binary_search(lambda p: make_chain(p).check(d_in, d_out), bounds, tolerance)
+    return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, tolerance)
 
 
 def binary_search(
         predicate: Callable[[Union[float, int]], bool],
         bounds: Union[Tuple[float, float], Tuple[int, int]],
         tolerance=None):
-    """Find the closest passing value to `predicate`'s decision boundary within float or integer `bounds`.
+    """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
     If `bounds` are float, `tolerance` defaults to 1e-8.
     If `bounds` are int, `tolerance` must be None.
@@ -382,6 +383,7 @@ def binary_search(
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
     :param tolerance: if float bounds, the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: the discovered parameter within the bounds
+    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
     assert len(bounds) == 2, "lower and upper bound must be provided"
     assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
@@ -402,7 +404,7 @@ def binary_search(
         done = lambda: upper - lower <= tolerance
         post = lambda: upper if minimize else lower
     else:
-        raise ValueError("bounds must be either float or int")
+        raise AssertionError("bounds must be either float or int")
 
     while not done():
         mid = lower + half(upper - lower)
