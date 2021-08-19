@@ -288,8 +288,10 @@ def binary_search_chain(
     """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    If bounds are float, `tolerance` defaults to 1e-8.
-    If bounds are int, `tolerance` must be None.
+    If `bounds` are float, `tolerance` defaults to 1e-8.
+    If `bounds` are int, `tolerance` must be None.
+
+    See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 
     :example:
 
@@ -303,9 +305,9 @@ def binary_search_chain(
     >>>     make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
     >>>     make_bounded_mean(lower=0., upper=1., n=10)
     >>> )
-    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the acceptance boundary
+    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary
     >>> # `make_chain` returns the complete computation chain when given a single numeric parameter.
-    >>> # `binary_search_chain` returns the parameterized computation chain.
+    >>> # The function `binary_search_chain` returns the parameterized computation chain.
     >>> chain = binary_search_chain(
     >>>     lambda s: pre >> make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
@@ -332,8 +334,8 @@ def binary_search_param(
     """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    If bounds are float, `tolerance` defaults to 1e-8.
-    If bounds are int, `tolerance` must be None.
+    If `bounds` are float, `tolerance` defaults to 1e-8.
+    If `bounds` are int, `tolerance` must be None.
 
     :example:
 
@@ -348,9 +350,9 @@ def binary_search_param(
     >>>     make_bounded_mean(lower=0., upper=1., n=10)
     >>> )
     >>>
-    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the acceptance boundary
+    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary
     >>> # `make_chain` returns the complete computation chain when given a single numeric parameter
-    >>> # `binary_search_param` returns the discovered parameter.
+    >>> # The function `binary_search_param` returns the discovered parameter.
     >>> scale = binary_search_param(
     >>>     make_chain=lambda s: pre >> make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
@@ -371,10 +373,10 @@ def binary_search(
         predicate: Callable[[Union[float, int]], bool],
         bounds: Union[Tuple[float, float], Tuple[int, int]],
         tolerance=None):
-    """Find the closest value to `predicate` acceptance boundary within float or integer `bounds`.
+    """Find the closest passing value to `predicate`'s decision boundary within float or integer `bounds`.
 
-    If bounds are float, `tolerance` defaults to 1e-8.
-    If bounds are int, `tolerance` must be None.
+    If `bounds` are float, `tolerance` defaults to 1e-8.
+    If `bounds` are int, `tolerance` must be None.
 
     :example:
 
@@ -397,8 +399,7 @@ def binary_search(
 
     maximize = predicate(lower)  # if the lower bound passes, we should maximize
     minimize = predicate(upper)  # if the upper bound passes, we should minimize
-
-    assert maximize != minimize, "the decision point of the predicate is outside the bounds"
+    assert maximize != minimize, "the decision boundary of the predicate is outside the bounds"
 
     if isinstance(lower, int):
         assert tolerance is None, "integer binary search does not accept a tolerance"
@@ -420,5 +421,5 @@ def binary_search(
         else:
             lower = mid
 
-    # make sure the search terminates on a successful predicate
+    # ensure the search terminates on a successful predicate
     return post()
