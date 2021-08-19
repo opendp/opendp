@@ -282,96 +282,85 @@ def assert_features(*features: str) -> None:
 
 
 def binary_search_chain(
-        make_chain: Callable[[Any], Union[Transformation, Measurement]],
-        bounds: Tuple[Any, Any], *,
+        make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
+        bounds: Union[Tuple[float, float], Tuple[int, int]],
         d_in, d_out, tolerance=1e-8) -> Union[Transformation, Measurement]:
-    """Optimizes a parameterized chain `make_chain` within `bounds`,
+    """Optimizes a parameterized chain `make_chain` subject to float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
-    The discovered parameter differs by at most `tolerance` from the ideal parameter.
 
     :param make_chain: a function with one parameter that constructs a Transformation or Measurement
-    :param bounds: the parameter's lower and upper bounds
-    :param d_in:
-    :param d_out:
-    :param tolerance:
-    :return: A chain parameterized at the decision point of the relation.
+    :param bounds: a 2-tuple of the parameter's lower and upper bounds
+    :param d_in: desired input distance of the computation chain
+    :param d_out: desired output distance of the computation chain
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :return: A chain parameterized at the nearest passing value to the decision point of the relation.
     """
-    return make_chain(binary_search(lambda p: make_chain(p).check(d_in, d_out), bounds, tolerance))
+    return make_chain(binary_search_param(make_chain, bounds, d_in, d_out, tolerance))
 
 
-def binary_search(predicate, bounds, tolerance=1e-8):
+def binary_search_param(
+        make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
+        bounds: Union[Tuple[float, float], Tuple[int, int]],
+        d_in, d_out, tolerance=1e-8) -> Union[float, int]:
+    """Optimizes a parameterized chain `make_chain` subject to float or integer `bounds`,
+    subject to the chained relation being (`d_in`, `d_out`)-close.
+
+    :param make_chain: a function with one parameter that constructs a Transformation or Measurement
+    :param bounds: a 2-tuple of the parameter's lower and upper bounds
+    :param d_in: desired input distance of the computation chain
+    :param d_out: desired output distance of the computation chain
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :return: The nearest passing value to the decision point of the relation.
+    """
+    return binary_search(lambda p: make_chain(p).check(d_in, d_out), bounds, tolerance)
+
+
+def binary_search(
+        predicate: Callable[[Union[float, int]], bool],
+        bounds: Union[Tuple[float, float], Tuple[int, int]],
+        tolerance=1e-8):
+    """Find the closest value to the `predicate`'s decision point within float or integer `bounds`.
+
+    :param predicate: a function with one parameter that returns a boolean
+    :param bounds: the parameter's lower and upper bounds
+    :param tolerance: the discovered float parameter differs by at most `tolerance` from the ideal float parameter
+    :return: the discovered parameter within the bounds
+    """
     assert len(bounds) == 2, "lower and upper bound must be provided"
     assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
-    if isinstance(bounds[0], int):
-        return _integer_binary_search(predicate, bounds)
-    if isinstance(bounds[0], float):
-        return _float_binary_search(predicate, bounds, tolerance)
-    raise TypeError("bounds must be either int or float")
-
-
-def _float_binary_search(predicate, bounds, tolerance=1e-8):
-    """Find the decision point of the `predicate` within `bounds`.
-    The discovered parameter differs by at most `tolerance` from the ideal parameter.
-
-    :param predicate: a function with one parameter that returns a boolean
-    :param bounds: the parameter's lower and upper bounds
-    :param tolerance:
-    :return: the discovered parameter within the bounds
-    """
-    print('float')
     lower, upper = sorted(bounds)
-    if lower == upper:
+
+    maximize = predicate(lower)
+    minimize = predicate(upper)
+
+    assert maximize != minimize, "the decision point of the predicate is outside the bounds"
+
+    if isinstance(lower, int):
+        while upper != lower:
+            mid = (lower + upper) // 2
+
+            if predicate(mid) == minimize:
+                upper = mid
+            else:
+                lower = mid + 1
+
+        # make sure the search terminates on a successful predicate
+        if not predicate(lower):
+            lower += 1 if minimize else -1
         return lower
 
-    should_maximize = predicate(lower)
-    should_minimize = predicate(upper)
+    elif isinstance(lower, float):
+        assert isinstance(tolerance, float), 'tolerance must be a float'
+        while upper - lower > tolerance:
+            mid = (lower + upper) / 2.
 
-    if should_maximize == should_minimize:
-        raise ValueError("the decision point of the predicate is outside the bounds")
+            if predicate(mid) == minimize:
+                upper = mid
+            else:
+                lower = mid
 
-    while True:
-        mid = (lower + upper) / 2.
-        passes = predicate(mid)
+        # make sure the search terminates on a successful predicate
+        return upper if minimize else lower
 
-        if passes and upper - lower < tolerance:
-            return mid
-
-        if passes == should_minimize:
-            upper = mid
-        else:
-            lower = mid
-
-
-def _integer_binary_search(predicate, bounds):
-    """Find the decision point of the `predicate` within `bounds`.
-
-    :param predicate: a function with one parameter that returns a boolean
-    :param bounds: the parameter's lower and upper bounds
-    :return: the discovered parameter within the bounds
-    """
-    lower, upper = sorted(bounds)
-    if lower == upper:
-        return lower
-
-    should_maximize = predicate(lower)
-    should_minimize = predicate(upper)
-
-    if should_maximize == should_minimize:
-        raise ValueError("the decision point of the predicate is outside the bounds")
-
-    while True:
-        mid = (lower + upper) // 2
-        passes = predicate(mid)
-
-        if passes == should_minimize:
-            upper = mid
-        else:
-            lower = mid + 1
-            
-        if lower == upper:
-            if not passes:
-                if should_minimize:
-                    mid += 1
-                else:
-                    mid -= 1
-            return mid
+    else:
+        raise ValueError("bounds must be either float or int")
