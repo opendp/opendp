@@ -295,7 +295,7 @@ def binary_search_chain(
 
     :example:
 
-    >>> from opendp.mod import binary_search_chain, binary_search_param
+    >>> from opendp.mod import binary_search_chain
     >>> from opendp.trans import make_clamp, make_resize_bounded, make_bounded_mean
     >>> from opendp.meas import make_base_laplace
     >>>
@@ -305,7 +305,7 @@ def binary_search_chain(
     >>>     make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
     >>>     make_bounded_mean(lower=0., upper=1., n=10)
     >>> )
-    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary
+    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # `make_chain` returns the complete computation chain when given a single numeric parameter.
     >>> # The function `binary_search_chain` returns the parameterized computation chain.
     >>> chain = binary_search_chain(
@@ -313,7 +313,6 @@ def binary_search_chain(
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
     >>> # We can double-check that the resulting computation chain obeys the provided `d_in`, `d_out`.
     >>> assert chain.check(1, 1.)
-    >>> chain([5.] * 10)
 
 
     :param make_chain: a unary function that maps from a number to a Transformation or Measurement
@@ -338,23 +337,15 @@ def binary_search_param(
 
     :example:
 
-    >>> from opendp.mod import binary_search_chain, binary_search_param
-    >>> from opendp.trans import make_clamp, make_resize_bounded, make_bounded_mean
+    >>> from opendp.mod import binary_search_param
     >>> from opendp.meas import make_base_laplace
     >>>
-    >>> # The majority of the chain only needs to be defined once
-    >>> pre = (
-    >>>     make_clamp(lower=0., upper=1.) >>
-    >>>     make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
-    >>>     make_bounded_mean(lower=0., upper=1., n=10)
-    >>> )
-    >>>
-    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary
+    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # `make_chain` returns the complete computation chain when given a single numeric parameter
     >>> # The function `binary_search_param` returns the discovered parameter.
     >>> scale = binary_search_param(
-    >>>     make_chain=lambda s: pre >> make_base_laplace(scale=s),
-    >>>     bounds=(0., 10.), d_in=1, d_out=1.)
+    >>>     make_chain=lambda s: make_base_laplace(scale=s),
+    >>>     bounds=(0., 10.), d_in=0.1, d_out=1.)
     >>> # The discovered scale differs by at most `tolerance` from the ideal scale (0.1).
     >>> assert scale - 0.1 < 1e-8
 
