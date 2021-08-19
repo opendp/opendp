@@ -24,7 +24,11 @@ pub fn make_resize_constant<DA>(
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new(move |d_in: &IntDistance, d_out: &IntDistance| *d_out >= d_in + d_in % 2)
+        StabilityRelation::new_all(
+            move |d_in: &IntDistance, d_out: &IntDistance| Ok(*d_out >= d_in + d_in % 2),
+            Some(|d_in: &IntDistance| Ok(Box::new(d_in + d_in % 2))),
+            Some(|d_out: &IntDistance| Ok(Box::new(*d_out)))
+        )
     ))
 }
 
