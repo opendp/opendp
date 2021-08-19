@@ -59,9 +59,14 @@ def test_bisect_edge():
     with pytest.raises(AssertionError):
         binary_search(lambda x: x < 1, (0, 0))
 
+    assert binary_search(lambda x: x > 5, bounds=(0, 10)) == 6
+    assert binary_search(lambda x: x < 5, bounds=(0, 10)) == 4
+    assert binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. < 1e-8
+    assert binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. > -1e-8
+
 
 def test_bisect_chain():
-    from opendp.mod import binary_search, binary_search_chain, binary_search_param
+    from opendp.mod import binary_search_chain, binary_search_param
     from opendp.trans import make_clamp, make_resize_bounded, make_bounded_mean
     from opendp.meas import make_base_laplace
     pre = (
