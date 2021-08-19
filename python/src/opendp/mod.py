@@ -336,31 +336,25 @@ def binary_search(
     assert maximize != minimize, "the decision point of the predicate is outside the bounds"
 
     if isinstance(lower, int):
-        while upper != lower:
-            mid = lower + (upper - lower) // 2
-
-            if predicate(mid) == minimize:
-                upper = mid
-            else:
-                lower = mid + 1
-
-        # make sure the search terminates on a successful predicate
-        if not predicate(lower):
-            lower += 1 if minimize else -1
-        return lower
+        half = lambda x: x // 2
+        done = lambda: lower + 1 == upper
+        post = lambda: lower + (0 if predicate(lower) else 1)
 
     elif isinstance(lower, float):
-        assert isinstance(tolerance, float), 'tolerance must be a float'
-        while upper - lower > tolerance:
-            mid = lower + (upper - lower) / 2.
-
-            if predicate(mid) == minimize:
-                upper = mid
-            else:
-                lower = mid
-
-        # make sure the search terminates on a successful predicate
-        return upper if minimize else lower
+        half = lambda x: x / 2.
+        done = lambda: upper - lower <= tolerance
+        post = lambda: upper if minimize else lower
 
     else:
         raise ValueError("bounds must be either float or int")
+
+    while not done():
+        mid = lower + half(upper - lower)
+
+        if predicate(mid) == minimize:
+            upper = mid
+        else:
+            lower = mid
+
+    # make sure the search terminates on a successful predicate
+    return post()

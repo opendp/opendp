@@ -52,8 +52,12 @@ def test_bisect():
 
 def test_bisect_edge():
     from opendp.mod import binary_search
-    with pytest.raises(ValueError):
+    with pytest.raises(AssertionError):
         binary_search(lambda x: x > 5., (0., 5.))
+    assert binary_search(lambda x: x > 0, (0, 1)) == 1
+    assert binary_search(lambda x: x < 1, (0, 1)) == 0
+    with pytest.raises(AssertionError):
+        binary_search(lambda x: x < 1, (0, 0))
 
 
 def test_bisect_chain():
@@ -61,7 +65,7 @@ def test_bisect_chain():
     from opendp.trans import make_clamp, make_resize_bounded, make_bounded_mean
     from opendp.meas import make_base_laplace
     pre = (
-        # make_clamp(lower=0., upper=1.) >>
+        make_clamp(lower=0., upper=1.) >>
         make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
         make_bounded_mean(lower=0., upper=1., n=10)
     )
@@ -73,21 +77,4 @@ def test_bisect_chain():
     scale = binary_search_param(
         lambda s: pre >> make_base_laplace(scale=s),
         bounds=(0., 10.), d_in=1, d_out=1.)
-    print(scale)
-
-    print(binary_search(lambda s: (pre >> make_base_laplace(scale=s)).check(1, 1.), (0., 10.)))
-    print((pre >> make_base_laplace(scale=1.25)).check(1, 1.))
-    print((pre >> make_base_laplace(scale=0.1)).check(1, 1.))
-    # OH NO!
-    print((pre >> make_base_laplace(scale=0.11)).check(1, 1.))
-
-
-def test_check():
-    from opendp.meas import make_base_laplace
-    print((make_base_laplace(scale=0.1)).check(0.1, 1.))
-    print((make_base_laplace(scale=0.61)).check(0.1, 1.))
-
-
-test_bisect_chain()
-# test_bisect()
-# test_check()
+    assert scale - 0.1 < 1e-8
