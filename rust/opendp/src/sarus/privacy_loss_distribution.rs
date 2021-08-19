@@ -145,7 +145,7 @@ impl<'a> PLDistribution {
 
     /// TODO
     pub fn simplified(&self) -> PLDistribution {
-        let exp_epsilons: Vec<Rational> = self.exp_privacy_loss_probabilities.iter().map(|(l,p)| l.clone()).collect();
+        let exp_epsilons: Vec<Rational> = self.exp_privacy_loss_probabilities.iter().map(|(l,_)| l.clone()).collect();
         let mut result_exp_epsilons: Vec<Rational> = Vec::new();
         let min_exp_epsilon = exp_epsilons.first().unwrap_or(&Rational::from(0)).clone();
         let max_exp_epsilon = exp_epsilons.last().unwrap_or(&Rational::from(1)).clone();
