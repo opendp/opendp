@@ -289,7 +289,7 @@ def binary_search_chain(
     """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    `bounds` defaults to (0., 1.0e8).
+    `bounds` defaults to (0., MAX_FINITE_FLOAT).
     If `bounds` are float, `tolerance` defaults to 1e-8.
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
@@ -332,7 +332,7 @@ def binary_search_param(
     """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    `bounds` defaults to (0., 1.0e8).
+    `bounds` defaults to (0., MAX_FINITE_FLOAT).
     If `bounds` are float, `tolerance` defaults to 1e-8.
 
     :example:
@@ -358,7 +358,8 @@ def binary_search_param(
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
     if bounds is None:
-        bounds = (0., 1e8)
+        import sys
+        bounds = (0., sys.float_info.max)
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, tolerance)
 
 
@@ -394,7 +395,7 @@ def binary_search(
     assert maximize != minimize, "the decision boundary of the predicate is outside the bounds"
 
     if isinstance(lower, float):
-        tolerance = 1e-8 if tolerance is None else tolerance
+        tolerance = 1.0e-8 if tolerance is None else tolerance
         half = lambda x: x / 2.
     elif isinstance(lower, int):
         tolerance = tolerance or 1  # the lower and upper bounds never meet due to int truncation
