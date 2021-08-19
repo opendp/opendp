@@ -337,7 +337,7 @@ def binary_search(
 
     if isinstance(lower, int):
         while upper != lower:
-            mid = (lower + upper) // 2
+            mid = lower + (upper - lower) // 2
 
             if predicate(mid) == minimize:
                 upper = mid
@@ -352,7 +352,7 @@ def binary_search(
     elif isinstance(lower, float):
         assert isinstance(tolerance, float), 'tolerance must be a float'
         while upper - lower > tolerance:
-            mid = (lower + upper) / 2.
+            mid = lower + (upper - lower) / 2.
 
             if predicate(mid) == minimize:
                 upper = mid
