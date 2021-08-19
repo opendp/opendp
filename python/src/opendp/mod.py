@@ -309,7 +309,7 @@ def binary_search_chain(
     >>> # `make_chain` returns the complete computation chain when given a single numeric parameter.
     >>> # The function `binary_search_chain` returns the parameterized computation chain.
     >>> chain = binary_search_chain(
-    >>>     lambda s: pre >> make_base_laplace(scale=s),
+    >>>     make_chain=lambda s: pre >> make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
     >>> # We can double-check that the resulting computation chain obeys the provided `d_in`, `d_out`.
     >>> assert chain.check(1, 1.)
