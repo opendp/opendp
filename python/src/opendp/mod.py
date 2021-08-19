@@ -289,7 +289,6 @@ def binary_search_chain(
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
     If `bounds` are float, `tolerance` defaults to 1e-8.
-    If `bounds` are int, `tolerance` must be None.
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 
@@ -318,7 +317,7 @@ def binary_search_chain(
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
-    :param tolerance: if float bounds, the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
@@ -333,7 +332,6 @@ def binary_search_param(
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
     If `bounds` are float, `tolerance` defaults to 1e-8.
-    If `bounds` are int, `tolerance` must be None.
 
     :example:
 
@@ -353,7 +351,7 @@ def binary_search_param(
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
-    :param tolerance: if float bounds, the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: the nearest passing value to the decision point of the relation
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
@@ -367,7 +365,6 @@ def binary_search(
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
     If `bounds` are float, `tolerance` defaults to 1e-8.
-    If `bounds` are int, `tolerance` must be None.
 
     :example:
 
@@ -381,7 +378,7 @@ def binary_search(
 
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
-    :param tolerance: if float bounds, the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: the discovered parameter within the bounds
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
@@ -395,15 +392,13 @@ def binary_search(
     if isinstance(lower, float):
         tolerance = 1e-8 if tolerance is None else tolerance
         half = lambda x: x / 2.
-        done = lambda: upper - lower <= tolerance
     elif isinstance(lower, int):
-        assert tolerance is None, "integer binary search does not accept a tolerance"
+        tolerance = tolerance or 1  # the lower and upper bounds never meet due to int truncation
         half = lambda x: x // 2
-        done = lambda: lower + 1 == upper  # the lower and upper bounds never meet due to int truncation
     else:
         raise AssertionError("bounds must be either float or int")
 
-    while not done():
+    while upper - lower > tolerance:
         mid = lower + half(upper - lower)  # avoid overflow
         if predicate(mid) == minimize:
             upper = mid
