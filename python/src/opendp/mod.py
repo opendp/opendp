@@ -385,7 +385,6 @@ def binary_search(
     :return: the discovered parameter within the bounds
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
-    assert len(bounds) == 2, "lower and upper bound must be provided"
     assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
     lower, upper = sorted(bounds)
 
@@ -393,25 +392,23 @@ def binary_search(
     minimize = predicate(upper)  # if the upper bound passes, we should minimize
     assert maximize != minimize, "the decision boundary of the predicate is outside the bounds"
 
-    if isinstance(lower, int):
-        assert tolerance is None, "integer binary search does not accept a tolerance"
-        half = lambda x: x // 2
-        done = lambda: lower + 1 == upper
-        post = lambda: lower + (0 if predicate(lower) else 1)
-    elif isinstance(lower, float):
+    if isinstance(lower, float):
         tolerance = 1e-8 if tolerance is None else tolerance
         half = lambda x: x / 2.
         done = lambda: upper - lower <= tolerance
-        post = lambda: upper if minimize else lower
+    elif isinstance(lower, int):
+        assert tolerance is None, "integer binary search does not accept a tolerance"
+        half = lambda x: x // 2
+        done = lambda: lower + 1 == upper  # the lower and upper bounds never meet due to int truncation
     else:
         raise AssertionError("bounds must be either float or int")
 
     while not done():
-        mid = lower + half(upper - lower)
+        mid = lower + half(upper - lower)  # avoid overflow
         if predicate(mid) == minimize:
             upper = mid
         else:
             lower = mid
 
-    # ensure the search terminates on a successful predicate
-    return post()
+    # one bound is always false, the other true. Return the truthy bound
+    return upper if minimize else lower
