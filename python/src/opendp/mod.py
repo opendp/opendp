@@ -306,9 +306,9 @@ def binary_search_chain(
     >>>     make_bounded_mean(lower=0., upper=1., n=10)
     >>> )
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
-    >>> # `make_chain` returns the complete computation chain when given a single numeric parameter.
+    >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = binary_search_chain(
-    >>>     make_chain=lambda s: pre >> make_base_laplace(scale=s),
+    >>>     lambda s: pre >> make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
     >>> # We can double-check that the resulting computation chain obeys the provided `d_in`, `d_out`.
     >>> assert chain.check(1, 1.)
