@@ -1,5 +1,5 @@
 import ctypes
-from typing import Union, Tuple, Any, Callable
+from typing import Union, Tuple, Callable
 
 from opendp._lib import AnyMeasurement, AnyTransformation
 
@@ -312,7 +312,6 @@ def binary_search_chain(
     >>>     lambda s: pre >> make_base_laplace(scale=s),
     >>>     bounds=(0., 10.), d_in=1, d_out=1.)
     >>> # We can double-check that the resulting computation chain obeys the provided `d_in`, `d_out`.
-    >>> # The chain passes at a parameter within `tolerance` of the ideal parameter.
     >>> assert chain.check(1, 1.)
     >>> chain([5.] * 10)
 
