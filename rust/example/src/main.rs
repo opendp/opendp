@@ -1,5 +1,5 @@
 use opendp::dom::AllDomain;
-use opendp::sarus::{make_pld_composition, make_pld_gaussian, make_pld_laplace};
+use opendp::sarus::{make_pld_composition, make_pld_epsilon_delta, make_pld_gaussian, make_pld_laplace};
 
 use serde::{Deserialize, Serialize};
 use vega_lite_4::*;
@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     laplace_plot_example()?;
     laplace_comp_plot_example()?;
     gaussian_plot_example()?;
+    eps_delt_plot_example()?;
     return Ok(());
 }
 
@@ -30,6 +31,16 @@ fn laplace_plot_example() -> Result<(), Box<dyn std::error::Error>> {
         lap_meas.output_measure.f(&1.0),
         lap_meas.output_measure.f(&2.0),
         lap_meas.output_measure.simplified_f(&2.0),
+    ], false)?;
+    Ok(())
+}
+
+fn eps_delt_plot_example() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Plot Laplace examples");
+    let eps_delt_meas = make_pld_epsilon_delta(1.0, 0.01)?;
+    plot_fs(vec![
+        eps_delt_meas.output_measure.f(&1),
+        eps_delt_meas.output_measure.simplified_f(&1),
     ], false)?;
     Ok(())
 }

@@ -1,8 +1,8 @@
-use std::{convert::TryFrom, rc::Rc};
+use std::{convert::TryFrom, ops::Bound, rc::Rc};
 
 use rug::{Float, float::Round, Rational};
 
-use crate::{core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation}, dom::PairDomain, error::Fallible, meas::{GaussianDomain, LaplaceDomain}};
+use crate::{core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation}, dist::SymmetricDistance, dom::{IntervalDomain, PairDomain}, error::Fallible, meas::{GaussianDomain, LaplaceDomain}};
 
 use super::PLDistribution;
 
@@ -176,6 +176,32 @@ pub fn make_pld_laplace<D>(scale: f64) -> Fallible<Measurement<D, D, D::Metric, 
         D::new(),
         D::noise_function(scale.clone()),
         D::Metric::default(),
+        PLDSmoothedMaxDivergence::new(privacy_loss_distribution.clone()),
+        make_pld_privacy_relation(privacy_loss_distribution),
+    ))
+}
+
+/// Randmized Response
+fn epsilon_delta_pld<'a>(epsilon:f64, delta:f64) -> impl Fn(&u32) -> Fallible<PLDistribution> + 'a {
+    move |n| {
+        let n_exp_eps = ((*n as f64)*epsilon).exp();
+        let n_delta = (*n as f64)*delta;
+        Ok(PLDistribution::from(vec![(0.0, delta), (n_exp_eps, (1.0-n_delta)/(1.0+n_exp_eps)), (n_exp_eps.recip(), (1.0-n_delta)*n_exp_eps/(1.0+n_exp_eps))]))
+    }
+}
+
+pub fn make_pld_epsilon_delta(epsilon:f64, delta:f64) -> Fallible<Measurement<IntervalDomain<u32>, IntervalDomain<u32>, SymmetricDistance, PLDSmoothedMaxDivergence<SymmetricDistance>>> {
+    if delta<0.0 {
+        return fallible!(MakeMeasurement, "delta must not be negative")
+    }
+    let input_domain = IntervalDomain::new(Bound::Included(0u32), Bound::Excluded(2u32)).unwrap();
+    let output_domain = IntervalDomain::new(Bound::Included(0u32), Bound::Excluded(4u32)).unwrap();
+    let privacy_loss_distribution = Rc::new(epsilon_delta_pld(epsilon, delta));
+    Ok(Measurement::new(
+        input_domain,
+        output_domain,
+        Function::new_fallible(|&_| fallible!(NotImplemented, "not implemented")),
+        SymmetricDistance::default(),
         PLDSmoothedMaxDivergence::new(privacy_loss_distribution.clone()),
         make_pld_privacy_relation(privacy_loss_distribution),
     ))
