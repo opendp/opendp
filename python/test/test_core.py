@@ -65,22 +65,29 @@ def test_bisect_chain():
         make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
         make_bounded_mean(lower=0., upper=1., n=10)
     )
-    # chain = bisect_chain(
-    #     lambda s: pre >> make_base_laplace(scale=s),
-    #     bounds=(0., 10.), d_in=1, d_out=1.)
-    # assert chain.check(1, 1.)
+    chain = binary_search_chain(
+        lambda s: pre >> make_base_laplace(scale=s),
+        bounds=(0., 10.), d_in=1, d_out=1.)
+    assert chain.check(1, 1.)
 
-    # scale = bisect_param(
-    #     lambda s: pre >> make_base_laplace(scale=s),
-    #     bounds=(0., 10.), d_in=1, d_out=1.)
+    scale = binary_search_param(
+        lambda s: pre >> make_base_laplace(scale=s),
+        bounds=(0., 10.), d_in=1, d_out=1.)
+    print(scale)
 
     print(binary_search(lambda s: (pre >> make_base_laplace(scale=s)).check(1, 1.), (0., 10.)))
     print((pre >> make_base_laplace(scale=1.25)).check(1, 1.))
     print((pre >> make_base_laplace(scale=0.1)).check(1, 1.))
+    # OH NO!
+    print((pre >> make_base_laplace(scale=0.11)).check(1, 1.))
 
-    # print((pre >> make_base_laplace(scale=0.1)).check(2, 1.))
-    # print(scale)
+
+def test_check():
+    from opendp.meas import make_base_laplace
+    print((make_base_laplace(scale=0.1)).check(0.1, 1.))
+    print((make_base_laplace(scale=0.61)).check(0.1, 1.))
 
 
-# test_bisect_chain()
-test_bisect()
+test_bisect_chain()
+# test_bisect()
+# test_check()

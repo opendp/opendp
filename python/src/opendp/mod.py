@@ -321,8 +321,8 @@ def binary_search(
         tolerance=1e-8):
     """Find the closest value to the `predicate`'s decision point within float or integer `bounds`.
 
-    :param predicate: a function with one parameter that returns a boolean
-    :param bounds: the parameter's lower and upper bounds
+    :param predicate: a monotonic unary function over numbers that returns a boolean
+    :param bounds: lower and upper bounds on the argument to the predicate
     :param tolerance: the discovered float parameter differs by at most `tolerance` from the ideal float parameter
     :return: the discovered parameter within the bounds
     """
