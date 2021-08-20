@@ -1,6 +1,5 @@
 use num::{Float, One, Zero};
 use statrs::distribution::{Normal, Univariate};
-use std::fmt::Debug;
 
 use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric, Metric, Measure};
 use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence, EpsilonDelta};
