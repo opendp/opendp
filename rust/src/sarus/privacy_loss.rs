@@ -55,7 +55,7 @@ pub fn make_pld_privacy_relation<MI>(privacy_loss_distribution: Rc<dyn Fn(&MI::D
         }
         let mut exp_epsilon = rug::Float::with_val_round(64, epsilon, Round::Down).0;
         exp_epsilon.exp_round(Round::Down);
-        Ok(delta >= &privacy_loss_distribution(d_in)?.delta(Rational::try_from(exp_epsilon).unwrap_or_default()))
+        Ok(delta >= &privacy_loss_distribution(d_in)?.delta(&Rational::try_from(exp_epsilon).unwrap_or_default()))
     })
 }
 
@@ -186,7 +186,7 @@ fn epsilon_delta_pld<'a>(epsilon:f64, delta:f64) -> impl Fn(&u32) -> Fallible<PL
     move |n| {
         let n_exp_eps = ((*n as f64)*epsilon).exp();
         let n_delta = (*n as f64)*delta;
-        Ok(PLDistribution::from(vec![(0.0, delta), (n_exp_eps, (1.0-n_delta)/(1.0+n_exp_eps)), (n_exp_eps.recip(), (1.0-n_delta)*n_exp_eps/(1.0+n_exp_eps))]))
+        Ok(PLDistribution::from(vec![(0.0, n_delta), (n_exp_eps, (1.0-n_delta)/(1.0+n_exp_eps)), (n_exp_eps.recip(), (1.0-n_delta)*n_exp_eps/(1.0+n_exp_eps))]))
     }
 }
 

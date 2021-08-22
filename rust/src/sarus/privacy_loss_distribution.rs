@@ -14,49 +14,60 @@ const DENOM:usize = 1000000;
 /// A privacy loss value (log-likelihood)
 #[derive(Clone, PartialEq)]
 pub struct PLDistribution {
-    /// We represent PLD as p_y/p_x -> p_x
+    /// We represent PLD as p_y/p_x -> p_x for p_y <= p_x
     /// contrary to http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf (p_x/p_y -> p_x)
-    /// so we don't need +infinity in the number representation
-    pub exp_privacy_loss_probabilities: BTreeMap<Rational, Rational>
+    exp_privacy_loss_probabilities: BTreeMap<Rational, Rational>// Change that to have only p_y_x<1 TODO
 }
 
 impl<'a> PLDistribution {
     pub fn new<I>(exp_privacy_loss_probabilitiies:I) -> PLDistribution
     where I: IntoIterator<Item=(Rational, Rational)> {
-        let p_y_x_p_x: Vec<(Rational,Rational)> = exp_privacy_loss_probabilitiies.into_iter().collect();
-        let sum_p_x = p_y_x_p_x.iter().fold(Rational::from(0),
-        |s,(_,p)| {s+p});
-        let sum_p_y = p_y_x_p_x.iter().fold(Rational::from(0),
-        |s,(l,p)| {s+p.clone()*l});
-        let mut p_y_x_p_x_map:BTreeMap<Rational, Rational> = BTreeMap::new();
-        for (p_y_x, p_x) in p_y_x_p_x {
-            p_y_x_p_x_map.entry(p_y_x*&sum_p_x/&sum_p_y)
-                    .and_modify(|p| { *p += p_x.clone()/&sum_p_x })
-                    .or_insert(p_x/&sum_p_x);
+        let mut p_y_x_p_x:BTreeMap<Rational, Rational> = BTreeMap::new();
+        let mut sum_p = Rational::from(0);
+        for (p_y_x, p_x) in exp_privacy_loss_probabilitiies {
+            if &Rational::from(0) <= &p_y_x && &p_y_x <= &Rational::from(1) && &Rational::from(0) < &p_x {
+                p_y_x_p_x.entry(p_y_x.clone())
+                    .and_modify(|p| *p += p_x.clone() )
+                    .or_insert(p_x.clone());
+                // Compute the total sum of probabilities
+                sum_p += (Rational::from(1)+p_y_x)*p_x;
+            }
         }
-        PLDistribution {exp_privacy_loss_probabilities:p_y_x_p_x_map}
+        for (_, p_x) in p_y_x_p_x.iter_mut() {
+            *p_x /= &sum_p;
+        }
+        // Add 0 and 1 entries
+        p_y_x_p_x.entry(Rational::from(0))
+            .and_modify(|p| *p += Rational::from(0) )
+            .or_insert(Rational::from(0));
+        p_y_x_p_x.entry(Rational::from(1))
+            .and_modify(|p| *p += Rational::from(0) )
+            .or_insert(Rational::from(0));
+        println!("exp_privacy_loss_probabilities = {:?}", p_y_x_p_x.iter().map(|(l,p)| (l.to_f64(), p.to_f64())).collect::<Vec<(f64,f64)>>());
+        PLDistribution {exp_privacy_loss_probabilities:p_y_x_p_x}
     }
 
     /// Use the formula from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
-    pub fn delta(&self, exp_epsilon: Rational) -> Rational {
-        let zero_infinite_privacy_loss_delta = self.exp_privacy_loss_probabilities.get(&Rational::from(0)).unwrap_or(&Rational::from(0)).clone();
-        let (delta_x_y, delta_y_x) = if &exp_epsilon>&Rational::from(0) {
-            self.exp_privacy_loss_probabilities.iter()
-            .fold(( zero_infinite_privacy_loss_delta.clone(), zero_infinite_privacy_loss_delta), 
-            |(delta_x_y,delta_y_x),(l_y_x,p_x)| {
-                    (if l_y_x<&exp_epsilon.clone().recip() {delta_x_y + (Rational::from(1)-l_y_x.clone()*exp_epsilon.clone())*p_x} else {delta_x_y},
-                    if l_y_x>&exp_epsilon {delta_y_x + (Rational::from(1)-exp_epsilon.clone()/l_y_x)*p_x*l_y_x} else {delta_y_x})
-            })
-        } else {
-            (Rational::from(1), Rational::from(1))
-        };
-        Rational::max(delta_x_y,delta_y_x)
+    pub fn delta(&self, exp_epsilon: &Rational) -> Rational {
+        if exp_epsilon==&Rational::from(0) {
+            return Rational::from(1);
+        }
+        let mut result = Rational::from(0);
+        for (p_y_x,p_x) in self.exp_privacy_loss_probabilities.iter() {
+            if p_y_x<&exp_epsilon.clone().recip() {
+                result += (Rational::from(1)-p_y_x*exp_epsilon.clone())*p_x;
+            }
+            if p_y_x>exp_epsilon {
+                result += (p_y_x-exp_epsilon.clone())*p_x;
+            }
+        }
+        result
     }
 
     /// Compute a delta and simplifies it to the simple fraction just below
     /// The degree of simplification is expressed by giving the target denominator
     pub fn simplified_delta(&self, exp_epsilon: Rational, denom: usize) -> Rational {
-        let delta = self.delta(exp_epsilon);
+        let delta = self.delta(&exp_epsilon);
         let num = Integer::from(denom) * delta.numer() / delta.denom();
         Rational::from((num,denom))
     }
@@ -68,20 +79,21 @@ impl<'a> PLDistribution {
         // Initialize the set of possible exp_eps
         for exp_epsilon in self.exp_privacy_loss_probabilities.keys() {
             exp_epsilons_set.insert(exp_epsilon.clone());
-            // if exp_epsilon>&Rational::from(0) {
-            //     exp_epsilons_set.insert(exp_epsilon.clone().recip());
-            // }
+            if exp_epsilon>&Rational::from(0) {
+                exp_epsilons_set.insert(exp_epsilon.clone().recip());
+            }
         }
         // Reverse the exp epsilons to have them by decreasing order
         let exp_epsilons: Vec<Rational> = exp_epsilons_set.into_iter().rev().collect();
         // Insert the first points
         result.push((Rational::from(0), Rational::from(1)));
         let mut last_exp_epsilon = exp_epsilons[0].clone();
-        let mut last_delta= self.delta(last_exp_epsilon.clone());
+        let mut last_delta= self.delta(&last_exp_epsilon);
+        println!("first delta = {:?}", last_delta.to_f64());
         result.push((Rational::from(0), Rational::from(1)-&last_delta));
         for i in 1..exp_epsilons.len() {
             let exp_epsilon = exp_epsilons[i].clone();
-            let delta = self.delta(exp_epsilon.clone());
+            let delta = self.delta(&exp_epsilon);
             let denom = exp_epsilon.clone()-&last_exp_epsilon;
             if denom!=Rational::from(0) {
                 result.push((
@@ -111,7 +123,7 @@ impl<'a> PLDistribution {
 
     /// Compute a vctor of deltas
     pub fn deltas(&self, exp_epsilons:Vec<Rational>) -> Vec<(Rational, Rational)> {
-        exp_epsilons.into_iter().map(|e| {(e.clone(),self.delta(e))}).collect()
+        exp_epsilons.into_iter().map(|e| {(e.clone(),self.delta(&e))}).collect()
     }
 
     /// Probabilities computed from simplified deltas

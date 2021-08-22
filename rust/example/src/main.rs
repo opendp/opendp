@@ -40,7 +40,8 @@ fn eps_delt_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     let eps_delt_meas = make_pld_epsilon_delta(1.0, 0.01)?;
     plot_fs(vec![
         eps_delt_meas.output_measure.f(&1),
-        eps_delt_meas.output_measure.simplified_f(&1),
+        eps_delt_meas.output_measure.f(&2),
+        // eps_delt_meas.output_measure.simplified_f(&1),
     ], false)?;
     Ok(())
 }
