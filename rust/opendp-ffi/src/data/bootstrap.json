@@ -13,7 +13,7 @@
         "description": "Internal function. Load data from a `slice` into an AnyObject",
         "args": [
             {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
-            {"name": "T",  "c_type": "char *", "is_type": true}
+            {"name": "T", "is_type": true}
         ],
         "ret": {
             "c_type": "FfiResult<const AnyObject *>",
@@ -25,7 +25,7 @@
         "description": "Internal function. Load data from a `slice` into an AnyMetricDistance",
         "args": [
             {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
-            {"name": "T",  "c_type": "char *", "is_type": true}
+            {"name": "T", "is_type": true}
         ],
         "ret": {
             "c_type": "FfiResult<const AnyMetricDistance *>",
@@ -37,7 +37,7 @@
         "description": "Internal function. Load data from a `slice` into an AnyMeasureDistance",
         "args": [
             {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
-            {"name": "T",  "c_type": "char *", "is_type": true}
+            {"name": "T", "is_type": true}
         ],
         "ret": {
             "c_type": "FfiResult<const AnyMeasureDistance *>",

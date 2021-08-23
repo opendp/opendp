@@ -12,7 +12,6 @@
             },
             {
                 "name": "D",
-                "c_type": "char *",
                 "default": "AllDomain<T>",
                 "generics": ["T"],
                 "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
@@ -44,7 +43,6 @@
             },
             {
                 "name": "D",
-                "c_type": "char *",
                 "default": "AllDomain<T>",
                 "generics": ["T"],
                 "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
@@ -84,14 +82,12 @@
             },
             {
                 "name": "D",
-                "c_type": "char *",
                 "default": "AllDomain<i32>",
                 "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true
             },
             {
                 "name": "QO",
-                "c_type": "char *",
                 "description": "Data type of the sensitivity, scale, and budget.",
                 "is_type": true
             }
@@ -147,20 +143,17 @@
             },
             {
                 "name": "MI",
-                "c_type": "char *",
                 "description": "Input metric.",
                 "is_type": true,
                 "hint": "SensitivityMetric"
             },
             {
                 "name": "TIK",
-                "c_type": "char *",
                 "description": "Data type of input key- must be hashable/categorical.",
                 "is_type": true
             },
             {
                 "name": "TIC",
-                "c_type": "char *",
                 "description": "Data type of input count- must be integral.",
                 "is_type": true,
                 "default": "i32"
