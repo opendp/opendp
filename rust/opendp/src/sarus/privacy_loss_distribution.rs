@@ -7,7 +7,7 @@ use std::ops::Mul;
 use rug::{Integer, Rational};
 
 const GRID_SIZE:usize = 10;
-const DENOM:usize = 1000000000;
+const DENOM:usize = 1000000;
 
 /// Privacy Loss Distribution from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
@@ -138,7 +138,6 @@ impl<'a> PLDistribution {
             last_exp_epsilon = exp_epsilon.clone();
             last_delta = delta.clone();
         }
-        println!("{:?}", result_alpha_betas.iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect::<Vec<(f64,f64)>>());
         // Compute probabilities
         let mut last_alpha = result_alpha_betas[0].0.clone();
         let mut last_beta= result_alpha_betas[0].1.clone();
@@ -152,7 +151,6 @@ impl<'a> PLDistribution {
             last_alpha = alpha.clone();
             last_beta = beta.clone();
         }
-        println!("{:?}", result_exp_privacy_loss_probabilities.iter().map(|(l,p)| (l.to_f64(), p.to_f64())).collect::<Vec<(f64,f64)>>());
         PLDistribution::new(result_exp_privacy_loss_probabilities)
     }
 }
