@@ -90,7 +90,6 @@ impl<'a> PLDistribution {
         result.push((Rational::from(0), Rational::from(1)));
         let mut last_exp_epsilon = exp_epsilons[0].clone();
         let mut last_delta= self.delta(&last_exp_epsilon);
-        println!("first delta = {:?}", last_delta.to_f64());
         result.push((Rational::from(0), Rational::from(1)-&last_delta));
         for i in 1..exp_epsilons.len() {
             let exp_epsilon = exp_epsilons[i].clone();
@@ -111,7 +110,7 @@ impl<'a> PLDistribution {
         self.tradeoff().into_iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect()
     }
 
-    /// Compute a vctor of deltas
+    /// Compute a vector of deltas
     pub fn deltas(&self, exp_epsilons:Vec<Rational>) -> Vec<(Rational, Rational)> {
         exp_epsilons.into_iter().map(|e| {(e.clone(),self.delta(&e))}).collect()
     }
@@ -163,14 +162,45 @@ impl Mul for &PLDistribution {
     type Output = PLDistribution;
     fn mul(self, other: &PLDistribution) -> PLDistribution {
         let mut result = PLDistribution {exp_privacy_loss_probabilities:BTreeMap::new()};
-        for (s_epl,s_prob) in &self.exp_privacy_loss_probabilities {
-            for (o_epl,o_prob) in &other.exp_privacy_loss_probabilities {
-                let epl = s_epl.clone() * o_epl;
-                result.exp_privacy_loss_probabilities.entry(epl)
-                    .and_modify(|prob| { *prob += s_prob.clone() * o_prob })
-                    .or_insert(s_prob.clone() * o_prob);
+        for (s_p_y_x,s_p_x) in &self.exp_privacy_loss_probabilities {
+            for (o_p_y_x,o_p_x) in &other.exp_privacy_loss_probabilities {
+                // s,o
+                let so_p_y_x = s_p_y_x.clone() * o_p_y_x;
+                let so_p_x = s_p_x.clone() * o_p_x;
+                result.exp_privacy_loss_probabilities.entry(so_p_y_x)
+                    .and_modify(|p_x| { *p_x += so_p_x.clone() })
+                    .or_insert(so_p_x);
+                // s_inv,o
+                if s_p_y_x>&Rational::from(0) && s_p_y_x<&Rational::from(1) {
+                    let so_p_y_x = s_p_y_x.clone().recip() * o_p_y_x;
+                    let so_p_x = s_p_x.clone()*s_p_y_x * o_p_x;
+                    if so_p_y_x<=Rational::from(1) {
+                        result.exp_privacy_loss_probabilities.entry(so_p_y_x)
+                            .and_modify(|p_x| { *p_x += so_p_x.clone() })
+                            .or_insert(so_p_x);
+                    }
+                }
+                // s,o_inv
+                if o_p_y_x>&Rational::from(0) && o_p_y_x<&Rational::from(1) {
+                    let so_p_y_x = o_p_y_x.clone().recip() * s_p_y_x;
+                    let so_p_x = s_p_x.clone() * o_p_x * o_p_y_x;
+                    if so_p_y_x<=Rational::from(1) {
+                        result.exp_privacy_loss_probabilities.entry(so_p_y_x)
+                            .and_modify(|p_x| { *p_x += so_p_x.clone() })
+                            .or_insert(so_p_x);
+                    }
+                }
             }
         }
+        // Sanity check
+        let mut sump = 0.0;
+        for (p_y_x,p_x) in &result.exp_privacy_loss_probabilities {
+            sump += p_x.to_f64();
+            if p_y_x != &Rational::from(1) {
+                sump += p_x.to_f64()*p_y_x.to_f64();
+            }
+        }
+        println!("sump = {:.12}", sump);
         result
     }
 }
