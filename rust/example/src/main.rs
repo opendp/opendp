@@ -19,7 +19,7 @@ fn gaussian_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     let gauss_meas = make_pld_gaussian::<AllDomain<f64>>(1.0)?;
     plot_fs(vec![
         gauss_meas.output_measure.f(&1.0),
-        gauss_meas.output_measure.f(&0.2),
+        gauss_meas.output_measure.f(&0.5),
         gauss_meas.output_measure.simplified_f(&1.0),
     ], false)?;
     Ok(())
@@ -38,14 +38,14 @@ fn laplace_plot_example() -> Result<(), Box<dyn std::error::Error>> {
 
 fn eps_delt_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("Plot Epsilon Delta examples");
-    let eps_delt_meas = make_pld_epsilon_delta(0.0, 0.1)?;
-    let eps_delt_meas_2 = make_pld_epsilon_delta(0.1, 0.1)?;
+    let eps_delt_meas = make_pld_epsilon_delta(1.0, 0.1)?;
+    // let eps_delt_meas_2 = make_pld_epsilon_delta(0.1, 0.1)?;
     plot_fs(vec![
         eps_delt_meas.output_measure.f(&1),
         eps_delt_meas.output_measure.f(&2),
-        eps_delt_meas_2.output_measure.f(&1),
-        eps_delt_meas_2.output_measure.f(&2),
-        // eps_delt_meas.output_measure.simplified_f(&1),
+        // eps_delt_meas_2.output_measure.f(&1),
+        // eps_delt_meas_2.output_measure.f(&2),
+        eps_delt_meas.output_measure.simplified_f(&1),
     ], false)?;
     Ok(())
 }
@@ -58,9 +58,9 @@ fn laplace_comp_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     let meas_2 = make_pld_laplace::<AllDomain<f64>>(1.0)?;
     let comp_meas_1 = make_pld_composition(&comp_meas_0, &meas_2)?;
     plot_fs(vec![
-        comp_meas_1.output_measure.f(&0.2),
-        comp_meas_0.output_measure.f(&0.2),
-        meas_0.output_measure.f(&0.2),
+        comp_meas_1.output_measure.f(&1.0),
+        comp_meas_0.output_measure.f(&1.0),
+        meas_0.output_measure.f(&1.0),
     ], false)?;
     Ok(())
 }

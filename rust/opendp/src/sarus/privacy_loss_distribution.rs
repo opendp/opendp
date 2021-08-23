@@ -6,8 +6,8 @@ use std::ops::Mul;
 
 use rug::{Integer, Rational};
 
-const GRID_SIZE:usize = 100;
-const DENOM:usize = 1000000;
+const GRID_SIZE:usize = 10;
+const DENOM:usize = 1000000000;
 
 /// Privacy Loss Distribution from http://proceedings.mlr.press/v108/koskela20b/koskela20b.pdf
 
@@ -43,7 +43,6 @@ impl<'a> PLDistribution {
         p_y_x_p_x.entry(Rational::from(1))
             .and_modify(|p| *p += Rational::from(0) )
             .or_insert(Rational::from(0));
-        println!("exp_privacy_loss_probabilities = {:?}", p_y_x_p_x.iter().map(|(l,p)| (l.to_f64(), p.to_f64())).collect::<Vec<(f64,f64)>>());
         PLDistribution {exp_privacy_loss_probabilities:p_y_x_p_x}
     }
 
@@ -115,45 +114,46 @@ impl<'a> PLDistribution {
         exp_epsilons.into_iter().map(|e| {(e.clone(),self.delta(&e))}).collect()
     }
 
-    /// Probabilities computed from simplified deltas
-    pub fn simplified_probabilities(&self, exp_epsilons:Vec<Rational>, denom:usize) -> Vec<(Rational, Rational)> {
-        let mut result = Vec::new();
-        let mut exp_epsilons_set:BTreeSet<Rational> = BTreeSet::new();
-        // Initialize the set of possible exp_eps
-        for exp_epsilon in exp_epsilons {exp_epsilons_set.insert(exp_epsilon.clone());}
-        // Reverse the exp epsilons to have them by decreasing order
-        let exp_epsilons: Vec<Rational> = exp_epsilons_set.into_iter().rev().collect();
-        // Insert the first point
-        result.push((exp_epsilons[0].clone(), Rational::from(0)));
-        let mut last_exp_epsilon = exp_epsilons[0].clone();
-        let mut last_delta= self.simplified_delta(last_exp_epsilon.clone(), denom);
-        for i in 1..exp_epsilons.len() {
-            let exp_epsilon = exp_epsilons[i].clone();
-            let delta = self.simplified_delta(exp_epsilon.clone(), denom);
+    pub fn simplified(&self) -> PLDistribution {
+        let mut result_exp_epsilons: Vec<Rational> = Vec::new();
+        let mut result_alpha_betas: Vec<(Rational,Rational)> = Vec::new();
+        let mut result_exp_privacy_loss_probabilities: Vec<(Rational,Rational)> = Vec::new();
+        // Select a set of exp_epsilons
+        for i in 0..GRID_SIZE {
+            result_exp_epsilons.push(Rational::from(GRID_SIZE+1)/Rational::from(i+1));
+        }
+        // Compute alphas and betas
+        result_alpha_betas.push((Rational::from(0), Rational::from(1)));
+        let mut last_exp_epsilon = result_exp_epsilons[0].clone();
+        let mut last_delta= self.simplified_delta(last_exp_epsilon.clone(), DENOM);
+        result_alpha_betas.push((Rational::from(0), Rational::from(1)-&last_delta));
+        for i in 1..result_exp_epsilons.len() {
+            let exp_epsilon = result_exp_epsilons[i].clone();
+            let delta = self.simplified_delta(exp_epsilon.clone(), DENOM);
             let denom = exp_epsilon.clone()-&last_exp_epsilon;
-            result.push((exp_epsilon.clone(), (last_delta.clone()-&delta)/&denom));
+            result_alpha_betas.push((
+                (last_delta.clone()-&delta)/&denom,
+                ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
+            ));
             last_exp_epsilon = exp_epsilon.clone();
             last_delta = delta.clone();
         }
-        result.push((Rational::from(0), Rational::from(1)));
-        result.windows(2).map(|window| {(window[0].0.clone(), window[1].1.clone()-window[0].1.clone())}).collect()
-    }
-
-    pub fn simplified(&self) -> PLDistribution {
-        let exp_epsilons: Vec<Rational> = self.exp_privacy_loss_probabilities.iter().map(|(l,_)| l.clone()).collect();
-        let mut result_exp_epsilons: Vec<Rational> = Vec::new();
-        let min_exp_epsilon = exp_epsilons.first().unwrap_or(&Rational::from(0)).clone();
-        let max_exp_epsilon = exp_epsilons.last().unwrap_or(&Rational::from(1)).clone();
-        let max_result_exp_epsilon = if min_exp_epsilon == 0 {max_exp_epsilon} else {Rational::max(min_exp_epsilon.recip(), max_exp_epsilon)};
-        result_exp_epsilons.push(Rational::from(0));
-        for i in 0..GRID_SIZE {
-            result_exp_epsilons.push((max_result_exp_epsilon.clone()-Rational::from(i)*(max_result_exp_epsilon.clone()-Rational::from(1))/Rational::from(GRID_SIZE)).recip());
+        println!("{:?}", result_alpha_betas.iter().map(|(a,b)| (a.to_f64(), b.to_f64())).collect::<Vec<(f64,f64)>>());
+        // Compute probabilities
+        let mut last_alpha = result_alpha_betas[0].0.clone();
+        let mut last_beta= result_alpha_betas[0].1.clone();
+        for i in 1..result_alpha_betas.len() {
+            let alpha = result_alpha_betas[i].0.clone();
+            let beta= result_alpha_betas[i].1.clone();
+            if &beta != &last_beta {
+                let exp_epsilon = -(alpha.clone()-&last_alpha)/(beta.clone()-&last_beta);
+                result_exp_privacy_loss_probabilities.push((exp_epsilon, -(beta.clone()-&last_beta)));
+            }
+            last_alpha = alpha.clone();
+            last_beta = beta.clone();
         }
-        result_exp_epsilons.push(Rational::from(1));
-        for i in 0..GRID_SIZE {
-            result_exp_epsilons.push(Rational::from(1)+Rational::from(i+1)*(max_result_exp_epsilon.clone()-Rational::from(1))/Rational::from(GRID_SIZE));
-        }
-        PLDistribution::new(self.simplified_probabilities(result_exp_epsilons, DENOM))
+        println!("{:?}", result_exp_privacy_loss_probabilities.iter().map(|(l,p)| (l.to_f64(), p.to_f64())).collect::<Vec<(f64,f64)>>());
+        PLDistribution::new(result_exp_privacy_loss_probabilities)
     }
 }
 
@@ -192,15 +192,6 @@ impl Mul for &PLDistribution {
                 }
             }
         }
-        // Sanity check
-        let mut sump = 0.0;
-        for (p_y_x,p_x) in &result.exp_privacy_loss_probabilities {
-            sump += p_x.to_f64();
-            if p_y_x != &Rational::from(1) {
-                sump += p_x.to_f64()*p_y_x.to_f64();
-            }
-        }
-        println!("sump = {:.12}", sump);
         result
     }
 }
