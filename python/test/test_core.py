@@ -1,4 +1,7 @@
+import pytest
+
 from opendp.mod import enable_features
+enable_features('floating-point')
 
 
 def test_type_getters():
@@ -34,3 +37,45 @@ def test_chain():
     print("chained measurement check:", chain.check(d_in=1, d_out=1000., debug=True))
 
     print("evaluate chain:", chain(data))
+
+
+def test_bisect():
+    from opendp.mod import binary_search
+
+    for i in range(100):
+        assert binary_search(lambda x: x < i + 1, (0, 100)) == i
+        assert binary_search(lambda x: x > i, (0, 100)) == i + 1
+
+        assert -(binary_search(lambda x: x < i + 1, (0., 100.)) - (i + 1)) < 1e-8
+        assert binary_search(lambda x: x > i, (0., 100.)) - i < 1e-8
+
+
+def test_bisect_edge():
+    from opendp.mod import binary_search
+    with pytest.raises(AssertionError):
+        binary_search(lambda x: x > 5., (0., 5.))
+    assert binary_search(lambda x: x > 0, (0, 1)) == 1
+    assert binary_search(lambda x: x < 1, (0, 1)) == 0
+    with pytest.raises(AssertionError):
+        binary_search(lambda x: x < 1, (0, 0))
+
+    assert binary_search(lambda x: x > 5, bounds=(0, 10)) == 6
+    assert binary_search(lambda x: x < 5, bounds=(0, 10)) == 4
+    assert binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. < 1e-8
+    assert binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. > -1e-8
+
+
+def test_bisect_chain():
+    from opendp.mod import binary_search_chain, binary_search_param
+    from opendp.trans import make_clamp, make_resize_bounded, make_bounded_mean
+    from opendp.meas import make_base_laplace
+    pre = (
+        make_clamp(lower=0., upper=1.) >>
+        make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
+        make_bounded_mean(lower=0., upper=1., n=10)
+    )
+    chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
+    assert chain.check(1, 1.)
+
+    scale = binary_search_param(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
+    assert scale - 0.1 < 1e-8

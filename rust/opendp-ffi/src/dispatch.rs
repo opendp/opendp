@@ -127,7 +127,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => opendp::err!(FFI, "No match for concrete type {} ({:?})", $rt_type.descriptor, $rt_type.id).into()
+            _ => opendp::err!(FFI, "No match for concrete type {} ({:?}). You've got a debug binary! You may want to run `cargo build --release` and set `OPENDP_TEST_RELEASE=1` before importing opendp.", $rt_type.descriptor, $rt_type.id).into()
         }
     };
 }
