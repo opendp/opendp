@@ -37,10 +37,13 @@ fn laplace_plot_example() -> Result<(), Box<dyn std::error::Error>> {
 
 fn eps_delt_plot_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("Plot Laplace examples");
-    let eps_delt_meas = make_pld_epsilon_delta(1.0, 0.01)?;
+    let eps_delt_meas = make_pld_epsilon_delta(0.0, 0.1)?;
+    let eps_delt_meas_2 = make_pld_epsilon_delta(0.1, 0.1)?;
     plot_fs(vec![
         eps_delt_meas.output_measure.f(&1),
         eps_delt_meas.output_measure.f(&2),
+        eps_delt_meas_2.output_measure.f(&1),
+        eps_delt_meas_2.output_measure.f(&2),
         // eps_delt_meas.output_measure.simplified_f(&1),
     ], false)?;
     Ok(())

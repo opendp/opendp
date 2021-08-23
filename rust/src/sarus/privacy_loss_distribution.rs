@@ -29,8 +29,8 @@ impl<'a> PLDistribution {
                 p_y_x_p_x.entry(p_y_x.clone())
                     .and_modify(|p| *p += p_x.clone() )
                     .or_insert(p_x.clone());
-                // Compute the total sum of probabilities
-                sum_p += (Rational::from(1)+p_y_x)*p_x;
+                // Compute the total sum of probabilities (count half of p_y_x==1)
+                if &p_y_x != &Rational::from(1) {sum_p += (Rational::from(1)+p_y_x)*p_x;} else {sum_p += p_x;}
             }
         }
         for (_, p_x) in p_y_x_p_x.iter_mut() {
@@ -57,7 +57,8 @@ impl<'a> PLDistribution {
             if p_y_x<&exp_epsilon.clone().recip() {
                 result += (Rational::from(1)-p_y_x*exp_epsilon.clone())*p_x;
             }
-            if p_y_x>exp_epsilon {
+            // Avoid the double count of p_y_x==1
+            if p_y_x>exp_epsilon && p_y_x!=&Rational::from(1) {
                 result += (p_y_x-exp_epsilon.clone())*p_x;
             }
         }
@@ -95,23 +96,12 @@ impl<'a> PLDistribution {
             let exp_epsilon = exp_epsilons[i].clone();
             let delta = self.delta(&exp_epsilon);
             let denom = exp_epsilon.clone()-&last_exp_epsilon;
-            if denom!=Rational::from(0) {
-                result.push((
-                    (last_delta.clone()-&delta)/&denom,
-                    ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
-                ));
-            }
-            last_exp_epsilon = exp_epsilon.clone();
-            last_delta = delta.clone();
-        }
-        let exp_epsilon = Rational::from(0);
-        let delta = Rational::from(1);
-        let denom = exp_epsilon.clone()-&last_exp_epsilon;
-        if denom!=Rational::from(0) {
             result.push((
                 (last_delta.clone()-&delta)/&denom,
                 ((Rational::from(1)-&last_delta)*&exp_epsilon-(Rational::from(1)-&delta)*&last_exp_epsilon)/&denom,
             ));
+            last_exp_epsilon = exp_epsilon.clone();
+            last_delta = delta.clone();
         }
         result.push((Rational::from(1), Rational::from(0)));
         result
@@ -142,14 +132,10 @@ impl<'a> PLDistribution {
             let exp_epsilon = exp_epsilons[i].clone();
             let delta = self.simplified_delta(exp_epsilon.clone(), denom);
             let denom = exp_epsilon.clone()-&last_exp_epsilon;
-            if denom!=Rational::from(0) {result.push((exp_epsilon.clone(), (last_delta.clone()-&delta)/&denom));}
+            result.push((exp_epsilon.clone(), (last_delta.clone()-&delta)/&denom));
             last_exp_epsilon = exp_epsilon.clone();
             last_delta = delta.clone();
         }
-        let exp_epsilon = Rational::from(0);
-        let delta = Rational::from(1);
-        let denom = exp_epsilon.clone()-&last_exp_epsilon;
-        if denom!=Rational::from(0) {result.push((exp_epsilon.clone(), (last_delta.clone()-&delta)/&denom));}
         result.push((Rational::from(0), Rational::from(1)));
         result.windows(2).map(|window| {(window[0].0.clone(), window[1].1.clone()-window[0].1.clone())}).collect()
     }
