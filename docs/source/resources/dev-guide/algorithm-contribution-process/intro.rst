@@ -1,5 +1,0 @@
-Introduction
-============
-
-.. contents:: |toctitle|
-	:local:
