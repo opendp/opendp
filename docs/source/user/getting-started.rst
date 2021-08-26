@@ -25,9 +25,11 @@ Hello, OpenDP!
 
 Once you've installed OpenDP, you can write your first program. In the example below, we'll construct an identity ``Transformation``, then invoke it on a string.
 
-::
+.. doctest::
 
-    import opendp.trans as trans
+    >>> from opendp.trans import make_identity
+    >>> from opendp.typing import SubstituteDistance
 
-    identity = make_identity(M="SymmetricDistance", T=str)
-    print(identity("Hello, world!")
+    >>> identity = make_identity(M=SubstituteDistance, T=str)
+    >>> identity("Hello, world!")
+    'Hello, world!'
