@@ -7,7 +7,7 @@ Core Structures
 Overview
 --------
 
-OpenDP is about creating computations with specific privacy characteristics. These computations are modeled with two core structures in OpenDP: Transformations and Measurements. These structures are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy. By modeling computations in this abstract way, we're able to combine them in flexible arrangements, and reason about the resulting programs.
+OpenDP is focused on creating computations with specific privacy characteristics. These computations are modeled with two core structures in OpenDP: Transformations and Measurements. These structures are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy. By modeling computations in this abstract way, we're able to combine them in flexible arrangements and reason about the resulting programs.
 
 Measurement
 -----------
