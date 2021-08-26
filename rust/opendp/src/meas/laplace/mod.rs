@@ -117,7 +117,15 @@ pub fn find_epsilon_delta_family_laplace <Q: 'static + Zero + Float + One + Cast
             .map(|i| step.clone() * Q::from_internal(rug::Float::with_val(53, i)))
             .map(|eps| EpsilonDelta{
                 epsilon: eps.clone(),
-                delta: Q::one() - (eps - d_in.clone() / scale).exp().sqrt() // delta = 1 - sqrt(exp(epsk - d_in / scale))
+                delta: { // delta = 1 - sqrt(exp(epsk - d_in / scale))
+                    let mut delta = scale.into_internal();
+                    delta.recip_round(Round::Up);
+                    delta = delta * d_in.into_internal();
+                    delta = eps.into_internal() - delta;
+                    delta.exp_round(Round::Down);
+                    delta.sqrt_round(Round::Down);
+                    Q::from_internal(Q::one().into_internal() - delta)
+                }
             })
             .rev()
             .collect()
