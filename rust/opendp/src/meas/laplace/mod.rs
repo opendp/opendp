@@ -1,5 +1,6 @@
-use num::{Float, One};
+use num::{Float, One, Zero};
 use rug::float::Round;
+use std::rc::Rc;
 
 use crate::core::{Measurement, Function, PrivacyRelation, Measure, Metric, Domain, SensitivityMetric};
 use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence, EpsilonDelta};
@@ -104,6 +105,27 @@ pub fn make_base_laplace<D, MO>(scale: D::Atom) -> Fallible<Measurement<D, D, D:
         MO::privacy_relation(scale),
     ))
 }
+
+pub fn find_epsilon_delta_family_laplace <Q: 'static + Zero + Float + One + CastInternalReal + Clone> (scale: Q)
+-> Rc<dyn Fn(&Q, u8) -> Vec<EpsilonDelta<Q>>> {
+    // Returns a function
+    let epsilon_delta_family = move |d_in: &Q, npoints: u8| {
+        let max_epsilon = d_in.clone() / scale;
+        let step = max_epsilon.clone() / Q::from_internal(rug::Float::with_val(53, npoints - 1));
+
+        (0..npoints)
+            .map(|i| step.clone() * Q::from_internal(rug::Float::with_val(53, i)))
+            .map(|eps| EpsilonDelta{
+                epsilon: eps.clone(),
+                delta: Q::one() - (eps - d_in.clone() / scale).exp().sqrt() // delta = 1 - sqrt(exp(epsk - d_in / scale))
+            })
+            .rev()
+            .collect()
+    };
+    Rc::new(epsilon_delta_family)
+}
+
+
 
 
 #[cfg(test)]

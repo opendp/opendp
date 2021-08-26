@@ -1,13 +1,14 @@
 use std::ops::Shr;
 use std::fmt::Debug;
 use num::{One, Zero, Float};
+use std::rc::Rc;
 
 use crate::core::{Domain, Function, HintMt, HintTt, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
 use crate::dom::{PairDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{Tolerance, Midpoint};
 use crate::samplers::{CastRational, CastInternalReal};
-use crate::dist::{FSmoothedMaxDivergence, ProbabilitiesRatios, EpsilonDelta};
+use crate::dist::{FSmoothedMaxDivergence, ProbabilitiesRatios, EpsilonDelta, ExpEpsilonDelta};
 
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     measurement1: &Measurement<DX, DO, MX, MO>,
@@ -94,16 +95,35 @@ pub fn bounded_complexity_composition_privacy_relation <MI, Q>(
     relation2: &PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>,
     npoints: u8,
     delta_min: Q,
+    hint1: &Option<Rc<dyn Fn(&MI::Distance, u8) -> Vec<EpsilonDelta<Q>>>>,
+    hint2: &Option<Rc<dyn Fn(&MI::Distance, u8) -> Vec<EpsilonDelta<Q>>>>,
 ) -> PrivacyRelation<MI, FSmoothedMaxDivergence<Q>>
     where MI: Metric,
           Q: 'static + One + Zero + PartialOrd + CastRational + CastInternalReal + Clone + Debug + Float + Midpoint + Tolerance,
           MI::Distance: Clone + One + Zero + PartialOrd {
 
-    let probas_ratios1 = ProbabilitiesRatios::from_privacy_relation(relation1, npoints.clone(), delta_min.clone());
+
+    let epsilons_deltas = match hint1 {
+        Some(epsilon_delta_relation) => epsilon_delta_relation(&MI::Distance::one(), npoints),
+        None => relation1.find_epsilon_delta_family(&MI::Distance::one(), npoints, delta_min),
+    };
+    let exp_epsilons_deltas: Vec<ExpEpsilonDelta> = epsilons_deltas.iter()
+        .map(|ed| ExpEpsilonDelta::from_epsilon_delta(ed.clone()))
+        .collect();
+    let probas_ratios1 = ProbabilitiesRatios::from_vec_exp_epsilon_delta(exp_epsilons_deltas);
     if probas_ratios1.len() == 0 {
         return relation2.clone()
     }
-    let probas_ratios2 = ProbabilitiesRatios::from_privacy_relation(relation2, npoints.clone(), delta_min.clone());
+
+    let epsilons_deltas = match hint2 {
+        Some(epsilon_delta_relation) => epsilon_delta_relation(&MI::Distance::one(), npoints),
+        None => relation2.find_epsilon_delta_family(&MI::Distance::one(), npoints, delta_min),
+    };
+    let exp_epsilons_deltas: Vec<ExpEpsilonDelta> = epsilons_deltas.iter()
+        .map(|ed| ExpEpsilonDelta::from_epsilon_delta(ed.clone()))
+        .collect();
+    let probas_ratios2 = ProbabilitiesRatios::from_vec_exp_epsilon_delta(exp_epsilons_deltas);
+    //let probas_ratios2 = ProbabilitiesRatios::from_privacy_relation(relation2, npoints.clone(), delta_min.clone());
     if probas_ratios2.len() == 0 {
         return relation1.clone()
     }
@@ -140,6 +160,8 @@ pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, Q>(
     measurement1: &Measurement<DI, DO1, MI, FSmoothedMaxDivergence<Q>>,
     npoints: u8,
     delta_min: Q,
+    hint0: &Option<Rc<dyn Fn(&MI::Distance, u8) -> Vec<EpsilonDelta<Q>>>>,
+    hint1: &Option<Rc<dyn Fn(&MI::Distance, u8) -> Vec<EpsilonDelta<Q>>>>,
 ) -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, FSmoothedMaxDivergence<Q>>>
     where DI: 'static + Domain,
           DO0: 'static + Domain,
@@ -157,6 +179,7 @@ pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, Q>(
     }
 
 
+    //PrivacyRelation::make_chain(&measurement1.privacy_relation,&transformation0.stability_relation, hint)
     Ok(Measurement::new(
         measurement0.input_domain.clone(),
         PairDomain::new(measurement0.output_domain.clone(), measurement1.output_domain.clone()),
@@ -168,6 +191,8 @@ pub fn make_bounded_complexity_composition<DI, DO0, DO1, MI, Q>(
             &measurement1.privacy_relation,
             npoints,
             delta_min,
+            hint0,
+            hint1,
         )
     ))
 }
@@ -176,6 +201,7 @@ pub fn make_bounded_complexity_composition_multi<DI, DO, MI, Q>(
     measurements: &Vec<&'static Measurement<DI, DO, MI, FSmoothedMaxDivergence<Q>>>,
     npoints: u8,
     delta_min: Q,
+    hints: Vec<Option<Rc<dyn Fn(&MI::Distance, u8) -> Vec<EpsilonDelta<Q>>>>>,
 ) -> Fallible<Measurement<DI, VectorDomain<DO>, MI, FSmoothedMaxDivergence<Q>>>
     where DI: 'static + Domain + Clone,
           DO: 'static + Domain + Clone,
@@ -200,13 +226,15 @@ pub fn make_bounded_complexity_composition_multi<DI, DO, MI, Q>(
     let mut functions = Vec::new();
     let mut composed_privacy_relation = measurements[0].privacy_relation.clone();
 
-    for measurement in measurements {
+    for (measurement, hint) in measurements.iter().zip(hints.iter()) {
         functions.push(&measurement.function);
         composed_privacy_relation = bounded_complexity_composition_privacy_relation(
             &composed_privacy_relation,
             &measurement.privacy_relation,
             npoints,
             delta_min,
+            &None,
+            hint,
         );
     }
 
@@ -315,7 +343,7 @@ mod tests {
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
         let npoints: u8 = 3;
         let delta_min: f64 = 1e-5;
-        let composition = make_bounded_complexity_composition(&measurement0, &measurement1, npoints, delta_min).unwrap_test();
+        let composition = make_bounded_complexity_composition(&measurement0, &measurement1, npoints, delta_min, &None, &None).unwrap_test();
         let arg = 99;
         let ret = composition.function.eval(&arg).unwrap_test();
         assert_eq!(ret, (100_f32, 98_f64));
