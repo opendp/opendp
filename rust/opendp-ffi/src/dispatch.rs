@@ -104,7 +104,7 @@ macro_rules! disp_expand {
 #[cfg(debug_assertions)]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [bool, i32, f64, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [bool, u32, i32, f64, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [i32, f64, String, AnyObject]), $rt_dispatch_types, $type_args, $args)

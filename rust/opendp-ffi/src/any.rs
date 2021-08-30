@@ -7,13 +7,11 @@
 
 use std::any;
 use std::any::Any;
-use std::cmp::Ordering;
 use std::rc::Rc;
 
 use opendp::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
 use opendp::err;
 use opendp::error::*;
-use opendp::traits::{FallibleSub, MeasureDistance, MetricDistance};
 
 use crate::glue::Glue;
 use crate::util::Type;
@@ -172,93 +170,6 @@ impl Domain for AnyDomain {
     }
 }
 
-// TODO: If/when we remove the clone of the budget from make_adaptive_composition(), then remove Clone from AnyXXXDistance.
-#[derive(Clone, PartialEq)]
-pub struct AnyMeasureDistance {
-    distance: AnyBoxClonePartialEq,
-    partial_cmp_glue: Glue<fn(&Self, &Self) -> Option<Ordering>>,
-    sub_glue: Glue<fn(Self, &Self) -> Fallible<Self>>,
-}
-
-impl AnyMeasureDistance {
-    pub fn new<Q: 'static + Clone + MeasureDistance>(distance: Q) -> Self {
-        Self {
-            distance: AnyBoxClonePartialEq::new_clone_partial_eq(distance),
-            partial_cmp_glue: Glue::new(|self_: &Self, other: &Self| -> Option<Ordering> {
-                let self_ = self_.downcast_ref::<Q>().unwrap_assert("downcast of AnyMeasureDistance to constructed type will always work");
-                let other = other.downcast_ref::<Q>().ok()?;
-                // FIXME: Do we want to have a FalliblePartialCmp for this?
-                self_.partial_cmp(other)
-            }),
-            sub_glue: Glue::new(|self_: Self, rhs: &Self| -> Fallible<Self> {
-                let distance = self_.downcast::<Q>()?;
-                let rhs = rhs.downcast_ref::<Q>()?;
-                let res = distance.sub(rhs);
-                res.map(Self::new)
-            }),
-        }
-    }
-}
-
-impl Downcast for AnyMeasureDistance {
-    fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.distance.downcast()
-    }
-    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.distance.downcast_ref()
-    }
-}
-
-impl PartialOrd for AnyMeasureDistance {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        (self.partial_cmp_glue)(self, other)
-    }
-}
-
-impl FallibleSub<&Self> for AnyMeasureDistance {
-    type Output = Self;
-    fn sub(self, rhs: &Self) -> Fallible<Self::Output> {
-        // We have to clone sub_glue, because self is moved into the call.
-        self.sub_glue.clone()(self, rhs)
-    }
-}
-
-// TODO: If/when we remove the clone of the budget from make_adaptive_composition(), then remove Clone from AnyXXXDistance.
-#[derive(Clone, PartialEq)]
-pub struct AnyMetricDistance {
-    distance: AnyBoxClonePartialEq,
-    partial_cmp_glue: Glue<fn(&Self, &Self) -> Option<Ordering>>,
-}
-
-impl AnyMetricDistance {
-    pub fn new<Q: 'static + Clone + MetricDistance>(distance: Q) -> Self {
-        Self {
-            distance: AnyBoxClonePartialEq::new_clone_partial_eq(distance),
-            partial_cmp_glue: Glue::new(|self_: &Self, other: &Self| -> Option<Ordering> {
-                let self_ = self_.downcast_ref::<Q>().unwrap_assert("downcast of AnyMeasureDistance to constructed type will always work");
-                let other = other.downcast_ref::<Q>();
-                // FIXME: Do we want to have a FalliblePartialCmp for this?
-                other.map_or(None, |o| self_.partial_cmp(o))
-            }),
-        }
-    }
-}
-
-impl Downcast for AnyMetricDistance {
-    fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.distance.downcast()
-    }
-    fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
-        self.distance.downcast_ref()
-    }
-}
-
-impl PartialOrd for AnyMetricDistance {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        (self.partial_cmp_glue)(self, other)
-    }
-}
-
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasure {
     pub measure: AnyBoxClonePartialEq,
@@ -288,7 +199,7 @@ impl Default for AnyMeasure {
 }
 
 impl Measure for AnyMeasure {
-    type Distance = AnyMeasureDistance;
+    type Distance = AnyObject;
 }
 
 #[derive(Clone, PartialEq)]
@@ -320,7 +231,7 @@ impl Default for AnyMetric {
 }
 
 impl Metric for AnyMetric {
-    type Distance = AnyMetricDistance;
+    type Distance = AnyObject;
 }
 
 type AnyFunction = Function<AnyDomain, AnyDomain>;
@@ -369,16 +280,16 @@ fn make_any_relation<QI: 'static, QO: 'static, AQI: Downcast, AQO: Downcast>(rel
     }
 }
 
-fn make_any_map<QI, QO, AQI>(map: &Option<Rc<dyn Fn(&QI) -> Fallible<Box<QO>>>>) -> Option<impl Fn(&AQI) -> Fallible<Box<AnyMetricDistance>>>
-    where QI: 'static + PartialOrd,
-          QO: 'static + PartialOrd + Clone,
+fn make_any_map<QI, QO, AQI>(map: &Option<Rc<dyn Fn(&QI) -> Fallible<Box<QO>>>>) -> Option<impl Fn(&AQI) -> Fallible<Box<AnyObject>>>
+    where QI: 'static,
+          QO: 'static,
           AQI: Downcast {
     map.as_ref().map(|map| {
         let map = map.clone();
-        move |d_in: &AQI| -> Fallible<Box<AnyMetricDistance>> {
+        move |d_in: &AQI| -> Fallible<Box<AnyObject>> {
             let d_in = d_in.downcast_ref()?;
             let d_out = map(d_in);
-            d_out.map(|d| AnyMetricDistance::new(*d)).map(Box::new)
+            d_out.map(|d| AnyObject::new(*d)).map(Box::new)
         }
     })
 }
@@ -390,8 +301,8 @@ pub trait IntoAnyPrivacyRelationExt {
 }
 
 impl<MI: Metric, MO: Measure> IntoAnyPrivacyRelationExt for PrivacyRelation<MI, MO>
-    where MI::Distance: 'static + Clone + PartialOrd,
-          MO::Distance: 'static + Clone + PartialOrd {
+    where MI::Distance: 'static,
+          MO::Distance: 'static {
     fn into_any(self) -> AnyPrivacyRelation {
         AnyPrivacyRelation::new_all(
             make_any_relation(&self.relation),
@@ -496,7 +407,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 mod tests {
     use std::ops::Bound;
 
-    use opendp::dist::{SubstituteDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
+    use opendp::dist::{MaxDivergence, SmoothedMaxDivergence, SubstituteDistance, SymmetricDistance};
     use opendp::dom::{AllDomain, IntervalDomain};
     use opendp::error::*;
     use opendp::meas;

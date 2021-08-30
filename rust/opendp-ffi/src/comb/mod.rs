@@ -1,18 +1,17 @@
-use std::convert::TryFrom;
-use std::ops::{Div, Sub};
-use std::os::raw::{c_char, c_uint};
+use std::os::raw::c_uint;
 
-use opendp::err;
-use opendp::comb::{AmplifiableMeasure, make_basic_composition, make_chain_mt, make_chain_tt, make_population_amplification};
-use opendp::core::{Domain, Function, Measure, Measurement, PrivacyRelation};
+use num::Float;
+
+use opendp::comb::{AmplifiableMeasure, IsSizedDomain, make_basic_composition, make_chain_mt, make_chain_tt, make_population_amplification};
 use opendp::dist::{MaxDivergence, SmoothedMaxDivergence};
-use opendp::dom::{AllDomain, IntervalDomain, SizedDomain, VectorDomain};
-use opendp::traits::{ExactIntCast, CheckNull, TotalOrd, MeasureDistance};
+use opendp::dom::{SizedDomain, VectorDomain, AllDomain, IntervalDomain};
+use opendp::err;
+use opendp::error::Fallible;
+use opendp::traits::{CheckNull, ExactIntCast, TotalOrd};
 
-use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt, AnyMetricDistance, AnyMeasureDistance, Downcast};
+use crate::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, AnyTransformation, Downcast, IntoAnyMeasurementOutExt};
 use crate::core::FfiResult;
 use crate::util::Type;
-use num::Float;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -39,68 +38,70 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
     make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
 
+
+impl AmplifiableMeasure for AnyMeasure {
+    fn amplify(
+        &self, budget: &AnyObject, n_population: usize, n_sample: usize,
+    ) -> Fallible<AnyObject> {
+
+        fn monomorphize1<QO: 'static + Float + ExactIntCast<usize>>(
+            measure: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize,
+        ) -> Fallible<AnyObject> {
+
+            fn monomorphize2<M: 'static + AmplifiableMeasure>(
+                measure: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize,
+            ) -> Fallible<AnyObject> {
+
+                let measure = measure.downcast_ref::<M>()?;
+                let budget = budget.downcast_ref::<M::Distance>()?;
+                measure.amplify(budget, n_population, n_sample).map(AnyObject::new)
+            }
+            let measure_type = Type::of_id(&measure.measure.value.type_id())?;
+            dispatch!(monomorphize2, [
+                (measure_type, [MaxDivergence<QO>, SmoothedMaxDivergence<QO>])
+            ], (measure, budget, n_population, n_sample))
+        }
+
+        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, budget, n_population, n_sample))
+    }
+}
+
+impl IsSizedDomain for AnyDomain {
+    fn get_size(&self) -> Fallible<usize> {
+
+        fn monomorphize1<TIA>(domain: &AnyDomain, DIA: Type) -> Fallible<usize>
+            where TIA: 'static + Clone + TotalOrd + CheckNull {
+
+            fn monomorphize2<DIA: IsSizedDomain>(domain: &AnyDomain) -> Fallible<usize>
+                where DIA: 'static,
+                      DIA::Carrier: 'static + Clone {
+
+                domain.downcast_ref::<DIA>()
+                    .map_err(|_| err!(FFI, "failed to downcast AnyDomain to {}", Type::of::<DIA>().to_string()))?
+                    .get_size()
+            }
+
+            dispatch!(monomorphize2, [(DIA, [
+                SizedDomain<VectorDomain<IntervalDomain<TIA>>>,
+                SizedDomain<VectorDomain<AllDomain<TIA>>>
+            ])], (domain))
+        }
+
+        let DIA = Type::of_id(&self.domain.value.type_id())?;
+        let TIA = DIA.get_atom()?;
+
+        dispatch!(monomorphize1, [(TIA, @numbers)], (self, DIA))
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_population_amplification(
-    measurement: *const AnyMeasurement, n_population: c_uint,
-    DIA: *const c_char, MO: *const c_char,
+    measurement: *mut AnyMeasurement, n_population: c_uint,
 ) -> FfiResult<*mut AnyMeasurement> {
-    let measurement = try_as_ref!(measurement);
-    let DIA = try_!(Type::try_from(DIA));
-    let TIA = try_!(DIA.get_atom());
-    let MO = try_!(Type::try_from(MO));
-    let QO = try_!(MO.get_atom());
+    let measurement = try_as_mut_ref!(measurement);
     let n_population = n_population as usize;
 
-    fn monomorphize<TIA, QO>(
-        measurement: &AnyMeasurement, n_population: usize,
-        DIA: Type, MO: Type,
-    ) -> FfiResult<*mut AnyMeasurement>
-        where TIA: 'static + Clone + TotalOrd + CheckNull,
-              QO: 'static + ExactIntCast<usize> + Div<Output=QO> + Clone + Float + ExactIntCast<usize> + MeasureDistance + for<'a> Sub<&'a QO, Output=QO> {
-        fn monomorphize2<DIA: Domain, MO: Measure>(
-            measurement: &AnyMeasurement, n_population: usize,
-        ) -> FfiResult<*mut AnyMeasurement>
-            where MO: 'static + AmplifiableMeasure,
-                  MO::Atom: ExactIntCast<usize> + Div<Output=MO::Atom> + Clone,
-                  MO::Distance: Clone + PartialOrd + MeasureDistance,
-                  DIA: 'static,
-                  DIA::Carrier: 'static + Clone {
-
-            // reverse the conversion to Any on the input domain and output measure
-            let temp_measurement = Measurement::new(
-                try_!(measurement.input_domain.domain.value
-                    .downcast_ref::<SizedDomain<VectorDomain<DIA>>>()
-                    .ok_or_else(|| err!(FFI, "failed to downcast AnyDomain to SizedDomain<VectorDomain<{}>>", Type::of::<DIA>().to_string()))).clone(),
-                measurement.output_domain.clone(),
-                Function::new(|_| unreachable!()),
-                measurement.input_metric.clone(),
-                try_!(measurement.output_measure.measure.value
-                    .downcast_ref::<MO>()
-                    .ok_or_else(|| err!(FFI, "failed to downcast AnyMeasure to MO"))).clone(),
-                {
-                    let privacy_relation = measurement.privacy_relation.clone();
-                    PrivacyRelation::new_fallible(move |d_in: &AnyMetricDistance, d_out: &MO::Distance|
-                        privacy_relation.eval(d_in, &AnyMeasureDistance::new(d_out.clone())))
-                });
-
-            // use the population amplification constructor to replace the privacy relation
-            let adjusted_relation = try_!(make_population_amplification(&temp_measurement, n_population)).privacy_relation;
-            let mut measurement = measurement.clone();
-            measurement.privacy_relation = PrivacyRelation::new_fallible(
-                move |d_in: &AnyMetricDistance, d_out: &AnyMeasureDistance|
-                    adjusted_relation.eval(d_in, d_out.downcast_ref()?));
-            Ok(measurement).into()
-        }
-        dispatch!(monomorphize2, [
-            (DIA, [IntervalDomain<TIA>, AllDomain<TIA>]),
-            (MO, [MaxDivergence<QO>, SmoothedMaxDivergence<QO>])
-        ], (measurement, n_population))
-    }
-    // if DIA is AllDomain, then TIA should dispatch to @primitives, otherwise @numbers
-    dispatch!(monomorphize, [
-        (TIA, @numbers),
-        (QO, @floats)
-    ], (measurement, n_population, DIA, MO))
+    make_population_amplification(&measurement, n_population).into()
 }
 
 

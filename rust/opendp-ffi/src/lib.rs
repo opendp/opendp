@@ -115,6 +115,12 @@ macro_rules! try_as_ref {
     }
 }
 
+macro_rules! try_as_mut_ref {
+    ($value:expr) => {
+        try_!(crate::util::as_mut_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))));
+    }
+}
+
 #[macro_use]
 mod dispatch;
 

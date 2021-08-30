@@ -43,14 +43,6 @@ class AnyObject(ctypes.Structure):
     pass  # Opaque struct
 
 
-class AnyMetricDistance(ctypes.Structure):
-    pass  # Opaque struct
-
-
-class AnyMeasureDistance(ctypes.Structure):
-    pass  # Opaque struct
-
-
 class AnyMeasurement(ctypes.Structure):
     pass  # Opaque struct
 
@@ -65,14 +57,6 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
 
 class AnyObjectPtr(ctypes.POINTER(AnyObject)):
     _type_ = AnyObject
-
-
-class AnyMeasureDistancePtr(ctypes.POINTER(AnyMeasureDistance)):
-    _type_ = AnyMeasureDistance
-
-
-class AnyMetricDistancePtr(ctypes.POINTER(AnyMetricDistance)):
-    _type_ = AnyMetricDistance
 
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):

@@ -22,14 +22,14 @@ impl<TI: InfCast<Self>, TO: 'static + Clone + InfCast<TI> + Div<Output=Self> + M
 // TODO: Maybe this should be renamed to something more specific to budgeting, and add negative checks? -Mike
 pub trait FallibleSub<Rhs = Self> {
     type Output;
-    fn sub(self, rhs: Rhs) -> Fallible<Self::Output>;
+    fn fallible_sub(self, rhs: Rhs) -> Fallible<Self::Output>;
 }
 
 macro_rules! impl_fallible_sub {
     ($($ty:ty),+) => ($(
         impl<Rhs> FallibleSub<Rhs> for $ty where $ty: Sub<Rhs, Output=$ty> {
             type Output = $ty;
-            fn sub(self, rhs: Rhs) -> Fallible<Self::Output> {
+            fn fallible_sub(self, rhs: Rhs) -> Fallible<Self::Output> {
                 Ok(self - rhs)
             }
         }
@@ -45,14 +45,14 @@ impl_fallible_sub!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
 impl<T0, T1, Rhs0, Rhs1> FallibleSub<(Rhs0, Rhs1)> for (T0, T1) where T0: Sub<Rhs0>, T1: Sub<Rhs1> {
     type Output = (T0::Output, T1::Output);
-    fn sub(self, rhs: (Rhs0, Rhs1)) -> Fallible<Self::Output> {
+    fn fallible_sub(self, rhs: (Rhs0, Rhs1)) -> Fallible<Self::Output> {
         Ok((self.0 - rhs.0, self.1 - rhs.1))
     }
 }
 
 impl<'a, T0, T1, Rhs0, Rhs1> FallibleSub<&'a (Rhs0, Rhs1)> for (T0, T1) where T0: Sub<&'a Rhs0>, T1: Sub<&'a Rhs1> {
     type Output = (T0::Output, T1::Output);
-    fn sub(self, rhs: &'a (Rhs0, Rhs1)) -> Fallible<Self::Output> {
+    fn fallible_sub(self, rhs: &'a (Rhs0, Rhs1)) -> Fallible<Self::Output> {
         Ok((self.0 - &rhs.0, self.1 - &rhs.1))
     }
 }
