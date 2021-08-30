@@ -9,7 +9,7 @@ This section maps out development logistics for core team of OpenDP developers.
 Summary
 =======
 
-* Bas all code on a long-lived branch called ``main``, where we enforce a linear history.
+* Base all code on a long-lived branch called ``main``, where we enforce a linear history.
 * Do development on short-lived feature branches, which are merged to ``main`` with squash commits.
 * Generate new versions via GitHub Releases, using long-lived release branches.
 
