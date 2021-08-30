@@ -48,7 +48,7 @@ impl Type {
     }
 
     pub fn of_id(id: &TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse))
+        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse, "unrecognized type id"))
     }
 
     // Hacky special entry point for composition.
@@ -237,6 +237,7 @@ lazy_static! {
             type_vec![[VectorDomain IntervalDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[SizedDomain VectorDomain IntervalDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // metrics
             type_vec![SubstituteDistance, SymmetricDistance],

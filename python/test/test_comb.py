@@ -11,7 +11,7 @@ def test_amplification():
 
     meas = make_bounded_mean(0., 10., 10) >> make_base_laplace(scale=0.5)
 
-    amplified = make_population_amplification(meas, n_population=100, DIA=IntervalDomain[float], MO=MaxDivergence[float])
+    amplified = make_population_amplification(meas, n_population=100)
     print("amplified base laplace:", amplified([1.] * 10))
     assert meas.check(1, 1.)
     assert not meas.check(1, 0.999)
