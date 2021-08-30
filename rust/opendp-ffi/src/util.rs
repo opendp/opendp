@@ -237,6 +237,7 @@ lazy_static! {
             type_vec![[VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64>],
             type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[SizedDomain VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // metrics
             type_vec![SubstituteDistance, SymmetricDistance],
@@ -291,6 +292,9 @@ pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
 
 pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
+}
+pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
+    (!p.is_null()).then(|| unsafe { &mut *p })
 }
 
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {

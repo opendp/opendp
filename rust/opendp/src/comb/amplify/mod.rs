@@ -6,44 +6,48 @@ use num::Float;
 use crate::traits::ExactIntCast;
 use std::ops::Div;
 
-pub trait AmplifiableMeasure: Measure {
-    type Atom;
-    fn amplify(budget: Self::Distance, sampling_rate: Self::Atom) -> Self::Distance;
+pub trait IsSizedDomain: Domain { fn get_size(&self) -> Fallible<usize>; }
+impl<D: Domain> IsSizedDomain for SizedDomain<D> {
+    fn get_size(&self) -> Fallible<usize> { Ok(self.size) }
 }
 
-impl<Q: Float> AmplifiableMeasure for MaxDivergence<Q> {
-    type Atom = Q;
-    fn amplify(epsilon: Q, sampling_rate: Q) -> Q {
-        (epsilon.exp_m1() / sampling_rate).ln_1p()
+pub trait AmplifiableMeasure: Measure {
+    fn amplify(&self, budget: &Self::Distance, n_population: usize, n_sample: usize) -> Fallible<Self::Distance>;
+}
+
+impl<Q> AmplifiableMeasure for MaxDivergence<Q>
+    where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
+    fn amplify(&self, epsilon: &Q, n_population: usize, n_sample: usize) -> Fallible<Q> {
+        let sampling_rate = Q::exact_int_cast(n_sample)? / Q::exact_int_cast(n_population)?;
+        Ok((epsilon.exp_m1() / sampling_rate).ln_1p())
     }
 }
-impl<Q: Float> AmplifiableMeasure for SmoothedMaxDivergence<Q> {
-    type Atom = Q;
-    fn amplify((epsilon, delta): (Q, Q), sampling_rate: Q) -> (Q, Q) {
-        ((epsilon.exp_m1() / sampling_rate).ln_1p(), delta / sampling_rate)
+impl<Q> AmplifiableMeasure for SmoothedMaxDivergence<Q>
+    where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
+    fn amplify(&self, (epsilon, delta): &(Q, Q), n_population: usize, n_sample: usize) -> Fallible<(Q, Q)> {
+        let sampling_rate = Q::exact_int_cast(n_sample)? / Q::exact_int_cast(n_population)?;
+        Ok(((epsilon.exp_m1() / sampling_rate).ln_1p(), *delta / sampling_rate))
     }
 }
 
 pub fn make_population_amplification<DIA, DO, MI, MO>(
-    measurement: &Measurement<SizedDomain<DIA>, DO, MI, MO>,
+    measurement: &Measurement<DIA, DO, MI, MO>,
     n_population: usize,
-) -> Fallible<Measurement<SizedDomain<DIA>, DO, MI, MO>>
-    where DIA: Domain,
+) -> Fallible<Measurement<DIA, DO, MI, MO>>
+    where DIA: IsSizedDomain,
           DO: Domain,
           MI: 'static + Metric,
-          MO: 'static + Measure + AmplifiableMeasure,
-          MO::Atom: ExactIntCast<usize> + Div<Output=MO::Atom> + Clone,
-          MO::Distance: Clone {
+          MO: 'static + AmplifiableMeasure {
     let mut measurement = measurement.clone();
-    let n_sample = measurement.input_domain.size;
+    let n_sample = measurement.input_domain.get_size()?;
     if n_population < n_sample { return fallible!(MakeMeasurement, "population size cannot be less than sample size") }
 
     let privacy_relation = measurement.privacy_relation;
-    let sampling_rate = MO::Atom::exact_int_cast(n_sample)? / MO::Atom::exact_int_cast(n_population)?;
+    let output_measure: MO = measurement.output_measure.clone();
 
     measurement.privacy_relation = PrivacyRelation::new_fallible(
         move |d_in, d_out: &MO::Distance| privacy_relation.eval(
-            d_in, &MO::amplify(d_out.clone(), sampling_rate.clone())));
+            d_in, &output_measure.amplify(d_out, n_population, n_sample)?));
 
     Ok(measurement)
 }

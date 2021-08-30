@@ -71,16 +71,6 @@
                 "name": "n_population",
                 "c_type": "unsigned int",
                 "description": "Number of records in population."
-            },
-            {
-                "name": "DIA",
-                "is_type": true,
-                "description": "atomic input domain"
-            },
-            {
-                "name": "MO",
-                "is_type": true,
-                "description": "output measure"
             }
         ],
         "ret": {

@@ -106,7 +106,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> wh
 
     /// Updates this Queryable state by consuming the given amount of budget.
     fn update(self, d_out_query: &MO::Distance) -> Fallible<Self> {
-        Ok(Self { d_out_budget: self.d_out_budget.sub(d_out_query)?, ..self })
+        Ok(Self { d_out_budget: self.d_out_budget.fallible_sub(d_out_query)?, ..self })
     }
 
     /// Processes a query, generating a new Queryable state.

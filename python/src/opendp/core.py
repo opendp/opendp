@@ -87,15 +87,17 @@ def _measurement_free(
 
 def transformation_check(
     transformation: Transformation,
-    d_in,
-    d_out
+    d_in: Any,
+    d_out: Any
 ) -> bool:
     """Check the stability relation of the `transformation` at the given `d_in`, `d_out`.
     
     :param transformation: Transformation to check the stability relation of.
     :type transformation: Transformation
     :param d_in: Distance in terms of the input metric.
+    :type d_in: Any
     :param d_out: Distance in terms of the output metric.
+    :type d_out: Any
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
     :raises AssertionError: if an argument's type differs from the expected type
@@ -105,12 +107,12 @@ def transformation_check(
     # No type arguments to standardize.
     # Convert arguments to c types.
     transformation = py_to_c(transformation, c_type=Transformation)
-    d_in = py_to_c(d_in, c_type=AnyMetricDistancePtr, type_name=transformation_input_distance_type(transformation))
-    d_out = py_to_c(d_out, c_type=AnyMetricDistancePtr, type_name=transformation_output_distance_type(transformation))
+    d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=transformation_input_distance_type(transformation))
+    d_out = py_to_c(d_out, c_type=AnyObjectPtr, type_name=transformation_output_distance_type(transformation))
     
     # Call library function.
     function = lib.opendp_core__transformation_check
-    function.argtypes = [Transformation, AnyMetricDistancePtr, AnyMetricDistancePtr]
+    function.argtypes = [Transformation, AnyObjectPtr, AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(transformation, d_in, d_out), BoolPtr))
@@ -118,15 +120,17 @@ def transformation_check(
 
 def measurement_check(
     measurement: Measurement,
-    d_in,
-    d_out
+    d_in: Any,
+    d_out: Any
 ) -> bool:
     """Check the privacy relation of the `measurement` at the given `d_in`, `d_out`.
     
     :param measurement: Measurement to check the privacy relation of.
     :type measurement: Measurement
     :param d_in: Distance in terms of the input metric.
+    :type d_in: Any
     :param d_out: Distance in terms of the output measure.
+    :type d_out: Any
     :return: True indicates that the relation passed at the given distance.
     :rtype: bool
     :raises AssertionError: if an argument's type differs from the expected type
@@ -136,12 +140,12 @@ def measurement_check(
     # No type arguments to standardize.
     # Convert arguments to c types.
     measurement = py_to_c(measurement, c_type=Measurement)
-    d_in = py_to_c(d_in, c_type=AnyMetricDistancePtr, type_name=measurement_input_distance_type(measurement))
-    d_out = py_to_c(d_out, c_type=AnyMeasureDistancePtr, type_name=measurement_output_distance_type(measurement))
+    d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=measurement_input_distance_type(measurement))
+    d_out = py_to_c(d_out, c_type=AnyObjectPtr, type_name=measurement_output_distance_type(measurement))
     
     # Call library function.
     function = lib.opendp_core__measurement_check
-    function.argtypes = [Measurement, AnyMetricDistancePtr, AnyMeasureDistancePtr]
+    function.argtypes = [Measurement, AnyObjectPtr, AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement, d_in, d_out), BoolPtr))

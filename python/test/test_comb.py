@@ -1,7 +1,7 @@
 from opendp.mod import enable_features
 from opendp.typing import *
 
-enable_features("floating-point")
+enable_features("floating-point", "contrib")
 
 
 def test_amplification():
@@ -11,7 +11,7 @@ def test_amplification():
 
     meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> make_base_laplace(scale=0.5)
 
-    amplified = make_population_amplification(meas, n_population=100, DIA=BoundedDomain[float], MO=MaxDivergence[float])
+    amplified = make_population_amplification(meas, n_population=100)
     print("amplified base laplace:", amplified([1.] * 10))
     assert meas.check(1, 1.)
     assert not meas.check(1, 0.999)
