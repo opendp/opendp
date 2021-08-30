@@ -9,7 +9,7 @@ Installation
 
 The first step in using OpenDP is to install the OpenDP library.
 
-Installing OpenDP from PiPy
+Installing OpenDP from PyPI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A package for OpenDP is available from `PyPI <https://pypi.org/project/opendp/>`_. You can install it using ``pip`` or other package management tool:

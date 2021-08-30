@@ -74,7 +74,7 @@ Overview
   * The versions of the Rust crates and the Python package (and any other language bindings) are always kept in sync, even if there are no changes in one or the other. For example, version ``1.2.0`` will comprise Rust crates ``opendp 1.2.0`` and ``opendp-ffi 1.2.0``, and Python package ``opendp 1.2.0``.
 
 * For major and minor releases, create a new release branch. Release branches have the naming scheme ``release/<MAJ>.<MIN>.x`` (where ``x`` is literal "``x``"). For example, version ``1.2.0`` → branch ``release/1.2.x``. Release branches remain alive as long as that minor version is supported. (Note: Release branch names *don't* contain the ``-rc.<NUM>`` suffix, even when doing an RC release. All RC releases and the GM release use the same branch.)
-* For patch releases, don’t create a new release branch, use the existing branch for the corresponding major or minor version. For example, version = ``1.2.1`` → branch ``release/1.2.x``.
+* For patch releases, don’t create a new release branch. Use the existing branch for the corresponding major or minor version. For example, version = ``1.2.1`` → branch ``release/1.2.x``.
 * For all releases, create a tag. Tags have the naming scheme ``v<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``. For example, for version = ``1.2.0``, tag = ``v1.2.0``. (Note: Tag names *do* contain the ``-rc.<NUM>`` suffix, when doing an RC release.)
 * Use RC releases to validate the system end-to-end before creating the GM release. There should be at least one successful RC release before creating the GM release.
 * Use a GitHub Release to initiate each OpenDP release. This will run the GitHub Workflows that handle the build and publish process (see below).
@@ -115,7 +115,7 @@ Playbook
    :Tag version: ``v<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Target: ``release/<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Release title: ``OpenDP <MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
-   :Describe this release: <RELASE NOTES LINK>
+   :Describe this release: <RELEASE NOTES LINK>
    :This is a pre-release: <CHECKED IF RC>
    :Create a discussion...: <UNCHECKED>
 
