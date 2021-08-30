@@ -21,7 +21,7 @@ There are many ways to contribute to OpenDP:
 Requirements
 ============
 
-OpenDP development takes place on GitHub. In order to contribute, you'll need a
+OpenDP development takes place on GitHub. In order to contribute, you'll need a GitHub account.
 
 Submitting Pull Requests
 ========================
