@@ -125,11 +125,22 @@ impl AnyBoxClonePartialEqDebug {
 pub struct AnyObject {
     pub type_: Type,
     value: AnyBox,
+    // clone_glue: Option<Glue<fn(&Self) -> Self>>,
+    // eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+    // partial_cmp_glue: Option<Glue<fn(&Self, &Self) -> Option<Ordering>>>,
+    // checked_sub_glue: Option<Glue<fn(&Self, &Self) -> Option<Self>>>,
 }
 
 impl AnyObject {
     pub fn new<T: 'static>(value: T) -> Self {
-        Self { type_: Type::of::<T>(), value: AnyBox::new(value) }
+        Self {
+            type_: Type::of::<T>(),
+            value: AnyBox::new(value),
+            // clone_glue: None,
+            // eq_glue: None,
+            // partial_cmp_glue: None,
+            // checked_sub_glue: None,
+        }
     }
 
     #[cfg(test)]
@@ -137,6 +148,64 @@ impl AnyObject {
         crate::util::into_raw(Self::new(value))
     }
 }
+// impl AnyObject {
+//     pub fn has_clone<T: 'static + Clone>(&mut self) {
+//         self.clone_glue = Some(Glue::new(|self_: &Self| -> Self {
+//             Self::new(self_.downcast_ref::<T>().unwrap().clone())
+//         }))
+//     }
+// }
+// impl Clone for AnyObject {
+//     fn clone(&self) -> Self {
+//         self.clone_glue.as_ref().expect("missing clone glue")(self)
+//     }
+// }
+//
+// impl AnyObject {
+//     pub fn has_partial_eq<T: 'static + PartialEq>(&mut self) {
+//         self.eq_glue = Some(Glue::new(|self_: &Self, other: &Self| -> bool {
+//             let self_ = self_.downcast_ref::<T>().unwrap();
+//             let other = other.downcast_ref::<T>().unwrap();
+//             self_.eq(other)
+//         }));
+//     }
+// }
+// impl PartialEq for AnyObject {
+//     fn eq(&self, other: &AnyObject) -> bool {
+//         self.eq_glue.as_ref().expect("missing eq glue")(self, other)
+//     }
+// }
+//
+// impl AnyObject {
+//     pub fn has_partial_ord<T: 'static + PartialOrd>(&mut self) {
+//         self.partial_cmp_glue = Some(Glue::new(|self_: &Self, other: &Self| -> Option<Ordering> {
+//             // TODO: should this panic instead?
+//             let self_ = self_.downcast_ref::<T>().ok()?;
+//             let other = other.downcast_ref::<T>().ok()?;
+//             self_.partial_cmp(other)
+//         }));
+//     }
+// }
+// impl PartialOrd for AnyObject {
+//     fn partial_cmp(&self, other: &AnyObject) -> Option<Ordering> {
+//         self.partial_cmp_glue.as_ref().expect("missing partial_cmp glue")(self, other)
+//     }
+// }
+//
+// impl AnyObject {
+//     pub fn has_checked_sub<T: 'static + CheckedSub>(&mut self) {
+//         self.checked_sub_glue = Some(Glue::new(|self_: &Self, rhs: &Self| -> Option<Self> {
+//             let self_ = self_.downcast_ref::<T>().unwrap();
+//             let rhs = rhs.downcast_ref::<T>().unwrap();
+//             self_.checked_sub(&rhs).map(Self::new)
+//         }))
+//     }
+// }
+// impl CheckedSub for AnyObject {
+//     fn checked_sub(&self, other: &AnyObject) -> Option<Self> {
+//         self.checked_sub_glue.as_ref().expect("missing checked_sub glue")(self, other)
+//     }
+// }
 
 impl Downcast for AnyObject {
     fn downcast<T: 'static>(self) -> Fallible<T> {
@@ -398,7 +467,7 @@ impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, D
             self.function.into_any_out(),
             self.input_metric,
             self.output_measure,
-            self.privacy_relation.into_any(),
+            self.privacy_relation,
         )
     }
 }
@@ -432,7 +501,6 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Bound;
 
     use opendp::dist::{MaxDivergence, SmoothedMaxDivergence, SubstituteDistance, SymmetricDistance};
     use opendp::dom::{AllDomain, BoundedDomain};

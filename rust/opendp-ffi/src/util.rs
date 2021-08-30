@@ -48,7 +48,7 @@ impl Type {
     }
 
     pub fn of_id(id: &TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse))
+        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse, "unrecognized type id"))
     }
 
     // Hacky special entry point for composition.
@@ -293,9 +293,10 @@ pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
 pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
 }
-pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
-    (!p.is_null()).then(|| unsafe { &mut *p })
-}
+// If we build glue on-the-fly:
+// pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
+//     (!p.is_null()).then(|| unsafe { &mut *p })
+// }
 
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
     CString::new(s)

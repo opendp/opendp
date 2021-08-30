@@ -96,9 +96,9 @@ impl IsSizedDomain for AnyDomain {
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_population_amplification(
-    measurement: *mut AnyMeasurement, n_population: c_uint,
+    measurement: *const AnyMeasurement, n_population: c_uint,
 ) -> FfiResult<*mut AnyMeasurement> {
-    let measurement = try_as_mut_ref!(measurement);
+    let measurement = try_as_ref!(measurement);
     let n_population = n_population as usize;
 
     make_population_amplification(&measurement, n_population).into()
