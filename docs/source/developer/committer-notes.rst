@@ -18,7 +18,7 @@ Rationale
 
 Our process should be as simple as feasible -- but not simpler! We need to balance developer friendliness with the special requirements of privacy-sensitive software.
 
-We want a clean main branch that is always in a known good state. This allows us to create releases easily, using the
+We want a clean ``main`` branch that is always in a known good state. It should always be usable for development, and all tests should pass. This allows us to create releases easily, using the most up-to-date code.
 
 We need linear code history, without unanticipated changes introduced by merge commits. This is important so that contributions are validated using the exact code that will land on ``main``.
 
