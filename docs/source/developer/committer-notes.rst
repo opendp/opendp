@@ -130,18 +130,33 @@ Playbook
 Release Workflows
 -----------------
 
-* GH Actions Workflow release.yml (triggered by "on: release")
+These are the GitHub workflows that support the release process.
 
-  * Rust library is compiled, creating shared libraries for Linux, macOS, Windows.
-  * Python package is created.
-  * Rust crates are uploaded to crates.io.
-  * Python packages are uploaded to PyPI.
+sync-branches.yml
+^^^^^^^^^^^^^^^^^
 
-* GH Workflow docs.yml (triggered by "on: release", “on: push”)
+* Keeps the tracking branches ``latest`` and ``stable`` in sync with their targets. This is used when generating docs, so that we have a consistent path to each category.
+* Triggered on every push to ``main``, or when release is published.
+* Whenever there's a push to ``main``, it advances ``latest`` to the same ref.
+* Whenever a release is created, it advances ``stable`` to the release tag.
 
-  * Runs make versions
+release.yml
+^^^^^^^^^^^
 
-    * Generates Sphinx docs
-    * Generates Python API docs
+* Triggered whenever a GH Release is created.
+* Rust library is compiled, creating shared libraries for Linux, macOS, Windows.
+* Python package is created.
+* Rust crates are uploaded to crates.io.
+* Python packages are uploaded to PyPI.
 
-  * Pushes HTML to opendp gh-pages branch
+docs.yml
+^^^^^^^^
+
+* Generates and publishes the docs to https://docs.opendp.org
+* Triggered whenever ``sync-branches.html`` completes (i.e., whenever ``latest`` or ``stable`` have changed).
+* Runs ``make versions``
+
+  * Generates Python API docs
+  * Generates Sphinx docs
+
+* Pushes HTML to ``gh-pages`` branch, which is linked to https://docs.opendp.org
