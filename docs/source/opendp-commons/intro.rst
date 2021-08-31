@@ -15,7 +15,7 @@ The diagram below illustrates how the OpenDP library is the foundation of the Op
 
 |opendp-cake|
 
-.. |opendp-cake| image:: ../../_static/images/opendp-cake.svg
+.. |opendp-cake| image:: /_static/images/opendp-cake.svg
    :class: img-responsive
 
 

@@ -1,10 +1,13 @@
+Logistics
+*********
+
+.. contents:: |toctitle|
+    :local:
+
 Development Environment
 =======================
 
 Follow the steps below to get an OpenDP development environment set up, including the ability to run tests in both Rust and Python.
-
-.. contents:: Contents:
-    :local:
 
 Install Rust
 ------------
@@ -29,6 +32,9 @@ Clone the repo and change into the ``opendp`` directory that's created.
 
     git clone https://github.com/opendp/opendp.git
     cd opendp
+
+Building OpenDP
+===============
 
 Build OpenDP
 ------------
@@ -70,3 +76,16 @@ From the ``python`` directory, set an environment variable to the location of th
 
     export OPENDP_LIB_DIR=../rust/target/debug
     pytest -v
+
+Documentation
+=============
+
+Documentation Source
+--------------------
+
+The source for this documentation can be found in the "docs" directory at https://github.com/opendp/opendp
+
+Building the Docs
+-----------------
+
+The docs are built using Sphinx and the steps are listed in the README in the "docs" directory.
