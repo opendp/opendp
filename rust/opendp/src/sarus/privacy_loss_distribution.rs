@@ -4,6 +4,7 @@ use std::iter::IntoIterator;
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Mul;
 
+// We only deal with int and rationals here
 use rug::{Integer, Rational};
 
 const GRID_SIZE:usize = 10;
