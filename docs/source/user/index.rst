@@ -6,7 +6,11 @@ User Guide
 .. toctree::
 
    intro
-   installation
-   hello-opendp
-   framework-concepts
+   getting-started
+   programming-framework
+   core-structures
+   supporting-elements
    application-structure
+   data-input-output
+   type-conversions
+   implementation-notes

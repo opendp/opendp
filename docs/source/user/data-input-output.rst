@@ -1,4 +1,4 @@
-Application Structure
+Data Input and Output
 =====================
 
 .. contents:: |toctitle|

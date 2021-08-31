@@ -2,8 +2,8 @@
 #
 
 # You can set these variables from the command line.
+CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
-CARGODOC      = cargo doc
 SPHINXOPTS    = -W
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
@@ -29,10 +29,16 @@ clean:
 html:
 	$(SPHINXAPIDOC) -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
 # TODO: Figure out how to link locally generated Rust docs into sphinx structure.
-# 	cd ../rust && $(CARGODOC) --no-deps --target-dir ../docs/source/api/rust
+# 	cd ../rust && $(CARGO) doc --no-deps --target-dir ../docs/source/api/rust
 	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=search-field.html,sidebar-nav-bs.html source $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
+
+doctest:
+	cd ../rust && $(CARGO) test --doc
+	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest
+	@echo
+	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
 
 versions:
 	# "/en" is the default, but someday we might have translations
