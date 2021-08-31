@@ -97,6 +97,7 @@ Playbook
    GM tag          ``v<MAJ>.<MIN>.<PAT>``           ``v1.2.0``
    ==============  ===============================  =================  ==============================
 
+#. Update ``CHANGELOG.md`` on ``main`` (based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_) .
 #. Create/update the release branch:
 
    * Major or minor release ONLY: Create a *new* release branch, based on the desired point in ``main``.
@@ -118,7 +119,7 @@ Playbook
    :Tag version: ``v<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Target: ``release/<MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
    :Release title: ``OpenDP <MAJ>.<MIN>.<PAT>[-rc.<NUM>]``
-   :Describe this release: <RELEASE NOTES LINK>
+   :Describe this release: (Changelog)[https://github.com/opendp/opendp/blob/main/CHANGELOG.md#<MAJ><MIN><PAT>---<ISO-8601-DATE>]
    :This is a pre-release: <CHECKED IF RC>
    :Create a discussion...: <UNCHECKED>
 
