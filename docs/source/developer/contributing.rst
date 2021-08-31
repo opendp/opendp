@@ -1,10 +1,32 @@
-Making Pull Requests
-====================
+Contributing
+************
+
+.. contents:: |toctitle|
+    :local:
+
+Welcome
+=======
+
+OpenDP is a community effort, and we welcome your contributions!
+
+Ways to Contribute
+==================
+
+There are many ways to contribute to OpenDP:
+
+* Code contributions
+* Writing documentation
+* Adding tests
+
+Requirements
+============
+
+OpenDP development takes place on GitHub. In order to contribute, you'll need a GitHub account.
+
+Submitting Pull Requests
+========================
 
 Here's how to make a pull request to OpenDP.
-
-.. contents:: Contents:
-	:local:
 
 Find or Create a GitHub Issue
 -----------------------------
