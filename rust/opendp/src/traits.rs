@@ -5,7 +5,7 @@ use num::{NumCast, One, Zero};
 
 use crate::error::Fallible;
 use std::cmp::{Ordering};
-use crate::dist::{EpsilonDelta};
+use crate::fdp::EpsilonDelta;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.

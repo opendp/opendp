@@ -3,7 +3,8 @@ use rug::float::Round;
 use std::rc::Rc;
 
 use crate::core::{Measurement, Function, PrivacyRelation, Measure, Metric, Domain, SensitivityMetric};
-use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence, EpsilonDelta};
+use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
+use crate::fdp::{EpsilonDelta, FSmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace, CastInternalReal};
 use crate::error::*;

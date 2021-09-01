@@ -2,7 +2,8 @@ use num::{Float, One, Zero};
 use statrs::distribution::{Normal, Univariate};
 
 use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric, Metric, Measure};
-use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance, FSmoothedMaxDivergence, EpsilonDelta};
+use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
+use crate::fdp::{EpsilonDelta, FSmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::{CastInternalReal, SampleGaussian};

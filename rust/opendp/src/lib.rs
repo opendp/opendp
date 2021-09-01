@@ -145,6 +145,7 @@ pub mod error;
 pub mod core;
 pub mod data;
 pub mod dist;
+pub mod fdp;
 pub mod dom;
 pub mod interactive;
 pub mod meas;
