@@ -23,56 +23,56 @@ jobs:
           pip install toml
           (cd .github && python assert_version.py)
 
-  python-pre-publish-windows:
-    runs-on: windows-latest
-    needs: credential-check
-    env:
-      MSYS: winsymlinks:nativestrict
-    steps:
-      - name: Set up MSYS2
-        uses: msys2/setup-msys2@v2
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up rust, 7zip, curl
-        run: |
-          rustup self uninstall -y
-          choco install rust
-          rustup toolchain install stable-x86_64-pc-windows-gnu
-          rustup default stable-x86_64-pc-windows-gnu
-          choco install 7zip
-          choco install curl
-
-      - name: Install dependencies
-        shell: msys2 {0}
-        run: |
-          pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
-          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
-
-      - name: Prepare OpenDP Patch
-        run: |
-          chmod +x windows/1_download_and_patch.sh
-          (cd windows && bash 1_download_and_patch.sh)
-
-      - name: Patch OpenDP
-        shell: msys2 -leo pipefail {0}
-        run: |
-          chmod +x windows/2_build_dependencies.sh
-          (cd windows && bash 2_build_dependencies.sh)
-
-      - name: Build windows binaries
-        shell: msys2 -leo pipefail {0}
-        run: |
-          export PATH=$PATH:/c/ProgramData/chocolatey/bin
-          export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
-          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
-
-      - name: Upload .dll
-        uses: actions/upload-artifact@v2
-        with:
-          name: lib_dll
-          path: rust/target/x86_64-pc-windows-gnu/release/opendp_ffi.dll
+#  python-pre-publish-windows:
+#    runs-on: windows-latest
+#    needs: credential-check
+#    env:
+#      MSYS: winsymlinks:nativestrict
+#    steps:
+#      - name: Set up MSYS2
+#        uses: msys2/setup-msys2@v2
+#
+#      - name: Checkout repository
+#        uses: actions/checkout@v2
+#
+#      - name: Set up rust, 7zip, curl
+#        run: |
+#          rustup self uninstall -y
+#          choco install rust
+#          rustup toolchain install stable-x86_64-pc-windows-gnu
+#          rustup default stable-x86_64-pc-windows-gnu
+#          choco install 7zip
+#          choco install curl
+#
+#      - name: Install dependencies
+#        shell: msys2 {0}
+#        run: |
+#          pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
+#          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
+#
+#      - name: Prepare OpenDP Patch
+#        run: |
+#          chmod +x windows/1_download_and_patch.sh
+#          (cd windows && bash 1_download_and_patch.sh)
+#
+#      - name: Patch OpenDP
+#        shell: msys2 -leo pipefail {0}
+#        run: |
+#          chmod +x windows/2_build_dependencies.sh
+#          (cd windows && bash 2_build_dependencies.sh)
+#
+#      - name: Build windows binaries
+#        shell: msys2 -leo pipefail {0}
+#        run: |
+#          export PATH=$PATH:/c/ProgramData/chocolatey/bin
+#          export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
+#          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
+#
+#      - name: Upload .dll
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: lib_dll
+#          path: rust/target/x86_64-pc-windows-gnu/release/opendp_ffi.dll
 
 
   python-pre-publish-mac:
@@ -144,11 +144,11 @@ jobs:
           name: lib_so
           path: python/src/opendp/lib
 
-      - name: Download windows lib
-        uses: actions/download-artifact@v2
-        with:
-          name: lib_dll
-          path: python/src/opendp/lib
+#      - name: Download windows lib
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: lib_dll
+#          path: python/src/opendp/lib
 
       - name: Install dependencies
         run: |
