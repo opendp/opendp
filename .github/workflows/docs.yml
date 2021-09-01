@@ -3,9 +3,9 @@ name: Documentation
 # Controls when the action will run. 
 on:
   # Triggers whenever latest is updated or a release is done
-  workflow_run:
-    workflows: ["Sync Branches"]
-    types: [completed]
+#  workflow_run:
+#    workflows: ["Sync Branches"]
+#    types: [completed]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
