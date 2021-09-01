@@ -27,8 +27,10 @@ jobs:
     env:
       MSYS: winsymlinks:nativestrict
     steps:
-#      - name: Set up MSYS2
-#        uses: msys2/setup-msys2@v2
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          release: false
 
       - name: Checkout repository
         uses: actions/checkout@v2
