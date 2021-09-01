@@ -152,7 +152,6 @@ Cargo.lock
 .DS_Store
 
 /python/example/pums/data
-/data/
 /data_censored/
 
 /python/docs/

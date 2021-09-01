@@ -74,6 +74,10 @@ impl Argument {
         self.name.clone().expect("unknown name when parsing argument")
     }
     fn c_type(&self) -> String {
+        if self.is_type {
+            if self.c_type.is_some() { panic!("c_type should not be specified when is_type") }
+            return "char *".to_string()
+        }
         self.c_type.clone().expect("unknown c_type when parsing argument")
     }
     fn c_type_origin(&self) -> String {
