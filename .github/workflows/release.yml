@@ -48,8 +48,8 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
-#          rustup component remove rust-mingw
           cp msys64/mingw32/bin/{libwinpthread-1.dll,libgcc_s_dw2-1.dll} `rustc --print sysroot`/bin
+#          rustup component remove rust-mingw
 #          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
 
       - name: Prepare OpenDP Patch
