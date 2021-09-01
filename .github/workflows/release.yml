@@ -27,9 +27,6 @@ jobs:
     env:
       MSYS: winsymlinks:nativestrict
     steps:
-      - name: Uninstall embedded mingw
-        run: rustup component remove rust-mingw
-        
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
         with:
@@ -44,6 +41,7 @@ jobs:
           choco install rust
           rustup toolchain install stable-x86_64-pc-windows-gnu
           rustup default stable-x86_64-pc-windows-gnu
+          rustup component remove rust-mingw
           choco install 7zip
           choco install curl
 
