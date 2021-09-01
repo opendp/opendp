@@ -114,7 +114,7 @@ jobs:
 
 
   python-publish:
-    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
+    needs: [ python-pre-publish-mac, python-pre-publish-linux ]
     runs-on: ubuntu-20.04
     env:
       # https://pypi.org/help/#apitoken
