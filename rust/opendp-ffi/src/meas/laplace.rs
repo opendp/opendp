@@ -4,7 +4,7 @@ use std::os::raw::{c_char, c_void};
 use num::Float;
 
 use opendp::err;
-use opendp::meas::{make_base_laplace, LaplaceDomain};
+use opendp::meas::laplace::{make_base_laplace, LaplaceDomain};
 use opendp::samplers::SampleLaplace;
 
 use crate::any::AnyMeasurement;
