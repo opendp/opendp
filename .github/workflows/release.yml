@@ -39,11 +39,7 @@ jobs:
       - name: Set up rust, 7zip, curl
         run: |
           rustup self uninstall -y
-          rustup -h
           choco install rust
-          rustup toolchain install stable-x86_64-pc-windows-gnu
-          rustup default stable-x86_64-pc-windows-gnu
-          rustup component remove rust-mingw
           choco install 7zip
           choco install curl
 
