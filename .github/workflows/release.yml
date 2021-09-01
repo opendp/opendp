@@ -1,31 +1,29 @@
 name: Release
 on:
-  release:
-    types:
-      - published
+  pull_request:
 
 jobs:
-  credential-check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check if user is an administrator
-        uses: lannonbr/repo-permission-check-action@2.0.0
-        with:
-          permission: admin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Assert version
-        run: |
-          pip install toml
-          (cd .github && python assert_version.py)
+#  credential-check:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Check if user is an administrator
+#        uses: lannonbr/repo-permission-check-action@2.0.0
+#        with:
+#          permission: admin
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Checkout repository
+#        uses: actions/checkout@v2
+#
+#      - name: Assert version
+#        run: |
+#          pip install toml
+#          (cd .github && python assert_version.py)
 
   python-pre-publish-windows:
     runs-on: windows-latest
-    needs: credential-check
+#    needs: credential-check
     env:
       MSYS: winsymlinks:nativestrict
     steps:
@@ -75,118 +73,118 @@ jobs:
           path: rust/target/x86_64-pc-windows-gnu/release/opendp_ffi.dll
 
 
-  python-pre-publish-mac:
-    runs-on: macos-10.15
-    needs: credential-check
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Build mac binaries
-        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
-
-      - name: Upload .dylib
-        uses: actions/upload-artifact@v2
-        with:
-          name: lib_dylib
-          path: rust/target/release/libopendp_ffi.dylib
-
-
-  python-pre-publish-linux:
-    runs-on: ubuntu-20.04
-    needs: credential-check
-    env:
-      DOCKER_IMAGE: quay.io/pypa/manylinux2010_x86_64
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Build manylinux binaries
-        run: |
-          chmod +x .github/build_manylinux_binaries.sh
-          docker run --rm -v `pwd`:/io $DOCKER_IMAGE /io/.github/build_manylinux_binaries.sh
-
-      - name: Upload .so
-        uses: actions/upload-artifact@v2
-        with:
-          name: lib_so
-          path: rust/target/release/libopendp_ffi.so
-
-
-  python-publish:
-    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
-    runs-on: ubuntu-20.04
-    env:
-      # https://pypi.org/help/#apitoken
-      TWINE_USERNAME: __token__
-      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.6
-
-      - name: Prepare for libs
-        run: mkdir -p python/src/opendp/lib
-
-      - name: Download mac lib
-        uses: actions/download-artifact@v2
-        with:
-          name: lib_dylib
-          path: python/src/opendp/lib
-
-      - name: Download linux lib
-        uses: actions/download-artifact@v2
-        with:
-          name: lib_so
-          path: python/src/opendp/lib
-
-      - name: Download windows lib
-        uses: actions/download-artifact@v2
-        with:
-          name: lib_dll
-          path: python/src/opendp/lib
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install twine wheel
-
-      - name: Copy README.md
-        run: cp README.md python/README.md
-
-      - name: Build bdist
-        run: |
-          (cd python && python3 setup.py bdist_wheel -d wheelhouse)
-
-      - name: PyPi OpenDP upload
-        run: |
-          python3 -m twine upload --verbose --skip-existing python/wheelhouse/*
-
-
-  rust-publish:
-    runs-on: ubuntu-latest
-    needs: credential-check
-    defaults:
-      run:
-        working-directory: rust
-    env:
-      CARGO_TERM_COLOR: always
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Login
-        run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
-
-      - name: Publish Cargo OpenDP
-        run: cargo publish --verbose --manifest-path=opendp/Cargo.toml
-
-      - name: Let crates.io index settle
-        run: sleep 60
-
-      - name: Publish Cargo OpenDP-FFI
-        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml
+#  python-pre-publish-mac:
+#    runs-on: macos-10.15
+#    needs: credential-check
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v2
+#
+#      - name: Build mac binaries
+#        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
+#
+#      - name: Upload .dylib
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: lib_dylib
+#          path: rust/target/release/libopendp_ffi.dylib
+#
+#
+#  python-pre-publish-linux:
+#    runs-on: ubuntu-20.04
+#    needs: credential-check
+#    env:
+#      DOCKER_IMAGE: quay.io/pypa/manylinux2010_x86_64
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v2
+#
+#      - name: Build manylinux binaries
+#        run: |
+#          chmod +x .github/build_manylinux_binaries.sh
+#          docker run --rm -v `pwd`:/io $DOCKER_IMAGE /io/.github/build_manylinux_binaries.sh
+#
+#      - name: Upload .so
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: lib_so
+#          path: rust/target/release/libopendp_ffi.so
+#
+#
+#  python-publish:
+#    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
+#    runs-on: ubuntu-20.04
+#    env:
+#      # https://pypi.org/help/#apitoken
+#      TWINE_USERNAME: __token__
+#      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v2
+#
+#      - name: Set up Python
+#        uses: actions/setup-python@v2
+#        with:
+#          python-version: 3.6
+#
+#      - name: Prepare for libs
+#        run: mkdir -p python/src/opendp/lib
+#
+#      - name: Download mac lib
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: lib_dylib
+#          path: python/src/opendp/lib
+#
+#      - name: Download linux lib
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: lib_so
+#          path: python/src/opendp/lib
+#
+#      - name: Download windows lib
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: lib_dll
+#          path: python/src/opendp/lib
+#
+#      - name: Install dependencies
+#        run: |
+#          python -m pip install --upgrade pip
+#          pip install twine wheel
+#
+#      - name: Copy README.md
+#        run: cp README.md python/README.md
+#
+#      - name: Build bdist
+#        run: |
+#          (cd python && python3 setup.py bdist_wheel -d wheelhouse)
+#
+#      - name: PyPi OpenDP upload
+#        run: |
+#          python3 -m twine upload --verbose --skip-existing python/wheelhouse/*
+#
+#
+#  rust-publish:
+#    runs-on: ubuntu-latest
+#    needs: credential-check
+#    defaults:
+#      run:
+#        working-directory: rust
+#    env:
+#      CARGO_TERM_COLOR: always
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v2
+#
+#      - name: Login
+#        run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
+#
+#      - name: Publish Cargo OpenDP
+#        run: cargo publish --verbose --manifest-path=opendp/Cargo.toml
+#
+#      - name: Let crates.io index settle
+#        run: sleep 60
+#
+#      - name: Publish Cargo OpenDP-FFI
+#        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml
