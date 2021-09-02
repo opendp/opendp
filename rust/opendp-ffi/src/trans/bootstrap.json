@@ -182,7 +182,7 @@
         "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nUse make_base_stability to release this query.",
         "args": [
             {
-                "name": "n",
+                "name": "size",
                 "c_type": "unsigned int",
                 "description": "Number of records in input data."
             },
@@ -428,9 +428,14 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_bounded_mean": {
+    "make_sized_bounded_mean": {
         "description": "Make a Transformation that computes the mean of bounded data. \nUse make_clamp to bound data.",
         "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
             {
                 "name": "lower",
                 "c_type": "void *",
@@ -442,11 +447,6 @@
                 "c_type": "void *",
                 "rust_type": "T",
                 "description": "Upper bound of input data."
-            },
-            {
-                "name": "n",
-                "c_type": "unsigned int",
-                "description": "Number of records in input data."
             },
             {
                 "name": "T",
@@ -462,15 +462,15 @@
         "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains",
         "args": [
             {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in output data."
+            },
+            {
                 "name": "constant",
                 "c_type": "AnyObject *",
                 "rust_type": "TA",
                 "description": "Value to impute with."
-            },
-            {
-                "name": "length",
-                "c_type": "unsigned int",
-                "description": "Number of records in output data."
             },
             {
                 "name": "TA",
@@ -487,13 +487,7 @@
         "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize_constant that accepts domains",
         "args": [
             {
-                "name": "constant",
-                "c_type": "void *",
-                "rust_type": "TA",
-                "description": "Value to impute with."
-            },
-            {
-                "name": "length",
+                "name": "size",
                 "c_type": "unsigned int",
                 "description": "Number of records in output data."
             },
@@ -508,6 +502,12 @@
                 "c_type": "void *",
                 "rust_type": "TA",
                 "description": "Upper bound of data in input domain"
+            },
+            {
+                "name": "constant",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "description": "Value to impute with."
             },
             {
                 "name": "TA",
@@ -545,9 +545,14 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
-    "make_bounded_sum_n": {
+    "make_sized_bounded_sum": {
         "description": "Make a Transformation that computes the sum of bounded data with known length. \nThis uses a restricted-sensitivity proof that takes advantage of known N for better utility. \nUse make_clamp to bound data.",
         "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
             {
                 "name": "lower",
                 "c_type": "void *",
@@ -559,11 +564,6 @@
                 "c_type": "void *",
                 "rust_type": "T",
                 "description": "Upper bound of input data."
-            },
-            {
-                "name": "n",
-                "c_type": "unsigned int",
-                "description": "Number of records in input data."
             },
             {
                 "name": "T",
@@ -575,9 +575,14 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
-    "make_bounded_variance": {
+    "make_sized_bounded_variance": {
         "description": "Make a Transformation that computes the variance of bounded data. \nUse make_clamp to bound data.",
         "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
             {
                 "name": "lower",
                 "c_type": "void *",
@@ -589,11 +594,6 @@
                 "c_type": "void *",
                 "rust_type": "T",
                 "description": "Upper bound of input data."
-            },
-            {
-                "name": "n",
-                "c_type": "unsigned int",
-                "description": "Number of records in input data."
             },
             {
                 "name": "ddof",

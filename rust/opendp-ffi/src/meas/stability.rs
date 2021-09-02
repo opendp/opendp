@@ -18,7 +18,7 @@ use crate::util::Type;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_stability(
-    n: usize,
+    size: usize,
     scale: *const c_void,
     threshold: *const c_void,
     MI: *const c_char,  // input metric (sensitivity)
@@ -26,19 +26,19 @@ pub extern "C" fn opendp_meas__make_base_stability(
     TIC: *const c_char,  // type of input count (int)
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<TIC, TOC>(
-        n: usize, scale: *const c_void, threshold: *const c_void,
+        size: usize, scale: *const c_void, threshold: *const c_void,
         MI: Type, TIK: Type, TIC: Type,
     ) -> FfiResult<*mut AnyMeasurement>
         where TIC: 'static + Integer + Zero + One + AddAssign + Clone + CheckNull,
               TOC: 'static + TotalOrd + Clone + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull {
         fn monomorphize2<MI, TIK, TIC>(
-            n: usize, scale: MI::Distance, threshold: MI::Distance,
+            size: usize, scale: MI::Distance, threshold: MI::Distance,
         ) -> FfiResult<*mut AnyMeasurement>
             where MI: 'static + SensitivityMetric + BaseStabilityNoise,
                   TIK: 'static + Eq + Hash + Clone + CheckNull,
                   TIC: 'static + Integer + Zero + One + AddAssign + Clone + CheckNull,
                   MI::Distance: 'static + Clone + TotalOrd + Float + CastInternalReal + ExactIntCast<usize> + ExactIntCast<TIC> + CheckNull {
-            make_base_stability::<MI, TIK, TIC>(n, scale, threshold).into_any()
+            make_base_stability::<MI, TIK, TIC>(size, scale, threshold).into_any()
         }
         let scale = *try_as_ref!(scale as *const TOC);
         let threshold = *try_as_ref!(threshold as *const TOC);
@@ -46,7 +46,7 @@ pub extern "C" fn opendp_meas__make_base_stability(
             (MI, [L1Distance<TOC>, L2Distance<TOC>]),
             (TIK, @hashable),
             (TIC, [TIC])
-        ], (n, scale, threshold))
+        ], (size, scale, threshold))
     }
     let MI = try_!(Type::try_from(MI));
     let TIK = try_!(Type::try_from(TIK));
@@ -56,5 +56,5 @@ pub extern "C" fn opendp_meas__make_base_stability(
     dispatch!(monomorphize, [
         (TIC, @integers),
         (TOC, @floats)
-    ], (n, scale, threshold, MI, TIK, TIC))
+    ], (size, scale, threshold, MI, TIK, TIC))
 }

@@ -32,7 +32,7 @@ impl<TOC: SampleGaussian> BaseStabilityNoise for L2Distance<TOC> {
 }
 
 pub fn make_base_stability<MI, TIK, TIC>(
-    n: usize, scale: MI::Distance, threshold: MI::Distance
+    size: usize, scale: MI::Distance, threshold: MI::Distance
 ) -> Fallible<Measurement<CountDomain<TIK, TIC>, CountDomain<TIK, MI::Distance>, MI, SmoothedMaxDivergence<MI::Distance>>>
     where MI: BaseStabilityNoise,
           TIK: Eq + Hash + Clone + CheckNull,
@@ -44,12 +44,12 @@ pub fn make_base_stability<MI, TIK, TIC>(
     if threshold.is_sign_negative() {
         return fallible!(MakeMeasurement, "threshold must not be negative")
     }
-    let _n = MI::Distance::exact_int_cast(n)?;
+    let _size = MI::Distance::exact_int_cast(size)?;
     let _2 = MI::Distance::exact_int_cast(2)?;
 
     Ok(Measurement::new(
-        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
-        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, size),
+        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, size),
         Function::new_fallible(move |data: &HashMap<TIK, TIC>| {
             data.iter()
                 .map(|(k, c_in)| {
@@ -69,20 +69,20 @@ pub fn make_base_stability<MI, TIK, TIC>(
             // let _eps: f64 = NumCast::from(eps).unwrap_test();
             // let _del: f64 = NumCast::from(del).unwrap_test();
             // println!("eps, del: {:?}, {:?}", _eps, _del);
-            let ideal_scale = d_in / (eps * _n);
-            let ideal_threshold = (_2 / del).ln() * ideal_scale + _n.recip();
+            let ideal_scale = d_in / (eps * _size);
+            let ideal_threshold = (_2 / del).ln() * ideal_scale + _size.recip();
             // println!("ideal: {:?}, {:?}", ideal_sigma, ideal_threshold);
 
             if eps.is_sign_negative() || eps.is_zero() {
                 return fallible!(FailedRelation, "cause: epsilon <= 0")
             }
-            if eps >= _n.ln() {
+            if eps >= _size.ln() {
                 return fallible!(RelationDebug, "cause: epsilon >= n.ln()");
             }
             if del.is_sign_negative() || del.is_zero() {
                 return fallible!(FailedRelation, "cause: delta <= 0")
             }
-            if del >= _n.recip() {
+            if del >= _size.recip() {
                 return fallible!(RelationDebug, "cause: del >= n.ln()");
             }
             if scale < ideal_scale {

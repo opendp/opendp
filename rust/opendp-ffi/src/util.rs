@@ -11,7 +11,7 @@ use opendp::{err, fallible};
 use opendp::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
 use opendp::error::*;
 use crate::any::AnyObject;
-use opendp::dom::{VectorDomain, AllDomain, IntervalDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
+use opendp::dom::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -242,11 +242,11 @@ lazy_static! {
 
             // domains
             type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![IntervalDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![BoundedDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![[InherentNullDomain AllDomain], <f32, f64>],
             type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![[VectorDomain IntervalDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![[VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
             type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
 

@@ -5,7 +5,7 @@ use std::os::raw::{c_char, c_uint, c_void};
 
 use opendp::err;
 use opendp::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, ExactIntCast, CheckedMul, CheckNull};
-use opendp::trans::{make_bounded_sum, make_bounded_sum_n};
+use opendp::trans::{make_bounded_sum, make_sized_bounded_sum};
 
 use crate::any::AnyTransformation;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -34,21 +34,21 @@ pub extern "C" fn opendp_trans__make_bounded_sum(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_bounded_sum_n(
-    lower: *const c_void, upper: *const c_void, n: c_uint,
+pub extern "C" fn opendp_trans__make_sized_bounded_sum(
+    size: c_uint, lower: *const c_void, upper: *const c_void,
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<T>(lower: *const c_void, upper: *const c_void, n: usize) -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<T>(size: usize, lower: *const c_void, upper: *const c_void) -> FfiResult<*mut AnyTransformation>
         where T: DistanceConstant<IntDistance> + Sub<Output=T> + ExactIntCast<usize> + CheckedMul + CheckNull,
               for<'a> T: Sum<&'a T>,
               IntDistance: InfCast<T> {
         let lower = try_as_ref!(lower as *const T).clone();
         let upper = try_as_ref!(upper as *const T).clone();
-        make_bounded_sum_n::<T>(lower, upper, n).into_any()
+        make_sized_bounded_sum::<T>(size, lower, upper).into_any()
     }
-    let n = n as usize;
+    let size = size as usize;
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], (lower, upper, n))
+    dispatch!(monomorphize, [(T, @numbers)], (size, lower, upper))
 }
 
 
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_make_bounded_sum_n() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_bounded_sum_n(
+        let transformation = Result::from(opendp_trans__make_sized_bounded_sum(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(10.0) as *const c_void,
             3 as c_uint,

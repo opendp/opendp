@@ -162,8 +162,8 @@ def test_clamp():
 
 
 def test_bounded_mean():
-    from opendp.trans import make_bounded_mean
-    query = make_bounded_mean(lower=0., upper=10., n=9)
+    from opendp.trans import make_sized_bounded_mean
+    query = make_sized_bounded_mean(size=9, lower=0., upper=10.)
     assert query(FLOAT_DATA) == 5.
     assert query.check(1, 10. / 9.)
 
@@ -188,16 +188,16 @@ def test_bounded_sum():
 
 
 def test_bounded_sum_n():
-    from opendp.trans import make_bounded_sum_n
-    query = make_bounded_sum_n(lower=0., upper=10., n=9)
+    from opendp.trans import make_sized_bounded_sum
+    query = make_sized_bounded_sum(size=9, lower=0., upper=10.)
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten this check
     assert query.check(1, 20.)
 
 
 def test_bounded_variance():
-    from opendp.trans import make_bounded_variance
-    query = make_bounded_variance(lower=0., upper=10., n=9)
+    from opendp.trans import make_sized_bounded_variance
+    query = make_sized_bounded_variance(size=9, lower=0., upper=10.)
     assert query(FLOAT_DATA) == 7.5
     assert query.check(1, 20.)
 
@@ -222,7 +222,7 @@ def test_count_distinct():
 
 def test_count_by():
     from opendp.trans import make_count_by
-    query = make_count_by(n=9, MO=L1Distance[float], TI=str)
+    query = make_count_by(size=9, MO=L1Distance[float], TI=str)
     assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
     print('first')
     assert query.check(1, 2.)
@@ -237,14 +237,14 @@ def test_count_by_categories():
 
 def test_resize():
     from opendp.trans import make_resize_bounded
-    query = make_resize_bounded(constant=0, length=4, lower=0, upper=10)
+    query = make_resize_bounded(size=4, lower=0, upper=10, constant=0)
     assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 2)
 
     from opendp.trans import make_resize
-    query = make_resize(constant=0, length=4)
+    query = make_resize(size=4, constant=0)
     assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)

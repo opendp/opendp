@@ -32,8 +32,8 @@ def test_dp_mean():
         make_impute_constant(impute_constant) >>
         # Clamp age values
         make_clamp(lower, upper) >>
-        make_resize_bounded(impute_constant, n, lower, upper) >>
-        make_bounded_mean(lower, upper, n=n, T=float) >>
+        make_resize_bounded(n, lower, upper, impute_constant) >>
+        make_sized_bounded_mean(n, lower, upper, T=float) >>
         make_base_laplace(scale)
     )
     res = preprocessor(data)

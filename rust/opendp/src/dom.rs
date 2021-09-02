@@ -81,11 +81,11 @@ impl<D: Domain> Domain for DataDomain<D> where
 
 /// A Domain that contains all the values in an interval.
 #[derive(Clone, PartialEq)]
-pub struct IntervalDomain<T> {
+pub struct BoundedDomain<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: TotalOrd> IntervalDomain<T> {
+impl<T: TotalOrd> BoundedDomain<T> {
     pub fn new(lower: Bound<T>, upper: Bound<T>) -> Fallible<Self> {
         fn get<T>(value: &Bound<T>) -> Option<&T> {
             match value {
@@ -108,10 +108,10 @@ impl<T: TotalOrd> IntervalDomain<T> {
                 }
             }
         }
-        Ok(IntervalDomain { lower, upper })
+        Ok(BoundedDomain { lower, upper })
     }
 }
-impl<T: Clone + TotalOrd> Domain for IntervalDomain<T> {
+impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         Ok(match &self.lower {
@@ -204,11 +204,11 @@ impl<D: Domain> Domain for VectorDomain<D> {
 #[derive(Clone, PartialEq)]
 pub struct SizedDomain<D: Domain> {
     pub element_domain: D,
-    pub length: usize
+    pub size: usize
 }
 impl<D: Domain> SizedDomain<D> {
-    pub fn new(member_domain: D, length: usize) -> Self {
-        SizedDomain { element_domain: member_domain, length }
+    pub fn new(member_domain: D, size: usize) -> Self {
+        SizedDomain { element_domain: member_domain, size }
     }
 }
 impl<D: Domain> Domain for SizedDomain<D> {
