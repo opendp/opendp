@@ -95,32 +95,32 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_count_by(
     size: c_uint,
-    MO: *const c_char, TI: *const c_char, TO: *const c_char,
+    MO: *const c_char, TIA: *const c_char, TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<QO>(
-        size: usize, MO: Type, TI: Type, TO: Type,
+        size: usize, MO: Type, TIA: Type, TOA: Type,
     ) -> FfiResult<*mut AnyTransformation>
         where QO: DistanceConstant<IntDistance> + FloatConst + One,
               IntDistance: InfCast<QO> {
-        fn monomorphize2<MO, TI, TO>(size: usize) -> FfiResult<*mut AnyTransformation>
+        fn monomorphize2<MO, TIA, TOA>(size: usize) -> FfiResult<*mut AnyTransformation>
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + FloatConst + One,
-                  TI: 'static + Eq + Hash + Clone + CheckNull,
-                  TO: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
+                  TIA: 'static + Eq + Hash + Clone + CheckNull,
+                  TOA: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
                   IntDistance: InfCast<MO::Distance> {
-            make_count_by::<MO, TI, TO>(size).into_any()
+            make_count_by::<MO, TIA, TOA>(size).into_any()
         }
         dispatch!(monomorphize2, [
             (MO, [L1Distance<QO>, L2Distance<QO>]),
-            (TI, @hashable),
-            (TO, @integers)
+            (TIA, @hashable),
+            (TOA, @integers)
         ], (size))
     }
     let size = size as usize;
     let MO = try_!(Type::try_from(MO));
-    let TI = try_!(Type::try_from(TI));
-    let TO = try_!(Type::try_from(TO));
+    let TIA = try_!(Type::try_from(TIA));
+    let TOA = try_!(Type::try_from(TOA));
 
     let QO = try_!(MO.get_sensitivity_distance());
-    dispatch!(monomorphize, [(QO, @floats)], (size, MO, TI, TO))
+    dispatch!(monomorphize, [(QO, @floats)], (size, MO, TIA, TOA))
 }

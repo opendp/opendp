@@ -7,23 +7,20 @@ from opendp.typing import SubstituteDistance
 
 def main():
 
-    ### HELLO WORLD
-    identity = make_identity(M=SubstituteDistance, T=str)
+    # HELLO WORLD
+    identity = make_identity(M=SubstituteDistance, TA=str)
     arg = "hello, world!"
     res = identity(arg)
     print(res)
 
-    ### SUMMARY STATS
+    # SUMMARY STATS
     # Parse dataframe
-    parse_dataframe = (
-        make_split_dataframe(separator=",", col_names=["A", "B", "C"]) >>
-        make_parse_column(key="B", T=int) >>
-        make_parse_column(key="C", T=float)
-    )
+    parse_dataframe = make_split_dataframe(separator=",", col_names=["A", "B", "C"])
 
     # Noisy sum, col 1
     noisy_sum_1 = (
-        make_select_column(key="B", T=int) >>
+        make_select_column(key="B") >>
+        make_cast_default(TIA=str, TOA=int) >>
         make_clamp(bounds=(0, 10)) >>
         make_bounded_sum(bounds=(0, 10)) >>
         make_base_geometric(scale=1.0)
@@ -31,7 +28,8 @@ def main():
 
     # Count, col 2
     noisy_count_2 = (
-        make_select_column(key="C", T=float) >>
+        make_select_column(key="C") >>
+        make_cast_default(TIA=str, TOA=float) >>
         make_count(TIA=float) >>
         make_base_geometric(scale=1.0)
     )

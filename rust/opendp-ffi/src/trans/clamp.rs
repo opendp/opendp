@@ -13,17 +13,17 @@ use crate::util::Type;
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_clamp(
     bounds: *const AnyObject,
-    T: *const c_char,
+    TA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let T = try_!(Type::try_from(T));
+    let TA = try_!(Type::try_from(TA));
 
-    fn monomorphize_dataset<T>(bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where T: 'static + Clone + TotalOrd + CheckNull {
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_clamp::<T>(bounds).into_any()
+    fn monomorphize_dataset<TA>(bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+        where TA: 'static + Clone + TotalOrd + CheckNull {
+        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
+        make_clamp::<TA>(bounds).into_any()
     }
     dispatch!(monomorphize_dataset, [
-        (T, @numbers)
+        (TA, @numbers)
     ], (bounds))
 }
 
@@ -31,16 +31,16 @@ pub extern "C" fn opendp_trans__make_clamp(
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_unclamp(
     bounds: *const AnyObject,
-    T: *const c_char
+    TA: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
-    let T = try_!(Type::try_from(T));
-    fn monomorphize_dataset<T>(bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where T: 'static + Clone + TotalOrd + CheckNull {
-        let (lower, upper) = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_unclamp::<T>((Bound::Included(lower), Bound::Included(upper))).into_any()
+    let TA = try_!(Type::try_from(TA));
+    fn monomorphize_dataset<TA>(bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+        where TA: 'static + Clone + TotalOrd + CheckNull {
+        let (lower, upper) = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
+        make_unclamp::<TA>((Bound::Included(lower), Bound::Included(upper))).into_any()
     }
     dispatch!(monomorphize_dataset, [
-        (T, @numbers)
+        (TA, @numbers)
     ], (bounds))
 }
 

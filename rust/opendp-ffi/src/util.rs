@@ -335,9 +335,9 @@ pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
 #[allow(non_camel_case_types)]
 pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
 
-pub fn to_bool(b: c_bool) -> bool {
-    b != 0
-}
+// pub fn to_bool(b: c_bool) -> bool {
+//     b != 0
+// }
 
 pub fn from_bool(b: bool) -> c_bool {
     if b {1} else {0}

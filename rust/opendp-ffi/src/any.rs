@@ -562,8 +562,8 @@ mod tests {
     #[test]
     fn test_any_chain() -> Fallible<()> {
         let t1 = trans::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?.into_any();
-        let t2 = trans::make_parse_column::<_, f64>("a".to_owned(), true)?.into_any();
-        let t3 = trans::make_select_column::<_, f64>("a".to_owned())?.into_any();
+        let t2 = trans::make_select_column::<_, String>("a".to_owned())?.into_any();
+        let t3 = trans::make_cast_default::<String, f64>()?.into_any();
         let t4 = trans::make_clamp((0.0, 10.0))?.into_any();
         let t5 = trans::make_bounded_sum((0.0, 10.0))?.into_any();
         let m1 = meas::make_base_gaussian::<AllDomain<_>>(0.0)?.into_any();

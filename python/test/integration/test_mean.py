@@ -24,9 +24,9 @@ def test_dp_mean():
         # Convert data into Vec<Vec<String>>
         make_split_dataframe(separator=",", col_names=col_names) >>
         # Selects a column of df, Vec<str>
-        make_select_column(key=index, T=str) >>
+        make_select_column(key=index, TOA=str) >>
         # Cast the column as Vec<Optional<Float>>
-        make_cast(TI=str, TO=float) >>
+        make_cast(TIA=str, TOA=float) >>
         # Impute missing values to 0 Vec<Float>
         make_impute_constant(impute_constant) >>
         # Clamp age values

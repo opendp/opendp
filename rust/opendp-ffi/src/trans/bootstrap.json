@@ -1,32 +1,32 @@
 {
     "make_cast": {
-        "description": "Make a Transformation that casts a vector of data from type `TI` to type `TO`. \nFailure to parse results in None, else Some<TO>.",
+        "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. \nFailure to parse results in None, else Some<TOA>.",
         "args": [
             {
-                "name": "TI",
+                "name": "TIA",
                 "is_type": true,
-                "description": "input data type to cast from"
+                "description": "atomic input data type to cast from"
             },
             {
-                "name": "TO",
+                "name": "TOA",
                 "is_type": true,
-                "description": "data type to cast into"
+                "description": "atomic data type to cast into"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_cast_default": {
-        "description": "Make a Transformation that casts a vector of data from type `TI` to type `TO`. If cast fails, fill with default.",
+        "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. If cast fails, fill with default.",
         "args": [
             {
-                "name": "TI",
+                "name": "TIA",
                 "is_type": true,
-                "description": "input data type to cast from"
+                "description": "atomic input data type to cast from"
             },
             {
-                "name": "TO",
+                "name": "TOA",
                 "is_type": true,
-                "description": "data type to cast into"
+                "description": "atomic data type to cast into"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -37,13 +37,13 @@
             {
                 "name": "value",
                 "c_type": "AnyObject *",
-                "rust_type": "TI",
+                "rust_type": "TIA",
                 "description": "value to check against"
             },
             {
-                "name": "TI",
+                "name": "TIA",
                 "is_type": true,
-                "description": "input data type"
+                "description": "atomic input data type"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -63,12 +63,12 @@
         "description": "Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. \nIf cast fails, fill with `TO`'s null value.",
         "args": [
             {
-                "name": "TI",
+                "name": "TIA",
                 "is_type": true,
                 "description": "input data type to cast from"
             },
             {
-                "name": "TO",
+                "name": "TOA",
                 "is_type": true,
                 "description": "data type to cast into"
             }
@@ -91,7 +91,7 @@
                 "description": "output dataset metric"
             },
             {
-                "name": "T",
+                "name": "TA",
                 "is_type": true,
                 "description": "atomic type of data"
             }
@@ -106,13 +106,13 @@
                 "c_type": "AnyObject *",
                 "rust_type": {
                     "origin": "Tuple",
-                    "args": ["T", "T"]
+                    "args": ["TA", "TA"]
                 },
                 "hint": "Tuple[Any, Any]",
                 "description": "Tuple of inclusive lower and upper bounds."
             },
             {
-                "name": "T",
+                "name": "TA",
                 "is_type": true,
                 "description": "atomic data type",
                 "example": {
@@ -131,13 +131,13 @@
                 "c_type": "AnyObject *",
                 "rust_type": {
                     "origin": "Tuple",
-                    "args": ["T", "T"]
+                    "args": ["TA", "TA"]
                 },
                 "hint": "Tuple[Any, Any]",
                 "description": "Tuple of inclusive lower and upper bounds."
             },
             {
-                "name": "T",
+                "name": "TA",
                 "is_type": true,
                 "description": "atomic data type",
                 "example": {
@@ -160,7 +160,7 @@
                 "name": "TO",
                 "default": "i32",
                 "is_type": true,
-                "description": "type of output integer"
+                "description": "Output Type. Must be an integer."
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -177,7 +177,7 @@
                 "name": "TO",
                 "default": "i32",
                 "is_type": true,
-                "description": "Output Type. integer"
+                "description": "Output Type. Must be an integer."
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -197,14 +197,14 @@
                 "description": "Output Metric."
             },
             {
-                "name": "TI",
+                "name": "TIA",
                 "is_type": true,
-                "description": "Input Type. Categorical/hashable input data type. Input data must be Vec<TI>."
+                "description": "Atomic Input Type. Categorical/hashable input data type. Input data must be Vec<TI>."
             },
             {
-                "name": "TO",
+                "name": "TOA",
                 "is_type": true,
-                "description": "Output Type. express counts in terms of this integral type",
+                "description": "Atomic Output Type. Express counts in terms of this integral type.",
                 "default": "i32"
             }
         ],
@@ -221,7 +221,7 @@
                 "c_type": "AnyObject *",
                 "rust_type": {
                     "origin": "Vec",
-                    "args": ["TI"]
+                    "args": ["TIA"]
                 },
                 "description": "The set of categories to compute counts for."
             },
@@ -232,12 +232,12 @@
                 "description": "output sensitivity metric"
             },
             {
-                "name": "TI",
+                "name": "TIA",
                 "is_type": true,
-                "description": "categorical/hashable input data type. Input data must be Vec<TI>."
+                "description": "categorical/hashable input type. Input data must be Vec<TIA>."
             },
             {
-                "name": "TO",
+                "name": "TOA",
                 "is_type": true,
                 "description": "express counts in terms of this integral type",
                 "default": "i32"
@@ -310,36 +310,8 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
-    "make_parse_column": {
-        "description": "Make a Transformation that parses the `key` column of a dataframe as `T`.",
-        "args": [
-            {
-                "name": "key",
-                "c_type": "AnyObject *",
-                "rust_type": "K",
-                "description": "name of column to select from dataframe and parse"
-            },
-            {
-                "name": "impute",
-                "c_type": "bool",
-                "default": true,
-                "description": "Enable to impute values that fail to parse. If false, raise an error if parsing fails."
-            },
-            {
-                "name": "K",
-                "is_type": true,
-                "description": "categorical/hashable data type of the key/column name"
-            },
-            {
-                "name": "T",
-                "is_type": true,
-                "description": "data type to parse into"
-            }
-        ],
-        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
-    },
     "make_select_column": {
-        "description": "Make a Transformation that retrieves the column `key` from a dataframe as Vec<`T`>.",
+        "description": "Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.",
         "args": [
             {
                 "name": "key",
@@ -353,9 +325,9 @@
                 "description": "data type of the key"
             },
             {
-                "name": "T",
+                "name": "TOA",
                 "is_type": true,
-                "description": "data type to downcast to"
+                "description": "atomic data type to downcast to"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -370,7 +342,7 @@
                 "is_type": true
             },
             {
-                "name": "T",
+                "name": "TA",
                 "description": "Type of data passed to the identity function.",
                 "is_type": true
             }
@@ -380,25 +352,25 @@
         }
     },
     "make_impute_constant": {
-        "description": "Make a Transformation that replaces null/None data with `constant`.\nBy default, the input type is Vec<Option<`T`>>, as emitted by make_cast. \nSet DA to InherentNullDomain<AllDomain<T>> for imputing on types that have an inherent representation of nullity, like floats.",
+        "description": "Make a Transformation that replaces null/None data with `constant`.\nBy default, the input type is Vec<Option<TA>>, as emitted by make_cast. \nSet `DA` to InherentNullDomain<AllDomain<TA>> for imputing on types that have an inherent representation of nullity, like floats.",
         "args": [
             {
                 "name": "constant",
                 "c_type": "AnyObject *",
-                "rust_type": "T",
+                "rust_type": "TA",
                 "description": "Value to replace nulls with."
             },
             {
                 "name": "DA",
                 "is_type": true,
-                "default": "OptionNullDomain<AllDomain<T>>",
-                "generics": ["T"],
-                "description": "domain of data being imputed. This is OptionNullDomain<AllDomain<T>> or InherentNullDomain<AllDomain<T>>"
+                "default": "OptionNullDomain<AllDomain<TA>>",
+                "generics": ["TA"],
+                "description": "domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>"
             }
         ],
         "derived_types": [
             {
-                "name": "T",
+                "name": "TA",
                 "rust_type": {
                     "function": "get_domain_atom_or_infer",
                     "params": [
@@ -410,20 +382,20 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_impute_uniform_float": {
-        "description": "Make a Transformation that replaces null/None data in Vec<`T`> with uniformly distributed floats within `bounds`.",
+        "description": "Make a Transformation that replaces null/None data in Vec<`TA`> with uniformly distributed floats within `bounds`.",
         "args": [
             {
                 "name": "bounds",
                 "c_type": "AnyObject *",
                 "rust_type": {
                     "origin": "Tuple",
-                    "args": ["T", "T"]
+                    "args": ["TA", "TA"]
                 },
                 "hint": "Tuple[Any, Any]",
                 "description": "Tuple of inclusive lower and upper bounds."
             },
             {
-                "name": "T",
+                "name": "TA",
                 "is_type": true,
                 "description": "type of data being imputed",
                 "example": {
@@ -467,7 +439,7 @@
         }
     },
     "make_resize": {
-        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `size`.\\nWARNING: This function is pending change. It will accept an additional domain argument.",
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.\\nWARNING: This function is pending change. It will accept an additional domain argument.",
         "args": [
             {
                 "name": "size",
@@ -492,7 +464,7 @@
         }
     },
     "make_bounded_resize": {
-        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `size`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains",
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains",
         "args": [
             {
                 "name": "size",

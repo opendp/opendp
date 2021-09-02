@@ -8,10 +8,10 @@ use crate::dist::SymmetricDistance;
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
-pub(crate) fn make_row_by_row<'a, DIA, DOA, M, F: 'static + Fn(&DIA::Carrier) -> DOA::Carrier>(
+pub(crate) fn make_row_by_row<'a, DIA, DOA, M>(
     atom_input_domain: DIA,
     atom_output_domain: DOA,
-    atom_function: F
+    atom_function: impl 'static + Fn(&DIA::Carrier) -> DOA::Carrier
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
           DIA::Carrier: 'static,
@@ -27,10 +27,10 @@ pub(crate) fn make_row_by_row<'a, DIA, DOA, M, F: 'static + Fn(&DIA::Carrier) ->
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
-pub(crate) fn make_row_by_row_fallible<DIA, DOA, M, F: 'static + Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>>(
+pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
     atom_input_domain: DIA,
     atom_output_domain: DOA,
-    atom_function: F
+    atom_function: impl 'static + Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
           DIA::Carrier: 'static,
@@ -59,11 +59,11 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
 }
 
 /// A [`Transformation`] that checks equality elementwise with `value`.
-/// Maps a Vec<T> -> Vec<bool>
-pub fn make_is_equal<TI>(
-    value: TI
-) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
-    where TI: 'static + PartialEq + CheckNull {
+/// Maps a Vec<TIA> -> Vec<bool>
+pub fn make_is_equal<TIA>(
+    value: TIA
+) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
+    where TIA: 'static + PartialEq + CheckNull {
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
