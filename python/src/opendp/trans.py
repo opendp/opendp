@@ -236,7 +236,7 @@ def make_unclamp(
     upper,
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>.
+    """Make a Transformation that unclamps a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.
     
     :param lower: Lower bound of the input data.
     :param upper: Upper bound of the input data.

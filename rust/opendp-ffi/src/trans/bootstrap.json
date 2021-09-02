@@ -122,7 +122,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_unclamp": {
-        "description": "Make a Transformation that unclamps a VectorDomain<IntervalDomain<T>> to a VectorDomain<AllDomain<T>>.",
+        "description": "Make a Transformation that unclamps a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.",
         "args": [
             {
                 "name": "lower",

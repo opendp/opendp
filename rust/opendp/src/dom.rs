@@ -79,7 +79,7 @@ impl<D: Domain> Domain for DataDomain<D> where
 }
 
 
-/// A Domain that contains all the values in an interval.
+/// A Domain that contains all the values bounded by an interval.
 #[derive(Clone, PartialEq)]
 pub struct BoundedDomain<T> {
     lower: Bound<T>,
