@@ -32,7 +32,6 @@ jobs:
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          release: false
           install: git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
 
       - name: Checkout repository
