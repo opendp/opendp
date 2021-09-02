@@ -35,7 +35,7 @@ def test_cast_default():
 
 def test_impute_uniform():
     from opendp.trans import make_impute_uniform_float
-    caster = make_impute_uniform_float(-1., 2.)
+    caster = make_impute_uniform_float(bounds=(-1., 2.))
     assert -1. <= caster([float('nan')])[0] <= 2.
 
 
@@ -119,7 +119,7 @@ def test_inherent_cast__impute():
 def test_inherent_cast__impute_uniform():
     from opendp.trans import make_split_lines, make_cast_inherent, make_impute_uniform_float
     cast = make_split_lines() >> make_cast_inherent(TI=str, TO=float)
-    constant = cast >> make_impute_uniform_float(lower=23., upper=32.5)
+    constant = cast >> make_impute_uniform_float(bounds=(23., 32.5))
 
     res = constant("a\n23.23\n12")
     assert res[1:] == [23.23, 12.]
@@ -156,26 +156,26 @@ def test_split_dataframe():
 
 def test_clamp():
     from opendp.trans import make_clamp
-    query = make_clamp(lower=-1, upper=1)
+    query = make_clamp(bounds=(-1, 1))
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
 
 
 def test_bounded_mean():
     from opendp.trans import make_sized_bounded_mean
-    query = make_sized_bounded_mean(size=9, lower=0., upper=10.)
+    query = make_sized_bounded_mean(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 5.
     assert query.check(1, 10. / 9.)
 
 
 def test_bounded_sum():
     from opendp.trans import make_bounded_sum
-    query = make_bounded_sum(lower=0., upper=10.)
+    query = make_bounded_sum(bounds=(0., 10.))
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten the check
     assert query.check(1, 20.)
 
-    query = make_bounded_sum(lower=0, upper=10)
+    query = make_bounded_sum(bounds=(0, 10))
     assert query(INT_DATA) == 45
     # TODO: tighten the check
     assert query.check(1, 20)
@@ -189,7 +189,7 @@ def test_bounded_sum():
 
 def test_bounded_sum_n():
     from opendp.trans import make_sized_bounded_sum
-    query = make_sized_bounded_sum(size=9, lower=0., upper=10.)
+    query = make_sized_bounded_sum(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten this check
     assert query.check(1, 20.)
@@ -197,7 +197,7 @@ def test_bounded_sum_n():
 
 def test_bounded_variance():
     from opendp.trans import make_sized_bounded_variance
-    query = make_sized_bounded_variance(size=9, lower=0., upper=10.)
+    query = make_sized_bounded_variance(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 7.5
     assert query.check(1, 20.)
 
@@ -236,8 +236,8 @@ def test_count_by_categories():
 
 
 def test_resize():
-    from opendp.trans import make_resize_bounded
-    query = make_resize_bounded(size=4, lower=0, upper=10, constant=0)
+    from opendp.trans import make_bounded_resize
+    query = make_bounded_resize(size=4, bounds=(0, 10), constant=0)
     assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)

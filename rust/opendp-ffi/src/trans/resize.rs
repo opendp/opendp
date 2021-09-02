@@ -1,5 +1,4 @@
 use std::convert::TryFrom;
-use std::ops::Bound;
 use std::os::raw::{c_char, c_uint, c_void};
 
 use opendp::dom::{AllDomain, BoundedDomain};
@@ -13,25 +12,24 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::Type;
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_resize_bounded(
-    size: c_uint, lower: *const c_void, upper: *const c_void,
+pub extern "C" fn opendp_trans__make_bounded_resize(
+    size: c_uint, bounds: *const AnyObject,
     constant: *const c_void,
     TA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<TA>(
-        size: usize, lower: *const c_void, upper: *const c_void,
+        size: usize, bounds: *const AnyObject,
         constant: *const c_void,
     ) -> FfiResult<*mut AnyTransformation>
         where TA: 'static + Clone + CheckNull + TotalOrd {
-        let lower = try_as_ref!(lower as *const TA).clone();
-        let upper = try_as_ref!(upper as *const TA).clone();
-        let atom_domain = try_!(BoundedDomain::new(Bound::Included(lower), Bound::Included(upper)));
+        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
+        let atom_domain = try_!(BoundedDomain::new_closed(bounds));
         let constant = try_as_ref!(constant as *const TA).clone();
         make_resize_constant::<BoundedDomain<TA>>(size, atom_domain, constant).into_any()
     }
     let size = size as usize;
     let TA = try_!(Type::try_from(TA));
-    dispatch!(monomorphize, [(TA, @numbers)], (size, lower, upper, constant))
+    dispatch!(monomorphize, [(TA, @numbers)], (size, bounds, constant))
 }
 
 #[no_mangle]
@@ -79,11 +77,10 @@ mod tests {
 
 
     #[test]
-    fn test_make_resize_bounded() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_resize_bounded(
+    fn test_make_bounded_resize() -> Fallible<()> {
+        let transformation = Result::from(opendp_trans__make_bounded_resize(
             4 as c_uint,
-            util::into_raw(0i32) as *const c_void,
-            util::into_raw(10i32) as *const c_void,
+            util::into_raw(AnyObject::new((0i32, 10))),
             util::into_raw(0i32) as *const c_void,
             "i32".to_char_p(),
         ))?;

@@ -24,8 +24,8 @@ def main():
     # Noisy sum, col 1
     noisy_sum_1 = (
         make_select_column(key="B", T=int) >>
-        make_clamp(lower=0, upper=10) >>
-        make_bounded_sum(lower=0, upper=10) >>
+        make_clamp(bounds=(0, 10)) >>
+        make_bounded_sum(bounds=(0, 10)) >>
         make_base_geometric(scale=1.0)
     )
 

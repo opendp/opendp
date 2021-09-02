@@ -199,14 +199,15 @@ def make_cast_metric(
 
 
 def make_clamp(
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.
+    """Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`. 
+    If datum is less than lower, let datum be lower. 
+    If datum is greater than upper, let datum be upper.
     
-    :param lower: If datum is less than lower, let datum be lower.
-    :param upper: If datum is greater than upper, let datum be upper.
+    :param bounds: Tuple of inclusive lower and upper bounds.
+    :type bounds: Tuple[Any, Any]
     :param T: atomic data type
     :type T: RuntimeTypeDescriptor
     :return: A clamp step.
@@ -216,30 +217,28 @@ def make_clamp(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_clamp
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, T), Transformation))
+    return c_to_py(unwrap(function(bounds, T), Transformation))
 
 
 def make_unclamp(
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that unclamps a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.
     
-    :param lower: Lower bound of the input data.
-    :param upper: Upper bound of the input data.
+    :param bounds: Tuple of inclusive lower and upper bounds.
+    :type bounds: Tuple[Any, Any]
     :param T: atomic data type
     :type T: RuntimeTypeDescriptor
     :return: A unclamp step.
@@ -249,19 +248,18 @@ def make_unclamp(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_unclamp
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, T), Transformation))
+    return c_to_py(unwrap(function(bounds, T), Transformation))
 
 
 def make_count(
@@ -671,14 +669,13 @@ def make_impute_constant(
 
 
 def make_impute_uniform_float(
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that replaces null/None data in Vec<`T`> with `constant`
+    """Make a Transformation that replaces null/None data in Vec<`T`> with uniformly distributed floats within `bounds`.
     
-    :param lower: Lower bound of uniform distribution to sample from.
-    :param upper: Upper bound of uniform distribution to sample from.
+    :param bounds: Tuple of inclusive lower and upper bounds.
+    :type bounds: Tuple[Any, Any]
     :param T: type of data being imputed
     :type T: RuntimeTypeDescriptor
     :return: A impute_uniform_float step.
@@ -688,25 +685,23 @@ def make_impute_uniform_float(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_impute_uniform_float
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, T), Transformation))
+    return c_to_py(unwrap(function(bounds, T), Transformation))
 
 
 def make_sized_bounded_mean(
     size: int,
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the mean of bounded data. 
@@ -714,8 +709,8 @@ def make_sized_bounded_mean(
     
     :param size: Number of records in input data.
     :type size: int
-    :param lower: Lower bound of input data.
-    :param upper: Upper bound of input data.
+    :param bounds: Tuple of inclusive lower and upper bounds of the input data.
+    :type bounds: Tuple[Any, Any]
     :param T: atomic data type
     :type T: RuntimeTypeDescriptor
     :return: A sized_bounded_mean step.
@@ -725,20 +720,19 @@ def make_sized_bounded_mean(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_mean
-    function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, lower, upper, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, T), Transformation))
 
 
 def make_resize(
@@ -746,7 +740,7 @@ def make_resize(
     constant: Any,
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains
+    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `size`.\nWARNING: This function is pending change. It will accept an additional domain argument.
     
     :param size: Number of records in output data.
     :type size: int
@@ -754,7 +748,7 @@ def make_resize(
     :type constant: Any
     :param TA: Atomic type.
     :type TA: RuntimeTypeDescriptor
-    :return: A vector of the same type `TA`, but with the provided `length`.
+    :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -776,56 +770,53 @@ def make_resize(
     return c_to_py(unwrap(function(size, constant, TA), Transformation))
 
 
-def make_resize_bounded(
+def make_bounded_resize(
     size: int,
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     constant,
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\nWARNING: This function is temporary. It will be replaced by a more general make_resize_constant that accepts domains
+    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `size`.\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains
     
     :param size: Number of records in output data.
     :type size: int
-    :param lower: Lower bound of data in input domain
-    :param upper: Upper bound of data in input domain
+    :param bounds: Tuple of lower and upper bounds for data in the input domain
+    :type bounds: Tuple[Any, Any]
     :param constant: Value to impute with.
-    :param TA: Atomic type.
+    :param TA: Atomic type. If not passed, TA is inferred from the lower bound.
     :type TA: RuntimeTypeDescriptor
-    :return: A vector of the same type `TA`, but with the provided `length`.
+    :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=lower)
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=TA)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=TA)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
     constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=TA)
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_resize_bounded
-    function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function = lib.opendp_trans__make_bounded_resize
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, lower, upper, constant, TA), Transformation))
+    return c_to_py(unwrap(function(size, bounds, constant, TA), Transformation))
 
 
 def make_bounded_sum(
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data. 
     Use make_clamp to bound data.
     
-    :param lower: Lower bound of input data.
-    :param upper: Upper bound of input data.
+    :param bounds: Tuple of lower and upper bounds for data in the input domain
+    :type bounds: Tuple[Any, Any]
     :param T: atomic type of data
     :type T: RuntimeTypeDescriptor
     :return: A bounded_sum step.
@@ -835,25 +826,23 @@ def make_bounded_sum(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_sum
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(lower, upper, T), Transformation))
+    return c_to_py(unwrap(function(bounds, T), Transformation))
 
 
 def make_sized_bounded_sum(
     size: int,
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known length. 
@@ -862,8 +851,8 @@ def make_sized_bounded_sum(
     
     :param size: Number of records in input data.
     :type size: int
-    :param lower: Lower bound of input data.
-    :param upper: Upper bound of input data.
+    :param bounds: Tuple of lower and upper bounds for input data
+    :type bounds: Tuple[Any, Any]
     :param T: atomic type of data
     :type T: RuntimeTypeDescriptor
     :return: A sized_bounded_sum step.
@@ -873,26 +862,24 @@ def make_sized_bounded_sum(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_sum
-    function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, lower, upper, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, T), Transformation))
 
 
 def make_sized_bounded_variance(
     size: int,
-    lower,
-    upper,
+    bounds: Tuple[Any, Any],
     ddof: int = 1,
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
@@ -901,8 +888,8 @@ def make_sized_bounded_variance(
     
     :param size: Number of records in input data.
     :type size: int
-    :param lower: Lower bound of input data.
-    :param upper: Upper bound of input data.
+    :param bounds: Tuple of lower and upper bounds for input data
+    :type bounds: Tuple[Any, Any]
     :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
     :type ddof: int
     :param T: atomic data type
@@ -914,18 +901,17 @@ def make_sized_bounded_variance(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=lower)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
-    lower = py_to_c(lower, c_type=ctypes.c_void_p, type_name=T)
-    upper = py_to_c(upper, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     ddof = py_to_c(ddof, c_type=ctypes.c_uint)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_variance
-    function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_uint, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, lower, upper, ddof, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, ddof, T), Transformation))

@@ -17,8 +17,7 @@ def test_dp_mean():
     col_names = ["A", "B", "C", "D", "E"]
     index = "E"
     impute_constant = 0.
-    lower = 0.
-    upper = 10000.
+    bounds = (0., 10000.)
     n = 1000
     scale = 1.
     preprocessor = (
@@ -31,9 +30,9 @@ def test_dp_mean():
         # Impute missing values to 0 Vec<Float>
         make_impute_constant(impute_constant) >>
         # Clamp age values
-        make_clamp(lower, upper) >>
-        make_resize_bounded(n, lower, upper, impute_constant) >>
-        make_sized_bounded_mean(n, lower, upper, T=float) >>
+        make_clamp(bounds) >>
+        make_bounded_resize(n, bounds, impute_constant) >>
+        make_sized_bounded_mean(n, bounds) >>
         make_base_laplace(scale)
     )
     res = preprocessor(data)

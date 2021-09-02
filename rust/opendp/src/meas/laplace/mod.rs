@@ -63,7 +63,7 @@ mod tests {
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
         let chain = (
-            make_sized_bounded_mean(3, 10.0, 12.0)? >>
+            make_sized_bounded_mean(3, (10.0, 12.0))? >>
             make_base_laplace(1.0)?
         )?;
         let _ret = chain.function.eval(&vec![10.0, 11.0, 12.0])?;

@@ -99,24 +99,26 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_clamp": {
-        "description": "Make a Transformation that clamps numeric data in Vec<`T`> between `lower` and `upper`.",
+        "description": "Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`. \nIf datum is less than lower, let datum be lower. \nIf datum is greater than upper, let datum be upper.",
         "args": [
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "If datum is less than lower, let datum be lower."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "If datum is greater than upper, let datum be upper."
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "atomic data type"
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -125,21 +127,23 @@
         "description": "Make a Transformation that unclamps a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.",
         "args": [
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Lower bound of the input data."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Upper bound of the input data."
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "atomic data type"
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -406,24 +410,26 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_impute_uniform_float": {
-        "description": "Make a Transformation that replaces null/None data in Vec<`T`> with `constant`",
+        "description": "Make a Transformation that replaces null/None data in Vec<`T`> with uniformly distributed floats within `bounds`.",
         "args": [
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Lower bound of uniform distribution to sample from."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Upper bound of uniform distribution to sample from."
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "type of data being imputed"
+                "description": "type of data being imputed",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -437,21 +443,23 @@
                 "description": "Number of records in input data."
             },
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Lower bound of input data."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Upper bound of input data."
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds of the input data."
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "atomic data type"
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {
@@ -459,7 +467,7 @@
         }
     },
     "make_resize": {
-        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains",
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `size`.\\nWARNING: This function is pending change. It will accept an additional domain argument.",
         "args": [
             {
                 "name": "size",
@@ -480,11 +488,11 @@
         ],
         "ret": {
             "c_type": "FfiResult<AnyTransformation *>",
-            "description": "A vector of the same type `TA`, but with the provided `length`."
+            "description": "A vector of the same type `TA`, but with the provided `size`."
         }
     },
-    "make_resize_bounded": {
-        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `length`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize_constant that accepts domains",
+    "make_bounded_resize": {
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`T`> to match a provided `size`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains",
         "args": [
             {
                 "name": "size",
@@ -492,16 +500,14 @@
                 "description": "Number of records in output data."
             },
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "TA",
-                "description": "Lower bound of data in input domain"
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "TA",
-                "description": "Upper bound of data in input domain"
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for data in the input domain"
             },
             {
                 "name": "constant",
@@ -512,33 +518,39 @@
             {
                 "name": "TA",
                 "is_type": true,
-                "description": "Atomic type."
+                "description": "Atomic type. If not passed, TA is inferred from the lower bound.",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {
             "c_type": "FfiResult<AnyTransformation *>",
-            "description": "A vector of the same type `TA`, but with the provided `length`."
+            "description": "A vector of the same type `TA`, but with the provided `size`."
         }
     },
     "make_bounded_sum": {
         "description": "Make a Transformation that computes the sum of bounded data. \nUse make_clamp to bound data.",
         "args": [
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Lower bound of input data."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Upper bound of input data."
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for data in the input domain"
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "atomic type of data"
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {
@@ -554,21 +566,23 @@
                 "description": "Number of records in input data."
             },
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Lower bound of input data."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Upper bound of input data."
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "atomic type of data"
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {
@@ -584,16 +598,14 @@
                 "description": "Number of records in input data."
             },
             {
-                "name": "lower",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Lower bound of input data."
-            },
-            {
-                "name": "upper",
-                "c_type": "void *",
-                "rust_type": "T",
-                "description": "Upper bound of input data."
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
             },
             {
                 "name": "ddof",
@@ -604,7 +616,11 @@
             {
                 "name": "T",
                 "is_type": true,
-                "description": "atomic data type"
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {

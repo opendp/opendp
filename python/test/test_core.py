@@ -6,7 +6,7 @@ enable_features('floating-point')
 
 def test_type_getters():
     from opendp.trans import make_sized_bounded_mean
-    transformation = make_sized_bounded_mean(size=9, lower=0., upper=10., T=float)
+    transformation = make_sized_bounded_mean(size=9, bounds=(0., 10.), T=float)
     assert transformation.input_distance_type == "u32"
     assert transformation.output_distance_type == "f64"
     assert transformation.input_carrier_type == "Vec<f64>"
@@ -67,12 +67,12 @@ def test_bisect_edge():
 
 def test_bisect_chain():
     from opendp.mod import binary_search_chain, binary_search_param
-    from opendp.trans import make_clamp, make_resize_bounded, make_sized_bounded_mean
+    from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
     from opendp.meas import make_base_laplace
     pre = (
-        make_clamp(lower=0., upper=1.) >>
-        make_resize_bounded(size=10, lower=0., upper=1., constant=0.) >>
-        make_sized_bounded_mean(size=10, lower=0., upper=1.)
+        make_clamp(bounds=(0., 1.)) >>
+        make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
+        make_sized_bounded_mean(size=10, bounds=(0., 1.))
     )
     chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
     assert chain.check(1, 1.)

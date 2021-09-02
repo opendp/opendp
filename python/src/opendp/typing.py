@@ -332,3 +332,7 @@ def get_domain_atom(domain):
 
 def get_domain_atom_or_infer(domain: RuntimeType, example):
     return get_domain_atom(domain) or RuntimeType.infer(example)
+
+
+def get_first(value):
+    return value[0]

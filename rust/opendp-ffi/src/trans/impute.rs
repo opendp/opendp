@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 use std::ops::{Add, Mul, Sub};
-use std::os::raw::{c_char, c_void};
+use std::os::raw::c_char;
 
 use num::Float;
 
@@ -16,22 +16,19 @@ use opendp::traits::CheckNull;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_impute_uniform_float(
-    lower: *const c_void, upper: *const c_void,
+    bounds: *const AnyObject,
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let T = try_!(Type::try_from(T));
 
     fn monomorphize<T>(
-        lower: *const c_void, upper: *const c_void,
+        bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
         where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull {
-        let lower = try_as_ref!(lower as *const T).clone();
-        let upper = try_as_ref!(upper as *const T).clone();
-        make_impute_uniform_float::<T>(
-            lower, upper,
-        ).into_any()
+        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
+        make_impute_uniform_float::<T>(bounds).into_any()
     }
-    dispatch!(monomorphize, [(T, @floats)], (lower, upper))
+    dispatch!(monomorphize, [(T, @floats)], (bounds))
 }
 
 #[no_mangle]

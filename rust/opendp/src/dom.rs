@@ -86,7 +86,11 @@ pub struct BoundedDomain<T> {
     upper: Bound<T>,
 }
 impl<T: TotalOrd> BoundedDomain<T> {
-    pub fn new(lower: Bound<T>, upper: Bound<T>) -> Fallible<Self> {
+    pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
+        Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
+    }
+    pub fn new(bounds: (Bound<T>, Bound<T>)) -> Fallible<Self> {
+        let (lower, upper) = bounds;
         fn get<T>(value: &Bound<T>) -> Option<&T> {
             match value {
                 Bound::Included(value) => Some(value),
