@@ -19,7 +19,7 @@ def main():
 
     # Noisy sum, col 1
     noisy_sum_1 = (
-        make_select_column(key="B") >>
+        make_select_column(key="B", TOA=str) >>
         make_cast_default(TIA=str, TOA=int) >>
         make_clamp(bounds=(0, 10)) >>
         make_bounded_sum(bounds=(0, 10)) >>
@@ -28,7 +28,7 @@ def main():
 
     # Count, col 2
     noisy_count_2 = (
-        make_select_column(key="C") >>
+        make_select_column(key="C", TOA=str) >>
         make_cast_default(TIA=str, TOA=float) >>
         make_count(TIA=float) >>
         make_base_geometric(scale=1.0)

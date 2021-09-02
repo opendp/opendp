@@ -85,7 +85,6 @@ mod tests {
 
     use crate::any::{AnyObject, Downcast};
     use crate::core;
-    use crate::util;
     use crate::util::ToCharP;
 
     use super::*;
