@@ -26,7 +26,7 @@ jobs:
 #    needs: credential-check
     env:
       MSYS: winsymlinks:nativestrict
-      RUSTFLAGS: -C link-self-contained=false
+#      RUSTFLAGS: -C link-self-contained=false
     steps:
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
@@ -47,12 +47,12 @@ jobs:
       - name: Install dependencies
         shell: msys2 {0}
         run: |
-          echo OPENDP FROM
-          ls /mingw64/x86_64-w64-mingw32/lib/
-          echo OPENDP TO
-          ls /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
-          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
           cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib/self-contained
+#          echo OPENDP FROM
+#          ls /mingw64/x86_64-w64-mingw32/lib/
+#          echo OPENDP TO
+#          ls /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
+#          cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
 #          ls /mingw64/x86_64-w64-mingw32/bin
 #          cp /mingw64/x86_64-w64-mingw32/bin/{libwinpthread-1.dll,libgcc_s_seh-1.dll} /c/ProgramData/chocolatey/lib/rust/tools/bin
 #          pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
