@@ -11,13 +11,13 @@ gcc --version
 cd gmp-6.2.0
 ./configure --host=x86_64-w64-mingw32 CFLAGS="-march=x86-64"
 make
-#make check
+make check
 cd ..
 
 cd mpfr-4.0.2
 ./configure --host=x86_64-w64-mingw32 --with-gmp-include="../gmp-6.2.0/" --with-gmp-lib="../gmp-6.2.0/.libs/"  --enable-static --disable-shared CFLAGS="-march=x86-64"
 make
-#make check
+make check
 cd ..
 
 # These don't actually need to be built directly- they are built when opendp builds
