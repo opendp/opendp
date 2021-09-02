@@ -47,9 +47,9 @@ mod tests {
     #[test]
     fn test_make_bounded_sum_n() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_mean(
+            3 as c_uint,
             util::into_raw(0.0) as *const c_void,
             util::into_raw(10.0) as *const c_void,
-            3 as c_uint,
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);

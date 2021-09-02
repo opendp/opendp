@@ -83,8 +83,8 @@ mod tests {
         let transformation = Result::from(opendp_trans__make_resize_bounded(
             4 as c_uint,
             util::into_raw(0i32) as *const c_void,
-            util::into_raw(0i32) as *const c_void,
             util::into_raw(10i32) as *const c_void,
+            util::into_raw(0i32) as *const c_void,
             "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
