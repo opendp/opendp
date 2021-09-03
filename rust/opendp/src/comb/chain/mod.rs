@@ -231,8 +231,8 @@ mod tests_shr {
         (
             make_split_lines()? >>
             make_cast_default()? >>
-            make_clamp(0, 1)? >>
-            make_bounded_sum(0, 1)? >>
+            make_clamp((0, 1))? >>
+            make_bounded_sum((0, 1))? >>
             make_base_geometric(1., Some((0, 10)))?
         ).map(|_| ())
     }

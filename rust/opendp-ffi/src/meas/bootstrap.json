@@ -125,7 +125,7 @@
         "features": ["floating-point"],
         "args": [
             {
-                "name": "n",
+                "name": "size",
                 "c_type": "unsigned int",
                 "description": "Number of records in the input vector."
             },

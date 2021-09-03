@@ -14,28 +14,28 @@ use opendp::traits::CheckNull;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(
-    M: *const c_char, T: *const c_char,
+    M: *const c_char, TA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize_scalar<M, T>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize_scalar<M, TA>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              T: 'static + Clone + CheckNull {
-        make_identity::<AllDomain<T>, M>(AllDomain::<T>::new(), M::default()).into_any()
+              TA: 'static + Clone + CheckNull {
+        make_identity::<AllDomain<TA>, M>(AllDomain::<TA>::new(), M::default()).into_any()
     }
-    fn monomorphize_vec<M, T>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize_vec<M, TA>() -> FfiResult<*mut AnyTransformation>
         where M: 'static + DatasetMetric,
-              T: 'static + Clone + CheckNull {
-        make_identity::<VectorDomain<AllDomain<T>>, M>(VectorDomain::new(AllDomain::<T>::new()), M::default()).into_any()
+              TA: 'static + Clone + CheckNull {
+        make_identity::<VectorDomain<AllDomain<TA>>, M>(VectorDomain::new(AllDomain::<TA>::new()), M::default()).into_any()
     }
     let M = try_!(Type::try_from(M));
-    let T = try_!(Type::try_from(T));
-    match &T.contents {
+    let TA = try_!(Type::try_from(TA));
+    match &TA.contents {
         TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [
             (M, @dist_dataset),
             (try_!(Type::of_id(element_id)), @primitives)
         ], ()),
         _ => dispatch!(monomorphize_scalar, [
             (M, @dist_dataset),
-            (&T, @primitives)
+            (&TA, @primitives)
         ], ())
     }
 }
@@ -43,16 +43,16 @@ pub extern "C" fn opendp_trans__make_identity(
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_is_equal(
     value: *const AnyObject,
-    TI: *const c_char,
+    TIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let TI = try_!(Type::try_from(TI));
+    let TIA = try_!(Type::try_from(TIA));
 
-    fn monomorphize<TI>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
-        TI: 'static + Clone + PartialEq + CheckNull {
-        let value: TI = try_!(try_as_ref!(value).downcast_ref::<TI>()).clone();
-        make_is_equal::<TI>(value).into_any()
+    fn monomorphize<TIA>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
+        TIA: 'static + Clone + PartialEq + CheckNull {
+        let value: TIA = try_!(try_as_ref!(value).downcast_ref::<TIA>()).clone();
+        make_is_equal::<TIA>(value).into_any()
     }
-    dispatch!(monomorphize, [(TI, @primitives)], (value))
+    dispatch!(monomorphize, [(TIA, @primitives)], (value))
 }
 
 #[no_mangle]
@@ -60,22 +60,22 @@ pub extern "C" fn opendp_trans__make_is_null(
     DIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let DIA = try_!(Type::try_from(DIA));
-    let T = try_!(DIA.get_domain_atom());
+    let TIA = try_!(DIA.get_domain_atom());
 
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
-            fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
-                where T: 'static + CheckNull {
-                make_is_null::<OptionNullDomain<AllDomain<T>>>().into_any()
+            fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
+                where TIA: 'static + CheckNull {
+                make_is_null::<OptionNullDomain<AllDomain<TIA>>>().into_any()
             }
-            dispatch!(monomorphize, [(T, @primitives)], ())
+            dispatch!(monomorphize, [(TIA, @primitives)], ())
         }
         TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
-            fn monomorphize<T>() -> FfiResult<*mut AnyTransformation>
-                where T: 'static + InherentNull {
-                make_is_null::<InherentNullDomain<AllDomain<T>>>().into_any()
+            fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
+                where TIA: 'static + InherentNull {
+                make_is_null::<InherentNullDomain<AllDomain<TIA>>>().into_any()
             }
-            dispatch!(monomorphize, [(T, [f64, f32])], ())
+            dispatch!(monomorphize, [(TIA, [f64, f32])], ())
         },
         _ => err!(TypeParse, "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>").into()
     }

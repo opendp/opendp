@@ -59,7 +59,10 @@ pub struct Argument {
     // an example usage is _slice_as_object,
     //  to prevent the returned AnyObject from getting converted back to python
     #[serde(default)]
-    do_not_convert: bool
+    do_not_convert: bool,
+    // when is_type, use this as an example to infer the type
+    #[serde(default)]
+    example: Option<RuntimeType>
 }
 
 // deserialize "k": null as `Some(Value::Null)` and no key as `None`.
@@ -96,7 +99,7 @@ enum RuntimeType {
     // build a higher level RuntimeType
     Raise { origin: String, args: Vec<Box<RuntimeType>> },
     // construct the RuntimeType via function call
-    Function { function: String, params: Vec<String> },
+    Function { function: String, params: Vec<Box<RuntimeType>> },
 }
 
 impl<S: Into<String>> From<S> for RuntimeType {

@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::repeat;
-use std::str::FromStr;
 
 use crate::core::{Function, StabilityRelation, Transformation};
 use crate::data::Column;
@@ -81,49 +80,17 @@ pub fn make_split_dataframe<K>(
         StabilityRelation::new_from_constant(1)))
 }
 
-fn replace_col<K: Eq + Hash + Debug + Clone>(key: &K, df: &DataFrame<K>, col: Column) -> Fallible<DataFrame<K>> {
-    let mut df = df.clone();
-    *df.get_mut(key)
-        .ok_or_else(|| err!(FailedFunction, "column does not exist: {:?}", key))? = col;
-    Ok(df)
-}
-
-fn parse_column<K, T>(key: &K, impute: bool, df: &DataFrame<K>) -> Fallible<DataFrame<K>>
-    where T: 'static + Debug + Clone + PartialEq + FromStr + Default,
-          K: Eq + Hash + Clone + Debug,
-          T::Err: Debug {
-    let col: &Vec<String> = df.get(key)
-        .ok_or_else(|| err!(FailedFunction, "column does not exist: {:?}", key))?
-        .as_form()?;
-    let col = vec_string_to_str(col);
-    let col = parse_series::<T>(&col, impute)?;
-    replace_col(key, &df, col.into())
-}
-
-pub fn make_parse_column<K, T>(key: K, impute: bool) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Hash + Eq + Debug + Clone + CheckNull,
-          T: 'static + Debug + FromStr + Clone + Default + PartialEq,
-          T::Err: Debug {
-    Ok(Transformation::new(
-        create_dataframe_domain(),
-        create_dataframe_domain(),
-        Function::new_fallible(move |arg: &DataFrame<K>| parse_column::<K, T>(&key, impute, arg)),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1)))
-}
-
-pub fn make_select_column<K, T>(key: K) -> Fallible<Transformation<DataFrameDomain<K>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
+pub fn make_select_column<K, TOA>(key: K) -> Fallible<Transformation<DataFrameDomain<K>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
     where K: 'static + Eq + Hash + Debug + CheckNull,
-          T: 'static + Debug + Clone + PartialEq + CheckNull {
+          TOA: 'static + Debug + Clone + PartialEq + CheckNull {
     Ok(Transformation::new(
         create_dataframe_domain(),
         VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<T>> {
+        Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
             // retrieve column from dataframe and handle error
             arg.get(&key).ok_or_else(|| err!(FailedFunction, "column does not exist: {:?}", key))?
                 // cast down to &Vec<T>
-                .as_form::<Vec<T>>().map(|c| c.clone())
+                .as_form::<Vec<TOA>>().map(|c| c.clone())
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
@@ -155,16 +122,6 @@ pub fn make_split_lines() -> Fallible<Transformation<AllDomain<String>, VectorDo
         StabilityRelation::new_from_constant(1)))
 }
 
-fn parse_series<T>(col: &[&str], default_on_error: bool) -> Fallible<Vec<T>> where
-    T: FromStr + Default,
-    T::Err: Debug {
-    if default_on_error {
-        Ok(col.iter().map(|v| v.parse().unwrap_or_default()).collect())
-    } else {
-        col.iter().map(|v| v.parse().map_err(|e| err!(FailedCast, "{:?}", e))).collect()
-    }
-}
-
 fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
     fn split<'a>(line: &'a str, separator: &str) -> Vec<&'a str> {
         line.split(separator).into_iter().map(|e| e.trim()).collect()
@@ -191,9 +148,7 @@ pub fn make_split_records(separator: Option<&str>) -> Fallible<Transformation<Ve
 
 #[cfg(test)]
 mod tests {
-    use crate::comb::make_chain_tt;
     use crate::error::ExplainUnwrap;
-
     use super::*;
 
     #[test]
@@ -240,40 +195,6 @@ mod tests {
         let expected: DataFrame<String> = vec![
             ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
             ("1".to_owned(), Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()])),
-        ].into_iter().collect();
-        assert_eq!(ret, expected);
-    }
-
-    #[test]
-    fn test_make_parse_column() {
-        let transformation = make_parse_column::<_, i32>(1, true).unwrap_test();
-        let arg: DataFrame<usize> = vec![
-            (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            (1, Column::new(vec!["1".to_owned(), "2".to_owned(), "".to_owned()])),
-        ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap_test();
-        let expected: DataFrame<usize> = vec![
-            (0, Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            (1, Column::new(vec![1, 2, 0])),
-        ].into_iter().collect();
-        assert_eq!(ret, expected);
-    }
-
-    #[test]
-    fn test_make_parse_columns() {
-        let transformation0 = make_parse_column::<_, i32>("1".to_string(), true).unwrap_test();
-        let transformation1 = make_parse_column::<_, f64>("2".to_string(), true).unwrap_test();
-        let transformation = make_chain_tt(&transformation1, &transformation0, None).unwrap_test();
-        let arg: DataFrame<String> = vec![
-            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Column::new(vec!["1".to_owned(), "2".to_owned(), "3".to_owned()])),
-            ("2".to_owned(), Column::new(vec!["1.1".to_owned(), "2.2".to_owned(), "3.3".to_owned()])),
-        ].into_iter().collect();
-        let ret = transformation.function.eval(&arg).unwrap_test();
-        let expected: DataFrame<String> = vec![
-            ("0".to_owned(), Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()])),
-            ("1".to_owned(), Column::new(vec![1, 2, 3])),
-            ("2".to_owned(), Column::new(vec![1.1, 2.2, 3.3])),
         ].into_iter().collect();
         assert_eq!(ret, expected);
     }
