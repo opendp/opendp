@@ -2,14 +2,13 @@ use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::os::raw::c_char;
-use std::str::FromStr;
 
 use opendp::err;
-use opendp::trans::{make_create_dataframe, make_parse_column, make_select_column, make_split_dataframe, make_split_lines, make_split_records};
+use opendp::trans::{make_create_dataframe, make_select_column, make_split_dataframe, make_split_lines, make_split_records};
 
 use crate::any::{AnyObject, AnyTransformation, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::util::{c_bool, Type};
+use crate::util::Type;
 use crate::util;
 use opendp::traits::CheckNull;
 
@@ -56,43 +55,21 @@ pub extern "C" fn opendp_trans__make_split_dataframe(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_parse_column(
-    key: *const AnyObject, impute: c_bool,
-    K: *const c_char, T: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K, T>(key: *const AnyObject, impute: bool) -> FfiResult<*mut AnyTransformation> where
-        K: 'static + Hash + Eq + Debug + Clone + CheckNull,
-        T: 'static + Debug + Clone + PartialEq + FromStr + Default,
-        T::Err: Debug {
-        let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
-        make_parse_column::<K, T>(key, impute).into_any()
-    }
-    let K = try_!(Type::try_from(K));
-    let T = try_!(Type::try_from(T));
-    let impute = util::to_bool(impute);
-
-    dispatch!(monomorphize, [
-        (K, @hashable),
-        (T, @primitives)
-    ], (key, impute))
-}
-
-#[no_mangle]
 pub extern "C" fn opendp_trans__make_select_column(
-    key: *const AnyObject, K: *const c_char, T: *const c_char,
+    key: *const AnyObject, K: *const c_char, TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K, T>(key: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
+    fn monomorphize<K, TOA>(key: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
         K: 'static + Hash + Eq + Debug + Clone + CheckNull,
-        T: 'static + Debug + Clone + PartialEq + CheckNull {
+        TOA: 'static + Debug + Clone + PartialEq + CheckNull {
         let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
-        make_select_column::<K, T>(key).into_any()
+        make_select_column::<K, TOA>(key).into_any()
     }
     let K = try_!(Type::try_from(K));
-    let T = try_!(Type::try_from(T));
+    let TOA = try_!(Type::try_from(TOA));
 
     dispatch!(monomorphize, [
         (K, @hashable),
-        (T, @primitives)
+        (TOA, @primitives)
     ], (key))
 }
 
@@ -108,7 +85,6 @@ mod tests {
 
     use crate::any::{AnyObject, Downcast};
     use crate::core;
-    use crate::util;
     use crate::util::ToCharP;
 
     use super::*;
@@ -135,30 +111,6 @@ mod tests {
             res,
             dataframe(vec![
                 ("A", Column::new(to_owned(&["1", "2", "3"]))),
-                ("B", Column::new(to_owned(&["1.0", "2.0", "3.0"])))
-            ])
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_parse_column() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_parse_column(
-            util::into_raw(AnyObject::new("A".to_owned())),
-            util::from_bool(true),
-            "String".to_char_p(),
-            "i32".to_char_p(),
-        ))?;
-        let arg = util::into_raw(AnyObject::new(dataframe(vec![
-            ("A", Column::new(to_owned(&["1", "2", "3"]))),
-            ("B", Column::new(to_owned(&["1.0", "2.0", "3.0"])))
-        ])));
-        let res = core::opendp_core__transformation_invoke(&transformation, arg);
-        let res: HashMap<String, Column> = Fallible::from(res)?.downcast()?;
-        assert_eq!(
-            res,
-            dataframe(vec![
-                ("A", Column::new(vec![1, 2, 3])),
                 ("B", Column::new(to_owned(&["1.0", "2.0", "3.0"])))
             ])
         );

@@ -16,47 +16,47 @@ use crate::util::{Type};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast(
-    TI: *const c_char, TO: *const c_char
+    TIA: *const c_char, TOA: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
-    let TI = try_!(Type::try_from(TI));
-    let TO = try_!(Type::try_from(TO));
+    let TIA = try_!(Type::try_from(TIA));
+    let TOA = try_!(Type::try_from(TOA));
 
-    fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
-        where TI: 'static + Clone + CheckNull,
-              TO: 'static + RoundCast<TI> + CheckNull {
-        make_cast::<TI, TO>().into_any()
+    fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
+        where TIA: 'static + Clone + CheckNull,
+              TOA: 'static + RoundCast<TIA> + CheckNull {
+        make_cast::<TIA, TOA>().into_any()
     }
-    dispatch!(monomorphize, [(TI, @primitives), (TO, @primitives)], ())
+    dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast_default(
-    TI: *const c_char, TO: *const c_char,
+    TIA: *const c_char, TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let TI = try_!(Type::try_from(TI));
-    let TO = try_!(Type::try_from(TO));
+    let TIA = try_!(Type::try_from(TIA));
+    let TOA = try_!(Type::try_from(TOA));
 
-    fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
-        where TI: 'static + Clone + CheckNull,
-              TO: 'static + RoundCast<TI> + Default + CheckNull {
-        make_cast_default::<TI, TO>().into_any()
+    fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
+        where TIA: 'static + Clone + CheckNull,
+              TOA: 'static + RoundCast<TIA> + Default + CheckNull {
+        make_cast_default::<TIA, TOA>().into_any()
     }
-    dispatch!(monomorphize, [(TI, @primitives), (TO, @primitives)], ())
+    dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast_inherent(
-    TI: *const c_char, TO: *const c_char,
+    TIA: *const c_char, TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let TI = try_!(Type::try_from(TI));
-    let TO = try_!(Type::try_from(TO));
+    let TIA = try_!(Type::try_from(TIA));
+    let TOA = try_!(Type::try_from(TOA));
 
-    fn monomorphize<TI, TO>() -> FfiResult<*mut AnyTransformation>
-        where TI: 'static + Clone + CheckNull,
-              TO: 'static + RoundCast<TI> + InherentNull {
-        make_cast_inherent::<TI, TO>().into_any()
+    fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
+        where TIA: 'static + Clone + CheckNull,
+              TOA: 'static + RoundCast<TIA> + InherentNull {
+        make_cast_inherent::<TIA, TOA>().into_any()
     }
-    dispatch!(monomorphize, [(TI, @primitives), (TO, @floats)], ())
+    dispatch!(monomorphize, [(TIA, @primitives), (TOA, @floats)], ())
 }
 
 // The scope of this function has been reduced in the FFI layer from accepting any arbitrary domain,
@@ -64,22 +64,22 @@ pub extern "C" fn opendp_trans__make_cast_inherent(
 // This is because we don't have an established way of passing arbitrary domains over FFI
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_cast_metric(
-    MI: *const c_char, MO: *const c_char, T: *const c_char,
+    MI: *const c_char, MO: *const c_char, TA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let MI = try_!(Type::try_from(MI));
     let MO = try_!(Type::try_from(MO));
-    let T = try_!(Type::try_from(T));
+    let TA = try_!(Type::try_from(TA));
 
-    fn monomorphize<MI, MO, T>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<MI, MO, TA>() -> FfiResult<*mut AnyTransformation>
         where MI: 'static + DatasetMetric,
               MO: 'static + DatasetMetric,
               (MI, MO): DatasetMetricCast,
-              T: 'static + Clone + CheckNull {
-        make_cast_metric::<VectorDomain<AllDomain<T>>, MI, MO>(
+              TA: 'static + Clone + CheckNull {
+        make_cast_metric::<VectorDomain<AllDomain<TA>>, MI, MO>(
             VectorDomain::new_all()
         ).into_any()
     }
-    dispatch!(monomorphize, [(MI, @dist_dataset), (MO, @dist_dataset), (T, @primitives)], ())
+    dispatch!(monomorphize, [(MI, @dist_dataset), (MO, @dist_dataset), (TA, @primitives)], ())
 }
 
 

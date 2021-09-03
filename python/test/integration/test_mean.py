@@ -17,23 +17,22 @@ def test_dp_mean():
     col_names = ["A", "B", "C", "D", "E"]
     index = "E"
     impute_constant = 0.
-    lower = 0.
-    upper = 10000.
+    bounds = (0., 10000.)
     n = 1000
     scale = 1.
     preprocessor = (
         # Convert data into Vec<Vec<String>>
         make_split_dataframe(separator=",", col_names=col_names) >>
         # Selects a column of df, Vec<str>
-        make_select_column(key=index, T=str) >>
+        make_select_column(key=index, TOA=str) >>
         # Cast the column as Vec<Optional<Float>>
-        make_cast(TI=str, TO=float) >>
+        make_cast(TIA=str, TOA=float) >>
         # Impute missing values to 0 Vec<Float>
         make_impute_constant(impute_constant) >>
         # Clamp age values
-        make_clamp(lower, upper) >>
-        make_resize_bounded(impute_constant, n, lower, upper) >>
-        make_bounded_mean(lower, upper, n=n, T=float) >>
+        make_clamp(bounds) >>
+        make_bounded_resize(n, bounds, impute_constant) >>
+        make_sized_bounded_mean(n, bounds) >>
         make_base_laplace(scale)
     )
     res = preprocessor(data)

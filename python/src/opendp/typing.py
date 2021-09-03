@@ -122,7 +122,7 @@ class RuntimeType(object):
 
             domain = {
                 'AllDomain': AllDomain,
-                'IntervalDomain': IntervalDomain,
+                'BoundedDomain': BoundedDomain,
                 'VectorDomain': VectorDomain,
                 'OptionNullDomain': OptionNullDomain,
                 'InherentNullDomain': InherentNullDomain,
@@ -315,7 +315,7 @@ class Domain(RuntimeType):
 
 
 AllDomain = Domain('AllDomain')
-IntervalDomain = Domain('IntervalDomain')
+BoundedDomain = Domain('BoundedDomain')
 VectorDomain = Domain('VectorDomain')
 OptionNullDomain = Domain('OptionNullDomain')
 InherentNullDomain = Domain('InherentNullDomain')
@@ -332,3 +332,7 @@ def get_domain_atom(domain):
 
 def get_domain_atom_or_infer(domain: RuntimeType, example):
     return get_domain_atom(domain) or RuntimeType.infer(example)
+
+
+def get_first(value):
+    return value[0]

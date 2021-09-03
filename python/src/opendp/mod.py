@@ -297,14 +297,14 @@ def binary_search_chain(
     :example:
 
     >>> from opendp.mod import binary_search_chain
-    >>> from opendp.trans import make_clamp, make_resize_bounded, make_bounded_mean
+    >>> from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
     >>> from opendp.meas import make_base_laplace
     >>>
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     >>>     make_clamp(lower=0., upper=1.) >>
-    >>>     make_resize_bounded(constant=0., length=10, lower=0., upper=1.) >>
-    >>>     make_bounded_mean(lower=0., upper=1., n=10)
+    >>>     make_bounded_resize(size=10, lower=0., upper=1., constant=0.) >>
+    >>>     make_sized_bounded_mean(size=10, lower=0., upper=1.)
     >>> )
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.

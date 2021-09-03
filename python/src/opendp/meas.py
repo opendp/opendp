@@ -121,7 +121,7 @@ def make_base_geometric(
 
 
 def make_base_stability(
-    n: int,
+    size: int,
     scale,
     threshold,
     MI: SensitivityMetric,
@@ -130,8 +130,8 @@ def make_base_stability(
 ) -> Measurement:
     """Make a Measurement that implements a stability-based filtering and noising.
     
-    :param n: Number of records in the input vector.
-    :type n: int
+    :param size: Number of records in the input vector.
+    :type size: int
     :param scale: Noise scale parameter.
     :param threshold: Exclude counts that are less than this minimum value.
     :param MI: Input metric.
@@ -154,7 +154,7 @@ def make_base_stability(
     TIC = RuntimeType.parse(type_name=TIC)
     
     # Convert arguments to c types.
-    n = py_to_c(n, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_uint)
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=MI.args[0])
     threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=MI.args[0])
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
@@ -166,4 +166,4 @@ def make_base_stability(
     function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(n, scale, threshold, MI, TIK, TIC), Measurement))
+    return c_to_py(unwrap(function(size, scale, threshold, MI, TIK, TIC), Measurement))

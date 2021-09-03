@@ -494,10 +494,8 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Bound;
-
     use opendp::dist::{SubstituteDistance, MaxDivergence, SmoothedMaxDivergence, SymmetricDistance};
-    use opendp::dom::{AllDomain, IntervalDomain};
+    use opendp::dom::{AllDomain, BoundedDomain};
     use opendp::error::*;
     use opendp::meas;
     use opendp::trans;
@@ -506,19 +504,19 @@ mod tests {
 
     #[test]
     fn test_any_domain() -> Fallible<()> {
-        let domain1 = IntervalDomain::new(Bound::Included(0), Bound::Included(1))?;
-        let domain2 = IntervalDomain::new(Bound::Included(0), Bound::Included(1))?;
+        let domain1 = BoundedDomain::new_closed((0, 1))?;
+        let domain2 = BoundedDomain::new_closed((0, 1))?;
         // TODO: Add Debug to Domain so we can use assert_eq!.
         assert!(domain1 == domain2);
 
-        let domain1 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1))?);
-        let domain2 = AnyDomain::new(IntervalDomain::new(Bound::Included(0), Bound::Included(1))?);
+        let domain1 = AnyDomain::new(BoundedDomain::new_closed((0, 1))?);
+        let domain2 = AnyDomain::new(BoundedDomain::new_closed((0, 1))?);
         let domain3 = AnyDomain::new(AllDomain::<i32>::new());
         assert!(domain1 == domain2);
         assert!(domain1 != domain3);
 
-        let _domain1: IntervalDomain<i32> = domain1.downcast()?;
-        let domain3: Fallible<IntervalDomain<i32>> = domain3.downcast();
+        let _domain1: BoundedDomain<i32> = domain1.downcast()?;
+        let domain3: Fallible<BoundedDomain<i32>> = domain3.downcast();
         assert_eq!(domain3.err().unwrap_test().variant, ErrorVariant::FailedCast);
         Ok(())
     }
@@ -564,10 +562,10 @@ mod tests {
     #[test]
     fn test_any_chain() -> Fallible<()> {
         let t1 = trans::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?.into_any();
-        let t2 = trans::make_parse_column::<_, f64>("a".to_owned(), true)?.into_any();
-        let t3 = trans::make_select_column::<_, f64>("a".to_owned())?.into_any();
-        let t4 = trans::make_clamp(0.0, 10.0)?.into_any();
-        let t5 = trans::make_bounded_sum(0.0, 10.0)?.into_any();
+        let t2 = trans::make_select_column::<_, String>("a".to_owned())?.into_any();
+        let t3 = trans::make_cast_default::<String, f64>()?.into_any();
+        let t4 = trans::make_clamp((0.0, 10.0))?.into_any();
+        let t5 = trans::make_bounded_sum((0.0, 10.0))?.into_any();
         let m1 = meas::make_base_gaussian::<AllDomain<_>>(0.0)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
