@@ -13,12 +13,17 @@ use std::ops::Bound;
 use crate::core::Domain;
 use crate::error::Fallible;
 use crate::traits::{CheckNull, TotalOrd};
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 
 /// A Domain that contains all non-null members of the carrier type.
-#[derive(Debug)]
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
+}
+impl<T> Debug for AllDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        // TODO: if Type were in-scope, then use Type::of::<T>().unwrap().to_string()
+        write!(f, "AllDomain()")
+    }
 }
 impl<T> Default for AllDomain<T> {
     fn default() -> Self { Self::new() }
@@ -82,10 +87,24 @@ impl<D: Domain> Domain for DataDomain<D> where
 
 
 /// A Domain that contains all the values bounded by an interval.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct BoundedDomain<T> {
     lower: Bound<T>,
     upper: Bound<T>,
+}
+impl<T: Debug> Debug for BoundedDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        // TODO: if Type were in-scope, then use Type::of::<T>().unwrap().to_string()
+        write!(f, "BoundedDomain({}, {})", match &self.lower {
+            Bound::Included(v) => format!("[{:?}", v),
+            Bound::Excluded(v) => format!("({:?}", v),
+            Bound::Unbounded => "(-∞".to_string()
+        }, match &self.upper {
+            Bound::Included(v) => format!("{:?}]", v),
+            Bound::Excluded(v) => format!("{:?})", v),
+            Bound::Unbounded => "∞)".to_string()
+        })
+    }
 }
 impl<T: TotalOrd> BoundedDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
@@ -156,8 +175,8 @@ pub struct MapDomain<DK: Domain, DV: Domain> where DK::Carrier: Eq + Hash {
     pub value_domain: DV
 }
 impl<DK: Domain, DV: Domain> MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
-    pub fn new(key_domain: DK, element_domain: DV) -> Self {
-        MapDomain { key_domain, value_domain: element_domain }
+    pub fn new(key_domain: DK, value_domain: DV) -> Self {
+        MapDomain { key_domain, value_domain }
     }
 }
 impl<K: CheckNull + Debug, V: CheckNull + Debug> MapDomain<AllDomain<K>, AllDomain<V>> where K: Eq + Hash {
@@ -179,9 +198,14 @@ impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV> where DK::Carrier: Eq 
 
 
 /// A Domain that contains vectors of (homogeneous) values.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct VectorDomain<D: Domain> {
     pub element_domain: D,
+}
+impl<D: Domain> Debug for VectorDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "VectorDomain({:?})", self.element_domain)
+    }
 }
 impl<D: Domain + Default> Default for VectorDomain<D> {
     fn default() -> Self { Self::new(D::default()) }
@@ -207,10 +231,15 @@ impl<D: Domain> Domain for VectorDomain<D> {
 }
 
 /// A Domain that specifies the length of the enclosed domain
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct SizedDomain<D: Domain> {
     pub element_domain: D,
     pub size: usize
+}
+impl<D: Domain> Debug for SizedDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "SizedDomain({:?}, size={})", self.element_domain, self.size)
+    }
 }
 impl<D: Domain> SizedDomain<D> {
     pub fn new(member_domain: D, size: usize) -> Self {
@@ -225,10 +254,15 @@ impl<D: Domain> Domain for SizedDomain<D> {
 }
 
 /// A domain with a built-in representation of nullity, that may take on null values at runtime
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct InherentNullDomain<D: Domain>
     where D::Carrier: InherentNull {
     pub element_domain: D,
+}
+impl<D: Domain> Debug for InherentNullDomain<D> where D::Carrier: InherentNull {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "InherentNullDomain({:?})", self.element_domain)
+    }
 }
 impl<D: Domain + Default> Default for InherentNullDomain<D>
     where D::Carrier: InherentNull {
@@ -260,9 +294,14 @@ impl_inherent_null_float!(f64, f32);
 /// The value inside is non-null by definition.
 /// Transformations should not emit data that can take on null-values at runtime.
 /// For example, it is fine to have an OptionDomain<AllDomain<f64>>, but the f64 should never be nan
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 pub struct OptionNullDomain<D: Domain> {
     pub element_domain: D,
+}
+impl<D: Domain> Debug for OptionNullDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "OptionNullDomain({:?})", self.element_domain)
+    }
 }
 impl<D: Domain + Default> Default for OptionNullDomain<D> {
     fn default() -> Self { Self::new(D::default()) }

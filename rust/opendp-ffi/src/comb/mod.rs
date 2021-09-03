@@ -2,9 +2,6 @@ use opendp::comb::{make_basic_composition, make_chain_mt, make_chain_tt};
 
 use crate::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
 use crate::core::FfiResult;
-use crate::util::Type;
-use num::Float;
-use std::fmt::Debug;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -45,6 +42,7 @@ mod tests {
 
     use super::*;
     use opendp::traits::CheckNull;
+    use std::fmt::Debug;
 
     // TODO: Find all the places we've duplicated this code and replace with common function.
     pub fn make_test_measurement<T: Clone + CheckNull + Debug>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
