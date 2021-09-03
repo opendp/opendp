@@ -3,42 +3,49 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![ci tests](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)
 
-[OpenDP](https://opendp.org) is a community effort to build trustworthy, open-source software tools for statistical analysis of sensitive private data. This repository contains OpenDP Core, a library of differential privacy algorithms powering OpenDP.
+OpenDP is a modular library of statistical algorithms that adhere to the definition of [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy). It can be used to build applications of privacy-preserving computations, using a number of different models of privacy. OpenDP is implemented in Rust, with bindings for easy use from Python.
 
-## *WARNING*
-Please note that this library is still under development and not ready for production use. An important element of the OpenDP project is a formal vetting process that all library components must undergo, to verify their privacy characteristics. The code in this repository hasn't yet undergone that vetting. In addition to privacy concerns, it also likely has programming bugs.
-
-Feel free to explore the code, but *please do not yet rely on it for any privacy-sensitive applications*.
-
-## Overview
-OpenDP Core is a library of differential privacy algorithms for performing statistical analysis of private data. It consists of two conceptual layers:
-
-* A theoretical framework for expressing privacy-aware operations. This framework is described in the paper,
+The architecture of OpenDP is based on a conceptual framework for expressing privacy-aware computations. This framework is described in the paper,
 [A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
 
-* A set of algorithmic components implemented within the conceptual framework. These components can be used "out of the box" to build applications for handling private data.
-
-## Implementation
-OpenDP Core is packaged as a library that can be incorporated into applications. Public APIs to the library are provided in Python and Rust, with more language bindings possible based on interest. The underlying logic of the library is implemented in native Rust.
+OpenDP (the library) is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy, open-source software tools for analysis of private data.
 
 ## Status
-OpenDP Core is early in its initial development. We're building out the main concepts of the OpenDP Programming Framework, and providing implementations of several common privacy mechanisms and summary statistics. Our focus is on correctness and developer usability.
 
-The current code is functional, but not ready for general usage. The APIs are unstable and subject to extensive change. Aspects of the library are likely difficult to understand without examining the sources. Documentation and sample code is forthcoming.
+OpenDP is under development, and we aim to [release new versions](https://github.com/opendp/opendp/releases) frequently. It's a work in progress, but we feel that OpenDP already can be used to build some useful applications. We also hope that it may be a vehicle for exploring new ideas in privacy. We welcome you to try it, and look forward to feedback on the usability of the library! However, please be aware of the following limitations.
 
-## Communication
-- You are very welcome to join us on [GitHub Discussions](https://github.com/opendp/opendp/discussions)!
-- Please use [GitHub Issues](https://github.com/opendp/opendp/issues) for bug reports and feature requests.
-- For other requests, including security issues, please contact us at [info@opendp.org](mailto:info@opendp.org).
+### WARNING
 
+OpenDP is not yet recommended for production deployments. It has known privacy concerns, particularly around floating point handling and side channel attacks. We expect to address these issues, but until then, *please don't use OpenDP for any privacy-critical applications*.
 
-## Install
-- [From PyPI](https://pypi.org/project/opendp/)
-- [From Crates.io](https://crates.io/crates/opendp)
-- [From Source](https://docs.opendp.org/en/latest/resources/dev-guide/general-logistics/dev-environment.html)
+More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/stable/user/limitations.html)
+
+## Installation
+
+The easiest way to install OpenDP is using `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
+
+    % pip install opendp
+
+More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/stable/user/getting-started.html)
 
 ## Documentation
-- [Overview](https://docs.opendp.org)
-- [Python API](https://docs.opendp.org/en/latest/api/python/index.html)
-- [Rust API](https://docs.rs/opendp/)
-    
+
+The full documentation for OpenDP is located at https://docs.opendp.org. Here are some helpful entry points:
+
+* [User Guide](https://docs.opendp.org/en/stable/user/index.html)
+* [Python API Docs](https://docs.opendp.org/en/stable/api/python/index.html)
+* [Developer Guide](https://docs.opendp.org/en/stable/developer/index.html)
+
+## Getting Help
+
+If you're having problems using OpenDP, or want to submit feedback, please reach out! Here are some ways to contact us:
+
+* Ask questions on our [discussions forum](https://github.com/opendp/opendp/discussions)
+* Open issues on our [issue tracker](https://github.com/opendp/opendp/issues)
+* Send critical bugs to [security@opendp.org](mailto:security@opendp.org)
+* Send general queries to [info@opendp.org](mailto:info@opendp.org)
+* Reach us on Twitter at [@opendp_org](https://twitter.com/opendp_org)
+
+## Contributing
+
+OpenDP is a community effort, and we welcome your contributions to its development! If you'd like to participate, please see the [Contributing section of the Developer Guide](https://docs.opendp.org/en/stable/developer/contributing.html)
