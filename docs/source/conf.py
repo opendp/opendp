@@ -42,7 +42,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = '0.2.0-rc.6'
+version = '0.2.0'
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
