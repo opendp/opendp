@@ -26,18 +26,22 @@ use crate::dom::PairDomain;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast};
 use crate::dist::IntDistance;
+use crate::comb::{IsSizedDomain, AmplifiableMeasure};
+
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
-pub trait Domain: Clone + PartialEq {
+pub trait Domain {
     /// The underlying type that the Domain specializes.
     type Carrier;
     /// Predicate to test an element for membership in the domain.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
+    /// Convert to a sized domain
+    fn as_sized_domain(&self) -> Fallible<&dyn IsSizedDomain<Carrier=Self::Carrier>> {fallible!(FailedFunction, "this domain is not sized")}
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-pub struct Function<DI: Domain, DO: Domain> {
+pub struct Function<DI: Domain + ?Sized, DO: Domain + ?Sized> {
     pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
 }
 impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
@@ -82,8 +86,11 @@ pub trait Metric: Default + Clone + PartialEq {
 }
 
 /// A representation of the distance between two distributions.
-pub trait Measure: Default + Clone + PartialEq {
+pub trait Measure {
     type Distance;
+    fn to_amplifiable(&self) -> Fallible<&dyn AmplifiableMeasure<Distance=Self::Distance>> {
+        fallible!(FailedCast, "failed to cast Measure to AmplifiableMeasure")
+    }
 }
 
 /// An indicator trait that is only implemented for dataset distances.

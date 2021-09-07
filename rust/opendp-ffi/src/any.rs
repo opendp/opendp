@@ -207,10 +207,11 @@ pub struct AnyDomain {
     pub carrier_type: Type,
     pub domain: AnyBoxClonePartialEq,
     member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>>,
+    get_size_glue: Glue<fn(&Self) -> Fallible<usize>>,
 }
 
 impl AnyDomain {
-    pub fn new<D: 'static + Domain>(domain: D) -> Self {
+    pub fn new<D: 'static + Domain + Clone + PartialEq>(domain: D) -> Self {
         Self {
             carrier_type: Type::of::<D::Carrier>(),
             domain: AnyBoxClonePartialEq::new_clone_partial_eq(domain),
@@ -219,6 +220,11 @@ impl AnyDomain {
                     .unwrap_assert("downcast of AnyDomain to constructed type will always work");
                 self_.member(val.downcast_ref::<D::Carrier>()?)
             }),
+            get_size_glue: Glue::new(|self_: &Self| {
+                let self_: &D = self_.downcast_ref::<D>()
+                    .unwrap_assert("downcast of AnyDomain to constructed type will always work");
+                self_.as_sized_domain()?.get_size()
+            })
         }
     }
 }
@@ -242,14 +248,19 @@ impl Domain for AnyDomain {
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasure {
     pub measure: AnyBoxClonePartialEq,
-    pub distance_type: Type
+    pub distance_type: Type,
+    amplify_glue: Glue<fn(&Self, &AnyObject, usize, usize) -> Fallible<AnyObject>>,
 }
 
 impl AnyMeasure {
-    pub fn new<M: 'static + Measure>(measure: M) -> Self {
+    pub fn new<M: 'static + Measure + Clone + PartialEq>(measure: M) -> Self {
         Self {
             measure: AnyBoxClonePartialEq::new_clone_partial_eq(measure),
-            distance_type: Type::of::<M::Distance>()
+            distance_type: Type::of::<M::Distance>(),
+            amplify_glue: Glue::new(|self_: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize| -> Fallible<AnyObject> {
+                let budget = budget.downcast_ref::<M::Distance>()?;
+                self_.downcast_ref::<M>()?.to_amplifiable()?.amplify(budget, n_population, n_sample).map(AnyObject::new)
+            })
         }
     }
 }
@@ -408,7 +419,7 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
+impl<DI: 'static + Domain + Clone + PartialEq, DO: 'static + Domain + Clone + PartialEq, MI: 'static + Metric, MO: 'static + Measure + Clone + PartialEq> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
           MI::Distance: 'static + Clone + PartialOrd,
@@ -431,7 +442,7 @@ pub trait IntoAnyMeasurementOutExt {
     fn into_any_out(self) -> AnyMeasurement;
 }
 
-impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DO, AnyMetric, AnyMeasure>
+impl<DO: 'static + Domain + Clone + PartialEq> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DO, AnyMetric, AnyMeasure>
     where DO::Carrier: 'static {
     fn into_any_out(self) -> AnyMeasurement {
         AnyMeasurement::new(
@@ -455,7 +466,7 @@ pub trait IntoAnyTransformationExt {
     fn into_any(self) -> AnyTransformation;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric> IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
+impl<DI: 'static + Domain + Clone + PartialEq, DO: 'static + Domain + Clone + PartialEq, MI: 'static + Metric, MO: 'static + Metric> IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
           MI::Distance: 'static + Clone + PartialOrd,

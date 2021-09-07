@@ -60,7 +60,12 @@ pub struct AcState<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     d_out_budget: MO::Distance,
     data: DI::Carrier,
 }
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> where MO::Distance: MeasureDistance {
+impl<DI, DO, MI, MO> AcState<DI, DO, MI, MO>
+    where DI: Domain + PartialEq + Clone,
+          DO: Domain + PartialEq + Clone,
+          MI: Metric,
+          MO: Measure + PartialEq + Clone,
+          MO::Distance: MeasureDistance {
     pub fn new(
         input_domain: DI,
         output_domain: DO,
@@ -131,12 +136,12 @@ pub fn make_adaptive_composition<DI, DO, MI, MO>(
     d_in_budget: MI::Distance,
     d_out_budget: MO::Distance,
 ) -> AcMeasurement<DI, DO, MI, MO>
-    where DI: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
           DI::Carrier: Clone,
-          DO: 'static + Domain,
+          DO: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
           MI::Distance: 'static + MetricDistance + Clone,
-          MO: 'static + Measure,
+          MO: 'static + Measure + Clone + PartialEq,
           MO::Distance: 'static + MeasureDistance + Clone {
     AcMeasurement::new(
         input_domain.clone(),

@@ -3,6 +3,10 @@
 use std::marker::PhantomData;
 
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
+use crate::error::Fallible;
+use crate::comb::{AmplifiableMeasure};
+use crate::traits::ExactIntCast;
+use num::Float;
 
 // default type for distances between datasets
 pub type IntDistance = u32;
@@ -18,8 +22,12 @@ impl<Q> PartialEq for MaxDivergence<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
 
-impl<Q: Clone> Measure for MaxDivergence<Q> {
+impl<Q: Clone + ExactIntCast<usize> + Float> Measure for MaxDivergence<Q> {
     type Distance = Q;
+
+    fn to_amplifiable(&self) -> Fallible<&dyn AmplifiableMeasure<Distance=Q>> {
+        Ok(self)
+    }
 }
 
 #[derive(Clone)]
@@ -33,8 +41,12 @@ impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
 
-impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
+impl<Q: Clone + ExactIntCast<usize> + Float> Measure for SmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
+
+    fn to_amplifiable(&self) -> Fallible<&dyn AmplifiableMeasure<Distance=Self::Distance>> {
+        Ok(self)
+    }
 }
 
 /// Metrics

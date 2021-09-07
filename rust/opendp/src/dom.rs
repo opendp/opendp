@@ -13,6 +13,7 @@ use std::ops::Bound;
 use crate::core::Domain;
 use crate::error::Fallible;
 use crate::traits::{CheckNull, TotalOrd};
+use crate::comb::IsSizedDomain;
 
 /// A Domain that contains all non-null members of the carrier type.
 pub struct AllDomain<T> {
@@ -216,6 +217,7 @@ impl<D: Domain> Domain for SizedDomain<D> {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         self.element_domain.member(val)
     }
+    fn as_sized_domain(&self) -> Fallible<&dyn IsSizedDomain<Carrier=D::Carrier>> { Ok(self) }
 }
 
 /// A domain with a built-in representation of nullity, that may take on null values at runtime

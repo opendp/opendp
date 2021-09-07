@@ -11,7 +11,7 @@ use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 use opendp::dom::{AllDomain, VectorDomain};
-use opendp::traits::{InfCast, CheckNull};
+use opendp::traits::{InfCast, CheckNull, ExactIntCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(
@@ -19,8 +19,8 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
     D: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement> where
-        D: 'static + GaussianDomain,
-        D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull {
+        D: 'static + GaussianDomain + Clone + PartialEq,
+        D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + ExactIntCast<usize> {
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_gaussian::<D>(scale).into_any()
     }

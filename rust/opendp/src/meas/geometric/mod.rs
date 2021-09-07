@@ -4,7 +4,7 @@ use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleTwoSidedGeometric;
 use num::Float;
-use crate::traits::{DistanceConstant, InfCast, CheckNull, TotalOrd};
+use crate::traits::{DistanceConstant, InfCast, CheckNull, TotalOrd, ExactIntCast};
 
 
 pub trait GeometricDomain: Domain {
@@ -47,7 +47,7 @@ pub fn make_base_geometric<D, QO>(
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
     where D: 'static + GeometricDomain,
           D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
-          QO: 'static + Float + DistanceConstant<D::Atom>,
+          QO: 'static + Float + DistanceConstant<D::Atom> + ExactIntCast<usize>,
           f64: From<QO> {
     if scale.is_sign_negative() { return fallible!(MakeMeasurement, "scale must not be negative") }
     if bounds.as_ref().map(|(lower, upper)| lower > upper).unwrap_or(false) {

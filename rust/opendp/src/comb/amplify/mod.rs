@@ -4,7 +4,6 @@ use crate::dom::SizedDomain;
 use crate::error::Fallible;
 use num::Float;
 use crate::traits::ExactIntCast;
-use std::ops::Div;
 
 pub trait IsSizedDomain: Domain { fn get_size(&self) -> Fallible<usize>; }
 impl<D: Domain> IsSizedDomain for SizedDomain<D> {
@@ -16,14 +15,14 @@ pub trait AmplifiableMeasure: Measure {
 }
 
 impl<Q> AmplifiableMeasure for MaxDivergence<Q>
-    where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
+    where Q: ExactIntCast<usize> + Float {
     fn amplify(&self, epsilon: &Q, n_population: usize, n_sample: usize) -> Fallible<Q> {
         let sampling_rate = Q::exact_int_cast(n_sample)? / Q::exact_int_cast(n_population)?;
         Ok((epsilon.exp_m1() / sampling_rate).ln_1p())
     }
 }
 impl<Q> AmplifiableMeasure for SmoothedMaxDivergence<Q>
-    where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
+    where Q: ExactIntCast<usize> + Float {
     fn amplify(&self, (epsilon, delta): &(Q, Q), n_population: usize, n_sample: usize) -> Fallible<(Q, Q)> {
         let sampling_rate = Q::exact_int_cast(n_sample)? / Q::exact_int_cast(n_population)?;
         Ok(((epsilon.exp_m1() / sampling_rate).ln_1p(), *delta / sampling_rate))
@@ -34,10 +33,10 @@ pub fn make_population_amplification<DIA, DO, MI, MO>(
     measurement: &Measurement<DIA, DO, MI, MO>,
     n_population: usize,
 ) -> Fallible<Measurement<DIA, DO, MI, MO>>
-    where DIA: IsSizedDomain,
-          DO: Domain,
+    where DIA: IsSizedDomain + Clone,
+          DO: Domain + Clone,
           MI: 'static + Metric,
-          MO: 'static + AmplifiableMeasure {
+          MO: 'static + AmplifiableMeasure + Clone + PartialEq {
     let mut measurement = measurement.clone();
     let n_sample = measurement.input_domain.get_size()?;
     if n_population < n_sample { return fallible!(MakeMeasurement, "population size cannot be less than sample size") }

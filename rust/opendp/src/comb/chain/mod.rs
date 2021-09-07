@@ -9,12 +9,12 @@ pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     transformation0: &Transformation<DI, DX, MI, MX>,
     hint: Option<&HintMt<MI, MO, MX>>,
 ) -> Fallible<Measurement<DI, DO, MI, MO>>
-    where DI: 'static + Domain,
-          DX: 'static + Domain,
-          DO: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
+          DX: 'static + Domain + PartialEq + Clone,
+          DO: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
           MX: 'static + Metric,
-          MO: 'static + Measure {
+          MO: 'static + Measure + Clone + PartialEq {
     if transformation0.output_domain != measurement1.input_domain {
         return fallible!(DomainMismatch, "Intermediate domain mismatch");
     } else if transformation0.output_metric != measurement1.input_metric {
@@ -36,9 +36,9 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
     transformation0: &Transformation<DI, DX, MI, MX>,
     hint: Option<&HintTt<MI, MO, MX>>,
 ) -> Fallible<Transformation<DI, DO, MI, MO>>
-    where DI: 'static + Domain,
-          DX: 'static + Domain,
-          DO: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
+          DX: 'static + Domain + PartialEq + Clone,
+          DO: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Metric {
@@ -59,11 +59,11 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
 }
 
 pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, MO>>
-    where DI: 'static + Domain,
-          DO0: 'static + Domain,
-          DO1: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
+          DO0: 'static + Domain + PartialEq + Clone,
+          DO1: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
-          MO: 'static + Measure {
+          MO: 'static + Measure + Clone + PartialEq {
     if measurement0.input_domain != measurement1.input_domain {
         return fallible!(DomainMismatch, "Input domain mismatch");
     } else if measurement0.input_metric != measurement1.input_metric {
@@ -163,12 +163,12 @@ mod tests {
 
 
 impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Transformation<DI, DX, MI, MX>
-    where DI: 'static + Domain,
-          DX: 'static + Domain,
-          DO: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
+          DX: 'static + Domain + PartialEq + Clone,
+          DO: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
           MX: 'static + Metric,
-          MO: 'static + Measure {
+          MO: 'static + Measure + Clone + PartialEq {
     type Output = Fallible<Measurement<DI, DO, MI, MO>>;
 
     fn shr(self, rhs: Measurement<DX, DO, MX, MO>) -> Self::Output {
@@ -177,12 +177,12 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Transformation
 }
 
 impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Fallible<Transformation<DI, DX, MI, MX>>
-    where DI: 'static + Domain,
-          DX: 'static + Domain,
-          DO: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
+          DX: 'static + Domain + PartialEq + Clone,
+          DO: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
           MX: 'static + Metric,
-          MO: 'static + Measure {
+          MO: 'static + Measure + Clone + PartialEq {
     type Output = Fallible<Measurement<DI, DO, MI, MO>>;
 
     fn shr(self, rhs: Measurement<DX, DO, MX, MO>) -> Self::Output {
@@ -191,9 +191,9 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Fallible<Trans
 }
 
 impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Transformation<DI, DX, MI, MX>
-    where DI: 'static + Domain,
-          DX: 'static + Domain,
-          DO: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
+          DX: 'static + Domain + PartialEq + Clone,
+          DO: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Metric {
@@ -205,9 +205,9 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Transformat
 }
 
 impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Fallible<Transformation<DI, DX, MI, MX>>
-    where DI: 'static + Domain,
-          DX: 'static + Domain,
-          DO: 'static + Domain,
+    where DI: 'static + Domain + PartialEq + Clone,
+          DX: 'static + Domain + PartialEq + Clone,
+          DO: 'static + Domain + PartialEq + Clone,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Metric {
