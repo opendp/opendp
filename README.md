@@ -5,14 +5,14 @@
 
 OpenDP is a modular library of statistical algorithms that adhere to the definition of [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy). It can be used to build applications of privacy-preserving computations, using a number of different models of privacy. OpenDP is implemented in Rust, with bindings for easy use from Python.
 
-The architecture of OpenDP is based on a conceptual framework for expressing privacy-aware computations. This framework is described in the paper,
+The architecture of OpenDP is based on a conceptual framework for expressing privacy-aware computations. This framework is described in the paper
 [A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
 
-OpenDP (the library) is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy, open-source software tools for analysis of private data.
+OpenDP (the library) is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy, open source software tools for analysis of private data.
 
 ## Status
 
-OpenDP is under development, and we aim to [release new versions](https://github.com/opendp/opendp/releases) frequently. It's a work in progress, but we feel that OpenDP already can be used to build some useful applications. We also hope that it may be a vehicle for exploring new ideas in privacy. We welcome you to try it, and look forward to feedback on the usability of the library! However, please be aware of the following limitations.
+OpenDP is under development, and we aim to [release new versions](https://github.com/opendp/opendp/releases) frequently. It's a work in progress, but we feel that OpenDP already can be used to build some useful applications. We also hope that it may be a vehicle for exploring new ideas in privacy. We welcome you to try it and look forward to feedback on the usability of the library! However, please be aware of the following limitations.
 
 ### WARNING
 

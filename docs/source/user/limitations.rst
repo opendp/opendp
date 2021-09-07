@@ -7,7 +7,7 @@ Limitations
 Overview
 --------
 
-OpenDP is early in its development history. We aim to build *the* trusted implementation of differtial privacy algorithms, but we're not there yet. We feel that OpenDP already can be used to build some useful applications, but please be aware of the following limitations.
+OpenDP is early in its development history. We aim to build *the* trusted implementation of differential privacy algorithms, but we're not there yet. We feel that OpenDP already can be used to build some useful applications, but please be aware of the following limitations.
 
 Privacy Concerns
 ----------------
@@ -23,7 +23,7 @@ We know that these issues are critical for a privacy library, and are formulatin
 Incomplete Privacy Proofs
 -------------------------
 
-An important element of the OpenDP project is a formal vetting process that all library components must undergo, to verify their privacy characteristics. This process involves supplying mathematical proofs of the privacy properties of all algorithms, and validating that all code faithfully implements the specified algorithms.
+An important element of the OpenDP project is a formal vetting process that all library components must undergo, to verify their privacy characteristics. This process involves supplying mathematical proofs of the privacy properties of all algorithms and validating that all code faithfully implements the specified algorithms.
 
 For the most part, the code in OpenDP hasn't yet undergone that vetting. This process is underway, but will take time. Therefore, we can't yet properly vouch for the privacy claims of the implemented algorithms. If mathematical verifiability is important to you, then you shouldn't yet rely on the code in OpenDP.
 
