@@ -5,7 +5,7 @@ license-file = "../../LICENSE"
 readme = "../../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
-version = "0.2.0-rc.3"
+version = "0.2.0-rc.4"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
 
