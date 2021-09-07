@@ -9,7 +9,7 @@ fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2
     let str1 = format!("{:?}", struct1);
     let str2 = format!("{:?}", struct2);
     let explanation = if str1 == str2 {
-        format!("\n    The structure of the intermediate {mode}s are the same, but the types or parameters differ.\n    shared_{mode}: {str1}", mode=mode, str1=str1)
+        format!("\n    The structure of the intermediate {mode}s are the same, but the types or parameters differ.\n    shared_{mode}: {str1}\n", mode=mode, str1=str1)
     } else {
         format!("\n    output_{mode}: {struct1}\n    input_{mode}:  {struct2}\n", mode=mode, struct1=str1, struct2=str2)
     };
