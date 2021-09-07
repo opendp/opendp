@@ -3,6 +3,18 @@ use std::ops::Shr;
 use crate::core::{Domain, Function, HintMt, HintTt, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
 use crate::dom::PairDomain;
 use crate::error::Fallible;
+use std::fmt::Debug;
+
+fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2) -> String {
+    let str1 = format!("{:?}", struct1);
+    let str2 = format!("{:?}", struct2);
+    let explanation = if str1 == str2 {
+        format!("\n    The structure of the intermediate {mode}s are the same, but the types or parameters differ.\n    shared_{mode}: {str1}", mode=mode, str1=str1)
+    } else {
+        format!("\n    output_{mode}: {struct1}\n    input_{mode}:  {struct2}\n", mode=mode, struct1=str1, struct2=str2)
+    };
+    return format!("Intermediate {}s don't match.{}", mode, explanation)
+}
 
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     measurement1: &Measurement<DX, DO, MX, MO>,
@@ -16,9 +28,10 @@ pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
           MX: 'static + Metric,
           MO: 'static + Measure {
     if transformation0.output_domain != measurement1.input_domain {
-        return fallible!(DomainMismatch, "Intermediate domain mismatch");
-    } else if transformation0.output_metric != measurement1.input_metric {
-        return fallible!(MetricMismatch, "Intermediate metric mismatch");
+        return fallible!(DomainMismatch, mismatch_message("domain", &transformation0.output_domain, &measurement1.input_domain))
+    }
+    if transformation0.output_metric != measurement1.input_metric {
+        return fallible!(MetricMismatch, mismatch_message("metric", &transformation0.output_metric, &measurement1.input_metric))
     }
 
     Ok(Measurement::new(
@@ -43,9 +56,10 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
           MX: 'static + Metric,
           MO: 'static + Metric {
     if transformation0.output_domain != transformation1.input_domain {
-        return fallible!(DomainMismatch, "Intermediate domain mismatch");
-    } else if transformation0.output_metric != transformation1.input_metric {
-        return fallible!(MetricMismatch, "Intermediate metric mismatch");
+        return fallible!(DomainMismatch, mismatch_message("domain", &transformation0.output_domain, &transformation1.input_domain))
+    }
+    if transformation0.output_metric != transformation1.input_metric {
+        return fallible!(MetricMismatch, mismatch_message("metric", &transformation0.output_metric, &transformation1.input_metric))
     }
 
     Ok(Transformation::new(

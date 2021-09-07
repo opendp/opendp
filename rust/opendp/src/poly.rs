@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::core::{Domain, Function, Measure, Measurement, Metric, Transformation};
 use crate::error::*;
+use std::fmt::{Formatter, Debug};
 
 /// A polymorphic Domain. This admits any value of any type (represented as a Box<dyn Any>).
 #[derive(PartialEq, Clone)]
@@ -11,7 +12,11 @@ pub struct PolyDomain {}
 impl PolyDomain {
     pub fn new() -> Self { PolyDomain {} }
 }
-
+impl Debug for PolyDomain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "PolyDomain()")
+    }
+}
 impl Domain for PolyDomain {
     type Carrier = Box<dyn Any>;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> { Ok(true) }
