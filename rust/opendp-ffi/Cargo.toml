@@ -5,7 +5,7 @@ license-file = "../../LICENSE"
 readme = "../../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
-version = "0.2.0-rc.5"
+version = "0.2.0-rc.6"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
 build = "build/main.rs"
@@ -17,7 +17,7 @@ backtrace = "0.3"
 
 [dependencies.opendp]
 path = "../opendp"
-version = "0.2.0-rc.5"
+version = "0.2.0-rc.6"
 default-features = false
 
 [build-dependencies]
