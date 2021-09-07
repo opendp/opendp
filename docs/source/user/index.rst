@@ -6,6 +6,7 @@ User Guide
 .. toctree::
 
    intro
+   limitations
    getting-started
    programming-framework
    core-structures
