@@ -15,6 +15,9 @@ use opendp::error::*;
 
 use crate::glue::Glue;
 use crate::util::Type;
+use opendp::comb::AmplifiableMeasure;
+use num::Float;
+use opendp::traits::ExactIntCast;
 
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
@@ -249,18 +252,36 @@ impl Domain for AnyDomain {
 pub struct AnyMeasure {
     pub measure: AnyBoxClonePartialEq,
     pub distance_type: Type,
-    amplify_glue: Glue<fn(&Self, &AnyObject, usize, usize) -> Fallible<AnyObject>>,
+    amplify_glue: Option<Glue<fn(&Self, &AnyObject, usize, usize) -> Fallible<AnyObject>>>,
 }
-
 impl AnyMeasure {
     pub fn new<M: 'static + Measure + Clone + PartialEq>(measure: M) -> Self {
+
+        fn monomorphize1<QO: 'static + Float + ExactIntCast<usize>>(
+            measure_type: Type
+        ) -> Fallible<Glue<fn(&AnyMeasure, &AnyObject, usize, usize) -> Fallible<AnyObject>>> {
+            fn monomorphize2<M: 'static + AmplifiableMeasure>(
+            ) -> Fallible<Glue<fn(&AnyMeasure, &AnyObject, usize, usize) -> Fallible<AnyObject>>> {
+                Ok(Glue::new(|self_: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize| -> Fallible<AnyObject> {
+                    let measure = self_.downcast_ref::<M>()?;
+                    let budget = budget.downcast_ref::<M::Distance>()?;
+                    measure.amplify(budget, n_population, n_sample).map(AnyObject::new)
+                }))
+            }
+            use opendp::dist::{MaxDivergence, SmoothedMaxDivergence};
+            dispatch!(monomorphize2, [
+                (measure_type, [MaxDivergence<QO>, SmoothedMaxDivergence<QO>])
+            ], ())
+        }
+
         Self {
             measure: AnyBoxClonePartialEq::new_clone_partial_eq(measure),
             distance_type: Type::of::<M::Distance>(),
-            amplify_glue: Glue::new(|self_: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize| -> Fallible<AnyObject> {
-                let budget = budget.downcast_ref::<M::Distance>()?;
-                self_.downcast_ref::<M>()?.to_amplifiable()?.amplify(budget, n_population, n_sample).map(AnyObject::new)
-            })
+            // amplify_glue: Glue::new(|self_: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize| -> Fallible<AnyObject> {
+            //     let budget = budget.downcast_ref::<M::Distance>()?;
+            //     self_.downcast_ref::<M>()?.to_amplifiable()?.amplify(budget, n_population, n_sample).map(AnyObject::new)
+            // })
+            amplify_glue: dispatch!(monomorphize1, [(Type::of::<M::Distance>(), @floats)], (Type::of::<M>())).ok()
         }
     }
 }

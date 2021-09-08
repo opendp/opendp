@@ -69,8 +69,6 @@ impl AmplifiableMeasure for AnyMeasure {
 impl IsSizedDomain for AnyDomain {
     fn get_size(&self) -> Fallible<usize> {
 
-
-
         fn monomorphize1<TIA>(domain: &AnyDomain, DIA: Type) -> Fallible<usize>
             where TIA: 'static + Clone + TotalOrd + CheckNull {
 

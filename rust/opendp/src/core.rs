@@ -26,7 +26,7 @@ use crate::dom::PairDomain;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast};
 use crate::dist::IntDistance;
-use crate::comb::{IsSizedDomain, AmplifiableMeasure};
+use crate::comb::IsSizedDomain;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -88,9 +88,6 @@ pub trait Metric: Default + Clone + PartialEq {
 /// A representation of the distance between two distributions.
 pub trait Measure {
     type Distance;
-    fn to_amplifiable(&self) -> Fallible<&dyn AmplifiableMeasure<Distance=Self::Distance>> {
-        fallible!(FailedCast, "failed to cast Measure to AmplifiableMeasure")
-    }
 }
 
 /// An indicator trait that is only implemented for dataset distances.
