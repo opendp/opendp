@@ -651,7 +651,7 @@ macro_rules! impl_sample_uniform_unsigned_int {
 impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
 #[cfg(test)]
-mod test {
+mod test_uniform_int {
     use super::*;
     use std::collections::HashMap;
 
@@ -666,6 +666,154 @@ mod test {
             Fallible::Ok(())
         })?;
         println!("{:?}", counts);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test_samplers {
+    use std::fmt::Debug;
+    use std::iter::Sum;
+    use std::ops::{Div, Sub};
+
+    use num::traits::real::Real;
+    use statrs::function::erf;
+
+    use super::*;
+    use num::NumCast;
+
+    /// returns z-statistic that satisfies p == ∫P(x)dx over (-∞, z),
+    ///     where P is the standard normal distribution
+    fn normal_cdf_inverse(p: f64) -> f64 {
+        std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * p)
+    }
+
+    macro_rules! c {($expr:expr; $ty:ty) => ({let t: $ty = NumCast::from($expr).unwrap(); t})}
+
+    fn test_proportion_parameters<T, FS: Fn() -> T>(sampler: FS, p_pop: T, alpha: f64, err_margin: T) -> bool
+        where T: Sum<T> + Sub<Output=T> + Div<Output=T> + Real + Debug + One {
+
+        // |z_{alpha/2}|
+        let z_stat = c!(normal_cdf_inverse(alpha / 2.).abs(); T);
+
+        // derived sample size necessary to conduct the test
+        let n: T = (p_pop * (T::one() - p_pop) * (z_stat / err_margin).powi(2)).ceil();
+
+        // confidence interval for the mean
+        let abs_p_tol = z_stat * (p_pop * (T::one() - p_pop) / n).sqrt(); // almost the same as err_margin
+
+        println!("sampling {:?} observations to detect a change in proportion with {:.4?}% confidence",
+                 c!(n; u32), (1. - alpha) * 100.);
+
+        // take n samples from the distribution, compute average as empirical proportion
+        let p_emp: T = (0..c!(n; u32)).map(|_| sampler()).sum::<T>() / n;
+
+        let passed = (p_emp - p_pop).abs() < abs_p_tol;
+
+        println!("stat: (tolerance, pop, emp, passed)");
+        println!("    proportion:     {:?}, {:?}, {:?}, {:?}", abs_p_tol, p_pop, p_emp, passed);
+        println!();
+
+        passed
+    }
+
+    #[test]
+    fn test_bernoulli() {
+        [0.2, 0.5, 0.7, 0.9].iter().for_each(|p|
+            assert!(test_proportion_parameters(
+                || if bool::sample_bernoulli(*p, false).unwrap() {1.} else {0.},
+                *p, 0.00001, *p / 100.),
+                    "empirical evaluation of the bernoulli({:?}) distribution failed", p)
+        )
+    }
+
+    #[test]
+    #[cfg(feature="test-plot")]
+    fn plot_geometric() -> Fallible<()> {
+
+        let shift = 0;
+        let scale = 5.;
+
+        let title = format!("Geometric(shift={}, scale={}) distribution", shift, scale);
+        let data = (0..10_000)
+            .map(|_| i8::sample_two_sided_geometric(0, 1., None))
+            .collect::<Fallible<Vec<i8>>>()?;
+
+        use vega_lite_4::*;
+        VegaliteBuilder::default()
+            .title(title)
+            .data(&data)
+            .mark(Mark::Bar)
+            .encoding(
+                EdEncodingBuilder::default()
+                    .x(XClassBuilder::default()
+                        .field("data")
+                        .position_def_type(Type::Nominal)
+                        .build()?)
+                    .y(YClassBuilder::default()
+                        .field("data")
+                        .position_def_type(Type::Quantitative)
+                        .aggregate(NonArgAggregateOp::Count)
+                        .build()?)
+                    .build()?,
+            )
+            .build()?.show().unwrap();
+        Ok(())
+    }
+
+    #[cfg(feature="test-plot")]
+    fn plot_continuous(title: String, data: Vec<f64>) -> Fallible<()> {
+        use vega_lite_4::*;
+
+        VegaliteBuilder::default()
+            .title(title)
+            .data(&data)
+            .mark(Mark::Area)
+            .transform(vec![TransformBuilder::default().density("data").build()?])
+            .encoding(
+                EdEncodingBuilder::default()
+                    .x(XClassBuilder::default()
+                        .field("value")
+                        .position_def_type(Type::Quantitative)
+                        .build()?)
+                    .y(YClassBuilder::default()
+                        .field("density")
+                        .position_def_type(Type::Quantitative)
+                        .build()?)
+                    .build()?,
+            )
+            .build()?.show().unwrap_test();
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(feature="test-plot")]
+    fn plot_laplace() -> Fallible<()> {
+        let shift = 0.;
+        let scale = 5.;
+
+        let title = format!("Laplace(shift={}, scale={}) distribution", shift, scale);
+        let data = (0..10_000)
+            .map(|_| f64::sample_laplace(shift, scale, false))
+            .collect::<Fallible<Vec<f64>>>()?;
+
+        plot_continuous(title, data).unwrap_test();
+        Ok(())
+    }
+
+
+    #[test]
+    #[cfg(feature="test-plot")]
+    fn plot_gaussian() -> Fallible<()> {
+        let shift = 0.;
+        let scale = 5.;
+
+        let title = format!("Gaussian(shift={}, scale={}) distribution", shift, scale);
+        let data = (0..10_000)
+            .map(|_| f64::sample_gaussian(shift, scale, false))
+            .collect::<Fallible<Vec<f64>>>()?;
+
+        plot_continuous(title, data).unwrap_test();
         Ok(())
     }
 }
