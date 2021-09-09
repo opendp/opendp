@@ -41,7 +41,7 @@ macro_rules! build_extern_accuracy {
     }
 }
 
-build_extern_accuracy!(accuracy, opendp_accuracy__accuracy_to_laplacian_scale, accuracy_to_laplacian_scale);
 build_extern_accuracy!(scale, opendp_accuracy__laplacian_scale_to_accuracy, laplacian_scale_to_accuracy);
-build_extern_accuracy!(accuracy, opendp_accuracy__accuracy_to_gaussian_scale, accuracy_to_gaussian_scale);
+build_extern_accuracy!(accuracy, opendp_accuracy__accuracy_to_laplacian_scale, accuracy_to_laplacian_scale);
 build_extern_accuracy!(scale, opendp_accuracy__gaussian_scale_to_accuracy, gaussian_scale_to_accuracy);
+build_extern_accuracy!(accuracy, opendp_accuracy__accuracy_to_gaussian_scale, accuracy_to_gaussian_scale);

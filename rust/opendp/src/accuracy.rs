@@ -50,7 +50,7 @@ pub fn accuracy_to_gaussian_scale<T>(accuracy: T, alpha: T) -> Fallible<T>
     if alpha <= 0. || 1. <= alpha {
         return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)")
     }
-    T::inf_cast(accuracy / SQRT_2 * erf_inv(1. - alpha))
+    T::inf_cast(accuracy / SQRT_2 / erf_inv(1. - alpha))
 }
 
 
@@ -60,6 +60,9 @@ pub mod test {
     use std::ops::{Mul, Sub};
 
     use super::*;
+    use crate::meas::{make_base_laplace, make_base_gaussian};
+    use crate::error::ExplainUnwrap;
+    use crate::dom::AllDomain;
 
     fn print_statement<T: Copy + Debug + One + From<i8> + Sub<Output=T> + Mul<Output=T>>(dist: &str, scale: T, accuracy: T, alpha: T) {
         let _100 = T::from(100);
@@ -112,6 +115,110 @@ pub mod test {
         check_accuracy_to_gaussian_scale!(accuracy=1., alpha=0.05);
         check_accuracy_to_gaussian_scale!(accuracy=2., alpha=0.05);
         check_accuracy_to_gaussian_scale!(accuracy=1.2, alpha=0.1);
+        Ok(())
+    }
+
+
+    #[test]
+    fn test_relative_laplacian_scale_to_accuracy() -> Fallible<()> {
+        // fix the scale.
+        // you get a tighter accuracy interval when you require greater statistical significance
+        // a higher confidence accuracy interval is wider than a lower confidence accuracy interval
+        assert!(laplacian_scale_to_accuracy(1., 0.05)? // 95% confidence
+            > laplacian_scale_to_accuracy(1., 0.06)?); // 94% confidence
+
+        // fix the alpha/statistical significance.
+        // you get a tighter accuracy interval when there is less noise
+        // a less noisy sample produces a tighter/smaller accuracy interval
+        assert!(laplacian_scale_to_accuracy(2., 0.05)? // 95% confidence
+            > laplacian_scale_to_accuracy(1., 0.05)?); // 95% confidence
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_relative_accuracy_to_laplacian_scale() -> Fallible<()> {
+        // fix the size of the accuracy interval.
+        // if I want more confidence in the result, then I should have less noise
+        // you get a larger noise scale when you require greater statistical significance
+        // a higher confidence laplace scale is smaller than a lower confidence laplace scale
+        assert!(accuracy_to_laplacian_scale(1., 0.05)? // 95% confidence
+            < accuracy_to_laplacian_scale(1., 0.06)?); // 94% confidence
+
+        // fix alpha/statistical significance.
+        // you get a larger noise scale when there is a wider accuracy interval
+        assert!(accuracy_to_laplacian_scale(2., 0.05)? // 95% confidence
+            > accuracy_to_laplacian_scale(1., 0.05)?); // 95% confidence
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_relative_gaussian_scale_to_accuracy() -> Fallible<()> {
+        // fix the scale.
+        // you get a tighter accuracy interval when you require greater statistical significance
+        // a higher confidence accuracy interval is wider than a lower confidence accuracy interval
+        assert!(gaussian_scale_to_accuracy(1., 0.05)? // 95% confidence
+            > gaussian_scale_to_accuracy(1., 0.06)?); // 94% confidence
+
+        // fix the alpha/statistical significance.
+        // you get a tighter accuracy interval when there is less noise
+        // a less noisy sample produces a tighter/smaller accuracy interval
+        assert!(gaussian_scale_to_accuracy(2., 0.05)? // 95% confidence
+            > gaussian_scale_to_accuracy(1., 0.05)?); // 95% confidence
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_relative_accuracy_to_gaussian_scale() -> Fallible<()> {
+        // fix the size of the accuracy interval.
+        // if I want more confidence in the result, then I should have less noise
+        // you get a larger noise scale when you require greater statistical significance
+        // a higher confidence noise scale is smaller than a lower confidence noise scale
+        assert!(accuracy_to_gaussian_scale(1., 0.05)? // 95% confidence
+            < accuracy_to_gaussian_scale(1., 0.06)?); // 94% confidence
+
+        // fix alpha/statistical significance.
+        // you get a larger noise scale when there is a wider accuracy interval
+        assert!(accuracy_to_gaussian_scale(2., 0.05)? // 95% confidence
+            > accuracy_to_gaussian_scale(1., 0.05)?); // 95% confidence
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_empirical_laplace_accuracy() -> Fallible<()> {
+        let accuracy = 1.0;
+        let theoretical_alpha = 0.05;
+        let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
+        let base_laplace = make_base_laplace::<AllDomain<f64>>(scale)?;
+        let n = 50_000;
+        let empirical_alpha = (0..n)
+            .filter(|_| base_laplace.function.eval(&0.0).unwrap_test().abs() > accuracy)
+            .count() as f64 / n as f64;
+
+        println!("Laplacian significance levels/alpha");
+        println!("Theoretical: {:?}", theoretical_alpha);
+        println!("Empirical:   {:?}", empirical_alpha);
+        assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
+        let accuracy = 1.0;
+        let theoretical_alpha = 0.05;
+        let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
+        let base_gaussian = make_base_gaussian::<AllDomain<f64>>(scale)?;
+        let n = 50_000;
+        let empirical_alpha = (0..n)
+            .filter(|_| base_gaussian.function.eval(&0.0).unwrap_test().abs() > accuracy)
+            .count() as f64 / n as f64;
+
+        println!("Gaussian significance levels/alpha");
+        println!("Theoretical: {:?}", theoretical_alpha);
+        println!("Empirical:   {:?}", empirical_alpha);
+        assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
         Ok(())
     }
 }
