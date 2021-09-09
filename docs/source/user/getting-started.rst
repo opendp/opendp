@@ -30,6 +30,6 @@ Once you've installed OpenDP, you can write your first program. In the example b
     >>> from opendp.trans import make_identity
     >>> from opendp.typing import SubstituteDistance
 
-    >>> identity = make_identity(M=SubstituteDistance, T=str)
+    >>> identity = make_identity(M=SubstituteDistance, TA=str)
     >>> identity("Hello, world!")
     'Hello, world!'
