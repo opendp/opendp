@@ -152,4 +152,5 @@ pub mod poly;
 pub mod samplers;
 pub mod traits;
 pub mod trans;
+pub mod sarus;
 pub mod comb;

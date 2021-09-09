@@ -2,5 +2,6 @@
 
 members = [
     "opendp",
-    "opendp-ffi"
+    "opendp-ffi",
+    "example"
 ]
