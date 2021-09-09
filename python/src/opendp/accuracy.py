@@ -46,7 +46,7 @@ def accuracy_to_laplacian_scale(
     """Convert a desired accuracy into a laplacian noise scale.
     
     :param accuracy: Desired accuracy.
-    :param alpha: Level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1).
+    :param alpha: Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1).
     :param T: Data type of accuracy and alpha
     :type T: RuntimeTypeDescriptor
     :return: Laplacian noise scale that meets the accuracy requirement at a level-alpha.
@@ -112,7 +112,7 @@ def accuracy_to_gaussian_scale(
     """Convert a desired accuracy into a gaussian noise scale.
     
     :param accuracy: Desired accuracy.
-    :param alpha: Level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1).
+    :param alpha: Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1).
     :param T: Data type of accuracy and alpha
     :type T: RuntimeTypeDescriptor
     :return: Gaussian noise scale that meets the accuracy requirement at a level-alpha.
