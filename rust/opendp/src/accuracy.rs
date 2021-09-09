@@ -221,4 +221,16 @@ pub mod test {
         assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
         Ok(())
     }
+
+    #[test]
+    pub fn test_roundtrip() -> Fallible<()> {
+        let accuracy = 1.;
+        let alpha = 0.05;
+        let accuracy_2 = gaussian_scale_to_accuracy(accuracy_to_gaussian_scale(accuracy, alpha)?, alpha)?;
+        assert!((accuracy - accuracy_2).abs() < 1e-8);
+
+        let accuracy_2 = laplacian_scale_to_accuracy(accuracy_to_laplacian_scale(accuracy, alpha)?, alpha)?;
+        assert!((accuracy - accuracy_2).abs() < 1e-8);
+        Ok(())
+    }
 }
