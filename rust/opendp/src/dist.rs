@@ -3,6 +3,7 @@
 use std::marker::PhantomData;
 
 use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
+use std::fmt::{Debug, Formatter};
 
 // default type for distances between datasets
 pub type IntDistance = u32;
@@ -16,6 +17,12 @@ impl<Q> Default for MaxDivergence<Q> {
 
 impl<Q> PartialEq for MaxDivergence<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
+}
+
+impl<Q> Debug for MaxDivergence<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "MaxDivergence()")
+    }
 }
 
 impl<Q: Clone> Measure for MaxDivergence<Q> {
@@ -32,7 +39,11 @@ impl<Q> Default for SmoothedMaxDivergence<Q> {
 impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-
+impl<Q> Debug for SmoothedMaxDivergence<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "SmoothedMaxDivergence()")
+    }
+}
 impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
@@ -47,6 +58,11 @@ impl Default for SymmetricDistance {
 
 impl PartialEq for SymmetricDistance {
     fn eq(&self, _other: &Self) -> bool { true }
+}
+impl Debug for SymmetricDistance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "SymmetricDistance()")
+    }
 }
 impl Metric for SymmetricDistance {
     type Distance = IntDistance;
@@ -64,7 +80,11 @@ impl Default for SubstituteDistance {
 impl PartialEq for SubstituteDistance {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-
+impl Debug for SubstituteDistance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "SubstituteDistance()")
+    }
+}
 impl Metric for SubstituteDistance {
     type Distance = IntDistance;
 }
@@ -82,6 +102,11 @@ impl<Q, const P: usize> Clone for LpDistance<Q, P> {
 }
 impl<Q, const P: usize> PartialEq for LpDistance<Q, P> {
     fn eq(&self, _other: &Self) -> bool { true }
+}
+impl<Q, const P: usize> Debug for LpDistance<Q, P> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "L{}Distance()", P)
+    }
 }
 impl<Q, const P: usize> Metric for LpDistance<Q, P> {
     type Distance = Q;
@@ -102,6 +127,11 @@ impl<Q> Clone for AbsoluteDistance<Q> {
 }
 impl<Q> PartialEq for AbsoluteDistance<Q> {
     fn eq(&self, _other: &Self) -> bool { true }
+}
+impl<Q> Debug for AbsoluteDistance<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "AbsoluteDistance()")
+    }
 }
 impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;

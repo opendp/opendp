@@ -13,10 +13,16 @@ use std::ops::Bound;
 use crate::core::Domain;
 use crate::error::Fallible;
 use crate::traits::{CheckNull, TotalOrd};
+use std::fmt::{Debug, Formatter};
 
 /// A Domain that contains all non-null members of the carrier type.
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
+}
+impl<T> Debug for AllDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "AllDomain()")
+    }
 }
 impl<T> Default for AllDomain<T> {
     fn default() -> Self { Self::new() }
@@ -41,7 +47,7 @@ impl<T: CheckNull> Domain for AllDomain<T> {
 
 
 /// A Domain that carries an underlying Domain in a Box.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct BoxDomain<D: Domain> {
     element_domain: Box<D>
 }
@@ -59,7 +65,7 @@ impl<D: Domain> Domain for BoxDomain<D> {
 
 
 /// A Domain that unwraps a Data wrapper.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct DataDomain<D: Domain> {
     pub form_domain: D,
 }
@@ -79,14 +85,18 @@ impl<D: Domain> Domain for DataDomain<D> where
 }
 
 
-/// A Domain that contains all the values in an interval.
+/// A Domain that contains all the values bounded by an interval.
 #[derive(Clone, PartialEq)]
-pub struct IntervalDomain<T> {
+pub struct BoundedDomain<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: TotalOrd> IntervalDomain<T> {
-    pub fn new(lower: Bound<T>, upper: Bound<T>) -> Fallible<Self> {
+impl<T: TotalOrd> BoundedDomain<T> {
+    pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
+        Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
+    }
+    pub fn new(bounds: (Bound<T>, Bound<T>)) -> Fallible<Self> {
+        let (lower, upper) = bounds;
         fn get<T>(value: &Bound<T>) -> Option<&T> {
             match value {
                 Bound::Included(value) => Some(value),
@@ -108,10 +118,15 @@ impl<T: TotalOrd> IntervalDomain<T> {
                 }
             }
         }
-        Ok(IntervalDomain { lower, upper })
+        Ok(BoundedDomain { lower, upper })
     }
 }
-impl<T: Clone + TotalOrd> Domain for IntervalDomain<T> {
+impl<T> Debug for BoundedDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "BoundedDomain()")
+    }
+}
+impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         Ok(match &self.lower {
@@ -128,7 +143,7 @@ impl<T: Clone + TotalOrd> Domain for IntervalDomain<T> {
 
 
 /// A Domain that contains pairs of values.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct PairDomain<D0: Domain, D1: Domain>(pub D0, pub D1);
 impl<D0: Domain, D1: Domain> PairDomain<D0, D1> {
     pub fn new(element_domain0: D0, element_domain1: D1) -> Self {
@@ -144,7 +159,7 @@ impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1> {
 
 
 /// A Domain that contains maps of (homogeneous) values.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct MapDomain<DK: Domain, DV: Domain> where DK::Carrier: Eq + Hash {
     pub key_domain: DK,
     pub value_domain: DV
@@ -177,6 +192,11 @@ impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV> where DK::Carrier: Eq 
 pub struct VectorDomain<D: Domain> {
     pub element_domain: D,
 }
+impl<D: Domain> Debug for VectorDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "VectorDomain({:?})", self.element_domain)
+    }
+}
 impl<D: Domain + Default> Default for VectorDomain<D> {
     fn default() -> Self { Self::new(D::default()) }
 }
@@ -204,11 +224,16 @@ impl<D: Domain> Domain for VectorDomain<D> {
 #[derive(Clone, PartialEq)]
 pub struct SizedDomain<D: Domain> {
     pub element_domain: D,
-    pub length: usize
+    pub size: usize
 }
 impl<D: Domain> SizedDomain<D> {
-    pub fn new(member_domain: D, length: usize) -> Self {
-        SizedDomain { element_domain: member_domain, length }
+    pub fn new(member_domain: D, size: usize) -> Self {
+        SizedDomain { element_domain: member_domain, size }
+    }
+}
+impl<D: Domain> Debug for SizedDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "SizedDomain({:?}, size={})", self.element_domain, self.size)
     }
 }
 impl<D: Domain> Domain for SizedDomain<D> {
@@ -231,6 +256,11 @@ impl<D: Domain + Default> Default for InherentNullDomain<D>
 impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
     pub fn new(member_domain: D) -> Self {
         InherentNullDomain { element_domain: member_domain }
+    }
+}
+impl<D: Domain> Debug for InherentNullDomain<D> where D::Carrier: InherentNull {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "InherentNullDomain({:?})", self.element_domain)
     }
 }
 impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull {
@@ -264,6 +294,11 @@ impl<D: Domain + Default> Default for OptionNullDomain<D> {
 impl<D: Domain> OptionNullDomain<D> {
     pub fn new(member_domain: D) -> Self {
         OptionNullDomain { element_domain: member_domain }
+    }
+}
+impl<D: Domain> Debug for OptionNullDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "OptionNullDomain({:?})", self.element_domain)
     }
 }
 impl<D: Domain> Domain for OptionNullDomain<D> {

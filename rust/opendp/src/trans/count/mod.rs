@@ -94,7 +94,7 @@ pub fn make_count_by_categories<MO, TI, TO>(
 // This implementation could be made tighter with the relation in the spreadsheet for known n.
 // Need to double-check if stability-based histograms have any additional stability requirements.
 pub fn make_count_by<MO, TI, TO>(
-    n: usize
+    size: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance>,
@@ -102,8 +102,8 @@ pub fn make_count_by<MO, TI, TO>(
           TO: Integer + Zero + One + SaturatingAdd + CheckNull,
           IntDistance: InfCast<MO::Distance> {
     Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new_all(), n),
-        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+        SizedDomain::new(VectorDomain::new_all(), size),
+        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, size),
         Function::new(move |data: &Vec<TI>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {

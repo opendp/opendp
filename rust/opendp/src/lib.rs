@@ -57,8 +57,8 @@
 //!     let load_numbers = make_chain_tt(&cast, &split_lines, None)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = make_clamp(bounds.0, bounds.1)?;
-//!     let bounded_sum = make_bounded_sum(bounds.0, bounds.1)?;
+//!     let clamp = make_clamp(bounds)?;
+//!     let bounded_sum = make_bounded_sum(bounds)?;
 //!     let laplace = make_base_laplace(sigma)?;
 //!     let intermediate = make_chain_tt(&bounded_sum, &clamp, None)?;
 //!     let noisy_sum = make_chain_mt(&laplace, &intermediate, None)?;
@@ -153,3 +153,4 @@ pub mod samplers;
 pub mod traits;
 pub mod trans;
 pub mod comb;
+pub mod accuracy;

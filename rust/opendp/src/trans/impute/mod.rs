@@ -14,9 +14,10 @@ use crate::traits::CheckNull;
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
 /// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
 pub fn make_impute_uniform_float<T>(
-    lower: T, upper: T,
+    bounds: (T, T)
 ) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
     where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull + CheckNull {
+    let (lower, upper) = bounds;
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
@@ -80,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_impute_uniform() {
-        let imputer = make_impute_uniform_float::<f64>(2.0, 2.0).unwrap_test();
+        let imputer = make_impute_uniform_float::<f64>((2.0, 2.0)).unwrap_test();
 
         let result = imputer.function.eval(&vec![1.0, f64::NAN]).unwrap_test();
 

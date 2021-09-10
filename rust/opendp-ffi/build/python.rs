@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -260,6 +259,11 @@ fn generate_flag_check(features: &Vec<String>) -> String {
 
 /// generate code that provides an example of the type of the type_arg
 fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<String> {
+    // the json has supplied explicit instructions to find an example
+    if let Some(example) = &type_arg.example {
+        return Some(example.to_python())
+    }
+
     let type_name = type_arg.name.as_ref().unwrap();
 
     // rewrite args to remove references to derived types
@@ -343,7 +347,9 @@ impl RuntimeType {
             Self::Lower { root: arg, index } =>
                 format!("{}.args[{}]", arg.to_python(), index),
             Self::Function { function, params } =>
-                format!("{function}({params})", function = function, params = params.join(", ")),
+                format!("{function}({params})", function = function, params = params.iter()
+                    .map(|v| v.to_python())
+                    .collect::<Vec<_>>().join(", ")),
             Self::Raise { origin, args } =>
                 format!("RuntimeType(origin='{origin}', args=[{args}])",
                         origin = origin,

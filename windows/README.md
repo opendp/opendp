@@ -25,7 +25,7 @@ These instructions are part of the process for preparing a multiplatform OpenDP 
 1. Install choco `https://chocolatey.org/install`
    
 1. Install dependencies
-   ```shell
+   ```cmd
    choco install rust
    rustup toolchain install stable-x86_64-pc-windows-gnu
    rustup default stable-x86_64-pc-windows-gnu
@@ -36,28 +36,31 @@ These instructions are part of the process for preparing a multiplatform OpenDP 
    
 1. Set the environment variable:
    `MSYS=winsymlinks:nativestrict`
-
+   
+1. Set up wsl, then restart:
+   `wsl --install`
+   
 1. Install MSYS2 dependencies and patch rust
-   ```shell
+   ```bash
    pacman -S --noconfirm git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
-   cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib
+   cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib/self-contained
    ```
    See more in-depth comments in the [Technical Details](#technical-details) section.
    
 1. Download sources and apply patches to the sources
-   ```shell
+   ```cmd
    chmod +x windows/1_download_and_patch.sh
    (cd windows && bash 1_download_and_patch.sh)
    ```
    
 1. Build gmp and mpfr. Run these commands in an elevated MSYS2 shell
-   ```shell
+   ```cmd
    chmod +x windows/2_build_dependencies.sh
    (cd windows && bash 2_build_dependencies.sh)
    ```
    
 1. Build the opendp library! This must also be run in an MSYS2 shell.
-   ```shell
+   ```cmd
    export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
    (cd rust && cargo build)
    ```
@@ -86,5 +89,5 @@ The Cargo.toml for the rust crate rug is modified to point to the customized gmp
 The Cargo.toml for the opendp crate is modified to point to the modified rug and gmp-mpfr-sys crates.
 
 # Attribution
-This repository is largely based on build instructions by Wenming Ye at AWS and Joshua Allen at Microsoft.
+This patch is largely based on build instructions by Wenming Ye at AWS and Joshua Allen at Microsoft.
 If you run your own build, please share your experiences to help us improve the build process.
