@@ -77,16 +77,6 @@ Deep Learning with Differential Privacy
 
 https://arxiv.org/pdf/1607.00133.pdf
 
-Rényi Differential Privacy
-
-https://arxiv.org/pdf/1702.07476.pdf
-
-Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds
-
-(zCDP)
-
-https://arxiv.org/pdf/1605.02065.pdf
-
 U.S. Broadband Coverage Data Set: A Differentially Private Data Release
 
 https://arxiv.org/pdf/2103.14035.pdf
