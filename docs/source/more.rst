@@ -8,6 +8,7 @@ More...
 
 .. toctree::
 
+   resources/index
    faq
    developer/index
    opendp-commons/index
