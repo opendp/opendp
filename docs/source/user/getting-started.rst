@@ -93,6 +93,10 @@ Next, you'll need to build the Rust binaries. This is done by running ``cargo bu
     cd rust
     cargo build
 
+.. note::
+
+    If you're using Windows, you may encounter problems when ``cargo`` tries to compile some dependencies. There are detailed instructions and scripts for dealing with this in the `windows subdirectory <https://github.com/opendp/opendp/tree/main/windows>`_ of the repository. (A quick workaround is to use the following variation: ``cargo build --no-default-features``.)
+
 This will compile a debug version of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. (The specific name of the library file will vary depending on your platform.)
 
 Finally, you can create a local Python package that incorporates your new shared library. This is possible by using ``pip install`` with the ``-e`` option in the ``python`` subdirectory:
@@ -129,9 +133,9 @@ Once you've installed OpenDP, you can write your first program. In the example b
     >>> identity("Hello, world!")
     'Hello, world!'
 
-First, we import some types to have them in scope. ``make_identity`` is a constructor function, and ``SubstituteDistance`` is a type we need for disambiguation.
+First, we import some types to have them in scope. ``make_identity`` is a constructor function, and ``SymmetricDistance`` is a type we need for disambiguation.
 
-Next we call ``make_identity()`` to construct an identity ``Transformation``. Because OpenDP is statically typed (even when called from dynamically typed languages like Python), we need to specify some type information. This is done by supplying some key-value arguments. ``M=SubstituteDistance`` says that we want the resulting ``Transformation`` to use the OpenDP type ``SubstituteDistance`` for its ``Metric``, and ``TA=str`` says that we want the ``Transformation`` to use the Python type ``str`` for its input and output type.
+Next we call ``make_identity()`` to construct an identity ``Transformation``. Because OpenDP is statically typed (even when called from dynamically typed languages like Python), we need to specify some type information. This is done by supplying some key-value arguments. ``M=SymmetricDistance`` says that we want the resulting ``Transformation`` to use the OpenDP type ``SymmetricDistance`` for its ``Metric``, and ``TA=str`` says that we want the ``Transformation`` to use the Python type ``str`` for its input and output type.
 
 Finally, we invoke our ``identity`` transformation by calling it like a function on a string value. As expected, it returns the same string back to us!
 
