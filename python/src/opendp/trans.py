@@ -494,7 +494,7 @@ def make_split_dataframe(
     col_names: Any,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>,
+    """Make a Transformation that splits each record in a String into a Vec<Vec<String>>,
     and loads the resulting table into a dataframe keyed by `col_names`.
     
     :param separator: The token(s) that separate entries in each record.
