@@ -71,8 +71,6 @@ class RuntimeType(object):
         >>> assert RuntimeType.parse("i32") == "i32"
         >>> assert RuntimeType.parse(L1Distance[int]) == "L1Distance<i32>"
         >>> assert RuntimeType.parse(L1Distance["f32"]) == "L1Distance<f32>"
-        >>> from typing import List
-        >>> assert RuntimeType.parse(List[int]) == "Vec<int>"
         """
         generics = generics or []
         if isinstance(type_name, RuntimeType):

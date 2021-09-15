@@ -3,36 +3,94 @@
 Core Structures
 ===============
 
+.. contents:: |toctitle|
+    :local:
+
+Overview
+--------
+
 OpenDP is focused on creating computations with specific privacy characteristics.
-These computations are modeled with two core structures in OpenDP: Transformations and Measurements.
+These computations are modeled with two core structures in OpenDP:
+:py:class:`opendp.mod.Transformation` and :py:class:`opendp.mod.Measurement`.
 These structures are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy.
 By modeling computations in this abstract way, we're able to combine them in flexible arrangements and reason about the resulting programs.
+
+A unifying perspective towards OpenDP is that OpenDP is a system for relating:
+
+#. an upper bound on distance between neighboring function inputs (to)
+#. an upper bound on distance between respective function outputs (or distributions)
+
+OpenDP naturally captures the definition of privacy via `relations`,
+because the definition of privacy is an upper bound on distance between probability distributions.
+
+Each measurement or transformation is a self-contained structure with a relation, function, and supporting proof.
+
+
+.. _measurement:
 
 Measurement
 -----------
 
-A Measurement is a randomized mapping from datasets to outputs of an arbitrary type.
-Each Measurement consists of a privacy relation and a function.
+A :py:class:`Measurement <opendp.mod.Measurement>` is a randomized mapping from datasets to outputs of an arbitrary type.
+Lets say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``meas.check(d_in, d_out)``.
+If the code snippet evaluates to True, then ``meas`` is ``d_out``-DP on ``d_in``-close inputs,
+or equivalently "(``d_in``, ``d_out``)-close".
+The code snippet simply checks the privacy relation that comes bundled inside ``meas``.
 
-The privacy relation is used to check if the function is `d_out`-DP on `d_in`-close inputs.
-The privacy relation is qualified by an input metric and an output measure, which give units to the distances `d_in` and `d_out`.
+The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output measure.
+Depending on the context, ``d_in`` could be a distance bound to neighboring datasets or a global sensitivity,
+and ``d_out`` may be `epsilon`, `(epsilon, delta)`, or some other measure of privacy.
+More information on distances is available :ref:`here <distances>`.
 
-The function is used at most once to create a differentially private release.
-The function is qualified by an input domain and an output domain, which define the set of valid data inputs and the set of valid outputs.
+Each invocation of the measurement's function (via ``meas.invoke(data)`` or ``meas(data)``) is a differentially private release.
+The privacy expenditure of each release is any ``d_out`` that makes the relation pass.
+
+A measurement structure contains the following internal fields:
+
+:input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
+:output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
+:function: A function that computes a differentially-private release on private data.
+:input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
+:output_measure: The :ref:`measure <measures>` used to measure distance between two distributions in the output domain.
+:privacy_relation: A function that encapsulates the privacy characteristics of the function.
+
+The framework quantifies output distance bounds on measurements with a measure, instead of a metric,
+because measurements emit samples from a probability distribution,
+measures can be used to quantify differences between probability distributions.
+
+.. _transformation:
 
 Transformation
 --------------
 
-A Transformation is a (deterministic) mapping from datasets to datasets.
-Each Transformation consists of a stability relation and a function.
+A :py:class:`Transformation <opendp.mod.Transformation>` is a (deterministic) mapping from datasets to datasets.
+Transformations are used to preprocess and aggregate data before chaining with a measurement.
 
-Similarly to measurements, the stability relation is used to check if the function output is `d_out`-close on `d_in`-close inputs.
-The stability relation is qualified by an input metric and an output metric, which give units to `d_in` and `d_out`.
+Similarly to ``meas`` above, lets say we have an arbitrary instance of a Transformation, called ``trans``,
+and a code snippet ``trans.check(d_in, d_out)``.
+If the code snippet evaluates to True, then ``trans`` is ``d_out``-close on ``d_in``-close inputs,
+or equivalently "(``d_in``, ``d_out``)-close".
+The code snippet simply checks the stability relation that comes bundled inside ``trans``.
+In this context, the relation captures the stability of a transformation.
 
-The function transforms the data, but the output is not differentially private.
-Just like in measurements, the function is qualified by an input domain and output domain, which restrict the set of valid data inputs and outputs.
+The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output metric.
+Depending on the context, ``d_in`` and ``d_out`` could be a distance bound to neighboring datasets or a global sensitivity.
+More information on distances is available :ref:`here <distances>`.
 
-Transformations are used to preprocess and aggregate the data before chaining with a measurement.
+
+Invoking the function (via ``trans.invoke(data)`` or ``trans(data)``) transforms the data, but the output is not differentially private.
+Transformations need to be :ref:`chained <chaining>` with a measurement before they can be used to create a differentially-private release.
+
+A transformation structure contains the following internal fields:
+
+:input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
+:output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
+:function: A function that transforms data.
+:input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
+:output_metric: The :ref:`metric <metrics>` used to measure distance between two members of the output domain.
+:stability_relation: A function that encapsulates the stability characteristics of the function.
+
+The distances ``d_in`` and ``d_out`` above are expressed in the units of the input metric and output metric.
 
 Constructors and Functions
 --------------------------
@@ -40,59 +98,26 @@ Constructors and Functions
 In OpenDP, Measurements and Transformations are created by calling constructor functions.
 The majority of the library's interface consists of these constructors.
 
-Because Measurements and Transformations are themselves like functions (they can be invoked on an input and return an output), you can think of constructors as higher-order functions:
-You call them to produce another function, that you will then investigate the privacy or stability relation of and feed data.
+Because Measurements and Transformations are themselves like functions (they can be invoked on an input and return an output),
+you can think of constructors as higher-order functions:
+You call them to produce another function, that you will then feed data.
 
-In this simplified example with `make_base_geometric` we assume the data was properly preprocessed and aggregated such that the sensitivity by absolute distance is at most 1.
+In this simplified example with :py:func:`opendp.meas.make_base_geometric` we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
 
-.. code-block:: python
 
-    from opendp.meas import make_base_geometric
+.. doctest::
 
-    # call the constructor to produce a measurement
-    base_geometric = make_base_geometric(scale=1.0)
+    >>> from opendp.meas import make_base_geometric
+    ...
+    >>> # call the constructor to produce a measurement
+    >>> base_geometric = make_base_geometric(scale=1.0)
+    ...
+    >>> # investigate the privacy relation
+    >>> absolute_distance = 1
+    >>> epsilon = 1.0
+    >>> assert base_geometric.check(d_in=absolute_distance, d_out=epsilon)
+    ...
+    >>> # feed some data/invoke the measurement as a function
+    >>> aggregated = 5
+    >>> release = base_geometric(aggregated)
 
-    # investigate the privacy relation
-    absolute_distance = 1.0
-    epsilon = 1.0
-    assert base_geometric.check(d_in=absolute_distance, d_out=epsilon)
-
-    # feed some data
-    aggregated = 5
-    release = base_geometric(data=aggregated)
-
-Chaining
---------
-
-Two of the most essential constructors are the combinators that chain transformations with transformations, or transformations with measurements.
-The usage of these constructors is so common that a special syntax (`>>`) is provided.
-
-We continue the prior example by chaining `base_geometric` with a `bounded_sum` using this right-shift operator shorthand.
-
-.. code-block:: python
-
-    from opendp.trans import make_bounded_sum
-
-    # call the constructor to produce a transformation
-    bounded_sum = make_bounded_sum(bounds=(0, 1))
-    # CHAINING: opendp.meas.make_mt_chain
-    chained_measurement = bounded_sum >> base_geometric
-
-    # investigate the privacy relation
-    symmetric_distance = 1
-    epsilon = 1.0
-    assert chained_measurement.check(d_in=symmetric_distance, d_out=epsilon)
-
-    # feed some data
-    dataset = [0, 0, 1, 1, 0, 1, 1, 1]
-    release = chained_measurement(data=dataset)
-
-In this example the chaining was successful because:
-
-* bounded_sum's output domain is equivalent to base_geometric's input domain
-* bounded_sum's output metric is equivalent to base_geometric's input metric
-
-In addition, the resulting Measurement's input domain and input metric come from bounded_sum's input domain and input metric.
-This is intended to enable further chaining with preprocessors like `make_cast`, `make_impute`, `make_clamp` and `make_resize`.
-
-This chaining design gives the core data structures the capability to represent flexible computations.

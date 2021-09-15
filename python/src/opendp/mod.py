@@ -13,29 +13,28 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     :example:
 
     >>> from opendp.mod import Measurement
-    >>>
+    ...
     >>> # create an instance of Measurement using a constructor from the meas module
     >>> from opendp.meas import make_base_geometric
-    >>> base_geometric: Measurement = make_base_geometric(scale=2., lower=0, upper=20)
-    >>>
+    >>> base_geometric: Measurement = make_base_geometric(scale=2.)
+    ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> base_geometric.invoke(100)  # -> 101
-    >>> base_geometric(100)  # -> 99
-    >>>
+    >>> base_geometric.invoke(100)  # -> 101   # doctest: +SKIP
+    >>> base_geometric(100)  # -> 99           # doctest: +SKIP
+    ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
     >>> assert base_geometric.check(1, 0.5)
-    >>>
+    ...
     >>> # chain with a transformation from the trans module
     >>> from opendp.trans import make_count
-    >>> from opendp.typing import SubstituteDistance
     >>> chained = (
-    >>>     make_count(MI=SubstituteDistance, TI=int) >>
-    >>>     base_geometric
-    >>> )
-    >>>
+    ...     make_count(TIA=int) >>
+    ...     base_geometric
+    ... )
+    ...
     >>> # the resulting measurement has the same features
-    >>> chained([1, 2, 3])  # -> 4
+    >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
     >>> # check the chained measurement's relation at
     >>> #     (1, 0.5): (SubstituteDistance, MaxDivergence)
     >>> assert chained.check(1, 0.5)
@@ -124,30 +123,30 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     :example:
 
     >>> from opendp.mod import Transformation
-    >>>
+    ...
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> from opendp.trans import make_count
-    >>> count: Transformation = make_count(MI=SymmetricDistance, TI=int)
-    >>>
+    >>> count: Transformation = make_count(TIA=int)
+    ...
     >>> # invoke the transformation (invoke and __call__ are equivalent)
-    >>> count.invoke([1, 2, 3])  # -> 3
-    >>> count([1, 2, 3])  # -> 3
-    >>>
+    >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
+    >>> count([1, 2, 3])  # -> 3         # doctest: +SKIP
+    ...
     >>> # check the transformation's relation at
     >>> #     (1, 1): (SymmetricDistance, AbsoluteDistance<u32>)
     >>> assert count.check(1, 1)
-    >>>
+    ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.trans import make_split_lines, make_cast
-    >>> from opendp.typing import SymmetricDistance
+    >>> from opendp.trans import make_split_lines, make_cast, make_impute_constant
     >>> chained = (
-    >>>     make_split_lines(M=SymmetricDistance) >>
-    >>>     make_cast(M=SymmetricDistance, TI=str, TO=int) >>
-    >>>     count
-    >>> )
-    >>>
+    ...     make_split_lines() >>
+    ...     make_cast(TIA=str, TOA=int) >>
+    ...     make_impute_constant(constant=0) >>
+    ...     count
+    ... )
+    ...
     >>> # the resulting transformation has the same features
-    >>> chained("1\\n2\\n3")  # -> 3
+    >>> chained("1\\n2\\n3")  # -> 3 # doctest: +SKIP
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """
     _type_ = AnyTransformation
@@ -296,19 +295,22 @@ def binary_search_chain(
 
     :example:
 
-    >>> from opendp.mod import binary_search_chain
+    >>> from opendp.mod import binary_search_chain, enable_features
     >>> from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
     >>> from opendp.meas import make_base_laplace
-    >>>
+    >>> enable_features("floating-point")
+    ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
-    >>>     make_clamp(lower=0., upper=1.) >>
-    >>>     make_bounded_resize(size=10, lower=0., upper=1., constant=0.) >>
-    >>>     make_sized_bounded_mean(size=10, lower=0., upper=1.)
-    >>> )
+    ...     make_clamp(bounds=(0., 1.)) >>
+    ...     make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
+    ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
+    ... )
+    ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
+    ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
     >>> assert chain.check(1, 1.)
 
@@ -339,7 +341,7 @@ def binary_search_param(
 
     >>> from opendp.mod import binary_search_param
     >>> from opendp.meas import make_base_laplace
-    >>>
+    ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
     >>> # The first argument is any function that returns your complete computation chain
     >>> #     when passed a single numeric parameter.

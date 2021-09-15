@@ -97,3 +97,6 @@ jobs:
 
       - name: Test
         run: pytest -v
+
+      - name: Test docs
+        run: cd docs && make doctest-python
