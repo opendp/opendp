@@ -95,7 +95,7 @@ Next, you'll need to build the Rust binaries. This is done by running ``cargo bu
 
 .. note::
 
-    If you're using Windows, you may encounter problems when ``cargo`` tries to compile some dependencies. There are detailed instructions and scripts for dealing with this in the `windows subdirectory <https://github.com/opendp/opendp/tree/main/windows>`_ of the repository. (A quick workaround is to use the following variation: ``cargo build --no-default-features``.)
+    If you're using Windows, you may encounter problems when ``cargo`` tries to compile some dependencies. There are detailed instructions and scripts for dealing with this in the `windows subdirectory <https://github.com/opendp/opendp/tree/main/windows>`_ of the repository.
 
 This will compile a debug version of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. (The specific name of the library file will vary depending on your platform.)
 
