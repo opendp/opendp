@@ -81,6 +81,8 @@ OpenDP comes with some utility functions to make these binary searches easier to
 
 It might be helpful to go through an example on how to use this.
 
+.. _putting-together:
+
 Putting It Together
 -------------------
 

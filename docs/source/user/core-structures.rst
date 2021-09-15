@@ -39,7 +39,7 @@ The code snippet simply checks the privacy relation that comes bundled inside ``
 
 The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output measure.
 Depending on the context, ``d_in`` could be a distance bound to neighboring datasets or a global sensitivity,
-and ``d_out`` may be `epsilon`, `(epsilon, delta)`, or some other measure of privacy.
+and ``d_out`` may be ``epsilon``, ``(epsilon, delta)``, or some other measure of privacy.
 More information on distances is available :ref:`here <distances>`.
 
 Each invocation of the measurement's function (via ``meas.invoke(data)`` or ``meas(data)``) is a differentially private release.
@@ -49,14 +49,15 @@ A measurement structure contains the following internal fields:
 
 :input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
 :output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
-:function: A function that computes a differentially-private release on private data.
+:function: A :ref:`function <functions>` that computes a differentially-private release on private data.
 :input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_measure: The :ref:`measure <measures>` used to measure distance between two distributions in the output domain.
-:privacy_relation: A function that encapsulates the privacy characteristics of the function.
+:privacy_relation: A function that encapsulates the privacy characteristics of the function. :ref:`Link <relations>`.
 
 The framework quantifies output distance bounds on measurements with a measure, instead of a metric,
 because measurements emit samples from a probability distribution,
-measures can be used to quantify differences between probability distributions.
+and measures can be used to quantify differences between probability distributions.
+This is the primary differentiating factor between measurements and transformations.
 
 .. _transformation:
 
@@ -85,10 +86,10 @@ A transformation structure contains the following internal fields:
 
 :input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
 :output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
-:function: A function that transforms data.
+:function: A :ref:`function <functions>` that transforms data.
 :input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_metric: The :ref:`metric <metrics>` used to measure distance between two members of the output domain.
-:stability_relation: A function that encapsulates the stability characteristics of the function.
+:stability_relation: A function that encapsulates the stability characteristics of the function. :ref:`Link <relations>`.
 
 The distances ``d_in`` and ``d_out`` above are expressed in the units of the input metric and output metric.
 

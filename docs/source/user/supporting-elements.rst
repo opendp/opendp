@@ -10,6 +10,8 @@ Overview
 This document builds on the :ref:`core-structures` documentation to expand on the constituent pieces of Measurements and Transformations.
 
 
+.. _functions:
+
 Function
 --------
 As one would expect, all data processing is handled via a function.
@@ -70,6 +72,8 @@ A metric is a function that computes the distance between two elements of a set.
 A concrete example of a metric in opendp is ``SymmetricDistance``, or "the symmetric distance metric ``|A △ B| = |(A\B) ∪ (B\A)|``."
 This is used to count the fewest number of additions or removals to convert one dataset ``A`` into another dataset ``B``.
 
+.. _absolute-distance:
+
 Each metric is bundled together with a domain, and ``A`` and ``B`` are members of that domain.
 Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, ``A`` and ``B`` are often vectors.
 In practice, if we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k``.
@@ -88,13 +92,20 @@ Measures
 --------
 In OpenDP, a measure is a function for measuring the distance between probability distributions.
 
+.. _max-divergence:
+
 A concrete example is ``MaxDivergence<f64>``,
 read as "the max divergence metric where numbers are expressed in terms of 64-bit floats."
-The max divergence metric has distances that correspond to epsilon in the pure definition of differential privacy.
+The max divergence measure has distances that correspond to epsilon in the pure definition of differential privacy.
+
+
+.. _smoothed-max-divergence:
 
 Another example is ``SmoothedMaxDivergence<f64>``.
-The smoothed max divergence metric corresponds to approximate differential privacy,
+The smoothed max divergence measure corresponds to approximate differential privacy,
 where distances are (epsilon, delta) tuples.
+
+Every :ref:`Measurement <measurements>` contains an output_measure, and compositors are always typed by a Measure.
 
 .. _relations:
 
@@ -151,14 +162,23 @@ Putting this to practice, the following example checks the stability relation on
 Distances
 ---------
 
-You might find it surprising that metrics and measures are never actually evaluated!
-The framework does not evaluate these because it relates a user-provided input distance to another user-provided output distance.
-Even the user should not directly compute input and output distances: they are contextual or inferred.
+You can determine what units ``d_in`` and ``d_out`` are expressed in based on the ``input_metric``, and ``output_metric`` or ``output_measure``.
+Follow the links into the example metrics and measures to get more detail on what the distances mean for that kind of metric or measure.
 
+On Transformations, the ``input_metric`` will be a dataset metric like :ref:`SymmetricDistance <symmetric-distance>`.
+The ``output_metric`` will either be some dataset metric (on dataset transformations)
+or some kind of global sensitivity metric like :ref:`AbsoluteDistance <absolute-distance>` (on aggregations).
+
+The ``input_metric`` of Measurements is initially only some kind of global sensitivity metric.
+However, once you chain the Measurement with a Transformation, the resulting Measurement will have whatever ``input_metric`` was on the Transformation.
+The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
 
 It is critical that you choose the correct ``d_in`` for the relation,
-whereas you can use utilities in the library to search for the tightest ``d_out``.
-Practically speaking, the smaller the ``d_out``, the tighter your analysis.
+whereas you can use :ref:`binary search utilities <binary-search>` to find the tightest ``d_out``.
+Practically speaking, the smaller the ``d_out``, the tighter your analysis will be.
 
-If you are starting with a dataset, the input metric will likely be :ref:`SymmetricDistance <symmetric-distance>`.
-In this case, ``d_in`` is the maximum number of records that an individual may contribute.
+You might find it surprising that metrics and measures are never actually evaluated!
+The framework does not evaluate these because it relates a user-provided input distance to another user-provided output distance.
+Even the user should not directly compute input and output distances:
+they are :ref:`solved-for <accuracy>`, :ref:`bisected <binary-search>`, or even :ref:`contextual <putting-together>`.
+
