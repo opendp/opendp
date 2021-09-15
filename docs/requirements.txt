@@ -1,3 +1,4 @@
 sphinx==4.1.2
+sphinx-prompt
 git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
 pydata-sphinx-theme
