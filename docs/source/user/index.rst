@@ -11,7 +11,7 @@ User Guide
    programming-framework
    core-structures
    supporting-elements
+   combinator-constructors
+   transformation-constructors
+   measurement-constructors
    application-structure
-   data-input-output
-   type-conversions
-   implementation-notes

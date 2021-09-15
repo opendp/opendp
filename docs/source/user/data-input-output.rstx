@@ -1,0 +1,24 @@
+Data Input and Output
+=====================
+
+.. contents:: |toctitle|
+    :local:
+
+
+OpenDP has support for data loaders and unloaders at most parts of the data processing pipeline,
+which allows you to pick and choose the subset of the pipeline that best meshes with your data processing needs.
+It is, however, recommended that you express your entire data processing pipeline with Transformations,
+because the :ref:`domains <domains>`, :ref:`metrics <metrics>` and :ref:`relations <relations>` capture many gritty details that are easy to miss.
+
+When you call constructors or invoke functions or relations from python,
+the data you pass is transparently converted to a C representation and interpreted as a Rust data structure.
+
+After we perform computations in the trusted rust core, the return values-
+be them data, or even Transformations and Measurements themselves-
+are reinterpreted as C data structures, passed back to the bindings language, and made accessible through the familiar python API.
+
+Sometimes the Python abstraction leaks!
+In some cases where we have a complicated data structure like dataframes,
+we have not yet implemented a system for reinterpreting the dataframe as a C data structure and parsing the C data structure from Python.
+In these cases, it is necessary to chain transformations that take in or emit unsupported data structures in simplifying transformations.
+
