@@ -13,17 +13,17 @@ The OpenDP Programming Framework consists of a set of high-level conceptual elem
 
 .. note::
 
-    In this section, we've used lower case when writing the names of OpenDP concepts. Later, when we talk about programming elements, we'll use the capitalized form to refer to the concrete data types that implement these concepts.
+    In this section, we've used lower case when writing the names of OpenDP concepts. Later, when we talk about :doc:`programming elements <core-structures>`, we'll use the capitalized form to refer to the concrete data types that implement these concepts. (The concept names link to their corresponding type descriptions.)
 
-* Measurements are randomized mappings from a dataset to an arbitrary output value. They are a controlled means of introducing privacy (e.g. noise) to a computation. An example of a measurement is one which applies Laplace noise to a value.
-* Transformations are deterministic mappings from a dataset to another dataset. They are used to summarize or transform values in some way. An example of a transformation is one which calculates the mean of a set of values.
-* Domains are sets which identify the possible values that some object can take. The are used to constrain the input or output of measurements and transformations. Examples of domains are the integers between 1 and 10, or vectors of length 5 containing floating point numbers.
-* Measures and metrics are things that specify distances between two mathematical objects.
+* :ref:`Measurements <measurement>` are randomized mappings from a dataset to an arbitrary output value. They are a controlled means of introducing privacy (e.g. noise) to a computation. An example of a measurement is one which applies Laplace noise to a value.
+* :ref:`Transformations <transformation>` are deterministic mappings from a dataset to another dataset. They are used to summarize or transform values in some way. An example of a transformation is one which calculates the mean of a set of values.
+* :ref:`Domains <domains>` are sets which identify the possible values that some object can take. The are used to constrain the input or output of measurements and transformations. Examples of domains are the integers between 1 and 10, or vectors of length 5 containing floating point numbers.
+* :ref:`Measures <measures>` and :ref:`metrics <metrics>` are things that specify distances between two mathematical objects.
 
   * Measures characterize the distance between two probability distributions. An example measure is the "max-divergence" of pure differential privacy.
   * Metrics capture the distance between two neighboring datasets. An example metric is (counting the number of elements changed).
 
-* Privacy relations and stability relations are boolean functions which characterize the notion "closeness" of operation inputs and outputs. They are the glue that binds everything together.
+* :ref:`Privacy relations and stability relations <relations>` are boolean functions which characterize the notion "closeness" of operation inputs and outputs. They are the glue that binds everything together.
 
   * A privacy relation is a statement about a measurement. It's a boolean function of two values, an input distance (in a specific metric) and an output distance (in a specific measure). A privacy relation lets you make assertions about a measurement when the measurement is evaluated on any pairs of neighboring datasets. If the privacy relation is true, it's guaranteed that any pair of measurement inputs within the input distance will always produce a pair of transformation outputs within the output distance.
   * A stability relation is a statement about a transformation. It's also a boolean function of two values, an input distance (in a specific metric) and an output distance (in a specific metric, possibly different from the input metric). A stability relation lets you make assertions about the behavior of a transformation when that transformation is evaluated on any pairs of neighboring datasets. If the stability relation is true, it is a guarantee that any pair of transformation inputs within the input distance will always produce transformation outputs within the output distance.
