@@ -52,7 +52,7 @@ A measurement structure contains the following internal fields:
 :function: A :ref:`function <functions>` that computes a differentially-private release on private data.
 :input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_measure: The :ref:`measure <measures>` used to measure distance between two distributions in the output domain.
-:privacy_relation: A function that encapsulates the privacy characteristics of the function. :ref:`Link <relations>`.
+:privacy_relation: A :ref:`relation <relations>` that encapsulates the privacy characteristics of the function.
 
 The framework quantifies output distance bounds on measurements with a measure, instead of a metric,
 because measurements emit samples from a probability distribution,
@@ -78,7 +78,6 @@ The distances ``d_in`` and ``d_out`` are expressed in the units of the input met
 Depending on the context, ``d_in`` and ``d_out`` could be a distance bound to neighboring datasets or a global sensitivity.
 More information on distances is available :ref:`here <distances>`.
 
-
 Invoking the function (via ``trans.invoke(data)`` or ``trans(data)``) transforms the data, but the output is not differentially private.
 Transformations need to be :ref:`chained <chaining>` with a measurement before they can be used to create a differentially-private release.
 
@@ -89,9 +88,7 @@ A transformation structure contains the following internal fields:
 :function: A :ref:`function <functions>` that transforms data.
 :input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_metric: The :ref:`metric <metrics>` used to measure distance between two members of the output domain.
-:stability_relation: A function that encapsulates the stability characteristics of the function. :ref:`Link <relations>`.
-
-The distances ``d_in`` and ``d_out`` above are expressed in the units of the input metric and output metric.
+:stability_relation: A :ref:`relation <relations>` that encapsulates the stability characteristics of the function.
 
 Constructors and Functions
 --------------------------
@@ -103,7 +100,12 @@ Because Measurements and Transformations are themselves like functions (they can
 you can think of constructors as higher-order functions:
 You call them to produce another function, that you will then feed data.
 
-In this simplified example with :py:func:`opendp.meas.make_base_geometric` we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
+There's a few top-level constructor listings:
+* :ref:`combinators`
+* :ref:`measurements`
+* :ref:`transformations`
+
+In this simplified example with the :py:func:`opendp.meas.make_base_geometric` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
 
 
 .. doctest::
