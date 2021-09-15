@@ -7,7 +7,7 @@ Supporting Elements
 Overview
 --------
 
-This document builds on the :ref:`core-structures` documentation to expand on the constituent pieces of Measurements and Transformations.
+This section builds on the :ref:`core-structures` documentation to expand on the constituent pieces of Measurements and Transformations.
 
 
 .. _functions:
@@ -57,7 +57,7 @@ These domains serve two purposes:
    An example is the relation for :py:func:`opendp.trans.make_sized_bounded_sum`,
    which makes use of a ``SizedDomain`` domain descriptor to more tightly bound the sensitivity.
 #. Combinators also use domains to ensure the output is well-defined.
-   For instance, chainer constructors check that interior domains are equivalent,
+   For instance, chainer constructors check that intermediate domains are equivalent,
    to guarantee that the output of the interior function is always a valid input to the exterior function.
 
 
@@ -79,7 +79,7 @@ Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, 
 In practice, if we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k``.
 
 Another example metric is ``AbsoluteDistance<f64>``.
-This can be read as "the absolute distance metric ``|A - B|``, where distances are expressed in unsigned 8-bit integers."
+This can be read as "the absolute distance metric ``|A - B|``, where distances are expressed in 64-bit floats."
 This metric is used to represent global sensitivities
 (an upper bound on how much an aggregated value can change if you were to perturb an individual in the original dataset).
 In practice, most users will not have a need to provide global sensitivities to privacy relations,
@@ -105,7 +105,7 @@ Another example is ``SmoothedMaxDivergence<f64>``.
 The smoothed max divergence measure corresponds to approximate differential privacy,
 where distances are ``(epsilon, delta)`` tuples.
 
-Every :ref:`Measurement <measurements>` contains an output_measure, and compositors are always typed by a Measure.
+Every Measurement (:ref:`see listing <measurement-constructors>`) contains an output_measure, and compositors are always typed by a Measure.
 
 .. _relations:
 
@@ -142,7 +142,7 @@ If the relation passes, then it tells you that, for all ``x``, ``x'`` in the inp
 * then ``d_Y(x, x') <= d_out`` (then the distance between function outputs is no greater than ``d_out``)
 
 Notice that if the relation passes at ``d_out``, it will pass for any value greater than ``d_out``.
-This is an incredibly useful observation, as we will see in the :ref:`binary-search` section.
+This is an incredibly useful observation, as we will see in the :ref:`parameter-search` section.
 
 Putting this to practice, the following example checks the stability relation on a clamp transformation.
 
@@ -174,12 +174,12 @@ However, once you chain the Measurement with a Transformation, the resulting Mea
 The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
 
 It is critical that you choose the correct ``d_in`` for the relation,
-whereas you can use :ref:`binary search utilities <binary-search>` to find the tightest ``d_out``.
+whereas you can use :ref:`binary search utilities <parameter-search>` to find the tightest ``d_out``.
 Practically speaking, the smaller the ``d_out``, the tighter your analysis will be.
 
 You might find it surprising that metrics and measures are never actually evaluated!
 The framework does not evaluate these because it only needs to relate a user-provided input distance to another user-provided output distance.
 Even the user should not directly compute input and output distances:
-they are :ref:`solved-for <accuracy>`, :ref:`bisected <binary-search>`, or even :ref:`contextual <putting-together>`.
+they are :ref:`solved-for <determining-accuracy>`, :ref:`bisected <parameter-search>`, or even :ref:`contextual <putting-together>`.
 
 Be careful: even a dataset query to determine the greatest number of contributions made by any any one individual can itself be private information.

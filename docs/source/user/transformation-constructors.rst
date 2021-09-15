@@ -1,17 +1,17 @@
-.. _transformations:
+.. _transformation-constructors:
 
-Transformations
-===============
+Transformation Constructors
+===========================
 
 .. contents:: |toctitle|
     :local:
 
 Overview
 --------
-This documentation gives a high-level overview of the transformations that are available in the library.
+This section gives a high-level overview of the transformations that are available in the library.
 Refer to the :ref:`transformation` section for an explanation of what a transformation is.
 
-As covered in the :ref:`chaining` section, the inner domains need to match when chaining.
+As covered in the :ref:`chaining` section, the intermediate domains need to match when chaining.
 Each transformation has a carefully chosen input domain and output domain that supports their relation.
 
 Preprocessing is the series of transformations that shape the data into a domain that is conformable with the aggregator.
@@ -101,7 +101,7 @@ Null values are tricky to handle in a differentially private manner.
 If we were to allow aggregations to propagate null,
 then aggregations provide a non-differentially-private bit revealing the existence of nullity in the dataset.
 If we were to implicitly drop nulls from sized aggregations, then the sensitivity of non-null individuals is underestimated.
-Therefore, aggregators must fed completely non-null data.
+Therefore, aggregators must be fed completely non-null data.
 We can ensure data is non-null by imputing.
 
 When you cast with :func:`opendp.trans.make_cast` or :func:`opendp.trans.make_cast_default`,

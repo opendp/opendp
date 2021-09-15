@@ -1,12 +1,12 @@
-.. _combinators:
+.. _combinator-constructors:
 
-Combinators
-===========
+Combinator Constructors
+=======================
 
 .. contents:: |toctitle|
     :local:
 
-Combinators are transformations or measurements that operate on transformations or measurements.
+Combinator constructors use transformations or measurements to produce new transformations or measurements.
 Combinators are an area of OpenDP that are still heavily in development,
 but the chainers in particular are foundational and well-tested.
 
@@ -80,7 +80,7 @@ but the chaining fails because the sum emits floats and the geometric mechanism 
 
 Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.trans.make_cast>`, :py:func:`make_impute_constant <opendp.trans.make_impute_constant>`, :py:func:`make_clamp <opendp.trans.make_clamp>` and :py:func:`make_bounded_resize <opendp.trans.make_bounded_resize>`.
-See the section on :ref:`transformations` for more information on how to preprocess data in OpenDP.
+See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
 
 Composition
 -----------

@@ -50,8 +50,8 @@ A measurement structure contains the following internal fields:
 :input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
 :output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
 :function: A :ref:`function <functions>` that computes a differentially-private release on private data.
-:input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
-:output_measure: The :ref:`measure <measures>` used to measure distance between two distributions in the output domain.
+:input_metric: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
+:output_measure: A :ref:`measure <measures>` used to measure distance between two distributions in the output domain.
 :privacy_relation: A :ref:`relation <relations>` that encapsulates the privacy characteristics of the function.
 
 The framework quantifies output distance bounds on measurements with a measure, instead of a metric,
@@ -86,8 +86,8 @@ A transformation structure contains the following internal fields:
 :input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
 :output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
 :function: A :ref:`function <functions>` that transforms data.
-:input_metric: The :ref:`metric <metrics>` used to compute distance between two members of the input domain.
-:output_metric: The :ref:`metric <metrics>` used to measure distance between two members of the output domain.
+:input_metric: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
+:output_metric: A :ref:`metric <metrics>` used to measure distance between two members of the output domain.
 :stability_relation: A :ref:`relation <relations>` that encapsulates the stability characteristics of the function.
 
 Constructors and Functions
@@ -101,9 +101,10 @@ you can think of constructors as higher-order functions:
 You call them to produce another function, that you will then feed data.
 
 There's a few top-level constructor listings:
-* :ref:`combinators`
-* :ref:`measurements`
-* :ref:`transformations`
+
+* :ref:`combinator-constructors`
+* :ref:`measurement-constructors`
+* :ref:`transformation-constructors`
 
 In this simplified example with the :py:func:`opendp.meas.make_base_geometric` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
 

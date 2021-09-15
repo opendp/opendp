@@ -11,7 +11,7 @@ User Guide
    programming-framework
    core-structures
    supporting-elements
-   combinators
-   transformations
-   measurements
+   combinator-constructors
+   transformation-constructors
+   measurement-constructors
    application-structure

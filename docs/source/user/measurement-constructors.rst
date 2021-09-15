@@ -1,20 +1,24 @@
-.. _measurements:
+.. _measurement-constructors:
 
-Measurements
-===============
+Measurement Constructors
+========================
 
 .. contents:: |toctitle|
     :local:
 
 Overview
 --------
-This documentation gives a high-level overview of the measurements that are available in the library.
+This section gives a high-level overview of the measurements that are available in the library.
 Refer to the :ref:`measurement` section for an explanation of what a measurement is.
 
-As covered in the :ref:`chaining` section, the inner domains and metrics need to match when chaining.
+As covered in the :ref:`chaining` section, the intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
 
 In the following table, the scalar-valued and vector-valued versions of each measurement are listed separately.
+You can choose whether to construct scalar or vector-valued versions by setting the ``D`` type argument when calling the constructor.
+
+:Scalar: ``D=AllDomain[T]`` (default)
+:Vector: ``D=VectorDomain[AllDomain[T]]``
 
 
 .. list-table::

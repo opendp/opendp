@@ -34,16 +34,14 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
-doctest:
-	make doctest-rust
-	make doctest-python
+doctest: doctest-rust doctest-python
 	@echo
 	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
 
 doctest-rust:
 	cd ../rust && $(CARGO) test --doc
 
-doctest-python:
+doctest-python: html
 	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest
 
 versions:
