@@ -40,13 +40,13 @@ pub extern "C" fn opendp_trans__make_resize(
     fn monomorphize<TA>(
         size: usize, constant: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where TA: 'static + Clone + CheckNull + TotalOrd {
+        where TA: 'static + Clone + CheckNull {
         let constant = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
         make_resize_constant::<AllDomain<TA>>(size, AllDomain::new(), constant).into_any()
     }
     let size = size as usize;
     let TA = try_!(Type::try_from(TA));
-    dispatch!(monomorphize, [(TA, @numbers)], (size, constant))
+    dispatch!(monomorphize, [(TA, @primitives)], (size, constant))
 }
 
 
