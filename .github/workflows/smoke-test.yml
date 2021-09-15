@@ -97,3 +97,9 @@ jobs:
 
       - name: Test
         run: pytest -v
+
+      - name: Test docs
+        run: |
+          cd ../docs
+          python -m pip install -r requirements.txt
+          make doctest-python
