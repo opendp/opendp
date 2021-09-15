@@ -15,12 +15,12 @@ These computations are modeled with two core structures in OpenDP:
 These structures are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy.
 By modeling computations in this abstract way, we're able to combine them in flexible arrangements and reason about the resulting programs.
 
-A unifying perspective towards OpenDP is that OpenDP is a system for relating:
+A unifying perspective towards OpenDP is that OpenDP is a system for `relating`:
 
 #. an upper bound on distance between neighboring function inputs (to)
 #. an upper bound on distance between respective function outputs (or distributions)
 
-OpenDP naturally captures the definition of privacy via `relations`,
+OpenDP naturally captures the definition of privacy via :ref:`relations <relations>`,
 because the definition of privacy is an upper bound on distance between probability distributions.
 
 Each measurement or transformation is a self-contained structure with a relation, function, and supporting proof.

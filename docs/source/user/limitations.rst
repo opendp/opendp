@@ -14,11 +14,18 @@ OpenDP is early in its development history. We aim to build *the* trusted implem
 Privacy Concerns
 ----------------
 
-As a work in progress, OpenDP has some known privacy concerns. These vulnerabilities can have a significant impact on some applications, so you should carefully consider them when using OpenDP.
+As a work in progress, OpenDP has some known privacy concerns.
+These vulnerabilities can have a significant impact on some applications,
+so you should carefully consider them when using OpenDP.
 
-* Floating point issues: There are situations where OpenDP generates noise using native machine representations. This has the known issue of porous floating point output, resulting in `attacks <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_ where privacy can be violated.
+* Floating point issues: There are situations where OpenDP generates noise using native machine representations.
+  This has the known issue of porous floating point output,
+  resulting in `attacks <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_ where privacy can be violated.
+  See :ref:`floating-point` for additional comments.
 
-* Side channel attacks: OpenDP is not robust to some side channel attacks. These include things like timing attacks, cache effects, etc. These may make it possible for an attacker to obtain information outside the intended interfaces of OpenDP functions, violating privacy.
+* Side channel attacks: OpenDP is not robust to some side channel attacks.
+  These include things like timing attacks, cache effects, etc.
+  These may make it possible for an attacker to obtain information outside the intended interfaces of OpenDP functions, violating privacy.
 
 We know that these issues are critical for a privacy library, and are formulating plans to address them. Until then, *we strongly recommend that you not yet use OpenDP for any privacy-critical applications*.
 

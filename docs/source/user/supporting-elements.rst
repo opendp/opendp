@@ -96,14 +96,14 @@ In OpenDP, a measure is a function for measuring the distance between probabilit
 
 A concrete example is ``MaxDivergence<f64>``,
 read as "the max divergence metric where numbers are expressed in terms of 64-bit floats."
-The max divergence measure has distances that correspond to epsilon in the pure definition of differential privacy.
+The max divergence measure has distances that correspond to ``epsilon`` in the pure definition of differential privacy.
 
 
 .. _smoothed-max-divergence:
 
 Another example is ``SmoothedMaxDivergence<f64>``.
 The smoothed max divergence measure corresponds to approximate differential privacy,
-where distances are (epsilon, delta) tuples.
+where distances are ``(epsilon, delta)`` tuples.
 
 Every :ref:`Measurement <measurements>` contains an output_measure, and compositors are always typed by a Measure.
 
@@ -178,7 +178,8 @@ whereas you can use :ref:`binary search utilities <binary-search>` to find the t
 Practically speaking, the smaller the ``d_out``, the tighter your analysis will be.
 
 You might find it surprising that metrics and measures are never actually evaluated!
-The framework does not evaluate these because it relates a user-provided input distance to another user-provided output distance.
+The framework does not evaluate these because it only needs to relate a user-provided input distance to another user-provided output distance.
 Even the user should not directly compute input and output distances:
 they are :ref:`solved-for <accuracy>`, :ref:`bisected <binary-search>`, or even :ref:`contextual <putting-together>`.
 
+Be careful: even a dataset query to determine the greatest number of contributions made by any any one individual can itself be private information.

@@ -17,7 +17,7 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 In the following table, the scalar-valued and vector-valued versions of each measurement are listed separately.
 
 
-.. list-table:: Measurements
+.. list-table::
    :header-rows: 1
 
    * - Measurement
@@ -76,4 +76,6 @@ Precautions have been made to sample noise using the MPFR library, to avoid arti
 but our noise postprocessing re-introduces artifacts.
 We are developing alternative mechanisms for answering continuous queries.
 
-We acknowledge the snapping mechanism and have an implementation of it `in this PR <https://github.com/opendp/opendp/pull/84>`_.
+We acknowledge the snapping mechanism and have an implementation of it `in PR #84 <https://github.com/opendp/opendp/pull/84>`_.
+
+We are also working towards adding support for fixed-point data types `in PR #184 <https://github.com/opendp/opendp/pull/184>`_.

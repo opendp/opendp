@@ -86,10 +86,10 @@ It might be helpful to go through an example on how to use this.
 Putting It Together
 -------------------
 
-Lets say we want to compute the DP mean, along with an 95% confident accuracy estimate, of a dataset of student exam scores.
-We have a privacy budget of one-epsilon, ``d_out`` is 1.
+Lets say we want to compute the DP mean, along with a 95% confident accuracy estimate, of a dataset of student exam scores.
 With the public knowledge that the class only has three exams,
 we know each student may contribute at most three records, so ``d_in`` is 3.
+We have a privacy budget of one-epsilon, therefore ``d_out`` will be 1.
 
 Referencing the :ref:`transformations` section, first we'll need to cast, impute, clamp and resize.
 
