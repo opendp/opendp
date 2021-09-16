@@ -58,5 +58,5 @@ Merge
 -----
 
 Once the review process is successful, your PR will be merged into the `main` branch.
-Your contribution and credit will be added to the release notes.
-You'll also get an acknowledgement for your efforts!
+Your contribution and credit will be added to the release notes,
+and your changes will appear on crates.io and PyPi on our next library release.
