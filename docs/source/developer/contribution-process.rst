@@ -6,6 +6,12 @@ Contribution Process
 .. contents:: |toctitle|
     :local:
 
+There's no need to fear, because our contribution process is human!
+We're aiming to keep this process approachable to people of all skill levels.
+Without compromising the integrity of the library,
+there is reasonable variation in how strictly we adhere to this process in accordance to the depth of your contribution.
+
+
 Development Setup
 -----------------
 The first task to tackle is setting up the development environment.
@@ -25,7 +31,7 @@ the proof, constructor and FFI.
 * If you are adding a new constructor, all three components are relevant.
 * If you are resolving an issue, your work may be isolated to specific component(s).
   Even if you don't need to make changes to another component,
-  be intentional about checking that your changes are compatible with the other components.
+  be intentional about checking that your changes are consistent with the other components.
 
 Submit your pull request once you are ready for feedback and/or review.
 `GitHub has thorough documentation for this process when you are working with a fork <https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_.
