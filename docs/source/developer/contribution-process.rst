@@ -46,7 +46,7 @@ On the OpenDP side, the review process for the proof goes as follows:
 #. Reviewer validates the pseudo-code against the proof.
 #. Reviewer validates the Rust code against the pseudo-code.
 
-Please be patient- this process may take several iterations as issues may be raised in the review process.
+Please be patient— this process may take several iterations as issues come up in the review process.
 
 Merge
 -----

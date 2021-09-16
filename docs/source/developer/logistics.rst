@@ -115,6 +115,6 @@ A few notes on Intellij IDEA:
 * Both the Intellij IDEA community edition and the CodeWithMe plugin are free
 * Be sure to open the project at the root of the git repository
 * Be sure to install the Python and Rust plugins for interactivity
-* Be sure to "attach" the Cargo.toml in the red banner the first time you open a rust source file
+* Be sure to "attach" the Cargo.toml in the red banner the first time you open a Rust source file
 
 To reiterate, of course, use whatever developer tooling you are comfortable with!

@@ -16,7 +16,7 @@ The user guide has a relevant section explaining :ref:`constructors <constructor
 
 #. The constructor is the only mandatory component to implement!
 #. If the proof is not written, then your work must be marked by the ``contrib`` flag.
-   In rust, you just need to add an annotation ``#[cfg(feature="contrib")]`` above an element to mark it.
+   In Rust, you just need to add an annotation ``#[cfg(feature="contrib")]`` above an element to mark it.
    You can place this flag on your module definition to mark your entire module at once.
    It is possible to submit another pull request at a later time to add a proof that will move your constructor out of ``contrib``.
 #. You should place your code inside a folder containing a mod.rs.
@@ -31,7 +31,7 @@ If you are still unsure, please ask for help!
 Proof
 =====
 Any constructor that has been merged into the library but does not have a vetted proof is a part of ``contrib``.
-Both the rust library and language bindings have a mechanism to remove ``contrib`` from the library by default.
+Both the Rust library and language bindings have ``contrib`` components disabled by default.
 This means the user will have to explicitly opt-in to access your constructor if it is part of ``contrib``.
 
 #. Your proof should show the following:
@@ -42,7 +42,7 @@ This means the user will have to explicitly opt-in to access your constructor if
 
 #. Your proof should include pseudocode.
    This pseudocode is necessary for the vetting process:
-   We will need to check that the rust and pseudocode are isomorphic.
+   We will need to check that the Rust and pseudocode are isomorphic.
 #. The proof documents should be located in the same folder as your constructor function.
    At the moment there are many proofs undergoing review `in an adjacent repository <https://github.com/opendp/whitepapers/pulls>`_.
    We will be moving these proof files to be adjacent to the code in the near future,
@@ -51,16 +51,15 @@ This means the user will have to explicitly opt-in to access your constructor if
    Going forward we intend to use these shared definitions for all proofs, for consistency.
 
 You may find the more general row transform proof useful.
-If your transformation is a row-transform, you can lean on this proof-
-you only need to prove that your transformation meets the supporting requirements.
+If your transformation is a row-transform, you can lean on this proof— you
+only need to prove that your transformation meets the supporting requirements.
 
 FFI Wrapper
 ===========
 Any constructor that does not have an FFI wrapper will not be available in bindings languages.
 At the same time, we acknowledge that writing FFI wrappers can be tricky.
 We are working on more automated tooling to generate FFI wrappers, but in the meantime,
-it is likely a core library developer will kindly offer to write FFI wrappers for you,
-if you write the constructor!
+a core developer can work with you to write the FFI wrappers, if you write the constructor.
 
 This section only has one requirement:
 

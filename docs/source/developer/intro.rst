@@ -68,8 +68,8 @@ Add Tests
 ---------
 We need your help to make OpenDP more stable by adding tests.
 
-* python: `pytest unit and integration tests <https://github.com/opendp/opendp/tree/main/python/test>`_
-* rust: in-file testing modules (`core example <https://github.com/opendp/opendp/blob/ead11c5dbadfb17062182da6799f400888e66cef/rust/opendp/src/trans/count/mod.rs#L121-L182>`_, `ffi example <https://github.com/opendp/opendp/blob/ead11c5dbadfb17062182da6799f400888e66cef/rust/opendp-ffi/src/trans/resize.rs#L53-L93>`_)
+* Python: `pytest unit and integration tests <https://github.com/opendp/opendp/tree/main/python/test>`_
+* Rust: in-file testing modules (`core example <https://github.com/opendp/opendp/blob/ead11c5dbadfb17062182da6799f400888e66cef/rust/opendp/src/trans/count/mod.rs#L121-L182>`_, `ffi example <https://github.com/opendp/opendp/blob/ead11c5dbadfb17062182da6799f400888e66cef/rust/opendp-ffi/src/trans/resize.rs#L53-L93>`_)
 
 All tests (even ones embedded inside docstrings and this docs site) are checked automatically via CI.
 
