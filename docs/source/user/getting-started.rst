@@ -71,7 +71,7 @@ With that configured, the Rust dependency system will automatically download the
 Building OpenDP from Source
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Under special circumstances, it may be necessary to install OpenDP directly from the source files. This is only required if you want to build OpenDP from scratch, or if you're interested in :doc:`contributing to OpenDP <../developer/contributing>`.
+Under special circumstances, it may be necessary to install OpenDP directly from the source files. This is only required if you want to build OpenDP from scratch, or if you're interested in :doc:`contributing to OpenDP <../developer/intro>`.
 
 For this to work, you'll need some prerequisites:
 
