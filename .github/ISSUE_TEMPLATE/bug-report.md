@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Email security@opendp.org if your bug is security related.
+about: Email security@opendp.org if your bug is security related
 labels: bug
 
 ---

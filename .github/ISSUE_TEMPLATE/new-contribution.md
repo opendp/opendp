@@ -1,6 +1,6 @@
 ---
 name: New contribution
-about: Solicit feedback for a contribution you'd like to make.
+about: Solicit feedback for a contribution you'd like to make
 
 ---
 How exciting!
