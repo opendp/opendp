@@ -34,11 +34,15 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
-doctest:
-	cd ../rust && $(CARGO) test --doc
-	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest
+doctest: doctest-rust doctest-python
 	@echo
 	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
+
+doctest-rust:
+	cd ../rust && $(CARGO) test --doc
+
+doctest-python: html
+	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest
 
 versions:
 	# "/en" is the default, but someday we might have translations

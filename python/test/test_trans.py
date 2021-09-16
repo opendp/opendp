@@ -228,9 +228,9 @@ def test_count_by():
 
 def test_count_by_categories():
     from opendp.trans import make_count_by_categories
-    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[float])
+    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
     assert query(STR_DATA) == [1, 1, 1, 6]
-    assert query.check(1, 2.)
+    assert query.check(1, 1)
 
 
 def test_resize():
@@ -251,6 +251,6 @@ def test_resize():
 
 def test_count_by_categories_str():
     from opendp.trans import make_count_by_categories
-    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[float])
+    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
     assert query(STR_DATA) == [1, 1, 1, 6]
-    assert query.check(1, 2.)
+    assert query.check(1, 1)
