@@ -1,5 +1,5 @@
 ---
-name: New Contribution
+name: New contribution
 about: Solicit feedback on a contribution you'd like to make.
 
 ---
