@@ -1,3 +1,5 @@
+.. _logistics:
+
 Logistics
 *********
 
@@ -26,7 +28,10 @@ Download Python from the `Python website`_.
 Clone the OpenDP Repo
 ---------------------
 
-Clone the repo and change into the ``opendp`` directory that's created.
+If you don't have write access to the OpenDP repository, you will first need to make a fork.
+`The GitHub documentation explains this process well <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_.
+
+Clone the repo (or your fork) and change into the ``opendp`` directory that's created.
 
 .. code-block:: bash
 
@@ -89,3 +94,27 @@ Building the Docs
 -----------------
 
 The docs are built using Sphinx and the steps are listed in the README in the "docs" directory.
+
+
+Development Tooling
+===================
+
+There are many development environments that work with Rust. Here are a few:
+
+* `Intellij IDEA <https://plugins.jetbrains.com/plugin/8182-rust>`_
+* `VS Code <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust>`_
+* `Sublime <https://github.com/rust-lang/rust-enhanced>`_
+
+Use whatever developer tooling you are comfortable with.
+The benefit to using Intellij IDEA is that the core developers use it,
+which makes it possible for one of us to actually join your IDE with the `CodeWithMe Plugin <https://www.jetbrains.com/code-with-me/>`_,
+and talk through issues.
+
+A few notes on Intellij IDEA:
+
+* Both the Intellij IDEA community edition and the CodeWithMe plugin are free
+* Be sure to open the project at the root of the git repository
+* Be sure to install the Python and Rust plugins for interactivity
+* Be sure to "attach" the Cargo.toml in the red banner the first time you open a rust source file
+
+To reiterate, of course, use whatever developer tooling you are comfortable with!

@@ -6,8 +6,7 @@ Developer Guide
 .. toctree::
 
    intro
-   contributing
+   contribution-process
    logistics
    code-structure
-   review-process
-   committer-notes
+   maintainer-notes

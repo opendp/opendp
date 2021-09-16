@@ -90,6 +90,8 @@ A transformation structure contains the following internal fields:
 :output_metric: A :ref:`metric <metrics>` used to measure distance between two members of the output domain.
 :stability_relation: A :ref:`relation <relations>` that encapsulates the stability characteristics of the function.
 
+.. _constructors:
+
 Constructors and Functions
 --------------------------
 
