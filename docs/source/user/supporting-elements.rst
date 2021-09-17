@@ -16,7 +16,7 @@ Function
 --------
 As one would expect, all data processing is handled via a function.
 The function member stored in a Transformation or Measurement struct is straightforward representation of an idealized mathematical function.
-A mathematical function is a binary relation between two sets,
+A mathematical function is a binary relation between two sets
 that associates each value in the input set with a value in the output set.
 In OpenDP, we capture these sets with domains...
 
@@ -44,7 +44,7 @@ Some common domains are:
 
 In many cases, you provide some qualities about the underlying domain and the rest is automatically chosen by the constructor.
 
-Lets look at the Transformation returned from :py:func:`make_bounded_sum(bounds=(0, 1)) <opendp.trans.make_bounded_sum>`.
+Let's look at the Transformation returned from :py:func:`make_bounded_sum(bounds=(0, 1)) <opendp.trans.make_bounded_sum>`.
 The input domain has type ``VectorDomain<BoundedDomain<i32>>``,
 read as "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 The bounds argument to the constructor provides L and U, and since TIA (atomic input type) is not passed,
@@ -57,7 +57,7 @@ These domains serve two purposes:
    An example is the relation for :py:func:`opendp.trans.make_sized_bounded_sum`,
    which makes use of a ``SizedDomain`` domain descriptor to more tightly bound the sensitivity.
 #. Combinators also use domains to ensure the output is well-defined.
-   For instance, chainer constructors check that intermediate domains are equivalent,
+   For instance, chainer constructors check that intermediate domains are equivalent
    to guarantee that the output of the interior function is always a valid input to the exterior function.
 
 
@@ -130,7 +130,7 @@ What are ``d_in`` and ``d_out``?
 ``d_in`` and ``d_out`` are distances in terms of the input and output metric or measure.
 Refer to :ref:`distances` below for more details.
 
-This should be enough rope to work with, but I'll still touch quickly on the mathematical side.
+This should be enough rope to work with, but let's still touch quickly on the mathematical side.
 Refer to the programming framework paper itself if you want a deeper understanding.
 Consider ``d_X`` the input metric, ``d_Y`` the output metric or measure,
 and ``f`` the function in the Transformation or Measurement.
@@ -182,4 +182,4 @@ The framework does not evaluate these because it only needs to relate a user-pro
 Even the user should not directly compute input and output distances:
 they are :ref:`solved-for <determining-accuracy>`, :ref:`bisected <parameter-search>`, or even :ref:`contextual <putting-together>`.
 
-Be careful: even a dataset query to determine the greatest number of contributions made by any any one individual can itself be private information.
+Be careful: even a dataset query to determine the greatest number of contributions made by any one individual can itself be private information.

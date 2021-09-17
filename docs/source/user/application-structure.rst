@@ -21,7 +21,7 @@ The relation simply returns a boolean indicating if it passed.
 As alluded to in the :ref:`relations` section,
 if the relation passes for a given ``d_out``, it will also pass for any value greater than ``d_out``.
 
-This behavior makes it possible to solve for any one parameter using a binary search,
+This behavior makes it possible to solve for any one parameter using a binary search
 because the relation itself acts as your predicate function.
 This is extremely powerful!
 
@@ -31,9 +31,9 @@ This is extremely powerful!
   | This is useful when you want to determine how accurate you can make a query with a given budget.
 * | If you have a noise scale and a budget ``d_out``, you can solve for the smallest bound on ``d_in`` that is still differentially private.
   | This is useful when you want to determine an upper bound on how many records can be collected from an individual before needing to truncate.
-* | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, and want to find the smallest dataset size ``n`` that is still differentially private.
+* | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy and want to find the smallest dataset size ``n`` that is still differentially private.
   | This is useful when you want to determine the necessary sample size when collecting data.
-* | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, and want to find the greatest clipping range that is still differentially private
+* | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy and want to find the greatest clipping range that is still differentially private
   | This is useful when you want to minimize the likelihood of introducing bias.
 
 OpenDP comes with some utility functions to make these binary searches easier to conduct:
@@ -42,15 +42,13 @@ OpenDP comes with some utility functions to make these binary searches easier to
 * :func:`opendp.mod.binary_search_param`: Same as binary_search_chain, but returns the discovered parameter.
 * :func:`opendp.mod.binary_search`: Pass a predicate function and bounds. Returns the discovered parameter. Useful when you just want to solve for ``d_in`` or ``d_out``.
 
-It might be helpful to go through an example on how to use this.
-
 
 .. _determining-accuracy:
 
 Determining Accuracy
 --------------------
 
-The library contains utilities to estimate accuracy at a given noise scale and statistical significance level,
+The library contains utilities to estimate accuracy at a given noise scale and statistical significance level
 or derive the necessary noise scale to meet a given target accuracy and statistical significance level.
 
 The noise scale may be either laplace or gaussian.
@@ -88,7 +86,7 @@ into the following statement to interpret these functions:
 Putting It Together
 -------------------
 
-Lets say we want to compute the DP mean, along with a 95% confident accuracy estimate, of a dataset of student exam scores.
+Let's say we want to compute the DP mean, along with a 95% confident accuracy estimate, of a dataset of student exam scores.
 With the public knowledge that the class only has three exams,
 we know each student may contribute at most three records, so ``d_in`` is 3.
 We have a privacy budget of one-epsilon, therefore ``d_out`` will be 1.

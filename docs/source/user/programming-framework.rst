@@ -21,7 +21,7 @@ The OpenDP Programming Framework consists of a set of high-level conceptual elem
 * :ref:`Measures <measures>` and :ref:`metrics <metrics>` are things that specify distances between two mathematical objects.
 
   * Measures characterize the distance between two probability distributions. An example measure is the "max-divergence" of pure differential privacy.
-  * Metrics capture the distance between two neighboring datasets. An example metric is (counting the number of elements changed).
+  * Metrics capture the distance between two neighboring datasets. An example metric is "symmetric distance" (counting the number of elements changed).
 
 * :ref:`Privacy relations and stability relations <relations>` are boolean functions which characterize the notion "closeness" of operation inputs and outputs. They are the glue that binds everything together.
 
@@ -55,7 +55,7 @@ Unfortunately, OpenDP doesn't yet implement interactive measurements, and is lim
 Row Transforms
 ^^^^^^^^^^^^^^
 
-Row transforms are way of applying a user-defined function to each of the elements of a dataset. This concept can be used to construct transformations for operations that aren't provided "out of the box" by OpenDP. Unfortunately, supporting row transforms has some privacy limitations around pure functions, and also requires some tricky technical work, so these aren't yet implemented in OpenDP.
+Row transforms are a way of applying a user-defined function to each of the elements of a dataset. This concept can be used to construct transformations for operations that aren't provided "out of the box" by OpenDP. Unfortunately, supporting row transforms has some privacy limitations around pure functions and also requires some tricky technical work, so these aren't yet implemented in OpenDP.
 
 Applying the Concepts
 ^^^^^^^^^^^^^^^^^^^^^

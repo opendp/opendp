@@ -67,7 +67,7 @@ Transformation
 A :py:class:`Transformation <opendp.mod.Transformation>` is a (deterministic) mapping from datasets to datasets.
 Transformations are used to preprocess and aggregate data before chaining with a measurement.
 
-Similarly to ``meas`` above, lets say we have an arbitrary instance of a Transformation, called ``trans``,
+Similarly to ``meas`` above, let's say we have an arbitrary instance of a Transformation, called ``trans``,
 and a code snippet ``trans.check(d_in, d_out)``.
 If the code snippet evaluates to True, then ``trans`` is ``d_out``-close on ``d_in``-close inputs,
 or equivalently "(``d_in``, ``d_out``)-close".
@@ -100,7 +100,7 @@ The majority of the library's interface consists of these constructors.
 
 Because Measurements and Transformations are themselves like functions (they can be invoked on an input and return an output),
 you can think of constructors as higher-order functions:
-You call them to produce another function, that you will then feed data.
+You call them to produce another function that you will then feed data.
 
 There's a few top-level constructor listings:
 

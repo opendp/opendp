@@ -24,7 +24,7 @@ It also contains a privacy relation that relates an input distance bound on the 
 
 The :py:func:`opendp.comb.make_chain_mt` constructor similarly creates a new Measurement by combining an inner Transformation with an outer Measurement.
 Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
-Any computation beyond a measurement is postprocessing, and need not be governed by relations.
+Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
 In the following example we chain :py:func:`opendp.meas.make_base_geometric` with :py:func:`opendp.trans.make_bounded_sum`.
 
