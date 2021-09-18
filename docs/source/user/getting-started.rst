@@ -108,12 +108,16 @@ Finally, you can create a local Python package that incorporates your new shared
 
 At this point, you should be able use OpenDP as a locally installed package. You can test that things are working by running the OpenDP test suite, using ``pytest``:
 
+.. prompt:: bash
+
     pip install opendp
 
     # Still in python subdirectory
     pytest
 
 If everything has gone well, you'll see a bunch of output, then a line similar to this:
+
+.. prompt:: bash
 
     ================== 57 passed in 1.02s ==================
 
@@ -139,12 +143,12 @@ Next we call ``make_identity()`` to construct an identity ``Transformation``. Be
 
 Finally, we invoke our ``identity`` transformation by calling it like a function on a string value. As expected, it returns the same string back to us!
 
-That's not particularly exciting, but it shows the rudiments of an OpenDP program. Don't worry if some of the concepts don't make sense, because they'll be explained later in this guide.
+That's not particularly exciting, but it shows the rudiments of an OpenDP program. Don't worry if some of the concepts don't make sense because they'll be explained later in this guide.
 
 What's Next?
 ------------
 
-Now that you've had a taste of OpenDP, you can start exploring the library in more depth. The remainder of this guide will walk you through the concepts that underlie OpenDP, starting with it's conceptual underpinnings, known as the :doc:`OpenDP Programming Framework <programming-framework>`.
+Now that you've had a taste of OpenDP, you can start exploring the library in more depth. The remainder of this guide will walk you through the concepts that underlie OpenDP, starting with its conceptual underpinnings, known as the :doc:`OpenDP Programming Framework <programming-framework>`.
 
 If you're eager to just jump in with programming, you can look at some of the :doc:`example uses of OpenDP <../examples/index>`.
 

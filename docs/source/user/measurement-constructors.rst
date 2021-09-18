@@ -74,7 +74,7 @@ At this time these mechanisms are present in the library, but require explicit o
     >>> enable_features("floating-point")
 
 The canonical paper on this and introduction of the snapping mechanism is here:
-`On Significance of the Least Significant Bits For Differential Privacy <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_
+`On Significance of the Least Significant Bits For Differential Privacy <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_.
 
 Precautions have been made to sample noise using the MPFR library, to avoid artifacts in noise,
 but our noise postprocessing re-introduces artifacts.

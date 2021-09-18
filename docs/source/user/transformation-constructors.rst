@@ -108,7 +108,7 @@ When you cast with :func:`opendp.trans.make_cast` or :func:`opendp.trans.make_ca
 the cast may fail, so the output domain may include null values (``OptionNullDomain`` and ``InherentNullDomain``).
 We have provided imputation transformations to transform the data domain to the non-null ``VectorDomain<AllDomain<TA>>``.
 
-You may also be in a situation where you want to bypass dataframe loading and casting,
+You may also be in a situation where you want to bypass dataframe loading and casting
 because you already have a vector of floats loaded into memory.
 In this case, you should start your chain with an imputer if the floats are potentially null.
 
@@ -144,7 +144,7 @@ This relation states that adding or removing ``d_in`` records may influence the 
 Any aggregator that needs bounded data will indicate it in the function name.
 In these kinds of aggregators the relations make use of the clamping bounds ``L`` and ``U`` to translate ``d_in`` to ``d_out``.
 
-Clamping happens after casting and imputation, but before resizing.
+Clamping happens after casting and imputation but before resizing.
 Only chain with a clamp transformation if the aggregator you intend to use needs bounded data.
 
 .. list-table::
@@ -209,7 +209,7 @@ If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mecha
 The :func:`opendp.trans.make_count_by` transformation stands out;
 it is currently the only transformation that pairs with :func:`opendp.trans.make_base_stability`.
 
-The ``make_sized_bounded_covariance`` aggregator is rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
+The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
 
 .. list-table::
    :header-rows: 1
@@ -241,6 +241,6 @@ The ``make_sized_bounded_covariance`` aggregator is rust-only at this time becau
    * - :func:`opendp.trans.make_sized_bounded_variance`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
      - ``AllDomain<T>``
-   * - make_sized_bounded_covariance (rust only)
+   * - make_sized_bounded_covariance (Rust only)
      - ``SizedDomain<VectorDomain<BoundedDomain<(T,T)>>>``
      - ``AllDomain<T>``
