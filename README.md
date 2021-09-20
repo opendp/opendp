@@ -4,7 +4,8 @@
 [![Python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9-blue)](https://www.python.org/)
 [![ci tests](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
 
-The OpenDP Library is a modular collection of statistical algorithms that adhere to the [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy).
+The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of
+[differential privacy](https://en.wikipedia.org/wiki/Differential_privacy).
 It can be used to build applications of privacy-preserving computations, using a number of different models of privacy.
 OpenDP is implemented in Rust, with bindings for easy use from Python.
 
