@@ -1,20 +1,6 @@
 # OpenDP Changelog
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-[Unreleased]: https://github.com/opendp/opendp/compare/v0.2.1...HEAD
-
-### Added
-### Changed
-### Deprecated
-### Removed
-### Fixed
-### Security
-
+This file documents the version history of OpenDP.
 
 ## [0.2.2] - 2021-09-20
 [0.2.2]: https://github.com/opendp/opendp/compare/v0.2.1...v0.2.2
@@ -59,3 +45,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 * Initial release.
+
+
+
+## [Unreleased]
+[Unreleased]: https://github.com/opendp/opendp/compare/stable...HEAD
+Template for additions.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
