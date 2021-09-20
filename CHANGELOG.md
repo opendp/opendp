@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
+
+## [0.2.2] - 2021-09-20
+[0.2.2]: https://github.com/opendp/opendp/compare/v0.2.1...v0.2.2
+
+### Added
+- User guide, developer guide, and general focus on documentation
+- Examples folder has complete notebooks for getting started with the library
+
 ## [0.2.1] - 2021-09-09
 [0.2.0]: https://github.com/opendp/opendp/compare/v0.2.0...v0.2.1
 
