@@ -5,6 +5,8 @@ use crate::dom::PairDomain;
 use crate::error::Fallible;
 use std::fmt::Debug;
 
+const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
+
 fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2) -> String {
     let str1 = format!("{:?}", struct1);
     let str2 = format!("{:?}", struct2);
@@ -13,7 +15,7 @@ fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2
     } else {
         format!("\n    output_{mode}: {struct1}\n    input_{mode}:  {struct2}\n", mode=mode, struct1=str1, struct2=str2)
     };
-    return format!("Intermediate {}s don't match.{}", mode, explanation)
+    return format!("Intermediate {}s don't match. See {}{}", mode, ERROR_URL, explanation)
 }
 
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
@@ -126,7 +128,7 @@ mod tests {
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
         let chain = make_chain_mt(&measurement1, &transformation0, None).unwrap_test();
         let arg = 99_u8;
-        let ret = chain.function.eval(&arg).unwrap_test();
+        let ret = chain.invoke(&arg).unwrap_test();
         assert_eq!(ret, 101.0);
     }
 
@@ -148,7 +150,7 @@ mod tests {
         let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
         let chain = make_chain_tt(&transformation1, &transformation0, None).unwrap_test();
         let arg = 99_u8;
-        let ret = chain.function.eval(&arg).unwrap_test();
+        let ret = chain.invoke(&arg).unwrap_test();
         assert_eq!(ret, 101.0);
     }
 
@@ -170,7 +172,7 @@ mod tests {
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
         let composition = make_basic_composition(&measurement0, &measurement1).unwrap_test();
         let arg = 99;
-        let ret = composition.function.eval(&arg).unwrap_test();
+        let ret = composition.invoke(&arg).unwrap_test();
         assert_eq!(ret, (100_f32, 98_f64));
     }
 }

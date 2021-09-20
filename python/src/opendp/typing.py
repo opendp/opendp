@@ -219,15 +219,17 @@ class RuntimeType(object):
         :param inferred: the type inferred from data
         :raises AssertionError: if `expected` type differs significantly from `inferred` type
         """
+
+        ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
         if isinstance(inferred, UnknownType):
             return
         if isinstance(expected, str) and isinstance(inferred, str):
             if inferred in ATOM_EQUIVALENCE_CLASSES:
                 assert expected in ATOM_EQUIVALENCE_CLASSES[inferred], \
-                    f"inferred type is {inferred}, expected {expected}"
+                    f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}"
             else:
                 assert expected == inferred, \
-                    f"inferred type is {inferred}, expected {expected}"
+                    f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}"
 
         elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
             # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
@@ -235,15 +237,16 @@ class RuntimeType(object):
                 expected = expected.args[0]
 
             assert expected.origin == inferred.origin, \
-                f"inferred type is {inferred.origin}, expected {expected.origin}"
+                f"inferred type is {inferred.origin}, expected {expected.origin}. See {ERROR_URL_298}"
 
             assert len(expected.args) == len(inferred.args), \
-                f"inferred type has {len(inferred.args)} arg(s), expected {len(expected.args)} arg(s)"
+                f"inferred type has {len(inferred.args)} arg(s), expected {len(expected.args)} arg(s). See {ERROR_URL_298}"
 
             for (arg_par, arg_inf) in zip(expected.args, inferred.args):
                 RuntimeType.assert_is_similar(arg_par, arg_inf)
         else:
-            raise AssertionError(f"args are not similar because they have differing depths. Expected: {expected}. Inferred: {inferred}")
+            # inferred type differs in structure
+            raise AssertionError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
 
     def substitute(self, **kwargs):
         if isinstance(self, GenericType):

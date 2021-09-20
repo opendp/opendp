@@ -11,14 +11,18 @@ The steps below assume the use of [Homebrew] on a Mac.
 
 [Homebrew]: https://brew.sh
 
-Note that Python 3.8 is required. Python 3.9 is known not to work with the synthesizers packages.
-
-```
+```shell
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 make html
 open build/html/index.html
+```
+
+To make html and run python doctests:
+
+```shell
+make doctest-python
 ```
 
 ## Deployment

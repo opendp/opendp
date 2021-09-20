@@ -3,9 +3,6 @@
 Combinator Constructors
 =======================
 
-.. contents:: |toctitle|
-    :local:
-
 Combinator constructors use transformations or measurements to produce new transformations or measurements.
 Combinators are an area of OpenDP that are still heavily in development,
 but the chainers in particular are foundational and well-tested.
@@ -57,6 +54,8 @@ The syntax automatically chooses between :func:`make_chain_mt <opendp.mod.make_c
 
     >>> noisy_sum = bounded_sum >> base_geometric
 
+.. _chaining-mismatch:
+
 In this example the chaining was successful because:
 
 * bounded_sum's output domain is equivalent to base_geometric's input domain
@@ -74,7 +73,7 @@ but the chaining fails because the sum emits floats and the geometric mechanism 
     ...     make_bounded_sum(bounds=(0., 1.)) >> base_geometric
     ... except OpenDPException as err:
     ...     print(err.message[:-1])
-    Intermediate domains don't match.
+    Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
         The structure of the intermediate domains are the same, but the types or parameters differ.
         shared_domain: AllDomain()
 

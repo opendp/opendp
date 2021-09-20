@@ -48,23 +48,24 @@ def test_cast_metric():
 
 def test_identity():
     from opendp.trans import make_identity
+    from opendp.typing import VectorDomain, AllDomain
     # test int
-    transformation = make_identity(SubstituteDistance, int)
-    arg = 123
+    transformation = make_identity(VectorDomain[AllDomain[int]], SubstituteDistance)
+    arg = [123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(SubstituteDistance, float)
-    arg = 123.123
+    transformation = make_identity(VectorDomain[AllDomain[float]], SubstituteDistance)
+    arg = [123.123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(SubstituteDistance, str)
-    arg = "hello, world"
+    transformation = make_identity(VectorDomain[AllDomain[str]], SubstituteDistance)
+    arg = ["hello, world"]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(SubstituteDistance, "Vec<i32>")
+    transformation = make_identity("VectorDomain<AllDomain<i32>>", SubstituteDistance)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == arg

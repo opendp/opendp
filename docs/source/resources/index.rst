@@ -1,9 +1,6 @@
 Resources
 =========
 
-.. contents:: |toctitle|
-    :local:
-
 Background
 ----------
 

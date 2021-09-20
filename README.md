@@ -2,32 +2,41 @@
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C3.8%20%7C%203.9-blue)](https://www.python.org/)
-![ci tests](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)
+[![ci tests](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
 
-OpenDP is a modular library of statistical algorithms that adhere to the definition of [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy). It can be used to build applications of privacy-preserving computations, using a number of different models of privacy. OpenDP is implemented in Rust, with bindings for easy use from Python.
+OpenDP is a modular library of statistical algorithms that adhere to the definition of [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy). 
+It can be used to build applications of privacy-preserving computations, using a number of different models of privacy. 
+OpenDP is implemented in Rust, with bindings for easy use from Python.
 
-The architecture of OpenDP is based on a conceptual framework for expressing privacy-aware computations. This framework is described in the paper
-[A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
+The architecture of OpenDP is based on a conceptual framework for expressing privacy-aware computations.
+This framework is described in the paper [A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
 
-OpenDP (the library) is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy, open source software tools for analysis of private data.
+OpenDP (the library) is part of the larger [OpenDP Project](https://opendp.org), 
+a community effort to build trustworthy, open source software tools for analysis of private data.
 
 ## Status
 
-OpenDP is under development, and we aim to [release new versions](https://github.com/opendp/opendp/releases) frequently. It's a work in progress, but we feel that OpenDP already can be used to build some useful applications. We also hope that it may be a vehicle for exploring new ideas in privacy. We welcome you to try it and look forward to feedback on the usability of the library! However, please be aware of the following limitations.
+OpenDP is under development, and we aim to [release new versions](https://github.com/opendp/opendp/releases) frequently. 
+It's a work in progress, but we feel that OpenDP already can be used to build some useful applications. 
+We also hope that it may be a vehicle for exploring new ideas in privacy. 
+We welcome you to try it and look forward to feedback on the usability of the library! 
+However, please be aware of the following limitations.
 
 ### WARNING
 
-OpenDP is not yet recommended for production deployments. It has known privacy concerns, particularly around floating point handling and side channel attacks. We expect to address these issues, but until then, *please don't use OpenDP for any privacy-critical applications*.
+OpenDP is not yet recommended for production deployments. 
+It has known privacy concerns, particularly around floating point handling and side channel attacks. 
+We expect to address these issues, but until then, *please don't use OpenDP for any privacy-critical applications*.
 
-More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/stable/user/limitations.html)
+More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/stable/user/limitations.html).
 
 ## Installation
 
 The easiest way to install OpenDP is using `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
 
-    % pip install opendp
+    pip install opendp
 
-More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/stable/user/getting-started.html)
+More information can be found in the [Getting Started section of the User Guide](https://docs.opendp.org/en/stable/user/getting-started.html).
 
 ## Documentation
 
@@ -48,4 +57,5 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 
 ## Contributing
 
-OpenDP is a community effort, and we welcome your contributions to its development! If you'd like to participate, please see the [Contributing section of the Developer Guide](https://docs.opendp.org/en/stable/developer/intro.html)
+OpenDP is a community effort, and we welcome your contributions to its development! 
+If you'd like to participate, please see the [Contributing section of the Developer Guide](https://docs.opendp.org/en/stable/developer/intro.html)

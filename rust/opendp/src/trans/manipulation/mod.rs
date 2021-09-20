@@ -91,7 +91,7 @@ mod tests {
     fn test_identity() {
         let identity = make_identity(AllDomain::new(), SubstituteDistance).unwrap_test();
         let arg = 99;
-        let ret = identity.function.eval(&arg).unwrap_test();
+        let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);
     }
 
@@ -99,9 +99,9 @@ mod tests {
     fn test_is_equal() -> Fallible<()> {
         let is_equal = make_is_equal("alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
-        let ret = is_equal.function.eval(&arg)?;
+        let ret = is_equal.invoke(&arg)?;
         assert_eq!(ret, vec![true, false, false]);
-        assert!(is_equal.stability_relation.eval(&1, &1)?);
+        assert!(is_equal.check(&1, &1)?);
         Ok(())
     }
 
@@ -109,9 +109,9 @@ mod tests {
     fn test_is_null() -> Fallible<()> {
         let is_equal = make_is_null::<InherentNullDomain<AllDomain<_>>>()?;
         let arg = vec![f64::NAN, 1., 2.];
-        let ret = is_equal.function.eval(&arg)?;
+        let ret = is_equal.invoke(&arg)?;
         assert_eq!(ret, vec![true, false, false]);
-        assert!(is_equal.stability_relation.eval(&1, &1)?);
+        assert!(is_equal.check(&1, &1)?);
         Ok(())
     }
 }

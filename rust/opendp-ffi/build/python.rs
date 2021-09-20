@@ -40,6 +40,7 @@ fn generate_module(
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
+    let all = module.keys().map(|v| format!("    \"{}\"", v)).collect::<Vec<_>>().join(",\n");
     let functions = module.into_iter()
         .map(|(func_name, func)| generate_function(&module_name, &func_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
@@ -51,7 +52,11 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
-{functions}"#, functions = functions)
+__all__ = [
+{all}
+]
+
+{functions}"#, all = all, functions = functions)
 }
 
 fn generate_function(

@@ -293,6 +293,15 @@ def binary_search_chain(
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 
+    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
+    :param d_in: desired input distance of the computation chain
+    :param d_out: desired output distance of the computation chain
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :return: a chain parameterized at the nearest passing value to the decision point of the relation
+    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+
+
     :example:
 
     >>> from opendp.mod import binary_search_chain, enable_features
@@ -313,15 +322,6 @@ def binary_search_chain(
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
     >>> assert chain.check(1, 1.)
-
-
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
-    :return: a chain parameterized at the nearest passing value to the decision point of the relation
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
     return make_chain(binary_search_param(make_chain, d_in, d_out, bounds, tolerance))
 

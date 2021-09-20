@@ -1,16 +1,7 @@
-Introduction
-************
+.. _getting-involved:
 
-.. contents:: Contents:
-    :local:
-
-
-This guide provides information for those interested in participating in OpenDP development.
-
-If your focus is using OpenDP to build your own applications, please consult the :doc:`../user/index`.
-
-How to Get Involved
-===================
+Getting Involved
+================
 
 OpenDP is a community effort and we welcome your contributions!
 OpenDP development takes place on GitHub, so you will need to create a GitHub account to get started.
@@ -33,11 +24,11 @@ or identify existing tooling that may be useful to you.
 
 If you open an issue for adding a new constructor,
 please include a link to the research paper(s) your contribution will be derived from,
+if you already have an existing implementation,
 and make a case for why this constructor should be added to the library.
 
 * Is it unique and does it have reasonable utility?
 * If it has a similar behavior as another constructor, can you show that it has greater utility or useful trade-offs?
-* Is there an existing implementation that you are adapting?
 
 Once you get feedback, you can move on to the :ref:`contribution-process`.
 

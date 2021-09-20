@@ -4,8 +4,21 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
+__all__ = [
+    "to_string",
+    "slice_as_object",
+    "slice_as_metric_distance",
+    "slice_as_measure_distance",
+    "object_type",
+    "object_as_slice",
+    "object_free",
+    "slice_free",
+    "str_free",
+    "bool_free"
+]
 
-def _to_string(
+
+def to_string(
     this: Any
 ) -> str:
     """Internal function. Convert the AnyObject to a string representation.
@@ -23,14 +36,14 @@ def _to_string(
     this = py_to_c(this, c_type=AnyObjectPtr)
     
     # Call library function.
-    function = lib.opendp_data___to_string
+    function = lib.opendp_data__to_string
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
-def _slice_as_object(
+def slice_as_object(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ) -> Any:
@@ -54,14 +67,14 @@ def _slice_as_object(
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_data___slice_as_object
+    function = lib.opendp_data__slice_as_object
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return unwrap(function(slice, T), AnyObjectPtr)
 
 
-def _slice_as_metric_distance(
+def slice_as_metric_distance(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ):
@@ -84,14 +97,14 @@ def _slice_as_metric_distance(
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_data___slice_as_metric_distance
+    function = lib.opendp_data__slice_as_metric_distance
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return unwrap(function(slice, T), AnyMetricDistancePtr)
 
 
-def _slice_as_measure_distance(
+def slice_as_measure_distance(
     slice: FfiSlicePtr,
     T: RuntimeTypeDescriptor = None
 ):
@@ -114,14 +127,14 @@ def _slice_as_measure_distance(
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_data___slice_as_measure_distance
+    function = lib.opendp_data__slice_as_measure_distance
     function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return unwrap(function(slice, T), AnyMeasureDistancePtr)
 
 
-def _object_type(
+def object_type(
     this: Any
 ) -> str:
     """Internal function. Retrieve the type descriptor string of an AnyObject.
@@ -139,14 +152,14 @@ def _object_type(
     this = py_to_c(this, c_type=AnyObjectPtr)
     
     # Call library function.
-    function = lib.opendp_data___object_type
+    function = lib.opendp_data__object_type
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_char_p))
 
 
-def _object_as_slice(
+def object_as_slice(
     this: Any
 ) -> Any:
     """Internal function. Unload data from an AnyObject into an FfiSlicePtr.
@@ -164,14 +177,14 @@ def _object_as_slice(
     this = py_to_c(this, c_type=AnyObjectPtr)
     
     # Call library function.
-    function = lib.opendp_data___object_as_slice
+    function = lib.opendp_data__object_as_slice
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return unwrap(function(this), FfiSlicePtr)
 
 
-def _object_free(
+def object_free(
     this: Any
 ):
     """Internal function. Free the memory associated with `this`, an AnyObject.
@@ -185,18 +198,18 @@ def _object_free(
     # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
-    function = lib.opendp_data___object_free
+    function = lib.opendp_data__object_free
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
-def _slice_free(
+def slice_free(
     this: Any
 ):
     """Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
-    Used to clean up after _object_as_slice.
+    Used to clean up after object_as_slice.
     
     :param this: 
     :type this: Any
@@ -207,14 +220,14 @@ def _slice_free(
     # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
-    function = lib.opendp_data___slice_free
+    function = lib.opendp_data__slice_free
     function.argtypes = [FfiSlicePtr]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
-def _str_free(
+def str_free(
     this: str
 ):
     """Internal function. Free the memory associated with `this`, a string. 
@@ -229,14 +242,14 @@ def _str_free(
     # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
-    function = lib.opendp_data___str_free
+    function = lib.opendp_data__str_free
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_void_p))
 
 
-def _bool_free(
+def bool_free(
     this
 ):
     """Internal function. Free the memory associated with `this`, a bool. 
@@ -250,7 +263,7 @@ def _bool_free(
     # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
-    function = lib.opendp_data___bool_free
+    function = lib.opendp_data__bool_free
     function.argtypes = [BoolPtr]
     function.restype = FfiResult
     

@@ -27,23 +27,21 @@
 //!
 //! # User Guide
 //!
+//! A more thorough User Guide [can be found on the docs website](https://docs.opendp.org/en/stable/user/index.html).
+//!
 //! OpenDP applications are created by using constructors and combinators to create private computation pipelines.
 //! These can be written directly in Rust, or by using a language binding that uses OpenDP through an FFI interface.
-//! Python is the first language binding available, but we made add others in the future.
+//! Python is the first language binding available, but we plan to add others in the future.
+//!
 //!
 //! ## Rust Application Example
 //!
 //! Here's a simple example of using OpenDP from Rust to create a private sum:
 //! ```
-//! use opendp::core;
-//! use opendp::meas;
-//! use opendp::trans;
-//! use opendp::trans::{manipulation, sum, make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
-//! use opendp::dist::{SubstituteDistance, L1Distance};
-//! use opendp::error::*;
+//! use opendp::error::Fallible;
+//! use opendp::trans::{make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
 //! use opendp::comb::{make_chain_tt, make_chain_mt};
 //! use opendp::meas::make_base_laplace;
-//! use opendp::dom::VectorDomain;
 //!
 //! pub fn example() -> Fallible<()> {
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
@@ -65,25 +63,40 @@
 //!
 //!     // Put it all together.
 //!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers, None)?;
-//!     let result = pipeline.function.eval(&data)?;
-//!     println!("result = {}", result);
+//!
+//!     // Notice that you can write the same pipeline more succinctly with `>>`.
+//!     let pipeline = (
+//!         make_split_lines()? >>
+//!         make_cast_default::<String, f64>()? >>
+//!         make_clamp(bounds)? >>
+//!         make_bounded_sum(bounds)? >>
+//!         make_base_laplace(sigma)?
+//!     )?;
+//!
+//!     // Check that the pipeline is (1, 1.0)-close
+//!     assert!(pipeline.check(&1, &epsilon)?);
+//!
+//!     // Make a 1.0-epsilon-DP release
+//!     let release = pipeline.invoke(&data)?;
+//!     println!("release = {}", release);
 //!     Ok(())
 //! }
-//! example().unwrap_test();
+//! example().unwrap();
 //! ```
 //!
 //! # Contributor Guide
 //!
-//! Contributions to OpenDP typically take the form of what we call "Components." A Component is shorthand for
-//! the collection of code that comprises a  [`Measurement`] or [`Transformation`].
+//! Contributions to OpenDP typically take the form of what we call "constructors."
+//! A constructor is a function that returns a [`Measurement`] or [`Transformation`].
 //!
-//! ## Adding Components
+//! Before you submit your PR, please review the [Contribution Process](https://docs.opendp.org/en/latest/developer/contribution-process.html).
 //!
-//! OpenDP components take the form of constructor functions that construct new instances of [`Measurement`]
-//! and [`Transformation`]. Measurement constructors go in the module [`meas`], and Transformation constructors
-//! in the module [`trans`]. (We'll probably split these up as they grow.)
+//! ## Adding Constructors
 //!
-//! There are two steps to adding a constructor function: Writing the function itself, and adding the FFI wrapper.
+//! Measurement constructors go in the module [`meas`], and Transformation constructors
+//! in the module [`trans`].
+//!
+//! There are two code steps to adding a constructor function: Writing the function itself, and adding the FFI wrapper.
 //!
 //! ### Writing Constructors
 //!
@@ -97,14 +110,14 @@
 //! #### Example Transformation Constructor
 //! ```
 //!# use opendp::core::{Transformation, StabilityRelation, Function};
-//!# use opendp::dist::L1Distance;
+//!# use opendp::dist::AbsoluteDistance;
 //!# use opendp::dom::AllDomain;
-//! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, L1Distance<i32>, L1Distance<i32>> {
+//! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
 //!     let input_domain = AllDomain::new();
 //!     let output_domain = AllDomain::new();
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
-//!     let input_metric = L1Distance::default();
-//!     let output_metric = L1Distance::default();
+//!     let input_metric = AbsoluteDistance::default();
+//!     let output_metric = AbsoluteDistance::default();
 //!     let stability_relation = StabilityRelation::new_from_constant(1);
 //!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
 //! }
@@ -114,7 +127,7 @@
 //! #### Input and Output Types
 //!
 //! The [`Function`] created in a constructor is allowed to have any type for its input and output [`Domain::Carrier`].
-//! There's no need for special data carrying wrappers. The clue code in the FFI layer handles this transparently.
+//! There's no need for special data carrying wrappers. The glue code in the FFI layer handles this transparently.
 //! However, the most common are the Rust primitives (e.g., `i32`, `f64`, etc.), and collections of the primitives
 //! (`Vec<i32>`, `HashMap<String, f64>`).
 //!

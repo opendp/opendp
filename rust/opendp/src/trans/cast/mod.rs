@@ -86,12 +86,12 @@ mod tests {
         let data = vec![1., 1e10, 0.5, f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
         let caster = make_cast::<f64, i64>()?;
         assert_eq!(
-            caster.function.eval(&data)?,
+            caster.invoke(&data)?,
             vec![Some(1), Some(10000000000), Some(0), None, None, None]);
 
         let caster = make_cast::<f64, u8>()?;
         assert_eq!(
-            caster.function.eval(&vec![-1., f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
+            caster.invoke(&vec![-1., f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
             vec![None; 4]);
         Ok(())
     }
@@ -101,9 +101,9 @@ mod tests {
         macro_rules! test_pair {
             ($from:ty, $to:ty) => {
                 let caster = make_cast::<$from, $to>().unwrap_test();
-                caster.function.eval(&vec!(<$from>::default())).unwrap_test();
+                caster.invoke(&vec!(<$from>::default())).unwrap_test();
                 let caster = make_cast::<$from, $to>().unwrap_test();
-                caster.function.eval(&vec!(<$from>::default())).unwrap_test();
+                caster.invoke(&vec!(<$from>::default())).unwrap_test();
             }
         }
         macro_rules! test_cartesian {
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn test_cast_default_unsigned() -> Fallible<()> {
         let caster = make_cast_default::<f64, u8>()?;
-        assert_eq!(caster.function.eval(&vec![-1.])?, vec![u8::default()]);
+        assert_eq!(caster.invoke(&vec![-1.])?, vec![u8::default()]);
         Ok(())
     }
 
@@ -140,10 +140,10 @@ mod tests {
         let data = vec!["2".to_string(), "3".to_string(), "a".to_string(), "".to_string()];
 
         let caster = make_cast_default::<String, u8>()?;
-        assert_eq!(caster.function.eval(&data)?, vec![2, 3, u8::default(), u8::default()]);
+        assert_eq!(caster.invoke(&data)?, vec![2, 3, u8::default(), u8::default()]);
 
         let caster = make_cast_default::<String, f64>()?;
-        assert_eq!(caster.function.eval(&data)?, vec![2., 3., f64::default(), f64::default()]);
+        assert_eq!(caster.invoke(&data)?, vec![2., 3., f64::default(), f64::default()]);
         Ok(())
     }
 
@@ -152,18 +152,18 @@ mod tests {
         let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
         let caster = make_cast_default::<f64, String>()?;
         assert_eq!(
-            caster.function.eval(&data)?,
+            caster.invoke(&data)?,
             vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]);
 
         let caster = make_cast_default::<f64, u8>()?;
         assert_eq!(
-            caster.function.eval(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
+            caster.invoke(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
             vec![u8::default(), u8::default(), u8::default()]);
 
         let data = vec!["1e+2", "1e2", "1e+02", "1.e+02", "1.0E+02", "1.0E+00002", "01.E+02", "1.0E2"]
             .into_iter().map(|v| v.to_string()).collect();
         let caster = make_cast_default::<String, f64>()?;
-        assert!(caster.function.eval(&data)?.into_iter().all(|v| v == 100.));
+        assert!(caster.invoke(&data)?.into_iter().all(|v| v == 100.));
         Ok(())
     }
 
@@ -171,7 +171,7 @@ mod tests {
     fn test_cast_inherent() -> Fallible<()> {
         let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
         let caster = make_cast_inherent::<String, f64>()?;
-        let res = caster.function.eval(&data)?;
+        let res = caster.invoke(&data)?;
         assert!(res[0].is_nan());
         assert_eq!(res[1..], vec![1., 1.]);
         Ok(())
@@ -181,9 +181,9 @@ mod tests {
     fn test_cast_metric() -> Fallible<()> {
         let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
         let caster = make_cast_metric::<VectorDomain<AllDomain<_>>, SubstituteDistance, SymmetricDistance>(VectorDomain::new_all())?;
-        let _res = caster.function.eval(&data)?;
-        assert!(!caster.stability_relation.eval(&1, &1)?);
-        assert!(caster.stability_relation.eval(&1, &2)?);
+        let _res = caster.invoke(&data)?;
+        assert!(!caster.check(&1, &1)?);
+        assert!(caster.check(&1, &2)?);
         Ok(())
     }
 }

@@ -26,10 +26,10 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/* source/api/python source/api/rust
 
-html:
+html: clean
 	$(SPHINXAPIDOC) -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
-# TODO: Figure out how to link locally generated Rust docs into sphinx structure.
-# 	cd ../rust && $(CARGO) doc --no-deps --target-dir ../docs/source/api/rust
+	# TODO: Figure out how to link locally generated Rust docs into sphinx structure.
+	# 	cd ../rust && $(CARGO) doc --no-deps --target-dir ../docs/source/api/rust
 	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=search-field.html,sidebar-nav-bs.html source $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

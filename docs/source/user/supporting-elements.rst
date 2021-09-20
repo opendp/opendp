@@ -1,12 +1,6 @@
 Supporting Elements
 ===================
 
-.. contents:: |toctitle|
-    :local:
-
-Overview
---------
-
 This section builds on the :ref:`core-structures` documentation to expand on the constituent pieces of Measurements and Transformations.
 
 
@@ -33,7 +27,7 @@ Some common domains are:
   | For example, ``AllDomain<u8>`` describes the set of all possible unsigned 8-bit integers:
   | ``{0, 1, 2, 3, ..., 127}``.
 :BoundedDomain<T>: | The set of all non-null values in the type T, bounded between some L and U.
-  | For example, ``BoundedDomain<u32>`` between -2 and 2:
+  | For example, ``BoundedDomain<i32>`` between -2 and 2:
   | ``{-2, -1, 0, 1, 2}``.
 :VectorDomain<D>: | The set of all vectors, where each element of the vector is a member of domain D.
   | For example, ``VectorDomain<AllDomain<bool>>`` describes the set of all boolean vectors:

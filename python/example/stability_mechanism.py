@@ -3,18 +3,25 @@ from collections import Counter
 
 import matplotlib.pyplot as plt
 import numpy as np
-import opendp
-from opendp.meas import make_base_laplace, make_base_stability
+from opendp.meas import make_base_stability
 from opendp.trans import make_count_by
-from opendp.typing import L2Distance, SymmetricDistance
+from opendp.typing import L1Distance
+from opendp.mod import binary_search
+
+# This is a more complicated example that makes
+# differentially private releases of vocabulary sets from audio file transcriptions
+# The plot shows the size of the released vocabulary set as you vary the budget parameters.
+# The script assumes (to a fault) that each row is a different individual
 
 
 def get_bounded_vocabulary(corpus_path, dataset_distance):
-    """create a non-private vocabulary with bounded user contribution"""
+    """create a non-private vocabulary with bounded user contribution
+    Reads corpus_path and does a word count, with some DP-specific count truncation
+    """
     total_counter = Counter()
     with open(corpus_path, 'r') as corpus_file:
         for line in corpus_file:
-            # truncate number of words in line to bound dataset distance
+            # limit the counts for each word in each line to bound dataset distance
             individual_counter = Counter(line.split())
             for key in individual_counter:
                 individual_counter[key] = min(dataset_distance, individual_counter[key])
@@ -23,42 +30,55 @@ def get_bounded_vocabulary(corpus_path, dataset_distance):
 
 
 def privatize_vocabulary(word_count, line_count, dataset_distance, budget):
-    """privatize a vocabulary with bounded user contribution"""
+    """privatize a vocabulary with bounded user contribution
+    :param word_count: a dictionary of {word: count}
+    :param line_count: the number of individuals in the original data
+    :param dataset_distance: max number of times an individual may repeat a word
+    :param budget:
+    :return: privatized vocabulary as a string set of words
+    """
 
-    scale = opendp.binary_search(
-        lambda s: check_stability(s, 1000., line_count,  dataset_distance, budget),
-        0., 100.)
-    threshold = opendp.binary_search(
+    def check_stability(scale, threshold, line_count, dataset_distance, budget):
+        return (
+                make_count_by(size=line_count, MO=L1Distance[float], TIA=str) >>
+                make_base_stability(size=line_count, scale=scale, threshold=threshold, MI=L1Distance[float], TIK=str)
+        ).check(dataset_distance, budget)
+
+    # solve for scale and threshold
+    scale = binary_search(
+        lambda s: check_stability(s, 1000., line_count, dataset_distance, budget),
+        (0., 100.))
+    threshold = binary_search(
         lambda thresh: check_stability(scale, thresh, line_count, dataset_distance, budget),
-        0., 1000.)
+        (0., 1000.))
 
     print("chosen scale and threshold:", scale, threshold)
-    # stability_mech = make_base_stability(line_count, scale, threshold, L2Distance[float], str, int)
-    # print("does chosen scale and threshold pass:", stability_mech.check(d_in, d_out))
 
-    laplace_mechanism = make_base_laplace(scale, float)
-    word_count = dict(word_count)
+    base_stability = make_base_stability(
+        size=line_count, scale=scale, threshold=threshold, MI=L1Distance[float], TIK=str)
 
-    vocabulary = set()
-    for word in word_count:
-        privatized_count = laplace_mechanism(word_count[word])
-        if privatized_count >= threshold:
-            vocabulary.add(word)
+    privatized_count = base_stability(word_count)
 
-    return vocabulary
+    return set(privatized_count.keys())
 
-
-def check_stability(scale, threshold, line_count, dataset_distance, budget):
-    count_by = make_count_by(line_count, SymmetricDistance, L2Distance[float], str, int)
-    base_stability = make_base_stability(line_count, scale, threshold, L2Distance[float], str, int)
-    stability_mech = count_by >> base_stability
-
-    # assuming each line is a different user, a user can influence up to max_word_count_per_individual counts
-    return stability_mech.check(dataset_distance, budget)
+    # incremental evaluation of the mechanism
+    # laplace_mechanism = make_base_laplace(scale)
+    # word_count = dict(word_count)
+    #
+    # vocabulary = set()
+    # for word in word_count:
+    #     privatized_count = laplace_mechanism(word_count[word])
+    #     if privatized_count >= threshold:
+    #         vocabulary.add(word)
+    #
+    # return vocabulary
 
 
 def get_private_vocabulary(corpus_path, dataset_distance, budget):
-    """create a private vocabulary"""
+    """create a private vocabulary
+    This function combines get_bounded_vocabulary and privatize_vocabulary
+    The constituent functions are separate to facilitate integration with popular tokenizers
+    """
     word_counts = get_bounded_vocabulary(corpus_path, dataset_distance)
     line_count = sum(1 for _ in open(corpus_path))
 
@@ -75,23 +95,49 @@ def write_private_vocabulary(corpus_path, output_path, dataset_distance, budget)
 
 
 if __name__ == "__main__":
+
+    # download the data if it does not exist
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    ami_dir = os.path.join(data_dir, 'AMI')
+    if not os.path.exists(ami_dir):
+        import requests
+        ami_remote_dir = "https://raw.githubusercontent.com/opendp/dp-test-datasets/master/data/AMI/"
+        os.makedirs(ami_dir)
+        def download_ami(name):
+            print(f'downloading {name} into {ami_dir}')
+            with open(os.path.join(ami_dir, name), 'w') as ami_file:
+                ami_file.write(requests.get(ami_remote_dir + "AMI_E_text").text)
+
+        download_ami("AMI_E_text")
+        download_ami("AMI_I_text")
+        download_ami("AMI_T_text")
+
+    # each user says each word at most this many times
+    # If they say the word more than this many times, then truncate
     max_word_count_per_individual = 20
 
-    data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data'))
-    censored_data_dir = os.path.abspath(os.path.join(__file__, '..', '..', '..', 'data_censored'))
+    from opendp.mod import enable_features
+    enable_features("floating-point")
 
-    for corpus_name in os.listdir(data_dir):
-        corpus_path = os.path.join(data_dir, corpus_name)
+    for corpus_name in os.listdir(ami_dir):
+        print(f'Processing {corpus_name}')
+        corpus_path = os.path.join(ami_dir, corpus_name)
 
+        # non-dp vocabulary set
         word_counts = get_bounded_vocabulary(corpus_path, max_word_count_per_individual)
+        # we make the (unlikely) assumption that each user influences at most one row
+        # For this to be correct, we need a separate file that pairs each row with a user ID
+        # Additional preprocessing is necessary if we consider the distinct_count of user IDs to be private
         line_count = sum(1 for _ in open(corpus_path))
 
-        epsilons = np.linspace(.001, .01, 10)
-        deltas = np.linspace(1e-10, 1e-8, 10)
+        epsilons = list(map(float, np.linspace(.001, .01, 10)))
+        deltas = list(map(float, np.linspace(1e-10, 1e-8, 10)))
         vocabulary_counts = np.zeros((len(epsilons), len(deltas)), dtype=int)
 
+        # for each combination of epsilon and delta...
         for i, epsilon in enumerate(epsilons):
             for j, delta in enumerate(deltas):
+                # ...save the size of the resulting vocabulary set
                 vocabulary = privatize_vocabulary(
                     word_counts, line_count,  # carrier (real data)
                     max_word_count_per_individual, (epsilon, delta))  # distance
@@ -124,10 +170,10 @@ if __name__ == "__main__":
         fig.tight_layout()
         plt.show()
 
-
-# corpus_path = os.path.join(data_dir, corpus_name)
-# os.makedirs(censored_data_dir, exist_ok=True)
-# censored_corpus_path = os.path.join(censored_data_dir, corpus_name)
-# with open(corpus_path, 'r') as in_file, open(censored_corpus_path, 'w') as out_file:
-#     for line in in_file:
-#         out_file.write(' '.join([word if word in vocabulary else 'CENSORED' for word in line.split()]) + '\n')
+        # censor words that are not in the histogram release
+        # ami_censored_dir = os.path.join(data_dir, 'AMI_censored')
+        # os.makedirs(ami_censored_dir, exist_ok=True)
+        # censored_corpus_path = os.path.join(ami_censored_dir, corpus_name)
+        # with open(corpus_path, 'r') as in_file, open(censored_corpus_path, 'w') as out_file:
+        #     for line in in_file:
+        #         out_file.write(' '.join([word if word in vocabulary else 'CENSORED' for word in line.split()]) + '\n')

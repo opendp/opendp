@@ -108,10 +108,10 @@ mod tests {
         arg.insert(true, 6);
         arg.insert(false, 4);
         let measurement = make_base_stability::<L2Distance<f64>, bool, i8>(10, 0.5, 1.)?;
-        let _ret = measurement.function.eval(&arg)?;
+        let _ret = measurement.invoke(&arg)?;
         // println!("stability eval: {:?}", ret);
 
-        assert!(measurement.privacy_relation.eval(&1., &(2.3, 1e-5))?);
+        assert!(measurement.check(&1., &(2.3, 1e-5))?);
         Ok(())
     }
 }

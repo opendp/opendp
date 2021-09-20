@@ -4,6 +4,13 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
+__all__ = [
+    "make_base_laplace",
+    "make_base_gaussian",
+    "make_base_geometric",
+    "make_base_stability"
+]
+
 
 def make_base_laplace(
     scale,

@@ -4,6 +4,13 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
+__all__ = [
+    "laplacian_scale_to_accuracy",
+    "accuracy_to_laplacian_scale",
+    "gaussian_scale_to_accuracy",
+    "accuracy_to_gaussian_scale"
+]
+
 
 def laplacian_scale_to_accuracy(
     scale,

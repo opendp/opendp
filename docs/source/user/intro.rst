@@ -1,9 +1,6 @@
 Introduction
 ============
 
-.. contents:: |toctitle|
-   :local:
-
 What is OpenDP?
 ---------------
 

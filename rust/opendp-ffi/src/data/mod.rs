@@ -18,7 +18,7 @@ use std::hash::Hash;
 
 
 #[no_mangle]
-pub extern "C" fn opendp_data___slice_as_measure_distance(
+pub extern "C" fn opendp_data__slice_as_measure_distance(
     raw: *const FfiSlice, T: *const c_char
 ) -> FfiResult<*mut AnyMeasureDistance> {
     fn raw_to_plain<T: 'static + Clone + MeasureDistance>(raw: &FfiSlice) -> Fallible<AnyMeasureDistance> {
@@ -59,7 +59,7 @@ pub extern "C" fn opendp_data___slice_as_measure_distance(
 
 
 #[no_mangle]
-pub extern "C" fn opendp_data___slice_as_metric_distance(
+pub extern "C" fn opendp_data__slice_as_metric_distance(
     raw: *const FfiSlice, T: *const c_char
 ) -> FfiResult<*mut AnyMetricDistance> {
     fn raw_to_plain<T: 'static + Clone + MetricDistance>(raw: &FfiSlice) -> Fallible<AnyMetricDistance> {
@@ -79,7 +79,7 @@ pub extern "C" fn opendp_data___slice_as_metric_distance(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
+pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
     let T = try_!(Type::try_from(T));
     fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
@@ -175,7 +175,7 @@ pub extern "C" fn opendp_data___slice_as_object(raw: *const FfiSlice, T: *const 
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data___object_type(this: *mut AnyObject) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*mut c_char> {
     let obj: &AnyObject = try_as_ref!(this);
 
     match util::into_c_char_p(obj.type_.descriptor.to_string()) {
@@ -185,7 +185,7 @@ pub extern "C" fn opendp_data___object_type(this: *mut AnyObject) -> FfiResult<*
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
+pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
     let obj = try_as_ref!(obj);
     fn plain_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let plain: &T = obj.downcast_ref()?;
@@ -271,23 +271,23 @@ pub extern "C" fn opendp_data___object_as_slice(obj: *const AnyObject) -> FfiRes
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data___object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
 /// Frees the slice, but not what the slice references!
-pub extern "C" fn opendp_data___slice_free(this: *mut FfiSlice) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data___str_free(this: *mut c_char) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data___bool_free(this: *mut c_bool) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
@@ -316,7 +316,7 @@ impl std::fmt::Debug for AnyObject {
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data___to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
+pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
     util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
         |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
         FfiResult::Ok)
@@ -336,7 +336,7 @@ mod tests {
         let raw_ptr = util::into_raw(999) as *mut c_void;
         let raw_len = 1;
         let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
-        let res = opendp_data___slice_as_object(raw, "i32".to_char_p());
+        let res = opendp_data__slice_as_object(raw, "i32".to_char_p());
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
         Ok(())
@@ -348,7 +348,7 @@ mod tests {
         let raw_ptr = util::into_c_char_p(data.clone()).unwrap_test() as *mut c_void;
         let raw_len = data.len() + 1;
         let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
-        let res = opendp_data___slice_as_object(raw, "String".to_char_p());
+        let res = opendp_data__slice_as_object(raw, "String".to_char_p());
         let res: String = Fallible::from(res)?.downcast()?;
         assert_eq!(res, "Hello");
         Ok(())
@@ -360,7 +360,7 @@ mod tests {
         let raw_ptr = data.as_ptr() as *mut c_void;
         let raw_len = data.len();
         let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
-        let res = opendp_data___slice_as_object(raw, "Vec<i32>".to_char_p());
+        let res = opendp_data__slice_as_object(raw, "Vec<i32>".to_char_p());
         let res: Vec<i32> = Fallible::from(res)?.downcast()?;
         assert_eq!(res, vec![1, 2, 3]);
         Ok(())
@@ -371,7 +371,7 @@ mod tests {
         let raw_ptr = util::into_raw((util::into_raw(999), util::into_raw(-999))) as *mut c_void;
         let raw_len = 2;
         let raw = util::into_raw(FfiSlice::new(raw_ptr, raw_len));
-        let res = opendp_data___slice_as_object(raw, "(i32, i32)".to_char_p());
+        let res = opendp_data__slice_as_object(raw, "(i32, i32)".to_char_p());
         let res: (i32, i32) = Fallible::from(res)?.downcast()?;
         assert_eq!(res, (999, -999));
         Ok(())
@@ -380,7 +380,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_number() -> Fallible<()> {
         let obj = AnyObject::new_raw(999);
-        let res = opendp_data___object_as_slice(obj);
+        let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 1);
         assert_eq!(util::as_ref(res.ptr as *const i32).unwrap_test(), &999);
@@ -390,7 +390,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_string() -> Fallible<()> {
         let obj = AnyObject::new_raw("Hello".to_owned());
-        let res = opendp_data___object_as_slice(obj);
+        let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 6);
         assert_eq!(util::into_string(res.ptr as *mut c_char).unwrap_test(), "Hello");
@@ -400,7 +400,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_vec() -> Fallible<()> {
         let obj = AnyObject::new_raw(vec![1, 2, 3]);
-        let res = opendp_data___object_as_slice(obj);
+        let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 3);
         assert_eq!(util::as_ref(res.ptr as *const [i32;3]).unwrap_test(), &[1, 2, 3]);
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_tuple_numbers() -> Fallible<()> {
         let obj = AnyObject::new_raw((999, -999));
-        let res = opendp_data___object_as_slice(obj);
+        let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 2);
         let res_ptr = util::as_ref(res.ptr as *const [*mut i32;2]).unwrap_test();
@@ -421,7 +421,7 @@ mod tests {
     #[test]
     fn test_data_as_raw_tuple_objects() -> Fallible<()> {
         let obj = AnyObject::new_raw((AnyObject::new(999), AnyObject::new(999.0)));
-        let res = opendp_data___object_as_slice(obj);
+        let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 2);
         let res_ptr = util::as_ref(res.ptr as *const [*mut AnyObject;2]).unwrap_test();

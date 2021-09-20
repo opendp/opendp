@@ -1,7 +1,5 @@
-OpenDP Documentation
-====================
-
-|opendp-logo|
+Welcome
+=======
 
 OpenDP documentation is organized into the guides below. In addition to browsing, you can :ref:`search <search>`.
 
@@ -10,12 +8,12 @@ OpenDP documentation is organized into the guides below. In addition to browsing
   :titlesonly:
   :maxdepth: 2
 
-  quickstart/index
+  quickstart
   user/index
-  examples/index
+  examples
   api/index
   more
-  contact/index
+  contact
 
 This is version |version| of the guides.
 

@@ -42,19 +42,19 @@ mod tests {
     fn test_make_bounded_mean_hamming() {
         let transformation = make_sized_bounded_mean(5, (0., 10.)).unwrap_test();
         let arg = vec![1., 2., 3., 4., 5.];
-        let ret = transformation.function.eval(&arg).unwrap_test();
+        let ret = transformation.invoke(&arg).unwrap_test();
         let expected = 3.;
         assert_eq!(ret, expected);
-        assert!(transformation.stability_relation.eval(&1, &2.).unwrap_test())
+        assert!(transformation.check(&1, &2.).unwrap_test())
     }
 
     #[test]
     fn test_make_bounded_mean_symmetric() {
         let transformation = make_sized_bounded_mean(5, (0., 10.)).unwrap_test();
         let arg = vec![1., 2., 3., 4., 5.];
-        let ret = transformation.function.eval(&arg).unwrap_test();
+        let ret = transformation.invoke(&arg).unwrap_test();
         let expected = 3.;
         assert_eq!(ret, expected);
-        assert!(transformation.stability_relation.eval(&1, &1.).unwrap_test())
+        assert!(transformation.check(&1, &1.).unwrap_test())
     }
 }

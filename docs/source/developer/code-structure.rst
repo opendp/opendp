@@ -4,7 +4,7 @@ Code Structure
 **************
 Most library contributions will involve the following components:
 
-.. contents:: |toctitle|
+.. contents::
     :local:
 
 The requirements to be met for the vetting process are numbered for each component.

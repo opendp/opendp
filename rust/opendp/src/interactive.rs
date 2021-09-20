@@ -114,7 +114,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> wh
         where MO::Distance: Clone + MeasureDistance {
         self.check_types(measurement)?;
         self.check_budget(&measurement.privacy_relation, d_out_query)?;
-        let res = measurement.function.eval(&self.data)?;
+        let res = measurement.invoke(&self.data)?;
         let new = self.update(d_out_query)?;
         Ok((new, res))
     }
@@ -185,7 +185,7 @@ mod tests {
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
         let adaptive = make_adaptive_composition(meas1.input_domain.clone(), meas1.output_domain.clone(), meas1.input_metric.clone(), meas1.output_measure.clone(), d_in_budget, d_out_budget);
-        let mut queryable = adaptive.function.eval(&data)?;
+        let mut queryable = adaptive.invoke(&data)?;
         let res1 = queryable.eval(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999);
         let res2 = queryable.eval(&(meas2, d_out_budget / 2.0))?;
@@ -203,7 +203,7 @@ mod tests {
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
         let adaptive = make_adaptive_composition(meas1.input_domain.clone(), PolyDomain::new(), meas1.input_metric.clone(), meas1.output_measure.clone(), d_in_budget, d_out_budget);
-        let mut queryable = adaptive.function.eval(&data)?;
+        let mut queryable = adaptive.invoke(&data)?;
         let res1: i32 = queryable.eval_poly(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999_i32);
         let res2: i64 = queryable.eval_poly(&(meas2, d_out_budget / 2.0))?;
@@ -221,7 +221,7 @@ mod tests {
         let d_in_budget = 1.0;
         let d_out_budget = 1.0;
         let adaptive = make_adaptive_composition(meas1.input_domain.clone(), meas1.output_domain.clone(), meas1.input_metric.clone(), meas1.output_measure.clone(), d_in_budget, d_out_budget);
-        let mut queryable = adaptive.function.eval(&data)?;
+        let mut queryable = adaptive.invoke(&data)?;
         let res1 = queryable.eval(&(meas1, d_out_budget / 2.0))?;
         assert_eq!(res1, 999);
         let res2 = queryable.eval(&(meas2, d_out_budget));
@@ -244,7 +244,7 @@ mod tests {
         let d_out_budget = 1.0;
         let adaptive = make_adaptive_composition(input_domain, output_domain, input_metric, output_measure, d_in, d_out_budget);
         let data = vec![0.6, 2.8, 6.0, 9.4, 8.9, 7.7, 5.9, 3.4, 8.0, 2.4, 4.4, 7.1, 6.0, 3.2, 7.1];
-        let mut queryable = adaptive.function.eval(&data)?;
+        let mut queryable = adaptive.invoke(&data)?;
         // NO FURTHER ACCESS TO DATA AFTER THIS POINT.
 
         // Set parameters for queries
