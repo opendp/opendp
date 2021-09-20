@@ -1,3 +1,7 @@
+from opendp.mod import enable_features
+
+enable_features('contrib')
+
 
 def test_count_by_categories():
     """Compute histogram with known category set"""

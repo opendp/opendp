@@ -140,6 +140,11 @@ This is an incredibly useful observation, as we will see in the :ref:`parameter-
 
 Putting this to practice, the following example checks the stability relation on a clamp transformation.
 
+.. testsetup::
+
+    from opendp.mod import enable_features
+    enable_features('contrib')
+
 .. doctest::
 
     >>> from opendp.trans import make_clamp

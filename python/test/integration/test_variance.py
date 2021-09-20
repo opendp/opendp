@@ -8,7 +8,7 @@ def test_sized_bounded_variance():
     from opendp.meas import make_base_laplace
     from opendp.mod import binary_search_chain, enable_features
 
-    enable_features("floating-point")
+    enable_features("floating-point", "contrib")
 
     size = 200
     bounds = (0., 20.)

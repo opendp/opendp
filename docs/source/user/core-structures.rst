@@ -104,6 +104,10 @@ There's a few top-level constructor listings:
 
 In this simplified example with the :py:func:`opendp.meas.make_base_geometric` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
 
+.. testsetup::
+
+    from opendp.mod import enable_features
+    enable_features('contrib')
 
 .. doctest::
 

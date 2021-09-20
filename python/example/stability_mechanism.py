@@ -6,7 +6,9 @@ import numpy as np
 from opendp.meas import make_base_stability
 from opendp.trans import make_count_by
 from opendp.typing import L1Distance
-from opendp.mod import binary_search
+from opendp.mod import binary_search, enable_features
+
+enable_features("floating-point", "contrib")
 
 # This is a more complicated example that makes
 # differentially private releases of vocabulary sets from audio file transcriptions
@@ -115,9 +117,6 @@ if __name__ == "__main__":
     # each user says each word at most this many times
     # If they say the word more than this many times, then truncate
     max_word_count_per_individual = 20
-
-    from opendp.mod import enable_features
-    enable_features("floating-point")
 
     for corpus_name in os.listdir(ami_dir):
         print(f'Processing {corpus_name}')

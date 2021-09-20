@@ -8,7 +8,7 @@ def test_sized_bounded_float_sum():
     from opendp.meas import make_base_laplace, make_base_gaussian
     from opendp.mod import binary_search_chain, enable_features
 
-    enable_features("floating-point")
+    enable_features("floating-point", 'contrib')
 
     size = 200
     bounds = (0., 20.)
@@ -55,7 +55,7 @@ def test_sized_bounded_int_sum():
     from opendp.meas import make_base_geometric
     from opendp.mod import binary_search_chain, enable_features
 
-    enable_features("floating-point")
+    enable_features("floating-point", 'contrib')
 
     size = 200
     bounds = (0, 20)

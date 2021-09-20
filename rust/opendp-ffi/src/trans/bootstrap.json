@@ -1,6 +1,7 @@
 {
     "make_cast": {
         "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. \nFailure to parse results in None, else Some<TOA>.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "TIA",
@@ -17,6 +18,7 @@
     },
     "make_cast_default": {
         "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. If cast fails, fill with default.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "TIA",
@@ -33,6 +35,7 @@
     },
     "make_is_equal": {
         "description": "Make a Transformation that checks if each element is equal to `value`.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "value",
@@ -50,6 +53,7 @@
     },
     "make_is_null": {
         "description": "Make a Transformation that checks if each element in a vector is null.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "DIA",
@@ -61,6 +65,7 @@
     },
     "make_cast_inherent": {
         "description": "Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. \nIf cast fails, fill with `TO`'s null value.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "TIA",
@@ -77,6 +82,7 @@
     },
     "make_cast_metric": {
         "description": "Make a Transformation that converts the dataset metric from type `MI` to type `MO`.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "MI",
@@ -100,6 +106,7 @@
     },
     "make_clamp": {
         "description": "Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`. \nIf datum is less than lower, let datum be lower. \nIf datum is greater than upper, let datum be upper.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "bounds",
@@ -125,6 +132,7 @@
     },
     "make_unclamp": {
         "description": "Make a Transformation that unclamps a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "bounds",
@@ -150,6 +158,7 @@
     },
     "make_count": {
         "description": "Make a Transformation that computes a count of the number of records in data.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "TIA",
@@ -167,6 +176,7 @@
     },
     "make_count_distinct": {
         "description": "Make a Transformation that computes a count of the number of unique, distinct records in data.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "TIA",
@@ -184,6 +194,7 @@
     },
     "make_count_by": {
         "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size.\nUse meas.make_base_stability to release this query.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "size",
@@ -215,6 +226,7 @@
     },
     "make_count_by_categories": {
         "description": "Make a Transformation that computes the number of times each category appears in the data. \nThis assumes that the category set is known.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "categories",
@@ -248,11 +260,13 @@
     },
     "make_split_lines": {
         "description": "Make a Transformation that takes a string and splits it into a Vec<String> of its lines.",
+        "features": ["contrib"],
         "args": [],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_split_records": {
         "description": "Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "separator",
@@ -266,6 +280,7 @@
     },
     "make_create_dataframe": {
         "description": "Make a Transformation that constructs a dataframe from a Vec<Vec<String>>.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "col_names",
@@ -286,6 +301,7 @@
     },
     "make_split_dataframe": {
         "description": "Make a Transformation that splits each record in a String into a Vec<Vec<String>>,\nand loads the resulting table into a dataframe keyed by `col_names`.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "separator",
@@ -313,6 +329,7 @@
     },
     "make_select_column": {
         "description": "Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "key",
@@ -335,6 +352,7 @@
     },
     "make_identity": {
         "description": "Make a Transformation that simply passes the data through.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "D",
@@ -354,6 +372,7 @@
     },
     "make_impute_constant": {
         "description": "Make a Transformation that replaces null/None data with `constant`.\nBy default, the input type is Vec<Option<TA>>, as emitted by make_cast. \nSet `DA` to InherentNullDomain<AllDomain<TA>> for imputing on types that have an inherent representation of nullity, like floats.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "constant",
@@ -384,6 +403,7 @@
     },
     "make_impute_uniform_float": {
         "description": "Make a Transformation that replaces null/None data in Vec<`TA`> with uniformly distributed floats within `bounds`.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "bounds",
@@ -409,6 +429,7 @@
     },
     "make_sized_bounded_mean": {
         "description": "Make a Transformation that computes the mean of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "size",
@@ -441,6 +462,7 @@
     },
     "make_resize": {
         "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "size",
@@ -466,6 +488,7 @@
     },
     "make_bounded_resize": {
         "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "size",
@@ -505,6 +528,7 @@
     },
     "make_bounded_sum": {
         "description": "Make a Transformation that computes the sum of bounded data. \nUse `make_clamp` to bound data.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "bounds",
@@ -532,6 +556,7 @@
     },
     "make_sized_bounded_sum": {
         "description": "Make a Transformation that computes the sum of bounded data with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "size",
@@ -564,6 +589,7 @@
     },
     "make_sized_bounded_variance": {
         "description": "Make a Transformation that computes the variance of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "size",

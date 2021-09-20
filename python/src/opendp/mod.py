@@ -277,7 +277,7 @@ def disable_features(*features: str) -> None:
 
 def assert_features(*features: str) -> None:
     for feature in features:
-        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. Check the documentation for the feature, then call enable_features(\"{feature}\")"
+        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
 
 
 def binary_search_chain(
