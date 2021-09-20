@@ -25,8 +25,7 @@ extensions = [
     'sphinx_multiversion',
 ]
 
-extlinks = {'issue': ('https://github.com/opendp/opendp/issues/%s', 'issue %s')}
-
+# This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 
 # Add any paths that contain templates here, relative to this directory.

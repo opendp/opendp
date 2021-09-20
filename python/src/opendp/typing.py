@@ -184,7 +184,7 @@ class RuntimeType(object):
 
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
-        print(type(public_example))
+
         raise UnknownTypeException(public_example)
 
     @classmethod
@@ -254,9 +254,6 @@ class RuntimeType(object):
         if isinstance(self, RuntimeType):
             return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
         return self
-
-    def __getitem__(self, *subtypes):
-        return RuntimeType(self.origin, [self.parse(type_name=subtype) for subtype in subtypes])
 
 
 class GenericType(RuntimeType):

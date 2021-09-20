@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_make_identity() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_identity(
-            "Vec<i32>".to_char_p(),
+            "VectorDomain<AllDomain<i32>>".to_char_p(),
             "SymmetricDistance".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![123]);
