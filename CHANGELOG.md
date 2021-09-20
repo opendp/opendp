@@ -2,6 +2,12 @@
 
 This file documents the version history of OpenDP.
 
+## [0.2.3] - 2021-09-20
+[0.2.3]: https://github.com/opendp/opendp/compare/v0.2.2...v0.2.3
+
+### Changed
+- All constructors without vetted proofs (all of them) are now behind the "contrib" feature
+
 ## [0.2.2] - 2021-09-20
 [0.2.2]: https://github.com/opendp/opendp/compare/v0.2.1...v0.2.2
 
