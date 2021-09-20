@@ -172,7 +172,7 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 fn generate_docstring(func: &Function, func_name: &String, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let mut description = func.description.as_ref()
-        .map(|v| format!("{}\n", v.split("\\n").collect::<Vec<_>>().join("\n")))
+        .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
     if let Some(proof) = &func.proof {
         description = format!(r#"{description}
