@@ -10,6 +10,6 @@ If your focus is using OpenDP to build your own applications, please consult the
    getting-involved
    contribution-process
    development-environment
-   developer-faq
    code-structure
+   developer-faq
    maintainer-notes
