@@ -144,7 +144,7 @@ will help us find a noise scale parameter that satisfies our given budget.
 .. doctest::
 
     >>> from opendp.meas import make_base_laplace
-    >>> from opendp.mod import enable_features, binary_search_chain
+    >>> from opendp.mod import enable_features, binary_search_param
     ...
     >>> # Please make yourself aware of the dangers of floating point numbers
     >>> enable_features("floating-point")
