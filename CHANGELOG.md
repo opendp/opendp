@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User guide, developer guide, and general focus on documentation
 - Examples folder has complete notebooks for getting started with the library
 
+### Fixed
+- Usability issues in the FFI layer for `make_count_by_categories` and `make_count_by`
+- The FFI for make_identity ensures proper domain metric pairing
+
 ## [0.2.1] - 2021-09-09
 [0.2.0]: https://github.com/opendp/opendp/compare/v0.2.0...v0.2.1
 
