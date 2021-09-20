@@ -25,6 +25,10 @@ extensions = [
     'sphinx_multiversion',
 ]
 
+extlinks = {'issue': ('https://github.com/opendp/opendp/issues/%s', 'issue %s')}
+
+autodoc_typehints = "description"
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -43,7 +47,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = '0.0.0-development'
+version = open('../../VERSION').read()
 # The full version, including alpha/beta/rc tags.
 #release = ''
 

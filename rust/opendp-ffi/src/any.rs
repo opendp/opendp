@@ -597,7 +597,7 @@ mod tests {
         let m1 = meas::make_base_gaussian::<AllDomain<_>>(0.0)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
-        let res = chain.function.eval(&arg);
+        let res = chain.invoke(&arg);
         let res: f64 = res?.downcast()?;
         assert_eq!(6.0, res);
 

@@ -54,16 +54,16 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         raise UnknownTypeException(rust_type)
 
     if c_type == AnyObjectPtr:
-        from opendp._data import _slice_as_object
-        return _slice_as_object(value, type_name)
+        from opendp._data import slice_as_object
+        return slice_as_object(value, type_name)
 
     if c_type == AnyMeasureDistancePtr:
-        from opendp._data import _slice_as_measure_distance
-        return _slice_as_measure_distance(value, type_name)
+        from opendp._data import slice_as_measure_distance
+        return slice_as_measure_distance(value, type_name)
 
     if c_type == AnyMetricDistancePtr:
-        from opendp._data import _slice_as_metric_distance
-        return _slice_as_metric_distance(value, type_name)
+        from opendp._data import slice_as_metric_distance
+        return slice_as_metric_distance(value, type_name)
 
     if c_type == FfiSlicePtr:
         assert type_name is not None
@@ -89,10 +89,10 @@ def c_to_py(value):
     :return: copy of data in python representation
     """
     if isinstance(value, AnyObjectPtr):
-        from opendp._data import _object_type, _object_as_slice, _to_string, _slice_free
-        ffi_slice = _object_as_slice(value)
+        from opendp._data import object_type, object_as_slice, to_string, slice_free
+        ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, _object_type(value))
+            return _slice_to_py(ffi_slice, object_type(value))
         except UnknownTypeException:
             raise
         except Exception as err:
@@ -101,20 +101,20 @@ def c_to_py(value):
             # raise err
             # If we fail, resort to string representation.
             # TODO: Remove this fallback once we have composition and/or tuples sorted out.
-            return _to_string(value)
+            return to_string(value)
         finally:
-            _slice_free(ffi_slice)
+            slice_free(ffi_slice)
 
     if isinstance(value, ctypes.c_char_p):
-        from opendp._data import _str_free
+        from opendp._data import str_free
         value_contents = value.value.decode()
-        _str_free(value)
+        str_free(value)
         return value_contents
 
     if isinstance(value, BoolPtr):
-        from opendp._data import _bool_free
+        from opendp._data import bool_free
         value_contents = value.contents.value
-        _bool_free(value)
+        bool_free(value)
         return value_contents
 
     if isinstance(value, (Transformation, Measurement)):

@@ -102,16 +102,16 @@ mod tests {
         let arg = vec![1., 2., 3., 4., 5.];
 
         let transformation_sample = make_sized_bounded_variance(5, (0., 10.), 1).unwrap_test();
-        let ret = transformation_sample.function.eval(&arg).unwrap_test();
+        let ret = transformation_sample.invoke(&arg).unwrap_test();
         let expected = 2.5;
         assert_eq!(ret, expected);
-        assert!(transformation_sample.stability_relation.eval(&1, &(100. / 5.)).unwrap_test());
+        assert!(transformation_sample.check(&1, &(100. / 5.)).unwrap_test());
 
         let transformation_pop = make_sized_bounded_variance(5, (0., 10.), 0).unwrap_test();
-        let ret = transformation_pop.function.eval(&arg).unwrap_test();
+        let ret = transformation_pop.invoke(&arg).unwrap_test();
         let expected = 2.0;
         assert_eq!(ret, expected);
-        assert!(transformation_pop.stability_relation.eval(&1, &(100. * 4. / 25.)).unwrap_test());
+        assert!(transformation_pop.check(&1, &(100. * 4. / 25.)).unwrap_test());
     }
 
     #[test]
@@ -119,15 +119,15 @@ mod tests {
         let arg = vec![(1., 3.), (2., 4.), (3., 5.), (4., 6.), (5., 7.)];
 
         let transformation_sample =  make_sized_bounded_covariance(5, (0., 2.), (10., 12.), 1).unwrap_test();
-        let ret = transformation_sample.function.eval(&arg).unwrap_test();
+        let ret = transformation_sample.invoke(&arg).unwrap_test();
         let expected = 2.5;
         assert_eq!(ret, expected);
-        assert!(transformation_sample.stability_relation.eval(&1, &(100. / 5.)).unwrap_test());
+        assert!(transformation_sample.check(&1, &(100. / 5.)).unwrap_test());
 
         let transformation_pop = make_sized_bounded_covariance(5, (0., 2.), (10., 12.), 0).unwrap_test();
-        let ret = transformation_pop.function.eval(&arg).unwrap_test();
+        let ret = transformation_pop.invoke(&arg).unwrap_test();
         let expected = 2.0;
         assert_eq!(ret, expected);
-        assert!(transformation_pop.stability_relation.eval(&1, &(100. * 4. / 25.)).unwrap_test());
+        assert!(transformation_pop.check(&1, &(100. * 4. / 25.)).unwrap_test());
     }
 }

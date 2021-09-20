@@ -40,12 +40,12 @@ mod test {
     #[test]
     fn test() -> Fallible<()> {
         let trans = make_resize_constant(3, AllDomain::new(), "x")?;
-        assert_eq!(trans.function.eval(&vec!["A"; 2])?, vec!["A", "A", "x"]);
-        assert_eq!(trans.function.eval(&vec!["A"; 3])?, vec!["A"; 3]);
-        assert_eq!(trans.function.eval(&vec!["A"; 4])?, vec!["A", "A", "A"]);
+        assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
+        assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
+        assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);
 
-        assert!(trans.stability_relation.eval(&1, &2)?);
-        assert!(!trans.stability_relation.eval(&1, &1)?);
+        assert!(trans.check(&1, &2)?);
+        assert!(!trans.check(&1, &1)?);
         Ok(())
     }
 }

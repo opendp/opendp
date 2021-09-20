@@ -97,7 +97,7 @@ mod tests {
     fn test_poly_measurement() -> Fallible<()> {
         let op_plain = meas::make_base_laplace::<AllDomain<_>>(0.0)?;
         let arg = 99.9;
-        let res_plain = op_plain.function.eval(&arg)?;
+        let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);
         let op_poly = op_plain.into_poly();
         let res_poly = op_poly.function.eval_poly::<f64>(&arg)?;
@@ -111,7 +111,7 @@ mod tests {
     fn test_poly_transformation() -> Fallible<()> {
         let op_plain = trans::make_identity(AllDomain::new(), SubstituteDistance::default())?;
         let arg = 99.9;
-        let res_plain = op_plain.function.eval(&arg)?;
+        let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);
         let op_poly = op_plain.into_poly();
         let res_poly = op_poly.function.eval_poly::<f64>(&arg)?;

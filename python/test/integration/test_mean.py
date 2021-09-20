@@ -29,10 +29,13 @@ def test_dp_mean():
         make_cast(TIA=str, TOA=float) >>
         # Impute missing values to 0 Vec<Float>
         make_impute_constant(impute_constant) >>
-        # Clamp age values
+        # Clamp values
         make_clamp(bounds) >>
+        # Resize dataset length
         make_bounded_resize(n, bounds, impute_constant) >>
+        # Aggregate with mean
         make_sized_bounded_mean(n, bounds) >>
+        # Noise
         make_base_laplace(scale)
     )
     res = preprocessor(data)

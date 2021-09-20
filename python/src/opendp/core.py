@@ -4,6 +4,22 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
+__all__ = [
+    "_error_free",
+    "_transformation_free",
+    "_measurement_free",
+    "transformation_check",
+    "measurement_check",
+    "measurement_invoke",
+    "transformation_invoke",
+    "transformation_input_carrier_type",
+    "measurement_input_carrier_type",
+    "transformation_input_distance_type",
+    "transformation_output_distance_type",
+    "measurement_input_distance_type",
+    "measurement_output_distance_type"
+]
+
 
 def _error_free(
     error: FfiError

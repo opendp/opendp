@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char};
 
-use opendp::core::{DatasetMetric};
-use opendp::dist::{SubstituteDistance, SymmetricDistance};
+use opendp::core::{DatasetMetric, SensitivityMetric};
+use opendp::dist::{SubstituteDistance, SymmetricDistance, L1Distance, L2Distance, AbsoluteDistance};
 use opendp::dom::{AllDomain, VectorDomain, OptionNullDomain, InherentNullDomain, InherentNull};
 use opendp::err;
 use opendp::trans::{make_identity, make_is_equal, make_is_null};
@@ -10,33 +10,67 @@ use opendp::trans::{make_identity, make_is_equal, make_is_null};
 use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::util::{Type, TypeContents};
-use opendp::traits::CheckNull;
+use opendp::traits::{CheckNull, DistanceConstant};
+use num::One;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_identity(
-    M: *const c_char, TA: *const c_char,
+    D: *const c_char, M: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize_scalar<M, TA>() -> FfiResult<*mut AnyTransformation>
-        where M: 'static + DatasetMetric,
-              TA: 'static + Clone + CheckNull {
-        make_identity::<AllDomain<TA>, M>(AllDomain::<TA>::new(), M::default()).into_any()
-    }
-    fn monomorphize_vec<M, TA>() -> FfiResult<*mut AnyTransformation>
-        where M: 'static + DatasetMetric,
-              TA: 'static + Clone + CheckNull {
-        make_identity::<VectorDomain<AllDomain<TA>>, M>(VectorDomain::new(AllDomain::<TA>::new()), M::default()).into_any()
-    }
     let M = try_!(Type::try_from(M));
-    let TA = try_!(Type::try_from(TA));
-    match &TA.contents {
-        TypeContents::VEC(element_id) => dispatch!(monomorphize_vec, [
-            (M, @dist_dataset),
-            (try_!(Type::of_id(element_id)), @primitives)
-        ], ()),
-        _ => dispatch!(monomorphize_scalar, [
-            (M, @dist_dataset),
-            (&TA, @primitives)
-        ], ())
+    let D = try_!(Type::try_from(D));
+
+    match &D.contents {
+        TypeContents::GENERIC {name, args} if name == &"VectorDomain" => {
+            if args.len() != 1 {
+                return err!(FFI, "VectorDomain only accepts one argument.").into()
+            }
+            let atomic_domain = try_!(Type::of_id(&args[0]));
+            let T = match atomic_domain.contents {
+                TypeContents::GENERIC {name, args} if &name == &"AllDomain" => {
+                    if args.len() != 1 {
+                        return err!(FFI, "AllDomain only accepts one argument.").into()
+                    }
+                    try_!(Type::of_id(&args[0]))
+                }
+                _ => return err!(FFI, "In FFI, make_identity's VectorDomain may only contain AllDomain<_>").into()
+            };
+            fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
+                where M: 'static + DatasetMetric,
+                      T: 'static + Clone + CheckNull {
+                make_identity::<VectorDomain<AllDomain<T>>, M>(
+                    VectorDomain::new(AllDomain::<T>::new()),
+                    M::default()).into_any()
+            }
+            dispatch!(monomorphize, [
+                (M, @dist_dataset),
+                (T, @primitives)
+            ], ())
+        },
+        TypeContents::GENERIC {name, args} if name == &"AllDomain" => {
+            if args.len() != 1 {
+                return err!(FFI, "AllDomain only accepts one argument.").into()
+            }
+            let T = try_!(Type::of_id(&args[0]));
+
+            fn monomorphize<T>(M: Type) -> FfiResult<*mut AnyTransformation>
+                where T: 'static + DistanceConstant<T> + CheckNull + One {
+                fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
+                    where M: 'static + SensitivityMetric ,
+                          M::Distance: CheckNull + DistanceConstant<M::Distance> + One {
+                    make_identity::<AllDomain<M::Distance>, M>(
+                        AllDomain::<M::Distance>::new(),
+                        M::default()).into_any()
+                }
+                dispatch!(monomorphize, [
+                    (M, [AbsoluteDistance<T>, L1Distance<T>, L2Distance<T>])
+                ], ())
+            }
+            dispatch!(monomorphize, [
+                (T, @numbers)
+            ], (M))
+        },
+        _ => err!(FFI, "Monomorphizations for the identity function are only available for VectorDomain<AllDomain<_>> and AllDomain<_>").into()
     }
 }
 
@@ -96,13 +130,13 @@ mod tests {
     #[test]
     fn test_make_identity() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_identity(
+            "Vec<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
-            "i32".to_char_p(),
         ))?;
-        let arg = AnyObject::new_raw(123);
+        let arg = AnyObject::new_raw(vec![123]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
-        let res: i32 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 123);
+        let res: Vec<i32> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, vec![123]);
         Ok(())
     }
 

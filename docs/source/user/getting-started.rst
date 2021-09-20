@@ -1,12 +1,6 @@
 Getting Started
 ===============
 
-.. contents:: |toctitle|
-    :local:
-
-Goal
-----
-
 This section will walk you through the process of getting started with OpenDP. By the end, you should have a working OpenDP installation, and you'll be ready to explore OpenDP programming.
 
 Installation
@@ -71,7 +65,8 @@ With that configured, the Rust dependency system will automatically download the
 Building OpenDP from Source
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Under special circumstances, it may be necessary to install OpenDP directly from the source files. This is only required if you want to build OpenDP from scratch, or if you're interested in :doc:`contributing to OpenDP <../developer/intro>`.
+Under special circumstances, it may be necessary to install OpenDP directly from the source files.
+This is only required if you want to build OpenDP from scratch, or if you're interested in :doc:`contributing to OpenDP <../developer/index>`.
 
 For this to work, you'll need some prerequisites:
 
@@ -121,35 +116,49 @@ If everything has gone well, you'll see a bunch of output, then a line similar t
 
     ================== 57 passed in 1.02s ==================
 
-This is just a quick overview of building OpenDP. If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact/index>`!
+This is just a quick overview of building OpenDP. If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
+
+.. _hello-opendp:
 
 Hello, OpenDP!
 --------------
 
-Once you've installed OpenDP, you can write your first program. In the example below, we'll construct a ``Transformation``, which is an OpenDP object that transforms data some way. In this case, the operation it performs is the identity transformation -- so no transformation at all! Then we'll apply that transformation to a string, getting back the original string.
+Once you've installed OpenDP, you can write your first program.
+In the example below, we'll construct a ``Transformation``, which is an OpenDP object that transforms data in some way.
+In this case, the operation it performs is the identity transformation -- so no transformation at all!
+Then we'll apply that transformation to a vector consisting of one string, and get back a copy of the vector.
 
 .. doctest::
 
     >>> from opendp.trans import make_identity
-    >>> from opendp.typing import SubstituteDistance
+    >>> from opendp.typing import VectorDomain, AllDomain, SymmetricDistance
     ...
-    >>> identity = make_identity(M=SubstituteDistance, TA=str)
-    >>> identity("Hello, world!")
-    'Hello, world!'
+    >>> identity = make_identity(D=VectorDomain[AllDomain[str]], M=SymmetricDistance)
+    >>> identity(["Hello, world!"])
+    ['Hello, world!']
 
-First, we import some types to have them in scope. ``make_identity`` is a constructor function, and ``SymmetricDistance`` is a type we need for disambiguation.
+First, we import some types to have them in scope.
+:func:`make_identity <opendp.trans.make_identity>` is a :ref:`constructor function <constructors>`,
+and the imports from :mod:`opendp.typing` are necessary for disambiguating the types the transformation will work with.
 
-Next we call ``make_identity()`` to construct an identity ``Transformation``. Because OpenDP is statically typed (even when called from dynamically typed languages like Python), we need to specify some type information. This is done by supplying some key-value arguments. ``M=SymmetricDistance`` says that we want the resulting ``Transformation`` to use the OpenDP type ``SymmetricDistance`` for its ``Metric``, and ``TA=str`` says that we want the ``Transformation`` to use the Python type ``str`` for its input and output type.
+Next we call ``make_identity()`` to construct an identity ``Transformation``.
+Because OpenDP is statically typed (even when called from dynamically typed languages like Python), we need to specify some type information.
+This is done by supplying some key-value arguments.
+``D=VectorDomain[AllDomain[str]]`` says that we want the ``Transformation`` to have an input and output :ref:`Domain <domains>` consisting of all string vectors,
+and ``M=SymmetricDistance`` says that we want the resulting ``Transformation`` to use the OpenDP type ``SymmetricDistance`` for its input and output :ref:`Metric <metrics>`.
 
-Finally, we invoke our ``identity`` transformation by calling it like a function on a string value. As expected, it returns the same string back to us!
+Finally, we invoke our ``identity`` transformation by calling it like a function on a string vector. As expected, it returns the same string vector back to us!
 
-That's not particularly exciting, but it shows the rudiments of an OpenDP program. Don't worry if some of the concepts don't make sense because they'll be explained later in this guide.
+That's not particularly exciting, but it shows the rudiments of an OpenDP program.
+Don't worry if some of the concepts don't make sense because they'll be explained later in this guide.
 
 What's Next?
 ------------
 
-Now that you've had a taste of OpenDP, you can start exploring the library in more depth. The remainder of this guide will walk you through the concepts that underlie OpenDP, starting with its conceptual underpinnings, known as the :doc:`OpenDP Programming Framework <programming-framework>`.
+Now that you've had a taste of OpenDP, you can start exploring the library in more depth.
+The remainder of this guide will walk you through the concepts that underlie OpenDP,
+starting with its conceptual underpinnings, known as the :doc:`OpenDP Programming Framework <programming-framework>`.
 
-If you're eager to just jump in with programming, you can look at some of the :doc:`example uses of OpenDP <../examples/index>`.
+If you're eager to just jump in with programming, you can look at some of the :doc:`example uses of OpenDP <../examples>`.
 
 For those who prefer to study reference material, you can consult the :doc:`API Docs <../api/index>`.

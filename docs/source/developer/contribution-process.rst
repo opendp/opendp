@@ -3,9 +3,6 @@
 Contribution Process
 ********************
 
-.. contents:: |toctitle|
-    :local:
-
 There's no need to fear, because our contribution process is human!
 We're aiming to keep this process approachable to people of all skill levels.
 Without compromising the integrity of the library,
@@ -15,7 +12,7 @@ there is reasonable variation in how strictly we adhere to this process in accor
 Development Setup
 -----------------
 The first task to tackle is setting up the development environment.
-We have detailed instructions in the :ref:`logistics` section.
+We have detailed instructions in the :ref:`development-environment` section.
 
 Checkout to a new feature branch when you are ready to work on your issue.
 Your branch should have a name that includes the issue number followed by a short description such as ``123-typo-in-readme``.
@@ -25,6 +22,10 @@ If new commits have been added to the main branch, please rebase to help maintai
 
 Implementation
 --------------
+The programming framework suggests `many types of contributions <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf#section.10>`_,
+but this guide focuses on constructor contributions (types 1-3) for brevity.
+The process involved for other kinds of code contribution will share similarities.
+
 The :ref:`code-structure` section contains information about the various components you may be involved with:
 the proof, constructor and FFI.
 

@@ -40,6 +40,7 @@ fn generate_module(
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
+    let all = module.keys().map(|v| format!("    \"{}\"", v)).collect::<Vec<_>>().join(",\n");
     let functions = module.into_iter()
         .map(|(func_name, func)| generate_function(&module_name, &func_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
@@ -51,7 +52,11 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
-{functions}"#, functions = functions)
+__all__ = [
+{all}
+]
+
+{functions}"#, all = all, functions = functions)
 }
 
 fn generate_function(
@@ -167,7 +172,7 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 fn generate_docstring(func: &Function, func_name: &String, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let mut description = func.description.as_ref()
-        .map(|v| format!("{}\n", v))
+        .map(|v| format!("{}\n", v.split("\\n").collect::<Vec<_>>().join("\n")))
         .unwrap_or_else(String::new);
     if let Some(proof) = &func.proof {
         description = format!(r#"{description}

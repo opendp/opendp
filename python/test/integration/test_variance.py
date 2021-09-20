@@ -14,13 +14,20 @@ def test_sized_bounded_variance():
     bounds = (0., 20.)
 
     preprocess = (
-            make_split_dataframe(",", ['A', 'B']) >>
-            make_select_column("A", TOA=str) >>
-            make_cast(TIA=str, TOA=float) >>
-            make_impute_constant(constant=0.) >>
-            make_clamp(bounds=bounds) >>
-            make_bounded_resize(size=size, bounds=bounds, constant=0.) >>
-            make_sized_bounded_variance(size=size, bounds=bounds)
+        # Convert csv string into a dataframe of String columns
+        make_split_dataframe(",", ['A', 'B']) >>
+        # Selects a column of df, Vec<str>
+        make_select_column("A", TOA=str) >>
+        # Cast the column as Vec<Optional<Float>>
+        make_cast(TIA=str, TOA=float) >>
+        # Impute missing values to 0, emit Vec<Float>
+        make_impute_constant(constant=0.) >>
+        # Clamp values
+        make_clamp(bounds=bounds) >>
+        # Resize dataset length
+        make_bounded_resize(size=size, bounds=bounds, constant=0.) >>
+        # Aggregate with variance
+        make_sized_bounded_variance(size=size, bounds=bounds)
     )
 
     noisy_known_n_variance_from_dataframe = binary_search_chain(

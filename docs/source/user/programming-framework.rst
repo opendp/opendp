@@ -1,9 +1,6 @@
 Programming Framework
 =====================
 
-.. contents:: |toctitle|
-    :local:
-
 OpenDP is based on a conceptual model that defines the characteristics of privacy-preserving operations and provides a way for components to be assembled into programs with desired behavior. This model, known as the OpenDP Programming Framework, is described in the paper `A Programming Framework for OpenDP <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf>`_. The framework is designed with a clear and verifiable means of capturing the sensitive aspects of an algorithm, while remaining highly flexible and extensible. OpenDP (the software library) is intended to be a faithful implementation of that approach. Because OpenDP is based on a well-defined model, users can create applications with rigorous privacy properties.
 
 Summary
@@ -17,7 +14,7 @@ The OpenDP Programming Framework consists of a set of high-level conceptual elem
 
 * :ref:`Measurements <measurement>` are randomized mappings from a dataset to an arbitrary output value. They are a controlled means of introducing privacy (e.g. noise) to a computation. An example of a measurement is one which applies Laplace noise to a value.
 * :ref:`Transformations <transformation>` are deterministic mappings from a dataset to another dataset. They are used to summarize or transform values in some way. An example of a transformation is one which calculates the mean of a set of values.
-* :ref:`Domains <domains>` are sets which identify the possible values that some object can take. The are used to constrain the input or output of measurements and transformations. Examples of domains are the integers between 1 and 10, or vectors of length 5 containing floating point numbers.
+* :ref:`Domains <domains>` are sets which identify the possible values that some object can take. They are used to constrain the input or output of measurements and transformations. Examples of domains are the integers between 1 and 10, or vectors of length 5 containing floating point numbers.
 * :ref:`Measures <measures>` and :ref:`metrics <metrics>` are things that specify distances between two mathematical objects.
 
   * Measures characterize the distance between two probability distributions. An example measure is the "max-divergence" of pure differential privacy.
@@ -38,7 +35,7 @@ Key Points
 You don't need to know all the details of the Programming Framework to write OpenDP applications, but it helps understand some of the key points:
 
 * OpenDP calculations are built by assembling a measurement from a number of constituent transformations and measurements, typically through chaining or composition.
-* Measurements don't have a static privacy loss specified when constructing the measurement. Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provide some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the framework as a whole.
+* Measurements don't have a static privacy loss specified when constructing the measurement. Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the framework as a whole.
 
 Implementation Differences
 --------------------------
