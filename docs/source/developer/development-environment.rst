@@ -1,10 +1,4 @@
-.. _logistics:
-
-Logistics
-*********
-
-.. contents:: |toctitle|
-    :local:
+.. _development-environment:
 
 Development Environment
 =======================
@@ -54,7 +48,7 @@ Change to the ``rust`` directory before attempting a build, run the tests, and t
     cd ..
 
 Add `--features=untrusted` to the `cargo` commands to include non-secure floating-point and contrib features like `make_base_laplace`.
-If you are on Windows, `check the windows build instructions <https://github.com/opendp/opendp/tree/main/windows>`_.
+Refer to the :ref:`developer-faq` section if you run into compilation problems.
 
 Install Python Dependencies
 ---------------------------
@@ -96,8 +90,8 @@ Building the Docs
 The docs are built using Sphinx and the steps are listed in the README in the "docs" directory.
 
 
-Development Tooling
-===================
+Tooling
+=======
 
 There are many development environments that work with Rust. Here are a few:
 

@@ -3,12 +3,6 @@
 Limitations
 ===========
 
-.. contents:: |toctitle|
-   :local:
-
-Overview
---------
-
 OpenDP is early in its development history. We aim to build *the* trusted implementation of differential privacy algorithms, but we're not there yet. We feel that OpenDP already can be used to build some useful applications, but please be aware of the following limitations.
 
 Privacy Concerns

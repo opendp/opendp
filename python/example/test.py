@@ -2,14 +2,17 @@ from opendp.trans import *
 from opendp.meas import *
 from opendp.comb import *
 
-from opendp.typing import SubstituteDistance
+from opendp.typing import SubstituteDistance, VectorDomain, AllDomain
+
+# This is a short demonstration of opendp in a script.
+# Includes an example of composition.
 
 
 def main():
 
     # HELLO WORLD
-    identity = make_identity(M=SubstituteDistance, TA=str)
-    arg = "hello, world!"
+    identity = make_identity(D=VectorDomain[AllDomain[str]], M=SubstituteDistance)
+    arg = ["hello, world!"]
     res = identity(arg)
     print(res)
 
@@ -39,6 +42,8 @@ def main():
     # Compose & chain
     everything = parse_dataframe >> make_basic_composition(noisy_sum_1, noisy_count_2)
     print(everything(arg))
+
+    # TODO: update data unloaders to work recursively, to avoid needing the cast to a string
 
 
 if __name__ == "__main__":

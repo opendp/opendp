@@ -56,7 +56,7 @@ pub struct Argument {
     #[serde(default)]
     is_type: bool,
     // most functions convert c_to_py or py_to_c. Set to true to leave the value as-is
-    // an example usage is _slice_as_object,
+    // an example usage is slice_as_object,
     //  to prevent the returned AnyObject from getting converted back to python
     #[serde(default)]
     do_not_convert: bool,

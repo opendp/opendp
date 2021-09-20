@@ -3,6 +3,8 @@ Maintainer Notes
 
 This section maps out development logistics for the core team of OpenDP developers.
 
+.. I left this here because it's actually deeply nested
+
 .. contents:: |toctitle|
     :local:
 

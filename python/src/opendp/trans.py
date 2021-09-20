@@ -4,6 +4,35 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
+__all__ = [
+    "make_cast",
+    "make_cast_default",
+    "make_is_equal",
+    "make_is_null",
+    "make_cast_inherent",
+    "make_cast_metric",
+    "make_clamp",
+    "make_unclamp",
+    "make_count",
+    "make_count_distinct",
+    "make_count_by",
+    "make_count_by_categories",
+    "make_split_lines",
+    "make_split_records",
+    "make_create_dataframe",
+    "make_split_dataframe",
+    "make_select_column",
+    "make_identity",
+    "make_impute_constant",
+    "make_impute_uniform_float",
+    "make_sized_bounded_mean",
+    "make_resize",
+    "make_bounded_resize",
+    "make_bounded_sum",
+    "make_sized_bounded_sum",
+    "make_sized_bounded_variance"
+]
+
 
 def make_cast(
     TIA: RuntimeTypeDescriptor,
@@ -334,7 +363,9 @@ def make_count_by(
 ) -> Transformation:
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown. 
-    Use make_base_stability to release this query.
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
+    Use `make_resize` to establish dataset size.
+    Use meas.make_base_stability to release this query.
     
     :param size: Number of records in input data.
     :type size: int
@@ -371,7 +402,7 @@ def make_count_by(
 
 def make_count_by_categories(
     categories: Any,
-    MO: SensitivityMetric,
+    MO: SensitivityMetric = "L1Distance<i32>",
     TIA: RuntimeTypeDescriptor = None,
     TOA: RuntimeTypeDescriptor = "i32"
 ) -> Transformation:
@@ -562,35 +593,35 @@ def make_select_column(
 
 
 def make_identity(
-    M: DatasetMetric,
-    TA: RuntimeTypeDescriptor
+    D: RuntimeTypeDescriptor,
+    M: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that simply passes the data through.
     
-    :param M: dataset metric
-    :type M: DatasetMetric
-    :param TA: Type of data passed to the identity function.
-    :type TA: RuntimeTypeDescriptor
-    :return: A identity step.
+    :param D: Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>
+    :type D: RuntimeTypeDescriptor
+    :param M: metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
+    :type M: RuntimeTypeDescriptor
+    :return: A transformation where the input and output domain are D and the input and output metric are M
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
+    D = RuntimeType.parse(type_name=D)
     M = RuntimeType.parse(type_name=M)
-    TA = RuntimeType.parse(type_name=TA)
     
     # Convert arguments to c types.
+    D = py_to_c(D, c_type=ctypes.c_char_p)
     M = py_to_c(M, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_identity
     function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(M, TA), Transformation))
+    return c_to_py(unwrap(function(D, M), Transformation))
 
 
 def make_impute_constant(
@@ -665,7 +696,8 @@ def make_sized_bounded_mean(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the mean of bounded data. 
-    Use make_clamp to bound data.
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
+    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
     :param size: Number of records in input data.
     :type size: int
@@ -700,7 +732,7 @@ def make_resize(
     constant: Any,
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.\nWARNING: This function is pending change. It will accept an additional domain argument.
+    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     
     :param size: Number of records in output data.
     :type size: int
@@ -736,7 +768,7 @@ def make_bounded_resize(
     constant,
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains
+    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     
     :param size: Number of records in output data.
     :type size: int
@@ -773,7 +805,7 @@ def make_bounded_sum(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data. 
-    Use make_clamp to bound data.
+    Use `make_clamp` to bound data.
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
@@ -805,9 +837,9 @@ def make_sized_bounded_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data with known length. 
-    This uses a restricted-sensitivity proof that takes advantage of known N for better utility. 
-    Use make_clamp to bound data.
+    """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
     :param size: Number of records in input data.
     :type size: int
@@ -844,7 +876,8 @@ def make_sized_bounded_variance(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the variance of bounded data. 
-    Use make_clamp to bound data.
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
+    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
     :param size: Number of records in input data.
     :type size: int

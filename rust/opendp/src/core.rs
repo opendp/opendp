@@ -365,6 +365,14 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
             privacy_relation,
         }
     }
+
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+        self.function.eval(arg)
+    }
+
+    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool> {
+        self.privacy_relation.eval(d_in, d_out)
+    }
 }
 
 /// A data transformation with certain stability characteristics.
@@ -395,6 +403,14 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
             stability_relation,
         }
     }
+
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+        self.function.eval(arg)
+    }
+
+    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool> {
+        self.stability_relation.eval(d_in, d_out)
+    }
 }
 
 
@@ -416,7 +432,7 @@ mod tests {
         let stability_relation = StabilityRelation::new_from_constant(1);
         let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
         let arg = 99;
-        let ret = identity.function.eval(&arg).unwrap_test();
+        let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);
     }
 }

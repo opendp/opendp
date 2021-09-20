@@ -90,9 +90,9 @@ mod tests {
     fn test_make_gaussian_mechanism() -> Fallible<()> {
         let measurement = make_base_gaussian::<AllDomain<_>>(1.0)?;
         let arg = 0.0;
-        let _ret = measurement.function.eval(&arg)?;
+        let _ret = measurement.invoke(&arg)?;
 
-        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001))?);
+        assert!(measurement.check(&0.1, &(0.5, 0.00001))?);
         Ok(())
     }
 
@@ -100,9 +100,9 @@ mod tests {
     fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
         let measurement = make_base_gaussian::<VectorDomain<_>>(1.0)?;
         let arg = vec![0.0, 1.0];
-        let _ret = measurement.function.eval(&arg)?;
+        let _ret = measurement.invoke(&arg)?;
 
-        assert!(measurement.privacy_relation.eval(&0.1, &(0.5, 0.00001))?);
+        assert!(measurement.check(&0.1, &(0.5, 0.00001))?);
         Ok(())
     }
 }

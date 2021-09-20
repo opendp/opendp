@@ -1,5 +1,0 @@
-Applications
-============
-
-.. contents:: |toctitle|
-	:local:

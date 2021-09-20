@@ -183,7 +183,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_count_by": {
-        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nUse make_base_stability to release this query.",
+        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size.\nUse meas.make_base_stability to release this query.",
         "args": [
             {
                 "name": "size",
@@ -227,6 +227,7 @@
             },
             {
                 "name": "MO",
+                "default": "L1Distance<i32>",
                 "hint": "SensitivityMetric",
                 "is_type": true,
                 "description": "output sensitivity metric"
@@ -336,19 +337,19 @@
         "description": "Make a Transformation that simply passes the data through.",
         "args": [
             {
-                "name": "M",
-                "hint": "DatasetMetric",
-                "description": "dataset metric",
+                "name": "D",
+                "description": "Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>",
                 "is_type": true
             },
             {
-                "name": "TA",
-                "description": "Type of data passed to the identity function.",
+                "name": "M",
+                "description": "metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain",
                 "is_type": true
             }
         ],
         "ret": {
-            "c_type": "FfiResult<AnyTransformation *>"
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A transformation where the input and output domain are D and the input and output metric are M"
         }
     },
     "make_impute_constant": {
@@ -407,7 +408,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_sized_bounded_mean": {
-        "description": "Make a Transformation that computes the mean of bounded data. \nUse make_clamp to bound data.",
+        "description": "Make a Transformation that computes the mean of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
         "args": [
             {
                 "name": "size",
@@ -439,7 +440,7 @@
         }
     },
     "make_resize": {
-        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.\\nWARNING: This function is pending change. It will accept an additional domain argument.",
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.",
         "args": [
             {
                 "name": "size",
@@ -464,7 +465,7 @@
         }
     },
     "make_bounded_resize": {
-        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.\\nWARNING: This function is temporary. It will be replaced by a more general make_resize that accepts domains",
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.",
         "args": [
             {
                 "name": "size",
@@ -503,7 +504,7 @@
         }
     },
     "make_bounded_sum": {
-        "description": "Make a Transformation that computes the sum of bounded data. \nUse make_clamp to bound data.",
+        "description": "Make a Transformation that computes the sum of bounded data. \nUse `make_clamp` to bound data.",
         "args": [
             {
                 "name": "bounds",
@@ -530,7 +531,7 @@
         }
     },
     "make_sized_bounded_sum": {
-        "description": "Make a Transformation that computes the sum of bounded data with known length. \nThis uses a restricted-sensitivity proof that takes advantage of known N for better utility. \nUse make_clamp to bound data.",
+        "description": "Make a Transformation that computes the sum of bounded data with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
         "args": [
             {
                 "name": "size",
@@ -562,7 +563,7 @@
         }
     },
     "make_sized_bounded_variance": {
-        "description": "Make a Transformation that computes the variance of bounded data. \nUse make_clamp to bound data.",
+        "description": "Make a Transformation that computes the variance of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
         "args": [
             {
                 "name": "size",

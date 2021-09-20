@@ -66,7 +66,7 @@ mod tests {
             make_sized_bounded_mean(3, (10.0, 12.0))? >>
             make_base_laplace(1.0)?
         )?;
-        let _ret = chain.function.eval(&vec![10.0, 11.0, 12.0])?;
+        let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
         Ok(())
 
     }
@@ -74,9 +74,9 @@ mod tests {
     #[test]
     fn test_make_laplace_mechanism() -> Fallible<()> {
         let measurement = make_base_laplace::<AllDomain<_>>(1.0)?;
-        let _ret = measurement.function.eval(&0.0)?;
+        let _ret = measurement.invoke(&0.0)?;
 
-        assert!(measurement.privacy_relation.eval(&1., &1.)?);
+        assert!(measurement.check(&1., &1.)?);
         Ok(())
     }
 
@@ -84,9 +84,9 @@ mod tests {
     fn test_make_vector_laplace_mechanism() -> Fallible<()> {
         let measurement = make_base_laplace::<VectorDomain<_>>(1.0)?;
         let arg = vec![1.0, 2.0, 3.0];
-        let _ret = measurement.function.eval(&arg)?;
+        let _ret = measurement.invoke(&arg)?;
 
-        assert!(measurement.privacy_relation.eval(&1., &1.)?);
+        assert!(measurement.check(&1., &1.)?);
         Ok(())
     }
 }

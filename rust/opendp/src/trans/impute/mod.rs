@@ -83,7 +83,7 @@ mod tests {
     fn test_impute_uniform() {
         let imputer = make_impute_uniform_float::<f64>((2.0, 2.0)).unwrap_test();
 
-        let result = imputer.function.eval(&vec![1.0, f64::NAN]).unwrap_test();
+        let result = imputer.invoke(&vec![1.0, f64::NAN]).unwrap_test();
 
         assert_eq!(result, vec![1., 2.]);
         assert!(imputer.stability_relation
@@ -94,7 +94,7 @@ mod tests {
     fn test_impute_constant_option() {
         let imputer = make_impute_constant::<OptionNullDomain<_>>("IMPUTED".to_string()).unwrap_test();
 
-        let result = imputer.function.eval(&vec![Some("A".to_string()), None]).unwrap_test();
+        let result = imputer.invoke(&vec![Some("A".to_string()), None]).unwrap_test();
 
         assert_eq!(result, vec!["A".to_string(), "IMPUTED".to_string()]);
         assert!(imputer.stability_relation
@@ -105,7 +105,7 @@ mod tests {
     fn test_impute_constant_inherent() {
         let imputer = make_impute_constant::<InherentNullDomain<_>>(12.).unwrap_test();
 
-        let result = imputer.function.eval(&vec![f64::NAN, 23.]).unwrap_test();
+        let result = imputer.invoke(&vec![f64::NAN, 23.]).unwrap_test();
 
         assert_eq!(result, vec![12., 23.]);
         assert!(imputer.stability_relation

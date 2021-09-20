@@ -194,7 +194,7 @@ pub mod test {
         let base_laplace = make_base_laplace::<AllDomain<f64>>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_laplace.function.eval(&0.0).unwrap_test().abs() > accuracy)
+            .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
             .count() as f64 / n as f64;
 
         println!("Laplacian significance levels/alpha");
@@ -212,7 +212,7 @@ pub mod test {
         let base_gaussian = make_base_gaussian::<AllDomain<f64>>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_gaussian.function.eval(&0.0).unwrap_test().abs() > accuracy)
+            .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)
             .count() as f64 / n as f64;
 
         println!("Gaussian significance levels/alpha");
@@ -231,7 +231,7 @@ pub mod test {
         let base_geometric = make_base_geometric::<AllDomain<i8>, f64>(scale, None)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_geometric.function.eval(&0).unwrap_test().abs() >= accuracy)
+            .filter(|_| base_geometric.invoke(&0).unwrap_test().abs() >= accuracy)
             .count() as f64 / n as f64;
 
         println!("Geometric significance levels/alpha");

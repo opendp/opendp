@@ -3,15 +3,10 @@
 Transformation Constructors
 ===========================
 
-.. contents:: |toctitle|
-    :local:
-
-Overview
---------
 This section gives a high-level overview of the transformations that are available in the library.
 Refer to the :ref:`transformation` section for an explanation of what a transformation is.
 
-As covered in the :ref:`chaining` section, the intermediate domains need to match when chaining.
+As covered in the :ref:`chaining` section, the intermediate :ref:`domains <domains>` need to match when chaining.
 Each transformation has a carefully chosen input domain and output domain that supports their relation.
 
 Preprocessing is the series of transformations that shape the data into a domain that is conformable with the aggregator.

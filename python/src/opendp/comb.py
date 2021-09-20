@@ -4,6 +4,12 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
+__all__ = [
+    "make_chain_mt",
+    "make_chain_tt",
+    "make_basic_composition"
+]
+
 
 def make_chain_mt(
     measurement: Measurement,
