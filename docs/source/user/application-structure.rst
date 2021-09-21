@@ -103,6 +103,8 @@ Our transformation will
 .. doctest::
 
     >>> from opendp.trans import *
+    >>> from opendp.mod import enable_features
+    >>> enable_features('contrib') # we are using un-vetted constructors
     ...
     >>> num_tests = 3  # d_in=symmetric distance; we are told this is public knowledge
     >>> budget = 1. # d_out=epsilon

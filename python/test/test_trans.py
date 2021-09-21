@@ -1,4 +1,7 @@
 from opendp.typing import *
+from opendp.mod import enable_features
+
+enable_features('contrib')
 
 INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))

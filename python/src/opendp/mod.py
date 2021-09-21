@@ -12,7 +12,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     :example:
 
-    >>> from opendp.mod import Measurement
+    >>> from opendp.mod import Measurement, enable_features
+    >>> enable_features("contrib")
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
     >>> from opendp.meas import make_base_geometric
@@ -122,7 +123,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     :example:
 
-    >>> from opendp.mod import Transformation
+    >>> from opendp.mod import Transformation, enable_features
+    >>> enable_features("contrib")
     ...
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> from opendp.trans import make_count
@@ -277,7 +279,7 @@ def disable_features(*features: str) -> None:
 
 def assert_features(*features: str) -> None:
     for feature in features:
-        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. Check the documentation for the feature, then call enable_features(\"{feature}\")"
+        assert feature in GLOBAL_FEATURES, f"Attempted to use function that requires {feature}, but {feature} is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"{feature}\")"
 
 
 def binary_search_chain(
@@ -307,7 +309,7 @@ def binary_search_chain(
     >>> from opendp.mod import binary_search_chain, enable_features
     >>> from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
     >>> from opendp.meas import make_base_laplace
-    >>> enable_features("floating-point")
+    >>> enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
@@ -339,7 +341,7 @@ def binary_search_param(
 
     :example:
 
-    >>> from opendp.mod import binary_search_param
+    >>> from opendp.mod import binary_search_param, enable_features
     >>> from opendp.meas import make_base_laplace
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.

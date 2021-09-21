@@ -1,8 +1,7 @@
 {
     "make_base_laplace": {
         "description": "Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.\nAdjust D to noise vector-valued data.",
-        "features": ["floating-point"],
-        "proof": "https://www.overleaf.com/read/brvrprjhrhwb",
+        "features": ["floating-point", "contrib"],
         "args": [
             {
                 "name": "scale",
@@ -33,7 +32,7 @@
     },
     "make_base_gaussian": {
         "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
-        "features": ["floating-point"],
+        "features": ["floating-point", "contrib"],
         "args": [
             {
                 "name": "scale",
@@ -66,6 +65,7 @@
     },
     "make_base_geometric": {
         "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "scale",
@@ -122,7 +122,7 @@
     },
     "make_base_stability": {
         "description": "Make a Measurement that implements a stability-based filtering and noising.",
-        "features": ["floating-point"],
+        "features": ["floating-point", "contrib"],
         "args": [
             {
                 "name": "size",

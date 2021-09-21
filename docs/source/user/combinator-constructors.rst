@@ -25,6 +25,11 @@ Any computation beyond a measurement is postprocessing and need not be governed 
 
 In the following example we chain :py:func:`opendp.meas.make_base_geometric` with :py:func:`opendp.trans.make_bounded_sum`.
 
+.. testsetup::
+
+    from opendp.mod import enable_features
+    enable_features('contrib')
+
 .. doctest::
 
     >>> from opendp.trans import make_bounded_sum

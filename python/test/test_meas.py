@@ -1,7 +1,7 @@
 from opendp.mod import enable_features
 from opendp.typing import L1Distance
 
-enable_features("floating-point")
+enable_features('floating-point', 'contrib')
 
 
 def test_base_laplace():

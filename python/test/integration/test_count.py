@@ -1,3 +1,7 @@
+from opendp.mod import enable_features
+
+enable_features('contrib')
+
 
 def test_count():
     from opendp.trans import make_count, make_split_dataframe, make_select_column
