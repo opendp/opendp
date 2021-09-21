@@ -2,6 +2,25 @@
 
 This file documents the version history of OpenDP.
 
+## [0.3.0] - 2021-09-21
+[0.3.0]: https://github.com/opendp/opendp/compare/v0.2.4...v0.3.0
+
+### Changed
+- All unvetted modules (which is currently all modules) are tagged with the "contrib" feature
+- Programs must explicitly opt-in to access the "contrib" feature
+
+## [0.2.4] - 2021-09-20
+[0.2.4]: https://github.com/opendp/opendp/compare/v0.2.3...v0.2.4
+
+### Fixed
+- Version tag
+
+## [0.2.3] - 2021-09-20
+[0.2.3]: https://github.com/opendp/opendp/compare/v0.2.2...v0.2.3
+
+### Fixed
+- Version tag
+
 ## [0.2.2] - 2021-09-20
 [0.2.2]: https://github.com/opendp/opendp/compare/v0.2.1...v0.2.2
 
@@ -31,7 +50,7 @@ This file documents the version history of OpenDP.
 - Resize transformation for making `VectorDomain<D>` sized
 - TotalOrd trait for consistency with proofs 
 
-# Changed
+### Changed
 - General renaming of library interfaces. [See issue #181](https://github.com/opendp/opendp/issues/181).
 
 ### Removed
