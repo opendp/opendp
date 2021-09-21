@@ -1,6 +1,7 @@
 {
     "make_chain_mt": {
         "description": "Construct the functional composition (`measurement` ○ `transformation`). Returns a Measurement.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "measurement",
@@ -20,6 +21,7 @@
     },
     "make_chain_tt": {
         "description": "Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Tranformation.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "transformation1",
@@ -39,6 +41,7 @@
     },
     "make_basic_composition": {
         "description": "Construct the DP composition (`measurement0`, `measurement1`). Returns a Measurement.",
+        "features": ["contrib"],
         "args": [
             {
                 "name": "measurement0",

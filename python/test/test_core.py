@@ -1,7 +1,7 @@
 import pytest
 
 from opendp.mod import enable_features
-enable_features('floating-point')
+enable_features('floating-point', 'contrib')
 
 
 def test_type_getters():
@@ -21,7 +21,7 @@ def test_type_getters():
 def test_chain():
     from opendp.trans import make_count
     from opendp.meas import make_base_laplace, make_base_geometric
-    enable_features("floating-point")
+    enable_features("floating-point", "contrib")
 
     data = [1, 2, 3, 4, 5]
     count = make_count(TIA=int, TO=int)
@@ -66,9 +66,11 @@ def test_bisect_edge():
 
 
 def test_bisect_chain():
-    from opendp.mod import binary_search_chain, binary_search_param
+    from opendp.mod import binary_search_chain, binary_search_param, enable_features
     from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
     from opendp.meas import make_base_laplace
+    enable_features("contrib")
+
     pre = (
         make_clamp(bounds=(0., 1.)) >>
         make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>

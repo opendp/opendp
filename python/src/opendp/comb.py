@@ -27,6 +27,8 @@ def make_chain_mt(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
     measurement = py_to_c(measurement, c_type=Measurement)
@@ -56,6 +58,8 @@ def make_chain_tt(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
     transformation1 = py_to_c(transformation1, c_type=Transformation)
@@ -85,6 +89,8 @@ def make_basic_composition(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
     measurement0 = py_to_c(measurement0, c_type=Measurement)

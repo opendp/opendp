@@ -19,9 +19,6 @@ def make_base_laplace(
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     Adjust D to noise vector-valued data.
     
-    
-    `This constructor is supported by the linked proof. <https://www.overleaf.com/read/brvrprjhrhwb>`_
-    
     :param scale: Noise scale parameter of the laplace distribution.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: RuntimeTypeDescriptor
@@ -31,7 +28,7 @@ def make_base_laplace(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    assert_features("floating-point")
+    assert_features("floating-point", "contrib")
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
@@ -66,7 +63,7 @@ def make_base_gaussian(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    assert_features("floating-point")
+    assert_features("floating-point", "contrib")
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
@@ -107,6 +104,8 @@ def make_base_geometric(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
@@ -153,7 +152,7 @@ def make_base_stability(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    assert_features("floating-point")
+    assert_features("floating-point", "contrib")
     
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)

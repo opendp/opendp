@@ -3,6 +3,8 @@ from opendp.meas import *
 from opendp.comb import *
 
 from opendp.typing import SubstituteDistance, VectorDomain, AllDomain
+from opendp.mod import enable_features
+enable_features("contrib")
 
 # This is a short demonstration of opendp in a script.
 # Includes an example of composition.

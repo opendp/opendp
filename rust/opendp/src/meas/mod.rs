@@ -3,18 +3,22 @@
 //! The different [`Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
 
-#[cfg(feature="floating-point")]
+#[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod laplace;
-#[cfg(feature="floating-point")]
-pub mod gaussian;
-pub mod geometric;
-#[cfg(feature="floating-point")]
-pub mod stability;
-
-#[cfg(feature="floating-point")]
+#[cfg(all(feature="floating-point", feature="contrib"))]
 pub use crate::meas::laplace::*;
-#[cfg(feature="floating-point")]
+
+#[cfg(all(feature="floating-point", feature="contrib"))]
+pub mod gaussian;
+#[cfg(all(feature="floating-point", feature="contrib"))]
 pub use crate::meas::gaussian::*;
+
+#[cfg(feature="contrib")]
+pub mod geometric;
+#[cfg(feature="contrib")]
 pub use crate::meas::geometric::*;
-#[cfg(feature="floating-point")]
+
+#[cfg(all(feature="floating-point", feature="contrib"))]
+pub mod stability;
+#[cfg(all(feature="floating-point", feature="contrib"))]
 pub use crate::meas::stability::*;

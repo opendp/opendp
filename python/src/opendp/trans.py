@@ -51,6 +51,8 @@ def make_cast(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
@@ -83,6 +85,8 @@ def make_cast_default(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
@@ -115,6 +119,8 @@ def make_is_equal(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
     
@@ -143,6 +149,8 @@ def make_is_null(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     DIA = RuntimeType.parse(type_name=DIA)
     
@@ -174,6 +182,8 @@ def make_cast_inherent(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
@@ -209,6 +219,8 @@ def make_cast_metric(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
     MO = RuntimeType.parse(type_name=MO)
@@ -245,6 +257,8 @@ def make_clamp(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     
@@ -276,6 +290,8 @@ def make_unclamp(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     
@@ -307,6 +323,8 @@ def make_count(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TIA = RuntimeType.parse(type_name=TIA)
     TO = RuntimeType.parse(type_name=TO)
@@ -339,6 +357,8 @@ def make_count_distinct(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TIA = RuntimeType.parse(type_name=TIA)
     TO = RuntimeType.parse(type_name=TO)
@@ -381,6 +401,8 @@ def make_count_by(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     MO = RuntimeType.parse(type_name=MO)
     TIA = RuntimeType.parse(type_name=TIA)
@@ -423,6 +445,8 @@ def make_count_by_categories(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     MO = RuntimeType.parse(type_name=MO)
     TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(categories), None))
@@ -454,6 +478,8 @@ def make_split_lines(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # No arguments to convert to c types.
     # Call library function.
@@ -477,6 +503,8 @@ def make_split_records(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
     separator = py_to_c(separator, c_type=ctypes.c_char_p)
@@ -505,6 +533,8 @@ def make_create_dataframe(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
     
@@ -540,6 +570,8 @@ def make_split_dataframe(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
     
@@ -575,6 +607,8 @@ def make_select_column(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     K = RuntimeType.parse_or_infer(type_name=K, public_example=key)
     TOA = RuntimeType.parse(type_name=TOA)
@@ -608,6 +642,8 @@ def make_identity(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
     M = RuntimeType.parse(type_name=M)
@@ -642,6 +678,8 @@ def make_impute_constant(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     DA = RuntimeType.parse(type_name=DA, generics=["TA"])
     TA = get_domain_atom_or_infer(DA, constant)
@@ -675,6 +713,8 @@ def make_impute_uniform_float(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     
@@ -711,6 +751,8 @@ def make_sized_bounded_mean(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
@@ -746,6 +788,8 @@ def make_resize(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=constant)
     
@@ -783,6 +827,8 @@ def make_bounded_resize(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     
@@ -817,6 +863,8 @@ def make_bounded_sum(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
@@ -853,6 +901,8 @@ def make_sized_bounded_sum(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
@@ -893,6 +943,8 @@ def make_sized_bounded_variance(
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     

@@ -2,7 +2,7 @@ from opendp.trans import *
 from opendp.meas import *
 from opendp.mod import enable_features
 
-enable_features("floating-point")
+enable_features("floating-point", "contrib")
 
 
 def test_dp_mean():

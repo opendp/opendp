@@ -44,16 +44,21 @@ At this point, you should be good to go! You can confirm your installation in Py
 Installing OpenDP for Rust from crates.io
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-OpenDP is also available as a `Rust crate <https://crates.io/crates/opendp>`_. This is uncommon, as most people will use OpenDP through one of the other language bindings. But if you need to use the Rust interface of OpenDP directly, you can just reference the ``opendp`` crate in your ``Cargo.toml`` file:
+OpenDP is also available as a `Rust crate <https://crates.io/crates/opendp>`_.
+This is not as common, as most people will use OpenDP through one of the other language bindings.
+But if you need to use the Rust interface of OpenDP directly, you can just reference the ``opendp`` crate in your ``Cargo.toml`` file:
 
 .. code-block:: toml
 
     [dependencies]
-    opendp = "0.1.0"
+    opendp = { version = "0.1.0", features = ["contrib"] }
 
 .. note::
 
     The actual version may differ depending on the `releases available <https://github.com/opendp/opendp/releases>`_.
+
+In the above snip, opting into the "contrib" feature includes code that has not yet completed the vetting process.
+Continuous noise samplers require explicit opt-in and are behind the "floating-point" feature.
 
 With that configured, the Rust dependency system will automatically download the crate as needed, and you can just ``use`` the ``opendp`` module:
 
@@ -124,6 +129,16 @@ Hello, OpenDP!
 --------------
 
 Once you've installed OpenDP, you can write your first program.
+
+Be aware that the vetting process is currently underway for the code in the OpenDP Library.
+Any code that has not completed the vetting process is marked as "contrib" and will not run unless you opt-in.
+Enable ``contrib`` globally with the following snippet:
+
+.. doctest::
+
+    >>> from opendp.mod import enable_features
+    >>> enable_features('contrib')
+
 In the example below, we'll construct a ``Transformation``, which is an OpenDP object that transforms data in some way.
 In this case, the operation it performs is the identity transformation -- so no transformation at all!
 Then we'll apply that transformation to a vector consisting of one string, and get back a copy of the vector.
