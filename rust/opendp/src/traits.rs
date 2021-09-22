@@ -223,7 +223,14 @@ macro_rules! impl_inf_cast_int_float {
     ($int:ty, $float:ty) => (impl InfCast<$int> for $float {
         fn inf_cast(v_int: $int) -> Fallible<Self> {
             let v_float = v_int as $float;
-            Ok(if v_int > v_float as $int { <$float>::from_bits(v_float.to_bits() + 1) } else { v_float })
+            if v_int > v_float as $int {
+                return Ok(<$float>::from_bits(if v_float.is_sign_negative() {
+                    v_float.to_bits() - 1
+                } else {
+                    v_float.to_bits() + 1
+                }))
+            }
+            Ok(v_float)
         }
     })
 }
@@ -239,8 +246,21 @@ impl_inf_cast_from!(f32, f32);
 impl_inf_cast_from!(f32, f64);
 impl InfCast<f64> for f32 {
     fn inf_cast(vf64: f64) -> Fallible<Self> {
+        if vf64.is_nan() {return Ok(f32::NAN)}
+        // cast with rounding towards nearest, ties toward even
+        // https://doc.rust-lang.org/reference/expressions/operator-expr.html#semantics
         let vf32 = vf64 as f32;
-        Ok(if vf64 > vf32 as f64 { f32::from_bits(vf32.to_bits() + 1) } else { vf32 })
+
+        // if nearest was toward -inf, then perturb one step towards inf
+        // +/- zero always evaluates to false
+        if vf64 > vf32 as f64 {
+            return Ok(f32::from_bits(if vf32.is_sign_negative() {
+                vf32.to_bits() - 1
+            } else {
+                vf32.to_bits() + 1
+            }))
+        }
+        Ok(vf32)
     }
 }
 impl_inf_cast_from!(f64, f64);
