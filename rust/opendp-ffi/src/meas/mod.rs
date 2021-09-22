@@ -1,7 +1,8 @@
-#[cfg(feature="floating-point")]
+#[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod gaussian;
+#[cfg(feature="contrib")]
 pub mod geometric;
-#[cfg(feature="floating-point")]
+#[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod laplace;
-#[cfg(feature="floating-point")]
+#[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod stability;
