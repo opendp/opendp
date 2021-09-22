@@ -125,5 +125,6 @@ mod glue;
 mod meas;
 mod trans;
 pub(crate) mod util;
+#[cfg(feature="contrib")]
 mod comb;
 mod accuracy;
