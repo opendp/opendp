@@ -570,3 +570,40 @@ impl FloatBits for f32 {
     const EXPONENT_PROB: u32 = 126;
     fn to_bits(self) -> Self::Bits {self.to_bits()}
 }
+
+// division with rounding towards infinity
+pub trait InfDiv {
+    fn inf_div(&self, other: &Self) -> Self;
+}
+
+macro_rules! impl_int_inf_div {
+    ($($ty:ty),+) => ($(impl InfDiv for $ty {
+        fn inf_div(&self, other: &Self) -> Self {
+            (self + 1) / other
+        }
+    })+)
+}
+impl_int_inf_div!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+
+macro_rules! impl_float_inf_div {
+    ($($ty:ty),+) => ($(impl InfDiv for $ty {
+        fn inf_div(&self, other: &Self) -> Self {
+            let div = self / other;
+            if !div.is_finite() {
+                // don't increment -Inf or Inf into a NaN, leave NaN as-is
+                div
+            } else if div * other <= *self {
+                // < is (probably) too tight, <= is too loose. Remain conservative with <=
+                // perturb the floating-point bit representation by taking the next float
+                <$ty>::from_bits(if div.is_sign_negative() {
+                    div.to_bits() - 1
+                } else {
+                    div.to_bits() + 1
+                })
+            } else {
+                div
+            }
+        }
+    })+)
+}
+impl_float_inf_div!(f32, f64);

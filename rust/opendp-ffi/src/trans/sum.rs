@@ -4,8 +4,8 @@ use std::ops::Sub;
 use std::os::raw::{c_char, c_uint};
 
 use opendp::err;
-use opendp::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, ExactIntCast, CheckedMul, CheckNull};
-use opendp::trans::{make_bounded_sum, make_sized_bounded_sum, InfDiv};
+use opendp::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, ExactIntCast, CheckedMul, CheckNull, InfDiv};
+use opendp::trans::{make_bounded_sum, make_sized_bounded_sum};
 
 use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
