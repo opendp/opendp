@@ -293,10 +293,6 @@ pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
 pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
 }
-// If we build glue on-the-fly:
-// pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
-//     (!p.is_null()).then(|| unsafe { &mut *p })
-// }
 
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
     CString::new(s)
