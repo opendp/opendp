@@ -68,7 +68,7 @@
                 "description": "The measurement to amplify."
             },
             {
-                "name": "n_population",
+                "name": "population_size",
                 "c_type": "unsigned int",
                 "description": "Number of records in population."
             }

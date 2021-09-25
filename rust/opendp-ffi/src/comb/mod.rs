@@ -41,28 +41,28 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
-        &self, budget: &AnyObject, n_population: usize, n_sample: usize,
+        &self, budget: &AnyObject, population_size: usize, sample_size: usize,
     ) -> Fallible<AnyObject> {
 
         fn monomorphize1<QO: 'static + Float + ExactIntCast<usize>>(
-            measure: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize,
+            measure: &AnyMeasure, budget: &AnyObject, population_size: usize, sample_size: usize,
         ) -> Fallible<AnyObject> {
 
             fn monomorphize2<M: 'static + AmplifiableMeasure>(
-                measure: &AnyMeasure, budget: &AnyObject, n_population: usize, n_sample: usize,
+                measure: &AnyMeasure, budget: &AnyObject, population_size: usize, sample_size: usize,
             ) -> Fallible<AnyObject> {
 
                 let measure = measure.downcast_ref::<M>()?;
                 let budget = budget.downcast_ref::<M::Distance>()?;
-                measure.amplify(budget, n_population, n_sample).map(AnyObject::new)
+                measure.amplify(budget, population_size, sample_size).map(AnyObject::new)
             }
             let measure_type = Type::of_id(&measure.measure.value.type_id())?;
             dispatch!(monomorphize2, [
                 (measure_type, [MaxDivergence<QO>, SmoothedMaxDivergence<QO>])
-            ], (measure, budget, n_population, n_sample))
+            ], (measure, budget, population_size, sample_size))
         }
 
-        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, budget, n_population, n_sample))
+        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, budget, population_size, sample_size))
     }
 }
 
@@ -96,12 +96,11 @@ impl IsSizedDomain for AnyDomain {
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_population_amplification(
-    measurement: *const AnyMeasurement, n_population: c_uint,
+    measurement: *const AnyMeasurement, population_size: c_uint
 ) -> FfiResult<*mut AnyMeasurement> {
-    let measurement = try_as_ref!(measurement);
-    let n_population = n_population as usize;
-
-    make_population_amplification(&measurement, n_population).into()
+    make_population_amplification(
+        try_as_ref!(measurement),
+        population_size as usize).into()
 }
 
 

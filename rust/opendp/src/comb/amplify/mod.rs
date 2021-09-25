@@ -12,42 +12,44 @@ impl<D: Domain> IsSizedDomain for SizedDomain<D> {
 }
 
 pub trait AmplifiableMeasure: Measure {
-    fn amplify(&self, budget: &Self::Distance, n_population: usize, n_sample: usize) -> Fallible<Self::Distance>;
+    fn amplify(&self, budget: &Self::Distance, population_size: usize, sample_size: usize) -> Fallible<Self::Distance>;
 }
 
 impl<Q> AmplifiableMeasure for MaxDivergence<Q>
     where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
-    fn amplify(&self, epsilon: &Q, n_population: usize, n_sample: usize) -> Fallible<Q> {
-        let sampling_rate = Q::exact_int_cast(n_sample)? / Q::exact_int_cast(n_population)?;
+    fn amplify(&self, epsilon: &Q, population_size: usize, sample_size: usize) -> Fallible<Q> {
+        let sampling_rate = Q::exact_int_cast(sample_size)? / Q::exact_int_cast(population_size)?;
         Ok((epsilon.exp_m1() / sampling_rate).ln_1p())
     }
 }
 impl<Q> AmplifiableMeasure for SmoothedMaxDivergence<Q>
     where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
-    fn amplify(&self, (epsilon, delta): &(Q, Q), n_population: usize, n_sample: usize) -> Fallible<(Q, Q)> {
-        let sampling_rate = Q::exact_int_cast(n_sample)? / Q::exact_int_cast(n_population)?;
+    fn amplify(&self, (epsilon, delta): &(Q, Q), population_size: usize, sample_size: usize) -> Fallible<(Q, Q)> {
+        let sampling_rate = Q::exact_int_cast(sample_size)? / Q::exact_int_cast(population_size)?;
         Ok(((epsilon.exp_m1() / sampling_rate).ln_1p(), *delta / sampling_rate))
     }
 }
 
 pub fn make_population_amplification<DIA, DO, MI, MO>(
     measurement: &Measurement<DIA, DO, MI, MO>,
-    n_population: usize,
+    population_size: usize,
 ) -> Fallible<Measurement<DIA, DO, MI, MO>>
     where DIA: IsSizedDomain,
           DO: Domain,
           MI: 'static + Metric,
           MO: 'static + AmplifiableMeasure {
     let mut measurement = measurement.clone();
-    let n_sample = measurement.input_domain.get_size()?;
-    if n_population < n_sample { return fallible!(MakeMeasurement, "population size cannot be less than sample size") }
+    let sample_size = measurement.input_domain.get_size()?;
+    if population_size < sample_size { 
+        return fallible!(MakeMeasurement, "population size cannot be less than sample size") 
+    }
 
     let privacy_relation = measurement.privacy_relation;
     let output_measure: MO = measurement.output_measure.clone();
 
     measurement.privacy_relation = PrivacyRelation::new_fallible(
         move |d_in, d_out: &MO::Distance| privacy_relation.eval(
-            d_in, &output_measure.amplify(d_out, n_population, n_sample)?));
+            d_in, &output_measure.amplify(d_out, population_size, sample_size)?));
 
     Ok(measurement)
 }

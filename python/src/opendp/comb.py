@@ -107,14 +107,14 @@ def make_basic_composition(
 
 def make_population_amplification(
     measurement: Measurement,
-    n_population: int
+    population_size: int
 ) -> Measurement:
     """Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
     
     :param measurement: The measurement to amplify.
     :type measurement: Measurement
-    :param n_population: Number of records in population.
-    :type n_population: int
+    :param population_size: Number of records in population.
+    :type population_size: int
     :return: New measurement with the same function, but an adjusted privacy relation.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -124,11 +124,11 @@ def make_population_amplification(
     # No type arguments to standardize.
     # Convert arguments to c types.
     measurement = py_to_c(measurement, c_type=Measurement)
-    n_population = py_to_c(n_population, c_type=ctypes.c_uint)
+    population_size = py_to_c(population_size, c_type=ctypes.c_uint)
     
     # Call library function.
     function = lib.opendp_comb__make_population_amplification
     function.argtypes = [Measurement, ctypes.c_uint]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(measurement, n_population), Measurement))
+    return c_to_py(unwrap(function(measurement, population_size), Measurement))
