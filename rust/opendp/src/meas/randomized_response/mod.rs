@@ -6,7 +6,7 @@ use crate::dist::{MaxDivergence, SymmetricDistance, IntDistance};
 use crate::dom::AllDomain;
 use crate::error::Fallible;
 use crate::samplers::{SampleBernoulli, SampleUniformInt};
-use crate::traits::{ExactIntCast, CheckNull};
+use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfCast};
 use num::Float;
 
 // useful paper: http://csce.uark.edu/~xintaowu/publ/DPL-2014-003.pdf
@@ -17,7 +17,8 @@ pub fn make_randomized_response_bool<Q>(
     prob: Q, constant_time: bool
 ) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, SymmetricDistance, MaxDivergence<Q>>>
     where bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<IntDistance> {
+          Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance>,
+          IntDistance: InfCast<Q> {
 
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(Q::exact_int_cast(2)?.recip()..Q::one()).contains(&prob) {
@@ -33,8 +34,7 @@ pub fn make_randomized_response_bool<Q>(
         }),
         SymmetricDistance::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_fallible(move |d_in: &IntDistance, d_out: &Q|
-            Ok(*d_out >= Q::exact_int_cast(*d_in)? * (prob / (Q::one() - prob)).ln())),
+        PrivacyRelation::new_from_constant((prob / (Q::one() - prob)).ln()),
     ))
 }
 
@@ -43,7 +43,8 @@ pub fn make_randomized_response<T, Q>(
 ) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<Q>>>
     where T: 'static + Clone + Eq + Hash + CheckNull,
           bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<IntDistance> + ExactIntCast<usize> {
+          Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance>,
+          IntDistance: InfCast<Q> {
 
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
@@ -77,12 +78,12 @@ pub fn make_randomized_response<T, Q>(
         }),
         SymmetricDistance::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_fallible(move |d_in: &IntDistance, d_out: &Q|
+        PrivacyRelation::new_from_constant(
             // d_out >= d_in * (p / p').ln()
             // where off-diagonal probability p' = (1 - p) / (t - 1)
-            // d_out >= d_in * (p / ((1 - p) / (t - 1))).ln()
             // d_out >= d_in * (p / (1 - p) * (t - 1)).ln()
-            Ok(*d_out >= Q::exact_int_cast(*d_in)? * (prob * (num_categories - Q::one()) / (Q::one() - prob)).ln())),
+            // where t = num_categories
+            (prob * (num_categories - Q::one()) / (Q::one() - prob)).ln()),
     ))
 }
 
