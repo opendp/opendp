@@ -576,3 +576,54 @@ impl SampleGaussian for f32 {
         Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
     }
 }
+
+pub trait SampleUniformInt: Sized {
+    /// sample uniformly from [Self::MIN, Self::MAX]
+    fn sample_uniform_int() -> Fallible<Self>;
+    /// sample uniformly from [0, upper)
+    fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self>;
+}
+
+macro_rules! impl_sample_uniform_unsigned_int {
+    ($($ty:ty),+) => ($(
+        impl SampleUniformInt for $ty {
+            fn sample_uniform_int() -> Fallible<Self> {
+                let mut buffer = [0; core::mem::size_of::<Self>()];
+                fill_bytes(&mut buffer).unwrap();
+                Ok(Self::from_be_bytes(buffer))
+            }
+            fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
+                // v % upper is unbiased for any v < MAX - MAX % upper, because
+                // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
+                loop {
+                    // algorithm is only valid when sample_uniform_int is non-negative
+                    let v = Self::sample_uniform_int()?;
+                    if v <= Self::MAX - Self::MAX % upper {
+                        return Ok(v % upper)
+                    }
+                }
+            }
+        }
+    )+)
+}
+impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    #[ignore]
+    fn test_sample_uniform_int() -> Fallible<()> {
+        let mut counts = HashMap::new();
+        // this checks that the output distribution of each number is uniform
+        (0..10000).try_for_each(|_| {
+            let sample = u32::sample_uniform_int_0_u(7)?;
+            *counts.entry(sample).or_insert(0) += 1;
+            Fallible::Ok(())
+        })?;
+        println!("{:?}", counts);
+        Ok(())
+    }
+}

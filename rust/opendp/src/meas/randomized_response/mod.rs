@@ -1,13 +1,11 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
-use rand::Rng;
-
 use crate::core::{Function, Measurement, PrivacyRelation};
 use crate::dist::{MaxDivergence, SymmetricDistance, IntDistance};
 use crate::dom::AllDomain;
 use crate::error::Fallible;
-use crate::samplers::SampleBernoulli;
+use crate::samplers::{SampleBernoulli, SampleUniformInt};
 use crate::traits::{ExactIntCast, CheckNull};
 use num::Float;
 
@@ -51,27 +49,23 @@ pub fn make_randomized_response<T, Q>(
     if categories.len() < 2 {
         return fallible!(MakeTransformation, "length of categories must be at least two")
     }
-    let t = Q::exact_int_cast(categories.len())?;
+    let num_categories = Q::exact_int_cast(categories.len())?;
 
-    if !(t.recip()..Q::one()).contains(&prob) {
-        return fallible!(MakeTransformation, "probability must be within [1/t, 1)")
+    if !(num_categories.recip()..Q::one()).contains(&prob) {
+        return fallible!(MakeTransformation, "probability must be within [1/num_categories, 1)")
     }
 
     Ok(Measurement::new(
         AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(move |truth: &T| {
-
-            // TODO: implement openssl CoreRng generator, implement a constant-time int sampler
-            let mut rng = rand::thread_rng();
-
             // find index of truth in category set, or None
             let index = categories.iter().position(|cat| cat == truth);
 
             // randomly sample a lie from among the categories with equal probability
             // if truth in categories, sample among n - 1 categories
-            let mut sample = rng.gen_range(
-                0, categories.len() - if index.is_some() { 1 } else { 0 });
+            let mut sample = usize::sample_uniform_int_0_u(
+                categories.len() - if index.is_some() { 1 } else { 0 })?;
             // shift the sample by one if index is greater or equal to the index of truth
             if let Some(i) = index { if sample >= i { sample += 1 } }
             let lie = &categories[sample];
@@ -88,7 +82,7 @@ pub fn make_randomized_response<T, Q>(
             // where off-diagonal probability p' = (1 - p) / (t - 1)
             // d_out >= d_in * (p / ((1 - p) / (t - 1))).ln()
             // d_out >= d_in * (p / (1 - p) * (t - 1)).ln()
-            Ok(*d_out >= Q::exact_int_cast(*d_in)? * (prob * (t - Q::one()) / (Q::one() - prob)).ln())),
+            Ok(*d_out >= Q::exact_int_cast(*d_in)? * (prob * (num_categories - Q::one()) / (Q::one() - prob)).ln())),
     ))
 }
 
@@ -118,12 +112,13 @@ mod test {
     #[test]
     fn test_cat() -> Fallible<()> {
         let ran_res = make_randomized_response(
-            HashSet::from_iter(vec![2, 3, 5].into_iter()),
+            HashSet::from_iter(vec![2, 3, 5, 6].into_iter()),
             0.75, false)?;
         let res = ran_res.invoke(&3)?;
         println!("{:?}", res);
-        assert!(ran_res.check(&1, &3.0.ln())?);
-        assert!(!ran_res.check(&1, &2.99999.ln())?);
+        // (.75 * 3 / .25) = 9
+        assert!(ran_res.check(&1, &9.0.ln())?);
+        assert!(!ran_res.check(&1, &8.99999.ln())?);
         Ok(())
     }
     #[test]
