@@ -24,11 +24,19 @@ def test_base_gaussian():
     print("base gaussian:", meas(100.))
     assert meas.check(1., (1.3, .000001))
 
+    meas = make_base_gaussian(scale=10.5, analytic=True)
+    print("base analytic gaussian:", meas(100.))
+    assert meas.check(1., (1.3, .000001))
+
 
 def test_base_vector_gaussian():
     from opendp.meas import make_base_gaussian
     meas = make_base_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>")
     print("base gaussian:", meas([80., 90., 100.]))
+    assert meas.check(1., (1.3, .000001))
+
+    meas = make_base_gaussian(scale=10.5, analytic=True, D="VectorDomain<AllDomain<f64>>")
+    print("base analytic gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (1.3, .000001))
 
 

@@ -41,6 +41,12 @@
                 "description": "noise scale parameter to the gaussian distribution"
             },
             {
+                "name": "analytic",
+                "c_type": "bool",
+                "default": false,
+                "description": "enable to use a privacy relation corresponding to the analytic gaussian mechanism"
+            },
+            {
                 "name": "D",
                 "default": "AllDomain<T>",
                 "generics": ["T"],

@@ -49,12 +49,15 @@ def make_base_laplace(
 
 def make_base_gaussian(
     scale,
+    analytic: bool = False,
     D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
     
     :param scale: noise scale parameter to the gaussian distribution
+    :param analytic: enable to use a privacy relation corresponding to the analytic gaussian mechanism
+    :type analytic: bool
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: RuntimeTypeDescriptor
     :return: A base_gaussian step.
@@ -72,14 +75,15 @@ def make_base_gaussian(
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    analytic = py_to_c(analytic, c_type=ctypes.c_bool)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D), Measurement))
+    return c_to_py(unwrap(function(scale, analytic, D), Measurement))
 
 
 def make_base_geometric(
