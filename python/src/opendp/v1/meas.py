@@ -177,10 +177,10 @@ def make_alp_histogram(
     
     :param n: Number of records in the input vector.
     :type n: int
-    :param alpha: Parameter for sampling hash functions.
+    :param alpha: Parameter for trade-off between randomized response and scaling.
     :param scale: Noise scale parameter.
-    :param beta: Noise scale parameter.
-    :param size_factor: Number of records in the input vector.
+    :param beta: Parameter for clamping values. Upper bound of values to store.
+    :param size_factor: Used to determine size of ALP bitvector.
     :type size_factor: int
     :param K: Type of input query.
     :type K: RuntimeTypeDescriptor
