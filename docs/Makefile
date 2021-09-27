@@ -26,7 +26,7 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/* source/api/python source/api/rust
 
-html: clean
+html:
 	$(SPHINXAPIDOC) -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
 	# TODO: Figure out how to link locally generated Rust docs into sphinx structure.
 	# 	cd ../rust && $(CARGO) doc --no-deps --target-dir ../docs/source/api/rust

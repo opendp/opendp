@@ -191,18 +191,18 @@ We intend to merge these in the future.
 
 Aggregators
 -----------
-Aggregators compute a summary statistic computed on individual-level data.
+Aggregators compute a summary statistic on individual-level data.
 
 Aggregators that produce scalar-valued statistics have a output_metric of ``AbsoluteDistance[TO]``.
 This output metric can be chained with most noise-addition measurements interchangeably.
 
 However, aggregators that produce vector-valued statistics like :func:`opendp.trans.make_count_by_categories`
 provide the option to choose the output metric: ``L1Distance[TOA]`` or ``L2Distance[TOA]``.
-These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like :func:`opendp.trans.make_base_geometric` and :func:`opendp.trans.make_base_laplace`.
-If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.trans.make_base_gaussian`.
+These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like :func:`opendp.meas.make_base_geometric` and :func:`opendp.meas.make_base_laplace`.
+If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.meas.make_base_gaussian`.
 
 The :func:`opendp.trans.make_count_by` transformation stands out;
-it is currently the only transformation that pairs with :func:`opendp.trans.make_base_stability`.
+it is currently the only transformation that pairs with :func:`opendp.meas.make_base_stability`.
 
 The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
 

@@ -30,6 +30,11 @@ make doctest-python
 Docs are deployed to http://docs.opendp.org using GitHub Actions.
 
 Note that `make html` is replaced with `make versions` to build multiple versions (branches, tags) using the [sphinx-multiversion][] extension.
+Be sure you have installed sphinx-multiversion from the fork in requirements.txt. 
+Otherwise, you will get an error that includes: 
+
+    /docs/source/api/index.rst:4:toctree contains reference to nonexisting document 'api/python/index'
+
 
 [sphinx-multiversion]: https://holzhaus.github.io/sphinx-multiversion/
 
