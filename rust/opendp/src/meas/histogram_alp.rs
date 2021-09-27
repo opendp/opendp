@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-use num::Integer;
+use num::{Integer, ToPrimitive};
 use rug::{Float, float::Round, ops::AddAssignRound, ops::DivAssignRound};
 
 use crate::core::{Measurement, Function, PrivacyRelation};
@@ -61,14 +61,14 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
 }
 
 fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> 
-    where C: Integer + Hash,
+    where C: Integer + ToPrimitive,
           T: CastInternalReal {
     let mut scalar = scale.into_internal();
     scalar.div_assign_round(alpha.into_internal(), Round::Down);
     // Truncate bits that represents values below 2^-53
     scalar.set_prec_round((f64::MANTISSA_DIGITS as i32 - scalar.get_exp().unwrap()).max(1) as u32, Round::Down);
 
-    let r = Float::with_val(f64::MANTISSA_DIGITS * 2, pre_hash(x.max(C::zero()))) * scalar;
+    let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.max(C::zero()).to_u64().unwrap_or_default()) * scalar;
     let floored = f64::from_internal(r.clone().floor()) as usize;
     
     match bool::sample_bernoulli(f64::from_internal(r.fract()), false)? {
@@ -90,8 +90,8 @@ fn check_parameters<T : CastInternalReal>(alpha: T, scale: T) -> bool {
 }
 
 
-fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T, scale: T, s: usize) -> Fallible<BitVector>
-    where C: Clone + Integer + Hash,
+fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T, scale: T, s: usize) -> Fallible<BitVector> 
+    where C: Clone + Integer + ToPrimitive,
           T: Clone + CastInternalReal {
     let mut z = vec![false; s];
 
