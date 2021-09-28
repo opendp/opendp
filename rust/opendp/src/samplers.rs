@@ -465,13 +465,18 @@ impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
 
         let shift = shift.into_internal();
         let scale = scale.into_internal() * T::sample_standard_rademacher()?.into_internal();
-        let standard_exponential_sample = {
+        // standard laplacian(1) noise from rademacher * exponential(1)
+        let laplace = {
             let mut rng = GeneratorOpenSSL {};
             let mut state = ThreadRandState::new_custom(&mut rng);
             rug::Float::with_val(Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state))
         };
 
-        Ok(Self::from_internal(standard_exponential_sample.mul_add(&scale, &shift)))
+        // (shift / scale + noise) * scale
+        // The noise itself is never scaled, to avoid introducing gaps/stacks
+        let noised = shift.mul_add(&scale.clone().recip(), &laplace);
+        // postprocessing remains differentially private
+        Ok(Self::from_internal(noised * &scale))
     }
 }
 
@@ -504,7 +509,12 @@ impl<T: CastInternalReal> SampleGaussian for T {
         // initialize floats within mpfr/rug
         let shift = shift.into_internal();
         let scale = scale.into_internal();
-        Ok(Self::from_internal(gauss.mul_add(&scale, &shift)))
+
+        // (shift / scale + noise) * scale
+        // The noise itself is never scaled, to avoid introducing gaps/stacks
+        let noised = shift.mul_add(&scale.clone().recip(), &gauss);
+        // postprocessing remains differentially private
+        Ok(Self::from_internal(noised * &scale))
     }
 }
 
