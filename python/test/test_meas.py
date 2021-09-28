@@ -4,6 +4,17 @@ from opendp.typing import L1Distance
 enable_features('floating-point', 'contrib')
 
 
+def test_base_gaussian():
+    from opendp.meas import make_base_gaussian
+    from opendp.mod import binary_search_param
+    print("Analytic", binary_search_param(
+        lambda s: make_base_gaussian(s, analytic=True),
+        d_in=1., d_out=(1., 1e-5)))
+    print("Standard", binary_search_param(
+        lambda s: make_base_gaussian(s, analytic=False),
+        d_in=1., d_out=(1., 1e-5)))
+
+
 def test_base_laplace():
     from opendp.meas import make_base_laplace
     meas = make_base_laplace(scale=10.5)

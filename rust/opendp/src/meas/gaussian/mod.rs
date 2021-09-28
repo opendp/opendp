@@ -6,10 +6,8 @@ use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
 use crate::traits::{CheckNull, InfCast};
-
-pub use self::analytic::*;
-
-pub mod analytic;
+mod analytic;
+use analytic::get_analytic_gaussian_sigma;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / std::f64::consts::PI).ln();
 pub const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
@@ -29,7 +27,8 @@ impl<T> GaussianDomain for AllDomain<T>
 
     fn new() -> Self { AllDomain::new() }
     fn noise_function(scale: Self::Carrier) -> Function<Self, Self> {
-        Function::new_fallible(move |arg: &Self::Carrier| Self::Carrier::sample_gaussian(*arg, scale, false))
+        Function::new_fallible(move |arg: &Self::Carrier|
+            Self::Carrier::sample_gaussian(*arg, scale, false))
     }
 }
 
@@ -76,10 +75,8 @@ pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measure
                 let eps = f64::inf_cast(eps.clone())?;
                 let del = f64::inf_cast(del.clone())?;
                 let scale = f64::inf_cast(scale.clone())?;
-                if get_analytic_gaussian_sigma(eps, del, d_in) > scale {
-                    return Ok(false)
-                }
-                eps * scale >= d_in * (ADDITIVE_GAUSS_CONST + 2. * del.recip().ln()).sqrt()
+
+                scale >= get_analytic_gaussian_sigma(d_in, eps, del)
             } else {
                 let _2 = D::Atom::inf_cast(2.)?;
                 let additive_gauss_const = D::Atom::inf_cast(ADDITIVE_GAUSS_CONST)?;
@@ -105,13 +102,36 @@ mod tests {
         Ok(())
     }
 
+    fn catastrophic_analytic_check(scale: f64, d_in: f64, d_out: (f64, f64)) -> bool {
+        let (eps, del) = d_out;
+        // simple shortcut to check the analytic gaussian.
+        // suffers from catastrophic cancellation
+        use statrs::function::erf;
+        fn phi(t: f64) -> f64 {
+            0.5 * (1. + erf::erf(t / 2.0_f64.sqrt()))
+        }
+
+        let prob_l_xy = phi(d_in / (2. * scale) - eps * scale / d_in);
+        let prob_l_yx = phi(-d_in / (2. * scale) - eps * scale / d_in);
+        del >= prob_l_xy - eps.exp() * prob_l_yx
+    }
+
     #[test]
     fn test_make_gaussian_mechanism_analytic() -> Fallible<()> {
-        let measurement = make_base_gaussian::<AllDomain<_>>(1.0, true)?;
+        let d_in = 1.;
+        let d_out = (1., 1e-5);
+        let scale = 3.730632;
+
+        let measurement = make_base_gaussian::<AllDomain<_>>(scale, true)?;
         let arg = 0.0;
         let _ret = measurement.invoke(&arg)?;
 
-        assert!(measurement.check(&0.1, &(0.5, 0.00001))?);
+        assert!(measurement.check(&d_in, &d_out)?);
+        // use the simpler version of the check that suffers from catastrophic cancellation,
+        // to check the more complicated algorithm for finding the analytic gaussian scale
+        assert!(catastrophic_analytic_check(scale, d_in, d_out));
+        assert!(!catastrophic_analytic_check(3.730631, d_in, d_out));
+
         Ok(())
     }
 

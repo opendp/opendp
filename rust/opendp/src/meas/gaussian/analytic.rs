@@ -1,57 +1,43 @@
 use statrs::function::erf;
 
 
-/// Integrate gaussian from -inf to t
-/// P(N(0,1)≤t)
+/// Algorithm to compute sigma for use in the analytic gaussian mechanism
+/// Using p.9, p.19 of [Balle (2018)](https://arxiv.org/pdf/1805.06530.pdf)
 ///
 /// # Arguments
-/// * `t` - upper bound for integration
-fn phi(t: f64) -> f64 {
-    0.5 * (1. + erf::erf(t / 2.0_f64.sqrt()))
-}
+/// * `sensitivity` - Upper bound on the L2 sensitivity of the function you want to privatize.
+/// * `epsilon` - Multiplicative privacy loss parameter.
+/// * `delta` - Additive privacy loss parameter.
+pub(super) fn get_analytic_gaussian_sigma(sensitivity: f64, epsilon: f64, delta: f64) -> f64 {
+    // threshold to choose whether alpha is larger or smaller than one
+    let delta_thr = case_a(epsilon, 0.);
 
-/// B^-: Reduced form of inequality (6) for optimization when alpha > 1.
-/// Refer to p.19 Proof of Theorem 9.
-/// 1. Substitute σ = α∆/sqrt(2ε) into inequality (6)
-/// 2. Substitute u = (α−1/α)2/2
-fn case_a(epsilon: f64, s: f64) -> f64 {
-    phi((epsilon * s).sqrt()) - epsilon.exp() * phi(-(epsilon * (s + 2.)).sqrt())
-}
-
-/// B^+: Reduced form of inequality (6) for optimization when alpha > 1.
-/// Refer to p.19 Proof of Theorem 9.
-fn case_b(epsilon: f64, s: f64) -> f64 {
-    phi(-(epsilon * s).sqrt()) - epsilon.exp() * phi(-(epsilon * (s + 2.)).sqrt())
-}
-
-/// Obtain an interval from which to start a binary search
-/// Choice of B^+ or B^- is based on the sign determined by delta_thr
-/// The paper's example given for v* on B+ is to-- "Find the smallest k in N such that B^+_eps(2^k) > delta"
-///
-/// Returns the interval (2^(k - 1), 2^k)
-fn doubling_trick(
-    epsilon: f64, delta: f64, delta_thr: f64,
-) -> (f64, f64) {
-    // base case
-    let mut s_inf: f64 = 0.;
-    let mut s_sup: f64 = 1.;
-
-    // return false when bounds should no longer be doubled
-    let predicate = |s: f64| if delta > delta_thr {
-        case_a(epsilon, s) < delta
+    // Algorithm 1
+    let alpha = if delta == delta_thr {
+        1.
     } else {
-        case_b(epsilon, s) > delta
+        // depending on comparison with delta_thr alpha is either negative or positive
+        // searching for either:
+        //     v* = inf{u ∈ R≥0: B−ε(u)≤δ}  (where alpha positive)
+        //     u* = sup{v ∈ R≥0: B+ε(v)≤δ}  (where alpha negative)
+        // let s be a B agnostic substitution for either u or v
+
+        // use the doubling trick to bound the R≥0 region to the interval:
+        let (s_inf, s_sup) = doubling_trick(epsilon, delta, delta_thr);
+
+        // run a binary search over either B+ or B- to find s*.
+        let tol: f64 = 1e-10f64;
+        let s_final = binary_search(s_inf, s_sup, epsilon, delta, delta_thr, tol);
+
+        // differentiate s between the u and v based on the sign
+        let sign = if delta > delta_thr { -1. } else { 1. };
+        // reverse second transform out of simplified optimization space (p.19)
+        (1. + s_final / 2.).sqrt() + sign * (s_final / 2.).sqrt()
     };
 
-    // continue doubling the bounds until Theorem 8's comparison with delta is not satisfied
-    while predicate(s_sup) {
-        s_inf = s_sup;
-        s_sup = 2.0 * s_inf;
-    }
-    // return an interval of (2^(k - 1), 2^k) to search over
-    (s_inf, s_sup)
+    // reverse first transform out of simplified optimization space (p.19)
+    alpha * sensitivity / (2. * epsilon).sqrt()
 }
-
 /// Find an s* (where s corresponds to either u or v based on delta_threshold),
 ///     such that B(s) lies within a positive tolerance of delta.
 ///
@@ -96,50 +82,53 @@ fn binary_search(
     }
 }
 
-/// Algorithm to compute sigma for use in the analytic gaussian mechanism
-/// Using p.9, p.19 of [Balle (2018)](https://arxiv.org/pdf/1805.06530.pdf)
+/// Obtain an interval from which to start a binary search
+/// Choice of B^+ or B^- is based on the sign determined by delta_thr
+/// The paper's example given for v* on B+ is to-- "Find the smallest k in N such that B^+_eps(2^k) > delta"
 ///
-/// # Arguments
-/// * `epsilon` - Multiplicative privacy loss parameter.
-/// * `delta` - Additive privacy loss parameter.
-/// * `sensitivity` - Upper bound on the L2 sensitivity of the function you want to privatize.
-pub fn get_analytic_gaussian_sigma(epsilon: f64, delta: f64, sensitivity: f64) -> f64 {
-    // threshold to choose whether alpha is larger or smaller than one
-    let delta_thr = case_a(epsilon, 0.);
+/// Returns the interval (2^(k - 1), 2^k)
+fn doubling_trick(
+    epsilon: f64, delta: f64, delta_thr: f64,
+) -> (f64, f64) {
+    // base case
+    let mut s_inf: f64 = 0.;
+    let mut s_sup: f64 = 1.;
 
-    // Algorithm 1
-    let alpha = if delta == delta_thr {
-        1.
+    // return false when bounds should no longer be doubled
+    let predicate = |s: f64| if delta > delta_thr {
+        case_a(epsilon, s) < delta
     } else {
-        // depending on comparison with delta_thr alpha is either negative or positive
-        // searching for either:
-        //     v* = inf{u ∈ R≥0: B−ε(u)≤δ}  (where alpha positive)
-        //     u* = sup{v ∈ R≥0: B+ε(v)≤δ}  (where alpha negative)
-        // let s be a B agnostic substitution for either u or v
-
-        // use the doubling trick to bound the R≥0 region to the interval:
-        let (s_inf, s_sup) = doubling_trick(epsilon, delta, delta_thr);
-
-        // run a binary search over either B+ or B- to find s*.
-        let tol: f64 = 1e-10f64;
-        let s_final = binary_search(s_inf, s_sup, epsilon, delta, delta_thr, tol);
-
-        // differentiate s between the u and v based on the sign
-        let sign = if delta > delta_thr { -1. } else { 1. };
-        // reverse second transform out of simplified optimization space (p.19)
-        (1. + s_final / 2.).sqrt() + sign * (s_final / 2.).sqrt()
+        case_b(epsilon, s) > delta
     };
 
-    // reverse first transform out of simplified optimization space (p.19)
-    alpha * sensitivity / (2. * epsilon).sqrt()
+    // continue doubling the bounds until Theorem 8's comparison with delta is not satisfied
+    while predicate(s_sup) {
+        s_inf = s_sup;
+        s_sup = 2.0 * s_inf;
+    }
+    // return an interval of (2^(k - 1), 2^k) to search over
+    (s_inf, s_sup)
 }
 
-#[cfg(test)]
-mod test_analytic_gaussian {
-    use crate::meas::get_analytic_gaussian_sigma;
+/// B^-: Reduced form of inequality (6) for optimization when alpha > 1.
+/// Refer to p.19 Proof of Theorem 9.
+/// 1. Substitute σ = α∆/sqrt(2ε) into inequality (6)
+/// 2. Substitute u = (α−1/α)2/2
+fn case_a(epsilon: f64, s: f64) -> f64 {
+    phi((epsilon * s).sqrt()) - epsilon.exp() * phi(-(epsilon * (s + 2.)).sqrt())
+}
 
-    #[test]
-    fn test_analytic_gaussian_sigma() {
-        println!("{:?}", get_analytic_gaussian_sigma(0.5, 1E-10, 1.))
-    }
+/// B^+: Reduced form of inequality (6) for optimization when alpha > 1.
+/// Refer to p.19 Proof of Theorem 9.
+fn case_b(epsilon: f64, s: f64) -> f64 {
+    phi(-(epsilon * s).sqrt()) - epsilon.exp() * phi(-(epsilon * (s + 2.)).sqrt())
+}
+
+/// Integrate gaussian from -inf to t
+/// P(N(0,1)≤t)
+///
+/// # Arguments
+/// * `t` - upper bound for integration
+fn phi(t: f64) -> f64 {
+    0.5 * (1. + erf::erf(t / 2.0_f64.sqrt()))
 }
