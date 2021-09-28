@@ -1,17 +1,16 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg, SubAssign, Sub};
+use std::ops::{AddAssign, Neg, Sub, SubAssign};
 
 use ieee754::Ieee754;
-
-use num::{One, Zero, Bounded, clamp};
-#[cfg(feature="use-mpfr")]
-use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
-
-use crate::error::Fallible;
-#[cfg(not(feature="use-mpfr"))]
-use statrs::function::erf;
+use num::{Bounded, clamp, One, Zero};
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
+#[cfg(feature="use-mpfr")]
+use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
+#[cfg(not(feature="use-mpfr"))]
+use statrs::function::erf;
+
+use crate::error::Fallible;
 use crate::traits::TotalOrd;
 
 #[cfg(feature="use-openssl")]
@@ -29,16 +28,24 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     } else { Ok(()) }
 }
 
-#[cfg(feature="use-mpfr")]
-struct GeneratorOpenSSL;
+#[cfg(feature = "use-mpfr")]
+struct GeneratorOpenSSL {
+    error: Fallible<()>,
+}
+
+impl GeneratorOpenSSL {
+    fn new() -> Self {
+        GeneratorOpenSSL { error: Ok(()) }
+    }
+}
 
 #[cfg(feature="use-mpfr")]
 impl ThreadRandGen for GeneratorOpenSSL {
     fn gen(&mut self) -> u32 {
         let mut buffer = [0u8; 4];
-        // impossible not to panic here
-        //    cannot ignore errors with .ok(), because the buffer will remain 0
-        fill_bytes(&mut buffer).unwrap();
+        if let Err(e) = fill_bytes(&mut buffer) {
+            self.error = Err(e)
+        }
         u32::from_ne_bytes(buffer)
     }
 }
@@ -465,23 +472,27 @@ impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenSSL {};
-        let mut state = ThreadRandState::new_custom(&mut rng);
+        let mut rng = GeneratorOpenSSL::new();
+        let laplace = {
+            let mut state = ThreadRandState::new_custom(&mut rng);
+
+            // see https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
+            let exponential = rug::Float::with_val(
+                Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state));
+            // adding a random sign to the exponential deviate does not induce gaps or stacks
+            exponential * T::sample_standard_rademacher()?.into_internal()
+        };
+
+        rng.error?;
 
         // initialize floats within mpfr/rug
         let shift = shift.into_internal();
         let scale = scale.into_internal();
 
-        // see https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
-        let exponential = rug::Float::with_val(
-            Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state));
-        // adding a random sign to the exponential deviate does not induce gaps or stacks
-        let laplace = exponential * T::sample_standard_rademacher()?.into_internal();
-
         // (shift / scale + noise) * scale. The noise itself is never scaled
         let noised = shift.mul_add(&scale.clone().recip(), &laplace);
         // postprocessing remains differentially private
-        Ok(Self::from_internal(noised * &scale))
+        Ok(Self::from_internal(noised * scale))
     }
 }
 
@@ -507,12 +518,15 @@ impl<T: CastInternalReal + Zero> SampleGaussian for T {
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenSSL {};
-        let mut state = ThreadRandState::new_custom(&mut rng);
+        let mut rng = GeneratorOpenSSL::new();
+        let gauss = {
+            let mut state = ThreadRandState::new_custom(&mut rng);
 
-        // generate Gaussian(0,1) according to mpfr standard
-        // See https://arxiv.org/pdf/1303.6257.pdf, algorithm N for exact standard normal deviates
-        let gauss = rug::Float::with_val(Self::MANTISSA_DIGITS, Float::random_normal(&mut state));
+            // generate Gaussian(0,1) according to mpfr standard
+            // See https://arxiv.org/pdf/1303.6257.pdf, algorithm N for exact standard normal deviates
+            rug::Float::with_val(Self::MANTISSA_DIGITS, Float::random_normal(&mut state))
+        };
+        rng.error?;
 
         // initialize floats within mpfr/rug
         let shift = shift.into_internal();
@@ -522,7 +536,7 @@ impl<T: CastInternalReal + Zero> SampleGaussian for T {
         // The noise itself is never scaled, to avoid introducing gaps/stacks
         let noised = shift.mul_add(&scale.clone().recip(), &gauss);
         // postprocessing remains differentially private
-        Ok(Self::from_internal(noised * &scale))
+        Ok(Self::from_internal(noised * scale))
     }
 }
 
