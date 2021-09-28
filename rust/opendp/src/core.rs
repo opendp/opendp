@@ -287,6 +287,17 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
             backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
         }
     }
+    pub fn new_from_forward(
+        forward_map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + Clone + 'static
+    ) -> Self
+        where MI::Distance: 'static, MO::Distance: 'static + PartialOrd + Clone {
+        StabilityRelation::new_all(
+            enclose!(forward_map, move |d_in: &MI::Distance, d_out: &MO::Distance|
+                Ok(d_out.clone() >= forward_map(d_in)?)),
+            Some(forward_map),
+            None::<fn(&_)->_>
+        )
+    }
     pub fn new_from_constant(c: MO::Distance) -> Self where
         MI::Distance: InfCast<MO::Distance> + Clone,
         MO::Distance: DistanceConstant<MI::Distance> {

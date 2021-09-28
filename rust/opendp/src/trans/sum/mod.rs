@@ -36,7 +36,7 @@ pub fn make_sized_bounded_sum<T>(
         || upper.checked_mul(&size_).is_none() {
         return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
     }
-    let _2 = T::exact_int_cast(2)?;
+    let range = upper - lower;
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
             BoundedDomain::new_closed(bounds)?), size),
@@ -44,9 +44,9 @@ pub fn make_sized_bounded_sum<T>(
         Function::new(|arg: &Vec<T>| arg.iter().sum()),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        // d_out >= d_in * (U - L).inf_div(2)
-        StabilityRelation::new_from_constant(
-            (upper - lower).inf_div(&T::exact_int_cast(2)?))))
+        StabilityRelation::new_from_forward(
+            move |d_in: &IntDistance| T::inf_cast(d_in / 2).map(|v| v * range.clone()))
+    ))
 }
 
 
