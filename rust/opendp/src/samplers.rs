@@ -457,8 +457,9 @@ impl CastInternalReal for f32 {
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
+impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        if scale.is_zero() { return Ok(shift) }
         if constant_time {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
@@ -497,9 +498,10 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal> SampleGaussian for T {
+impl<T: CastInternalReal + Zero> SampleGaussian for T {
 
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        if scale.is_zero() { return Ok(shift) }
         if constant_time {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
