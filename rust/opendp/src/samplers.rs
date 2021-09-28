@@ -1,17 +1,16 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg, SubAssign, Sub};
+use std::ops::{AddAssign, Neg, Sub, SubAssign};
 
 use ieee754::Ieee754;
-
-use num::{One, Zero, Bounded, clamp};
-#[cfg(feature="use-mpfr")]
-use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
-
-use crate::error::Fallible;
-#[cfg(not(feature="use-mpfr"))]
-use statrs::function::erf;
+use num::{Bounded, clamp, One, Zero};
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
+#[cfg(feature="use-mpfr")]
+use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
+#[cfg(not(feature="use-mpfr"))]
+use statrs::function::erf;
+
+use crate::error::Fallible;
 use crate::traits::TotalOrd;
 
 #[cfg(feature="use-openssl")]
@@ -29,16 +28,24 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     } else { Ok(()) }
 }
 
-#[cfg(feature="use-mpfr")]
-struct GeneratorOpenSSL;
+#[cfg(feature = "use-mpfr")]
+struct GeneratorOpenSSL {
+    error: Fallible<()>,
+}
+
+impl GeneratorOpenSSL {
+    fn new() -> Self {
+        GeneratorOpenSSL { error: Ok(()) }
+    }
+}
 
 #[cfg(feature="use-mpfr")]
 impl ThreadRandGen for GeneratorOpenSSL {
     fn gen(&mut self) -> u32 {
         let mut buffer = [0u8; 4];
-        // impossible not to panic here
-        //    cannot ignore errors with .ok(), because the buffer will remain 0
-        fill_bytes(&mut buffer).unwrap();
+        if let Err(e) = fill_bytes(&mut buffer) {
+            self.error = Err(e)
+        }
         u32::from_ne_bytes(buffer)
     }
 }
@@ -457,21 +464,35 @@ impl CastInternalReal for f32 {
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
+impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        if scale.is_zero() { return Ok(shift) }
         if constant_time {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
 
-        let shift = shift.into_internal();
-        let scale = scale.into_internal() * T::sample_standard_rademacher()?.into_internal();
-        let standard_exponential_sample = {
-            let mut rng = GeneratorOpenSSL {};
+        // initialize randomness
+        let mut rng = GeneratorOpenSSL::new();
+        let laplace = {
             let mut state = ThreadRandState::new_custom(&mut rng);
-            rug::Float::with_val(Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state))
+
+            // see https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
+            let exponential = rug::Float::with_val(
+                Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state));
+            // adding a random sign to the exponential deviate does not induce gaps or stacks
+            exponential * T::sample_standard_rademacher()?.into_internal()
         };
 
-        Ok(Self::from_internal(standard_exponential_sample.mul_add(&scale, &shift)))
+        rng.error?;
+
+        // initialize floats within mpfr/rug
+        let shift = shift.into_internal();
+        let scale = scale.into_internal();
+
+        // (shift / scale + noise) * scale. The noise itself is never scaled
+        let noised = shift.mul_add(&scale.clone().recip(), &laplace);
+        // postprocessing remains differentially private
+        Ok(Self::from_internal(noised * scale))
     }
 }
 
@@ -479,32 +500,43 @@ impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
 impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademacher> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, _constant_time: bool) -> Fallible<Self> {
         let mut rng = rand::thread_rng();
-        let _1_ = T::from(1.0).unwrap();
-        let _2_ = T::from(2.0).unwrap();
-        let u: T = rng.gen_range(T::from(-0.5).unwrap(), T::from(0.5).unwrap());
-        Ok(shift - u.signum() * (_1_ - _2_ * u.abs()).ln() * scale)
+        let mut u: T = T::zero();
+        while u.abs().is_zero() {
+            u = rng.gen_range(T::from(-1.).unwrap(), T::from(1.).unwrap())
+        }
+        Ok(shift + u.signum() * u.abs().ln() * scale)
     }
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal> SampleGaussian for T {
+impl<T: CastInternalReal + Zero> SampleGaussian for T {
 
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
+        if scale.is_zero() { return Ok(shift) }
         if constant_time {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenSSL {};
-        let mut state = ThreadRandState::new_custom(&mut rng);
+        let mut rng = GeneratorOpenSSL::new();
+        let gauss = {
+            let mut state = ThreadRandState::new_custom(&mut rng);
 
-        // generate Gaussian(0,1) according to mpfr standard
-        let gauss = rug::Float::with_val(Self::MANTISSA_DIGITS, Float::random_normal(&mut state));
+            // generate Gaussian(0,1) according to mpfr standard
+            // See https://arxiv.org/pdf/1303.6257.pdf, algorithm N for exact standard normal deviates
+            rug::Float::with_val(Self::MANTISSA_DIGITS, Float::random_normal(&mut state))
+        };
+        rng.error?;
 
         // initialize floats within mpfr/rug
         let shift = shift.into_internal();
         let scale = scale.into_internal();
-        Ok(Self::from_internal(gauss.mul_add(&scale, &shift)))
+
+        // (shift / scale + noise) * scale
+        // The noise itself is never scaled, to avoid introducing gaps/stacks
+        let noised = shift.mul_add(&scale.clone().recip(), &gauss);
+        // postprocessing remains differentially private
+        Ok(Self::from_internal(noised * scale))
     }
 }
 
