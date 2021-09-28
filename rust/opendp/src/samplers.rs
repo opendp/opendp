@@ -464,17 +464,17 @@ impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
         }
 
         let shift = shift.into_internal();
-        let scale = scale.into_internal() * T::sample_standard_rademacher()?.into_internal();
-        // standard laplacian(1) noise from rademacher * exponential(1)
-        let laplace = {
-            let mut rng = GeneratorOpenSSL {};
-            let mut state = ThreadRandState::new_custom(&mut rng);
-            // See https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
-            rug::Float::with_val(Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state))
-        };
+        let scale = scale.into_internal();
+        let mut rng = GeneratorOpenSSL {};
+        let mut state = ThreadRandState::new_custom(&mut rng);
+        // See https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
+        let exponential = rug::Float::with_val(
+            Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state));
+        // Adding a random sign to the exponential deviate does not induce gaps or stacks
+        let laplace = exponential * T::sample_standard_rademacher()?.into_internal();
 
         // (shift / scale + noise) * scale
-        // The noise itself is never scaled, to avoid introducing gaps/stacks
+        // The noise itself is never scaled
         let noised = shift.mul_add(&scale.clone().recip(), &laplace);
         // postprocessing remains differentially private
         Ok(Self::from_internal(noised * &scale))
