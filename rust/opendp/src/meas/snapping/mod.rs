@@ -5,7 +5,7 @@ use num::Zero;
 use rug::rand::ThreadRandState;
 
 use crate::core::{Function, Measurement, PrivacyRelation};
-use crate::dist::{L1Sensitivity, MaxDivergence};
+use crate::dist::{L1Distance, MaxDivergence};
 use crate::dom::AllDomain;
 use crate::error::Fallible;
 use crate::samplers::{GeneratorOpenSSL, SampleRademacher};
@@ -13,7 +13,7 @@ use crate::samplers::{GeneratorOpenSSL, SampleRademacher};
 // snapping for scalar-valued query
 pub fn make_base_snapping(
     scale: f64, sensitivity: f64, min: f64, max: f64, precision: u32,
-) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, L1Sensitivity<f64>, MaxDivergence<f64>>> {
+) -> Fallible<Measurement<AllDomain<f64>, AllDomain<f64>, L1Distance<f64>, MaxDivergence<f64>>> {
     if min > max {
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
@@ -22,8 +22,8 @@ pub fn make_base_snapping(
         AllDomain::new(),
         Function::new_fallible(move |arg: &f64|
             snapping_mechanism(*arg, scale, sensitivity, min, max, precision)),
-        L1Sensitivity::new(),
-        MaxDivergence::new(),
+        L1Distance::default(),
+        MaxDivergence::default(),
         PrivacyRelation::new_fallible(move |&d_in: &f64, &eps: &f64| {
             if eps.is_sign_negative() || eps.is_zero() {
                 return fallible!(FailedRelation, "cause: epsilon <= 0");
