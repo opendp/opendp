@@ -463,18 +463,21 @@ impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
             return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
         }
 
-        let shift = shift.into_internal();
-        let scale = scale.into_internal();
+        // initialize randomness
         let mut rng = GeneratorOpenSSL {};
         let mut state = ThreadRandState::new_custom(&mut rng);
-        // See https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
+
+        // initialize floats within mpfr/rug
+        let shift = shift.into_internal();
+        let scale = scale.into_internal();
+
+        // see https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
         let exponential = rug::Float::with_val(
             Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state));
-        // Adding a random sign to the exponential deviate does not induce gaps or stacks
+        // adding a random sign to the exponential deviate does not induce gaps or stacks
         let laplace = exponential * T::sample_standard_rademacher()?.into_internal();
 
-        // (shift / scale + noise) * scale
-        // The noise itself is never scaled
+        // (shift / scale + noise) * scale. The noise itself is never scaled
         let noised = shift.mul_add(&scale.clone().recip(), &laplace);
         // postprocessing remains differentially private
         Ok(Self::from_internal(noised * &scale))
