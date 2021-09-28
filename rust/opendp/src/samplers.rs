@@ -469,6 +469,7 @@ impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
         let laplace = {
             let mut rng = GeneratorOpenSSL {};
             let mut state = ThreadRandState::new_custom(&mut rng);
+            // See https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
             rug::Float::with_val(Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state))
         };
 
@@ -484,10 +485,11 @@ impl<T: CastInternalReal + SampleRademacher> SampleLaplace for T {
 impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademacher> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, _constant_time: bool) -> Fallible<Self> {
         let mut rng = rand::thread_rng();
-        let _1_ = T::from(1.0).unwrap();
-        let _2_ = T::from(2.0).unwrap();
-        let u: T = rng.gen_range(T::from(-0.5).unwrap(), T::from(0.5).unwrap());
-        Ok(shift - u.signum() * (_1_ - _2_ * u.abs()).ln() * scale)
+        let mut u: T = T::zero();
+        while u.abs().is_zero() {
+            u = rng.gen_range(T::from(-1.).unwrap(), T::from(1.).unwrap())
+        }
+        Ok(shift + u.signum() * u.abs().ln() * scale)
     }
 }
 
@@ -504,6 +506,7 @@ impl<T: CastInternalReal> SampleGaussian for T {
         let mut state = ThreadRandState::new_custom(&mut rng);
 
         // generate Gaussian(0,1) according to mpfr standard
+        // See https://arxiv.org/pdf/1303.6257.pdf, algorithm N for exact standard normal deviates
         let gauss = rug::Float::with_val(Self::MANTISSA_DIGITS, Float::random_normal(&mut state));
 
         // initialize floats within mpfr/rug
