@@ -400,16 +400,16 @@ fn make_any_relation<QI: 'static, QO: 'static, AQI: Downcast, AQO: Downcast>(rel
     }
 }
 
-fn make_any_map<QI, QO, AQI>(map: &Option<Rc<dyn Fn(&QI) -> Fallible<Box<QO>>>>) -> Option<impl Fn(&AQI) -> Fallible<Box<AnyMetricDistance>>>
+fn make_any_map<QI, QO, AQI>(map: &Option<Rc<dyn Fn(&QI) -> Fallible<QO>>>) -> Option<impl Fn(&AQI) -> Fallible<AnyMetricDistance>>
     where QI: 'static + PartialOrd,
           QO: 'static + PartialOrd + Clone,
           AQI: Downcast {
     map.as_ref().map(|map| {
         let map = map.clone();
-        move |d_in: &AQI| -> Fallible<Box<AnyMetricDistance>> {
+        move |d_in: &AQI| -> Fallible<AnyMetricDistance> {
             let d_in = d_in.downcast_ref()?;
             let d_out = map(d_in);
-            d_out.map(|d| AnyMetricDistance::new(*d)).map(Box::new)
+            d_out.map(|d| AnyMetricDistance::new(d))
         }
     })
 }

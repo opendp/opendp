@@ -1,4 +1,4 @@
-use num::Float;
+use num::{Float};
 
 use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric};
 use crate::dist::{L2Distance, SmoothedMaxDivergence, AbsoluteDistance};
@@ -28,7 +28,7 @@ fn make_gaussian_privacy_relation<T, MI>(scale: T) -> PrivacyRelation<MI, Smooth
         }
 
         // TODO: should we error if epsilon > 1., or just waste the budget?
-        Ok(eps.min(T::one()) >= (d_in / scale) * (additive_gauss_const + _2 * del.recip().ln()).sqrt())
+        Ok(eps.min(T::one()) * scale >= d_in * (additive_gauss_const + _2 * del.recip().ln()).sqrt())
     })
 }
 

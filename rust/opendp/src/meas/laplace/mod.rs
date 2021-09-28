@@ -1,4 +1,4 @@
-use num::Float;
+use num::{Float};
 
 use crate::core::{Measurement, Function, PrivacyRelation, Domain, SensitivityMetric};
 use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
@@ -50,7 +50,9 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
         D::noise_function(scale.clone()),
         D::Metric::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(scale.recip())
+        PrivacyRelation::new_all(
+            move |d_in: &D::Atom, d_out: &D::Atom| Ok(d_out.clone() * scale.clone() >= d_in.clone()),
+            Some(move |d_out: &D::Atom| Ok(d_out.clone() * scale.clone())))
     ))
 }
 
