@@ -15,11 +15,13 @@ fn median_smooth_sensitivity(
 
     let m = (sorted_data.len() + 1) / 2;
     let difference = |t, k| {
-        let lower_ = if m + t < k + 1 {&lower} else {
-            sorted_data.get(m + t - k - 1).unwrap_or(&lower)
+        let l = if m + t < k + 1 {lower} else {
+            sorted_data[m + t - k - 1]
         };
-        let upper_ = sorted_data.get(m + t).unwrap_or(&upper);
-        upper_ - lower_
+        let u = if m + t > sorted_data.len() {upper} else {
+            sorted_data[m + t]
+        };
+        u - l
     };
 
     (0..sorted_data.len()).flat_map(move |k| (0..=k).map(move |t|
