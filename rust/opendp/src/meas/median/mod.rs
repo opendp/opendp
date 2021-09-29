@@ -1,8 +1,9 @@
+use std::cmp::Ordering;
+
 use crate::core::{Domain, Function, Measurement, Metric, PrivacyRelation};
 use crate::dist::{MaxDivergence, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, VectorDomain};
 use crate::error::Fallible;
-use std::cmp::Ordering;
 use crate::samplers::SampleLaplace;
 
 fn median_smooth_sensitivity(
@@ -13,13 +14,16 @@ fn median_smooth_sensitivity(
     let (lower, upper) = bounds;
 
     let m = (sorted_data.len() + 1) / 2;
-    let difference = |t, k|
-        sorted_data.get(m + t).unwrap_or(&upper) -
-            sorted_data.get(m + t - k - 1).unwrap_or(&lower);
+    let difference = |t, k| {
+        let lower_ = if m + t < k + 1 {lower} else {
+            sorted_data.get(m + t - k - 1).unwrap_or(&lower)
+        };
+        let upper_ = sorted_data.get(m + t).unwrap_or(&upper);
+        upper_ - lower_
+    };
 
-    (0..sorted_data.len()).flat_map(move |k|
-        (0..=k).filter(move |t| m + t > k + 1).map(move |t|
-            difference(t, k) * (-(k as f64) * epsilon).exp()))
+    (0..sorted_data.len()).flat_map(move |k| (0..=k).map(move |t|
+        difference(t, k) * (-(k as f64) * epsilon).exp()))
         .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
         .unwrap_or(f64::INFINITY)
 }
