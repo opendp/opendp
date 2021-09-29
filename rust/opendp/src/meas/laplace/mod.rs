@@ -51,7 +51,16 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
         D::Metric::default(),
         MaxDivergence::default(),
         PrivacyRelation::new_all(
-            move |d_in: &D::Atom, d_out: &D::Atom| Ok(d_out.inf_mul(&scale)? >= d_in.clone()),
+            move |d_in: &D::Atom, d_out: &D::Atom| {
+                if d_in.is_sign_negative() {
+                    return fallible!(InvalidDistance, "sensitivity must be non-negative")
+                }
+                if d_out.is_sign_negative() {
+                    return fallible!(InvalidDistance, "epsilon must be non-negative")
+                }
+                // d_out * scale >= d_in
+                Ok(d_out.inf_mul(&scale)? >= d_in.clone())
+            },
             Some(move |d_out: &D::Atom| d_out.inf_mul(&scale)))
     ))
 }

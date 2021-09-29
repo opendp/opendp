@@ -25,7 +25,7 @@ pub extern "C" fn opendp_meas__make_base_geometric(
         where D: 'static + GeometricDomain,
               D::Atom: 'static + TotalOrd + Clone + DistanceConstant<QO>,
               QO: 'static + Float + InfCast<D::Atom> + TotalOrd + InfDiv + InfMul,
-              f64: From<QO> {
+              f64: InfCast<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             Some(try_!(bounds.downcast_ref::<(D::Atom, D::Atom)>()).clone())

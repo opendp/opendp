@@ -13,7 +13,7 @@ use statrs::function::erf;
 use crate::error::Fallible;
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
-use crate::traits::{TotalOrd, FloatBits};
+use crate::traits::{TotalOrd, FloatBits, InfExp, InfSub, InfAdd, NegInfSub, NegInfDiv, AlertingSub};
 
 #[cfg(feature="use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
@@ -365,7 +365,7 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd> SampleTwoSidedGeometric for T {
+impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub> SampleTwoSidedGeometric for T {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the
@@ -380,13 +380,15 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
     ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
     ///             the analyst can deduce that the input was greater than or equal to upper
     fn sample_two_sided_geometric(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+        if scale.is_zero() {return Ok(shift)}
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
             if lower == upper {return Ok(lower)}
-            Some(upper - lower - T::one())
+            Some(upper.alerting_sub(&lower)?.alerting_sub(&T::one())?)
         } else {None};
 
-        let alpha: f64 = (scale.recip()).exp().recip();
+        // make alpha conservatively smaller
+        let alpha: f64 = scale.recip().inf_exp()?.recip();
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
@@ -398,10 +400,13 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
         // TODO: benchmark execution time on different inputs
         let uniform = f64::sample_standard_uniform(bounds.is_some())?;
         let direction = bool::sample_standard_bernoulli()?;
-        let geometric = T::sample_geometric(shift.clone(), direction,1. - alpha, trials)?;
+        // make prob conservatively larger
+        let geometric = T::sample_geometric(
+            shift.clone(), direction,(1.).inf_sub(&alpha)?, trials)?;
 
         // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
-        let noised = if uniform < (1. - alpha) / (1. + alpha) { shift } else { geometric };
+        let noised = if uniform < (1.).neg_inf_sub(&alpha)?.neg_inf_div(
+            &(1.).inf_add(&alpha)?)? { shift } else { geometric };
 
         Ok(if let Some((lower, upper)) = bounds {
             clamp(noised, lower, upper)
@@ -411,6 +416,12 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
     }
 }
 
+/// If v is -0., return 0., otherwise return v.
+/// This removes the duplicate -0. member of the output space,
+/// which could hold an unintended bit of information
+fn censor_neg_zero<T: Zero>(v: T) -> T {
+    if v.is_zero() { T::zero() } else { v }
+}
 
 pub trait SampleLaplace: SampleRademacher + Sized {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self>;
@@ -564,7 +575,7 @@ impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
             &gauss, if value.is_sign_positive() {Round::Up} else {Round::Down});
         // postprocessing back to original coordinate space
         //     remains differentially private via postprocessing
-        Ok(Self::from_internal(value) * scale)
+        Ok(censor_neg_zero(Self::from_internal(value)) * scale)
     }
 }
 

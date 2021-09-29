@@ -1,5 +1,5 @@
 use std::iter::Sum;
-use std::ops::{Add, Div, Sub};
+use std::ops::{Add, Div, Sub, Mul};
 
 use num::{Float, One, Zero};
 
@@ -22,7 +22,7 @@ pub fn make_sized_bounded_variance<T>(
     let _ddof = T::exact_int_cast(ddof)?;
     let (lower, upper) = bounds.clone();
     let _1 = T::one();
-    let _2 = &_1 + &_1;
+    let _2 = T::exact_int_cast(2)?;
 
     let range = upper.inf_sub(&lower)?;
     // check for potential overflow
@@ -53,17 +53,17 @@ pub fn make_sized_bounded_covariance<T>(
     bounds_0: (T, T), bounds_1: (T, T),
     ddof: usize,
 ) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
-    T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero + One
-    + Sub<Output=T> + Div<Output=T> + Add<Output=T> + Sum<T>
-    + InfSub + InfAdd + NegInfAdd + NegInfSub + CheckNull,
+    T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero
+    + Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T>
+    + InfAdd + InfSub + NegInfAdd + NegInfSub + CheckNull,
     for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
     for<'a> &'a T: Sub<Output=T>,
     IntDistance: InfCast<T> {
 
     let _size = T::exact_int_cast(size)?;
     let _ddof = T::exact_int_cast(ddof)?;
-    let _1 = T::one();
-    let _2 = _1.clone() + &_1;
+    let _1 = T::exact_int_cast(1)?;
+    let _2 = T::exact_int_cast(2)?;
 
     bounds_0.1.inf_sub(&bounds_0.0)?.inf_div(&_2)?.inf_mul(
         &bounds_1.1.inf_sub(&bounds_1.0)?.inf_div(&_2)?)

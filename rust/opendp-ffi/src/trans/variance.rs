@@ -1,12 +1,12 @@
 use std::convert::TryFrom;
 use std::iter::Sum;
-use std::ops::{Add, Div, Sub};
+use std::ops::{Add, Div, Sub, Mul};
 use std::os::raw::{c_char, c_uint};
 
-use num::{Float, One, Zero};
+use num::{Float, Zero};
 
 use opendp::err;
-use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckNull, InfAdd, InfSub, InfMul, NegInfAdd, NegInfSub};
+use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckNull, InfAdd, InfSub, NegInfAdd, NegInfSub};
 use opendp::trans::{make_sized_bounded_covariance, make_sized_bounded_variance};
 
 use crate::any::{AnyObject, AnyTransformation, Downcast};
@@ -50,8 +50,9 @@ pub extern "C" fn opendp_trans__make_sized_bounded_covariance(
         lower: *const AnyObject, upper: *const AnyObject,
         ddof: usize,
     ) -> FfiResult<*mut AnyTransformation> where
-        T: DistanceConstant<IntDistance> + Sub<Output=T> + Div<Output=T> + Sum<T> + Zero + One
-        + ExactIntCast<usize> + CheckNull + InfAdd + InfSub + NegInfAdd + NegInfSub + InfMul,
+        T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero
+        + Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T>
+        + InfAdd + InfSub + NegInfAdd + NegInfSub + CheckNull,
         for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
         for<'a> &'a T: Sub<Output=T>,
         IntDistance: InfCast<T> {

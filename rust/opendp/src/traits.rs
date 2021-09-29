@@ -633,6 +633,66 @@ macro_rules! impl_math_float {
 }
 impl_math_float!(f32, f64);
 
+/// Performs exponentiation with rounding towards infinity that returns an error if overflowing.
+pub trait InfExp: Sized {
+    fn inf_exp(self) -> Fallible<Self>;
+}
+/// Performs exponentiation with rounding towards -infinity that returns an error if overflowing.
+pub trait NegInfExp: Sized {
+    fn neg_inf_exp(self) -> Fallible<Self>;
+}
+/// Performs the logarithm with rounding towards infinity that returns an error if overflowing.
+pub trait InfLn: Sized {
+    fn inf_ln(self) -> Fallible<Self>;
+}
+/// Performs the logarithm with rounding towards -infinity that returns an error if overflowing.
+pub trait NegInfLn: Sized {
+    fn neg_inf_ln(self) -> Fallible<Self>;
+}
+/// Performs the sqrt with rounding towards infinity that returns an error if overflowing.
+pub trait InfSqrt: Sized {
+    fn inf_sqrt(self) -> Fallible<Self>;
+}
+/// Performs the sqrt with rounding towards -infinity that returns an error if overflowing.
+pub trait NegInfSqrt: Sized {
+    fn neg_inf_sqrt(self) -> Fallible<Self>;
+}
+macro_rules! impl_float_inf_uni {
+    ($($ty:ty),+; $name:ident, $method:ident, $op:ident, $round:expr, $fallback:ident) => {
+        $(
+        #[cfg(feature="use-mpfr")]
+        impl $name for $ty {
+            fn $method(self) -> Fallible<Self> {
+                use rug::float::Round::*;
+                let mut this = self.into_internal();
+                this.$op($round);
+                let this = Self::from_internal(this);
+                this.is_finite().then(|| this).ok_or_else(|| err!(
+                    FailedFunction,
+                    concat!("({}).", stringify!($method), "() is not finite. Consider tightening your parameters."),
+                    self))
+            }
+        }
+        #[cfg(not(feature="use-mpfr"))]
+        impl $name for $ty {
+            fn $method(self) -> Fallible<Self> {
+                let this = self.$fallback();
+                this.is_finite().then(|| this).ok_or_else(|| err!(
+                    FailedFunction,
+                    concat!("({}).", stringify!($method), "() is not finite. Consider tightening your parameters."),
+                    self))
+            }
+        })+
+    }
+}
+impl_float_inf_uni!(f64, f32; InfLn, inf_ln, ln_round, Up, ln);
+impl_float_inf_uni!(f64, f32; InfExp, inf_exp, exp_round, Up, exp);
+impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, sqrt_round, Up, sqrt);
+impl_float_inf_uni!(f64, f32; NegInfLn, neg_inf_ln, ln_round, Down, ln);
+impl_float_inf_uni!(f64, f32; NegInfExp, neg_inf_exp, exp_round, Down, exp);
+impl_float_inf_uni!(f64, f32; NegInfSqrt, neg_inf_sqrt, sqrt_round, Down, sqrt);
+
+
 /// Performs multiplication with rounding towards infinity that returns an error if overflowing.
 pub trait InfMul: Sized {
     /// Alerting multiplication with rounding towards infinity.
@@ -706,7 +766,7 @@ macro_rules! impl_int_inf {
 }
 impl_int_inf!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
 
-macro_rules! impl_float_inf {
+macro_rules! impl_float_inf_bi {
     ($($ty:ty),+; $name:ident, $method:ident, $op:ident, $round:expr, $fallback:ident) => {
         $(
         #[cfg(feature="use-mpfr")]
@@ -719,7 +779,7 @@ macro_rules! impl_float_inf {
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
-                    self, this))
+                    self, other))
             }
         }
         #[cfg(not(feature="use-mpfr"))]
@@ -729,19 +789,19 @@ macro_rules! impl_float_inf {
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
-                    self, this))
+                    self, other))
             }
         })+
     }
 }
-impl_float_inf!(f64, f32; InfAdd, inf_add, add_assign_round, Up, alerting_add);
-impl_float_inf!(f64, f32; InfSub, inf_sub, sub_assign_round, Up, alerting_sub);
-impl_float_inf!(f64, f32; InfMul, inf_mul, mul_assign_round, Up, alerting_mul);
-impl_float_inf!(f64, f32; InfDiv, inf_div, div_assign_round, Up, alerting_div);
-impl_float_inf!(f64, f32; NegInfAdd, neg_inf_add, add_assign_round, Down, alerting_add);
-impl_float_inf!(f64, f32; NegInfSub, neg_inf_sub, sub_assign_round, Down, alerting_sub);
-impl_float_inf!(f64, f32; NegInfMul, neg_inf_mul, mul_assign_round, Down, alerting_mul);
-impl_float_inf!(f64, f32; NegInfDiv, neg_inf_div, div_assign_round, Down, alerting_div);
+impl_float_inf_bi!(f64, f32; InfAdd, inf_add, add_assign_round, Up, alerting_add);
+impl_float_inf_bi!(f64, f32; InfSub, inf_sub, sub_assign_round, Up, alerting_sub);
+impl_float_inf_bi!(f64, f32; InfMul, inf_mul, mul_assign_round, Up, alerting_mul);
+impl_float_inf_bi!(f64, f32; InfDiv, inf_div, div_assign_round, Up, alerting_div);
+impl_float_inf_bi!(f64, f32; NegInfAdd, neg_inf_add, add_assign_round, Down, alerting_add);
+impl_float_inf_bi!(f64, f32; NegInfSub, neg_inf_sub, sub_assign_round, Down, alerting_sub);
+impl_float_inf_bi!(f64, f32; NegInfMul, neg_inf_mul, mul_assign_round, Down, alerting_mul);
+impl_float_inf_bi!(f64, f32; NegInfDiv, neg_inf_div, div_assign_round, Down, alerting_div);
 
 
 pub trait AlertingAbs: Sized {
