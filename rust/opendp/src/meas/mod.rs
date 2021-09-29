@@ -18,6 +18,11 @@ pub mod geometric;
 #[cfg(feature="contrib")]
 pub use crate::meas::geometric::*;
 
+#[cfg(feature="contrib")]
+pub mod median;
+#[cfg(feature="contrib")]
+pub use crate::meas::median::*;
+
 #[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod ptr;
 #[cfg(all(feature="floating-point", feature="contrib"))]
