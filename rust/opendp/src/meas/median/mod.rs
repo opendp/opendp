@@ -6,6 +6,10 @@ use crate::dom::{AllDomain, BoundedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::samplers::SampleLaplace;
 
+fn partial_max<T: PartialOrd>(x: &T, y: &T) -> Ordering {
+    x.partial_cmp(y).unwrap_or(Ordering::Equal)
+}
+
 fn median_smooth_sensitivity(
     epsilon: f64,
     bounds: (f64, f64),
@@ -26,7 +30,7 @@ fn median_smooth_sensitivity(
 
     (0..sorted_data.len()).flat_map(move |k| (0..=k).map(move |t|
         difference(t, k) * (-(k as f64) * epsilon).exp()))
-        .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
+        .max_by(partial_max)
         .unwrap_or(f64::INFINITY)
 }
 
