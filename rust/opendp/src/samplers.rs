@@ -1,5 +1,5 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg, Sub, SubAssign};
+use std::ops::{AddAssign, Neg, Sub, SubAssign, Mul};
 
 use ieee754::Ieee754;
 use num::{Bounded, clamp, One, Zero};
@@ -484,7 +484,7 @@ impl CastInternalReal for f32 {
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
+impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         if scale.is_zero() { return Ok(shift) }
         if constant_time {
@@ -505,19 +505,18 @@ impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
         rng.error?;
 
         use rug::float::Round;
-        use rug::ops::{DivAssignRound, MulAssignRound};
-        let scale = scale.into_internal();
+        use rug::ops::{DivAssignRound, AddAssignRound};
 
         // (shift / scale + noise) * scale.
         let mut value = shift.into_internal();
         // when scaling into the noise coordinate space, round down so that noise is overestimated
-        value.div_assign_round(&scale, Round::Down);
-        // the noise itself is never scaled
-        value.add_assign(&laplace);
-        // postprocessing remains differentially private
-        value.mul_assign_round(&scale, Round::Up);
-
-        Ok(Self::from_internal(value))
+        value.div_assign_round(&scale.clone().into_internal(), Round::Zero);
+        // the noise itself is never scaled. Round away from zero to offset the scaling bias
+        value.add_assign_round(
+            &laplace, if value.is_sign_positive() {Round::Up} else {Round::Down});
+        // postprocessing back to original coordinate space
+        //     remains differentially private via postprocessing
+        Ok(Self::from_internal(value) * scale)
     }
 }
 
@@ -534,7 +533,7 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal + Zero> SampleGaussian for T {
+impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
 
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         if scale.is_zero() { return Ok(shift) }
@@ -554,19 +553,18 @@ impl<T: CastInternalReal + Zero> SampleGaussian for T {
         rng.error?;
 
         use rug::float::Round;
-        use rug::ops::{DivAssignRound, MulAssignRound};
-        let scale = scale.into_internal();
+        use rug::ops::{DivAssignRound, AddAssignRound};
 
         // (shift / scale + noise) * scale.
         let mut value = shift.into_internal();
         // when scaling into the noise coordinate space, round down so that noise is overestimated
-        value.div_assign_round(&scale, Round::Down);
-        // the noise itself is never scaled
-        value.add_assign(&gauss);
-        // postprocessing remains differentially private
-        value.mul_assign_round(&scale, Round::Up);
-
-        Ok(Self::from_internal(value))
+        value.div_assign_round(&scale.clone().into_internal(), Round::Zero);
+        // the noise itself is never scaled. Round away from zero to offset the scaling bias
+        value.add_assign_round(
+            &gauss, if value.is_sign_positive() {Round::Up} else {Round::Down});
+        // postprocessing back to original coordinate space
+        //     remains differentially private via postprocessing
+        Ok(Self::from_internal(value) * scale)
     }
 }
 

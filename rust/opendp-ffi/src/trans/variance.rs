@@ -6,7 +6,7 @@ use std::os::raw::{c_char, c_uint};
 use num::{Float, One, Zero};
 
 use opendp::err;
-use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckNull, InfAdd, InfSub, InfMul};
+use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckNull, InfAdd, InfSub, InfMul, NegInfAdd, NegInfSub};
 use opendp::trans::{make_sized_bounded_covariance, make_sized_bounded_variance};
 
 use crate::any::{AnyObject, AnyTransformation, Downcast};
@@ -23,7 +23,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_variance(
     fn monomorphize2<T>(
         size: usize, bounds: *const AnyObject, ddof: usize,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + InfSub + InfAdd + CheckNull,
+        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + InfSub + InfAdd + NegInfSub + NegInfAdd + CheckNull,
               for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
               IntDistance: InfCast<T> {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
@@ -49,11 +49,13 @@ pub extern "C" fn opendp_trans__make_sized_bounded_covariance(
         size: usize,
         lower: *const AnyObject, upper: *const AnyObject,
         ddof: usize,
-    ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Div<Output=T> + Sum<T> + Zero + One + ExactIntCast<usize> + CheckNull + InfAdd + InfSub + InfMul,
-              for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
-              for<'a> &'a T: Sub<Output=T>,
-              IntDistance: InfCast<T> {
+    ) -> FfiResult<*mut AnyTransformation> where
+        T: DistanceConstant<IntDistance> + Sub<Output=T> + Div<Output=T> + Sum<T> + Zero + One
+        + ExactIntCast<usize> + CheckNull + InfAdd + InfSub + NegInfAdd + NegInfSub + InfMul,
+        for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
+        for<'a> &'a T: Sub<Output=T>,
+        IntDistance: InfCast<T> {
+
         let lower = try_!(try_as_ref!(lower).downcast_ref::<(T, T)>()).clone();
         let upper = try_!(try_as_ref!(upper).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_covariance::<T>(size, lower, upper, ddof).into_any()
