@@ -1,6 +1,6 @@
 use crate::core::{Transformation, Function, StabilityRelation};
 use std::iter::Sum;
-use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckNull, AlertingSub, InfDiv};
+use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckNull, InfDiv, InfSub};
 use crate::error::Fallible;
 use crate::dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain};
 use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
@@ -10,7 +10,7 @@ pub fn make_sized_bounded_mean<T>(
     size: usize, bounds: (T, T)
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
     T: DistanceConstant<IntDistance> + ExactIntCast<usize>, for <'a> T: Sum<&'a T>
-    + AlertingSub + CheckNull + Float + InfDiv,
+    + InfSub + CheckNull + Float + InfDiv,
     IntDistance: InfCast<T> {
     let _size = T::exact_int_cast(size)?;
     let _2 = T::exact_int_cast(2)?;
@@ -19,7 +19,7 @@ pub fn make_sized_bounded_mean<T>(
     lower.inf_mul(&_size).or(upper.inf_mul(&_size))
         .map_err(|_| err!(MakeTransformation, "potential for overflow when computing function"))?;
 
-    let c = upper.alerting_sub(&lower)?.inf_div(&_size)?;
+    let c = upper.inf_sub(&lower)?.inf_div(&_size)?;
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
             BoundedDomain::new_closed(bounds)?), size),

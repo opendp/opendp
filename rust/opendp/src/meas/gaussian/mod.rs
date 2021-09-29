@@ -6,7 +6,7 @@ use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
 
-use crate::traits::{InfCast, CheckNull, InfMul, AlertingAdd};
+use crate::traits::{InfCast, CheckNull, InfMul, InfAdd};
 mod analytic;
 use analytic::get_analytic_gaussian_sigma;
 
@@ -50,7 +50,7 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
           f64: InfCast<D::Atom>,
-          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + Zero + One + InfMul + AlertingAdd {
+          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + Zero + One + InfMul + InfAdd {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -84,7 +84,7 @@ pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measure
 
                 eps.min(D::Atom::one()).inf_mul(&scale)? >=
                     d_in.inf_mul(&additive_gauss_const
-                        .alerting_add(&_2.inf_mul(&del.recip().ln())?)?.sqrt())?
+                        .inf_add(&_2.inf_mul(&del.recip().ln())?)?.sqrt())?
             })
         }),
     ))

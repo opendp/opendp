@@ -657,30 +657,6 @@ pub trait InfSub: Sized {
     /// Returns `Ok` if the result does not overflow, else `Err`
     fn inf_sub(&self, v: &Self) -> Fallible<Self>;
 }
-/// Performs multiplication with rounding towards -infinity that returns an error if overflowing.
-pub trait NegInfMul: Sized {
-    /// Alerting multiplication with rounding towards -infinity.
-    /// Returns `Ok` if the result does not overflow, else `Err`
-    fn neg_inf_mul(&self, v: &Self) -> Fallible<Self>;
-}
-/// Performs division with rounding towards -infinity that returns an error if overflowing.
-pub trait NegInfDiv: Sized {
-    /// Alerting division with rounding towards -infinity.
-    /// Returns `Ok` if the result does not overflow, else `Err`
-    fn neg_inf_div(&self, v: &Self) -> Fallible<Self>;
-}
-/// Performs addition with rounding towards -infinity that returns an error if overflowing.
-pub trait NegInfAdd: Sized {
-    /// Alerting addition with rounding towards -infinity.
-    /// Returns `Ok` if the result does not overflow, else `Err`
-    fn neg_inf_add(&self, v: &Self) -> Fallible<Self>;
-}
-/// Performs subtraction with rounding towards -infinity that returns an error if overflowing.
-pub trait NegInfSub: Sized {
-    /// Alerting subtraction with rounding towards -infinity.
-    /// Returns `Ok` if the result does not overflow, else `Err`
-    fn neg_inf_sub(&self, v: &Self) -> Fallible<Self>;
-}
 
 
 macro_rules! impl_int_inf {
@@ -698,10 +674,6 @@ macro_rules! impl_int_inf {
                 self.alerting_add(&1)?.alerting_div(other)
             }
         })+
-        $(impl_int_inf!{$ty, NegInfAdd, neg_inf_add, alerting_add})+
-        $(impl_int_inf!{$ty, NegInfSub, neg_inf_sub, alerting_sub})+
-        $(impl_int_inf!{$ty, NegInfMul, neg_inf_mul, alerting_mul})+
-        $(impl_int_inf!{$ty, NegInfDiv, neg_inf_div, alerting_div})+
     }
 }
 impl_int_inf!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
@@ -738,11 +710,6 @@ impl_float_inf!(f64, f32; InfAdd, inf_add, add_assign_round, Up, alerting_add);
 impl_float_inf!(f64, f32; InfSub, inf_sub, sub_assign_round, Up, alerting_sub);
 impl_float_inf!(f64, f32; InfMul, inf_mul, mul_assign_round, Up, alerting_mul);
 impl_float_inf!(f64, f32; InfDiv, inf_div, div_assign_round, Up, alerting_div);
-
-impl_float_inf!(f64, f32; NegInfAdd, neg_inf_add, add_assign_round, Down, alerting_add);
-impl_float_inf!(f64, f32; NegInfSub, neg_inf_sub, sub_assign_round, Down, alerting_sub);
-impl_float_inf!(f64, f32; NegInfMul, neg_inf_mul, mul_assign_round, Down, alerting_mul);
-impl_float_inf!(f64, f32; NegInfDiv, neg_inf_div, div_assign_round, Down, alerting_div);
 
 pub trait AlertingAbs: Sized {
     fn alerting_abs(&self) -> Fallible<Self>;
