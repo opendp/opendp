@@ -18,7 +18,7 @@ fn median_smooth_sensitivity(
         let l = if m + t < k + 1 {lower} else {
             sorted_data[m + t - k - 1]
         };
-        let u = if m + t > sorted_data.len() {upper} else {
+        let u = if m + t >= sorted_data.len() {upper} else {
             sorted_data[m + t]
         };
         u - l
