@@ -502,17 +502,22 @@ impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
             // adding a random sign to the exponential deviate does not induce gaps or stacks
             exponential * T::sample_standard_rademacher()?.into_internal()
         };
-
         rng.error?;
 
-        // initialize floats within mpfr/rug
-        let shift = shift.into_internal();
+        use rug::float::Round;
+        use rug::ops::{DivAssignRound, MulAssignRound};
         let scale = scale.into_internal();
 
-        // (shift / scale + noise) * scale. The noise itself is never scaled
-        let noised = shift.mul_add(&scale.clone().recip(), &laplace);
+        // (shift / scale + noise) * scale.
+        let mut value = shift.into_internal();
+        // when scaling into the noise coordinate space, round down so that noise is overestimated
+        value.div_assign_round(&scale, Round::Down);
+        // the noise itself is never scaled
+        value.add_assign(&laplace);
         // postprocessing remains differentially private
-        Ok(Self::from_internal(noised * scale))
+        value.mul_assign_round(&scale, Round::Up);
+
+        Ok(Self::from_internal(value))
     }
 }
 
@@ -548,15 +553,20 @@ impl<T: CastInternalReal + Zero> SampleGaussian for T {
         };
         rng.error?;
 
-        // initialize floats within mpfr/rug
-        let shift = shift.into_internal();
+        use rug::float::Round;
+        use rug::ops::{DivAssignRound, MulAssignRound};
         let scale = scale.into_internal();
 
-        // (shift / scale + noise) * scale
-        // The noise itself is never scaled, to avoid introducing gaps/stacks
-        let noised = shift.mul_add(&scale.clone().recip(), &gauss);
+        // (shift / scale + noise) * scale.
+        let mut value = shift.into_internal();
+        // when scaling into the noise coordinate space, round down so that noise is overestimated
+        value.div_assign_round(&scale, Round::Down);
+        // the noise itself is never scaled
+        value.add_assign(&gauss);
         // postprocessing remains differentially private
-        Ok(Self::from_internal(noised * scale))
+        value.mul_assign_round(&scale, Round::Up);
+
+        Ok(Self::from_internal(value))
     }
 }
 
