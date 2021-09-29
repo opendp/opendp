@@ -24,7 +24,7 @@ use std::rc::Rc;
 
 use crate::dom::PairDomain;
 use crate::error::*;
-use crate::traits::{DistanceConstant, InfCast};
+use crate::traits::{DistanceConstant, InfCast, InfMul, InfDiv};
 use crate::dist::IntDistance;
 use std::fmt::Debug;
 
@@ -170,9 +170,9 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
         MO::Distance: DistanceConstant<MI::Distance> {
         PrivacyRelation::new_all(
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.clone() / c.clone())?))))
+                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)
@@ -304,13 +304,13 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
         StabilityRelation::new_all(
             // relation
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
             // forward map
             Some(enclose!(c, move |d_in: &MI::Distance|
-                Ok(MO::Distance::inf_cast(d_in.clone())? * c.clone()))),
+                Ok(MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?))),
             // backward map
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.clone() / c.clone())?))))
+                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)

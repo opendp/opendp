@@ -1,10 +1,12 @@
 use std::convert::TryFrom;
-use std::ops::{Div, Mul, Sub, Shr, Shl, BitAnd};
+use std::ops::{Sub, Shr, Shl, BitAnd};
 
 use num::{NumCast, One, Zero};
 
 use crate::error::Fallible;
 use std::cmp::{Ordering};
+use crate::samplers::CastInternalReal;
+use rug::ops::{AddAssignRound, SubAssignRound, MulAssignRound, DivAssignRound};
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.
@@ -15,9 +17,9 @@ use std::cmp::{Ordering};
 /// - QO also clearly needs to support Mul and PartialOrd used in the general form above.
 /// - Div is used for the backward map:
 ///     How do you translate d_out to a d_in that can be used as a hint? |d_out| d_out / c
-pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + TotalOrd
+pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + InfDiv + InfMul + TotalOrd
     where TI: InfCast<Self> {}
-impl<TI: InfCast<Self>, TO: 'static + Clone + InfCast<TI> + Div<Output=Self> + Mul<Output=Self> + TotalOrd> DistanceConstant<TI> for TO {}
+impl<TI: InfCast<Self>, TO: 'static + Clone + InfCast<TI> + InfDiv + InfMul + TotalOrd> DistanceConstant<TI> for TO {}
 
 // TODO: Maybe this should be renamed to something more specific to budgeting, and add negative checks? -Mike
 pub trait FallibleSub<Rhs = Self> {
@@ -408,71 +410,6 @@ macro_rules! impl_check_null_for_float {
 }
 impl_check_null_for_float!(f64, f32);
 
-
-/// Performs addition that saturates at the numeric bounds instead of overflowing.
-pub trait SaturatingAdd: Sized {
-    /// Saturating addition. Computes `self + v`,
-    /// saturating at the relevant high or low boundary of the type.
-    fn saturating_add(&self, v: &Self) -> Self;
-}
-/// Performs multiplication that returns none if overflowing.
-pub trait CheckedMul: Sized {
-    /// Checked multiplication.
-    /// Returns `Some(self * v)` if the result does not overflow, else `None`
-    fn checked_mul(&self, v: &Self) -> Option<Self>;
-}
-/// Performs subtraction that returns none if overflowing.
-pub trait CheckedSub: Sized {
-    /// Checked subtraction.
-    /// Returns `Some(self - v)` if the result does not overflow, else `None`
-    fn checked_sub(&self, v: &Self) -> Option<Self>;
-}
-macro_rules! impl_math_delegation {
-    ($($t:ty),+) => {
-        $(impl SaturatingAdd for $t {
-            #[inline]
-            fn saturating_add(&self, v: &Self) -> Self {
-                <$t>::saturating_add(*self, *v)
-            }
-        })+
-        $(impl CheckedMul for $t {
-            #[inline]
-            fn checked_mul(&self, v: &Self) -> Option<Self> {
-                <$t>::checked_mul(*self, *v)
-            }
-        })+
-        $(impl CheckedSub for $t {
-            #[inline]
-            fn checked_sub(&self, v: &Self) -> Option<Self> {
-                <$t>::checked_sub(*self, *v)
-            }
-        })+
-    };
-}
-impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
-macro_rules! impl_math_float {
-    ($($t:ty),+) => {
-        $(impl SaturatingAdd for $t {
-            fn saturating_add(&self, v: &Self) -> Self {
-                (self + v).clamp(<$t>::MIN, <$t>::MAX)
-            }
-        })+
-        $(impl CheckedMul for $t {
-            fn checked_mul(&self, v: &Self) -> Option<Self> {
-                let y = self * v;
-                y.is_finite().then(|| y)
-            }
-        })+
-        $(impl CheckedSub for $t {
-            fn checked_sub(&self, v: &Self) -> Option<Self> {
-                let y = self - v;
-                y.is_finite().then(|| y)
-            }
-        })+
-    }
-}
-impl_math_float!(f32, f64);
-
 pub fn max_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
     compare(&v1, &v2).map(|cmp| match cmp {
         Ordering::Less | Ordering::Equal => v2,
@@ -571,39 +508,269 @@ impl FloatBits for f32 {
     fn to_bits(self) -> Self::Bits {self.to_bits()}
 }
 
-// division with rounding towards infinity
-pub trait InfDiv {
-    fn inf_div(&self, other: &Self) -> Self;
+/// Performs addition that saturates at the numeric bounds instead of overflowing.
+pub trait SaturatingAdd: Sized {
+    /// Saturating addition. Computes `self + v`,
+    /// saturating at the relevant high or low boundary of the type.
+    fn saturating_add(&self, v: &Self) -> Self;
+
+}
+/// Performs multiplication that returns an error if overflowing.
+pub trait AlertingMul: Sized {
+    /// Alerting multiplication.
+    /// Returns `Ok(self * v)` if the result does not overflow, else `Err(Error)`
+    fn alerting_mul(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs division that returns an error if overflowing.
+pub trait AlertingDiv: Sized {
+    /// Alerting division.
+    /// Returns `Ok(self / v)` if the result does not overflow, else `Err(Error)`
+    fn alerting_div(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs addition that returns an error if overflowing.
+pub trait AlertingAdd: Sized {
+    /// Alerting addition.
+    /// Returns `Ok(self + v)` if the result does not overflow, else `Err(Error)`
+    fn alerting_add(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs subtraction that returns an error if overflowing.
+pub trait AlertingSub: Sized {
+    /// Alerting subtraction.
+    /// Returns `Ok(self - v)` if the result does not overflow, else `Err(Error)`
+    fn alerting_sub(&self, v: &Self) -> Fallible<Self>;
+}
+macro_rules! impl_math_delegation {
+    ($($t:ty),+) => {
+        $(impl SaturatingAdd for $t {
+            #[inline]
+            fn saturating_add(&self, v: &Self) -> Self {
+                <$t>::saturating_add(*self, *v)
+            }
+        })+
+        $(impl AlertingMul for $t {
+            #[inline]
+            fn alerting_mul(&self, v: &Self) -> Fallible<Self> {
+                <$t>::checked_mul(*self, *v).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} * {} overflows. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+        $(impl AlertingDiv for $t {
+            #[inline]
+            fn alerting_div(&self, v: &Self) -> Fallible<Self> {
+                <$t>::checked_div(*self, *v).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} / {} overflows. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+        $(impl AlertingAdd for $t {
+            #[inline]
+            fn alerting_add(&self, v: &Self) -> Fallible<Self> {
+                <$t>::checked_add(*self, *v).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} + {} overflows. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+        $(impl AlertingSub for $t {
+            #[inline]
+            fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
+                <$t>::checked_sub(*self, *v).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} - {} overflows. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+    };
+}
+impl_math_delegation!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+macro_rules! impl_math_float {
+    ($($t:ty),+) => {
+        $(impl SaturatingAdd for $t {
+            fn saturating_add(&self, v: &Self) -> Self {
+                (self + v).clamp(<$t>::MIN, <$t>::MAX)
+            }
+        })+
+        $(impl AlertingMul for $t {
+            fn alerting_mul(&self, v: &Self) -> Fallible<Self> {
+                let y = self * v;
+                y.is_finite().then(|| y).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} * {} is not finite. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+        $(impl AlertingDiv for $t {
+            fn alerting_div(&self, v: &Self) -> Fallible<Self> {
+                let y = self / v;
+                y.is_finite().then(|| y).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} / {} is not finite. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+        $(impl AlertingAdd for $t {
+            fn alerting_add(&self, v: &Self) -> Fallible<Self> {
+                let y = self + v;
+                y.is_finite().then(|| y).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} + {} is not finite. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+        $(impl AlertingSub for $t {
+            fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
+                let y = self - v;
+                y.is_finite().then(|| y).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} - {} is not finite. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+    }
+}
+impl_math_float!(f32, f64);
+
+/// Performs multiplication with rounding towards infinity that returns an error if overflowing.
+pub trait InfMul: Sized {
+    /// Alerting multiplication with rounding towards infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn inf_mul(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs division with rounding towards infinity that returns an error if overflowing.
+pub trait InfDiv: Sized {
+    /// Alerting division with rounding towards infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn inf_div(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs addition with rounding towards infinity that returns an error if overflowing.
+pub trait InfAdd: Sized {
+    /// Alerting addition with rounding towards infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn inf_add(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs subtraction with rounding towards infinity that returns an error if overflowing.
+pub trait InfSub: Sized {
+    /// Alerting subtraction with rounding towards infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn inf_sub(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs multiplication with rounding towards -infinity that returns an error if overflowing.
+pub trait NegInfMul: Sized {
+    /// Alerting multiplication with rounding towards -infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn neg_inf_mul(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs division with rounding towards -infinity that returns an error if overflowing.
+pub trait NegInfDiv: Sized {
+    /// Alerting division with rounding towards -infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn neg_inf_div(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs addition with rounding towards -infinity that returns an error if overflowing.
+pub trait NegInfAdd: Sized {
+    /// Alerting addition with rounding towards -infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn neg_inf_add(&self, v: &Self) -> Fallible<Self>;
+}
+/// Performs subtraction with rounding towards -infinity that returns an error if overflowing.
+pub trait NegInfSub: Sized {
+    /// Alerting subtraction with rounding towards -infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn neg_inf_sub(&self, v: &Self) -> Fallible<Self>;
 }
 
-macro_rules! impl_int_inf_div {
-    ($($ty:ty),+) => ($(impl InfDiv for $ty {
-        fn inf_div(&self, other: &Self) -> Self {
-            (self + 1) / other
+
+macro_rules! impl_int_inf {
+    ($ty:ty, $name:ident, $method:ident, $func:ident) => (impl $name for $ty {
+        fn $method(&self, other: &Self) -> Fallible<Self> {
+            self.$func(other)
         }
-    })+)
+    });
+    ($($ty:ty),+) => {
+        $(impl_int_inf!{$ty, InfAdd, inf_add, alerting_add})+
+        $(impl_int_inf!{$ty, InfSub, inf_sub, alerting_sub})+
+        $(impl_int_inf!{$ty, InfMul, inf_mul, alerting_mul})+
+        $(impl InfDiv for $ty {
+            fn inf_div(&self, other: &Self) -> Fallible<Self> {
+                self.alerting_add(&1)?.alerting_div(other)
+            }
+        })+
+        $(impl_int_inf!{$ty, NegInfAdd, neg_inf_add, alerting_add})+
+        $(impl_int_inf!{$ty, NegInfSub, neg_inf_sub, alerting_sub})+
+        $(impl_int_inf!{$ty, NegInfMul, neg_inf_mul, alerting_mul})+
+        $(impl_int_inf!{$ty, NegInfDiv, neg_inf_div, alerting_div})+
+    }
 }
-impl_int_inf_div!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+impl_int_inf!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
 
-macro_rules! impl_float_inf_div {
-    ($($ty:ty),+) => ($(impl InfDiv for $ty {
-        fn inf_div(&self, other: &Self) -> Self {
-            let div = self / other;
-            if !div.is_finite() {
-                // don't increment -Inf or Inf into a NaN, leave NaN as-is
-                div
-            } else if div * other <= *self {
-                // < is (probably) too tight, <= is too loose. Remain conservative with <=
-                // perturb the floating-point bit representation by taking the next float
-                <$ty>::from_bits(if div.is_sign_negative() {
-                    div.to_bits() - 1
-                } else {
-                    div.to_bits() + 1
-                })
-            } else {
-                div
+macro_rules! impl_float_inf {
+    ($($ty:ty),+; $name:ident, $method:ident, $op:ident, $round:expr, $fallback:ident) => {
+        $(
+        #[cfg(feature="use-mpfr")]
+        impl $name for $ty {
+            fn $method(&self, other: &Self) -> Fallible<Self> {
+                use rug::float::Round::*;
+                let mut this = self.into_internal();
+                this.$op(other, $round);
+                let this = Self::from_internal(this);
+                this.is_finite().then(|| this).ok_or_else(|| err!(
+                    FailedFunction,
+                    concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
+                    self, this))
             }
         }
+        #[cfg(not(feature="use-mpfr"))]
+        impl $name for $ty {
+            fn $method(&self, other: &Self) -> Fallible<Self> {
+                let this = self.$fallback(other);
+                this.is_finite().then(|| this).ok_or_else(|| err!(
+                    FailedFunction,
+                    concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
+                    self, this))
+            }
+        })+
+    }
+}
+impl_float_inf!(f64, f32; InfAdd, inf_add, add_assign_round, Up, alerting_add);
+impl_float_inf!(f64, f32; InfSub, inf_sub, sub_assign_round, Up, alerting_sub);
+impl_float_inf!(f64, f32; InfMul, inf_mul, mul_assign_round, Up, alerting_mul);
+impl_float_inf!(f64, f32; InfDiv, inf_div, div_assign_round, Up, alerting_div);
+
+impl_float_inf!(f64, f32; NegInfAdd, neg_inf_add, add_assign_round, Down, alerting_add);
+impl_float_inf!(f64, f32; NegInfSub, neg_inf_sub, sub_assign_round, Down, alerting_sub);
+impl_float_inf!(f64, f32; NegInfMul, neg_inf_mul, mul_assign_round, Down, alerting_mul);
+impl_float_inf!(f64, f32; NegInfDiv, neg_inf_div, div_assign_round, Down, alerting_div);
+
+pub trait AlertingAbs: Sized {
+    fn alerting_abs(&self) -> Fallible<Self>;
+}
+
+
+macro_rules! impl_alerting_abs_signed_int {
+    ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
+        fn alerting_abs(&self) -> Fallible<Self> {
+            self.checked_abs().ok_or_else(|| err!(FailedFunction,
+                "the corresponding positive value for {} is out of range", self))
+        }
     })+)
 }
-impl_float_inf_div!(f32, f64);
+impl_alerting_abs_signed_int!(i8, i16, i32, i64, i128);
+macro_rules! impl_alerting_abs_unsigned_int {
+    ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
+        fn alerting_abs(&self) -> Fallible<Self> {
+            Ok(*self)
+        }
+    })+)
+}
+impl_alerting_abs_unsigned_int!(u8, u16, u32, u64, u128);
+macro_rules! impl_alerting_abs_float {
+    ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
+        fn alerting_abs(&self) -> Fallible<Self> {
+            Ok(self.abs())
+        }
+    })+)
+}
+impl_alerting_abs_float!(f32, f64);

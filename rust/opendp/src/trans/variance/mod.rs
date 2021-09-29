@@ -1,19 +1,18 @@
 use std::iter::Sum;
-use std::ops::{Div, Sub, Add};
+use std::ops::{Add, Div, Sub};
 
 use num::{Float, One, Zero};
 
 use crate::core::{Function, StabilityRelation, Transformation};
-use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
+use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckedMul, CheckNull};
-
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfSub, InfAdd, InfMul};
 
 pub fn make_sized_bounded_variance<T>(
     size: usize, bounds: (T, T), ddof: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Float + One + Sub<Output=T> + Div<Output=T> + Sum<T> + for<'a> Sum<&'a T> + ExactIntCast<usize> + CheckedMul + CheckNull,
+    where T: DistanceConstant<IntDistance> + Float + One + Sub<Output=T> + Div<Output=T> + Sum<T> + for<'a> Sum<&'a T> + ExactIntCast<usize> + InfMul + InfSub + InfAdd + CheckNull,
           for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
           IntDistance: InfCast<T> {
     let _size = T::exact_int_cast(size)?;
@@ -22,10 +21,9 @@ pub fn make_sized_bounded_variance<T>(
     let _1 = T::one();
     let _2 = &_1 + &_1;
 
-    let range = (&upper - &lower) / _2.clone();
-    if range.clone().checked_mul(&range).is_none() {
-        return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
-    }
+    let range = upper.inf_sub(&lower)?;
+    // check for potential overflow
+    range.inf_div(&_2)?.inf_mul(&range.inf_div(&_2)?)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
@@ -38,11 +36,11 @@ pub fn make_sized_bounded_variance<T>(
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_constant(
-            (upper - lower).powi(2)
-                * _size
-                / (_size + _1)
-                / (_size - _ddof)
-                / _2)))
+            range.inf_mul(&range)?
+                .inf_mul(&_size)?
+                .inf_div(&_size.inf_add(&_1)?)?
+                .inf_div(&_size.inf_sub(&_ddof)?)?
+                .inf_div(&_2)?)))
 }
 
 type CovarianceDomain<T> = SizedDomain<VectorDomain<BoundedDomain<(T, T)>>>;
@@ -50,22 +48,23 @@ type CovarianceDomain<T> = SizedDomain<VectorDomain<BoundedDomain<(T, T)>>>;
 pub fn make_sized_bounded_covariance<T>(
     size: usize,
     bounds_0: (T, T), bounds_1: (T, T),
-    ddof: usize
-) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero + One + Sub<Output=T> + Div<Output=T> + Add<Output=T> + Sum<T> + CheckedMul + CheckNull,
-          for <'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
-          for<'a> &'a T: Sub<Output=T>,
-          IntDistance: InfCast<T> {
+    ddof: usize,
+) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
+    T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero + One
+    + Sub<Output=T> + Div<Output=T> + Add<Output=T> + Sum<T>
+    + InfSub + InfAdd + CheckNull,
+    for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
+    for<'a> &'a T: Sub<Output=T>,
+    IntDistance: InfCast<T> {
 
     let _size = T::exact_int_cast(size)?;
     let _ddof = T::exact_int_cast(ddof)?;
     let _1 = T::one();
     let _2 = _1.clone() + &_1;
 
-    if ((&bounds_0.1 - &bounds_0.0) / _2.clone()).checked_mul(
-        &((&bounds_1.1 - &bounds_1.0) / _2.clone())).is_none() {
-        return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
-    }
+    bounds_0.1.inf_sub(&bounds_0.0)?.inf_div(&_2)?.inf_mul(
+        &bounds_1.1.inf_sub(&bounds_1.0)?.inf_div(&_2)?)
+        .map_err(|_| err!(MakeTransformation, "potential for overflow when computing function"))?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(
@@ -84,18 +83,21 @@ pub fn make_sized_bounded_covariance<T>(
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_constant(
-            (bounds_0.1 - bounds_0.0) * (bounds_1.1 - bounds_1.0)
-                * _size.clone()
-                / (_size.clone() + _1)
-                / (_size - _ddof)
-                / _2)))
+            bounds_0.1.inf_sub(&bounds_0.0)?
+                .inf_mul(&bounds_1.1.inf_sub(&bounds_1.0)?)?
+                .inf_mul(&_size)?
+                .inf_div(&_size.inf_add(&_1)?)?
+                .inf_div(&_size.inf_sub(&_ddof)?)?
+                .inf_div(&_2)?),
+    ))
 }
 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::error::ExplainUnwrap;
+
+    use super::*;
 
     #[test]
     fn test_make_bounded_variance_hamming() {

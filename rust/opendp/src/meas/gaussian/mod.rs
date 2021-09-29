@@ -5,12 +5,13 @@ use crate::dist::{AbsoluteDistance, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
-use crate::traits::{CheckNull, InfCast};
+
+use crate::traits::{InfCast, CheckNull, InfMul, AlertingAdd};
 mod analytic;
 use analytic::get_analytic_gaussian_sigma;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / std::f64::consts::PI).ln();
-pub const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
+const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
 pub trait GaussianDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -49,7 +50,7 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
           f64: InfCast<D::Atom>,
-          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + Zero + One {
+          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + Zero + One + InfMul + AlertingAdd {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -81,8 +82,9 @@ pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measure
                 let _2 = D::Atom::inf_cast(2.)?;
                 let additive_gauss_const = D::Atom::inf_cast(ADDITIVE_GAUSS_CONST)?;
 
-                eps.min(D::Atom::one()) * scale >=
-                    d_in * (additive_gauss_const + _2 * del.recip().ln()).sqrt()
+                eps.min(D::Atom::one()).inf_mul(&scale)? >=
+                    d_in.inf_mul(&additive_gauss_const
+                        .alerting_add(&_2.inf_mul(&del.recip().ln())?)?.sqrt())?
             })
         }),
     ))
