@@ -17,6 +17,18 @@ def test_cast_impute():
     assert caster([float('nan'), 2.]) == [1, 2]
 
 
+def test_cast_drop_null():
+    from opendp.trans import make_cast, make_drop_null, make_cast_inherent
+    caster = make_cast(TIA=str, TOA=int) >> make_drop_null(DA=OptionNullDomain[AllDomain[int]])
+    assert caster(["A", "2", "3"]) == [2, 3]
+
+    caster = make_cast(TIA=float, TOA=int) >> make_drop_null(DA=OptionNullDomain[AllDomain[int]])
+    assert caster([float('nan'), 2.]) == [2]
+
+    caster = make_cast_inherent(TIA=str, TOA=float) >> make_drop_null(DA=InherentNullDomain[AllDomain[float]])
+    assert caster(["a", "2."]) == [2]
+
+
 def test_cast_inherent():
     from opendp.trans import make_cast_inherent
     caster = make_cast_inherent(TIA=int, TOA=float)

@@ -401,6 +401,18 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
+    "make_drop_null": {
+        "description": "Make a Transformation that drops null values.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "DA",
+                "is_type": true,
+                "description": "domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
     "make_impute_uniform_float": {
         "description": "Make a Transformation that replaces null/None data in Vec<`TA`> with uniformly distributed floats within `bounds`.",
         "features": ["contrib"],

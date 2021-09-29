@@ -24,6 +24,7 @@ __all__ = [
     "make_select_column",
     "make_identity",
     "make_impute_constant",
+    "make_drop_null",
     "make_impute_uniform_float",
     "make_sized_bounded_mean",
     "make_resize",
@@ -695,6 +696,35 @@ def make_impute_constant(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(constant, DA), Transformation))
+
+
+def make_drop_null(
+    DA: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that drops null values.
+    
+    :param DA: domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
+    :type DA: RuntimeTypeDescriptor
+    :return: A drop_null step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    DA = RuntimeType.parse(type_name=DA)
+    
+    # Convert arguments to c types.
+    DA = py_to_c(DA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_drop_null
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(DA), Transformation))
 
 
 def make_impute_uniform_float(
