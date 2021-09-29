@@ -11,34 +11,31 @@ fn partial_max<T: PartialOrd>(x: &T, y: &T) -> Ordering {
 }
 
 fn median_smooth_sensitivity(
-    epsilon: f64,
-    bounds: (f64, f64),
     sorted_data: Vec<f64>,
+    bounds: (f64, f64),
+    epsilon: f64,
 ) -> f64 {
     let (lower, upper) = bounds;
-
     let m = (sorted_data.len() + 1) / 2;
-    let difference = |t, k| {
-        let l = if m + t < k + 1 {lower} else {
-            sorted_data[m + t - k - 1]
-        };
-        let u = if m + t >= sorted_data.len() {upper} else {
-            sorted_data[m + t]
-        };
+
+    let difference = |k, t| {
+        // return lower bound if index is negative
+        let l = if m + t < k + 1 { lower } else { sorted_data[m + t - k - 1] };
+        // return upper bound if index is past array length
+        let u = if m + t >= sorted_data.len() { upper } else { sorted_data[m + t] };
         u - l
     };
 
-    (0..sorted_data.len()).flat_map(move |k| (0..=k).map(move |t|
-        difference(t, k) * (-(k as f64) * epsilon).exp()))
-        .max_by(partial_max)
-        .unwrap_or(f64::INFINITY)
+    (0..sorted_data.len()).flat_map(|k|
+        (0..=k).map(move |t| difference(k, t) * (-(k as f64) * epsilon).exp()))
+        .max_by(partial_max).unwrap_or(f64::INFINITY)
 }
 
 pub fn make_smooth_sensitivity_median<DIA: Domain, DO: Domain, MI: 'static + Metric>(
     bounds: (f64, f64), influence: u32, epsilon: f64,
 ) -> Fallible<Measurement<VectorDomain<BoundedDomain<f64>>, AllDomain<f64>, SymmetricDistance, MaxDivergence<f64>>> {
     if influence < 1 { return fallible!(MakeMeasurement, "influence must be positive") }
-    if epsilon.is_sign_negative() { return fallible!(MakeMeasurement, "budget must be non-negative") }
+    if epsilon.is_sign_negative() { return fallible!(MakeMeasurement, "epsilon must be non-negative") }
     let epsilon_prime = epsilon / influence as f64;
 
     Ok(Measurement::new(
@@ -49,7 +46,7 @@ pub fn make_smooth_sensitivity_median<DIA: Domain, DO: Domain, MI: 'static + Met
             sorted_data.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
             let median = sorted_data[(sorted_data.len() + 1) / 2];
 
-            let sensitivity = median_smooth_sensitivity(epsilon_prime, bounds, sorted_data);
+            let sensitivity = median_smooth_sensitivity(sorted_data, bounds, epsilon_prime);
             f64::sample_laplace(median, sensitivity / epsilon_prime, false)
         }),
         SymmetricDistance::default(),
@@ -65,7 +62,7 @@ mod test {
 
     #[test]
     fn test_function() {
-        let sens = median_smooth_sensitivity(1., (1., 0.3), vec![2., 3., 4.]);
+        let sens = median_smooth_sensitivity(vec![2., 3., 4.], (1., 0.3), 1.);
         println!("{}", sens);
     }
 }
