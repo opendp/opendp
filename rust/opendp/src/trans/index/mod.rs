@@ -1,12 +1,13 @@
-use crate::core::{Function, StabilityRelation, Transformation};
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::iter::FromIterator;
+
+use crate::core::Transformation;
 use crate::dist::SymmetricDistance;
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::CheckNull;
-use std::hash::Hash;
-use std::collections::HashMap;
-use std::iter::FromIterator;
-
+use crate::trans::make_row_by_row;
 
 pub fn make_find<TIA>(
     categories: Vec<TIA>
@@ -20,16 +21,9 @@ pub fn make_find<TIA>(
         return fallible!(MakeTransformation, "categories must be unique")
     }
 
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<TIA>| arg.iter()
-            .map(|v| indexes.get(v).cloned().unwrap_or(categories_len))
-            .collect()),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1)
-    ))
+    make_row_by_row(
+        AllDomain::new(), AllDomain::new(),
+        move |v| indexes.get(v).cloned().unwrap_or(categories_len))
 }
 
 pub fn make_find_bin<TIA>(
@@ -39,34 +33,20 @@ pub fn make_find_bin<TIA>(
     if !edges.windows(2).all(|pair| pair[0] < pair[1]) {
         return fallible!(MakeTransformation, "edges must be unique and ordered")
     }
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<TIA>| arg.iter().map(|v| edges
-            .iter().enumerate()
+    make_row_by_row(
+        AllDomain::new(), AllDomain::new(),
+        move |v| edges.iter().enumerate()
             .find(|(_, edge)| v < edge).map(|(i, _)| i)
             .unwrap_or(edges.len()))
-            .collect()),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1)
-    ))
 }
 
 pub fn make_index<TOA>(
     categories: Vec<TOA>, null: TOA
 ) -> Fallible<Transformation<VectorDomain<AllDomain<usize>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
     where TOA: 'static + CheckNull + Clone {
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<usize>| arg.iter()
-            .map(|v| categories.get(*v).unwrap_or(&null).clone())
-            .collect()),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1)
-    ))
+    make_row_by_row(
+        AllDomain::new(), AllDomain::new(),
+        move |v| categories.get(*v).unwrap_or(&null).clone())
 }
 
 
