@@ -50,14 +50,14 @@ jobs:
 
       - name: Prepare OpenDP Patch
         run: |
-          chmod +x windows/1_download_and_patch.sh
-          (cd windows && bash 1_download_and_patch.sh)
+          chmod +x rust/windows/1_download_and_patch.sh
+          (cd rust/windows && bash 1_download_and_patch.sh)
 
       - name: Patch OpenDP
         shell: msys2 -leo pipefail {0}
         run: |
-          chmod +x windows/2_build_dependencies.sh
-          (cd windows && bash 2_build_dependencies.sh)
+          chmod +x rust/windows/2_build_dependencies.sh
+          (cd rust/windows && bash 2_build_dependencies.sh)
 
       - name: Build windows binaries
         shell: msys2 -leo pipefail {0}
