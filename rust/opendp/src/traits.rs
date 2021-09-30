@@ -222,19 +222,22 @@ impl ExactIntBounds for f32 {
 }
 
 macro_rules! impl_inf_cast_int_float {
-    ($int:ty, $float:ty) => (impl InfCast<$int> for $float {
-        fn inf_cast(v_int: $int) -> Fallible<Self> {
-            let v_float = v_int as $float;
-            if v_int > v_float as $int {
-                return Ok(<$float>::from_bits(if v_float.is_sign_negative() {
-                    v_float.to_bits() - 1
-                } else {
-                    v_float.to_bits() + 1
-                }))
+    ($int:ty, $float:ty) => (
+        #[cfg(feature="use-mpfr")]
+        impl InfCast<$int> for $float {
+            fn inf_cast(v_int: $int) -> Fallible<Self> {
+                use rug::{Float, float::Round};
+                let float = Float::with_val_round(<$float>::MANTISSA_DIGITS, v_int, Round::Up).0;
+                Ok(<$float>::from_internal(float))
             }
-            Ok(v_float)
         }
-    })
+        #[cfg(not(feature="use-mpfr"))]
+        impl InfCast<$int> for $float {
+            fn inf_cast(v_int: $int) -> Fallible<Self> {
+                <$float>::round_cast(v_int)
+            }
+        }
+    )
 }
 
 cartesian!([u8, u16, i8, i16], [f32, f64], impl_inf_cast_from);
