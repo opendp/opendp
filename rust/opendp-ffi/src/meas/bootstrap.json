@@ -87,8 +87,14 @@
                 "is_type": true
             },
             {
+                "name": "QI",
+                "description": "Data type of the sensitivity.",
+                "default": "i32",
+                "is_type": true
+            },
+            {
                 "name": "QO",
-                "description": "Data type of the sensitivity, scale, and budget.",
+                "description": "Data type of the scale and budget.",
                 "is_type": true
             }
         ],

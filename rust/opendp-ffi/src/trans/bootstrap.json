@@ -192,7 +192,7 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_count_by": {
+    "make_sized_count_by": {
         "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size.\nUse meas.make_base_stability to release this query.",
         "features": ["contrib"],
         "args": [
@@ -240,6 +240,39 @@
             {
                 "name": "MO",
                 "default": "L1Distance<i32>",
+                "hint": "SensitivityMetric",
+                "is_type": true,
+                "description": "output metric. The associated integer type is also the output data type"
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "categorical/hashable input type. Input data must be Vec<TIA>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_count_by_categories": {
+        "description": "Make a Transformation that computes the number of times each category appears in the data. \nThis assumes that both the dataset size and category set is known.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TIA"]
+                },
+                "description": "The set of categories to compute counts for."
+            },
+            {
+                "name": "MO",
+                "default": "L1Distance<f64>",
                 "hint": "SensitivityMetric",
                 "is_type": true,
                 "description": "output sensitivity metric"

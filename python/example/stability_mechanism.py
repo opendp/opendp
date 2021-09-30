@@ -4,7 +4,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
 from opendp.meas import make_base_stability
-from opendp.trans import make_count_by
+from opendp.trans import make_sized_count_by
 from opendp.typing import L1Distance
 from opendp.mod import binary_search, enable_features
 
@@ -42,7 +42,7 @@ def privatize_vocabulary(word_count, line_count, dataset_distance, budget):
 
     def check_stability(scale, threshold, line_count, dataset_distance, budget):
         return (
-                make_count_by(size=line_count, MO=L1Distance[float], TIA=str) >>
+                make_sized_count_by(size=line_count, MO=L1Distance[float], TIA=str) >>
                 make_base_stability(size=line_count, scale=scale, threshold=threshold, MI=L1Distance[float], TIK=str)
         ).check(dataset_distance, budget)
 

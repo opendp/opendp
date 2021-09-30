@@ -86,6 +86,7 @@ def make_base_geometric(
     scale,
     bounds: Any = None,
     D: RuntimeTypeDescriptor = "AllDomain<i32>",
+    QI: RuntimeTypeDescriptor = "i32",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the geometric(`scale`) distribution to the input.
@@ -96,7 +97,9 @@ def make_base_geometric(
     :type bounds: Any
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: RuntimeTypeDescriptor
-    :param QO: Data type of the sensitivity, scale, and budget.
+    :param QI: Data type of the sensitivity.
+    :type QI: RuntimeTypeDescriptor
+    :param QO: Data type of the scale and budget.
     :type QO: RuntimeTypeDescriptor
     :return: A base_geometric step.
     :rtype: Measurement
@@ -108,6 +111,7 @@ def make_base_geometric(
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
+    QI = RuntimeType.parse(type_name=QI)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     T = get_domain_atom(D)
     OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
@@ -116,14 +120,15 @@ def make_base_geometric(
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
     D = py_to_c(D, c_type=ctypes.c_char_p)
+    QI = py_to_c(QI, c_type=ctypes.c_char_p)
     QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_geometric
-    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, bounds, D, QO), Measurement))
+    return c_to_py(unwrap(function(scale, bounds, D, QI, QO), Measurement))
 
 
 def make_base_stability(

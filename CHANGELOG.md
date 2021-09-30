@@ -29,7 +29,7 @@ This file documents the version history of OpenDP.
 - Examples folder has complete notebooks for getting started with the library
 
 ### Fixed
-- Usability issues in the FFI layer for `make_count_by_categories` and `make_count_by`
+- Usability issues in the FFI layer for `make_count_by_categories` and `make_sized_count_by`
 - The FFI for make_identity ensures proper domain metric pairing
 
 ## [0.2.1] - 2021-09-09

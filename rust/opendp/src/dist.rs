@@ -9,10 +9,12 @@ use std::fmt::{Debug, Formatter};
 pub type IntDistance = u32;
 
 /// Measures
-#[derive(Clone)]
 pub struct MaxDivergence<Q>(PhantomData<Q>);
 impl<Q> Default for MaxDivergence<Q> {
     fn default() -> Self { MaxDivergence(PhantomData) }
+}
+impl<Q> Clone for MaxDivergence<Q> {
+    fn clone(&self) -> Self { MaxDivergence(PhantomData) }
 }
 
 impl<Q> PartialEq for MaxDivergence<Q> {
@@ -29,8 +31,10 @@ impl<Q: Clone> Measure for MaxDivergence<Q> {
     type Distance = Q;
 }
 
-#[derive(Clone)]
 pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
+impl<Q> Clone for SmoothedMaxDivergence<Q> {
+    fn clone(&self) -> Self { SmoothedMaxDivergence(PhantomData) }
+}
 
 impl<Q> Default for SmoothedMaxDivergence<Q> {
     fn default() -> Self { SmoothedMaxDivergence(PhantomData) }
@@ -92,26 +96,26 @@ impl Metric for SubstituteDistance {
 impl DatasetMetric for SubstituteDistance {}
 
 // Sensitivity in P-space
-pub struct LpDistance<Q, const P: usize>(PhantomData<Q>);
-impl<Q, const P: usize> Default for LpDistance<Q, P> {
+pub struct LpDistance<Q, const P: u8>(PhantomData<Q>);
+impl<Q, const P: u8> Default for LpDistance<Q, P> {
     fn default() -> Self { LpDistance(PhantomData) }
 }
 
-impl<Q, const P: usize> Clone for LpDistance<Q, P> {
+impl<Q, const P: u8> Clone for LpDistance<Q, P> {
     fn clone(&self) -> Self { Self::default() }
 }
-impl<Q, const P: usize> PartialEq for LpDistance<Q, P> {
+impl<Q, const P: u8> PartialEq for LpDistance<Q, P> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-impl<Q, const P: usize> Debug for LpDistance<Q, P> {
+impl<Q, const P: u8> Debug for LpDistance<Q, P> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "L{}Distance()", P)
     }
 }
-impl<Q, const P: usize> Metric for LpDistance<Q, P> {
+impl<Q, const P: u8> Metric for LpDistance<Q, P> {
     type Distance = Q;
 }
-impl<Q, const P: usize> SensitivityMetric for LpDistance<Q, P> {}
+impl<Q, const P: u8> SensitivityMetric for LpDistance<Q, P> {}
 
 pub type L1Distance<Q> = LpDistance<Q, 1>;
 pub type L2Distance<Q> = LpDistance<Q, 2>;

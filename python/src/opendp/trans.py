@@ -15,8 +15,9 @@ __all__ = [
     "make_unclamp",
     "make_count",
     "make_count_distinct",
-    "make_count_by",
+    "make_sized_count_by",
     "make_count_by_categories",
+    "make_sized_count_by_categories",
     "make_split_lines",
     "make_split_records",
     "make_create_dataframe",
@@ -375,7 +376,7 @@ def make_count_distinct(
     return c_to_py(unwrap(function(TIA, TO), Transformation))
 
 
-def make_count_by(
+def make_sized_count_by(
     size: int,
     MO: SensitivityMetric,
     TIA: RuntimeTypeDescriptor,
@@ -415,7 +416,7 @@ def make_count_by(
     TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_count_by
+    function = lib.opendp_trans__make_sized_count_by
     function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
@@ -425,12 +426,54 @@ def make_count_by(
 def make_count_by_categories(
     categories: Any,
     MO: SensitivityMetric = "L1Distance<i32>",
-    TIA: RuntimeTypeDescriptor = None,
-    TOA: RuntimeTypeDescriptor = "i32"
+    TIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
     
+    :param categories: The set of categories to compute counts for.
+    :type categories: Any
+    :param MO: output metric. The associated integer type is also the output data type
+    :type MO: SensitivityMetric
+    :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
+    :type TIA: RuntimeTypeDescriptor
+    :return: A count_by_categories step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MO = RuntimeType.parse(type_name=MO)
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(categories), None))
+    
+    # Convert arguments to c types.
+    categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_count_by_categories
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(categories, MO, TIA), Transformation))
+
+
+def make_sized_count_by_categories(
+    size: int,
+    categories: Any,
+    MO: SensitivityMetric = "L1Distance<f64>",
+    TIA: RuntimeTypeDescriptor = None,
+    TOA: RuntimeTypeDescriptor = "i32"
+) -> Transformation:
+    """Make a Transformation that computes the number of times each category appears in the data. 
+    This assumes that both the dataset size and category set is known.
+    
+    :param size: Number of records in input data.
+    :type size: int
     :param categories: The set of categories to compute counts for.
     :type categories: Any
     :param MO: output sensitivity metric
@@ -439,7 +482,7 @@ def make_count_by_categories(
     :type TIA: RuntimeTypeDescriptor
     :param TOA: express counts in terms of this integral type
     :type TOA: RuntimeTypeDescriptor
-    :return: A count_by_categories step.
+    :return: A sized_count_by_categories step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -453,17 +496,18 @@ def make_count_by_categories(
     TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_uint)
     categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
     TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_count_by_categories
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function = lib.opendp_trans__make_sized_count_by_categories
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(categories, MO, TIA, TOA), Transformation))
+    return c_to_py(unwrap(function(size, categories, MO, TIA, TOA), Transformation))
 
 
 def make_split_lines(

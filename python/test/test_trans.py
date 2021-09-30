@@ -223,8 +223,8 @@ def test_count_distinct():
 
 
 def test_count_by():
-    from opendp.trans import make_count_by
-    query = make_count_by(size=9, MO=L1Distance[float], TIA=str)
+    from opendp.trans import make_sized_count_by
+    query = make_sized_count_by(size=9, MO=L1Distance[float], TIA=str)
     assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
     print('first')
     assert query.check(1, 2.)
@@ -236,6 +236,19 @@ def test_count_by_categories():
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
 
+
+def test_sized_count_by_categories():
+    from opendp.trans import make_sized_count_by_categories
+    counter = make_sized_count_by_categories(size=4, categories=["1", "3", "4"], MO=L2Distance[float])
+    assert counter(STR_DATA) == [1, 1, 1, 6]
+    import math
+    assert counter.check(1, math.sqrt(2) / 2)
+
+    from opendp.meas import make_base_geometric
+    counter = make_sized_count_by_categories(size=4, categories=["1", "3", "4"], MO=L1Distance[float])
+    geo = make_base_geometric(scale=1., D=VectorDomain[AllDomain[int]], QI=float)
+    counter >> geo
+    
 
 def test_resize():
     from opendp.trans import make_bounded_resize

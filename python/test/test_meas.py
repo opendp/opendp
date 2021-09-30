@@ -59,10 +59,10 @@ def test_base_vector_geometric():
 
 
 def test_base_stability():
-    from opendp.trans import make_count_by
+    from opendp.trans import make_sized_count_by
     from opendp.meas import make_base_stability
     meas = (
-        make_count_by(size=10, MO=L1Distance[float], TIA=str) >>
+        make_sized_count_by(size=10, MO=L1Distance[float], TIA=str) >>
         make_base_stability(size=10, scale=20., threshold=1., MI=L1Distance[float], TIK=str)
     )
     print("base stability:", meas(["CAT_A"] * 4 + ["CAT_B"] * 6))

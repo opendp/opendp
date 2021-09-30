@@ -125,10 +125,17 @@ impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct PrivacyRelation<MI: Metric, MO: Measure> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
+}
+impl<MI: Metric, MO: Measure> Clone for PrivacyRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        PrivacyRelation {
+            relation: self.relation.clone(),
+            backward_map: self.backward_map.clone()
+        }
+    }
 }
 
 impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
@@ -237,13 +244,20 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
 ///
 /// A `StabilityRelation` is implemented as a function that takes an input and output [`Metric::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct StabilityRelation<MI: Metric, MO: Metric> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub forward_map: Option<Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
 }
-
+impl<MI: Metric, MO: Metric> Clone for StabilityRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        StabilityRelation {
+            relation: self.relation.clone(),
+            forward_map: self.forward_map.clone(),
+            backward_map: self.backward_map.clone()
+        }
+    }
+}
 impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
     pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
         StabilityRelation {

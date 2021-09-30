@@ -17,22 +17,24 @@ use opendp::traits::{InfCast, TotalOrd};
 pub extern "C" fn opendp_meas__make_base_geometric(
     scale: *const c_void,
     bounds: *const AnyObject,
-    D: *const c_char, QO: *const c_char
+    D: *const c_char, QI: *const c_char, QO: *const c_char
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<D, QO>(
+    fn monomorphize<D, QI, QO>(
         scale: *const c_void, bounds: *const AnyObject
     ) -> FfiResult<*mut AnyMeasurement>
-        where D: 'static + GeometricDomain,
-              D::Atom: 'static + InfCast<QO> + TotalOrd + Clone,
-              QO: 'static + Float + InfCast<D::Atom> + TotalOrd,
+        where D: 'static + GeometricDomain<QI, QO>,
+              D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
+              QO: 'static + Float + InfCast<QI> + InfCast<D::Atom> + TotalOrd,
+              QI: 'static + Clone + InfCast<QO> + PartialOrd,
               f64: From<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             Some(try_!(bounds.downcast_ref::<(D::Atom, D::Atom)>()).clone())
         } else {None};
-        make_base_geometric::<D, QO>(scale, bounds).into_any()
+        make_base_geometric::<D, QI, QO>(scale, bounds).into_any()
     }
     let D = try_!(Type::try_from(D));
+    let QI = try_!(Type::try_from(QI));
     let QO = try_!(Type::try_from(QO));
     dispatch!(monomorphize, [
         (D, [
@@ -43,6 +45,7 @@ pub extern "C" fn opendp_meas__make_base_geometric(
             VectorDomain<AllDomain<i16>>, VectorDomain<AllDomain<i32>>, VectorDomain<AllDomain<i64>>,
             VectorDomain<AllDomain<i128>>
         ]),
+        (QI, @numbers),
         (QO, @floats)
     ], (scale, bounds))
 }

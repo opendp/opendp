@@ -2,13 +2,14 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::hash::Hash;
 
-use num::{Integer, One, Zero};
+use num::{Integer, One, Zero, Float};
 
 use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
 use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
+use std::ops::Sub;
 
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
@@ -47,19 +48,43 @@ pub fn make_count_distinct<TIA, TO>(
 pub trait CountByConstant<QO> {
     fn get_stability_constant() -> QO;
 }
-impl<Q: One, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
+impl<Q: One, const P: u8> CountByConstant<Q> for LpDistance<Q, P> {
     fn get_stability_constant() -> Q { Q::one() }
 }
 
-// count with unknown n, known categories
-pub fn make_count_by_categories<MO, TI, TO>(
+fn count_by_categories_function<TI, TO>(
     categories: Vec<TI>
-) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
+) -> impl Fn(&Vec<TI>) -> Vec<TO>
+    where TI: Hash + Eq,
+          TO: Integer + Zero + One + SaturatingAdd {
+    move |data: &Vec<TI>| {
+        let mut counts = categories.iter()
+            .map(|cat| (cat, TO::zero())).collect::<HashMap<&TI, TO>>();
+        let mut null_count = TO::zero();
+
+        data.iter().for_each(|v| {
+            let count = match counts.entry(v) {
+                Entry::Occupied(v) => v.into_mut(),
+                Entry::Vacant(_v) => &mut null_count
+            };
+            *count = TO::one().saturating_add(count)
+        });
+
+        categories.iter().map(|cat| counts.remove(cat)
+            .unwrap_assert("categories are distinct and every category is in the map"))
+            .chain(vec![null_count])
+            .collect()
+    }
+}
+
+// count with unknown n, known categories
+pub fn make_count_by_categories<MO, TI>(
+    categories: Vec<TI>
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<MO::Distance>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
-          MO::Distance: DistanceConstant<IntDistance> + One,
+          MO::Distance: DistanceConstant<IntDistance> + One + Integer + Zero + One + SaturatingAdd + CheckNull,
           TI: 'static + Eq + Hash + CheckNull,
-          TO: Integer + Zero + One + SaturatingAdd + CheckNull,
-          IntDistance: InfCast<MO::Distance>{
+          IntDistance: InfCast<MO::Distance> {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct")
@@ -67,33 +92,47 @@ pub fn make_count_by_categories<MO, TI, TO>(
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new(move |data: &Vec<TI>| {
-            let mut counts = categories.iter()
-                .map(|cat| (cat, TO::zero())).collect::<HashMap<&TI, TO>>();
-            let mut null_count = TO::zero();
-
-            data.iter().for_each(|v| {
-                let count = match counts.entry(v) {
-                    Entry::Occupied(v) => v.into_mut(),
-                    Entry::Vacant(_v) => &mut null_count
-                };
-                *count = TO::one().saturating_add(count)
-            });
-
-            categories.iter().map(|cat| counts.remove(cat)
-                .unwrap_assert("categories are distinct and every category is in the map"))
-                .chain(vec![null_count])
-                .collect()
-        }),
+        Function::new(count_by_categories_function(categories)),
         SymmetricDistance::default(),
         MO::default(),
         StabilityRelation::new_from_constant(MO::get_stability_constant())))
 }
 
+pub trait SizedCountByConstant<Q> {
+    fn get_stability_constant() -> Fallible<Q>;
+}
+impl<Q: One + Sub<Output=Q> + Float + InfCast<u8>, const P: u8> SizedCountByConstant<Q> for LpDistance<Q, P> {
+    fn get_stability_constant() -> Fallible<Q> {
+        Ok(Q::inf_cast(2)?.powf(Q::inf_cast(P)?.recip() - Q::one()))
+    }
+}
+
+
+pub fn make_sized_count_by_categories<MO, TIA, TOA>(
+    size: usize, categories: Vec<TIA>
+) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TIA>>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, MO>>
+    where MO: SizedCountByConstant<MO::Distance> + SensitivityMetric,
+          MO::Distance: DistanceConstant<IntDistance> + One,
+          TIA: 'static + Eq + Hash + CheckNull,
+          TOA: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
+          IntDistance: InfCast<MO::Distance> {
+    let mut uniques = HashSet::new();
+    if categories.iter().any(move |x| !uniques.insert(x)) {
+        return fallible!(MakeTransformation, "categories must be distinct")
+    }
+    Ok(Transformation::new(
+        SizedDomain::new(VectorDomain::new_all(), size),
+        VectorDomain::new_all(),
+        Function::new(count_by_categories_function(categories)),
+        SymmetricDistance::default(),
+        MO::default(),
+        StabilityRelation::new_from_constant(MO::get_stability_constant()?)))
+}
+
 // count with known n, unknown categories
 // This implementation could be made tighter with the relation in the spreadsheet for known n.
 // Need to double-check if stability-based histograms have any additional stability requirements.
-pub fn make_count_by<MO, TI, TO>(
+pub fn make_sized_count_by<MO, TI, TO>(
     size: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
@@ -167,9 +206,9 @@ mod tests {
     }
 
     #[test]
-    fn test_make_count_by() -> Fallible<()> {
+    fn test_make_sized_count_by() -> Fallible<()> {
         let arg = vec![true, true, true, false, true, false, false, false, true, true];
-        let transformation = make_count_by::<L2Distance<f64>, bool, i8>(arg.len())?;
+        let transformation = make_sized_count_by::<L2Distance<f64>, bool, i8>(arg.len())?;
         let ret = transformation.invoke(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);
