@@ -270,3 +270,20 @@ def test_count_by_categories_str():
     query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
+
+
+def test_indexing():
+    from opendp.trans import make_find, make_find_bin, make_index
+
+    find = make_find(categories=["1", "3", "4"])
+    assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
+    assert find.check(1, 1)
+
+    binner = make_find_bin(edges=[2, 3, 5])
+    assert binner(INT_DATA) == [0, 1, 2, 2, 3, 3, 3, 3, 3]
+
+    indexer = make_index(categories=["A", "B", "C"], null="NA")
+    assert indexer([0, 1, 3, 1, 5]) == ['A', 'B', 'NA', 'B', 'NA']
+
+    assert (find >> indexer)(STR_DATA) == ['A', 'NA', 'B', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']
+    assert (binner >> indexer)(INT_DATA) == ['A', 'B', 'C', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']
