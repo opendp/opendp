@@ -273,9 +273,9 @@ def test_count_by_categories_str():
 
 
 def test_indexing():
-    from opendp.trans import make_find, make_find_bin, make_index
+    from opendp.trans import make_find, make_impute_constant, make_find_bin, make_index
 
-    find = make_find(categories=["1", "3", "4"])
+    find = make_find(categories=["1", "3", "4"]) >> make_impute_constant(3, DA=OptionNullDomain[AllDomain["usize"]])
     assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
     assert find.check(1, 1)
 

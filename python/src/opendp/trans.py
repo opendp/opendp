@@ -769,7 +769,7 @@ def make_find(
 ) -> Transformation:
     """Find the index of a data value in a set of categories.
     
-    :param categories: The set of categories to compute counts for.
+    :param categories: The set of categories to find indexes from.
     :type categories: Any
     :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
     :type TIA: RuntimeTypeDescriptor
@@ -804,7 +804,7 @@ def make_find_bin(
     
     :param edges: The set of edges to split bins by.
     :type edges: Any
-    :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
+    :param TIA: numerical input type. Input data must be Vec<TIA>.
     :type TIA: RuntimeTypeDescriptor
     :return: A find_bin step.
     :rtype: Transformation
@@ -840,7 +840,7 @@ def make_index(
     :type categories: Any
     :param null: Category to return if the index is out-of-range of the category set.
     :type null: Any
-    :param TOA: categorical/hashable output type. Output data will be Vec<TIA>.
+    :param TOA: atomic output type. Output data will be Vec<TIA>.
     :type TOA: RuntimeTypeDescriptor
     :return: A index step.
     :rtype: Transformation

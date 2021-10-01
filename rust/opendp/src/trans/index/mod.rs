@@ -4,14 +4,14 @@ use std::iter::FromIterator;
 
 use crate::core::Transformation;
 use crate::dist::SymmetricDistance;
-use crate::dom::{AllDomain, VectorDomain};
+use crate::dom::{AllDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::traits::CheckNull;
 use crate::trans::make_row_by_row;
 
 pub fn make_find<TIA>(
     categories: Vec<TIA>
-) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<usize>>, SymmetricDistance, SymmetricDistance>>
+) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<OptionNullDomain<AllDomain<usize>>>, SymmetricDistance, SymmetricDistance>>
     where TIA: 'static + CheckNull + Clone + Hash + Eq {
     let categories_len = categories.len();
     let indexes = HashMap::<TIA, usize>::from_iter(categories.into_iter()
@@ -22,8 +22,8 @@ pub fn make_find<TIA>(
     }
 
     make_row_by_row(
-        AllDomain::new(), AllDomain::new(),
-        move |v| indexes.get(v).cloned().unwrap_or(categories_len))
+        AllDomain::new(), OptionNullDomain::new(AllDomain::new()),
+        move |v| indexes.get(v).cloned())
 }
 
 pub fn make_find_bin<TIA>(
@@ -59,7 +59,7 @@ mod test {
         let find = make_find(vec!["1", "3", "4"])?;
         assert_eq!(
             find.invoke(&vec!["1", "2", "3", "4", "5"])?,
-            vec![0, 3, 1, 2, 3]);
+            vec![Some(0), None, Some(1), Some(2), None]);
         Ok(())
     }
 

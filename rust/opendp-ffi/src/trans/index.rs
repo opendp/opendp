@@ -64,6 +64,6 @@ pub extern "C" fn opendp_trans__make_index(
     }
     let TOA = try_!(Type::try_from(TOA));
     dispatch!(monomorphize, [
-        (TOA, @hashable)
+        (TOA, @primitives)
     ], (categories, null))
 }

@@ -450,7 +450,7 @@
                     "origin": "Vec",
                     "args": ["TIA"]
                 },
-                "description": "The set of categories to compute counts for."
+                "description": "The set of categories to find indexes from."
             },
             {
                 "name": "TIA",
@@ -476,7 +476,7 @@
             {
                 "name": "TIA",
                 "is_type": true,
-                "description": "categorical/hashable input type. Input data must be Vec<TIA>."
+                "description": "numerical input type. Input data must be Vec<TIA>."
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -503,7 +503,7 @@
             {
                 "name": "TOA",
                 "is_type": true,
-                "description": "categorical/hashable output type. Output data will be Vec<TIA>."
+                "description": "atomic output type. Output data will be Vec<TIA>."
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
