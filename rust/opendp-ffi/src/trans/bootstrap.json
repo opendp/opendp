@@ -408,7 +408,7 @@
             {
                 "name": "DA",
                 "is_type": true,
-                "description": "domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>"
+                "description": "atomic domain of input data that contains nulls. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
