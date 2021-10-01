@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, Sub};
 
 use num::Float;
 
-use crate::core::{Domain, Transformation};
+use crate::core::{Domain, Transformation, Function, StabilityRelation};
 use crate::dom::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::dom::InherentNull;
@@ -32,13 +32,13 @@ pub fn make_impute_uniform_float<T>(
 }
 
 // utility trait to impute with a constant, regardless of the representation of null
-pub trait ImputableDomain: Domain {
+pub trait ImputeConstantDomain: Domain {
     type Imputed;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed;
     fn new() -> Self;
 }
 // how to impute, when null represented as Option<T>
-impl<T: Clone + CheckNull> ImputableDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         default.as_ref().unwrap_or(constant)
@@ -46,7 +46,7 @@ impl<T: Clone + CheckNull> ImputableDomain for OptionNullDomain<AllDomain<T>> {
     fn new() -> Self { OptionNullDomain::new(AllDomain::new()) }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: InherentNull + CheckNull> ImputableDomain for InherentNullDomain<AllDomain<T>> {
+impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> {
     type Imputed = Self::Carrier;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         if default.is_null() { constant } else { default }
@@ -61,7 +61,7 @@ impl<T: InherentNull + CheckNull> ImputableDomain for InherentNullDomain<AllDoma
 pub fn make_impute_constant<DA>(
     constant: DA::Imputed
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
-    where DA: ImputableDomain,
+    where DA: ImputeConstantDomain,
           DA::Imputed: 'static + Clone + CheckNull,
           DA::Carrier: 'static {
     if constant.is_null() { return fallible!(MakeTransformation, "Constant may not be null.") }
@@ -72,43 +72,99 @@ pub fn make_impute_constant<DA>(
         move |v| DA::impute_constant(v, &constant).clone())
 }
 
+// utility trait to standardize a member into an Option, regardless of the representation of null
+pub trait DropNullDomain: Domain {
+    type Imputed;
+    fn option(value: &Self::Carrier) -> Option<Self::Imputed>;
+    fn new() -> Self;
+}
+// how to standardize into an option, when null represented as Option<T>
+impl<T: CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
+    type Imputed = T;
+    fn option(value: &Self::Carrier) -> Option<T> {
+        if value.is_null() { None } else { value.clone() }
+    }
+    fn new() -> Self { OptionNullDomain::new(AllDomain::new()) }
+}
+// how to standardize into an option, when null represented as T with internal nullity
+impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>> {
+    type Imputed = T;
+    fn option(value: &Self::Carrier) -> Option<T> {
+        if value.is_null() { None } else { Some(value.clone()) }
+    }
+    fn new() -> Self { InherentNullDomain::new(AllDomain::new()) }
+}
+
+pub fn make_drop_null<DA>(
+) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
+    where DA: DropNullDomain, DA::Imputed: CheckNull {
+    Ok(Transformation::new(
+        VectorDomain::new(DA::new()),
+        VectorDomain::new_all(),
+        Function::new(|arg: &Vec<DA::Carrier>|
+            arg.iter().filter_map(DA::option).collect()),
+        SymmetricDistance::default(),
+        SymmetricDistance::default(),
+        StabilityRelation::new_from_constant(1)
+    ))
+}
+
 
 #[cfg(test)]
 mod tests {
-    use crate::error::ExplainUnwrap;
-    use crate::trans::{make_impute_constant, make_impute_uniform_float};
-    use crate::dom::{OptionNullDomain, InherentNullDomain};
+    use super::*;
 
     #[test]
-    fn test_impute_uniform() {
-        let imputer = make_impute_uniform_float::<f64>((2.0, 2.0)).unwrap_test();
+    fn test_impute_uniform() -> Fallible<()> {
+        let imputer = make_impute_uniform_float::<f64>((2.0, 2.0))?;
 
-        let result = imputer.invoke(&vec![1.0, f64::NAN]).unwrap_test();
+        let result = imputer.invoke(&vec![1.0, f64::NAN])?;
 
         assert_eq!(result, vec![1., 2.]);
-        assert!(imputer.stability_relation
-            .eval(&1, &1).unwrap_test());
+        assert!(imputer.check(&1, &1)?);
+        Ok(())
     }
 
     #[test]
-    fn test_impute_constant_option() {
-        let imputer = make_impute_constant::<OptionNullDomain<_>>("IMPUTED".to_string()).unwrap_test();
+    fn test_impute_constant_option() -> Fallible<()> {
+        let imputer = make_impute_constant::<OptionNullDomain<_>>("IMPUTED".to_string())?;
 
-        let result = imputer.invoke(&vec![Some("A".to_string()), None]).unwrap_test();
+        let result = imputer.invoke(&vec![Some("A".to_string()), None])?;
 
         assert_eq!(result, vec!["A".to_string(), "IMPUTED".to_string()]);
-        assert!(imputer.stability_relation
-            .eval(&1, &1).unwrap_test());
+        assert!(imputer.check(&1, &1)?);
+        Ok(())
     }
 
     #[test]
-    fn test_impute_constant_inherent() {
-        let imputer = make_impute_constant::<InherentNullDomain<_>>(12.).unwrap_test();
+    fn test_impute_constant_inherent() -> Fallible<()> {
+        let imputer = make_impute_constant::<InherentNullDomain<_>>(12.)?;
 
-        let result = imputer.invoke(&vec![f64::NAN, 23.]).unwrap_test();
+        let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 
         assert_eq!(result, vec![12., 23.]);
-        assert!(imputer.stability_relation
-            .eval(&1, &1).unwrap_test());
+        assert!(imputer.check(&1, &1)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_impute_drop_option() -> Fallible<()> {
+        let imputer = make_drop_null::<OptionNullDomain<_>>()?;
+
+        let result = imputer.invoke(&vec![Some(f64::NAN), Some(23.), None])?;
+
+        assert_eq!(result, vec![23.]);
+        assert!(imputer.check(&1, &1)?);
+        Ok(())
+    }
+    #[test]
+    fn test_impute_drop_inherent() -> Fallible<()> {
+        let imputer = make_drop_null::<InherentNullDomain<_>>()?;
+
+        let result = imputer.invoke(&vec![f64::NAN, 23.])?;
+
+        assert_eq!(result, vec![23.]);
+        assert!(imputer.check(&1, &1)?);
+        Ok(())
     }
 }
