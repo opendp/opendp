@@ -75,6 +75,62 @@ def make_adaptive_composition(budget):
     return InteractiveMeasurement(function, budget)
 
 
+
+
+# Makes a sequential composition InteractiveMeasurement. Spawned Queryables require their queries
+# to be (non-Interactive) Measurements (whose Queryables must then be (non-Interactive) Measurements).
+# def make_sequential_composition_2(budget):
+#
+#     def self_transition(context, state, question):
+#         data = context
+#         (budget, children) = state
+#         if question.privacy_loss > budget:
+#             raise Exception("Insufficient budget")
+#         budget -= question.privacy_loss
+#         new_index = len(children)
+#         new_child = question.function(context, data)  # Question is an InteractiveMeasurement.
+#         children.append(new_child)
+#         new_state = (budget, children)
+#         answer = new_child
+#         return (new_state, answer)
+#
+#     def child_transition(state, child_index, child_answer):
+#         children = state
+#         if child_index != len(children) - 1:  # Make sure the child we're querying is the last created one (no backtracking)
+#             raise Exception("Non-sequential query")
+#         new_state = children
+#         return (new_state, child_answer)
+#
+#     def function(context, data):
+#         context = (coordinator, data)  # Static context contains coordinator and data
+#         initial_state = None           # Variable state is unused
+#         def transition(context, _state, question: InteractiveMeasurement):
+#             (coordinator, data) = context
+#             # Construct a spawn query for the coordinator
+#             null_index = None
+#             question = (data, null_index, question)
+#             child_index = coordinator.query(question)  # Returns the index of the spawned child
+#
+#             # We need a wrapper Queryable for each spawned child. This will intercept queries to the child,
+#             # and dispatch them through the coordinator.
+#             child_wrapper_context = (coordinator, data, child_index)
+#             child_wrapper_initial_state = None
+#             def child_wrapper_transition(context, _state, question):
+#                 (coordinator, data, index) = context
+#                 # Construct an existing child query for the coordinator
+#                 question = (data, index, question)
+#                 answer = coordinator.query(question)  # Returns whatever the child returns
+#                 # If we wanted to support deeper nesting, it'd happen here.
+#                 return (None, answer)
+#             child_wrapper = Queryable(child_wrapper_context, child_wrapper_initial_state, child_wrapper_transition)
+#             return (None, child_wrapper)
+#         return Queryable(context, initial_state, transition)
+#
+#     return InteractiveMeasurement(function, budget)
+
+
+
+
 # Makes a sequential composition InteractiveMeasurement. Spawned Queryables require their queries
 # to be (non-Interactive) Measurements (whose Queryables must then be (non-Interactive) Measurements).
 def make_sequential_composition(budget):
