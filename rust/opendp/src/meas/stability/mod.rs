@@ -45,7 +45,7 @@ pub fn make_base_stability<MI, TIK, TIC>(
         return fallible!(MakeMeasurement, "threshold must not be negative")
     }
     if size == 0 {
-        return fallible!(MakeMeasurement. "size must not be zero")
+        return fallible!(MakeMeasurement, "size must not be zero")
     }
     let _size = MI::Distance::exact_int_cast(size)?;
     let _2 = MI::Distance::exact_int_cast(2)?;
