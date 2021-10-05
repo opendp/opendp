@@ -16,6 +16,7 @@ ATOM_MAP = {
     'i16': ctypes.c_int16,
     'i32': ctypes.c_int32,
     'i64': ctypes.c_int64,
+    'usize': ctypes.c_size_t,
     'bool': ctypes.c_bool,
 }
 
