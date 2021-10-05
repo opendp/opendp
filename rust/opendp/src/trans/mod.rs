@@ -39,6 +39,11 @@ pub mod impute;
 pub use crate::trans::impute::*;
 
 #[cfg(feature="contrib")]
+pub mod index;
+#[cfg(feature="contrib")]
+pub use crate::trans::index::*;
+
+#[cfg(feature="contrib")]
 pub mod clamp;
 #[cfg(feature="contrib")]
 pub use crate::trans::clamp::*;
