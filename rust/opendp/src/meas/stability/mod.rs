@@ -44,6 +44,9 @@ pub fn make_base_stability<MI, TIK, TIC>(
     if threshold.is_sign_negative() {
         return fallible!(MakeMeasurement, "threshold must not be negative")
     }
+    if size == 0 {
+        return fallible!(MakeMeasurement, "size must not be zero")
+    }
     let _size = MI::Distance::exact_int_cast(size)?;
     let _2 = MI::Distance::exact_int_cast(2)?;
 
@@ -66,32 +69,17 @@ pub fn make_base_stability<MI, TIK, TIC>(
         MI::default(),
         SmoothedMaxDivergence::default(),
         PrivacyRelation::new_fallible(move |&d_in: &MI::Distance, &(eps, del): &(MI::Distance, MI::Distance)|{
-            // let _eps: f64 = NumCast::from(eps).unwrap_test();
-            // let _del: f64 = NumCast::from(del).unwrap_test();
-            // println!("eps, del: {:?}, {:?}", _eps, _del);
-            let ideal_scale = d_in / (eps * _size);
-            let ideal_threshold = (_2 / del).ln() * ideal_scale + _size.recip();
-            // println!("ideal: {:?}, {:?}", ideal_sigma, ideal_threshold);
-
             if eps.is_sign_negative() || eps.is_zero() {
-                return fallible!(FailedRelation, "cause: epsilon <= 0")
-            }
-            if eps >= _size.ln() {
-                return fallible!(RelationDebug, "cause: epsilon >= n.ln()");
+                return fallible!(FailedRelation, "epsilon must be positive")
             }
             if del.is_sign_negative() || del.is_zero() {
-                return fallible!(FailedRelation, "cause: delta <= 0")
+                return fallible!(FailedRelation, "delta must be positive")
             }
-            if del >= _size.recip() {
-                return fallible!(RelationDebug, "cause: del >= n.ln()");
-            }
-            if scale < ideal_scale {
-                return fallible!(RelationDebug, "cause: scale < d_in / (epsilon * n)")
-            }
-            if threshold < ideal_threshold {
-                return fallible!(RelationDebug, "cause: threshold < (2. / delta).ln() * d_in / (epsilon * n) + 1. / n");
-            }
-            Ok(true)
+
+            let ideal_scale = d_in / (eps * _size);
+            let ideal_threshold = (_2 / del).ln() * ideal_scale + _size.recip();
+
+            Ok(scale > ideal_scale && threshold > ideal_threshold)
         })
     ))
 }

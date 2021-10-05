@@ -24,7 +24,11 @@ __all__ = [
     "make_select_column",
     "make_identity",
     "make_impute_constant",
+    "make_drop_null",
     "make_impute_uniform_float",
+    "make_find",
+    "make_find_bin",
+    "make_index",
     "make_sized_bounded_mean",
     "make_resize",
     "make_bounded_resize",
@@ -697,6 +701,35 @@ def make_impute_constant(
     return c_to_py(unwrap(function(constant, DA), Transformation))
 
 
+def make_drop_null(
+    DA: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that drops null values.
+    
+    :param DA: domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
+    :type DA: RuntimeTypeDescriptor
+    :return: A drop_null step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    DA = RuntimeType.parse(type_name=DA)
+    
+    # Convert arguments to c types.
+    DA = py_to_c(DA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_drop_null
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(DA), Transformation))
+
+
 def make_impute_uniform_float(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
@@ -728,6 +761,109 @@ def make_impute_uniform_float(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(bounds, TA), Transformation))
+
+
+def make_find(
+    categories: Any,
+    TIA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Find the index of a data value in a set of categories.
+    
+    :param categories: The set of categories to find indexes from.
+    :type categories: Any
+    :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
+    :type TIA: RuntimeTypeDescriptor
+    :return: A find step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(categories), None))
+    
+    # Convert arguments to c types.
+    categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_find
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(categories, TIA), Transformation))
+
+
+def make_find_bin(
+    edges: Any,
+    TIA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Find the bin index from a monotonically increasing vector of edges.
+    
+    :param edges: The set of edges to split bins by.
+    :type edges: Any
+    :param TIA: numerical input type. Input data must be Vec<TIA>.
+    :type TIA: RuntimeTypeDescriptor
+    :return: A find_bin step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(edges), None))
+    
+    # Convert arguments to c types.
+    edges = py_to_c(edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_find_bin
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(edges, TIA), Transformation))
+
+
+def make_index(
+    categories: Any,
+    null: Any,
+    TOA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Index into a vector of categories.
+    
+    :param categories: The set of categories to index into.
+    :type categories: Any
+    :param null: Category to return if the index is out-of-range of the category set.
+    :type null: Any
+    :param TOA: atomic output type. Output data will be Vec<TIA>.
+    :type TOA: RuntimeTypeDescriptor
+    :return: A index step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=next(iter(categories), None))
+    
+    # Convert arguments to c types.
+    categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TOA]))
+    null = py_to_c(null, c_type=AnyObjectPtr, type_name=TOA)
+    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_index
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(categories, null, TOA), Transformation))
 
 
 def make_sized_bounded_mean(

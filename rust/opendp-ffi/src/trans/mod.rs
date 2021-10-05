@@ -15,6 +15,8 @@ pub mod variance;
 #[cfg(feature="contrib")]
 pub mod impute;
 #[cfg(feature="contrib")]
+pub mod index;
+#[cfg(feature="contrib")]
 pub mod clamp;
 #[cfg(feature="contrib")]
 pub mod cast;

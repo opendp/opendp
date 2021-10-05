@@ -7,7 +7,7 @@ use num::Float;
 use opendp::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain};
 use opendp::err;
 use opendp::samplers::SampleUniform;
-use opendp::trans::{ImputableDomain, make_impute_constant, make_impute_uniform_float};
+use opendp::trans::{ImputeConstantDomain, make_impute_constant, make_impute_uniform_float, make_drop_null, DropNullDomain};
 
 use crate::any::{AnyTransformation, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
@@ -44,7 +44,7 @@ pub extern "C" fn opendp_trans__make_impute_constant(
             fn monomorphize<TA>(
                 constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
-                where OptionNullDomain<AllDomain<TA>>: ImputableDomain<Imputed=TA>,
+                where OptionNullDomain<AllDomain<TA>>: ImputeConstantDomain<Imputed=TA>,
                       TA: 'static + Clone + CheckNull{
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
                 make_impute_constant::<OptionNullDomain<AllDomain<TA>>>(constant).into_any()
@@ -55,12 +55,43 @@ pub extern "C" fn opendp_trans__make_impute_constant(
             fn monomorphize<TA>(
                 constant: *const AnyObject
             ) -> FfiResult<*mut AnyTransformation>
-                where InherentNullDomain<AllDomain<TA>>: ImputableDomain<Imputed=TA>,
+                where InherentNullDomain<AllDomain<TA>>: ImputeConstantDomain<Imputed=TA>,
                       TA: 'static + InherentNull + Clone {
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
                 make_impute_constant::<InherentNullDomain<AllDomain<TA>>>(constant).into_any()
             }
             dispatch!(monomorphize, [(TA, [f64, f32])], (constant))
+        },
+        _ => err!(TypeParse, "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>").into()
+    }
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_trans__make_drop_null(
+    DA: *const c_char
+) -> FfiResult<*mut AnyTransformation> {
+    let DA = try_!(Type::try_from(DA));
+    let TA = try_!(DA.get_domain_atom());
+
+    match &DA.contents {
+        TypeContents::GENERIC {name, ..} if name == &"OptionNullDomain" => {
+            fn monomorphize<TA>(
+            ) -> FfiResult<*mut AnyTransformation>
+                where OptionNullDomain<AllDomain<TA>>: DropNullDomain<Imputed=TA>,
+                      TA: 'static + Clone + CheckNull {
+                make_drop_null::<OptionNullDomain<AllDomain<TA>>>().into_any()
+            }
+            dispatch!(monomorphize, [(TA, @primitives)], ())
+        }
+        TypeContents::GENERIC {name, ..} if name == &"InherentNullDomain" => {
+            fn monomorphize<TA>(
+            ) -> FfiResult<*mut AnyTransformation>
+                where InherentNullDomain<AllDomain<TA>>: DropNullDomain<Imputed=TA>,
+                      TA: 'static + InherentNull + Clone {
+                make_drop_null::<InherentNullDomain<AllDomain<TA>>>().into_any()
+            }
+            dispatch!(monomorphize, [(TA, [f64, f32])], ())
         },
         _ => err!(TypeParse, "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>").into()
     }

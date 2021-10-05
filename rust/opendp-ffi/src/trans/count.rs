@@ -2,14 +2,14 @@ use std::convert::TryFrom;
 use std::hash::Hash;
 use std::os::raw::{c_char, c_uint};
 
-use num::{Bounded, Integer, One, Zero};
+use num::{Bounded, Integer, One, Zero, Float};
 use num::traits::FloatConst;
 
 use opendp::core::{SensitivityMetric};
 use opendp::dist::{L1Distance, L2Distance, IntDistance};
 use opendp::err;
 use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
-use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct};
+use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct, CountByCategoriesConstant};
 
 use crate::any::{AnyObject, AnyTransformation};
 use crate::any::Downcast;
@@ -68,7 +68,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
         where QO: DistanceConstant<IntDistance> + One,
               IntDistance: InfCast<QO> {
         fn monomorphize2<MO, TI, TO>(categories: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-            where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
+            where MO: 'static + SensitivityMetric + CountByCategoriesConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + One,
                   TI: 'static + Eq + Hash + Clone + CheckNull,
                   TO: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
@@ -100,7 +100,7 @@ pub extern "C" fn opendp_trans__make_count_by(
     fn monomorphize<QO>(
         size: usize, MO: Type, TIA: Type, TOA: Type,
     ) -> FfiResult<*mut AnyTransformation>
-        where QO: DistanceConstant<IntDistance> + FloatConst + One,
+        where QO: DistanceConstant<IntDistance> + FloatConst + One + Float + ExactIntCast<usize>,
               IntDistance: InfCast<QO> {
         fn monomorphize2<MO, TIA, TOA>(size: usize) -> FfiResult<*mut AnyTransformation>
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,

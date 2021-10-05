@@ -346,7 +346,7 @@ macro_rules! impl_round_cast_self_string_bool {
         }
     }
 }
-cartesian!{[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64], impl_round_cast_num, impl_round_cast_self_string_bool, impl_round_cast_num}
+cartesian!{[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64], impl_round_cast_num, impl_round_cast_self_string_bool, impl_round_cast_num}
 
 // final four casts among bool and string
 impl RoundCast<bool> for bool { fn round_cast(v: bool) -> Fallible<Self> {Ok(v)} }
@@ -484,7 +484,7 @@ macro_rules! impl_total_ord_for_ord {
         fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
-impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128);
+impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {
