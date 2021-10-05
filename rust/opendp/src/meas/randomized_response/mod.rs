@@ -13,13 +13,13 @@ use num::Float;
 // 1. make_randomized_response_bool
 //    a simple implementation specifically for booleans
 // 2. make_randomized_response
-//    for any categorical type with k > 1 categories
+//    for any categorical type with t > 1 categories
 //
 // The general rule is eps = (p / p').ln(), where p' = (1 - p) / (t - 1), and t = # categories
 // See paper for more details: http://csce.uark.edu/~xintaowu/publ/DPL-2014-003.pdf
 //
 // In the case of privatizing a balanced coin flip,
-//     k = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
+//     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
 
 
 pub fn make_randomized_response_bool<Q>(
