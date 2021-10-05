@@ -255,14 +255,14 @@ def test_resize():
     assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)
-    assert query.check(2, 2)
+    assert query.check(2, 4)
 
     from opendp.trans import make_resize
     query = make_resize(size=4, constant=0)
     assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)
-    assert query.check(2, 2)
+    assert query.check(2, 4)
 
 
 def test_count_by_categories_str():

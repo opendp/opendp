@@ -1,6 +1,6 @@
 use crate::core::{Transformation, Function, StabilityRelation, Domain};
 use crate::error::Fallible;
-use crate::dist::{SymmetricDistance, IntDistance};
+use crate::dist::{SymmetricDistance};
 use crate::dom::{VectorDomain, SizedDomain};
 use std::cmp::Ordering;
 use crate::traits::CheckNull;
@@ -24,11 +24,7 @@ pub fn make_resize_constant<DA>(
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_all(
-            move |d_in: &IntDistance, d_out: &IntDistance| Ok(*d_out >= d_in + d_in % 2),
-            Some(|d_in: &IntDistance| Ok(d_in + d_in % 2)),
-            Some(|d_out: &IntDistance| Ok(*d_out))
-        )
+        StabilityRelation::new_from_constant(2)
     ))
 }
 
