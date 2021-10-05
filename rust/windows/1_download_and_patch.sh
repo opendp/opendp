@@ -31,6 +31,6 @@ git checkout tags/v1.9.0
 git apply ../rug-1.9.0.patch
 cd ..
 
-CARGO_TOML_PATH="$(realpath "../rust/opendp/Cargo.toml")"
-sed -i "s|rug = { version = \"1.9.0\"|rug = { path = \"../../windows/rug-1.9.0\"|g" "$CARGO_TOML_PATH"
-sed -i "s|gmp-mpfr-sys = { version = \"=1.2.4\"|gmp-mpfr-sys = { path = \"../../windows/gmp-mpfr-sys-1.2.4\"|g" "$CARGO_TOML_PATH"
+CARGO_TOML_PATH="$(realpath "../opendp/Cargo.toml")"
+sed -i "s|rug = { version = \"1.9.0\"|rug = { path = \"../windows/rug-1.9.0\"|g" "$CARGO_TOML_PATH"
+sed -i "s|gmp-mpfr-sys = { version = \"=1.2.4\"|gmp-mpfr-sys = { path = \"../windows/gmp-mpfr-sys-1.2.4\"|g" "$CARGO_TOML_PATH"
