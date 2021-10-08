@@ -130,7 +130,7 @@ mod tests {
         // use the simpler version of the check that suffers from catastrophic cancellation,
         // to check the more complicated algorithm for finding the analytic gaussian scale
         assert!(catastrophic_analytic_check(scale, d_in, d_out));
-        assert!(!catastrophic_analytic_check(3.730631, d_in, d_out));
+        assert!(!catastrophic_analytic_check(scale - 1e-6, d_in, d_out));
 
         Ok(())
     }

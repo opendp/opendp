@@ -10,7 +10,7 @@ use statrs::function::erf;
 /// * `delta` - Additive privacy loss parameter.
 pub(super) fn get_analytic_gaussian_sigma(sensitivity: f64, epsilon: f64, delta: f64) -> f64 {
     // threshold to choose whether alpha is larger or smaller than one
-    let delta_0 = case_a(epsilon, 0.);
+    let delta_0 = b_neg(epsilon, 0.);
 
     // Branching cases are merged, and a new case added for when alpha exactly 1
     let alpha = if delta == delta_0 {
@@ -55,9 +55,9 @@ fn binary_search(
 ) -> f64 {
     // evaluate either B+ or B- on s
     let s_to_delta = |s: f64| if delta > delta_0 {
-        case_a(epsilon, s)
+        b_neg(epsilon, s)
     } else {
-        case_b(epsilon, s)
+        b_pos(epsilon, s)
     };
 
     loop {
@@ -98,9 +98,9 @@ fn doubling_trick(
 
     // return false when bounds should no longer be doubled
     let predicate = |s: f64| if delta > delta_0 {
-        case_a(epsilon, s) < delta
+        b_neg(epsilon, s) < delta
     } else {
-        case_b(epsilon, s) > delta
+        b_pos(epsilon, s) > delta
     };
 
     // continue doubling the bounds until Theorem 8's comparison with delta is not satisfied
@@ -116,13 +116,13 @@ fn doubling_trick(
 /// Refer to p.19 Proof of Theorem 9.
 /// 1. Substitute σ = α∆/sqrt(2ε) into inequality (6)
 /// 2. Substitute u = (α−1/α)2/2
-fn case_a(epsilon: f64, s: f64) -> f64 {
+fn b_neg(epsilon: f64, s: f64) -> f64 {
     phi((epsilon * s).sqrt()) - epsilon.exp() * phi(-(epsilon * (s + 2.)).sqrt())
 }
 
-/// B+: Reduced form of inequality (6) for optimization when alpha > 1.
+/// B+: Reduced form of inequality (6) for optimization when alpha < 1.
 /// Refer to p.19 Proof of Theorem 9.
-fn case_b(epsilon: f64, s: f64) -> f64 {
+fn b_pos(epsilon: f64, s: f64) -> f64 {
     phi(-(epsilon * s).sqrt()) - epsilon.exp() * phi(-(epsilon * (s + 2.)).sqrt())
 }
 

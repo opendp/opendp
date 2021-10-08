@@ -29,7 +29,7 @@ def test_base_vector_laplace():
     assert meas.check(1., 1.3)
 
 
-def test_base_gaussian():
+def test_base_analytic_gaussian():
     from opendp.meas import make_base_gaussian
     meas = make_base_gaussian(scale=10.5)
     print("base gaussian:", meas(100.))
