@@ -45,22 +45,6 @@ impl<T: CheckNull> Domain for AllDomain<T> {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> { Ok(!val.is_null()) }
 }
 
-// /// A Domain that contains specific members of the carrier type.
-// #[derive(Clone, PartialEq, Eq)]
-// pub struct CategoricalDomain<T: Eq + Hash> {
-//     categories: HashSet<T>,
-// }
-// impl<T: Eq + Hash> CategoricalDomain<T> {
-//     pub fn new(categories: HashSet<T>) -> Fallible<Self> {
-//         if categories.is_empty() {return fallible!(MakeDomain, "category set must be nonempty")}
-//         Ok(CategoricalDomain { categories })
-//     }
-// }
-// impl<T: Clone + Eq + Hash> Domain for CategoricalDomain<T> {
-//     type Carrier = T;
-//     fn member(&self, val: &Self::Carrier) -> Fallible<bool> { Ok(self.categories.contains(val)) }
-// }
-
 /// A Domain that carries an underlying Domain in a Box.
 #[derive(Clone, PartialEq, Debug)]
 pub struct BoxDomain<D: Domain> {
