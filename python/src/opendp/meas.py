@@ -175,11 +175,11 @@ def make_randomized_response(
     T: RuntimeTypeDescriptor = None,
     Q: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that implements randomized response on a boolean value.
+    """Make a Measurement that implements randomized response on a categorical value.
     
     :param categories: Set of valid outcomes
     :type categories: Any
-    :param prob: Probability of returning the correct answer. Must be in [0.5, 1)
+    :param prob: Probability of returning the correct answer. Must be in [1/|categories|, 1)
     :param constant_time: Set to true to enable constant time
     :type constant_time: bool
     :param T: Data type of a category.

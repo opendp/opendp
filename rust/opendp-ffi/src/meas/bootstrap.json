@@ -151,7 +151,7 @@
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_randomized_response": {
-        "description": "Make a Measurement that implements randomized response on a boolean value.",
+        "description": "Make a Measurement that implements randomized response on a categorical value.",
         "features": ["contrib"],
         "args": [
             {
@@ -167,7 +167,7 @@
                 "name": "prob",
                 "c_type": "void *",
                 "rust_type": "Q",
-                "description": "Probability of returning the correct answer. Must be in [0.5, 1)"
+                "description": "Probability of returning the correct answer. Must be in [1/|categories|, 1)"
             },
             {
                 "name": "constant_time",

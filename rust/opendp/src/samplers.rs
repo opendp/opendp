@@ -52,6 +52,7 @@ impl ThreadRandGen for GeneratorOpenSSL {
     }
 }
 
+// SAMPLERS
 pub trait SampleStandardBernoulli: Sized {
     fn sample_standard_bernoulli() -> Fallible<Self>;
 }
@@ -63,7 +64,6 @@ impl SampleStandardBernoulli for bool {
     }
 }
 
-// SAMPLERS
 pub trait SampleBernoulli<T>: Sized {
     /// Sample a single bit with arbitrary probability of success
     ///
