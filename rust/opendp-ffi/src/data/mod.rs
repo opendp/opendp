@@ -107,7 +107,8 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
                 dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
             } else {fallible!(FFI, "unrecognized generic {:?}", name)}
         }
-        _ => dispatch!(raw_to_plain, [(T, @primitives)], (raw))
+        // This list is explicit because it allows us to avoid including u32 in the @primitives
+        _ => dispatch!(raw_to_plain, [(T, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (raw))
     }.into()
 }
 
