@@ -167,7 +167,7 @@
                 "name": "prob",
                 "c_type": "void *",
                 "rust_type": "Q",
-                "description": "Probability of returning the correct answer. Must be in [1/|categories|, 1)"
+                "description": "Probability of returning the correct answer. Must be in [1/num_categories, 1)"
             },
             {
                 "name": "constant_time",

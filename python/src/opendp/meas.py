@@ -179,7 +179,7 @@ def make_randomized_response(
     
     :param categories: Set of valid outcomes
     :type categories: Any
-    :param prob: Probability of returning the correct answer. Must be in [1/|categories|, 1)
+    :param prob: Probability of returning the correct answer. Must be in [1/num_categories, 1)
     :param constant_time: Set to true to enable constant time
     :type constant_time: bool
     :param T: Data type of a category.
