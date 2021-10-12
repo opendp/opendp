@@ -706,7 +706,7 @@ def make_drop_null(
 ) -> Transformation:
     """Make a Transformation that drops null values.
     
-    :param DA: domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
+    :param DA: atomic domain of input data that contains nulls. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
     :type DA: RuntimeTypeDescriptor
     :return: A drop_null step.
     :rtype: Transformation

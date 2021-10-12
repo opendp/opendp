@@ -11,7 +11,9 @@ use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 use statrs::function::erf;
 
 use crate::error::Fallible;
-use crate::traits::TotalOrd;
+#[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
+use rand::Rng;
+use crate::traits::{TotalOrd, FloatBits};
 
 #[cfg(feature="use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
@@ -50,11 +52,19 @@ impl ThreadRandGen for GeneratorOpenSSL {
     }
 }
 
-
 // SAMPLERS
-pub trait SampleBernoulli: Sized {
+pub trait SampleStandardBernoulli: Sized {
     fn sample_standard_bernoulli() -> Fallible<Self>;
+}
+impl SampleStandardBernoulli for bool {
+    fn sample_standard_bernoulli() -> Fallible<bool> {
+        let mut buffer = [0u8; 1];
+        fill_bytes(&mut buffer)?;
+        Ok(buffer[0] & 1 == 1)
+    }
+}
 
+pub trait SampleBernoulli<T>: Sized {
     /// Sample a single bit with arbitrary probability of success
     ///
     /// Uses only an unbiased source of coin flips.
@@ -90,46 +100,40 @@ pub trait SampleBernoulli: Sized {
     /// # use opendp::error::ExplainUnwrap;
     /// # n.unwrap_test();
     /// ```
-    fn sample_bernoulli(prob: f64, constant_time: bool) -> Fallible<Self>;
+    fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self>;
 }
 
-impl SampleBernoulli for bool {
-    fn sample_standard_bernoulli() -> Fallible<Self> {
-        let mut buffer = [0u8; 1];
-        fill_bytes(&mut buffer)?;
-        Ok(buffer[0] & 1 == 1)
-    }
+impl<T: Copy + One + Zero + PartialOrd + SampleExponent> SampleBernoulli<T> for bool
+    where T::Bits: PartialOrd {
 
-    fn sample_bernoulli(prob: f64, constant_time: bool) -> Fallible<Self> {
+    fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
-        if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
-
-        // decompose probability into mantissa and exponent integers to quickly identify the value in the first_heads_index
-        let (_sign, exponent, mantissa) = prob.decompose_raw();
+        if !(T::zero()..=T::one()).contains(&prob) {
+            return fallible!(FailedFunction, "probability is not within [0, 1]")
+        }
 
         // repeatedly flip fair coin (up to 1023 times) and identify index (0-based) of first heads
-        let first_heads_index = sample_i10_geometric(constant_time)?;
+        let first_heads_index = T::sample_exponent(constant_time)?;
 
         // if prob == 1., return after retrieving censored_specific_geom, to protect constant time
-        if exponent == 1023 { return Ok(true) }
+        // if prob == 1., then exponent is T::EXPONENT_PROB and mantissa is zero
+        if prob == T::one() { return Ok(true) }
 
         // number of leading zeros in binary representation of prob
         //    cast is non-saturating because exponent only uses first 11 bits
-        //    exponent is bounded within [0, 1022] by check for valid probability
-        let num_leading_zeros = 1022_i16 - exponent as i16;
+        //    exponent is bounded in [0, EXPONENT_PROB] by check for valid probability and one check
+        let num_leading_zeros = T::EXPONENT_PROB - prob.exponent();
 
-        // 0 is the most significant/leftmost implicit bit in the mantissa/fraction/significand
-        // 52 is the least significant/rightmost
-        Ok(match first_heads_index - num_leading_zeros {
+        Ok(match first_heads_index {
             // index into the leading zeros of the binary representation
-            i if i < 0 => false,
+            i if i < num_leading_zeros => false,
             // bit index 0 is implicitly set in ieee-754 when the exponent is nonzero
-            i if i == 0 => exponent != 0,
+            i if i == num_leading_zeros => prob.exponent() != T::Bits::zero(),
             // all other digits out-of-bounds are not float-approximated/are-implicitly-zero
-            i if i > 52 => false,
-            // retrieve the bit at `i` slots shifted from the left
-            i => mantissa & (1_u64 << (52 - i as usize)) != 0
+            i if i > num_leading_zeros + T::MANTISSA_BITS => false,
+            // retrieve the bit from the mantissa at `i` slots shifted from the left
+            i => prob.to_bits() & (T::Bits::one() << (T::MANTISSA_BITS + num_leading_zeros - i)) != T::Bits::zero()
         })
     }
 }
@@ -188,7 +192,7 @@ impl SampleUniform for f64 {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
 
         // A saturated mantissa with implicit bit is ~2
-        let exponent: i16 = -(1 + sample_i10_geometric(constant_time)?);
+        let exponent: i16 = -(1 + f64::sample_exponent(constant_time)? as i16);
 
         let mantissa: u64 = {
             let mut mantissa_buffer = [0u8; 8];
@@ -212,43 +216,59 @@ impl SampleUniform for f32 {
     }
 }
 
-/// Return sample from a censored Geometric distribution with parameter p=0.5 without calling to sample_bit_prob.
+/// Return sample from a Geometric distribution with parameter p=0.5.
 ///
-/// The algorithm generates 1023 bits uniformly at random and returns the
-/// index of the first bit with value 1. If all 1023 bits are 0, then
-/// the algorithm acts as if the last bit was a 1 and returns 1022.
+/// The algorithm generates B * 8 bits at random and returns
+/// - Some(index of the first set bit)
+/// - None (if all bits are 0)
 ///
-/// This is a less general version of the sample_geometric function.
-/// The major difference is that this function does not
-/// call sample_geometric itself (whereas sample_geometric does), so having this more specialized
-/// version allows us to avoid an infinite dependence loop.
-fn sample_i10_geometric(constant_time: bool) -> Fallible<i16> {
+/// This is a lower-level version of the sample_geometric trait
+fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Option<usize>> {
     Ok(if constant_time {
-        let mut buffer = [0_u8; 128];
+        let mut buffer = [0_u8; B];
         fill_bytes(&mut buffer)?;
-
-        cmp::min(buffer.iter().enumerate()
-                     // ignore samples that contain no events
-                     .filter(|(_, &sample)| sample > 0)
-                     // compute the index of the smallest event in the batch
-                     .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
-                     // retrieve the smallest index
-                     .min()
-                     // return 1022 if no events occurred (slight dp violation w.p. ~2^-52)
-                     .unwrap_or(1022) as i16, 1022)
+        buffer.iter().enumerate()
+            // ignore samples that contain no events
+            .filter(|(_, &sample)| sample > 0)
+            // compute the index of the smallest event in the batch
+            .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
+            // retrieve the smallest index
+            .min()
 
     } else {
-        // retrieve up to 128 bytes, each containing 8 trials
-        for i in 0..128 {
+        // retrieve up to B bytes, each containing 8 trials
+        for i in 0..B {
             let mut buffer = vec![0_u8; 1];
             fill_bytes(&mut buffer)?;
 
             if buffer[0] > 0 {
-                return Ok(cmp::min(i * 8 + buffer[0].leading_zeros() as i16, 1022))
+                return Ok(Some(i * 8 + buffer[0].leading_zeros() as usize))
             }
         }
-        1022
+        None
     })
+}
+
+pub trait SampleExponent: FloatBits {
+    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits>;
+}
+impl SampleExponent for f64 {
+    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
+        // return index of the first true bit in a randomly sampled 128 byte buffer
+        // return 1022 if no events occurred because 1023 is specially reserved for inf, -inf, NaN
+        //     (incurs a slight violation of DP)
+        let sample = sample_geometric_buffer::<128>(constant_time)?.unwrap_or(1022);
+        Ok(cmp::min(sample, 1022) as Self::Bits)
+    }
+}
+impl SampleExponent for f32 {
+    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
+        // return index of the first true bit in a randomly sampled 16 byte buffer
+        // return 126 if no events occurred because 127 is specially reserved for inf, -inf, NaN
+        //     (incurs a slight violation of DP)
+        let sample = sample_geometric_buffer::<16>(constant_time)?.unwrap_or(126);
+        Ok(cmp::min(sample, 126) as Self::Bits)
+    }
 }
 
 
@@ -366,7 +386,7 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
             Some(upper - lower - T::one())
         } else {None};
 
-        let alpha: f64 = (-scale.recip()).exp();
+        let alpha: f64 = (scale.recip()).exp().recip();
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
@@ -554,5 +574,56 @@ impl SampleGaussian for f32 {
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         let uniform_sample = f64::sample_standard_uniform(constant_time)?;
         Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
+    }
+}
+
+pub trait SampleUniformInt: Sized {
+    /// sample uniformly from [Self::MIN, Self::MAX]
+    fn sample_uniform_int() -> Fallible<Self>;
+    /// sample uniformly from [0, upper)
+    fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self>;
+}
+
+macro_rules! impl_sample_uniform_unsigned_int {
+    ($($ty:ty),+) => ($(
+        impl SampleUniformInt for $ty {
+            fn sample_uniform_int() -> Fallible<Self> {
+                let mut buffer = [0; core::mem::size_of::<Self>()];
+                fill_bytes(&mut buffer).unwrap();
+                Ok(Self::from_be_bytes(buffer))
+            }
+            fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
+                // v % upper is unbiased for any v < MAX - MAX % upper, because
+                // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
+                loop {
+                    // algorithm is only valid when sample_uniform_int is non-negative
+                    let v = Self::sample_uniform_int()?;
+                    if v <= Self::MAX - Self::MAX % upper {
+                        return Ok(v % upper)
+                    }
+                }
+            }
+        }
+    )+)
+}
+impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    #[ignore]
+    fn test_sample_uniform_int() -> Fallible<()> {
+        let mut counts = HashMap::new();
+        // this checks that the output distribution of each number is uniform
+        (0..10000).try_for_each(|_| {
+            let sample = u32::sample_uniform_int_0_u(7)?;
+            *counts.entry(sample).or_insert(0) += 1;
+            Fallible::Ok(())
+        })?;
+        println!("{:?}", counts);
+        Ok(())
     }
 }

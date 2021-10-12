@@ -86,3 +86,21 @@ def test_base_stability():
     )
     print("base stability:", meas(["CAT_A"] * 4 + ["CAT_B"] * 6))
     assert meas.check(1, (2.3, .000001))
+
+
+def test_randomized_response():
+    from opendp.meas import make_randomized_response
+    meas = make_randomized_response(categories=["A", "B", "C", "D"], prob=0.75)
+    print("randomized response:", meas("A"))
+    import math
+    assert meas.check(1, math.log(9.))
+    assert not meas.check(1, math.log(8.999))
+
+
+def test_randomized_response_bool():
+    from opendp.meas import make_randomized_response_bool
+    meas = make_randomized_response_bool(prob=0.75)
+    print("randomized response:", meas(True))
+    import math
+    assert meas.check(1, math.log(3.))
+    assert not meas.check(1, math.log(2.999))

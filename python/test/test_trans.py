@@ -27,7 +27,7 @@ def test_cast_drop_null():
 
     caster = make_cast_inherent(TIA=str, TOA=float) >> make_drop_null(DA=InherentNullDomain[AllDomain[float]])
     assert caster(["a", "2."]) == [2]
-
+    
 
 def test_cast_inherent():
     from opendp.trans import make_cast_inherent

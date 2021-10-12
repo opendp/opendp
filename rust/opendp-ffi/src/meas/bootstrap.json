@@ -126,6 +126,72 @@
             "c_type": "FfiResult<AnyMeasurement *>"
         }
     },
+    "make_randomized_response_bool": {
+        "description": "Make a Measurement that implements randomized response on a boolean value.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "prob",
+                "c_type": "void *",
+                "rust_type": "Q",
+                "description": "Probability of returning the correct answer. Must be in [0.5, 1)"
+            },
+            {
+                "name": "constant_time",
+                "c_type": "bool",
+                "default": false,
+                "description": "Set to true to enable constant time"
+            },
+            {
+                "name": "Q",
+                "description": "Data type of probability and budget.",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+    },
+    "make_randomized_response": {
+        "description": "Make a Measurement that implements randomized response on a categorical value.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["T"]
+                },
+                "description": "Set of valid outcomes"
+            },
+            {
+                "name": "prob",
+                "c_type": "void *",
+                "rust_type": "Q",
+                "description": "Probability of returning the correct answer. Must be in [1/num_categories, 1)"
+            },
+            {
+                "name": "constant_time",
+                "c_type": "bool",
+                "default": false,
+                "description": "Set to true to enable constant time"
+            },
+            {
+                "name": "T",
+                "description": "Data type of a category.",
+                "is_type": true,
+                "example": {
+                    "function": "get_first",
+                    "params": ["categories"]
+                }
+            },
+            {
+                "name": "Q",
+                "description": "Data type of probability and budget.",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+    },
     "make_base_stability": {
         "description": "Make a Measurement that implements a stability-based filtering and noising.",
         "features": ["floating-point", "contrib"],

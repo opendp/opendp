@@ -45,7 +45,6 @@ impl<T: CheckNull> Domain for AllDomain<T> {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> { Ok(!val.is_null()) }
 }
 
-
 /// A Domain that carries an underlying Domain in a Box.
 #[derive(Clone, PartialEq, Debug)]
 pub struct BoxDomain<D: Domain> {
@@ -106,14 +105,14 @@ impl<T: TotalOrd> BoundedDomain<T> {
         }
         if let Some((v_lower, v_upper)) = get(&lower).zip(get(&upper)) {
             if v_lower > v_upper {
-                return fallible!(MakeTransformation, "lower bound may not be greater than upper bound")
+                return fallible!(MakeDomain, "lower bound may not be greater than upper bound")
             }
             if v_lower == v_upper {
                 match (&lower, &upper) {
                     (Bound::Included(_l), Bound::Excluded(_u)) =>
-                        return fallible!(MakeTransformation, "upper bound excludes inclusive lower bound"),
+                        return fallible!(MakeDomain, "upper bound excludes inclusive lower bound"),
                     (Bound::Excluded(_l), Bound::Included(_u)) =>
-                        return fallible!(MakeTransformation, "lower bound excludes inclusive upper bound"),
+                        return fallible!(MakeDomain, "lower bound excludes inclusive upper bound"),
                     _ => ()
                 }
             }

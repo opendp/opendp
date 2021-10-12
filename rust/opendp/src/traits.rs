@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::ops::{Div, Mul, Sub};
+use std::ops::{Div, Mul, Sub, Shr, Shl, BitAnd};
 
 use num::{NumCast, One, Zero};
 
@@ -507,4 +507,40 @@ impl<T1: TotalOrd, T2: TotalOrd> TotalOrd for (T1, T2) {
             Ok(cmp)
         }
     }
+}
+
+
+pub trait FloatBits: Sized {
+    type Bits: Copy + One + Zero + Eq
+    + Shr<Output=Self::Bits> + Shl<Output=Self::Bits>
+    + BitAnd<Output=Self::Bits> + Sub<Output=Self::Bits>;
+    const EXPONENT_BITS: Self::Bits;
+    const MANTISSA_BITS: Self::Bits;
+    const EXPONENT_PROB: Self::Bits;
+
+    fn sign(self) -> bool {
+        (self.to_bits() & (Self::Bits::one() << (Self::EXPONENT_BITS + Self::MANTISSA_BITS))) == Self::Bits::zero()
+    }
+    fn exponent(self) -> Self::Bits {
+        (self.to_bits() >> Self::MANTISSA_BITS) & ((Self::Bits::one() << Self::EXPONENT_BITS) - Self::Bits::one())
+    }
+    fn mantissa(self) -> Self::Bits {
+        self.to_bits() & ((Self::Bits::one() << Self::MANTISSA_BITS) - Self::Bits::one())
+    }
+    fn to_bits(self) -> Self::Bits;
+}
+
+impl FloatBits for f64 {
+    type Bits = u64;
+    const EXPONENT_BITS: u64 = 11;
+    const MANTISSA_BITS: u64 = 52;
+    const EXPONENT_PROB: u64 = 1022;
+    fn to_bits(self) -> Self::Bits {self.to_bits()}
+}
+impl FloatBits for f32 {
+    type Bits = u32;
+    const EXPONENT_BITS: u32 = 8;
+    const MANTISSA_BITS: u32 = 23;
+    const EXPONENT_PROB: u32 = 126;
+    fn to_bits(self) -> Self::Bits {self.to_bits()}
 }
