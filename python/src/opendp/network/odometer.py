@@ -9,7 +9,7 @@ TODO: after adjusting to work with DDP, need to distribute epsilon among each cl
 """
 import copy
 import math
-from functools import partial as functools_partial
+from functools import partial as functools_partial, lru_cache
 from functools import wraps
 from typing import List, Optional, Union, Dict
 
@@ -369,6 +369,7 @@ class PrivacyOdometer(object):
                 hook = param.register_hook(partial(hook_param_grad, param, module, instance_grads[param]))
                 model.autograd_hooks.append(hook)
 
+    @lru_cache
     def _find_suitable_step_measurement(self, reduction, clipping_norm, size):
         mechanism_name = 'gaussian' if self.step_delta else 'laplace'
         # find the tightest scale between 0. and 10k that satisfies the stepwise budget
