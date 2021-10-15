@@ -48,9 +48,7 @@ class StochasticPrivacyOdometer(BasePrivacyOdometer):
         def hook_param_grad(measurement, grad):
             """
             Privatization hook for parameters
-            :param param_: the parameter being hooked
-            :param module_: the module of the parameter being hooked
-            :param get_instance_grad: function that returns a generator containing instance grad chunks
+            :param measurement: tool used to privatize the gradient
             :param grad: non-private gradient. Only useful for debugging grad correctness.
             :return: private grad
             """
@@ -63,5 +61,6 @@ class StochasticPrivacyOdometer(BasePrivacyOdometer):
         for module in self._filter_modules(model, whitelist):
             for param in module.parameters():
                 if param.requires_grad:
-                    measurement = self._find_suitable_step_measurement(prop=param.numel() / num_params)
+                    measurement = self._find_suitable_step_measurement(
+                        param.numel() / num_params, self.reduction, self.clipping_norm, 1)
                     model.autograd_hooks.append(param.register_hook(partial(hook_param_grad, measurement)))
