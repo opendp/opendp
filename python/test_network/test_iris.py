@@ -4,7 +4,8 @@ import torch.nn.functional as F
 from sklearn.datasets import load_iris
 from torch.utils.data import random_split, DataLoader, TensorDataset
 
-from opendp.network.odometer import PrivacyOdometer, assert_release_binary
+from opendp.network.odometer import assert_release_binary
+from opendp.network.odometer_reconstruction import ReconstructionPrivacyOdometer
 assert_release_binary()
 
 
@@ -75,7 +76,7 @@ def test_iris():
 
     print("Epoch | Accuracy | Loss")
 
-    odometer = PrivacyOdometer(
+    odometer = ReconstructionPrivacyOdometer(
         step_epsilon=1.0,
         clipping_norm=1.0, reduction='mean')
     private_model = odometer.make_tracked_view(model)

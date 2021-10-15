@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.tensor import Tensor
 
-from opendp.network.layers.base import InstanceGrad
+from opendp.network.odometer_reconstruction import InstanceGrad
 
 
 class DPCatBias(nn.Module, InstanceGrad):

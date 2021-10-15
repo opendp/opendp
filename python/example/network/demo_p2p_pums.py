@@ -9,7 +9,9 @@ from torch.utils.data import DataLoader, TensorDataset
 from utilities import printf, ModelCoordinator, main
 from pums_downloader import download_pums_data, get_pums_data_path, datasets
 
-from opendp.network.odometer import PrivacyOdometer, assert_release_binary
+from opendp.network.odometer import assert_release_binary
+from opendp.network.odometer_reconstruction import ReconstructionPrivacyOdometer
+
 
 assert_release_binary()
 
@@ -160,7 +162,7 @@ def run_pums_worker(rank, size, private_step_limit=None, federation_scheme='shuf
 
     model = PumsModule(len(problem['predictors']), 2)
 
-    odometer = PrivacyOdometer(step_epsilon=.1)
+    odometer = ReconstructionPrivacyOdometer(step_epsilon=.1)
     if not public:
         odometer.track_(model)
     coordinator = ModelCoordinator(model, rank, size, private_step_limit, federation_scheme, end_event=end_event)

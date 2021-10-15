@@ -1,28 +1,19 @@
-import math
 from typing import List, Optional
 
 import torch
 import torch.nn as nn
-from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
+
+from opendp.network.odometer import BasePrivacyOdometer
+from opendp.network.odometer_reconstruction import partial
+from opendp.typing import DatasetMetric, SymmetricDistance
 from opendp._convert import set_return_mode
 from opendp.mod import enable_features
 
-import opendp.trans as trans
-import opendp.meas as meas
-from opendp.mod import Measurement
-
-from functools import partial as functools_partial
 set_return_mode('torch')
 enable_features("contrib", "floating-point")
 
-# hack for pytorch 1.4
-def partial(func, *args, **keywords):
-    result = functools_partial(func, *args, **keywords)
-    result.__name__ = func.__name__
-    return result
 
-
-class StochasticPrivacyOdometer(object):
+class StochasticPrivacyOdometer(BasePrivacyOdometer):
     def __init__(
             self,
             step_epsilon, step_delta=0.,
@@ -37,20 +28,7 @@ class StochasticPrivacyOdometer(object):
         :param MI: HammingDistance or SymmetricDistance
         """
 
-        self.dataset_distance = dataset_distance
-        MI = RuntimeType.parse(MI)
-        if not isinstance(MI, DatasetMetric):
-            raise ValueError(f"MI must be a dataset metric")
-        self.MI = MI
-
-        self.step_epsilon = step_epsilon
-        self.step_delta = step_delta
-
-        # for budget tracking
-        self._epochs = []
-        self.steps = 0
-        self.clipping_norm = clipping_norm
-
+        super().__init__(step_epsilon, step_delta, clipping_norm, "sum", dataset_distance, MI)
         self.is_tracking = False
 
     def track_(
@@ -77,7 +55,7 @@ class StochasticPrivacyOdometer(object):
             :return: private grad
             """
             grad = grad.clone()
-            self.clip_grad_(grad)
+            grad /= torch.clamp(torch.norm(grad, p=2) / self.clipping_norm, min=1)
             return self._noise_grad(measurement, grad)
 
         model.autograd_hooks = []
@@ -85,130 +63,5 @@ class StochasticPrivacyOdometer(object):
         for module in self._filter_modules(model, whitelist):
             for param in module.parameters():
                 if param.requires_grad:
-                    measurement = self._find_suitable_step_measure(prop=param.numel() / num_params)
+                    measurement = self._find_suitable_step_measurement(prop=param.numel() / num_params)
                     model.autograd_hooks.append(param.register_hook(partial(hook_param_grad, measurement)))
-
-    def _find_suitable_step_measure(self, prop):
-        mechanism_name = 'gaussian' if self.step_delta else 'laplace'
-        # find the tightest scale between 0. and 10k that satisfies the stepwise budget
-        scale = _binary_search(lambda s: self._check_noise_scale(prop, mechanism_name, s),
-                               0., 10_000.)
-        return self._make_base_mechanism_vec(mechanism_name, scale)
-
-    def _check_noise_scale(self, prop, mechanism_name, scale):
-        aggregator = trans.make_bounded_sum_n(
-            lower=-self.clipping_norm, upper=self.clipping_norm, n=1)
-
-        chained = aggregator >> self._make_base_mechanism(mechanism_name, scale)
-
-        budget = (prop * self.step_epsilon, prop * self.step_delta) if self.step_delta else prop * self.step_epsilon
-        return chained.check(self.dataset_distance, budget)
-
-    @staticmethod
-    def _make_base_mechanism(mechanism_name, scale):
-        if mechanism_name == 'laplace':
-            return meas.make_base_laplace(scale)
-        if mechanism_name == 'gaussian':
-            return meas.make_base_gaussian(scale)
-
-    @staticmethod
-    def _make_base_mechanism_vec(mechanism_name, scale):
-        if mechanism_name == 'laplace':
-            return meas.make_base_vector_laplace(scale, T='f32')
-        if mechanism_name == 'gaussian':
-            return meas.make_base_vector_gaussian(scale, T='f32')
-
-    @staticmethod
-    def _unhook(model):
-        """
-        Remove hooks added to `model`. Does not reverse module replacement.
-        """
-
-        # This issue indicates that hooks are not actually removed if the forward pass is run
-        # https://github.com/pytorch/pytorch/issues/25723
-        # Based on testing, the hooks are actually removed
-
-        if not hasattr(model, 'autograd_hooks'):
-            print("Warning, asked to remove hooks, but no hooks found")
-        else:
-            for handle in model.autograd_hooks:
-                handle.remove()
-            del model.autograd_hooks
-
-    def clip_grad_(self, grad_instance):
-        grad_instance /= torch.clamp(torch.norm(grad_instance, p=2) / self.clipping_norm, min=1)
-
-    @staticmethod
-    def _noise_grad(measurement: Measurement, grad):
-        device = grad.device
-        if device != 'cpu':
-            grad = grad.to('cpu')
-
-        print('entering noising')
-        grad = measurement(grad.flatten()).reshape(grad.shape)
-        print('exiting noising')
-
-        if device != 'cpu':
-            grad = grad.to(device)
-        return grad
-
-    @staticmethod
-    def _filter_modules(model, whitelist=None) -> List[nn.Module]:
-        def has_params(module):
-            return next(module.parameters(recurse=False), None) is not None
-        return [m for m in whitelist or model.modules() if has_params(m)]
-
-    def increment_epoch(self):
-        if self.steps:
-            self._epochs.append(self.steps)
-        self.steps = 0
-
-    def compute_usage(self, suggested_delta=None):
-        """
-        Compute epsilon/delta privacy usage for all tracked epochs
-        :param suggested_delta: delta to
-        :return:
-        """
-        self.increment_epoch()
-
-        epsilon = 0
-        delta = 0
-
-        for batch_len in self._epochs:
-            if suggested_delta is None:
-                batch_delta = 2 * math.exp(-batch_len / 16 * math.exp(-self.step_epsilon)) + 1E-8
-            else:
-                batch_delta = suggested_delta / len(self._epochs)
-
-            def check_epsilon(batch_epsilon):
-                return meas.make_shuffle_amplification(
-                    step_epsilon=self.step_epsilon,
-                    step_delta=self.step_delta or 0.,
-                    num_steps=batch_len,
-                    MI=self.MI
-                ).check(self.dataset_distance, (batch_epsilon, batch_delta))
-
-            epsilon += _binary_search(check_epsilon, 0., 10_000.)
-            delta += batch_delta
-
-        return epsilon, delta
-
-
-def _binary_search(predicate, start, end):
-    if start > end:
-        raise ValueError
-
-    if not predicate(end):
-        raise ValueError("no possible value in range")
-
-    while True:
-        mid = (start + end) / 2
-        passes = predicate(mid)
-
-        if passes and end - start < .00001:
-            return mid
-
-        if passes:
-            end = mid
-        else:
-            start = mid

@@ -19,7 +19,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #    init_method=init_method,
 #    world_size=world_size)
 # For TcpStore, same way as on Linux.
-from opendp.network.odometer import PrivacyOdometer
+from opendp.network.odometer_reconstruction import ReconstructionPrivacyOdometer
 
 
 def torch_mpc_setup(rank, world_size):
@@ -55,7 +55,7 @@ def demo_basic(rank, world_size):
     model = ToyModel()  # .to(rank)
     model = DDP(model)  # , device_ids=[rank]
 
-    odometer = PrivacyOdometer(step_epsilon=.1)
+    odometer = ReconstructionPrivacyOdometer(step_epsilon=.1)
     # fill grads with `rank`
     odometer._set_fill(constant=rank)
     model = odometer.make_tracked_view(model)

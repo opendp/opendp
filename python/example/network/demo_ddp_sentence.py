@@ -7,7 +7,8 @@ from sentence_module import SentenceModule
 from utilities import main, printf
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from opendp.network.odometer import PrivacyOdometer, assert_release_binary
+from opendp.network.odometer import assert_release_binary
+from opendp.network.odometer_reconstruction import ReconstructionPrivacyOdometer
 
 
 assert_release_binary()

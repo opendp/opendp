@@ -6,7 +6,8 @@ import torch
 from sentence_module import SentenceModule
 from utilities import ModelCoordinator, main, printf
 
-from opendp.network.odometer import PrivacyOdometer, assert_release_binary
+from opendp.network.odometer import assert_release_binary
+from opendp.network.odometer_reconstruction import ReconstructionPrivacyOdometer
 
 assert_release_binary()
 
@@ -59,7 +60,7 @@ def run_lstm_worker(
         tagset_size=len(tag_to_idx),
         bahdanau=False)
 
-    odometer = PrivacyOdometer(step_epsilon=1.0, reduction='sum')
+    odometer = ReconstructionPrivacyOdometer(step_epsilon=1.0, reduction='sum')
     odometer.track_(model)
     coordinator = ModelCoordinator(model, rank, size, federation_scheme, end_event=end_event)
 
