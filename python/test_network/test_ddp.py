@@ -1,13 +1,11 @@
 
 import os
-import sys
-import tempfile
+
 import torch
 import torch.distributed as dist
+import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim as optim
-import torch.multiprocessing as mp
-
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 # On Windows platform, the torch.distributed package only
@@ -24,7 +22,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from opendp.network.odometer import PrivacyOdometer
 
 
-def setup(rank, world_size):
+def torch_mpc_setup(rank, world_size):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '12355'
     os.environ['GLOO_SOCKET_IFNAME'] = 'lo0'
@@ -50,7 +48,7 @@ class ToyModel(nn.Module):
 
 def demo_basic(rank, world_size):
     print(f"Running basic DDP example on rank {rank}.")
-    setup(rank, world_size)
+    torch_mpc_setup(rank, world_size)
 
     torch.manual_seed(0)
     # create model and move it to GPU with id rank
@@ -77,10 +75,14 @@ def demo_basic(rank, world_size):
     cleanup()
 
 
-if __name__ == "__main__":
+def test_multi():
     for world_size in range(3, 6):
         mp.spawn(demo_basic,
                  args=(world_size,),
                  nprocs=world_size,
                  join=True)
         print(f"DDP synchronized tensor grads successfully with {world_size} workers")
+
+
+if __name__ == "__main__":
+    test_multi()

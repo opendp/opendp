@@ -20,20 +20,35 @@ from torch.nn.parameter import Parameter
 
 import opendp.trans as trans
 import opendp.meas as meas
-from opendp.mod import binary_search
+from opendp.mod import binary_search, enable_features
 
 from opendp.network.layers.bahdanau import DPBahdanauAttention
 from opendp.network.layers.base import InstanceGrad
 from opendp.network.layers.lstm import DPLSTM, DPLSTMCell
 from opendp._convert import set_return_mode
-from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
+from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance, AllDomain, VectorDomain
 
 set_return_mode('torch')
+enable_features("contrib", "floating-point")
 
 
-# hack for pytorch 1.4
-def partial(func, *args, **keywords):
-    result = functools_partial(func, *args, **keywords)
+# hack for pytorch 1.4, and explicitly catch, and show errors so they don't get swallowed
+def partial(func, *args, **kwargs):
+    def func_warn(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            import traceback
+            traceback.print_exc()
+
+    # def func_debug(*args, **kwargs):
+    #     print("invoking", func.__name__)
+    #     result = func_warn(*args, **kwargs)
+    #     print("done invoking", func.__name__)
+    #     return result
+    # result = functools_partial(func_debug, *args, **kwargs)
+
+    result = functools_partial(func_warn, *args, **kwargs)
     result.__name__ = func.__name__
     return result
 
@@ -48,6 +63,16 @@ REPLACEMENT_MODULES = {
 
 # see https://github.com/pytorch/pytorch/issues/56380
 FULL_BACKWARD_HOOK = False
+
+
+def assert_release_binary():
+    import os
+    assert os.environ.get('OPENDP_TEST_RELEASE', "false") != "false", \
+        "32-bit floats from torch can only be privatized by release-mode OpenDP binaries.\n" \
+        "The relevant cargo command is:\n" \
+        "    cargo build --release --no-default-features\n" \
+        "Then enable release binaries in the python bindings before you start the script:\n" \
+        "    export OPENDP_TEST_RELEASE=1"
 
 
 class PrivacyOdometer(object):
@@ -185,10 +210,6 @@ class PrivacyOdometer(object):
 
         # restructure the copied network architecture in-place, without breaking references to original parameters
         replace_modules(model)
-
-        # overwrite forward on the first module to set requires_grad=True
-        if FULL_BACKWARD_HOOK:
-            self._patch_first_hook(model)
 
         # 2. DEFINE HOOKS
         def hook_module_forward(module_: nn.Module, input_: List[torch.Tensor], _output):
@@ -348,35 +369,39 @@ class PrivacyOdometer(object):
                 hook = param.register_hook(partial(hook_param_grad, param, module, instance_grads[param]))
                 model.autograd_hooks.append(hook)
 
-    def _find_suitable_step_measure(self, reduction, clipping_norm, size):
+    def _find_suitable_step_measurement(self, reduction, clipping_norm, size):
         mechanism_name = 'gaussian' if self.step_delta else 'laplace'
         # find the tightest scale between 0. and 10k that satisfies the stepwise budget
         scale = binary_search(lambda s: self._check_noise_scale(reduction, clipping_norm, size, mechanism_name, s),
-                              (0., 10_000.))
-        return self._make_base_mechanism(mechanism_name, scale)
+                              (0., 10_000.), tolerance=1.0e-4)
+
+        return self._make_base_mechanism(mechanism_name, scale, vectorize=True)
 
     def _check_noise_scale(self, reduction, clipping_norm, size, mechanism_name, scale):
 
         if reduction == 'mean':
-            aggregator = trans.make_sized_bounded_mean(
-                size, (-clipping_norm, clipping_norm))
+            constructor = trans.make_sized_bounded_mean
         elif reduction == 'sum':
-            aggregator = trans.make_sized_bounded_sum(
-                size, (-clipping_norm, clipping_norm))
+            constructor = trans.make_sized_bounded_sum
         else:
             raise ValueError(f'unrecognized reduction: {reduction}. Must be "mean" or "sum"')
 
-        chained = aggregator >> self._make_base_mechanism(mechanism_name, scale)
+        aggregator = constructor(size, (-clipping_norm, clipping_norm), T="f32")
+        chained = aggregator >> self._make_base_mechanism(mechanism_name, scale, vectorize=False)
 
         budget = (self.step_epsilon, self.step_delta) if self.step_delta else self.step_epsilon
         return chained.check(self.dataset_distance, budget)
 
     @staticmethod
-    def _make_base_mechanism(mechanism_name, scale):
+    def _make_base_mechanism(mechanism_name: str, scale: float, vectorize: bool):
+        domain = AllDomain["f32"]
+        if vectorize:
+            domain = VectorDomain[domain]
+
         if mechanism_name == 'laplace':
-            return meas.make_base_laplace(scale)
+            return meas.make_base_laplace(scale, D=domain)
         if mechanism_name == 'gaussian':
-            return meas.make_base_gaussian(scale)
+            return meas.make_base_gaussian(scale, D=domain)
 
     @staticmethod
     def _make_base_mechanism_vec(mechanism_name, scale):
@@ -467,7 +492,7 @@ class PrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        measurement = self._find_suitable_step_measure(reduction, clipping_norm, n)
+        measurement = self._find_suitable_step_measurement(reduction, clipping_norm, n)
         grad = measurement(grad.flatten()).reshape(grad.shape)
 
         # fill gradient with a constant, if a _fill value is set. Useful for validating DDP

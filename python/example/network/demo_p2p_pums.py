@@ -1,22 +1,21 @@
-import json
 import os
-import sys
-import time
-import traceback
-from multiprocessing import Queue, Event
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import torch
-import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.multiprocessing import Process
 from torch.utils.data import DataLoader, TensorDataset
 
-from opendp.network.odometer import PrivacyOdometer
-from pums.coordinator import ModelCoordinator
-from pums.download import get_pums_data_path, download_pums_data, datasets
+from utilities import printf, ModelCoordinator, main
+from pums_downloader import download_pums_data, get_pums_data_path, datasets
+
+from opendp.network.odometer import PrivacyOdometer, assert_release_binary
+
+assert_release_binary()
+
+# distributed learning implemented via sequential point-to-point communication
+# this is too slow to be practically useful
+
 
 TRAIN_PUBLIC = False
 
@@ -41,20 +40,6 @@ problem = {
         'target': 'HINS4'
     }
 }[ACTIVE_PROBLEM]
-
-debug = True
-
-
-def printf(x, force=False):
-    """
-    overkill flushing
-    :param x:
-    :param force:
-    :return:
-    """
-    if debug or force:
-        print(x, flush=True)
-        sys.stdout.flush()
 
 
 def load_pums(dataset):
@@ -201,80 +186,15 @@ def run_pums_worker(rank, size, private_step_limit=None, federation_scheme='shuf
         queue.put((tuple(datasets[rank].values()), odometer.compute_usage(), history))
 
 
-def init_process(rank, size, fn, kwargs, backend='gloo'):
-    """
-    Initialize the distributed environment.
-    """
-    # use this command to kill processes:
-    # lsof -t -i tcp:29500 | xargs kill
-    os.environ['MASTER_ADDR'] = '127.0.0.1'
-    os.environ['MASTER_PORT'] = '29500'
-    dist.init_process_group(backend, rank=rank, world_size=size)
-
-    try:
-        fn(rank, size, **kwargs)
-    except Exception:
-        if not kwargs['end_event'].is_set():
-            traceback.print_exc()
-        kwargs['end_event'].set()
-
-
-def main(worker, **kwargs):
-    """
-    Example method demonstrating ring structure running on
-    multiple processes. __main__ entrypoint.
-    :return:
-    """
-    size = len(datasets)
-    processes = []
-    queue = Queue()
-
-    end_event = Event()
-
-    for rank in range(size):
-        p = Process(target=init_process, args=(rank, size, worker, {
-            'queue': queue, 'end_event': end_event,
-            **kwargs
-        }))
-        p.start()
-        processes.append(p)
-
-    end_event.wait()
-    # wait for history to be queued
-    time.sleep(1)
-
-    for p in processes:
-        p.terminate()
-
-    history = []
-    usage = {}
-    while not queue.empty():
-        rank, (epsilon, delta), batch_history = queue.get()
-        usage[str(rank)] = {'epsilon': epsilon, 'delta': delta}
-        history.extend(batch_history)
-
-    print(json.dumps(usage, indent=4))
-
-    if history:
-        import pandas
-        history = pandas.DataFrame.from_records(list(sorted(history, key=lambda x: x['step'])))
-        plt.plot(list(range(len(history))), history['loss'], color='b', alpha=0.5)
-        plt.scatter(x=list(range(len(history))), y=history['loss'], c=history['rank'])
-        plt.title("Log-Loss of Federated DPSGD")
-        plt.xlabel("Step")
-        plt.ylabel("Log-Loss")
-        plt.legend(loc='upper right')
-        plt.show()
-
-
 if __name__ == "__main__":
     # Model checkpoints will be saved here
-    model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'model_checkpoints')
+    model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'model_checkpoints', 'p2p_pums')
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
     print("Rank | Epoch | Accuracy | Loss")
     main(worker=run_pums_worker,
+         n_workers=len(datasets),
          private_step_limit=40,
          model_filepath=os.path.join(model_path, 'model.pt'),
          federation_scheme='shuffle')

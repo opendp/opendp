@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance
 from opendp._convert import set_return_mode
+from opendp.mod import enable_features
 
 import opendp.trans as trans
 import opendp.meas as meas
@@ -12,7 +13,7 @@ from opendp.mod import Measurement
 
 from functools import partial as functools_partial
 set_return_mode('torch')
-
+enable_features("contrib", "floating-point")
 
 # hack for pytorch 1.4
 def partial(func, *args, **keywords):
@@ -143,7 +144,9 @@ class StochasticPrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
+        print('entering noising')
         grad = measurement(grad.flatten()).reshape(grad.shape)
+        print('exiting noising')
 
         if device != 'cpu':
             grad = grad.to(device)

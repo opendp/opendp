@@ -4,7 +4,6 @@ from opendp._lib import *
 
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
 from opendp.typing import RuntimeType
-import numpy as np
 
 ATOM_MAP = {
     'f32': ctypes.c_float,
@@ -214,8 +213,6 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
 def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     assert type_name[:4] == 'Vec<'
     inner_type_name = type_name[4:-1]
-    if not isinstance(val, list):
-        raise OpenDPException(f"Cannot cast a non-list type to a vector")
 
     if inner_type_name == "String":
         def str_to_slice(val):

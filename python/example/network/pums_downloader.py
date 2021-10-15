@@ -4,6 +4,8 @@ import requests
 import os
 import tempfile
 
+# this script downloads additional pums data files
+
 # legend
 # https://www2.census.gov/programs-surveys/acs/tech_docs/pums/data_dict/PUMS_Data_Dictionary_2019.txt
 
@@ -28,8 +30,8 @@ def download_pums_data(year, record_type, state, **_kwargs):
 
 
 def get_pums_data_dir(year, record_type, state, **_kwargs):
-    base_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-    return os.path.join(base_dir, f'PUMS_{year}_{record_type}_{state}')
+    base_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "data")
+    return os.path.join(base_dir, f'PUMS_DL_{year}_{record_type}_{state}')
 
 
 def get_pums_data_path(year, record_type, state, **_kwargs):
