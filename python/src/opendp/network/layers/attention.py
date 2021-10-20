@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Dict, Callable, Iterable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.tensor import Tensor
+from torch import Tensor
 
 from opendp.network.odometer_reconstruction import InstanceGrad
 

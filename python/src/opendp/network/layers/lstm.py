@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.rnn import apply_permutation
 from torch.nn.utils.rnn import PackedSequence
-from torch.tensor import Tensor
+from torch import Tensor
 
 
 class DPRNNBase(nn.Module):

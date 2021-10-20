@@ -19,7 +19,10 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 #    init_method=init_method,
 #    world_size=world_size)
 # For TcpStore, same way as on Linux.
+from opendp.network.odometer import assert_release_binary
 from opendp.network.odometer_reconstruction import ReconstructionPrivacyOdometer
+
+assert_release_binary()
 
 
 def torch_mpc_setup(rank, world_size):
@@ -77,6 +80,7 @@ def demo_basic(rank, world_size):
 
 def test_multi():
     for world_size in range(3, 6):
+        print(f"Trying DDP with world_size {world_size}")
         mp.spawn(demo_basic,
                  args=(world_size,),
                  nprocs=world_size,
