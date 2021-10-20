@@ -54,7 +54,7 @@ class StochasticPrivacyOdometer(BasePrivacyOdometer):
             """
             grad = grad.clone()
             grad /= torch.clamp(torch.norm(grad, p=2) / self.clipping_norm, min=1)
-            return self._noise_grad(measurement, grad)
+            return self._noise_grad(grad, measurement)
 
         model.autograd_hooks = []
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
