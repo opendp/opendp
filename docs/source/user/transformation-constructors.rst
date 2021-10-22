@@ -207,8 +207,9 @@ provide the option to choose the output metric: ``L1Distance[TOA]`` or ``L2Dista
 These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like :func:`opendp.meas.make_base_geometric` and :func:`opendp.meas.make_base_laplace`.
 If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.meas.make_base_gaussian`.
 
-The :func:`opendp.trans.make_count_by` transformation stands out;
-it is currently the only transformation that pairs with :func:`opendp.meas.make_base_stability`.
+The constructor :func:`opendp.meas.make_count_by_ptr` does a similar aggregation as :func:`opendp.trans.make_count_by_categories <make_count_by_categories>`,
+but does not need a category set (instead using the propose-test-release framework).
+It differs from `make_count_by_categories` in that it is itself a measurement; it already applies its own noise.
 
 The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
 
@@ -225,11 +226,11 @@ The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time becau
      - ``VectorDomain<AllDomain<TIA>>``
      - ``AllDomain<TO>``
    * - :func:`opendp.trans.make_count_by_categories`
-     - ``SizedDomain<VectorDomain<BoundedDomain<TIA>>>``
+     - ``VectorDomain<BoundedDomain<TIA>>``
      - ``VectorDomain<AllDomain<TOA>>``
-   * - :func:`opendp.trans.make_count_by`
-     - ``SizedDomain<VectorDomain<BoundedDomain<TIA>>>``
-     - ``SizedDomain<MapDomain<AllDomain<TIA>,AllDomain<TOA>>>``
+   * - :func:`opendp.meas.make_count_by_ptr`
+     - ``VectorDomain<BoundedDomain<TI>>``
+     - ``MapDomain<AllDomain<TI>,AllDomain<TO>>``
    * - :func:`opendp.trans.make_bounded_sum`
      - ``VectorDomain<BoundedDomain<T>>``
      - ``AllDomain<T>``
