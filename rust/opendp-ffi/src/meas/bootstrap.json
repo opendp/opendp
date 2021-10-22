@@ -192,43 +192,31 @@
         ],
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
-    "make_base_stability": {
-        "description": "Make a Measurement that implements a stability-based filtering and noising.",
+    "make_count_by_ptr": {
+        "description": "Make a Measurement that uses propose-test-release to count by an unknown set of categories.",
         "features": ["floating-point", "contrib"],
         "args": [
             {
-                "name": "size",
-                "c_type": "unsigned int",
-                "description": "Number of records in the input vector."
-            },
-            {
                 "name": "scale",
                 "c_type": "void *",
-                "rust_type": {"root": "MI", "index": 0},
+                "rust_type": "TOC",
                 "description": "Noise scale parameter."
             },
             {
                 "name": "threshold",
                 "c_type": "void *",
-                "rust_type": {"root": "MI", "index": 0},
+                "rust_type": "TOC",
                 "description": "Exclude counts that are less than this minimum value."
             },
             {
-                "name": "MI",
-                "description": "Input metric.",
-                "is_type": true,
-                "hint": "SensitivityMetric"
-            },
-            {
-                "name": "TIK",
-                "description": "Data type of input key- must be hashable/categorical.",
+                "name": "TIA",
+                "description": "Atomic type of input data- must be hashable/categorical.",
                 "is_type": true
             },
             {
-                "name": "TIC",
-                "description": "Data type of input count- must be integral.",
-                "is_type": true,
-                "default": "i32"
+                "name": "TOC",
+                "description": "Data type of output count- must be float.",
+                "is_type": true
             }
         ],
         "ret": {

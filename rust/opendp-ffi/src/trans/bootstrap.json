@@ -193,7 +193,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_count_by": {
-        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size.\nUse meas.make_base_stability to release this query.",
+        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size. \nThis transformation depends on a measurement that has not yet been implemented.",
         "features": ["contrib"],
         "args": [
             {

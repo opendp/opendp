@@ -77,15 +77,12 @@ def test_base_vector_geometric():
     assert not meas.check(1, 0.49999)
 
 
-def test_base_stability():
-    from opendp.trans import make_count_by
-    from opendp.meas import make_base_stability
-    meas = (
-        make_count_by(size=10, MO=L1Distance[float], TIA=str) >>
-        make_base_stability(size=10, scale=20., threshold=1., MI=L1Distance[float], TIK=str)
-    )
-    print("base stability:", meas(["CAT_A"] * 4 + ["CAT_B"] * 6))
-    assert meas.check(1, (2.3, .000001))
+def test_make_count_by_ptr():
+    from opendp.meas import make_count_by_ptr
+
+    meas = make_count_by_ptr(scale=2., threshold=16., TIA=str)
+    print("count_by_ptr:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
+    assert meas.check(1, (1.0, 1e-6))
 
 
 def test_randomized_response():

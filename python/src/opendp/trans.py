@@ -388,8 +388,8 @@ def make_count_by(
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
-    Use `make_resize` to establish dataset size.
-    Use meas.make_base_stability to release this query.
+    Use `make_resize` to establish dataset size. 
+    This transformation depends on a measurement that has not yet been implemented.
     
     :param size: Number of records in input data.
     :type size: int

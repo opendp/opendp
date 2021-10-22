@@ -10,7 +10,7 @@ __all__ = [
     "make_base_geometric",
     "make_randomized_response_bool",
     "make_randomized_response",
-    "make_base_stability"
+    "make_count_by_ptr"
 ]
 
 
@@ -213,27 +213,21 @@ def make_randomized_response(
     return c_to_py(unwrap(function(categories, prob, constant_time, T, Q), Measurement))
 
 
-def make_base_stability(
-    size: int,
+def make_count_by_ptr(
     scale,
     threshold,
-    MI: SensitivityMetric,
-    TIK: RuntimeTypeDescriptor,
-    TIC: RuntimeTypeDescriptor = "i32"
+    TIA: RuntimeTypeDescriptor,
+    TOC: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that implements a stability-based filtering and noising.
+    """Make a Measurement that uses propose-test-release to count by an unknown set of categories.
     
-    :param size: Number of records in the input vector.
-    :type size: int
     :param scale: Noise scale parameter.
     :param threshold: Exclude counts that are less than this minimum value.
-    :param MI: Input metric.
-    :type MI: SensitivityMetric
-    :param TIK: Data type of input key- must be hashable/categorical.
-    :type TIK: RuntimeTypeDescriptor
-    :param TIC: Data type of input count- must be integral.
-    :type TIC: RuntimeTypeDescriptor
-    :return: A base_stability step.
+    :param TIA: Atomic type of input data- must be hashable/categorical.
+    :type TIA: RuntimeTypeDescriptor
+    :param TOC: Data type of output count- must be float.
+    :type TOC: RuntimeTypeDescriptor
+    :return: A count_by_ptr step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -242,21 +236,18 @@ def make_base_stability(
     assert_features("floating-point", "contrib")
     
     # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    TIK = RuntimeType.parse(type_name=TIK)
-    TIC = RuntimeType.parse(type_name=TIC)
+    TIA = RuntimeType.parse(type_name=TIA)
+    TOC = RuntimeType.parse_or_infer(type_name=TOC, public_example=scale)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=MI.args[0])
-    threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=MI.args[0])
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    TIK = py_to_c(TIK, c_type=ctypes.c_char_p)
-    TIC = py_to_c(TIC, c_type=ctypes.c_char_p)
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TOC)
+    threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TOC)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    TOC = py_to_c(TOC, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_meas__make_base_stability
-    function.argtypes = [ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function = lib.opendp_meas__make_count_by_ptr
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, scale, threshold, MI, TIK, TIC), Measurement))
+    return c_to_py(unwrap(function(scale, threshold, TIA, TOC), Measurement))
