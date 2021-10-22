@@ -81,7 +81,7 @@ def test_make_count_by_ptr():
     from opendp.meas import make_count_by_ptr
 
     meas = make_count_by_ptr(scale=2., threshold=16., TIA=str)
-    print("base stability:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
+    print("count_by_ptr:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
     assert meas.check(1, (1.0, 1e-6))
 
 

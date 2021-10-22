@@ -389,7 +389,7 @@ def make_count_by(
     This assumes that the category set is unknown. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_resize` to establish dataset size. 
-    This transformation depends on a measurement that has not yet been released.
+    This transformation depends on a measurement that has not yet been implemented.
     
     :param size: Number of records in input data.
     :type size: int
