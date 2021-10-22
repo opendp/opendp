@@ -2,11 +2,11 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::hash::Hash;
 
-use num::{Integer, One, Zero, Float};
+use num::{Integer, One, Zero};
 
 use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation};
-use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
-use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
+use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance, L1Distance};
+use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
 
@@ -90,30 +90,15 @@ pub fn make_count_by_categories<MO, TI, TO>(
         StabilityRelation::new_from_constant(MO::get_stability_constant())))
 }
 
-pub trait CountByConstant<QO> {
-    fn get_stability_constant() -> Fallible<QO>;
-}
-impl<Q: One + Float + ExactIntCast<usize>, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
-    fn get_stability_constant() -> Fallible<Q> {
-        if P == 0 {return fallible!(MakeTransformation, "P must be positive")}
-        let p = Q::exact_int_cast(P)?;
-        let _2 = Q::exact_int_cast(2)?;
-        Ok(_2.powf(Q::one() / p - Q::one()))
-    }
-}
-
-// count with known n, unknown categories
-pub fn make_count_by<MO, TI, TO>(
-    size: usize
-) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
-    where MO: CountByConstant<MO::Distance> + SensitivityMetric,
-          MO::Distance: DistanceConstant<IntDistance>,
-          TI: 'static + Eq + Hash + Clone + CheckNull,
-          TO: Integer + Zero + One + SaturatingAdd + CheckNull,
-          IntDistance: InfCast<MO::Distance> {
+// count with unknown categories
+pub fn make_count_by<TI, TO>(
+) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, MapDomain<AllDomain<TI>, AllDomain<TO>>, SymmetricDistance, L1Distance<TO>>>
+    where TI: 'static + Eq + Hash + Clone + CheckNull,
+          TO: DistanceConstant<IntDistance> + Zero + One + SaturatingAdd + CheckNull,
+          IntDistance: InfCast<TO> {
     Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new_all(), size),
-        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, size),
+        VectorDomain::new_all(),
+        MapDomain::new(AllDomain::new(), AllDomain::new()),
         Function::new(move |data: &Vec<TI>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {
@@ -123,8 +108,8 @@ pub fn make_count_by<MO, TI, TO>(
             counts
         }),
         SymmetricDistance::default(),
-        MO::default(),
-        StabilityRelation::new_from_constant(MO::get_stability_constant()?)))
+        L1Distance::default(),
+        StabilityRelation::new_from_constant(TO::one())))
 }
 
 
@@ -179,14 +164,14 @@ mod tests {
     #[test]
     fn test_make_count_by() -> Fallible<()> {
         let arg = vec![true, true, true, false, true, false, false, false, true, true];
-        let transformation = make_count_by::<L2Distance<f64>, bool, i8>(arg.len())?;
+        let transformation = make_count_by()?;
         let ret = transformation.invoke(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);
         expected.insert(false, 4);
         assert_eq!(ret, expected);
-        assert!(!transformation.check(&6, &4.2426)?);
-        assert!(transformation.check(&6, &4.24265)?);
+        assert!(!transformation.check(&6, &5)?);
+        assert!(transformation.check(&6, &6)?);
         Ok(())
     }
 }

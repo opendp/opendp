@@ -7,4 +7,4 @@ pub mod randomized_response;
 #[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod laplace;
 #[cfg(all(feature="floating-point", feature="contrib"))]
-pub mod stability;
+pub mod ptr;
