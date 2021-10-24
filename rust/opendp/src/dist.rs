@@ -9,8 +9,11 @@ use std::fmt::{Debug, Formatter};
 pub type IntDistance = u32;
 
 /// Measures
-#[derive(Clone)]
 pub struct MaxDivergence<Q>(PhantomData<Q>);
+
+impl<Q> Clone for MaxDivergence<Q> {
+    fn clone(&self) -> Self { MaxDivergence::default() }
+}
 impl<Q> Default for MaxDivergence<Q> {
     fn default() -> Self { MaxDivergence(PhantomData) }
 }
@@ -25,12 +28,16 @@ impl<Q> Debug for MaxDivergence<Q> {
     }
 }
 
-impl<Q: Clone> Measure for MaxDivergence<Q> {
+impl<Q> Measure for MaxDivergence<Q> {
     type Distance = Q;
 }
 
-#[derive(Clone)]
+
 pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
+
+impl<Q> Clone for SmoothedMaxDivergence<Q> {
+    fn clone(&self) -> Self { SmoothedMaxDivergence::default() }
+}
 
 impl<Q> Default for SmoothedMaxDivergence<Q> {
     fn default() -> Self { SmoothedMaxDivergence(PhantomData) }
@@ -44,7 +51,7 @@ impl<Q> Debug for SmoothedMaxDivergence<Q> {
         write!(f, "SmoothedMaxDivergence()")
     }
 }
-impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
+impl<Q> Measure for SmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
 
