@@ -19,9 +19,9 @@ pub mod geometric;
 pub use crate::meas::geometric::*;
 
 #[cfg(feature="contrib")]
-pub mod median;
+pub mod smooth_sensitivity;
 #[cfg(feature="contrib")]
-pub use crate::meas::median::*;
+pub use crate::meas::smooth_sensitivity::*;
 
 #[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod ptr;

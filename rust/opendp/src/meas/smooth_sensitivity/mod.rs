@@ -28,6 +28,8 @@ struct Maximum<T>(PhantomData<T>);
 pub trait SmoothSensitivityQuery {
     type Atom;
     fn compute(sorted_data: &Vec<Self::Atom>) -> Self::Atom;
+    // sensitivity of f at distance k, A^(k)(x),
+    // from Def 3.1, p.11 https://cs-people.bu.edu/ads22/pubs/NRS07/NRS07-full-draft-v1.pdf
     fn a_k(sorted_data: &Vec<Self::Atom>, bounds: &(Self::Atom, Self::Atom), k: usize) -> Self::Atom;
 }
 
@@ -85,23 +87,29 @@ impl<T: Clone + PartialOrd + Sub<Output=T>> SmoothSensitivityQuery for Maximum<T
     }
 }
 
-pub trait SmoothSensitivityNoise: Metric {
-    type Unit: ExactIntCast<usize> + Float;
-    fn alpha(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit>;
-    fn beta(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit> {
+macro_rules! exponential_beta {
+    ($budget:ident) => {{
         let _1 = Self::Unit::exact_int_cast(1)?;
         let _2 = Self::Unit::exact_int_cast(2)?;
         let _4 = Self::Unit::exact_int_cast(4)?;
         // the same beta is shared between all l1 and l2 noise distributions
-        let (epsilon, delta) = budget;
+        let (epsilon, delta) = $budget;
         Ok(epsilon / (_4 * (_1 + (_2 / delta).ln())))
-    }
+    }}
+}
+pub trait SmoothSensitivityNoise: Metric {
+    type Unit: ExactIntCast<usize> + Float;
+    fn alpha(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit>;
+    fn beta(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit>;
     fn sample(shift: Self::Distance, scale: Self::Unit) -> Fallible<Self::Distance>;
 }
 impl SmoothSensitivityNoise for L1Distance<f64> {
     type Unit = f64;
     fn alpha(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit> {
         Ok(budget.0 / 2.)
+    }
+    fn beta(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit> {
+        exponential_beta!(budget)
     }
     fn sample(shift: Self::Distance, scale: Self::Unit) -> Fallible<Self::Distance> {
         Self::Distance::sample_laplace(shift, scale, false)
@@ -112,6 +120,9 @@ impl SmoothSensitivityNoise for L1Distance<i32> {
     fn alpha(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit> {
         Ok(budget.0 / 2.)
     }
+    fn beta(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit> {
+        exponential_beta!(budget)
+    }
     fn sample(shift: Self::Distance, scale: Self::Unit) -> Fallible<Self::Distance> {
         Self::Distance::sample_two_sided_geometric(shift, scale, None)
     }
@@ -121,6 +132,9 @@ impl SmoothSensitivityNoise for L2Distance<f64> {
     type Unit = f64;
     fn alpha(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit> {
         Ok(budget.0 / (5. * (2. * (2. / budget.1).ln()).sqrt()))
+    }
+    fn beta(budget: (Self::Unit, Self::Unit)) -> Fallible<Self::Unit> {
+        exponential_beta!(budget)
     }
     fn sample(shift: Self::Distance, scale: Self::Unit) -> Fallible<Self::Distance> {
         Self::Distance::sample_gaussian(shift, scale, false)
