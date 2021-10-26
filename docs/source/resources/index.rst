@@ -37,3 +37,5 @@ Papers
 `Deep Learning with Differential Privacy <https://arxiv.org/pdf/1607.00133.pdf>`_ (Gradient descent)
 
 `U.S. Broadband Coverage Data Set: A Differentially Private Data Release <https://arxiv.org/pdf/2103.14035.pdf>`_
+
+`A Feasibility Study of Differentially Private Summary Statistics and Regression Analyses for Administrative Tax Data <https://arxiv.org/pdf/2110.12055.pdf>`_ 
