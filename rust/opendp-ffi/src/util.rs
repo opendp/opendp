@@ -317,20 +317,20 @@ pub fn to_str<'a>(p: *const c_char) -> Fallible<&'a str> {
     s.to_str().map_err(|e: Utf8Error| err!(FFI, "{:?}", e))
 }
 
-pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
-    if p.is_null() {
-        Ok(None)
-    } else {
-        Some(to_str(p)).transpose()
-    }
-}
+// pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
+//     if p.is_null() {
+//         Ok(None)
+//     } else {
+//         Some(to_str(p)).transpose()
+//     }
+// }
 
 #[allow(non_camel_case_types)]
 pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
 
-pub fn to_bool(b: c_bool) -> bool {
-    b != 0
-}
+// pub fn to_bool(b: c_bool) -> bool {
+//     b != 0
+// }
 
 pub fn from_bool(b: bool) -> c_bool {
     if b {1} else {0}

@@ -93,27 +93,27 @@
 #[macro_use]
 extern crate lazy_static;
 
-// internal module for err! macro resolution
-mod error {
-    pub use opendp::error::{Error, ErrorVariant};
-}
-// replacement for ? operator, for FfiResults
-macro_rules! try_ {
-    ($value:expr) => {
-        match $value {
-            Ok(x) => x,
-            Err(e) => return e.into(),
-        }
-    }
-}
-// attempt to convert a raw pointer to a reference
-//      as_ref      ok_or_else       try_!
-// *mut T -> Option<&T> -> Fallible<&T> -> &T
-macro_rules! try_as_ref {
-    ($value:expr) => {
-        try_!(crate::util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))))
-    }
-}
+// // internal module for err! macro resolution
+// mod error {
+//     pub use opendp::error::{Error, ErrorVariant};
+// }
+// // replacement for ? operator, for FfiResults
+// macro_rules! try_ {
+//     ($value:expr) => {
+//         match $value {
+//             Ok(x) => x,
+//             Err(e) => return e.into(),
+//         }
+//     }
+// }
+// // attempt to convert a raw pointer to a reference
+// //      as_ref      ok_or_else       try_!
+// // *mut T -> Option<&T> -> Fallible<&T> -> &T
+// macro_rules! try_as_ref {
+//     ($value:expr) => {
+//         try_!(crate::util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))))
+//     }
+// }
 
 
 #[macro_use]
@@ -129,4 +129,4 @@ pub(crate) mod util;
 #[cfg(feature="contrib")]
 mod comb;
 mod accuracy;
-pub mod arr;
+mod arr;

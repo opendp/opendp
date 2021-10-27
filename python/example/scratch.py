@@ -1,5 +1,6 @@
 import ctypes
 import pyarrow as pa
+import sys
 
 ARROW_FLAG_DICTIONARY_ORDERED = 1
 ARROW_FLAG_NULLABLE = 2
@@ -71,21 +72,92 @@ class ArrowArraySchema(ctypes.Structure):
 
 lib_path = "../../rust/target/debug/libopendp_ffi.dylib"
 lib = ctypes.cdll.LoadLibrary(lib_path)
-func = lib.opendp__test_arrow
-func.argtypes = [ctypes.POINTER(ArrowArray), ctypes.POINTER(ArrowSchema)]
-func.restype = ctypes.POINTER(ArrowArraySchema)
-print(func)
+
+arrow_alloc = lib.opendp__arrow_alloc
+arrow_alloc.argtypes = []
+arrow_alloc.restype = ctypes.POINTER(ArrowArraySchema)
+
+arrow_identity = lib.opendp__arrow_identity
+arrow_identity.argtypes = [ctypes.POINTER(ArrowArray), ctypes.POINTER(ArrowSchema)]
+arrow_identity.restype = ctypes.POINTER(ArrowArraySchema)
+
+arrow_sort = lib.opendp__arrow_sort
+arrow_sort.argtypes = [ctypes.POINTER(ArrowArray), ctypes.POINTER(ArrowSchema), ctypes.c_bool]
+arrow_sort.restype = ctypes.POINTER(ArrowArraySchema)
+
+arrow_sum = lib.opendp__arrow_sum
+arrow_sum.argtypes = [ctypes.POINTER(ArrowArray), ctypes.POINTER(ArrowSchema), ctypes.POINTER(ArrowArray), ctypes.POINTER(ArrowSchema), ctypes.c_bool]
+arrow_sum.restype = ctypes.POINTER(ArrowArraySchema)
 
 
-array = pa.array([1, 2, None, 4])
-print(array)
+def to_ffi(array):
+    # ffi_array = ArrowArray()
+    # ffi_schema = ArrowSchema()
+    ffi_array_schema = arrow_alloc()
+    ffi_array = ffi_array_schema.contents.array.contents
+    ffi_schema = ffi_array_schema.contents.schema.contents
+    print(hex(ctypes.addressof(ffi_array)), hex(ctypes.addressof(ffi_schema)))
+    array._export_to_c(ctypes.addressof(ffi_array), ctypes.addressof(ffi_schema))
+    return ffi_array, ffi_schema
 
-ffi_array = ArrowArray()
-ffi_schema = ArrowSchema()
-array._export_to_c(ctypes.addressof(ffi_array), ctypes.addressof(ffi_schema))
+def _ptr_to_int(ptr):
+    vptr = ctypes.cast(ptr, ctypes.c_void_p)
+    value = vptr.value
+    return value if value is not None else 0
 
-res = func(ctypes.byref(ffi_array), ctypes.byref(ffi_schema))
-print(res)
-# res = pa.Array._import_from_c(ctypes.addressof(res.contents.array.contents), ctypes.addressof(res.contents.schema.contents))
-# print(res)
-print("YEAH")
+def from_ffi(ffi_array_schema):
+    ffi_array = ffi_array_schema.contents.array
+    ffi_schema = ffi_array_schema.contents.schema
+    return pa.Array._import_from_c(_ptr_to_int(ffi_array), _ptr_to_int(ffi_schema))
+
+def do_identity(dry=False):
+    in0 = pa.array([1, 2, None, 4])
+    print(f"python: in0 = {in0}")
+
+    in0_array, in0_schema = to_ffi(in0)
+    out_array_schema = arrow_identity(ctypes.byref(in0_array), ctypes.byref(in0_schema), dry)
+
+    if bool(out_array_schema):
+        out = from_ffi(out_array_schema)
+        print(f"python: out = {out}")
+
+
+def do_sort(dry=False):
+    in0 = pa.array([1, 2, None, 4])
+    print(f"python: in0 = {in0}")
+
+    in0_array, in0_schema = to_ffi(in0)
+    out_array_schema = arrow_sort(ctypes.byref(in0_array), ctypes.byref(in0_schema), dry)
+
+    if bool(out_array_schema):
+        out = from_ffi(out_array_schema)
+        print(f"python: out = {out}")
+
+
+def do_sum(dry=False):
+    in0 = pa.array([1, 2, None, 4])
+    in1 = pa.array([1, 2, 3, None])
+    print(f"python: in0 = {in0}, in1 = {in1}")
+
+    in0_array, in0_schema = to_ffi(in0)
+    in1_array, in1_schema = to_ffi(in1)
+    # print(f"python: in0_array = {in0_array}, in0_schema = {in0_schema}, in1_array = {in1_array}, in1_schema = {in1_schema}")
+
+    # out_array_schema = arrow_sum(ctypes.byref(in0_array), ctypes.byref(in0_schema), ctypes.byref(in1_array), ctypes.byref(in1_schema), dry)
+    arrow_sum(ctypes.byref(in0_array), ctypes.byref(in0_schema), ctypes.byref(in1_array), ctypes.byref(in1_schema), dry)
+
+    # if bool(out_array_schema):
+    #     # print(f"python: out_array = {out_array_schema.contents.array}, out_schema = {out_array_schema.contents.schema}")
+    #
+    #     out = from_ffi(out_array_schema)
+    #     print(f"python: out = {out}")
+
+
+if __name__ == "__main__":
+    # do_identity(True)
+    # do_identity(False)
+    # do_sort(True)
+    # do_sort(False)
+    # do_sum(True)
+    do_sum(False)
+    print("YEAH")
