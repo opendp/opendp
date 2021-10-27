@@ -58,7 +58,7 @@ pub fn make_count_by_categories<MO, TI, TO>(
     where MO: CountByCategoriesConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance> + One,
           TI: 'static + Eq + Hash + CheckNull,
-          TO: Integer + Zero + One + SaturatingAdd + CheckNull,
+          TO: Zero + One + SaturatingAdd + CheckNull,
           IntDistance: InfCast<MO::Distance>{
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
