@@ -31,7 +31,7 @@ pub extern "C" fn opendp_trans__make_count(
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @primitives),
-        (TO, @integers)
+        (TO, @numbers)
     ], ())
 }
 
@@ -51,7 +51,7 @@ pub extern "C" fn opendp_trans__make_count_distinct(
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @hashable),
-        (TO, @integers)
+        (TO, @numbers)
     ], ())
 }
 

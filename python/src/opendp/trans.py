@@ -319,7 +319,7 @@ def make_count(
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: RuntimeTypeDescriptor
-    :param TO: Output Type. Must be an integer.
+    :param TO: Output Type. Must be numeric.
     :type TO: RuntimeTypeDescriptor
     :return: A count step.
     :rtype: Transformation
@@ -353,7 +353,7 @@ def make_count_distinct(
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: RuntimeTypeDescriptor
-    :param TO: Output Type. Must be an integer.
+    :param TO: Output Type. Must be numeric.
     :type TO: RuntimeTypeDescriptor
     :return: A count_distinct step.
     :rtype: Transformation
@@ -441,7 +441,7 @@ def make_count_by_categories(
     :type MO: SensitivityMetric
     :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
     :type TIA: RuntimeTypeDescriptor
-    :param TOA: express counts in terms of this integral type
+    :param TOA: express counts in terms of this numeric type
     :type TOA: RuntimeTypeDescriptor
     :return: A count_by_categories step.
     :rtype: Transformation
