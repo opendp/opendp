@@ -11,7 +11,7 @@ use crate::dist::{L1Distance, MaxDivergence};
 use crate::dom::{AllDomain, MapDomain, SizedDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
-use crate::traits::DistanceCast;
+use crate::traits::{DistanceConstant, CheckNull, InfCast};
 use crate::samplers::{fill_bytes, CastInternalReal, SampleBernoulli};
 
 const ALPHA_DEFAULT : u32 = 4;
@@ -27,6 +27,9 @@ pub struct AlpState<K, T>{
     scale: T,
     h: HashFunctions<K>,
     z: BitVector 
+}
+impl <K,T> CheckNull for AlpState<K,T> {
+    fn is_null(&self) -> bool { false }
 }
 type AlpDomain<K, T> = AllDomain<AlpState<K, T>>;
 
@@ -143,9 +146,10 @@ pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: Ha
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash,
-          C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast + CastInternalReal {
+    where K: 'static + Eq + Hash + CheckNull,
+          C: 'static + Copy + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+          T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
+          AlpState<K,T> : CheckNull {
     
     if alpha.is_sign_negative() || alpha.is_zero() {
         return fallible!(MakeMeasurement, "alpha must be positive")
@@ -177,13 +181,14 @@ pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: T, scale: T, b
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + ToPrimitive,
-          C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast + CastInternalReal {
+    where K: 'static + Eq + Hash + Clone + ToPrimitive + CheckNull,
+          C: 'static + Copy + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+          T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
+          AlpState<K,T> : CheckNull {
     
-    let m = (beta.to_f64().unwrap() * (scale / alpha).to_f64().unwrap()).ceil() as usize;
+    let m = (T::inf_cast(beta).unwrap().to_f64().unwrap() * (scale / alpha).to_f64().unwrap()).ceil() as usize;
     
-    let exp = exponent_next_power_of_two(u64::distance_cast(size_factor as f64 * n as f64 * (scale / alpha).to_f64().unwrap())?);
+    let exp = exponent_next_power_of_two((size_factor as f64 * n as f64 * (scale / alpha).to_f64().unwrap()) as u64);
     let h = (0..m).map(|_| sample_hash_function(exp)).collect::<Fallible<HashFunctions<K>>>()?;
 
     make_alp_histogram(n, alpha, scale, 1 << exp, h)
@@ -193,9 +198,10 @@ pub fn make_alp_histogram_simple<K, C, T>(n: usize, scale: T, beta: C)
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + ToPrimitive,
-          C: 'static + Copy + Integer + DistanceCast,
-          T: 'static + num::Float + DistanceCast + CastInternalReal {
+    where K: 'static + Eq + Hash + Clone + ToPrimitive + CheckNull,
+          C: 'static + Copy + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+          T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
+          AlpState<K,T> : CheckNull {
     
     make_alp_histogram_parameterized(n, T::from(ALPHA_DEFAULT).unwrap(), scale, beta, SIZE_FACTOR_DEFAULT)
 }
@@ -213,9 +219,10 @@ pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K,
 // TODO: Could be refactored to a general post_processing function
 pub fn make_histogram_alp_post_process<K, C, T>(m : Measurement<SizedHistogramDomain<K, C>,AlpDomain<K, T>,L1Distance<C>, MaxDivergence<T>>) 
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone,
-          C: 'static,
-          T: 'static + num::Float + FromPrimitive {
+    where K: 'static + Eq + Hash + Clone + CheckNull,
+          C: 'static + CheckNull,
+          T: 'static + num::Float + FromPrimitive,
+          AlpState<K,T> : CheckNull {
         let f0 = m.function;
         let f1 = Function::new(move |x : &AlpState<K, T>| post_process(x.clone()));
         Ok(Measurement::new(
