@@ -120,8 +120,7 @@ class BasePrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        grad2 = grad.flatten().tolist()
-        grad = torch.tensor(measurement(grad2)).reshape(grad.shape)
+        grad = torch.tensor(measurement(grad.flatten().tolist())).reshape(grad.shape)
 
         # fill gradient with a constant, if a _fill value is set. Useful for validating DDP
         if hasattr(self, '_fill') and self._fill is not None:

@@ -17,11 +17,9 @@ from torch.nn.parameter import Parameter
 
 from opendp.mod import enable_features
 
-from opendp._convert import set_return_mode
 from opendp.network.odometer import BasePrivacyOdometer
 from opendp.typing import DatasetMetric, SymmetricDistance
 
-set_return_mode('torch')
 enable_features("contrib", "floating-point")
 
 

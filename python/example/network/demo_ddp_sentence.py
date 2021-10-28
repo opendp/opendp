@@ -3,7 +3,8 @@ import os
 import torch
 
 from sentence_module import SentenceModule
-from utilities import main
+from utilities import main, printf
+import numpy as np
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from opendp.network.odometer import assert_release_binary
@@ -90,13 +91,13 @@ def run_lstm_worker(
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-        # odometer.increment_epoch()
+        odometer.increment_epoch()
 
-        # inputs = prepare_sequence(training_data[0][0], word_to_idx)
-        # tag_scores = model(inputs).detach().numpy()
+        inputs = prepare_sequence(training_data[0][0], word_to_idx)
+        tag_scores = model(inputs).detach().numpy()
 
-        # tag = [idx_to_tag[idx] for idx in np.argmax(tag_scores[0], axis=1)]
-        # printf(f"{rank: 4d} | {epoch: 5d} | {tag}     | {training_data[0][1]}", force=True)
+        tag = [idx_to_tag[idx] for idx in np.argmax(tag_scores[0], axis=1)]
+        printf(f"{rank: 4d} | {epoch: 5d} | {tag}     | {training_data[0][1]}", force=True)
 
         if model_filepath:
             torch.save({
