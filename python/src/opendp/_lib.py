@@ -66,6 +66,10 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
 class AnyObjectPtr(ctypes.POINTER(AnyObject)):
     _type_ = AnyObject
 
+    def __del__(self):
+        from opendp._data import object_free
+        object_free(self)
+
 
 class AnyMeasureDistancePtr(ctypes.POINTER(AnyMeasureDistance)):
     _type_ = AnyMeasureDistance

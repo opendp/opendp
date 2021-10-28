@@ -175,6 +175,8 @@ class RuntimeType(object):
                 cls.infer(public_example[0]) if public_example else UnknownType(
                     "cannot infer atomic type of empty list")
             ])
+        elif (public_example.__class__.__module__, public_example.__class__.__name__) == ('numpy', 'ndarray'):
+            return RuntimeType('Vec', ["f64"])
         elif (public_example.__class__.__module__, public_example.__class__.__name__) == ('torch', 'Tensor'):
             return RuntimeType('Vec', ["f64"])
 

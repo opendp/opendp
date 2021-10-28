@@ -1,14 +1,14 @@
 import os
 
-import numpy as np
 import torch
 
 from sentence_module import SentenceModule
-from utilities import main, printf
+from utilities import main
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from opendp.network.odometer import assert_release_binary
 from opendp.network.odometer_reconstruction import ReconstructionPrivacyOdometer
+from opendp.network.odometer_stochastic import StochasticPrivacyOdometer
 
 
 assert_release_binary()
@@ -16,18 +16,15 @@ assert_release_binary()
 
 def run_lstm_worker(
         rank, size,
-        epoch_limit=None, private_step_limit=None,
-        federation_scheme='shuffle', queue=None,
-        model_filepath=None, end_event=None
+        epoch_limit=None,
+        model_filepath=None,
+        **_kwargs
 ):
     """
     Perform federated learning in a ring structure
     :param rank: index for specific data set
-    :param size: total ring size
+    :param size: total number of workers
     :param epoch_limit: maximum number of epochs
-    :param private_step_limit: maximum number of private steps
-    :param federation_scheme: how to choose the next worker
-    :param queue: stores values and privacy accountant usage
     :param model_filepath: indicating where to save the model checkpoint
     :return:
     """
@@ -62,7 +59,7 @@ def run_lstm_worker(
         tagset_size=len(tag_to_idx),
         bahdanau=False)
 
-    odometer = PrivacyOdometer(step_epsilon=1.0, reduction='sum')
+    odometer = ReconstructionPrivacyOdometer(step_epsilon=1.0, reduction='sum')
     odometer.track_(model)
     model = DDP(model)
 
@@ -93,13 +90,13 @@ def run_lstm_worker(
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-        odometer.increment_epoch()
+        # odometer.increment_epoch()
 
-        inputs = prepare_sequence(training_data[0][0], word_to_idx)
-        tag_scores = model(inputs).detach().numpy()
+        # inputs = prepare_sequence(training_data[0][0], word_to_idx)
+        # tag_scores = model(inputs).detach().numpy()
 
-        tag = [idx_to_tag[idx] for idx in np.argmax(tag_scores[0], axis=1)]
-        printf(f"{rank: 4d} | {epoch: 5d} | {tag}     | {training_data[0][1]}", force=True)
+        # tag = [idx_to_tag[idx] for idx in np.argmax(tag_scores[0], axis=1)]
+        # printf(f"{rank: 4d} | {epoch: 5d} | {tag}     | {training_data[0][1]}", force=True)
 
         if model_filepath:
             torch.save({
@@ -117,6 +114,5 @@ if __name__ == "__main__":
     print("Rank | Epoch | Predicted | Actual")
     main(worker=run_lstm_worker,
          n_workers=2,
-         epoch_limit=1000,
-         model_filepath=os.path.join(model_path, 'model.pt'),
-         federation_scheme='shuffle')
+         epoch_limit=1000000000,
+         model_filepath=os.path.join(model_path, 'model.pt'))

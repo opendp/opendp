@@ -20,8 +20,8 @@ ATOM_MAP = {
     'bool': ctypes.c_bool,
 }
 
-RETURN_MODE = 'list'
-ACCEPTABLE_RETURN_MODES = ('list', 'numpy', 'torch')
+RETURN_MODE = 'python'
+ACCEPTABLE_RETURN_MODES = ('C', 'python', 'numpy', 'torch')
 
 
 def set_return_mode(mode):
@@ -99,6 +99,9 @@ def c_to_py(value):
     :param value: data in ctypes format
     :return: copy of data in python representation
     """
+    if RETURN_MODE == 'C':
+        return value
+
     if isinstance(value, AnyObjectPtr):
         from opendp._data import object_type, object_as_slice, to_string, slice_free
         ffi_slice = object_as_slice(value)
@@ -224,7 +227,10 @@ def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
         raise OpenDPException(f"Members must be one of {ATOM_MAP.keys()}. Found {inner_type_name}.")
 
     if (val.__class__.__module__, val.__class__.__name__) == ('torch', 'Tensor'):
-        return _wrap_in_slice(val.contiguous().numpy().__array_interface__['data'][0], val.numel())
+        val = val.numpy()
+    if (val.__class__.__module__, val.__class__.__name__) == ('numpy', 'ndarray'):
+        return _wrap_in_slice(val.__array_interface__['data'][0], val.size)
+
     if not isinstance(val, list):
         raise OpenDPException(f"Cannot cast a non-list type to a vector")
 
@@ -247,10 +253,10 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: str) -> List[Any]:
         return list(map(lambda v: v.decode(), array))
 
     raw_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
-    if RETURN_MODE == 'list':
+    if RETURN_MODE == 'python':
         return raw_array[0:raw.contents.len]
     import numpy as np
-    array = np.ctypeslib.as_array(raw_array, shape=(raw.contents.len,)).copy()
+    array = np.ctypeslib.as_array(raw_array, shape=(raw.contents.len,))
 
     if RETURN_MODE == 'numpy':
         return array

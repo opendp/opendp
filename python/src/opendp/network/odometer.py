@@ -5,7 +5,6 @@ Thanks to https://github.com/cybertronai/autograd-hacks for demonstrating gradie
 A, activations: inputs into current module
 B, backprops: backprop values (aka Jacobian-vector product) observed at current module
 
-TODO: after adjusting to work with DDP, need to distribute epsilon among each clipping group
 """
 import math
 from functools import lru_cache
@@ -16,11 +15,10 @@ from torch import nn
 
 import opendp.meas as meas
 import opendp.trans as trans
-from opendp._convert import set_return_mode
 from opendp.mod import binary_search, enable_features
 from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance, AllDomain, VectorDomain, SubstituteDistance
-
-set_return_mode('torch')
+# from opendp._convert import set_return_mode
+# set_return_mode('torch')
 enable_features("contrib", "floating-point")
 
 
@@ -122,7 +120,8 @@ class BasePrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        grad = measurement(grad.flatten()).reshape(grad.shape)
+        grad2 = grad.flatten().tolist()
+        grad = torch.tensor(measurement(grad2)).reshape(grad.shape)
 
         # fill gradient with a constant, if a _fill value is set. Useful for validating DDP
         if hasattr(self, '_fill') and self._fill is not None:
@@ -137,7 +136,6 @@ class BasePrivacyOdometer(object):
         def has_params(module):
             return next(module.parameters(recurse=False), None) is not None
         return [m for m in whitelist or model.modules() if has_params(m)]
-
 
     def increment_epoch(self):
         if self.steps:
