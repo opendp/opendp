@@ -15,7 +15,12 @@ use crate::samplers::{fill_bytes, CastInternalReal, SampleBernoulli};
 use std::collections::hash_map::DefaultHasher;
 
 const ALPHA_DEFAULT : u32 = 4;
-const SIZE_FACTOR_DEFAULT : u32 = 30;
+const SIZE_FACTOR_DEFAULT : u32 = 50;
+
+// Implementation of a mechanism for representing sparse histogram.
+// The mechanism was introduced in the paper:
+// "Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access"
+// Available here: arxiv.org/abs/2106.10068
 
 type SizedHistogramDomain<K, C> = SizedDomain<MapDomain<AllDomain<K>, AllDomain<C>>>;
 
@@ -39,6 +44,7 @@ type AlpDomain<K, T> = AllDomain<AlpState<K, T>>;
 // a must be odd
 // The hash function is 2-approximate universal and uniform
 // See http://hjemmesider.diku.dk/~jyrki/Paper/CP-11.4.1997.pdf
+// "A Reliable Randomized Algorithm for the Closest-Pair Problem"
 fn hash(x: u64, a: u64, b:u64, l: u32) -> usize {
     (a.wrapping_mul(x).wrapping_add(b) >> (64 - l)) as usize
 }
