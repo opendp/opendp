@@ -1,10 +1,9 @@
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
-use num::{Integer, FromPrimitive, ToPrimitive};
-#[cfg(feature="use-mpfr")]
-use rug::{Float, ops::DivAssignRound, ops::AddAssignRound, float::Round};
+use num::{Integer, ToPrimitive};
+use rug::{Float, float::Round, ops::AddAssignRound, ops::DivAssignRound};
 
 use crate::core::{Measurement, Function, PrivacyRelation};
 use crate::dist::{L1Distance, MaxDivergence};
@@ -13,6 +12,7 @@ use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, CheckNull, InfCast};
 use crate::samplers::{fill_bytes, CastInternalReal, SampleBernoulli};
+use std::collections::hash_map::DefaultHasher;
 
 const ALPHA_DEFAULT : u32 = 4;
 const SIZE_FACTOR_DEFAULT : u32 = 30;
@@ -42,15 +42,20 @@ type AlpDomain<K, T> = AllDomain<AlpState<K, T>>;
 fn hash(x: u64, a: u64, b:u64, l: u32) -> usize {
     (a.wrapping_mul(x).wrapping_add(b) >> (64 - l)) as usize
 }
+fn pre_hash<K: Hash>(x: K) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    x.hash(&mut hasher);
+    hasher.finish()
+}
 
 fn sample_hash_function<K>(l: u32) -> Fallible<Rc<dyn Fn(&K) -> usize>> 
-    where K: Clone + ToPrimitive {
+    where K: Clone + Hash {
     let mut buf = [0u8; 8];
     fill_bytes(&mut buf)?;
     let a = u64::from_ne_bytes(buf) | 1u64;
     fill_bytes(&mut buf)?;
     let b = u64::from_ne_bytes(buf);
-    Ok(Rc::new(move |x: &K| hash(x.to_u64().unwrap_or_default(), a, b, l)))
+    Ok(Rc::new(move |x: &K| hash(pre_hash(x), a, b, l)))
 }
 
 fn exponent_next_power_of_two(x: u64) -> u32 {
@@ -58,7 +63,6 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
     if x > (1 << exp) { exp + 1 } else { exp }
 }
 
-#[cfg(feature="use-mpfr")]
 fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> 
     where C: Integer + ToPrimitive,
           T: CastInternalReal {
@@ -67,7 +71,7 @@ fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize>
     // Truncate bits that represents values below 2^-53
     scalar.set_prec_round((f64::MANTISSA_DIGITS as i32 - scalar.get_exp().unwrap()).max(1) as u32, Round::Down);
 
-    let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.max(C::zero()).to_u64().unwrap()) * scalar;
+    let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.max(C::zero()).to_u64().unwrap_or_default()) * scalar;
     let floored = f64::from_internal(r.clone().floor()) as usize;
     
     match bool::sample_bernoulli(f64::from_internal(r.fract()), false)? {
@@ -76,12 +80,6 @@ fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize>
     }
 }
 
-#[cfg(not(feature="use-mpfr"))]
-fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> {
-    unimplemented!()
-}
-
-#[cfg(feature="use-mpfr")]
 fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
     let mut a = alpha.into_internal();
     a.add_assign_round(2, Round::Down);
@@ -90,28 +88,18 @@ fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
     f64::from_internal(p)
 }
 
-#[cfg(not(feature="use-mpfr"))]
-fn compute_prob<T>(alpha: T) -> f64 {
-    unimplemented!()
-}
-
-#[cfg(feature="use-mpfr")]
 fn check_parameters<T : CastInternalReal>(alpha: T, scale: T) -> bool {
     scale.into_internal() * Float::with_val(53, 52).exp2() < alpha.into_internal()
 }
 
-#[cfg(not(feature="use-mpfr"))]
-fn check_parameters(alpha: T, scale: T) -> bool {
-    unimplemented!()
-}
 
 fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T, scale: T, s: usize) -> Fallible<BitVector> 
-    where C: Copy + Integer + ToPrimitive,
-          T: Copy + CastInternalReal {
+    where C: Clone + Integer + ToPrimitive,
+          T: Clone + CastInternalReal {
     let mut z = vec![false; s];
 
     for (k, v) in x.iter() {
-        let round = scale_and_round(*v, alpha, scale)?; 
+        let round = scale_and_round(v.clone(), alpha.clone(), scale.clone())?;
         h.iter().take(round).for_each(|f| z[f(k) % s] = true); // ^= true TODO: Hash collisions can be handled using OR or XOR
     }
 
@@ -121,7 +109,7 @@ fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T
 }
 
 fn estimate_unary<T>(v: &Vec<bool>) -> T
-    where T : FromPrimitive + num::Float {
+    where T : num::Float {
     let mut prefix_sum = Vec::with_capacity(v.len() + 1usize);
     prefix_sum.push(0);
 
@@ -135,19 +123,19 @@ fn estimate_unary<T>(v: &Vec<bool>) -> T
     T::from(peaks.iter().sum::<usize>()).unwrap() / T::from(peaks.len()).unwrap()
 }
 
-fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T 
-    where T: FromPrimitive + num::Float {
+fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
+    where T: num::Float {
     let v = state.h.iter().map(|f| state.z[f(key) % state.z.len()]).collect::<Vec<_>>();
 
     estimate_unary::<T>(&v) * T::from(state.alpha).unwrap() / state.scale
 }
 
-pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: HashFunctions<K>) 
-        -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
-                                AlpDomain<K, T>, 
+pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: HashFunctions<K>)
+        -> Fallible<Measurement<SizedHistogramDomain<K, C>,
+                                AlpDomain<K, T>,
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + CheckNull,
-          C: 'static + Copy + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+          C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
           T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
           AlpState<K,T> : CheckNull {
     
@@ -181,14 +169,18 @@ pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: T, scale: T, b
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + ToPrimitive + CheckNull,
-          C: 'static + Copy + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+    where K: 'static + Eq + Hash + Clone + CheckNull,
+          C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
           T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
           AlpState<K,T> : CheckNull {
+
+    let beta: f64 = T::inf_cast(beta).unwrap().to_f64()
+        .ok_or_else(|| err!(MakeTransformation, "failed to parse beta"))?;
+    let quotient = (scale / alpha).to_f64()
+        .ok_or_else(|| err!(MakeTransformation, "failed to parse scale/alpha"))?;
+    let m = (beta * quotient).ceil() as usize;
     
-    let m = (T::inf_cast(beta).unwrap().to_f64().unwrap() * (scale / alpha).to_f64().unwrap()).ceil() as usize;
-    
-    let exp = exponent_next_power_of_two((size_factor as f64 * n as f64 * (scale / alpha).to_f64().unwrap()) as u64);
+    let exp = exponent_next_power_of_two((size_factor as f64 * n as f64 * quotient) as u64);
     let h = (0..m).map(|_| sample_hash_function(exp)).collect::<Fallible<HashFunctions<K>>>()?;
 
     make_alp_histogram(n, alpha, scale, 1 << exp, h)
@@ -198,16 +190,16 @@ pub fn make_alp_histogram_simple<K, C, T>(n: usize, scale: T, beta: C)
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + ToPrimitive + CheckNull,
-          C: 'static + Copy + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+    where K: 'static + Eq + Hash + Clone + CheckNull,
+          C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
           T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
           AlpState<K,T> : CheckNull {
     
     make_alp_histogram_parameterized(n, T::from(ALPHA_DEFAULT).unwrap(), scale, beta, SIZE_FACTOR_DEFAULT)
 }
 
-pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T> 
-    where T: num::Float + FromPrimitive {
+pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T>
+    where T: num::Float {
     Queryable::new(
         state,
         move |state: AlpState<K, T>, key: &K| {
@@ -217,27 +209,28 @@ pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K,
 }
 
 // TODO: Could be refactored to a general post_processing function
-pub fn make_histogram_alp_post_process<K, C, T>(m : Measurement<SizedHistogramDomain<K, C>,AlpDomain<K, T>,L1Distance<C>, MaxDivergence<T>>) 
-        -> Fallible<Measurement<SizedHistogramDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + CheckNull,
-          C: 'static + CheckNull,
-          T: 'static + num::Float + FromPrimitive,
-          AlpState<K,T> : CheckNull {
-        let f0 = m.function;
-        let f1 = Function::new(move |x : &AlpState<K, T>| post_process(x.clone()));
-        Ok(Measurement::new(
-            m.input_domain, 
-            AllDomain::new(), 
-            Function::make_chain(&f1, &f0),
-            m.input_metric,
-            m.output_measure, 
-            m.privacy_relation))
+pub fn make_alp_histogram_post_process<K, C, T>(
+    m: &Measurement<SizedHistogramDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>
+) -> Fallible<Measurement<SizedHistogramDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
+    where K: 'static + Eq + Hash + CheckNull,
+          C: 'static + Clone + CheckNull,
+          T: 'static + num::Float,
+          HashMap<K,C>: Clone,
+          AlpState<K,T>: Clone {
+    let function = m.function.clone();
+    Ok(Measurement::new(
+        m.input_domain.clone(),
+        AllDomain::new(),
+        Function::new_fallible(move |x| function.eval(x).map(post_process)),
+        m.input_metric.clone(),
+        m.output_measure.clone(),
+        m.privacy_relation.clone()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     fn idx<T>(i: usize) -> Rc<dyn Fn(&T) -> usize> {
         Rc::new(move |_| i)
     }
@@ -382,7 +375,7 @@ mod tests {
 
         let alp = make_alp_histogram_simple::<i32,i32,f64>(24, 2., 24)?;
 
-        let wrapped = make_histogram_alp_post_process(alp)?;
+        let wrapped = make_alp_histogram_post_process(&alp)?;
         
         assert!(wrapped.privacy_relation.eval(&1, &2.)?);
         assert!(!wrapped.privacy_relation.eval(&1, &1.999)?);
