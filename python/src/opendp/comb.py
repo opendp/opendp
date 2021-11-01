@@ -7,7 +7,8 @@ from opendp.typing import *
 __all__ = [
     "make_chain_mt",
     "make_chain_tt",
-    "make_basic_composition"
+    "make_basic_composition",
+    "make_population_amplification"
 ]
 
 
@@ -102,3 +103,32 @@ def make_basic_composition(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement0, measurement1), Measurement))
+
+
+def make_population_amplification(
+    measurement: Measurement,
+    population_size: int
+) -> Measurement:
+    """Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
+    
+    :param measurement: The measurement to amplify.
+    :type measurement: Measurement
+    :param population_size: Number of records in population.
+    :type population_size: int
+    :return: New measurement with the same function, but an adjusted privacy relation.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement)
+    population_size = py_to_c(population_size, c_type=ctypes.c_uint)
+    
+    # Call library function.
+    function = lib.opendp_comb__make_population_amplification
+    function.argtypes = [Measurement, ctypes.c_uint]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement, population_size), Measurement))
