@@ -128,6 +128,12 @@ so long as you pass the DA (atomic domain) type argument.
    * - :func:`opendp.trans.make_impute_uniform_float`
      - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
      - ``VectorDomain<AllDomain<TA>>``
+   * - :func:`opendp.trans.make_drop_null`
+     - ``VectorDomain<OptionNullDomain<AllDomain<TA>>>``
+     - ``VectorDomain<AllDomain<TA>>``
+   * - :func:`opendp.trans.make_drop_null`
+     - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
+     - ``VectorDomain<AllDomain<TA>>``
 
 
 Clamping
