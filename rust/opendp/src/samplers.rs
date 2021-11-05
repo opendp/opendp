@@ -398,7 +398,7 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
         let direction = bool::sample_standard_bernoulli()?;
         // make prob conservatively smaller, because a smaller probability means greater noise
         let geometric = T::sample_geometric(
-            shift.clone(), direction,(1.).neg_inf_sub(&inf_alpha)?, trials)?;
+            shift.clone(), direction, (1.).neg_inf_sub(&inf_alpha)?, trials)?;
 
         // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
         // rounding should always make threshold smaller
