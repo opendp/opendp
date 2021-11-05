@@ -28,6 +28,8 @@ pub fn make_sized_bounded_mean<T>(
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(
+            // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
+            //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2)
                 .and_then(|d_in| d_in.inf_mul(&c)))
     ))

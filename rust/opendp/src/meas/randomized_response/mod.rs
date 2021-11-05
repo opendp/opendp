@@ -6,7 +6,7 @@ use crate::dist::{MaxDivergence, SymmetricDistance, IntDistance};
 use crate::dom::AllDomain;
 use crate::error::Fallible;
 use crate::samplers::{SampleBernoulli, SampleUniformInt};
-use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfCast, InfDiv, NegInfSub, InfLn, InfSub};
+use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfCast, InfLn, InfSub};
 use num::Float;
 
 // There are two constructors:
@@ -26,7 +26,7 @@ pub fn make_randomized_response_bool<Q>(
     prob: Q, constant_time: bool
 ) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, SymmetricDistance, MaxDivergence<Q>>>
     where bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + NegInfSub + InfLn,
+          Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfSub + InfLn,
           IntDistance: InfCast<Q> {
 
     // number of categories t is 2, and probability is bounded below by 1/t
@@ -95,7 +95,7 @@ pub fn make_randomized_response<T, Q>(
             // d_out >= d_in * (p / (1 - p) * (t - 1)).ln()
             // where t = num_categories
             prob.inf_mul(&num_categories.inf_sub(&Q::one())?)?
-                .inf_div(&Q::one().inf_sub(&prob)?)?.inf_ln()?),
+                .inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?),
     ))
 }
 

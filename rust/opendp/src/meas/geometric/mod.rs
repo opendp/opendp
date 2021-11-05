@@ -72,9 +72,9 @@ pub fn make_base_geometric<D, QO>(
                     return fallible!(InvalidDistance, "epsilon must be non-negative")
                 }
                 // d_out * scale >= d_in
-                Ok(d_out.inf_mul(&scale)? >= d_in)
+                Ok(d_out.neg_inf_mul(&scale)? >= d_in)
             },
-            Some(move |d_out: &QO| D::Atom::inf_cast(d_out.inf_mul(&scale)?)))
+            Some(move |d_out: &QO| D::Atom::inf_cast(d_out.neg_inf_mul(&scale)?)))
     ))
 }
 

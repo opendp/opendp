@@ -7,7 +7,7 @@ use opendp::dist::IntDistance;
 use opendp::err;
 use opendp::meas::{make_randomized_response_bool, make_randomized_response};
 use opendp::samplers::SampleBernoulli;
-use opendp::traits::{DistanceConstant, ExactIntCast, InfCast, CheckNull, NegInfSub, InfLn, InfSub};
+use opendp::traits::{DistanceConstant, ExactIntCast, InfCast, CheckNull, InfLn, InfSub};
 
 use crate::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
@@ -24,7 +24,7 @@ pub extern "C" fn opendp_meas__make_randomized_response_bool(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<Q>(prob: *const c_void, constant_time: bool) -> FfiResult<*mut AnyMeasurement>
         where bool: SampleBernoulli<Q>,
-              Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + NegInfSub + InfLn,
+              Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfSub + InfLn,
               IntDistance: InfCast<Q> {
         let prob = *try_as_ref!(prob as *const Q);
         make_randomized_response_bool::<Q>(prob, constant_time).into_any()

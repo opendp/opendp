@@ -7,12 +7,12 @@ use crate::core::{Function, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{Abs, CheckNull, DistanceConstant, ExactIntCast, InfCast, InfDiv, SaturatingAdd, InfSub, AlertingAbs};
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfDiv, SaturatingAdd, InfSub, AlertingAbs};
 
 pub fn make_bounded_sum<T>(
     bounds: (T, T)
 ) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero + CheckNull + AlertingAbs,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + SaturatingAdd + Zero + CheckNull + AlertingAbs,
           IntDistance: InfCast<T> {
     let (lower, upper) = bounds.clone();
 
@@ -47,6 +47,8 @@ pub fn make_sized_bounded_sum<T>(
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(
+            // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
+            //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2)
                 .and_then(|d_in| d_in.inf_mul(&range)))
     ))

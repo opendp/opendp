@@ -4,7 +4,7 @@ use std::ops::Sub;
 use std::os::raw::{c_char, c_uint};
 
 use opendp::err;
-use opendp::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, ExactIntCast, CheckNull, InfDiv, InfSub, AlertingAbs};
+use opendp::traits::{DistanceConstant, InfCast, SaturatingAdd, ExactIntCast, CheckNull, InfDiv, InfSub, AlertingAbs};
 use opendp::trans::{make_bounded_sum, make_sized_bounded_sum};
 
 use crate::any::{AnyTransformation, AnyObject, Downcast};
@@ -21,7 +21,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum(
     fn monomorphize<T>(
         bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero + CheckNull + AlertingAbs,
+        where T: DistanceConstant<IntDistance> + Sub<Output=T> + SaturatingAdd + Zero + CheckNull + AlertingAbs,
               IntDistance: InfCast<T> {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_bounded_sum::<T>(bounds).into_any()

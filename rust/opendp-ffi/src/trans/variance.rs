@@ -6,7 +6,7 @@ use std::os::raw::{c_char, c_uint};
 use num::{Float, Zero};
 
 use opendp::err;
-use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckNull, InfAdd, InfSub, NegInfAdd, NegInfSub};
+use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckNull, InfAdd, InfSub};
 use opendp::trans::{make_sized_bounded_covariance, make_sized_bounded_variance};
 
 use crate::any::{AnyObject, AnyTransformation, Downcast};
@@ -23,7 +23,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_variance(
     fn monomorphize2<T>(
         size: usize, bounds: *const AnyObject, ddof: usize,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + InfSub + InfAdd + NegInfSub + NegInfAdd + CheckNull,
+        where T: DistanceConstant<IntDistance> + Float + for<'a> Sum<&'a T> + Sum<T> + ExactIntCast<usize> + InfSub + InfAdd + CheckNull,
               for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
               IntDistance: InfCast<T> {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
@@ -52,7 +52,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_covariance(
     ) -> FfiResult<*mut AnyTransformation> where
         T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero
         + Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T>
-        + InfAdd + InfSub + NegInfAdd + NegInfSub + CheckNull,
+        + InfAdd + InfSub + CheckNull,
         for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
         for<'a> &'a T: Sub<Output=T>,
         IntDistance: InfCast<T> {

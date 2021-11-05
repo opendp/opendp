@@ -59,9 +59,9 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
                     return fallible!(InvalidDistance, "epsilon must be non-negative")
                 }
                 // d_out * scale >= d_in
-                Ok(d_out.inf_mul(&scale)? >= d_in.clone())
+                Ok(d_out.neg_inf_mul(&scale)? >= d_in.clone())
             },
-            Some(move |d_out: &D::Atom| d_out.inf_mul(&scale)))
+            Some(move |d_out: &D::Atom| d_out.neg_inf_mul(&scale)))
     ))
 }
 

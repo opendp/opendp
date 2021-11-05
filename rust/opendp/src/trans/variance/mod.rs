@@ -7,14 +7,14 @@ use crate::core::{Function, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfSub, InfAdd, InfMul, NegInfAdd, NegInfSub};
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfSub, InfAdd, InfMul};
 
 pub fn make_sized_bounded_variance<T>(
     size: usize, bounds: (T, T), ddof: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
     T: DistanceConstant<IntDistance> + Float + One + Sub<Output=T> + Div<Output=T>
     + Sum<T> + for<'a> Sum<&'a T> + ExactIntCast<usize>
-    + InfMul + InfSub + NegInfSub + InfAdd + NegInfAdd + CheckNull,
+    + InfMul + InfSub + InfAdd + CheckNull,
     for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
     IntDistance: InfCast<T> {
 
@@ -23,10 +23,14 @@ pub fn make_sized_bounded_variance<T>(
     let (lower, upper) = bounds.clone();
     let _1 = T::one();
     let _2 = T::exact_int_cast(2)?;
-
     let range = upper.inf_sub(&lower)?;
+
     // check for potential overflow
-    range.inf_div(&_2)?.inf_mul(&range.inf_div(&_2)?)?;
+    // Bound the magnitude of the sum when computing the mean
+    lower.inf_mul(&_size)?;
+    upper.inf_mul(&_size)?;
+    // The squared difference from the mean is bounded above by range^2
+    range.inf_mul(&range)?.inf_mul(&_size)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
@@ -55,7 +59,7 @@ pub fn make_sized_bounded_covariance<T>(
 ) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
     T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero
     + Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T>
-    + InfAdd + InfSub + NegInfAdd + NegInfSub + CheckNull,
+    + InfAdd + InfSub + CheckNull,
     for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
     for<'a> &'a T: Sub<Output=T>,
     IntDistance: InfCast<T> {
@@ -64,10 +68,17 @@ pub fn make_sized_bounded_covariance<T>(
     let _ddof = T::exact_int_cast(ddof)?;
     let _1 = T::exact_int_cast(1)?;
     let _2 = T::exact_int_cast(2)?;
+    let range_0 = bounds_0.1.inf_sub(&bounds_0.0)?;
+    let range_1 = bounds_1.1.inf_sub(&bounds_1.0)?;
 
-    bounds_0.1.inf_sub(&bounds_0.0)?.inf_div(&_2)?.inf_mul(
-        &bounds_1.1.inf_sub(&bounds_1.0)?.inf_div(&_2)?)
-        .map_err(|_| err!(MakeTransformation, "potential for overflow when computing function"))?;
+    // check for potential overflow
+    // Bound the magnitudes of the sums when computing the means
+    bounds_0.0.inf_mul(&_size)?;
+    bounds_0.1.inf_mul(&_size)?;
+    bounds_1.0.inf_mul(&_size)?;
+    bounds_1.1.inf_mul(&_size)?;
+    // The squared difference from the mean is bounded above by range^2
+    range_0.inf_mul(&range_1)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(
@@ -86,8 +97,7 @@ pub fn make_sized_bounded_covariance<T>(
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_constant(
-            bounds_0.1.inf_sub(&bounds_0.0)?
-                .inf_mul(&bounds_1.1.inf_sub(&bounds_1.0)?)?
+            range_0.inf_mul(&range_1)?
                 .inf_mul(&_size)?
                 .inf_div(&_size.neg_inf_add(&_1)?)?
                 .inf_div(&_size.neg_inf_sub(&_ddof)?)?
