@@ -5,12 +5,16 @@ from opendp.network.odometer import BasePrivacyOdometer
 from opendp.typing import DatasetMetric, SymmetricDistance
 enable_features("contrib", "floating-point")
 
+# To use this privacy odometer,
+#   call odometer.privatize_grad(n) between loss.backwards() and optimizer.step()
+# This privacy odometer does global clipping.
+
 
 class ManualPrivacyOdometer(BasePrivacyOdometer):
     def __init__(
             self,
             model,
-            step_epsilon, step_delta=0.,
+            step_epsilon, step_delta=1e-6,
             clipping_norm=1.,
             dataset_distance: int = 1,
             MI: DatasetMetric = SymmetricDistance):

@@ -86,7 +86,7 @@ def partial(func: Callable[..., C], *args, **kwargs) -> Callable[[A, B], C]:
 class ReconstructionPrivacyOdometer(BasePrivacyOdometer):
     def __init__(
             self,
-            step_epsilon, step_delta=0.,
+            step_epsilon, step_delta=1e-6,
             clipping_norm=1.,
             reduction='mean',
             dataset_distance: int = 1,

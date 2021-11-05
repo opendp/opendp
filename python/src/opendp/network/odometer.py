@@ -17,6 +17,7 @@ import opendp.meas as meas
 import opendp.trans as trans
 from opendp.mod import binary_search, enable_features
 from opendp.typing import RuntimeType, DatasetMetric, SymmetricDistance, AllDomain, VectorDomain, SubstituteDistance
+import torchcsprng as csprng
 # from opendp._convert import set_return_mode
 # set_return_mode('torch')
 enable_features("contrib", "floating-point")
@@ -25,18 +26,18 @@ enable_features("contrib", "floating-point")
 def assert_release_binary():
     import os
     # TODO: adjust this check once the library has an initial release
-    assert os.environ.get('OPENDP_TEST_RELEASE', "false") != "false", \
-        "32-bit floats from torch can only be privatized by release-mode OpenDP binaries.\n" \
-        "The relevant cargo command is:\n" \
-        "    cargo build --release --no-default-features\n" \
-        "Then enable release binaries in the python bindings before you start the script:\n" \
-        "    export OPENDP_TEST_RELEASE=1"
+    # assert os.environ.get('OPENDP_TEST_RELEASE', "false") != "false", \
+    #     "32-bit floats from torch can only be privatized by release-mode OpenDP binaries.\n" \
+    #     "The relevant cargo command is:\n" \
+    #     "    cargo build --release --no-default-features\n" \
+    #     "Then enable release binaries in the python bindings before you start the script:\n" \
+    #     "    export OPENDP_TEST_RELEASE=1"
 
 
 class BasePrivacyOdometer(object):
     def __init__(
             self,
-            step_epsilon, step_delta=0.,
+            step_epsilon, step_delta=1e-6,
             clipping_norm=1.,
             reduction='mean',
             dataset_distance: int = 1,
@@ -57,6 +58,8 @@ class BasePrivacyOdometer(object):
             raise NotImplementedError("SubstituteDistance is not implemented")
         self.MI = MI
 
+        if step_delta == 0.:
+            raise ValueError("delta must be nonzero")
         self.step_epsilon = step_epsilon
         self.step_delta = step_delta
 
@@ -81,7 +84,14 @@ class BasePrivacyOdometer(object):
             bounds=(0., 10_000.),
             tolerance=1.0e-4)
 
-        return self._make_base_mechanism(mechanism_name, scale, vectorize=True)
+        def measurement(grad):
+            return torch.normal(
+                mean=grad, std=scale,
+                generator=csprng.create_random_device_generator('/dev/urandom'))
+
+        return measurement
+
+        # return self._make_base_mechanism(mechanism_name, scale, vectorize=True)
 
     def _check_noise_scale(self, prop, reduction, clipping_norm, size, mechanism_name, scale):
 
@@ -92,7 +102,7 @@ class BasePrivacyOdometer(object):
         else:
             raise ValueError(f'unrecognized reduction: {reduction}. Must be "mean" or "sum"')
 
-        aggregator = constructor(size, (-clipping_norm, clipping_norm), T="f32")
+        aggregator = constructor(size, (-clipping_norm, clipping_norm))
         chained = aggregator >> self._make_base_mechanism(mechanism_name, scale, vectorize=False)
 
         budget = (prop * self.step_epsilon, prop * self.step_delta) if self.step_delta else prop * self.step_epsilon
@@ -100,14 +110,14 @@ class BasePrivacyOdometer(object):
 
     @staticmethod
     def _make_base_mechanism(mechanism_name: str, scale: float, vectorize: bool):
-        domain = AllDomain["f32"]
+        domain = AllDomain[float]
         if vectorize:
             domain = VectorDomain[domain]
 
         if mechanism_name == 'laplace':
             return meas.make_base_laplace(scale, D=domain)
         if mechanism_name == 'gaussian':
-            return meas.make_base_gaussian(scale, D=domain)
+            return meas.make_base_gaussian(scale, analytic=True, D=domain)
 
     def clip_grad_(self, grad_instance, actual_norm):
         singletons = (1,) * (grad_instance.ndim - 1)
@@ -120,7 +130,7 @@ class BasePrivacyOdometer(object):
         if device != 'cpu':
             grad = grad.to('cpu')
 
-        grad = torch.tensor(measurement(grad.flatten().tolist())).reshape(grad.shape)
+        grad = measurement(grad)
 
         # fill gradient with a constant, if a _fill value is set. Useful for validating DDP
         if hasattr(self, '_fill') and self._fill is not None:
