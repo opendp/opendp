@@ -5,7 +5,7 @@ use std::os::raw::c_char;
 
 use opendp::error::*;
 
-use crate::any::{AnyMeasureDistance, AnyMeasurement, AnyMetricDistance, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+use crate::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
 use crate::util;
 use crate::util::{c_bool, into_c_char_p};
 
@@ -189,8 +189,8 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_check(
     transformation: *const AnyTransformation,
-    distance_in: *const AnyMetricDistance,
-    distance_out: *const AnyMetricDistance
+    distance_in: *const AnyObject,
+    distance_out: *const AnyObject
 ) -> FfiResult<*mut c_bool> {
     let transformation = try_as_ref!(transformation);
     let distance_in = try_as_ref!(distance_in);
@@ -202,8 +202,8 @@ pub extern "C" fn opendp_core__transformation_check(
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_check(
     measurement: *const AnyMeasurement,
-    distance_in: *const AnyMetricDistance,
-    distance_out: *const AnyMeasureDistance
+    distance_in: *const AnyObject,
+    distance_out: *const AnyObject
 ) -> FfiResult<*mut c_bool> {
     let measurement = try_as_ref!(measurement);
     let distance_in = try_as_ref!(distance_in);

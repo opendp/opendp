@@ -26,7 +26,7 @@ You have an out-of-date Rust compiler.
     rustup update
 
 
-Runtime Error: "No match for concrete type; You've got a debug binary!"
+Runtime Error: "No match for concrete type. You've got a debug binary!"
 -----------------------------------------------------------------------
 If the built FFI library doesn't support a data type, you get the error:
 

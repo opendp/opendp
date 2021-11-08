@@ -8,75 +8,12 @@ use opendp::{err, fallible};
 use opendp::data::Column;
 use opendp::error::Fallible;
 
-use crate::any::{AnyObject, Downcast, AnyMeasureDistance, AnyMetricDistance};
+use crate::any::{AnyObject, Downcast};
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::util;
 use crate::util::{c_bool, Type, TypeContents};
-use opendp::traits::{MeasureDistance, MetricDistance};
 use std::fmt::Formatter;
 use std::hash::Hash;
-
-
-#[no_mangle]
-pub extern "C" fn opendp_data__slice_as_measure_distance(
-    raw: *const FfiSlice, T: *const c_char
-) -> FfiResult<*mut AnyMeasureDistance> {
-    fn raw_to_plain<T: 'static + Clone + MeasureDistance>(raw: &FfiSlice) -> Fallible<AnyMeasureDistance> {
-        if raw.len != 1 {
-            return fallible!(FFI, "The slice length must be one when creating a scalar from FfiSlice");
-        }
-        let plain = util::as_ref(raw.ptr as *const T)
-            .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create an object"))?.clone();
-        Ok(AnyMeasureDistance::new(plain))
-    }
-    fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyMeasureDistance>
-        where (T0, T1): MeasureDistance {
-        if raw.len != 2 {
-            return fallible!(FFI, "The slice length must be two when creating a tuple from FfiSlice");
-        }
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 2) };
-
-        let tuple = util::as_ref(slice[0] as *const T0).cloned()
-            .zip(util::as_ref(slice[1] as *const T1).cloned())
-            .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
-        Ok(AnyMeasureDistance::new(tuple))
-    }
-
-    let T = try_!(Type::try_from(T));
-    let raw = try_as_ref!(raw);
-    match T.contents {
-        TypeContents::TUPLE(ref element_ids) => {
-            if element_ids.len() != 2 {
-                return fallible!(FFI, "Only tuples of length 2 are supported").into();
-            }
-            let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
-            dispatch!(raw_to_tuple, [(types[0], @numbers), (types[1], @numbers)], (raw))
-        }
-        TypeContents::PLAIN(_) => dispatch!(raw_to_plain, [(T, @numbers)], (raw)),
-        _ => fallible!(FFI, "Metric distances are only expressed in terms of scalars and tuples.")
-    }.into()
-}
-
-
-#[no_mangle]
-pub extern "C" fn opendp_data__slice_as_metric_distance(
-    raw: *const FfiSlice, T: *const c_char
-) -> FfiResult<*mut AnyMetricDistance> {
-    fn raw_to_plain<T: 'static + Clone + MetricDistance>(raw: &FfiSlice) -> Fallible<AnyMetricDistance> {
-        if raw.len != 1 {
-            return fallible!(FFI, "The slice length must be one when creating a scalar from FfiSlice");
-        }
-        let plain = util::as_ref(raw.ptr as *const T)
-            .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create an object"))?.clone();
-        Ok(AnyMetricDistance::new(plain))
-    }
-    let T = try_!(Type::try_from(T));
-    let raw = try_as_ref!(raw);
-    match T.contents {
-        TypeContents::PLAIN(_) => dispatch!(raw_to_plain, [(T, @numbers)], (raw)),
-        _ => fallible!(FFI, "Metric distances are only expressed in terms of scalars.")
-    }.into()
-}
 
 #[no_mangle]
 pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
@@ -170,7 +107,8 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
                 dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
             } else {fallible!(FFI, "unrecognized generic {:?}", name)}
         }
-        _ => dispatch!(raw_to_plain, [(T, @primitives)], (raw))
+        // This list is explicit because it allows us to avoid including u32 in the @primitives
+        _ => dispatch!(raw_to_plain, [(T, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (raw))
     }.into()
 }
 

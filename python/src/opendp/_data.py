@@ -7,8 +7,6 @@ from opendp.typing import *
 __all__ = [
     "to_string",
     "slice_as_object",
-    "slice_as_metric_distance",
-    "slice_as_measure_distance",
     "object_type",
     "object_as_slice",
     "object_free",
@@ -72,66 +70,6 @@ def slice_as_object(
     function.restype = FfiResult
     
     return unwrap(function(slice, T), AnyObjectPtr)
-
-
-def slice_as_metric_distance(
-    slice: FfiSlicePtr,
-    T: RuntimeTypeDescriptor = None
-):
-    """Internal function. Load data from a `slice` into an AnyMetricDistance
-    
-    :param slice: 
-    :type slice: FfiSlicePtr
-    :param T: 
-    :type T: RuntimeTypeDescriptor
-    :return: An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information.
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
-    
-    # Convert arguments to c types.
-    slice = py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_data__slice_as_metric_distance
-    function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return unwrap(function(slice, T), AnyMetricDistancePtr)
-
-
-def slice_as_measure_distance(
-    slice: FfiSlicePtr,
-    T: RuntimeTypeDescriptor = None
-):
-    """Internal function. Load data from a `slice` into an AnyMeasureDistance
-    
-    :param slice: 
-    :type slice: FfiSlicePtr
-    :param T: 
-    :type T: RuntimeTypeDescriptor
-    :return: An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information.
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=slice)
-    
-    # Convert arguments to c types.
-    slice = py_to_c(slice, c_type=FfiSlicePtr, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_data__slice_as_measure_distance
-    function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return unwrap(function(slice, T), AnyMeasureDistancePtr)
 
 
 def object_type(

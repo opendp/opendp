@@ -50,7 +50,7 @@
             },
             {
                 "name": "d_in",
-                "c_type": "const AnyMetricDistance *",
+                "c_type": "const AnyObject *",
                 "rust_type": {
                     "function": "transformation_input_distance_type",
                     "params": [
@@ -61,7 +61,7 @@
             },
             {
                 "name": "d_out",
-                "c_type": "const AnyMetricDistance *",
+                "c_type": "const AnyObject *",
                 "rust_type": {
                     "function": "transformation_output_distance_type",
                     "params": [
@@ -87,7 +87,7 @@
             },
             {
                 "name": "d_in",
-                "c_type": "const AnyMetricDistance *",
+                "c_type": "const AnyObject *",
                 "rust_type": {
                     "function": "measurement_input_distance_type",
                     "params": [
@@ -98,7 +98,7 @@
             },
             {
                 "name": "d_out",
-                "c_type": "const AnyMeasureDistance *",
+                "c_type": "const AnyObject *",
                 "rust_type": {
                     "function": "measurement_output_distance_type",
                     "params": [
