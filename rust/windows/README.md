@@ -49,14 +49,14 @@ These instructions are part of the process for preparing a multiplatform OpenDP 
    
 1. Download sources and apply patches to the sources
    ```cmd
-   chmod +x windows/1_download_and_patch.sh
-   (cd windows && bash 1_download_and_patch.sh)
+   chmod +x rust/windows/1_download_and_patch.sh
+   (cd rust/windows && bash 1_download_and_patch.sh)
    ```
    
 1. Build gmp and mpfr. Run these commands in an elevated MSYS2 shell
    ```cmd
-   chmod +x windows/2_build_dependencies.sh
-   (cd windows && bash 2_build_dependencies.sh)
+   chmod +x rust/windows/2_build_dependencies.sh
+   (cd rust/windows && bash 2_build_dependencies.sh)
    ```
    
 1. Build the opendp library! This must also be run in an MSYS2 shell.

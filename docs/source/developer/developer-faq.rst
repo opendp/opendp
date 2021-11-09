@@ -14,7 +14,7 @@ If you are on a Windows platform and get the error:
 
     thread 'main' panicked at 'Program failed with code 2: "make" "-j" "12" "check"'
 
-Refer to `the windows build instructions <https://github.com/opendp/opendp/tree/main/windows>`_.
+Refer to `the windows build instructions <https://github.com/opendp/opendp/tree/main/rust/windows>`_.
 
 
 Compilation Error: "error[E0658]: const generics are unstable"
@@ -26,7 +26,7 @@ You have an out-of-date Rust compiler.
     rustup update
 
 
-Runtime Error: "No match for concrete type; You've got a debug binary!"
+Runtime Error: "No match for concrete type. You've got a debug binary!"
 -----------------------------------------------------------------------
 If the built FFI library doesn't support a data type, you get the error:
 

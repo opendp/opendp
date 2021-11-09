@@ -2,14 +2,14 @@ use std::convert::TryFrom;
 use std::hash::Hash;
 use std::os::raw::{c_char, c_uint};
 
-use num::{Bounded, Integer, One, Zero};
+use num::{Bounded, Integer, One, Zero, Float};
 use num::traits::FloatConst;
 
 use opendp::core::{SensitivityMetric};
 use opendp::dist::{L1Distance, L2Distance, IntDistance};
 use opendp::err;
 use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
-use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct};
+use opendp::trans::{CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct, CountByCategoriesConstant};
 
 use crate::any::{AnyObject, AnyTransformation};
 use crate::any::Downcast;
@@ -31,7 +31,7 @@ pub extern "C" fn opendp_trans__make_count(
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @primitives),
-        (TO, @integers)
+        (TO, @numbers)
     ], ())
 }
 
@@ -51,7 +51,7 @@ pub extern "C" fn opendp_trans__make_count_distinct(
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @hashable),
-        (TO, @integers)
+        (TO, @numbers)
     ], ())
 }
 
@@ -68,10 +68,10 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
         where QO: DistanceConstant<IntDistance> + One,
               IntDistance: InfCast<QO> {
         fn monomorphize2<MO, TI, TO>(categories: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-            where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
+            where MO: 'static + SensitivityMetric + CountByCategoriesConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + One,
                   TI: 'static + Eq + Hash + Clone + CheckNull,
-                  TO: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
+                  TO: 'static + Zero + One + SaturatingAdd + CheckNull,
                   IntDistance: InfCast<MO::Distance> {
             let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
             make_count_by_categories::<MO, TI, TO>(categories).into_any()
@@ -79,16 +79,16 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
         dispatch!(monomorphize2, [
             (MO, [L1Distance<QO>, L2Distance<QO>]),
             (TI, @hashable),
-            (TO, @integers)
+            (TO, @numbers)
         ], (categories))
     }
     let MO = try_!(Type::try_from(MO));
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    let QO = try_!(MO.get_sensitivity_distance());
+    let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [
-        (QO, @integers)
+        (QO, @numbers)
     ], (categories, MO, TI, TO))
 }
 
@@ -100,7 +100,7 @@ pub extern "C" fn opendp_trans__make_count_by(
     fn monomorphize<QO>(
         size: usize, MO: Type, TIA: Type, TOA: Type,
     ) -> FfiResult<*mut AnyTransformation>
-        where QO: DistanceConstant<IntDistance> + FloatConst + One,
+        where QO: DistanceConstant<IntDistance> + FloatConst + One + Float + ExactIntCast<usize>,
               IntDistance: InfCast<QO> {
         fn monomorphize2<MO, TIA, TOA>(size: usize) -> FfiResult<*mut AnyTransformation>
             where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
@@ -121,6 +121,6 @@ pub extern "C" fn opendp_trans__make_count_by(
     let TIA = try_!(Type::try_from(TIA));
     let TOA = try_!(Type::try_from(TOA));
 
-    let QO = try_!(MO.get_sensitivity_distance());
+    let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [(QO, @floats)], (size, MO, TIA, TOA))
 }

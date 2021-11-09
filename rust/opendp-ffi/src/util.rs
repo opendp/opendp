@@ -8,7 +8,7 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use opendp::{err, fallible};
-use opendp::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance};
+use opendp::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence};
 use opendp::error::*;
 use crate::any::AnyObject;
 use opendp::dom::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
@@ -48,7 +48,7 @@ impl Type {
     }
 
     pub fn of_id(id: &TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse))
+        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse, "unrecognized type id"))
     }
 
     // Hacky special entry point for composition.
@@ -74,48 +74,36 @@ impl Type {
     }
 }
 
-pub enum MetricClass { Dataset, Sensitivity }
-
 impl Type {
-    pub fn get_domain_atom(&self) -> Fallible<Type> {
+    pub fn get_atom(&self) -> Fallible<Type> {
         match &self.contents {
             TypeContents::PLAIN(_) => Ok(self.clone()),
-            TypeContents::GENERIC { name, args } => {
-                if !name.ends_with("Domain") {
-                    return fallible!(TypeParse, "Failed to extract atomic type: {:?} is not a domain", name)
-                }
+            TypeContents::GENERIC { args, .. } => {
                 if args.len() != 1 {
-                    return fallible!(TypeParse, "Failed to extract atomic type: expected one argument, got {:?} generic arguments", args.len())
+                    return fallible!(TypeParse, "Failed to extract atom type: expected one argument, got {:?} arguments", args.len())
                 }
-                Type::of_id(&args[0])?.get_domain_atom()
+                Type::of_id(&args[0])?.get_atom()
             }
-            _ => fallible!(TypeParse, "Failed to extract atomic type: not a domain")
+            _ => fallible!(TypeParse, "Failed to extract atom type: not a generic")
         }
     }
-    pub fn get_sensitivity_distance(&self) -> Fallible<Type> {
-        if let TypeContents::GENERIC {args, name} = &self.contents {
-            if !vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
-                return fallible!(TypeParse, "Expected a sensitivity type name, received {:?}", name)
-            }
-            if args.len() != 1 {
-                return fallible!(TypeParse, "Sensitivity must have one generic argument")
-            }
-            Type::of_id(&args[0])
-        } else {
-            fallible!(TypeParse, "Expected a sensitivity type that is generic with respect to one distance type- for example, AbsoluteDistance<u32>")
-        }
-    }
-    pub fn get_metric_class(&self) -> Fallible<MetricClass> {
-        if self == &Type::of::<SubstituteDistance>() || self == &Type::of::<SymmetricDistance>() {
-            Ok(MetricClass::Dataset)
-        } else if let TypeContents::GENERIC { name, .. } = &self.contents {
-            if vec!["L1Distance", "L2Distance", "AbsoluteDistance"].contains(name) {
-                Ok(MetricClass::Sensitivity)
-            } else {
-                return fallible!(TypeParse, "Expected a metric type name, received {:?}", name)
-            }
-        } else {
-            fallible!(TypeParse, "Expected a metric type.")
+}
+impl ToString for Type {
+    fn to_string(&self) -> String {
+        let get_id_str = |type_id: &TypeId| Type::of_id(type_id)
+            .as_ref().map(ToString::to_string)
+            .unwrap_or_else(|_| "?".to_string());
+
+        match &self.contents {
+            TypeContents::PLAIN(v) => v.to_string(),
+            TypeContents::TUPLE(args) => format!("({})", args.iter()
+                .map(get_id_str).collect::<Vec<_>>().join(", ")),
+            TypeContents::ARRAY { element_id, len } =>
+                format!("[{}; {}]", get_id_str(element_id), len),
+            TypeContents::SLICE(type_id) => format!("&[{}]", get_id_str(type_id)),
+            TypeContents::GENERIC { name, args } => format!("{}<{}>", name, args.iter()
+                .map(get_id_str).collect::<Vec<_>>().join(", ")),
+            TypeContents::VEC(v) => format!("Vec<{}>", get_id_str(v))
         }
     }
 }
@@ -231,30 +219,35 @@ lazy_static! {
         let types: Vec<Type> = vec![
             // data types
             vec![t!(())],
-            type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject],
-            type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject)],
-            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
-            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject]],
-            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
-            type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject],
+            type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject)],
+            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
+            type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
+            type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
-            type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, AnyObject>],
+            type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
 
             // domains
-            type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![BoundedDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![BoundedDomain, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64>],
             type_vec![[InherentNullDomain AllDomain], <f32, f64>],
-            type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![[VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-            type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
-            type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String>],
+            type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64>],
+            type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[SizedDomain VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // metrics
             type_vec![SubstituteDistance, SymmetricDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+
+            // measures
+            type_vec![MaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![SmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len());
@@ -335,9 +328,9 @@ pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
 #[allow(non_camel_case_types)]
 pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
 
-// pub fn to_bool(b: c_bool) -> bool {
-//     b != 0
-// }
+pub fn to_bool(b: c_bool) -> bool {
+    b != 0
+}
 
 pub fn from_bool(b: bool) -> c_bool {
     if b {1} else {0}

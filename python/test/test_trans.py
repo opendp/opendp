@@ -27,7 +27,7 @@ def test_cast_drop_null():
 
     caster = make_cast_inherent(TIA=str, TOA=float) >> make_drop_null(DA=InherentNullDomain[AllDomain[float]])
     assert caster(["a", "2."]) == [2]
-
+    
 
 def test_cast_inherent():
     from opendp.trans import make_cast_inherent
@@ -179,7 +179,7 @@ def test_bounded_mean():
     from opendp.trans import make_sized_bounded_mean
     query = make_sized_bounded_mean(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 5.
-    assert query.check(1, 10. / 9.)
+    assert query.check(2, 10. / 9.)
 
 
 def test_bounded_sum():
@@ -206,14 +206,14 @@ def test_bounded_sum_n():
     query = make_sized_bounded_sum(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten this check
-    assert query.check(1, 20.)
+    assert query.check(2, 20.)
 
 
 def test_bounded_variance():
     from opendp.trans import make_sized_bounded_variance
     query = make_sized_bounded_variance(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 7.5
-    assert query.check(1, 20.)
+    assert query.check(2, 20.)
 
 
 def test_count():
@@ -255,14 +255,14 @@ def test_resize():
     assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)
-    assert query.check(2, 2)
+    assert query.check(2, 4)
 
     from opendp.trans import make_resize
     query = make_resize(size=4, constant=0)
     assert query([-1, 2, 5]) == [-1, 2, 5, 0]
     assert not query.check(1, 1)
     assert query.check(1, 2)
-    assert query.check(2, 2)
+    assert query.check(2, 4)
 
 
 def test_count_by_categories_str():
@@ -270,3 +270,20 @@ def test_count_by_categories_str():
     query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
+
+
+def test_indexing():
+    from opendp.trans import make_find, make_impute_constant, make_find_bin, make_index
+
+    find = make_find(categories=["1", "3", "4"]) >> make_impute_constant(3, DA=OptionNullDomain[AllDomain["usize"]])
+    assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
+    assert find.check(1, 1)
+
+    binner = make_find_bin(edges=[2, 3, 5])
+    assert binner(INT_DATA) == [0, 1, 2, 2, 3, 3, 3, 3, 3]
+
+    indexer = make_index(categories=["A", "B", "C"], null="NA")
+    assert indexer([0, 1, 3, 1, 5]) == ['A', 'B', 'NA', 'B', 'NA']
+
+    assert (find >> indexer)(STR_DATA) == ['A', 'NA', 'B', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']
+    assert (binner >> indexer)(INT_DATA) == ['A', 'B', 'C', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']

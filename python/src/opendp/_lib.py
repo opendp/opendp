@@ -5,7 +5,7 @@ from typing import Optional, Any
 
 # list all acceptable alternative types for each default type
 ATOM_EQUIVALENCE_CLASSES = {
-    'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64'],
+    'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
     'bool': ['bool']
 }
@@ -43,14 +43,6 @@ class AnyObject(ctypes.Structure):
     pass  # Opaque struct
 
 
-class AnyMetricDistance(ctypes.Structure):
-    pass  # Opaque struct
-
-
-class AnyMeasureDistance(ctypes.Structure):
-    pass  # Opaque struct
-
-
 class AnyMeasurement(ctypes.Structure):
     pass  # Opaque struct
 
@@ -65,14 +57,6 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
 
 class AnyObjectPtr(ctypes.POINTER(AnyObject)):
     _type_ = AnyObject
-
-
-class AnyMeasureDistancePtr(ctypes.POINTER(AnyMeasureDistance)):
-    _type_ = AnyMeasureDistance
-
-
-class AnyMetricDistancePtr(ctypes.POINTER(AnyMetricDistance)):
-    _type_ = AnyMetricDistance
 
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):

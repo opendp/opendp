@@ -58,5 +58,25 @@
             "c_type": "FfiResult<AnyMeasurement *>",
             "description": "Measurement representing the composed transformations."
         }
+    },
+    "make_population_amplification": {
+        "description": "Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *",
+                "description": "The measurement to amplify."
+            },
+            {
+                "name": "population_size",
+                "c_type": "unsigned int",
+                "description": "Number of records in population."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "New measurement with the same function, but an adjusted privacy relation."
+        }
+
     }
 }

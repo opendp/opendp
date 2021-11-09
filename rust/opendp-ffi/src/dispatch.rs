@@ -73,22 +73,22 @@ macro_rules! disp {
 #[cfg(not(debug_assertions))]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, bool, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @floats),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [f32, f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [SubstituteDistance, SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
@@ -96,7 +96,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => opendp::err!(FFI, "No match for concrete type {} ({:?})", $rt_type.descriptor, $rt_type.id).into()
+            _ => opendp::err!(FFI, "No match for concrete type {}.", $rt_type.descriptor).into()
         }
     };
 }
@@ -104,10 +104,10 @@ macro_rules! disp_expand {
 #[cfg(debug_assertions)]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [bool, i32, f64, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [bool, i32, f64, String, usize]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32, f64, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32, f64, String, usize, AnyObject]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u32, i32, f64]), $rt_dispatch_types, $type_args, $args)
@@ -127,7 +127,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => opendp::err!(FFI, "No match for concrete type {} ({:?}). You've got a debug binary! Consult https://docs.opendp.org/en/stable/developer/troubleshooting.html", $rt_type.descriptor, $rt_type.id).into()
+            _ => opendp::err!(FFI, "No match for concrete type {}. You've got a debug binary! Consult https://docs.opendp.org/en/stable/developer/developer-faq.html", $rt_type.descriptor).into()
         }
     };
 }

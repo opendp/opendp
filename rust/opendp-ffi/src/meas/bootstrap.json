@@ -41,6 +41,12 @@
                 "description": "noise scale parameter to the gaussian distribution"
             },
             {
+                "name": "analytic",
+                "c_type": "bool",
+                "default": false,
+                "description": "enable to use a privacy relation corresponding to the analytic gaussian mechanism"
+            },
+            {
                 "name": "D",
                 "default": "AllDomain<T>",
                 "generics": ["T"],
@@ -120,43 +126,97 @@
             "c_type": "FfiResult<AnyMeasurement *>"
         }
     },
-    "make_base_stability": {
-        "description": "Make a Measurement that implements a stability-based filtering and noising.",
+    "make_randomized_response_bool": {
+        "description": "Make a Measurement that implements randomized response on a boolean value.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "prob",
+                "c_type": "void *",
+                "rust_type": "Q",
+                "description": "Probability of returning the correct answer. Must be in [0.5, 1)"
+            },
+            {
+                "name": "constant_time",
+                "c_type": "bool",
+                "default": false,
+                "description": "Set to true to enable constant time"
+            },
+            {
+                "name": "Q",
+                "description": "Data type of probability and budget.",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+    },
+    "make_randomized_response": {
+        "description": "Make a Measurement that implements randomized response on a categorical value.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["T"]
+                },
+                "description": "Set of valid outcomes"
+            },
+            {
+                "name": "prob",
+                "c_type": "void *",
+                "rust_type": "Q",
+                "description": "Probability of returning the correct answer. Must be in [1/num_categories, 1)"
+            },
+            {
+                "name": "constant_time",
+                "c_type": "bool",
+                "default": false,
+                "description": "Set to true to enable constant time"
+            },
+            {
+                "name": "T",
+                "description": "Data type of a category.",
+                "is_type": true,
+                "example": {
+                    "function": "get_first",
+                    "params": ["categories"]
+                }
+            },
+            {
+                "name": "Q",
+                "description": "Data type of probability and budget.",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+    },
+    "make_count_by_ptr": {
+        "description": "Make a Measurement that uses propose-test-release to count by an unknown set of categories.",
         "features": ["floating-point", "contrib"],
         "args": [
             {
-                "name": "size",
-                "c_type": "unsigned int",
-                "description": "Number of records in the input vector."
-            },
-            {
                 "name": "scale",
                 "c_type": "void *",
-                "rust_type": {"root": "MI", "index": 0},
+                "rust_type": "TOC",
                 "description": "Noise scale parameter."
             },
             {
                 "name": "threshold",
                 "c_type": "void *",
-                "rust_type": {"root": "MI", "index": 0},
+                "rust_type": "TOC",
                 "description": "Exclude counts that are less than this minimum value."
             },
             {
-                "name": "MI",
-                "description": "Input metric.",
-                "is_type": true,
-                "hint": "SensitivityMetric"
-            },
-            {
-                "name": "TIK",
-                "description": "Data type of input key- must be hashable/categorical.",
+                "name": "TIA",
+                "description": "Atomic type of input data- must be hashable/categorical.",
                 "is_type": true
             },
             {
-                "name": "TIC",
-                "description": "Data type of input count- must be integral.",
-                "is_type": true,
-                "default": "i32"
+                "name": "TOC",
+                "description": "Data type of output count- must be float.",
+                "is_type": true
             }
         ],
         "ret": {

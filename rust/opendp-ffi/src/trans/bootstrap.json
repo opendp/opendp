@@ -169,7 +169,7 @@
                 "name": "TO",
                 "default": "i32",
                 "is_type": true,
-                "description": "Output Type. Must be an integer."
+                "description": "Output Type. Must be numeric."
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
@@ -187,13 +187,13 @@
                 "name": "TO",
                 "default": "i32",
                 "is_type": true,
-                "description": "Output Type. Must be an integer."
+                "description": "Output Type. Must be numeric."
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_count_by": {
-        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size.\nUse meas.make_base_stability to release this query.",
+        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size. \nThis transformation depends on a measurement that has not yet been implemented.",
         "features": ["contrib"],
         "args": [
             {
@@ -252,7 +252,7 @@
             {
                 "name": "TOA",
                 "is_type": true,
-                "description": "express counts in terms of this integral type",
+                "description": "express counts in terms of this numeric type",
                 "default": "i32"
             }
         ],
@@ -435,6 +435,75 @@
                     "function": "get_first",
                     "params": ["bounds"]
                 }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_find": {
+        "description": "Find the index of a data value in a set of categories.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TIA"]
+                },
+                "description": "The set of categories to find indexes from."
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "categorical/hashable input type. Input data must be Vec<TIA>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_find_bin": {
+        "description": "Find the bin index from a monotonically increasing vector of edges.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "edges",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TIA"]
+                },
+                "description": "The set of edges to split bins by."
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "numerical input type. Input data must be Vec<TIA>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_index": {
+        "description": "Index into a vector of categories.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TOA"]
+                },
+                "description": "The set of categories to index into."
+            },
+            {
+                "name": "null",
+                "c_type": "AnyObject *",
+                "rust_type": "TOA",
+                "description": "Category to return if the index is out-of-range of the category set."
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "atomic output type. Output data will be Vec<TIA>."
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}

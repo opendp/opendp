@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::hash::Hash;
 
-use num::{Integer, One, Zero};
+use num::{Integer, One, Zero, Float};
 
 use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
@@ -44,10 +44,10 @@ pub fn make_count_distinct<TIA, TO>(
         StabilityRelation::new_from_constant(TO::one())))
 }
 
-pub trait CountByConstant<QO> {
+pub trait CountByCategoriesConstant<QO> {
     fn get_stability_constant() -> QO;
 }
-impl<Q: One, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
+impl<Q: One, const P: usize> CountByCategoriesConstant<Q> for LpDistance<Q, P> {
     fn get_stability_constant() -> Q { Q::one() }
 }
 
@@ -55,10 +55,10 @@ impl<Q: One, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
 pub fn make_count_by_categories<MO, TI, TO>(
     categories: Vec<TI>
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
-    where MO: CountByConstant<MO::Distance> + SensitivityMetric,
+    where MO: CountByCategoriesConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance> + One,
           TI: 'static + Eq + Hash + CheckNull,
-          TO: Integer + Zero + One + SaturatingAdd + CheckNull,
+          TO: Zero + One + SaturatingAdd + CheckNull,
           IntDistance: InfCast<MO::Distance>{
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
@@ -90,9 +90,19 @@ pub fn make_count_by_categories<MO, TI, TO>(
         StabilityRelation::new_from_constant(MO::get_stability_constant())))
 }
 
+pub trait CountByConstant<QO> {
+    fn get_stability_constant() -> Fallible<QO>;
+}
+impl<Q: One + Float + ExactIntCast<usize>, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
+    fn get_stability_constant() -> Fallible<Q> {
+        if P == 0 {return fallible!(MakeTransformation, "P must be positive")}
+        let p = Q::exact_int_cast(P)?;
+        let _2 = Q::exact_int_cast(2)?;
+        Ok(_2.powf(Q::one() / p - Q::one()))
+    }
+}
+
 // count with known n, unknown categories
-// This implementation could be made tighter with the relation in the spreadsheet for known n.
-// Need to double-check if stability-based histograms have any additional stability requirements.
 pub fn make_count_by<MO, TI, TO>(
     size: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
@@ -114,7 +124,7 @@ pub fn make_count_by<MO, TI, TO>(
         }),
         SymmetricDistance::default(),
         MO::default(),
-        StabilityRelation::new_from_constant(MO::get_stability_constant())))
+        StabilityRelation::new_from_constant(MO::get_stability_constant()?)))
 }
 
 
@@ -175,8 +185,8 @@ mod tests {
         expected.insert(true, 6);
         expected.insert(false, 4);
         assert_eq!(ret, expected);
-        assert!(!transformation.check(&5, &4.999)?);
-        assert!(transformation.check(&5, &5.0)?);
+        assert!(!transformation.check(&6, &4.2426)?);
+        assert!(transformation.check(&6, &4.24265)?);
         Ok(())
     }
 }

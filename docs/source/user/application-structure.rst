@@ -51,10 +51,9 @@ The noise scale may be either laplace or gaussian.
 :laplacian: | Applies to any L1 noise addition mechanism.
   | :func:`make_base_laplace() <opendp.meas.make_base_laplace>`
   | :func:`make_base_geometric() <opendp.meas.make_base_geometric>`
-  | :func:`make_base_stability(MI=L1Distance[T]) <opendp.meas.make_base_stability>`
+  | :func:`make_count_by_ptr() <opendp.meas.make_count_by_ptr>`
 :gaussian: | Applies to any L2 noise addition mechanism.
   | :func:`make_base_gaussian() <opendp.meas.make_base_gaussian>`
-  | :func:`make_base_stability(MI=L2Distance[T]) <opendp.meas.make_base_stability>`
 
 The library provides the following functions for converting to and from noise scales:
 
@@ -182,7 +181,7 @@ can be used to convert the earlier discovered noise scale parameter into an accu
     ...  f"the DP estimate differs from the true value by no more than {accuracy} "
     ...  f"at a statistical significance level alpha of {alpha}, "
     ...  f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence.")
-    'When the laplace scale is 1.33333333581686, the DP estimate differs from the true value by no more than 3.9943097055119687 at a statistical significance level alpha of 0.05, or with (1 - 0.05)100% = 95.0% confidence.'
+    'When the laplace scale is 2.00000000745058, the DP estimate differs from the true value by no more than 5.991464569427925 at a statistical significance level alpha of 0.05, or with (1 - 0.05)100% = 95.0% confidence.'
 
 Please be aware that the preprocessing (impute, clamp, resize) can introduce bias that the accuracy estimate cannot account for.
 In this example, since the sensitive dataset is short two exams,
