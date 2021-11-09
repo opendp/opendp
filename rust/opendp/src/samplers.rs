@@ -1,19 +1,15 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg, Sub, SubAssign};
+use std::ops::{AddAssign, Neg, Sub, SubAssign, Mul};
 
 use ieee754::Ieee754;
 use num::{Bounded, clamp, One, Zero};
-#[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
-use rand::Rng;
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
-#[cfg(not(feature="use-mpfr"))]
-use statrs::function::erf;
 
 use crate::error::Fallible;
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
-use crate::traits::{TotalOrd, FloatBits};
+use crate::traits::{TotalOrd, FloatBits, InfExp, InfSub, InfAdd, AlertingSub, CastInternalReal, InfDiv};
 
 #[cfg(feature="use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
@@ -365,7 +361,7 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd> SampleTwoSidedGeometric for T {
+impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub> SampleTwoSidedGeometric for T {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the
@@ -380,13 +376,15 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
     ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
     ///             the analyst can deduce that the input was greater than or equal to upper
     fn sample_two_sided_geometric(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+        if scale.is_zero() {return Ok(shift)}
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
             if lower == upper {return Ok(lower)}
-            Some(upper - lower - T::one())
+            Some(upper.alerting_sub(&lower)?.alerting_sub(&T::one())?)
         } else {None};
 
-        let alpha: f64 = (scale.recip()).exp().recip();
+        // make alpha conservatively larger
+        let inf_alpha: f64 = scale.recip().neg_inf_exp()?.recip();
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
@@ -398,10 +396,15 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
         // TODO: benchmark execution time on different inputs
         let uniform = f64::sample_standard_uniform(bounds.is_some())?;
         let direction = bool::sample_standard_bernoulli()?;
-        let geometric = T::sample_geometric(shift.clone(), direction,1. - alpha, trials)?;
+        // make prob conservatively smaller, because a smaller probability means greater noise
+        let geometric = T::sample_geometric(
+            shift.clone(), direction, (1.).neg_inf_sub(&inf_alpha)?, trials)?;
 
         // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
-        let noised = if uniform < (1. - alpha) / (1. + alpha) { shift } else { geometric };
+        // rounding should always make threshold smaller
+        let threshold = (1.).neg_inf_sub(&inf_alpha)?.neg_inf_div(
+            &(1.).inf_add(&inf_alpha)?)?;
+        let noised = if uniform < threshold { shift } else { geometric };
 
         Ok(if let Some((lower, upper)) = bounds {
             clamp(noised, lower, upper)
@@ -411,6 +414,19 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
     }
 }
 
+/// If v is -0., return 0., otherwise return v.
+/// This removes the duplicate -0. member of the output space,
+/// which could hold an unintended bit of information
+fn censor_neg_zero<T: Zero>(v: T) -> T {
+    if v.is_zero() { T::zero() } else { v }
+}
+
+/// MPFR sets flags for [certain floating-point operations](https://docs.rs/gmp-mpfr-sys/1.4.7/gmp_mpfr_sys/C/MPFR/constant.MPFR_Interface.html#index-mpfr_005fclear_005fflags)
+/// Clears all flags (underflow, overflow, divide-by-0, nan, inexact, erange).
+fn censor_flags() {
+    use gmp_mpfr_sys::mpfr::{clear_flags};
+    unsafe {clear_flags()}
+}
 
 pub trait SampleLaplace: SampleRademacher + Sized {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self>;
@@ -440,51 +456,91 @@ pub trait SampleGaussian: Sized {
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self>;
 }
 
+/// Perturb `value` at a given `scale` using mean=0, scale=1 "exact" `noise`.
+/// The general formula is: (shift / scale + noise) * scale
+///
+/// Floating-point arithmetic is performed with rounding such that
+///     `scale` is a lower bound on the effective noise scale.
+/// "exact" `noise` takes on any discrete representation in Float
+///     with probability proportional to the analogous theoretical continuous distribution
+///
+/// To be valid, T::MANTISSA_BITS_U32 must be equal to the `noise` precision.
+#[cfg(feature = "use-mpfr")]
+fn perturb<T>(value: T, scale: T, noise: Float) -> T
+    where T: Clone + CastInternalReal + Mul<Output=T> + Zero {
+    use rug::float::Round;
+    use rug::ops::{DivAssignRound, AddAssignRound};
 
-pub trait MantissaDigits { const MANTISSA_DIGITS: u32; }
+    let mut value = value.into_internal();
+    // when scaling into the noise coordinate space, round down so that noise is overestimated
+    value.div_assign_round(&scale.clone().into_internal(), Round::Zero);
+    // the noise itself is never scaled. Round away from zero to offset the scaling bias
+    value.add_assign_round(
+        &noise, if value.is_sign_positive() {Round::Up} else {Round::Down});
+    // postprocess back to original coordinate space
+    //     (remains differentially private via postprocessing)
+    let value = T::from_internal(value) * scale;
 
-impl MantissaDigits for f32 { const MANTISSA_DIGITS: u32 = f32::MANTISSA_DIGITS; }
+    // clear all flags raised by mpfr to prevent side-channels
+    censor_flags();
 
-impl MantissaDigits for f64 { const MANTISSA_DIGITS: u32 = f64::MANTISSA_DIGITS; }
+    // under no circumstance allow -0. to be returned
+    // while exceedingly unlikely, if both the query and noise are -0., then the output is -0.,
+    // which leaks that the input query was negatively signed.
+    censor_neg_zero(value)
+}
+
+#[cfg(test)]
+mod test_mpfr {
+    use rug::Float;
+    use gmp_mpfr_sys::mpfr::{inexflag_p, clear_inexflag, underflow_p, clear_underflow};
+    use std::ops::MulAssign;
+
+    #[test]
+    fn test_neg_zero() {
+        let a = Float::with_val(53, -0.0);
+        let b = Float::with_val(53, -0.0);
+        // neg zero is propagated
+        assert!((a + b).is_sign_negative());
+    }
+    #[test]
+    fn test_inexflag() {
+        println!("inexflag before:  {:?}", unsafe {inexflag_p()});
+        let a = Float::with_val(53, 0.1);
+        let b = Float::with_val(53, 0.2);
+        let _ = a + b;
+
+        println!("inexflag after:   {:?}", unsafe {inexflag_p()});
+        unsafe {clear_inexflag()}
+
+        println!("inexflag cleared: {:?}", unsafe {inexflag_p()});
+    }
+
+    #[test]
+    fn test_underflow_flag() {
+        println!("flag before:       {:?}", unsafe {underflow_p()});
+        // taking advantage of subnormal representation, which is smaller than f64::MIN_POSITIVE
+        let smallest_float = f64::from_bits(1);
+        println!("smallest float:    {:e}", smallest_float);
+        println!("underflow float:   {:e}", smallest_float / 2.);
+        let mut a = Float::with_val(53, smallest_float);
+        println!("smallest rug?:     {:?}", a);
+        // somehow rug represents numbers beyond the given precision
+        println!("smaller rug:       {:?}", a.clone() / 2.);
+        // tetrate to force underflow
+        for _ in 0..32 { a.mul_assign(&a.clone()); }
+        println!("underflow rug:     {:?}", a);
+
+        println!("flag after:        {:?}", unsafe {underflow_p()});
+        unsafe {clear_underflow()}
+
+        println!("flag cleared:      {:?}", unsafe {underflow_p()});
+    }
+}
+
 
 #[cfg(feature = "use-mpfr")]
-pub trait CastInternalReal: MantissaDigits + Sized {
-    fn from_internal(v: Float) -> Self;
-    fn into_internal(self) -> Float;
-}
-
-#[cfg(not(feature = "use-mpfr"))]
-pub trait CastInternalReal: rand::distributions::uniform::SampleUniform + SampleGaussian {
-    fn from_internal(v: Self) -> Self;
-    fn into_internal(self) -> Self;
-}
-
-#[cfg(feature = "use-mpfr")]
-impl CastInternalReal for f64 {
-    fn from_internal(v: Float) -> Self { v.to_f64() }
-    fn into_internal(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
-}
-
-#[cfg(feature = "use-mpfr")]
-impl CastInternalReal for f32 {
-    fn from_internal(v: Float) -> Self { v.to_f32() }
-    fn into_internal(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
-}
-
-#[cfg(not(feature = "use-mpfr"))]
-impl CastInternalReal for f64 {
-    fn from_internal(v: f64) -> Self { v }
-    fn into_internal(self) -> Self { self }
-}
-
-#[cfg(not(feature = "use-mpfr"))]
-impl CastInternalReal for f32 {
-    fn from_internal(v: f32) -> Self { v }
-    fn into_internal(self) -> Self { self }
-}
-
-#[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
+impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         if scale.is_zero() { return Ok(shift) }
         if constant_time {
@@ -502,17 +558,9 @@ impl<T: CastInternalReal + SampleRademacher + Zero> SampleLaplace for T {
             // adding a random sign to the exponential deviate does not induce gaps or stacks
             exponential * T::sample_standard_rademacher()?.into_internal()
         };
-
         rng.error?;
 
-        // initialize floats within mpfr/rug
-        let shift = shift.into_internal();
-        let scale = scale.into_internal();
-
-        // (shift / scale + noise) * scale. The noise itself is never scaled
-        let noised = shift.mul_add(&scale.clone().recip(), &laplace);
-        // postprocessing remains differentially private
-        Ok(Self::from_internal(noised * scale))
+        Ok(perturb(shift, scale, laplace))
     }
 }
 
@@ -529,7 +577,7 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: CastInternalReal + Zero> SampleGaussian for T {
+impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
 
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         if scale.is_zero() { return Ok(shift) }
@@ -548,15 +596,7 @@ impl<T: CastInternalReal + Zero> SampleGaussian for T {
         };
         rng.error?;
 
-        // initialize floats within mpfr/rug
-        let shift = shift.into_internal();
-        let scale = scale.into_internal();
-
-        // (shift / scale + noise) * scale
-        // The noise itself is never scaled, to avoid introducing gaps/stacks
-        let noised = shift.mul_add(&scale.clone().recip(), &gauss);
-        // postprocessing remains differentially private
-        Ok(Self::from_internal(noised * scale))
+        Ok(perturb(shift, scale, gauss))
     }
 }
 
@@ -565,6 +605,7 @@ impl<T: CastInternalReal + Zero> SampleGaussian for T {
 impl SampleGaussian for f64 {
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         let uniform_sample = f64::sample_standard_uniform(constant_time)?;
+        use statrs::function::erf;
         Ok(shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample))
     }
 }
@@ -573,6 +614,7 @@ impl SampleGaussian for f64 {
 impl SampleGaussian for f32 {
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         let uniform_sample = f64::sample_standard_uniform(constant_time)?;
+        use statrs::function::erf;
         Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
     }
 }

@@ -7,12 +7,12 @@ use crate::core::{Function, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{Abs, DistanceConstant, InfCast, SaturatingAdd, CheckedMul, ExactIntCast, CheckNull};
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfDiv, SaturatingAdd, InfSub, AlertingAbs};
 
 pub fn make_bounded_sum<T>(
     bounds: (T, T)
 ) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Abs + SaturatingAdd + Zero + CheckNull,
+    where T: DistanceConstant<IntDistance> + Sub<Output=T> + SaturatingAdd + Zero + CheckNull + AlertingAbs,
           IntDistance: InfCast<T> {
     let (lower, upper) = bounds.clone();
 
@@ -22,21 +22,23 @@ pub fn make_bounded_sum<T>(
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(lower.abs().total_max(upper.abs())?)))
+        StabilityRelation::new_from_constant(
+            lower.alerting_abs()?.total_max(upper.alerting_abs()?)?)))
 }
-
 
 pub fn make_sized_bounded_sum<T>(
     size: usize, bounds: (T, T)
-) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T>, for <'a> T: Sum<&'a T> + ExactIntCast<usize> + CheckedMul + CheckNull,
-          IntDistance: InfCast<T> {
+) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
+    T: DistanceConstant<IntDistance> + ExactIntCast<usize> + InfSub + CheckNull + InfDiv
+    + Sub<Output=T>, for<'a> T: Sum<&'a T>,
+    IntDistance: InfCast<T> {
     let size_ = T::exact_int_cast(size)?;
     let (lower, upper) = bounds.clone();
-    if lower.checked_mul(&size_).is_none()
-        || upper.checked_mul(&size_).is_none() {
-        return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
-    }
+
+    lower.inf_mul(&size_).or(upper.inf_mul(&size_))
+        .map_err(|_| err!(MakeTransformation, "potential for overflow when computing function"))?;
+
+    let range = upper.inf_sub(&lower)?;
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
             BoundedDomain::new_closed(bounds)?), size),
@@ -44,8 +46,12 @@ pub fn make_sized_bounded_sum<T>(
         Function::new(|arg: &Vec<T>| arg.iter().sum()),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        // d_out >= d_in * (M - m) / 2
-        StabilityRelation::new_from_constant((upper - lower) / T::exact_int_cast(2)?)))
+        StabilityRelation::new_from_forward(
+            // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
+            //    so floor division is acceptable
+            move |d_in: &IntDistance| T::inf_cast(d_in / 2)
+                .and_then(|d_in| d_in.inf_mul(&range)))
+    ))
 }
 
 

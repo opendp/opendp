@@ -6,7 +6,7 @@ use std::os::raw::{c_char, c_uint};
 use num::Float;
 
 use opendp::err;
-use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, CheckedMul, CheckNull};
+use opendp::traits::{DistanceConstant, InfCast, ExactIntCast, AlertingMul, CheckNull, InfDiv, InfSub};
 use opendp::trans::{make_sized_bounded_mean};
 
 use crate::any::{AnyTransformation, AnyObject, Downcast};
@@ -20,7 +20,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_mean(
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize> + CheckedMul + CheckNull,
+        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize> + AlertingMul + CheckNull + InfSub + InfDiv,
               for<'a> T: Sum<&'a T>,
               IntDistance: InfCast<T> {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();

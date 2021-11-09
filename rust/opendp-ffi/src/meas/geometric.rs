@@ -11,7 +11,7 @@ use crate::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::util::Type;
 use crate::util;
-use opendp::traits::{InfCast, TotalOrd};
+use opendp::traits::{InfCast, TotalOrd, DistanceConstant, InfDiv, InfMul};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
@@ -23,9 +23,9 @@ pub extern "C" fn opendp_meas__make_base_geometric(
         scale: *const c_void, bounds: *const AnyObject
     ) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + GeometricDomain,
-              D::Atom: 'static + InfCast<QO> + TotalOrd + Clone,
-              QO: 'static + Float + InfCast<D::Atom> + TotalOrd,
-              f64: From<QO> {
+              D::Atom: 'static + TotalOrd + Clone + DistanceConstant<QO>,
+              QO: 'static + Float + InfCast<D::Atom> + TotalOrd + InfDiv + InfMul,
+              f64: InfCast<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             Some(try_!(bounds.downcast_ref::<(D::Atom, D::Atom)>()).clone())

@@ -179,7 +179,7 @@ def test_bounded_mean():
     from opendp.trans import make_sized_bounded_mean
     query = make_sized_bounded_mean(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 5.
-    assert query.check(1, 10. / 9.)
+    assert query.check(2, 10. / 9.)
 
 
 def test_bounded_sum():
@@ -206,14 +206,14 @@ def test_bounded_sum_n():
     query = make_sized_bounded_sum(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 45.
     # TODO: tighten this check
-    assert query.check(1, 20.)
+    assert query.check(2, 20.)
 
 
 def test_bounded_variance():
     from opendp.trans import make_sized_bounded_variance
     query = make_sized_bounded_variance(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 7.5
-    assert query.check(1, 20.)
+    assert query.check(2, 20.)
 
 
 def test_count():

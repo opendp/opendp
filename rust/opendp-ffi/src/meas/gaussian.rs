@@ -7,7 +7,7 @@ use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
 use opendp::meas::{GaussianDomain, make_base_gaussian};
 use opendp::samplers::SampleGaussian;
-use opendp::traits::{CheckNull, InfCast};
+use opendp::traits::{InfCast, CheckNull, InfMul, InfAdd, InfLn, InfSqrt};
 
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
@@ -21,7 +21,7 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(scale: *const c_void, analytic: bool) -> FfiResult<*mut AnyMeasurement> where
         D: 'static + GaussianDomain,
-        D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull,
+        D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + InfMul + InfAdd + InfLn + InfSqrt,
         f64: InfCast<D::Atom> {
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_gaussian::<D>(scale, analytic).into_any()

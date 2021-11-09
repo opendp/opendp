@@ -1,7 +1,6 @@
 use crate::core::{Transformation, Function, StabilityRelation};
-use std::ops::{Sub};
 use std::iter::Sum;
-use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckedMul, CheckNull};
+use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckNull, InfDiv, InfSub};
 use crate::error::Fallible;
 use crate::dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain};
 use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
@@ -9,18 +8,18 @@ use num::{Float};
 
 pub fn make_sized_bounded_mean<T>(
     size: usize, bounds: (T, T)
-) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>>
-    where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize>, for <'a> T: Sum<&'a T> + CheckedMul + CheckNull,
-          IntDistance: InfCast<T> {
+) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
+    T: DistanceConstant<IntDistance> + ExactIntCast<usize>, for <'a> T: Sum<&'a T>
+    + InfSub + CheckNull + Float + InfDiv,
+    IntDistance: InfCast<T> {
     let _size = T::exact_int_cast(size)?;
     let _2 = T::exact_int_cast(2)?;
     let (lower, upper) = bounds.clone();
 
-    if lower.checked_mul(&_size).is_none()
-        || upper.checked_mul(&_size).is_none() {
-        return fallible!(MakeTransformation, "Detected potential for overflow when computing function.")
-    }
+    lower.inf_mul(&_size).or(upper.inf_mul(&_size))
+        .map_err(|_| err!(MakeTransformation, "potential for overflow when computing function"))?;
 
+    let c = upper.inf_sub(&lower)?.inf_div(&_size)?;
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(
             BoundedDomain::new_closed(bounds)?), size),
@@ -28,7 +27,12 @@ pub fn make_sized_bounded_mean<T>(
         Function::new(move |arg: &Vec<T>| arg.iter().sum::<T>() / _size),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant((upper - lower) / _size / _2)))
+        StabilityRelation::new_from_forward(
+            // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
+            //    so floor division is acceptable
+            move |d_in: &IntDistance| T::inf_cast(d_in / 2)
+                .and_then(|d_in| d_in.inf_mul(&c)))
+    ))
 }
 
 
