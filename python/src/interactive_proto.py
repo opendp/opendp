@@ -1,115 +1,125 @@
-# Prototype of interactive measurements with facilities for enforcing constraints across queryables.
+# Prototype of interactive measurements with facilities for enforcing constraints across hierarchies of queryables.
 #
 # This is a sort of synthesis of Salil's method of hook functions, and Michael's approach of using an index
 # to target specific child queryables. What I like about it is the natural interface: You operate on a child
-# queryable directly, using the same interface as originally, and the right housekeeping happens behind the scenes.
+# queryable directly, using the same interface as always; any housekeeping happens automatically behind the scenes.
 # In the case of sequential composition, a sub-queryable is implicitly "retired" whenever a new sibling is spawned.
-# Also, it doesn't require any special knowledge of the hierarchy inside child queryables. Everything is achieved
-# by wrapping our existing entities, without "injecting" any logic.
 #
-# This works by putting state that must be shared across queryables in a coordinating state machine
-# (also implemented as a queryable, though this isn't necesary). Then queries on the parent queryable,
-# as well as any child queryables, are dispatched through this coordinator. The coordinator can then
-# to enforce constraints like sequential access to children, or consumption of shared budget. After
-# the constraints are checked, the operation is forwarded to the destination entity.
+# This works by building an explicit hierarchy of queryables, and forwarding queries through the ancestor chain
+# (starting at the root). This allows ancestors to update their state and maintain any constraints.
+
+# More here: https://docs.google.com/document/d/1hHTrXFgTlxHL4KidO_9MxHbjMSnPO6vccuTqVezRrG0/edit?usp=sharing
 #
 # NOTES:
 # * For simplicity, this omits domains, and uses a static privacy loss instead of a relation.
-# * I've split queryable state into two components: static context, and varying state. I think this helps clarity, but it's not necessary.
-# * This retains the original taxonomy of InteractiveMeasurement being the general case, with Measurement a subtype.
-# * The packing and unpacking of queryable elements is a bit wordy; I've written it this way to be very explicit about what I'm storing where.
-# * This only supports a single level of sub-queryables. I think it could be generalized to support arbitrary levels of recursion, but it'll be tricky.
-# * I've only implemented sequential composition, but concurrent composition should be straightforward. I think odometers should be doable too.
-# * The code could use some rework; there would likely be a lot of duplication in other forms of composition that could be refactored out.
-# (I think just supplying a coordinator queryable would be enough to have a generic make_composition() function.)
+# * This retains the original taxonomy of InteractiveMeasurement being the general type, with Measurement a subtype.
+# * eval() is the public method to invoke InteractiveMeasurements. eval1() is for (non-Interactive)Measurements.
+# * Unlike this previous prototype, this one supports arbitrary recursion of Queryables.
 
 
 class Queryable:
+
     def __init__(self, parent, index, initial_state, transition):
-        self.parent = parent        # Static context data (the part of "state" that doesn't change)
+        self.parent = parent
         self.index = index
-        self.state = initial_state    # Variable state
-        self.transition = transition  # fn: (state, question) -> (state, answer)
+        self.state = initial_state
+        self.transition = transition  # fn: (self, target_index_path, state, question) -> (state, answer)
+
+    def _get_ancestors_and_indexes(self):
+        # As a building block, create a list of the descendants of the root.
+        descendants_of_root = []
+        node = self
+        while node.parent is not None:
+            descendants_of_root.append(node)
+            node = node.parent
+        # Reverse so that we're starting with the root.
+        descendants_of_root = list(reversed(descendants_of_root))
+        # Use the descendants list to create the list of ancestors, and the index path.
+        ancestors = [node.parent for node in descendants_of_root]
+        index_path = [node.index for node in descendants_of_root]
+        return (ancestors, index_path)
+
     def query(self, question):
-        children = []
-        child = self
-        while child.parent is not None:
-            children.append(child)
-            child = child.parent
-        parents = [child.parent for child in children]
-        child_indexes = [child.index for child in children]
-        for i, parent in enumerate(parents):
-            child_index_path = child_indexes[i:]
-            answer = parent._do_transition(child_index_path, question)
+        # Get the list of our ancestors (starting from the root), and the index path to us.
+        ancestors, index_path = self._get_ancestors_and_indexes()
+        # Iterate the ancestors, giving each a chance to transition (and optionally short circuit the query).
+        for i, ancestor in enumerate(ancestors):
+            target_index_path = index_path[i:]
+            answer = ancestor._do_transition(target_index_path, question)
             if answer:
                 return answer
         return self._do_transition(None, question)
-    def _do_transition(self, child_index_path, question):
-        (new_state, answer) = self.transition(self, child_index_path, self.state, question)
+
+    def _do_transition(self, target_index_path, question):
+        (new_state, answer) = self.transition(self, target_index_path, self.state, question)
         self.state = new_state
         return answer
 
 
 class InteractiveMeasurement:
     def __init__(self, function, privacy_loss):
-        self.function = function          # fn: parent x index x data -> Queryable
+        self.function = function          # fn: (parent, index, data) -> Queryable
         self.privacy_loss = privacy_loss  # Fixed privacy loss
-    def eval(self, data) -> Queryable:    # Convenience method to invoke function
+    def eval(self, data) -> Queryable:    # Convenience method to invoke function, with null parent and index
         return self.function(None, None, data)
 
 
 class Measurement(InteractiveMeasurement):
     def __init__(self, function, privacy_loss):
-        def interactive_function(parent, index, data):  # Wraps static function to generate a Queryable
+        def interactive_function(parent, index, data):  # Wrapper function that creates a dummy Queryable
             initial_state = function(data)
-            def transition(_self, _child_index_path, state, _question):
+            def transition(_self, target_index_path, state, _question):
                 return (state, state)
             return Queryable(parent, index, initial_state, transition)
         super().__init__(interactive_function, privacy_loss)
-    def eval1(self, data):               # Convenience method to invoke function, get result from null query
+    def eval1(self, data):                # Convenience method to invoke function, get result from null query
         queryable = self.eval(data)
         return queryable.query(None)
 
 
-# Makes an adaptive composition InteractiveMeasurement. Spawned Queryables require their queries
-# to be (non-Interactive) Measurements.
+# Makes an adaptive composition InteractiveMeasurement. Spawned Queryables expect their queries
+# to be (non-Interactive)Measurements.
 def make_adaptive_composition(budget):
     def function(parent, index, data):
         initial_state = (data, budget)
-        def transition(_self, child_index_path, state, question: Measurement):
+        def transition(_self, _target_index_path, state, question: Measurement):
             data, budget = state
-            if child_index_path is None:
-                if question.privacy_loss > budget:
-                    raise Exception("Insufficient budget")
-                budget -= question.privacy_loss
-                answer = question.eval1(data)
-            else:
-                answer = None
+            if question.privacy_loss > budget:
+                raise Exception("Insufficient budget")
+            budget -= question.privacy_loss
+            answer = question.eval1(data)
             new_state = (data, budget)
             return (new_state, answer)
         return Queryable(parent, index, initial_state, transition)
     return InteractiveMeasurement(function, budget)
 
 
-# Makes a sequential composition InteractiveMeasurement. Spawned Queryables require their queries
-# to be (non-Interactive) Measurements (whose Queryables must then be (non-Interactive) Measurements).
+# Makes a sequential composition InteractiveMeasurement. Spawned Queryables must be queried sequentially;
+# when a new Queryable is spawned, it becomes the active child, and previous children are implicitly retired.
+# Using a retired child (either directly, or through one of its descendants) will raise an error.
 def make_sequential_composition(budget):
 
     def function(parent, index, data):
-        initial_state = (data, budget, 0)
+        child_count = 0
+        initial_state = (data, budget, child_count)
 
-        def transition(self, child_index_path, state, question):
+        def transition(self, target_index_path, state, question):
             data, budget, child_count = state
-            if child_index_path is None:
+            if target_index_path is None:
+                # Path is null, so target is this Queryable. That means we will spawn a child.
                 if question.privacy_loss > budget:
                     raise Exception("Insufficient budget")
                 budget -= question.privacy_loss
+                # Assign the child the next available index.
                 child_index = child_count
-                answer = question.function(self, child_index, data)  # Question is an InteractiveMeasurement.
+                # Question is an InteractiveMeasurement, so calling the function will spawn the child.
+                answer = question.function(self, child_index, data)
                 child_count += 1
             else:
-                if child_index_path[0] != child_count - 1:  # Make sure the child we're querying is the last created one (no backtracking)
+                # Target is a descendant, so make sure the child involved is the last one created (no backtracking).
+                if target_index_path[0] != child_count - 1:
                     raise Exception("Non-sequential query")
+                # Allow the query to continue to the next descendant.
                 answer = None
             new_state = (data, budget, child_count)
             return (new_state, answer)
@@ -119,7 +129,7 @@ def make_sequential_composition(budget):
     return InteractiveMeasurement(function, budget)
 
 
-# Constructor to make a simple (non-Interactive) Measurement
+# Constructor to make a simple Laplace (non-Interactive)Measurement
 def make_base_laplace(sigma):
     def laplace(sigma):
         import random, math
@@ -128,56 +138,98 @@ def make_base_laplace(sigma):
     return Measurement(lambda x: x + laplace(sigma), 1.0 / sigma)
 
 
-# Converter from epsilon to  Laplace sigma
+# Converter from epsilon to Laplace sigma
 def eps_to_sigma(epsilon):
     return 1 / epsilon
 
 
+# Runs a (non-Interactive)Measurement
 def test_noninteractive():
     print("NON-INTERACTIVE MEASUREMENT")
+    data = 123.0
     measurement = make_base_laplace(eps_to_sigma(1.0))
-    print("    non-interactive =", measurement.eval1(123))
+    print("non-interactive =", measurement.eval1(data))
 
 
+# Runs an adaptive composition (Measurement queries)
 def test_adaptive():
     print("SIMPLE ADAPTIVE COMPOSITION")
+    data = 123.0
     budget = 1.0
-    print("    make adaptive")
+    print("make adaptive composition")
     adaptive = make_adaptive_composition(budget)
-    print("    make queryable")
-    queryable = adaptive.eval(123)
-    print("    adaptive query 1 =", queryable.query(make_base_laplace(eps_to_sigma(budget / 2))))
-    print("    adaptive query 2 =", queryable.query(make_base_laplace(eps_to_sigma(budget / 2))))
+    print("    spawn queryable")
+    queryable = adaptive.eval(data)
+    print("        adaptive query 1 =", queryable.query(make_base_laplace(eps_to_sigma(budget / 2))))
+    print("        adaptive query 2 =", queryable.query(make_base_laplace(eps_to_sigma(budget / 2))))
     try:
-        print("    SHOULD'VE FAILED: adaptive query 3 =", queryable.query(make_base_laplace(eps_to_sigma(budget / 2))))
+        print("        SHOULD'VE FAILED: adaptive query 3 =", queryable.query(make_base_laplace(eps_to_sigma(budget / 2))))
     except Exception as e:
-        print("    expected failure on adaptive query 3 =", e)
+        print("        got expected failure on adaptive query 3 =", e)
 
 
+# Runs a sequential composition (InteractiveMeasurement queries)
 def test_sequential():
     print("SEQUENTIAL COMPOSITION")
+    data = 123.0
     budget = 1.0
-    print("    make sequential")
+    print("make sequential composition")
     sequential = make_sequential_composition(budget)
-    print("    get root queryable")
-    root_queryable = sequential.eval(123)
+    print("    spawn root queryable")
+    root_queryable = sequential.eval(data)
 
-    print("    make adaptive (for sub-queryable 1 of sequential)")
+    print("        make adaptive composition (for sub-queryable 1 of sequential)")
     adaptive1 = make_adaptive_composition(budget / 2)
-    print("    get sub-queryable 1")
+    print("        spawn sub-queryable 1")
     sub_queryable1 = root_queryable.query(adaptive1)
-    print("    sub-queryable 1 / query 1 =", sub_queryable1.query(make_base_laplace(eps_to_sigma(budget / 4))))
+    print("            sub-queryable 1 / query 1 =", sub_queryable1.query(make_base_laplace(eps_to_sigma(budget / 4))))
 
-    print("    make adaptive (for sub-queryable 2 of sequential)")
+    print("        make adaptive (for sub-queryable 2 of sequential)")
     adaptive2 = make_adaptive_composition(budget / 2)
-    print("    get sub-queryable 2")
+    print("        spawn sub-queryable 2")
     sub_queryable2 = root_queryable.query(adaptive2)
-    print("    sub-queryable 2 / query 1 =", sub_queryable2.query(make_base_laplace(eps_to_sigma(budget / 4))))
+    print("            sub-queryable 2 / query 1 =", sub_queryable2.query(make_base_laplace(eps_to_sigma(budget / 4))))
 
+    print("        backtrack to sub-queryable 1")
     try:
-        print("    SHOULD'VE FAILED: sub-queryable 1 / query 2 =", sub_queryable1.query(make_base_laplace(eps_to_sigma(budget / 4))))
+        print("            SHOULD'VE FAILED: sub-queryable 1 / query 2 =", sub_queryable1.query(make_base_laplace(eps_to_sigma(budget / 4))))
     except Exception as e:
-        print("    expected failure on sub-queryable 1 / query 2 =", e)
+        print("            got expected failure on sub-queryable 1 / query 2 =", e)
+
+
+# Runs a recursive sequential composition (InteractiveMeasurement queries)
+def test_sequential_recursive():
+    print("SEQUENTIAL COMPOSITION (RECURSIVE)")
+    data = 123.0
+    budget = 1.0
+    print("make root sequential composition")
+    root_sequential = make_sequential_composition(budget)
+    print("    spawn root queryable")
+    root_queryable = root_sequential.eval(data)
+
+    print("        make sub-sequential composition (for sub-queryable 1 of root sequential)")
+    sub_sequential = make_sequential_composition(budget / 2)
+    print("        spawn sub-queryable 1")
+    sub_queryable1 = root_queryable.query(sub_sequential)
+
+    print("            make adaptive composition (for sub-sub-queryable 1 of sub-sequential)")
+    sub_adaptive1 = make_adaptive_composition(budget / 2)
+    print("            spawn sub-sub-queryable 1")
+    sub_sub_queryable1 = sub_queryable1.query(sub_adaptive1)
+    print("                sub-sub-queryable 1 / query 1 =", sub_sub_queryable1.query(make_base_laplace(eps_to_sigma(budget / 4))))
+
+    print("        make adaptive (for sub-queryable 2 of root sequential)")
+    adaptive2 = make_adaptive_composition(budget / 2)
+    print("        spawn sub-queryable 2")
+    sub_queryable2 = root_queryable.query(adaptive2)
+    print("            sub-queryable 2 / query 1 =", sub_queryable2.query(make_base_laplace(eps_to_sigma(budget / 4))))
+
+    print("            backtrack to sub-sub-queryable 1")
+    try:
+        print("                SHOULD'VE FAILED: sub-sub-queryable 1 / query 2 =", sub_sub_queryable1.query(make_base_laplace(eps_to_sigma(budget / 4))))
+    except Exception as e:
+        print("                got expected failure on sub-sub-queryable 1 / query 2 =", e)
+
 
 def main():
     test_noninteractive()
