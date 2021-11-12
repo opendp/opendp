@@ -7,7 +7,7 @@ use rug::{Float, float::Round, ops::AddAssignRound, ops::DivAssignRound};
 
 use crate::core::{Measurement, Function, PrivacyRelation};
 use crate::dist::{L1Distance, MaxDivergence};
-use crate::dom::{AllDomain, MapDomain, SizedDomain};
+use crate::dom::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, CheckNull, InfCast};
@@ -22,7 +22,7 @@ const SIZE_FACTOR_DEFAULT : u32 = 50;
 // "Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access"
 // Available here: arxiv.org/abs/2106.10068
 
-type SizedHistogramDomain<K, C> = SizedDomain<MapDomain<AllDomain<K>, AllDomain<C>>>;
+type SizedHistogramDomain<K, C> = MapDomain<AllDomain<K>, AllDomain<C>>;
 
 type BitVector = Vec<bool>;
 type HashFunctions<K> = Vec<Rc<dyn Fn(&K) -> usize>>;
@@ -136,7 +136,7 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
     estimate_unary::<T>(&v) * T::from(state.alpha).unwrap() / state.scale
 }
 
-pub fn make_base_alp_with_hashers<K, C, T>(total: usize, alpha: T, scale: T, s: usize, h: HashFunctions<K>)
+pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: HashFunctions<K>)
         -> Fallible<Measurement<SizedHistogramDomain<K, C>,
                                 AlpDomain<K, T>,
                                 L1Distance<C>, MaxDivergence<T>>>
@@ -159,7 +159,7 @@ pub fn make_base_alp_with_hashers<K, C, T>(total: usize, alpha: T, scale: T, s: 
     }
     
     Ok(Measurement::new(
-        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, total),
+        MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new()},
         AllDomain::new(),
         Function::new_fallible(move |x: &HashMap<K, C>| {
             let z = compute_projection(x, &h, alpha, scale, s)?;
@@ -171,7 +171,7 @@ pub fn make_base_alp_with_hashers<K, C, T>(total: usize, alpha: T, scale: T, s: 
     ))
 }
 
-pub fn make_base_alp<K, C, T>(total: usize, alpha: Option<T>, scale: T, beta: C, size_factor: Option<u32>) 
+pub fn make_base_alp<K, C, T>(total: usize, size_factor: Option<u32>, alpha: Option<T>, scale: T, beta: C) 
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
@@ -192,7 +192,7 @@ pub fn make_base_alp<K, C, T>(total: usize, alpha: Option<T>, scale: T, beta: C,
     let exp = exponent_next_power_of_two((factor * total as f64 * quotient) as u64);
     let h = (0..m).map(|_| sample_hash_function(exp)).collect::<Fallible<HashFunctions<K>>>()?;
 
-    make_base_alp_with_hashers(total, alpha, scale, 1 << exp, h)
+    make_base_alp_with_hashers(alpha, scale, 1 << exp, h)
 }
 
 pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T>
@@ -280,7 +280,7 @@ mod tests {
     #[test]
     fn test_alp_construction() -> Fallible<()> {
         let beta = 10;
-        let alp = make_base_alp_with_hashers::<u32, u32, f64>(10, 1., 1.0, beta, index_identify_functions(beta))?;
+        let alp = make_base_alp_with_hashers::<u32, u32, f64>(1., 1.0, beta, index_identify_functions(beta))?;
 
         assert!(alp.privacy_relation.eval(&1, &1.)?);
         assert!(!alp.privacy_relation.eval(&1, &0.999)?);
@@ -304,7 +304,7 @@ mod tests {
         // Handle silently using modulo
         // Returning an error would violate privacy
         let h = index_identify_functions(20);
-        let alp = make_base_alp_with_hashers::<u32, u32, f64>(3, 1., 1.0, s, h)?;
+        let alp = make_base_alp_with_hashers::<u32, u32, f64>( 1., 1.0, s, h)?;
 
         let mut x = HashMap::new();
         x.insert(42, 3);
@@ -349,7 +349,7 @@ mod tests {
         x.insert(42, 12);
         x.insert(100, 5);
 
-        let alp = make_base_alp::<i32,i32,f64>(24, None, 2., 24, None)?;
+        let alp = make_base_alp::<i32,i32,f64>(24, None, None, 2., 24)?;
 
         let state = alp.function.eval(&x)?;
 
@@ -370,7 +370,7 @@ mod tests {
         x.insert(42, 12);
         x.insert(100, 5);
 
-        let alp = make_base_alp::<i32,i32,f64>(24, None, 2., 24, None)?;
+        let alp = make_base_alp::<i32,i32,f64>(24, None, None, 2., 24)?;
 
         let wrapped = make_alp_histogram_post_process(&alp)?;
         
