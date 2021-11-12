@@ -17,7 +17,7 @@ use std::collections::hash_map::DefaultHasher;
 const ALPHA_DEFAULT : u32 = 4;
 const SIZE_FACTOR_DEFAULT : u32 = 50;
 
-// Implementation of a mechanism for representing sparse histogram.
+// Implementation of a mechanism for representing sparse integer queries e.g. a sparse histogram.
 // The mechanism was introduced in the paper:
 // "Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access"
 // Available here: arxiv.org/abs/2106.10068
@@ -180,7 +180,7 @@ pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: T, scale: T, b
           T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
           AlpState<K,T> : CheckNull {
 
-    let beta: f64 = T::inf_cast(beta).unwrap().to_f64()
+    let beta: f64 = T::inf_cast(beta)?.to_f64()
         .ok_or_else(|| err!(MakeTransformation, "failed to parse beta"))?;
     let quotient = (scale / alpha).to_f64()
         .ok_or_else(|| err!(MakeTransformation, "failed to parse scale/alpha"))?;
