@@ -30,6 +30,6 @@ pub mod randomized_response;
 pub use crate::meas::randomized_response::*;
 
 #[cfg(all(feature="floating-point", feature="contrib"))]
-pub mod histogram_alp;
+pub mod alp;
 #[cfg(all(feature="floating-point", feature="contrib"))]
-pub use crate::meas::histogram_alp::*;
+pub use crate::meas::alp::*;

@@ -136,7 +136,7 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
     estimate_unary::<T>(&v) * T::from(state.alpha).unwrap() / state.scale
 }
 
-pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: HashFunctions<K>)
+pub fn make_base_alp_with_hashers<K, C, T>(total: usize, alpha: T, scale: T, s: usize, h: HashFunctions<K>)
         -> Fallible<Measurement<SizedHistogramDomain<K, C>,
                                 AlpDomain<K, T>,
                                 L1Distance<C>, MaxDivergence<T>>>
@@ -159,7 +159,7 @@ pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: Ha
     }
     
     Ok(Measurement::new(
-        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, n),
+        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, total),
         AllDomain::new(),
         Function::new_fallible(move |x: &HashMap<K, C>| {
             let z = compute_projection(x, &h, alpha, scale, s)?;
@@ -171,7 +171,7 @@ pub fn make_alp_histogram<K, C, T>(n: usize, alpha: T, scale: T, s: usize, h: Ha
     ))
 }
 
-pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: T, scale: T, beta: C, size_factor: u32) 
+pub fn make_base_alp<K, C, T>(total: usize, alpha: Option<T>, scale: T, beta: C, size_factor: Option<u32>) 
         -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
@@ -179,6 +179,9 @@ pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: T, scale: T, b
           C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
           T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
           AlpState<K,T> : CheckNull {
+
+    let factor = size_factor.unwrap_or(SIZE_FACTOR_DEFAULT) as f64;
+    let alpha = alpha.unwrap_or(T::from(ALPHA_DEFAULT).unwrap());
 
     let beta: f64 = T::inf_cast(beta)?.to_f64()
         .ok_or_else(|| err!(MakeTransformation, "failed to parse beta"))?;
@@ -186,22 +189,10 @@ pub fn make_alp_histogram_parameterized<K, C, T>(n: usize, alpha: T, scale: T, b
         .ok_or_else(|| err!(MakeTransformation, "failed to parse scale/alpha"))?;
     let m = (beta * quotient).ceil() as usize;
     
-    let exp = exponent_next_power_of_two((size_factor as f64 * n as f64 * quotient) as u64);
+    let exp = exponent_next_power_of_two((factor * total as f64 * quotient) as u64);
     let h = (0..m).map(|_| sample_hash_function(exp)).collect::<Fallible<HashFunctions<K>>>()?;
 
-    make_alp_histogram(n, alpha, scale, 1 << exp, h)
-}
-
-pub fn make_alp_histogram_simple<K, C, T>(n: usize, scale: T, beta: C) 
-        -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
-                                AlpDomain<K, T>, 
-                                L1Distance<C>, MaxDivergence<T>>>
-    where K: 'static + Eq + Hash + Clone + CheckNull,
-          C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
-          T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
-          AlpState<K,T> : CheckNull {
-    
-    make_alp_histogram_parameterized(n, T::from(ALPHA_DEFAULT).unwrap(), scale, beta, SIZE_FACTOR_DEFAULT)
+    make_base_alp_with_hashers(total, alpha, scale, 1 << exp, h)
 }
 
 pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T>
@@ -289,7 +280,7 @@ mod tests {
     #[test]
     fn test_alp_construction() -> Fallible<()> {
         let beta = 10;
-        let alp = make_alp_histogram::<u32, u32, f64>(10, 1., 1.0, beta, index_identify_functions(beta))?;
+        let alp = make_base_alp_with_hashers::<u32, u32, f64>(10, 1., 1.0, beta, index_identify_functions(beta))?;
 
         assert!(alp.privacy_relation.eval(&1, &1.)?);
         assert!(!alp.privacy_relation.eval(&1, &0.999)?);
@@ -313,7 +304,7 @@ mod tests {
         // Handle silently using modulo
         // Returning an error would violate privacy
         let h = index_identify_functions(20);
-        let alp = make_alp_histogram::<u32, u32, f64>(3, 1., 1.0, s, h)?;
+        let alp = make_base_alp_with_hashers::<u32, u32, f64>(3, 1., 1.0, s, h)?;
 
         let mut x = HashMap::new();
         x.insert(42, 3);
@@ -358,7 +349,7 @@ mod tests {
         x.insert(42, 12);
         x.insert(100, 5);
 
-        let alp = make_alp_histogram_simple::<i32,i32,f64>(24, 2., 24)?;
+        let alp = make_base_alp::<i32,i32,f64>(24, None, 2., 24, None)?;
 
         let state = alp.function.eval(&x)?;
 
@@ -379,7 +370,7 @@ mod tests {
         x.insert(42, 12);
         x.insert(100, 5);
 
-        let alp = make_alp_histogram_simple::<i32,i32,f64>(24, 2., 24)?;
+        let alp = make_base_alp::<i32,i32,f64>(24, None, 2., 24, None)?;
 
         let wrapped = make_alp_histogram_post_process(&alp)?;
         
