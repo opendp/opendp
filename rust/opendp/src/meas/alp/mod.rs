@@ -22,8 +22,10 @@ const SIZE_FACTOR_DEFAULT : u32 = 50;
 // "Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access"
 // Available here: arxiv.org/abs/2106.10068
 
-type SizedHistogramDomain<K, C> = MapDomain<AllDomain<K>, AllDomain<C>>;
+// Input domain. The mechanism is designed for settings where the domain of K is huge.
+type SparseDomain<K, C> = MapDomain<AllDomain<K>, AllDomain<C>>;
 
+// Types used to store the DP projection.
 type BitVector = Vec<bool>;
 type HashFunctions<K> = Vec<Rc<dyn Fn(&K) -> usize>>;
 #[derive(Clone)]
@@ -64,11 +66,13 @@ fn sample_hash_function<K>(l: u32) -> Fallible<Rc<dyn Fn(&K) -> usize>>
     Ok(Rc::new(move |x: &K| hash(pre_hash(x), a, b, l)))
 }
 
+// Returns ceil(log_2(x))
 fn exponent_next_power_of_two(x: u64) -> u32 {
     let exp = 63 - x.leading_zeros();
     if x > (1 << exp) { exp + 1 } else { exp }
 }
 
+// Multiplies x with scale/alpha and applies randomized rounding to return an integer
 fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> 
     where C: Integer + ToPrimitive,
           T: CastInternalReal {
@@ -86,6 +90,7 @@ fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize>
     }
 }
 
+// Probability of flipping bits = 1 / (alpha + 2)
 fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
     let mut a = alpha.into_internal();
     a.add_assign_round(2, Round::Down);
@@ -94,11 +99,12 @@ fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
     f64::from_internal(p)
 }
 
+// Due to privacy concerns the current implementation discards bits with significance less than 2^-52 from scale/alpha
 fn check_parameters<T : CastInternalReal>(alpha: T, scale: T) -> bool {
     scale.into_internal() * Float::with_val(53, 52).exp2() < alpha.into_internal()
 }
 
-
+// Computes the DP projection. This corresponds to Algorithm 4 in the paper
 fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T, scale: T, s: usize) -> Fallible<BitVector> 
     where C: Clone + Integer + ToPrimitive,
           T: Clone + CastInternalReal {
@@ -114,6 +120,7 @@ fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T
     z.iter().map(|b| bool::sample_bernoulli(p , false).map(|flip| b ^ flip)).collect()
 }
 
+// Estimate the value of an entry based on its noisy bitrepresentation. This is Algorithm 3 in the paper
 fn estimate_unary<T>(v: &Vec<bool>) -> T
     where T : num::Float {
     let mut prefix_sum = Vec::with_capacity(v.len() + 1usize);
@@ -129,6 +136,7 @@ fn estimate_unary<T>(v: &Vec<bool>) -> T
     T::from(peaks.iter().sum::<usize>()).unwrap() / T::from(peaks.len()).unwrap()
 }
 
+// This is Algorithm 5 in the paper
 fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
     where T: num::Float {
     let v = state.h.iter().map(|f| state.z[f(key) % state.z.len()]).collect::<Vec<_>>();
@@ -136,8 +144,19 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
     estimate_unary::<T>(&v) * T::from(state.alpha).unwrap() / state.scale
 }
 
+/// Measurement to compute a DP projection of bounded sparse data. See arxiv.org/abs/2106.10068 (Algorithm 4).
+/// This function allows the user to create custom hash functions. The mechanism provides no utility guarantees 
+/// if hash functions are chosen poorly. It is recommended to use make_base_alp.
+/// 
+/// # Arguments
+/// * `alpha` - Parameter used for scaling and determining p in randomized response step. The default value is 4.
+/// * `scale` - Privacy loss parameter. This is equal to epsilon/sensitivity.
+/// * `s` - Size of the projection. This should be sufficiently large to limit hash collisions.
+/// * `h` - Hash functions used to project and estimate entries. The hash functions are not allowed to panic on any input.
+/// The hash functions in `h` should have type K -> [s]. To limit collisions the functions should be universal and uniform.
+/// The evaluation time of post-processing is O(h.len()).
 pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: HashFunctions<K>)
-        -> Fallible<Measurement<SizedHistogramDomain<K, C>,
+        -> Fallible<Measurement<SparseDomain<K, C>,
                                 AlpDomain<K, T>,
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + CheckNull,
@@ -171,8 +190,20 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
     ))
 }
 
+/// Measurement to compute a DP projection of bounded sparse data. See arxiv.org/abs/2106.10068 (Algorithm 4).
+/// The size of the projection is O(total * size_factor * scale / alpha).
+/// The evaluation time of post-processing is O(beta * scale / alpha). 
+///
+/// # Arguments
+/// * `total` - Estimate or true value of the sum of all values in the input. 
+/// This should be an upper bound if the true total is private.
+/// * `size_factor` - Optional multiplier for setting the size of the projection. There is a memory/utility trade-off.
+/// The value should be sufficient large to limit hash collisions. The default value is 50.
+/// * `alpha` - Optional parameter used for scaling and determining p in randomized response step. The default value is 4.
+/// * `scale` - Privacy loss parameter. This is equal to epsilon/sensitivity.
+/// * `beta` - Upper bound on values. Entries above beta are clamped.
 pub fn make_base_alp<K, C, T>(total: usize, size_factor: Option<u32>, alpha: Option<T>, scale: T, beta: C) 
-        -> Fallible<Measurement<SizedHistogramDomain<K, C>, 
+        -> Fallible<Measurement<SparseDomain<K, C>, 
                                 AlpDomain<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + Clone + CheckNull,
@@ -195,6 +226,9 @@ pub fn make_base_alp<K, C, T>(total: usize, size_factor: Option<u32>, alpha: Opt
     make_base_alp_with_hashers(alpha, scale, 1 << exp, h)
 }
 
+/// Wrap the AlpState in a Queryable object
+/// The Queryable object works similar to a dictionary
+/// Note that the access time is O(state.h.len())
 pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T>
     where T: num::Float {
     Queryable::new(
@@ -205,10 +239,10 @@ pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K,
     })
 }
 
-// TODO: Could be refactored to a general post_processing function
+/// Wrapper Measurement. See post_process above
 pub fn make_alp_histogram_post_process<K, C, T>(
-    m: &Measurement<SizedHistogramDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>
-) -> Fallible<Measurement<SizedHistogramDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
+    m: &Measurement<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>
+) -> Fallible<Measurement<SparseDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + CheckNull,
           C: 'static + Clone + CheckNull,
           T: 'static + num::Float,
