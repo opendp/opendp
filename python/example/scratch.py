@@ -105,6 +105,8 @@ def to_ffi(array):
     ffi_array = ArrowArray()
     ffi_schema = ArrowSchema()
     array._export_to_c(ctypes.addressof(ffi_array), ctypes.addressof(ffi_schema))
+    ffi_array.release = None
+    ffi_schema.release = None
     return ffi_array, ffi_schema
 
 def _ptr_to_int(ptr):
@@ -136,7 +138,7 @@ def from_ffi(ffi_array_schema):
 def do_identity():
     create_array = True
     call = True
-    parse = create_array and True
+    parse = True and create_array
     gen = False
     if create_array:
         arg = pa.array([1, 2, None, 4])

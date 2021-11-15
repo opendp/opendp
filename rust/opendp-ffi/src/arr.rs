@@ -51,8 +51,10 @@ pub extern "C" fn opendp__arrow_identity(ffi_arg_array: *const FFI_ArrowArray, f
 #[no_mangle]
 pub extern "C" fn opendp__arrow_identity_param(ffi_arg_array: *const FFI_ArrowArray, ffi_arg_schema: *const FFI_ArrowSchema, parse: bool, gen: bool) -> *const FFI_ArrowArraySchema {
     if parse {
-        let arg = from_ffi(ffi_arg_array, ffi_arg_schema);
-        println!("rust: arg = {:?}", arg);
+        unsafe { println!("rust: array = {:?}", &*ffi_arg_array); }
+        let _arg = from_ffi(ffi_arg_array, ffi_arg_schema);
+        std::mem::forget(_arg)
+        // println!("rust: arg = {:?}", arg);
     }
 
     if gen {
