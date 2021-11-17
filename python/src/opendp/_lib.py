@@ -58,9 +58,20 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
 class AnyObjectPtr(ctypes.POINTER(AnyObject)):
     _type_ = AnyObject
 
+    def __del__(self):
+        from opendp._data import object_free
+        object_free(self)
+
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _type_ = FfiSlice
+    _dependencies = {}
+
+    def depends_on(self, *args):
+        FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
+
+    def __del__(self):
+        FfiSlicePtr._dependencies.pop(id(self), None)
 
 
 class FfiError(ctypes.Structure):

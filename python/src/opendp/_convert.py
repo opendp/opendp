@@ -273,12 +273,22 @@ def _hashmap_to_slice(val: Dict[Any, Any], type_name: str) -> FfiSlicePtr:
     key_type, val_type = [i.strip() for i in type_name[8:-1].split(",")]
     keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr)
     vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr)
-    return _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)
+    ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)
+    # The __del__ destructor on `keys` and `vals` is called and memory freed when their refcounts go to zero.
+    # We don't want their refcount to go to zero until until the ffislice is cleaned up.
+    ffislice.depends_on(keys, vals)
+    return ffislice
 
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
     keys_obj, vals_obj = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:2]
-    return dict(zip(c_to_py(keys_obj), c_to_py(vals_obj)))
+    result = dict(zip(c_to_py(keys_obj), c_to_py(vals_obj)))
+
+    # AnyObjectPtr's __del__ would free the memory behind keys_obj and vals_obj when this stack frame is popped
+    # But we can't free that memory until raw is freed. So adjust the class to prevent the free
+    keys_obj.__class__ = ctypes.POINTER(AnyObject)
+    vals_obj.__class__ = ctypes.POINTER(AnyObject)
+    return result
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
