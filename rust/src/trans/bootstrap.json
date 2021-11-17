@@ -1,0 +1,226 @@
+{
+    "make_base_laplace": {
+        "description": "Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.\nAdjust D to noise vector-valued data.",
+        "features": ["floating-point", "contrib"],
+        "args": [
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "Noise scale parameter of the laplace distribution."
+            },
+            {
+                "name": "D",
+                "default": "AllDomain<T>",
+                "generics": ["T"],
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
+                "is_type": true
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "D", "scale"
+                    ]
+                }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+    },
+    "make_base_gaussian": {
+        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
+        "features": ["floating-point", "contrib"],
+        "args": [
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "noise scale parameter to the gaussian distribution"
+            },
+            {
+                "name": "analytic",
+                "c_type": "bool",
+                "default": false,
+                "description": "enable to use a privacy relation corresponding to the analytic gaussian mechanism"
+            },
+            {
+                "name": "D",
+                "default": "AllDomain<T>",
+                "generics": ["T"],
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
+                "is_type": true
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "D", "scale"
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
+    },
+    "make_base_geometric": {
+        "description": "Make a Measurement that adds noise from the geometric(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "QO",
+                "description": "noise scale parameter to the geometric distribution"
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": "OptionT",
+                "default": null,
+                "description": "Set bounds on the count to make the algorithm run in constant-time."
+            },
+            {
+                "name": "D",
+                "default": "AllDomain<i32>",
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
+                "is_type": true
+            },
+            {
+                "name": "QO",
+                "description": "Data type of the sensitivity, scale, and budget.",
+                "is_type": true
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom",
+                    "params": [
+                        "D"
+                    ]
+                }
+            },
+            {
+                "name": "OptionT",
+                "rust_type": {
+                    "origin": "Option",
+                    "args": [
+                        {
+                            "origin": "Tuple",
+                            "args": ["T", "T"]
+                        }
+                    ]
+                },
+                "generics": ["T"]
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
+    },
+    "make_randomized_response_bool": {
+        "description": "Make a Measurement that implements randomized response on a boolean value.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "prob",
+                "c_type": "void *",
+                "rust_type": "Q",
+                "description": "Probability of returning the correct answer. Must be in [0.5, 1)"
+            },
+            {
+                "name": "constant_time",
+                "c_type": "bool",
+                "default": false,
+                "description": "Set to true to enable constant time"
+            },
+            {
+                "name": "Q",
+                "description": "Data type of probability and budget.",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+    },
+    "make_randomized_response": {
+        "description": "Make a Measurement that implements randomized response on a categorical value.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["T"]
+                },
+                "description": "Set of valid outcomes"
+            },
+            {
+                "name": "prob",
+                "c_type": "void *",
+                "rust_type": "Q",
+                "description": "Probability of returning the correct answer. Must be in [1/num_categories, 1)"
+            },
+            {
+                "name": "constant_time",
+                "c_type": "bool",
+                "default": false,
+                "description": "Set to true to enable constant time"
+            },
+            {
+                "name": "T",
+                "description": "Data type of a category.",
+                "is_type": true,
+                "example": {
+                    "function": "get_first",
+                    "params": ["categories"]
+                }
+            },
+            {
+                "name": "Q",
+                "description": "Data type of probability and budget.",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
+    },
+    "make_count_by_ptr": {
+        "description": "Make a Measurement that uses propose-test-release to count by an unknown set of categories.",
+        "features": ["floating-point", "contrib"],
+        "args": [
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "TOC",
+                "description": "Noise scale parameter."
+            },
+            {
+                "name": "threshold",
+                "c_type": "void *",
+                "rust_type": "TOC",
+                "description": "Exclude counts that are less than this minimum value."
+            },
+            {
+                "name": "TIA",
+                "description": "Atomic type of input data- must be hashable/categorical.",
+                "is_type": true
+            },
+            {
+                "name": "TOC",
+                "description": "Data type of output count- must be float.",
+                "is_type": true
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
+    }
+}
