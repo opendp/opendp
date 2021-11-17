@@ -68,9 +68,11 @@ class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _dependencies = {}
 
     def depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
         FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
 
     def __del__(self):
+        """When self is deleted, stop keeping dependencies alive by freeing the reference."""
         FfiSlicePtr._dependencies.pop(id(self), None)
 
 

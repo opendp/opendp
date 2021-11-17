@@ -276,20 +276,23 @@ def _hashmap_to_slice(val: Dict[Any, Any], type_name: str) -> FfiSlicePtr:
     ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)
 
     # The __del__ destructor on `keys` and `vals` is called and memory freed when their refcounts go to zero.
-    # We can't allow their refcount to go to zero until ffislice is freed.
+    # ffislice needs keys and vals to have a lifetime at least as long as itself,
+    # so we can't allow their refcount to go to zero until ffislice is freed.
     ffislice.depends_on(keys, vals)
     return ffislice
 
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
-    keys_obj, vals_obj = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:2]
-    result = dict(zip(c_to_py(keys_obj), c_to_py(vals_obj)))
+    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
+    keys: AnyObjectPtr = slice_array[0]
+    vals: AnyObjectPtr = slice_array[1]
+    result = dict(zip(c_to_py(keys), c_to_py(vals)))
 
-    # AnyObjectPtr's __del__ would free the memory behind keys_obj and vals_obj when this stack frame is popped.
+    # AnyObjectPtr.__del__ would free the memory behind keys and vals when this stack frame is popped.
     # But that memory has a lifetime at least as long as raw, so it cannot be freed yet.
-    # Adjust the class to avoid calling AnyObject.__del__, which would free the backing memory.
-    keys_obj.__class__ = ctypes.POINTER(AnyObject)
-    vals_obj.__class__ = ctypes.POINTER(AnyObject)
+    # Adjust the class to avoid calling AnyObjectPtr.__del__, which would free the backing memory.
+    keys.__class__ = ctypes.POINTER(AnyObject)
+    vals.__class__ = ctypes.POINTER(AnyObject)
     return result
 
 
