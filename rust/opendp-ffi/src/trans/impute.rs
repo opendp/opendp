@@ -37,7 +37,7 @@ pub extern "C" fn opendp_trans__make_impute_constant(
     DA: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
     let DA = try_!(Type::try_from(DA));
-    let TA = try_!(DA.get_domain_atom());
+    let TA = try_!(DA.get_atom());
 
     match &DA.contents {
         TypeContents::GENERIC {name, ..} if name == &"OptionNullDomain" => {
@@ -72,7 +72,7 @@ pub extern "C" fn opendp_trans__make_drop_null(
     DA: *const c_char
 ) -> FfiResult<*mut AnyTransformation> {
     let DA = try_!(Type::try_from(DA));
-    let TA = try_!(DA.get_domain_atom());
+    let TA = try_!(DA.get_atom());
 
     match &DA.contents {
         TypeContents::GENERIC {name, ..} if name == &"OptionNullDomain" => {

@@ -21,30 +21,6 @@
             "description": "An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information."
         }
     },
-    "slice_as_metric_distance": {
-        "description": "Internal function. Load data from a `slice` into an AnyMetricDistance",
-        "args": [
-            {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
-            {"name": "T", "is_type": true}
-        ],
-        "ret": {
-            "c_type": "FfiResult<const AnyMetricDistance *>",
-            "do_not_convert": true,
-            "description": "An AnyMetricDistance that contains the data in `slice`. The AnyMetricDistance also captures rust type information."
-        }
-    },
-    "slice_as_measure_distance": {
-        "description": "Internal function. Load data from a `slice` into an AnyMeasureDistance",
-        "args": [
-            {"name": "slice", "c_type": "const FfiSlice *", "rust_type": "T", "hint": "FfiSlicePtr"},
-            {"name": "T", "is_type": true}
-        ],
-        "ret": {
-            "c_type": "FfiResult<const AnyMeasureDistance *>",
-            "do_not_convert": true,
-            "description": "An AnyMeasureDistance that contains the data in `slice`. The AnyMeasureDistance also captures rust type information."
-        }
-    },
     "object_type": {
         "description": "Internal function. Retrieve the type descriptor string of an AnyObject.",
         "args": [

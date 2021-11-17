@@ -5,12 +5,13 @@ use crate::dist::{AbsoluteDistance, L2Distance, SmoothedMaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
-use crate::traits::{CheckNull, InfCast};
+
+use crate::traits::{InfCast, CheckNull, InfMul, InfAdd, InfLn, InfSqrt};
 mod analytic;
 use analytic::get_analytic_gaussian_sigma;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / std::f64::consts::PI).ln();
-pub const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
+const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
 
 pub trait GaussianDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -49,7 +50,7 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
           f64: InfCast<D::Atom>,
-          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + Zero + One {
+          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + InfMul + InfAdd + InfLn + InfSqrt {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -61,10 +62,10 @@ pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measure
         SmoothedMaxDivergence::default(),
         PrivacyRelation::new_fallible(move |&d_in: &D::Atom, &(eps, del): &(D::Atom, D::Atom)| {
             if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "input sensitivity must be non-negative")
+                return fallible!(InvalidDistance, "sensitivity must be non-negative")
             }
             if eps.is_sign_negative() {
-                return fallible!(InvalidDistance, "epsilon must not be negative")
+                return fallible!(InvalidDistance, "epsilon must be non-negative")
             }
             if del.is_sign_negative() || del.is_zero() {
                 return fallible!(InvalidDistance, "delta must be positive")
@@ -81,8 +82,10 @@ pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measure
                 let _2 = D::Atom::inf_cast(2.)?;
                 let additive_gauss_const = D::Atom::inf_cast(ADDITIVE_GAUSS_CONST)?;
 
-                eps.min(D::Atom::one()) * scale >=
-                    d_in * (additive_gauss_const + _2 * del.recip().ln()).sqrt()
+                // min(eps, 1) * scale >= d_in * (const + sqrt(2 * ln(1/del)))
+                eps.min(D::Atom::one()).neg_inf_mul(&scale)? >=
+                    d_in.inf_mul(&additive_gauss_const.inf_add(
+                        &_2.inf_mul(&del.recip().inf_ln()?)?)?.inf_sqrt()?)?
             })
         }),
     ))

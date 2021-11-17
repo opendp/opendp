@@ -31,7 +31,7 @@ pub extern "C" fn opendp_trans__make_count(
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @primitives),
-        (TO, @integers)
+        (TO, @numbers)
     ], ())
 }
 
@@ -51,7 +51,7 @@ pub extern "C" fn opendp_trans__make_count_distinct(
     let TO = try_!(Type::try_from(TO));
     dispatch!(monomorphize, [
         (TIA, @hashable),
-        (TO, @integers)
+        (TO, @numbers)
     ], ())
 }
 
@@ -71,7 +71,7 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
             where MO: 'static + SensitivityMetric + CountByCategoriesConstant<MO::Distance>,
                   MO::Distance: DistanceConstant<IntDistance> + One,
                   TI: 'static + Eq + Hash + Clone + CheckNull,
-                  TO: 'static + Integer + Zero + One + SaturatingAdd + CheckNull,
+                  TO: 'static + Zero + One + SaturatingAdd + CheckNull,
                   IntDistance: InfCast<MO::Distance> {
             let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
             make_count_by_categories::<MO, TI, TO>(categories).into_any()
@@ -79,16 +79,16 @@ pub extern "C" fn opendp_trans__make_count_by_categories(
         dispatch!(monomorphize2, [
             (MO, [L1Distance<QO>, L2Distance<QO>]),
             (TI, @hashable),
-            (TO, @integers)
+            (TO, @numbers)
         ], (categories))
     }
     let MO = try_!(Type::try_from(MO));
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
 
-    let QO = try_!(MO.get_sensitivity_distance());
+    let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [
-        (QO, @integers)
+        (QO, @numbers)
     ], (categories, MO, TI, TO))
 }
 
@@ -121,6 +121,6 @@ pub extern "C" fn opendp_trans__make_count_by(
     let TIA = try_!(Type::try_from(TIA));
     let TOA = try_!(Type::try_from(TOA));
 
-    let QO = try_!(MO.get_sensitivity_distance());
+    let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [(QO, @floats)], (size, MO, TIA, TOA))
 }

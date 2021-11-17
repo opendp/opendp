@@ -58,14 +58,6 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         from opendp._data import slice_as_object
         return slice_as_object(value, type_name)
 
-    if c_type == AnyMeasureDistancePtr:
-        from opendp._data import slice_as_measure_distance
-        return slice_as_measure_distance(value, type_name)
-
-    if c_type == AnyMetricDistancePtr:
-        from opendp._data import slice_as_metric_distance
-        return slice_as_metric_distance(value, type_name)
-
     if c_type == FfiSlicePtr:
         assert type_name is not None
         return _py_to_slice(value, str(type_name))
