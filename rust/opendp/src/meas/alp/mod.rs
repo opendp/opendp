@@ -10,8 +10,8 @@ use crate::dist::{L1Distance, MaxDivergence};
 use crate::dom::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
-use crate::traits::{DistanceConstant, CheckNull, InfCast};
-use crate::samplers::{fill_bytes, CastInternalReal, SampleBernoulli};
+use crate::traits::{DistanceConstant, CheckNull, InfCast, CastInternalReal};
+use crate::samplers::{fill_bytes, SampleBernoulli};
 use std::collections::hash_map::DefaultHasher;
 
 const ALPHA_DEFAULT : u32 = 4;
