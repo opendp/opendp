@@ -5,6 +5,11 @@ from opendp._lib import *
 from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
 from opendp.typing import RuntimeType
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
 ATOM_MAP = {
     'f32': ctypes.c_float,
     'f64': ctypes.c_double,
@@ -176,6 +181,8 @@ def _py_to_slice(value: Any, type_name: str) -> FfiSlicePtr:
 
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
+    if np is not None and isinstance(val, np.ndarray):
+        val = val.item()
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
 
@@ -185,6 +192,8 @@ def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
 
 
 def _string_to_slice(val: str) -> FfiSlicePtr:
+    if np is not None and isinstance(val, np.ndarray):
+        val = val.item()
     return _wrap_in_slice(ctypes.c_char_p(val.encode()), len(val) + 1)
 
 
@@ -195,6 +204,10 @@ def _slice_to_string(raw: FfiSlicePtr) -> str:
 def _vector_to_slice(val: Sequence[Any], type_name) -> FfiSlicePtr:
     assert type_name[:4] == 'Vec<'
     inner_type_name = type_name[4:-1]
+
+    if np is not None and isinstance(val, np.ndarray):
+        val = val.tolist()
+
     if not isinstance(val, list):
         raise OpenDPException(f"Cannot cast a non-list type to a vector")
 
