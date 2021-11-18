@@ -18,6 +18,7 @@ pub mod geometric;
 #[cfg(feature="contrib")]
 pub use crate::meas::geometric::*;
 
+
 #[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod ptr;
 #[cfg(all(feature="floating-point", feature="contrib"))]
@@ -27,3 +28,8 @@ pub use crate::meas::ptr::*;
 pub mod randomized_response;
 #[cfg(feature="contrib")]
 pub use crate::meas::randomized_response::*;
+
+#[cfg(all(feature="floating-point", feature="contrib"))]
+pub mod alp;
+#[cfg(all(feature="floating-point", feature="contrib"))]
+pub use crate::meas::alp::*;
