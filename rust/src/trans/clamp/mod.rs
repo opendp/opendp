@@ -3,6 +3,9 @@ mod ffi;
 
 use std::collections::Bound;
 
+#[cfg(feature="ffi")]
+use opendp_derive::generate_ffi;
+
 use crate::core::Transformation;
 use crate::dist::SymmetricDistance;
 use crate::dom::{AllDomain, BoundedDomain, VectorDomain};
@@ -11,7 +14,7 @@ use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 
 
-#[generate_ffi(module="trans")]
+#[cfg_attr(feature="ffi", generate_ffi(module="trans"))]
 pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
     bounds: (TA, TA)
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<BoundedDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
