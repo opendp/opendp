@@ -4,6 +4,12 @@ from opendp._convert import (
     _vector_to_slice, _slice_to_vector,
     _hashmap_to_slice, _slice_to_hashmap,
 )
+import pytest
+import sys
+try:
+    import numpy as np
+except ImportError:
+    pass
 
 
 def test_data_object_int():
@@ -98,3 +104,24 @@ def test_hashmap():
     # complete roundtrip
     any = py_to_c(data, c_type=AnyObjectPtr)
     assert c_to_py(any) == data
+
+
+@pytest.mark.skipif('numpy' not in sys.modules,
+                    reason="requires the Numpy library")
+def test_numpy_data():
+    def roundtrip(value, type_name, dtype=None):
+        print(c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name)))
+    roundtrip([1, 2], "Vec<i32>", dtype=np.int32)
+    roundtrip(1, "i32", dtype=np.int32)
+    roundtrip([1., 2.], "Vec<f64>")
+    roundtrip(1., "f64")
+    roundtrip(["A", "B"], "Vec<String>")
+    roundtrip("A", "String")
+
+@pytest.mark.skipif('numpy' not in sys.modules,
+                    reason="requires the Numpy library")
+def test_numpy_trans():
+    from opendp.trans import make_bounded_sum
+    from opendp.mod import enable_features
+    enable_features("contrib")
+    assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3], dtype=np.int32)) == 6

@@ -6,6 +6,21 @@ from opendp.mod import *
 from opendp.typing import RuntimeType, L1Distance, SensitivityMetric, L2Distance, DatasetMetric
 
 
+try:
+    import numpy as np
+except ImportError:
+    pass
+
+@pytest.mark.skipif('numpy' not in sys.modules,
+                    reason="requires the Numpy library")
+def test_numpy_function():
+    print(RuntimeType.infer(np.array([1, 2, 3])))
+    print(RuntimeType.infer(np.array(1)))
+    print(RuntimeType.infer(np.array(1.)))
+    print(RuntimeType.infer(np.array("A")))
+    print(RuntimeType.infer(np.array(["A", "B"])))
+
+
 def test_typing_hint():
     # python < 3.8 should raise a NotImplementedError
     if sys.version_info < (3, 8):
