@@ -10,18 +10,20 @@ use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 
-pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (T, T)
-) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<BoundedDomain<T>>, SymmetricDistance, SymmetricDistance>> {
+
+#[generate_ffi(module="trans")]
+pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
+    bounds: (TA, TA)
+) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<BoundedDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row_fallible(
         AllDomain::new(),
         BoundedDomain::new_closed(bounds.clone())?,
-        move |arg: &T| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
+        move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
 }
 
-pub fn make_unclamp<T: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (Bound<T>, Bound<T>)
-) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>> {
+pub fn make_unclamp<TA: 'static + Clone + TotalOrd + CheckNull>(
+    bounds: (Bound<TA>, Bound<TA>)
+) -> Fallible<Transformation<VectorDomain<BoundedDomain<TA>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row(
         BoundedDomain::new(bounds)?,
         AllDomain::new(),
