@@ -384,7 +384,7 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
         } else {None};
 
         // make alpha conservatively larger
-        let inf_alpha: f64 = scale.recip().neg_inf_exp()?.recip();
+        let inf_alpha: f64 = (-scale.recip()).inf_exp()?;
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
