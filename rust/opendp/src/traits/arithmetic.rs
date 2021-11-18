@@ -237,7 +237,7 @@ macro_rules! impl_float_inf_uni {
                 let this = Self::from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "() is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
                     self))
             }
             fn $method_neg_inf(self) -> Fallible<Self> {
@@ -247,7 +247,7 @@ macro_rules! impl_float_inf_uni {
                 let this = Self::from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "() is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
                     self))
             }
         }
@@ -257,14 +257,14 @@ macro_rules! impl_float_inf_uni {
                 let this = self.$fallback();
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "() is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
                     self))
             }
             fn $method_neg_inf(self) -> Fallible<Self> {
                 let this = self.$fallback();
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "() is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
                     self))
             }
         })+
@@ -314,7 +314,7 @@ macro_rules! impl_float_inf_bi {
                 let this = Self::from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
@@ -324,7 +324,7 @@ macro_rules! impl_float_inf_bi {
                 let this = Self::from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
         }
@@ -334,14 +334,14 @@ macro_rules! impl_float_inf_bi {
                 let this = self.$fallback(other);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
                 let this = self.$fallback(other);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
-                    concat!("({}).", stringify!($method), "({}) is not finite. Consider tightening your parameters."),
+                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
         })+
