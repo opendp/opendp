@@ -4,13 +4,13 @@ enable_features('floating-point', 'contrib')
 
 
 def test_base_gaussian():
-    from opendp.meas import make_base_gaussian
+    from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
     from opendp.mod import binary_search_param
     print("Analytic", binary_search_param(
-        lambda s: make_base_gaussian(s, analytic=True),
+        make_base_analytic_gaussian,
         d_in=1., d_out=(1., 1e-5)))
     print("Standard", binary_search_param(
-        lambda s: make_base_gaussian(s, analytic=False),
+        make_base_gaussian,
         d_in=1., d_out=(1., 1e-5)))
 
 
@@ -29,23 +29,23 @@ def test_base_vector_laplace():
 
 
 def test_base_analytic_gaussian():
-    from opendp.meas import make_base_gaussian
+    from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
     meas = make_base_gaussian(scale=10.5)
     print("base gaussian:", meas(100.))
     assert meas.check(1., (1.3, .000001))
 
-    meas = make_base_gaussian(scale=10.5, analytic=True)
+    meas = make_base_analytic_gaussian(scale=10.5)
     print("base analytic gaussian:", meas(100.))
     assert meas.check(1., (1.3, .000001))
 
 
 def test_base_vector_gaussian():
-    from opendp.meas import make_base_gaussian
+    from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
     meas = make_base_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>")
     print("base gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (1.3, .000001))
 
-    meas = make_base_gaussian(scale=10.5, analytic=True, D="VectorDomain<AllDomain<f64>>")
+    meas = make_base_analytic_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>")
     print("base analytic gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (1.3, .000001))
 

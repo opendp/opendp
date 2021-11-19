@@ -5,7 +5,7 @@ use num::Float;
 
 use opendp::dom::{AllDomain, VectorDomain};
 use opendp::err;
-use opendp::meas::{GaussianDomain, make_base_gaussian};
+use opendp::meas::{GaussianDomain, make_base_gaussian, make_base_analytic_gaussian};
 use opendp::samplers::SampleGaussian;
 use opendp::traits::{InfCast, CheckNull, InfMul, InfAdd, InfLn, InfSqrt};
 
@@ -16,21 +16,37 @@ use crate::util::{c_bool, to_bool, Type};
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(
     scale: *const c_void,
-    analytic: c_bool,
     D: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<D>(scale: *const c_void, analytic: bool) -> FfiResult<*mut AnyMeasurement> where
+    fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement> where
         D: 'static + GaussianDomain,
         D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + InfMul + InfAdd + InfLn + InfSqrt,
         f64: InfCast<D::Atom> {
         let scale = *try_as_ref!(scale as *const D::Atom);
-        make_base_gaussian::<D>(scale, analytic).into_any()
+        make_base_gaussian::<D>(scale).into_any()
     }
     let D = try_!(Type::try_from(D));
-    let analytic = to_bool(analytic);
     dispatch!(monomorphize, [
         (D, [AllDomain<f64>, AllDomain<f32>, VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f32>>])
-    ], (scale, analytic))
+    ], (scale))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_meas__make_base_analytic_gaussian(
+    scale: *const c_void,
+    D: *const c_char,
+) -> FfiResult<*mut AnyMeasurement> {
+    fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement> where
+        D: 'static + GaussianDomain,
+        D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull,
+        f64: InfCast<D::Atom> {
+        let scale = *try_as_ref!(scale as *const D::Atom);
+        make_base_analytic_gaussian::<D>(scale).into_any()
+    }
+    let D = try_!(Type::try_from(D));
+    dispatch!(monomorphize, [
+        (D, [AllDomain<f64>, AllDomain<f32>, VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f32>>])
+    ], (scale))
 }
 
 

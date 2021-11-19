@@ -47,6 +47,14 @@ You can choose whether to construct scalar or vector-valued versions by setting 
      - ``VectorDomain<AllDomain<T>>``
      - ``L2Distance<T>``
      - ``SmoothedMaxDivergence<T>``
+   * - :func:`opendp.meas.make_base_analytic_gaussian`
+     - ``AllDomain<T>``
+     - ``AbsoluteDistance<T>``
+     - ``SmoothedMaxDivergence<T>``
+   * - :func:`opendp.meas.make_base_analytic_gaussian`
+     - ``VectorDomain<AllDomain<T>>``
+     - ``L2Distance<T>``
+     - ``SmoothedMaxDivergence<T>``
    * - :func:`opendp.meas.make_count_by_ptr`
      - ``SizedDomain<MapDomain<AllDomain<TIA>, AllDomain<TOA>>>``
      - ``L1Distance<T>``
