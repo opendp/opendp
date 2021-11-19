@@ -47,7 +47,9 @@ impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 }
 
 
-pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
+pub fn make_base_gaussian<D>(
+    scale: D::Atom
+) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
           f64: InfCast<D::Atom>,
           D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull + InfMul + InfAdd + InfLn + InfSqrt {
@@ -71,25 +73,53 @@ pub fn make_base_gaussian<D>(scale: D::Atom, analytic: bool) -> Fallible<Measure
                 return fallible!(InvalidDistance, "delta must be positive")
             }
 
-            Ok(if analytic {
-                let d_in = f64::inf_cast(d_in.clone())?;
-                let eps = f64::inf_cast(eps.clone())?;
-                let del = f64::inf_cast(del.clone())?;
-                let scale = f64::inf_cast(scale.clone())?;
+            let _2 = D::Atom::inf_cast(2.)?;
+            let additive_gauss_const = D::Atom::inf_cast(ADDITIVE_GAUSS_CONST)?;
 
-                scale >= get_analytic_gaussian_sigma(d_in, eps, del)
-            } else {
-                let _2 = D::Atom::inf_cast(2.)?;
-                let additive_gauss_const = D::Atom::inf_cast(ADDITIVE_GAUSS_CONST)?;
-
-                // min(eps, 1) * scale >= d_in * (const + sqrt(2 * ln(1/del)))
-                eps.min(D::Atom::one()).neg_inf_mul(&scale)? >=
-                    d_in.inf_mul(&additive_gauss_const.inf_add(
-                        &_2.inf_mul(&del.recip().inf_ln()?)?)?.inf_sqrt()?)?
-            })
+            // min(eps, 1) * scale >= d_in * (const + sqrt(2 * ln(1/del)))
+            Ok(eps.min(D::Atom::one()).neg_inf_mul(&scale)? >=
+                d_in.inf_mul(&additive_gauss_const.inf_add(
+                    &_2.inf_mul(&del.recip().inf_ln()?)?)?.inf_sqrt()?)?)
         }),
     ))
 }
+
+pub fn make_base_analytic_gaussian<D>(
+    scale: D::Atom
+) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
+    where D: GaussianDomain,
+          f64: InfCast<D::Atom>,
+          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull {
+    if scale.is_sign_negative() {
+        return fallible!(MakeMeasurement, "scale must not be negative")
+    }
+    Ok(Measurement::new(
+        D::new(),
+        D::new(),
+        D::noise_function(scale.clone()),
+        D::Metric::default(),
+        SmoothedMaxDivergence::default(),
+        PrivacyRelation::new_fallible(move |&d_in: &D::Atom, &(eps, del): &(D::Atom, D::Atom)| {
+            if d_in.is_sign_negative() {
+                return fallible!(InvalidDistance, "sensitivity must be non-negative")
+            }
+            if eps.is_sign_negative() {
+                return fallible!(InvalidDistance, "epsilon must be non-negative")
+            }
+            if del.is_sign_negative() || del.is_zero() {
+                return fallible!(InvalidDistance, "delta must be positive")
+            }
+
+            let d_in = f64::inf_cast(d_in.clone())?;
+            let eps = f64::inf_cast(eps.clone())?;
+            let del = f64::inf_cast(del.clone())?;
+            let scale = f64::inf_cast(scale.clone())?;
+
+            Ok(scale >= get_analytic_gaussian_sigma(d_in, eps, del))
+        }),
+    ))
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -97,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_mechanism() -> Fallible<()> {
-        let measurement = make_base_gaussian::<AllDomain<_>>(1.0, false)?;
+        let measurement = make_base_gaussian::<AllDomain<_>>(1.0)?;
         let arg = 0.0;
         let _ret = measurement.invoke(&arg)?;
 
@@ -125,7 +155,7 @@ mod tests {
         let d_out = (1., 1e-5);
         let scale = 3.730632;
 
-        let measurement = make_base_gaussian::<AllDomain<_>>(scale, true)?;
+        let measurement = make_base_analytic_gaussian::<AllDomain<_>>(scale)?;
         let arg = 0.0;
         let _ret = measurement.invoke(&arg)?;
 
@@ -140,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
-        let measurement = make_base_gaussian::<VectorDomain<_>>(1.0, false)?;
+        let measurement = make_base_gaussian::<VectorDomain<_>>(1.0)?;
         let arg = vec![0.0, 1.0];
         let _ret = measurement.invoke(&arg)?;
 
