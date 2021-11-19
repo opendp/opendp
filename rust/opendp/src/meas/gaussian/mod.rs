@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_mechanism() -> Fallible<()> {
-        let measurement = make_base_gaussian::<AllDomain<_>>(1.0, false)?;
+        let measurement = make_base_gaussian::<AllDomain<_>>(1.0)?;
         let arg = 0.0;
         let _ret = measurement.invoke(&arg)?;
 
@@ -155,7 +155,7 @@ mod tests {
         let d_out = (1., 1e-5);
         let scale = 3.730632;
 
-        let measurement = make_base_gaussian::<AllDomain<_>>(scale, true)?;
+        let measurement = make_base_analytic_gaussian::<AllDomain<_>>(scale)?;
         let arg = 0.0;
         let _ret = measurement.invoke(&arg)?;
 
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
-        let measurement = make_base_gaussian::<VectorDomain<_>>(1.0, false)?;
+        let measurement = make_base_gaussian::<VectorDomain<_>>(1.0)?;
         let arg = vec![0.0, 1.0];
         let _ret = measurement.invoke(&arg)?;
 
