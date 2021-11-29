@@ -1,12 +1,13 @@
 use proc_macro::TokenStream;
 
-use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::{AttributeArgs, ItemFn, parse_macro_input, Type, Visibility, WhereClause, TypeParamBound, Token, NestedMeta};
 
 
-mod parsing;
-use crate::parsing::{parse_macro_config, parse_doc_comments, normalize_function};
+mod parse;
+mod generate;
+
+use crate::parse::{parse_macro_config, parse_doc_comments, normalize_function};
 
 
 macro_rules! extract {
@@ -18,6 +19,7 @@ macro_rules! extract {
 pub(crate) use extract;
 use syn::punctuated::Punctuated;
 use std::collections::HashMap;
+use crate::generate::gen_function;
 
 // metadata for each function in a module
 struct Function {
@@ -80,22 +82,10 @@ pub(crate) struct Generic {
     meta: Vec<NestedMeta>
 }
 
-// RuntimeType contains the metadata to generate code that evaluates to a rust type name
-#[derive(Debug, PartialEq, Clone)]
-enum RuntimeType {
-    // reference an existing RuntimeType
-    Name(String),
-    // get the ith subtype of an existing RuntimeType
-    Lower { root: Box<RuntimeType>, index: i32 },
-    // build a higher level RuntimeType
-    Raise { origin: String, args: Vec<Box<RuntimeType>> },
-    // construct the RuntimeType via function call
-    Function { function: String, params: Vec<Box<RuntimeType>> },
-}
 
 #[proc_macro_attribute]
 pub fn generate_ffi(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let item_ = item.clone();
+    let mut item_: TokenStream = item.clone();
 
     let config = parse_macro_config(parse_macro_input!(attr as AttributeArgs));
 
@@ -111,21 +101,13 @@ pub fn generate_ffi(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let function = normalize_function(sig, doc_comments, config);
 
-    // Retrieve the base function name and construct the extern fn name
-    let ffi_name = Ident::new(
-        &*format!("opendp_{}__{}",
-                  function.module.join("_"),
-                  function.name),
-        Span::call_site());
-
-    // Construct the extern fn (in-progress)
-    let ffi_func = quote!{
-        extern "C" fn #ffi_name() {}
-    };
+    let function = gen_function(function);
 
     // current state of the generated function:
-    println!("{}", ffi_func);
+    println!("{}", quote!(#function));
 
     // for now, just return the base function as-is, without adding the extern fn
+    item_.extend(TokenStream::from(quote!(#function)));
+
     item_
 }
