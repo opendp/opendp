@@ -4,9 +4,10 @@ import json
 import os
 import platform
 import subprocess
-import semver
 import sys
 import types
+
+import semver
 
 
 def log(message, command=False):
@@ -266,7 +267,8 @@ def _main(argv):
     parser = argparse.ArgumentParser(description="OpenDP release tool")
     parser.add_argument("-u", "--repo-url", default="git@github.com:opendp/opendp.git", help="Remote repo URL")
     parser.add_argument("-d", "--repo-dir", default="/tmp/opendp-release", help="Local repo directory")
-    subparsers = parser.add_subparsers(help="Command to run")
+    subparsers = parser.add_subparsers(dest="COMMAND", help="Command to run")
+    subparsers.required = True
 
     subparser = subparsers.add_parser("init", help="Initialize the release process")
     subparser.set_defaults(func=init)
@@ -322,8 +324,7 @@ def _main(argv):
     subparser.add_argument("commit", nargs="+")
 
     args = parser.parse_args(argv[1:])
-    if "func" in args:
-        args.func(args)
+    args.func(args)
 
 
 def main():
