@@ -167,8 +167,8 @@ pub trait SampleUniform: Sized {
     ///
     /// # Arguments
     ///
-    /// `min`: f64 minimum of uniform distribution (inclusive)
-    /// `max`: f64 maximum of uniform distribution (non-inclusive)
+    /// * `min` - f64 minimum of uniform distribution (inclusive)
+    /// * `max` - f64 maximum of uniform distribution (non-inclusive)
     ///
     /// # Return
     /// Random draw from Unif[min, max).
