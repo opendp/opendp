@@ -11,6 +11,7 @@ pub(crate) fn gen_function(function: Function) -> ItemFn {
     let ffi_name = format_ident!("opendp_{}__{}_AUTO",
             function.module.join("_"),
             function.name);
+
     let args = Punctuated::<FnArg, Token![,]>::from_iter(
         function.arguments.iter().map(|a| FnArg::Typed(PatType {
             attrs: vec![],
@@ -79,4 +80,8 @@ fn rust_to_c_type(ty: Type) -> Type {
         Type::Tuple(_) => syn::parse_str("crate::ffi::any::AnyObject"),
         _ => panic!("unrecognized type structure")
     }.unwrap()
+}
+
+fn c_to_rust_expr() {
+
 }

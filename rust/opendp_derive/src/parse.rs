@@ -1,37 +1,56 @@
 use std::collections::HashMap;
-use syn::{Meta, NestedMeta, AttributeArgs, Path, Lit, Attribute, Signature, FnArg, Pat, GenericParam, TypeParam, ReturnType};
-use crate::{extract, Function, Argument, Generic};
-use quote::quote;
 use std::default::Default;
+
+use quote::quote;
+use syn::{Attribute, AttributeArgs, FnArg, GenericParam, Lit, Meta, NestedMeta, Pat, Path, ReturnType, Signature, TypeParam};
+
+use crate::{Argument, Dispatch, extract, Function, Generic};
 
 pub(crate) fn path_to_str(path: Path) -> String {
     if path.segments.len() != 1 { panic!("Path must be of length 1! {:?}", quote!(#path)) }
     path.segments[0].ident.to_string()
 }
 
-// struct Dispatch {
-//     condition: String,
-//     product: HashMap<String, String>
-// }
-// struct Argument {
-//     example: String,
-//     default: String
-// }
 #[derive(Default)]
 pub(crate) struct MacroConfig {
     pub module: Vec<String>,
     pub features: Vec<String>,
     pub arguments: HashMap<String, Vec<NestedMeta>>,
     pub generics: HashMap<String, Vec<NestedMeta>>,
-    pub dispatch: HashMap<String, String>,
+    pub dispatch: Vec<Dispatch>,
 }
 
 pub(crate) fn parse_macro_config(attribute_args: AttributeArgs) -> MacroConfig {
-    let mut macro_args = attribute_args.into_iter()
+    let mut dispatch = <Vec<Dispatch>>::new();
+    let mut macro_args = HashMap::new();
+
+    attribute_args.into_iter()
         .map(|v| extract!(v, NestedMeta::Meta(v) => v))
         .map(|v| extract!(v, Meta::List(v) => v))
-        .map(|v| (path_to_str(v.path), v.nested.into_iter().collect()))
-        .collect::<HashMap<String, Vec<NestedMeta>>>();
+        .for_each(|v| {
+            let key = path_to_str(v.path);
+            if &*key == "dispatch" {
+                let mut iter = v.nested.iter();
+                dispatch.push(Dispatch {
+                    cond: v.nested.first()
+                        .and_then(|first| match first {
+                            NestedMeta::Lit(Lit::Str(v)) => Some(v.value()),
+                            _ => None
+                        })
+                        .map(|first| {
+                            iter.next();
+                            first
+                        }),
+                    prod: iter
+                        .map(|v| extract!(v, NestedMeta::Meta(v) => v))
+                        .map(|v| extract!(v.clone(), Meta::NameValue(v) =>
+                            (path_to_str(v.path), extract!(v.lit, Lit::Str(v) => v.value()))))
+                        .collect(),
+                })
+            } else {
+                macro_args.insert(key, v.nested.into_iter().collect());
+            }
+        });
 
     let extract_strings = |data: Vec<NestedMeta>| data.into_iter()
         .map(|v| extract!(v, NestedMeta::Lit(v) => v))
@@ -53,11 +72,7 @@ pub(crate) fn parse_macro_config(attribute_args: AttributeArgs) -> MacroConfig {
             .map(|v| extract!(v, Meta::List(v) => v))
             .map(|l| (path_to_str(l.path), l.nested.into_iter().collect()))
             .collect()).unwrap_or_else(HashMap::new),
-        dispatch: macro_args.remove("dispatch").map(|data| data.into_iter()
-            .map(|v| extract!(v, NestedMeta::Meta(v) => v))
-            .map(|v| extract!(v, Meta::NameValue(v) =>
-                (path_to_str(v.path), extract!(v.lit, Lit::Str(v) => v.value()))))
-            .collect()).unwrap_or_else(HashMap::new),
+        dispatch,
     }
 }
 

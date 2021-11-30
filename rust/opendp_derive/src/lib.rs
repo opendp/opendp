@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use proc_macro::TokenStream;
 
 use quote::quote;
@@ -21,6 +23,11 @@ use syn::punctuated::Punctuated;
 use std::collections::HashMap;
 use crate::generate::gen_function;
 
+struct Dispatch {
+    cond: Option<String>,
+    prod: HashMap<String, String>
+}
+
 // metadata for each function in a module
 struct Function {
     name: String,
@@ -43,7 +50,7 @@ struct Function {
     // syn tree for the function's where clause
     where_clause: Option<WhereClause>,
     // TODO: parse into representation
-    dispatch: HashMap<String, String>
+    dispatch: Vec<Dispatch>
 }
 
 // Metadata for function arguments, derived types and returns.
