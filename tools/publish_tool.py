@@ -23,9 +23,10 @@ def rust(args):
     log(f"*** PUBLISHING RUST LIBRARY ***")
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     run_command("Logging into crates.io", f"cargo login")
-    run_command("Publishing opendp crate", "cargo publish --verbose --manifest-path=opendp/Cargo.toml")
+    dry_run_arg = " --dry-run" if args.dry_run else ""
+    run_command("Publishing opendp crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp/Cargo.toml")
     run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-    run_command("Publishing opendp-ffi crate", "cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml")
+    run_command("Publishing opendp-ffi crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp-ffi/Cargo.toml")
 
 
 def python(args):
@@ -33,7 +34,8 @@ def python(args):
     # https://pypi.org/help/#apitoken
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
-    run_command("Publishing opendp package", "python3 -m twine upload --verbose --skip-existing python/wheelhouse/*")
+    dry_run_arg = " --repository testpypi" if args.dry_run else ""
+    run_command("Publishing opendp package", f"python3 -m twine upload{dry_run_arg} --verbose --skip-existing python/wheelhouse/*")
 
 
 def meta(args):
@@ -52,11 +54,14 @@ def _main(argv):
 
     subparser = subparsers.add_parser("rust", help="Publish Rust library")
     subparser.set_defaults(func=rust)
-    subparser.add_argument("-t", "--token", required=True)
+    subparser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true", default=False)
+    subparser.add_argument("-nn", "--no-dry-run", dest="dry_run", action="store_false")
     subparser.add_argument("-s", "--settle-time", default=60)
 
     subparser = subparsers.add_parser("python", help="Publish Python library")
     subparser.set_defaults(func=python)
+    subparser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true", default=False)
+    subparser.add_argument("-nn", "--no-dry-run", dest="dry_run", action="store_false")
 
     subparser = subparsers.add_parser("all", help="Publish everything")
     subparser.set_defaults(func=meta, command="all")

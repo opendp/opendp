@@ -54,7 +54,7 @@ def resolve_target_version(target_version, prerelease_number):
 
 def get_cached_version():
     with open("VERSION") as f:
-        cached_version = f.read()
+        cached_version = f.read().strip()
     cached_version = semver.VersionInfo.parse(cached_version)
     return cached_version
 

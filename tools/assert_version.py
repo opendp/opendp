@@ -2,7 +2,7 @@ import configparser
 import toml
 
 # all version numbers should be:
-version = open("VERSION", 'r').read()
+version = open("VERSION", 'r').read().strip()
 assert version != "0.0.0-development", "Please update the repository with the current version."
 print("Checking if all version numbers are synchronized at", version)
 

@@ -2,9 +2,6 @@
 
 # exit immediately upon failure, print commands while running
 set -e -x
-export PATH=$PATH:/usr/bin/core_perl:/c/ProgramData/chocolatey/bin:/c/msys64/mingw64/bin
-export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
-
 cargo --version
 gcc --version
 
@@ -20,6 +17,9 @@ make
 make check
 cd ..
 
+#export PATH=$PATH:/usr/bin/core_perl:/c/ProgramData/chocolatey/bin:/c/msys64/mingw64/bin
+#export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
+#
 # These don't actually need to be built directly- they are built when opendp builds
 # They are useful to build individually when debugging the build process though
 ## build gmp-mpfr-sys
