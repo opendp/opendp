@@ -1,3 +1,4 @@
+
 use std::iter::FromIterator;
 
 use quote::{format_ident, quote};
@@ -6,6 +7,7 @@ use syn::punctuated::Punctuated;
 
 use crate::{extract, Function};
 use crate::parse::path_to_str;
+use syn::__private::TokenStream2;
 
 pub(crate) fn gen_function(function: Function) -> ItemFn {
     let ffi_name = format_ident!("opendp_{}__{}_AUTO",
@@ -39,9 +41,18 @@ pub(crate) fn gen_function(function: Function) -> ItemFn {
 
     let ret_type = rust_to_c_type(function.ret.rust_type);
 
+    let parse_types = function.generics.iter()
+        .map(|g| format_ident!("{}", g.name))
+        .fold(TokenStream2::new(), |mut stream, name| {
+            stream.extend(quote!(let #name = try_!(crate::ffi::util::Type::try_from(#name));));
+            stream
+        });
+
     syn::parse(quote!{
         #[no_mangle]
         extern "C" fn #ffi_name(#args) -> #ret_type {
+            use std::convert::TryFrom;
+            #parse_types
             unimplemented!()
         }
     }.into()).expect("failed to parse generated function")
