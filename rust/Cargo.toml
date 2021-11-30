@@ -40,7 +40,7 @@ use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 # for plotting in unit tests
 test-plot = ["vega_lite_4"]
 
-ffi = ["lazy_static"]
+ffi = ["lazy_static", "opendp_derive/ffi"]
 bindings-python = ["ffi"]
 
 [build-dependencies]

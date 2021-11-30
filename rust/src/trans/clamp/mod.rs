@@ -1,8 +1,5 @@
 use std::collections::Bound;
 
-#[cfg(feature="ffi")]
-use opendp_derive::generate_ffi;
-
 use crate::core::Transformation;
 use crate::dist::SymmetricDistance;
 use crate::dom::{AllDomain, BoundedDomain, VectorDomain};
@@ -11,15 +8,12 @@ use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 
 
-#[cfg(feature="ffi")]
-mod ffi;
-
-#[cfg_attr(feature = "ffi", generate_ffi(
+#[opendp_derive::ffi(
     module("trans"),
     features("contrib"),
     types(TA(example(get_first(bounds)))),
     dispatch(TA = "@numeric"),
-))]
+)]
 /// Make a Transformation that clamps numeric data in Vec<`TA`> to `bounds`.
 /// If datum is less than lower, let datum be lower.
 /// If datum is greater than upper, let datum be upper.

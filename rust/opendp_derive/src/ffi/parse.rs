@@ -4,7 +4,7 @@ use std::default::Default;
 use quote::quote;
 use syn::{Attribute, AttributeArgs, FnArg, GenericParam, Lit, Meta, NestedMeta, Pat, Path, ReturnType, Signature, TypeParam};
 
-use crate::{Argument, Dispatch, extract, Function, Generic};
+use crate::ffi::{Argument, Dispatch, extract, Function, Generic};
 
 pub(crate) fn path_to_str(path: Path) -> String {
     if path.segments.len() != 1 { panic!("Path must be of length 1! {:?}", quote!(#path)) }

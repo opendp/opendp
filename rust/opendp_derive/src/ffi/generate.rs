@@ -2,12 +2,13 @@
 use std::iter::FromIterator;
 
 use quote::{format_ident, quote};
-use syn::{FnArg, GenericArgument, ItemFn, Pat, Path, PathArguments, PatIdent, PatType, Token, Type, TypePath, TypePtr};
+use syn::{FnArg, GenericArgument, ItemFn, Pat, Path, PathArguments, PatIdent, PatType, Token, Type, TypePath, TypePtr, TypeTuple};
 use syn::punctuated::Punctuated;
 
-use crate::{extract, Function};
-use crate::parse::path_to_str;
-use syn::__private::TokenStream2;
+use crate::ffi::{extract, Function, Argument};
+use crate::ffi::parse::path_to_str;
+use std::collections::HashSet;
+use proc_macro2::TokenStream;
 
 pub(crate) fn gen_function(function: Function) -> ItemFn {
     let ffi_name = format_ident!("opendp_{}__{}_AUTO",
@@ -43,10 +44,19 @@ pub(crate) fn gen_function(function: Function) -> ItemFn {
 
     let parse_types = function.generics.iter()
         .map(|g| format_ident!("{}", g.name))
-        .fold(TokenStream2::new(), |mut stream, name| {
+        .fold(TokenStream::new(), |mut stream, name| {
             stream.extend(quote!(let #name = try_!(crate::ffi::util::Type::try_from(#name));));
             stream
         });
+
+    // let generic_names = function.generics.iter()
+    //     .map(|generic| generic.name).collect();
+
+    // let parse_args = function.arguments.iter()
+    //     .filter(|arg| )
+    //     .cloned()
+    //     .map(|arg| c_to_rust_expr(arg, &generic_names))
+    //     .fold()
 
     syn::parse(quote!{
         #[no_mangle]
@@ -93,6 +103,21 @@ fn rust_to_c_type(ty: Type) -> Type {
     }.unwrap()
 }
 
-fn c_to_rust_expr() {
+fn c_to_rust_expr(arg: Argument, generics: &HashSet<String>) -> Option<TokenStream> {
+    if is_generic(arg.rust_type.clone(), &generics) {
+        return None;
+    }
 
+    unimplemented!()
+
+}
+
+fn is_generic(ty: Type, generics: &HashSet<String>) -> bool {
+    match ty {
+        Type::Path(TypePath { path, .. }) => path.segments.into_iter()
+            .any(|segment| generics.contains(&segment.ident.to_string())),
+        Type::Tuple(TypeTuple { elems, .. }) => elems.into_iter()
+            .any(|elem| is_generic(elem.clone(), generics)),
+        _ => panic!("testing for genericity is only implemented for path and tuple types")
+    }
 }
