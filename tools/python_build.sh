@@ -59,6 +59,9 @@ function build() {
   else
     run \(cd python '&&' python setup.py bdist_wheel -d wheelhouse\)
   fi
+
+  log "Restore README.md"
+  run git restore python/README.md
 }
 
 if [[ $INIT == true ]]; then

@@ -184,11 +184,31 @@ def version(args):
     commit("versioned files", versioned_files, f"RELEASE_TOOL: Set version to {resolved_target_version}.")
 
 
+def python_version(version):
+    # Python doesn't like versions of the form "X.Y.Z-rc.N" (even though they're correct), and collapses them
+    # to "X.Y.ZrcN", but semver can't handle those, so we map to strings.
+    if version.prerelease:
+        version = f"{version.major}.{version.minor}.{version.patch}rc{version.prerelease.split('.')[1]}"
+    else:
+        version = str(version)
+    return version
+
+
+def sanity(venv, version, published=False):
+    version = python_version(version)
+    run_command("Creating venv", f"rm -rf {venv} && python -m venv {venv}")
+    package = f"opendp=={version}" if published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
+    run_command(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
+    run_command("Running test script", f"source {venv}/bin/activate && python python/example/test.py")
+
+
 def preflight(args):
     log(f"*** RUNNING PREFLIGHT TEST ***")
     conf = read_conf(args)
-    # TODO: Preflight test
-    run_command("Running preflight test", f"echo PREFLIGHT NOT IMPLEMENTED!!!")
+    # We may be doing a prerelease, so use the version that was cached in the VERSION file.
+    cached_version = get_cached_version()
+    run_command(f"Building locally", "python tools/build_tool.py all")
+    sanity(args.venv, cached_version, published=False)
 
 
 def create(args):
@@ -219,14 +239,12 @@ def watch(args):
     run_command(f"Watching workflow {line.strip()}", f"gh run watch {id} --exit-status", capture_output=False)
 
 
-def sanity(args):
+def postflight(args):
     log(f"*** RUNNING TEST ***")
     conf = read_conf(args)
     # We may be doing a prerelease, so use the version that was cached in the VERSION file.
     cached_version = get_cached_version()
-    run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
-    run_command(f"Installing opendp {cached_version}", f"source {args.venv}/bin/activate && pip install opendp=={cached_version}")
-    run_command("Running test script", f"source {args.venv}/bin/activate && python python/example/test.py")
+    sanity(args.venv, cached_version, published=True)
 
 
 def reconcile(args):
@@ -248,14 +266,15 @@ def meta(args):
     body_args = [
         "changelog",
         "version -p 1",
-        # "preflight",
+        "preflight",
         "create",
         "watch",
-        "sanity",
+        "postflight",
         "version",
+        "preflight",
         "create",
         "watch",
-        "sanity",
+        "postflight",
     ]
     reconcile_args = [] if args.command == "patch" else []
     meta_args = init_args + cherry_args + body_args + reconcile_args
@@ -293,6 +312,7 @@ def _main(argv):
 
     subparser = subparsers.add_parser("preflight", help="Run preflight test")
     subparser.set_defaults(func=preflight)
+    subparser.add_argument("-e", "--venv", default="preflight-venv", help="Virtual environment directory")
 
     subparser = subparsers.add_parser("create", help="Create a release")
     subparser.set_defaults(func=create)
@@ -304,9 +324,9 @@ def _main(argv):
     subparser = subparsers.add_parser("watch", help="Watch release progress")
     subparser.set_defaults(func=watch)
 
-    subparser = subparsers.add_parser("sanity", help="Run sanity test")
-    subparser.set_defaults(func=sanity)
-    subparser.add_argument("-e", "--venv", default="venv", help="Virtual environment directory")
+    subparser = subparsers.add_parser("postflight", help="Run postflight test")
+    subparser.set_defaults(func=postflight)
+    subparser.add_argument("-e", "--venv", default="postflight-venv", help="Virtual environment directory")
 
     subparser = subparsers.add_parser("reconcile", help="Reconcile after the final release")
     subparser.set_defaults(func=reconcile)
