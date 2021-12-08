@@ -236,7 +236,7 @@ def test_count_distinct():
 
 def test_count_by():
     from opendp.trans import make_count_by
-    query = make_count_by(size=9, MO=L1Distance[float], TIA=str)
+    query = make_count_by(MO=L1Distance[float], TK=str, TV=float)
     assert query(STR_DATA) == {str(i + 1): 1 for i in range(9)}
     print('first')
     assert query.check(1, 2.)

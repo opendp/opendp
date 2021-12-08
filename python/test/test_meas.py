@@ -77,10 +77,13 @@ def test_base_vector_geometric():
 
 
 def test_make_count_by_ptr():
-    from opendp.meas import make_count_by_ptr
+    from opendp.trans import make_count_by
+    from opendp.meas import make_base_ptr
+    from opendp.typing import L1Distance
 
-    meas = make_count_by_ptr(scale=2., threshold=16., TIA=str)
-    print("count_by_ptr:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
+    meas = make_count_by(MO=L1Distance[float], TK=str, TV=float) \
+           >> make_base_ptr(scale=2., threshold=16., TK=str)
+    print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
     assert meas.check(1, (1.0, 1e-6))
 
 

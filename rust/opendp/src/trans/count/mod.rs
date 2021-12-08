@@ -2,11 +2,11 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::hash::Hash;
 
-use num::{Integer, One, Zero, Float};
+use num::{One, Zero, Float};
 
 use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation};
 use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
-use crate::dom::{AllDomain, MapDomain, SizedDomain, VectorDomain};
+use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
 
@@ -103,22 +103,21 @@ impl<Q: One + Float + ExactIntCast<usize>, const P: usize> CountByConstant<Q> fo
 }
 
 // count with known n, unknown categories
-pub fn make_count_by<MO, TI, TO>(
-    size: usize
-) -> Fallible<Transformation<SizedDomain<VectorDomain<AllDomain<TI>>>, SizedDomain<MapDomain<AllDomain<TI>, AllDomain<TO>>>, SymmetricDistance, MO>>
+pub fn make_count_by<MO, TK, TV>(
+) -> Fallible<Transformation<VectorDomain<AllDomain<TK>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: DistanceConstant<IntDistance>,
-          TI: 'static + Eq + Hash + Clone + CheckNull,
-          TO: Integer + Zero + One + SaturatingAdd + CheckNull,
+          TK: 'static + Eq + Hash + Clone + CheckNull,
+          TV: Zero + One + SaturatingAdd + CheckNull,
           IntDistance: InfCast<MO::Distance> {
     Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new_all(), size),
-        SizedDomain::new(MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new() }, size),
-        Function::new(move |data: &Vec<TI>| {
+        VectorDomain::new_all(),
+        MapDomain::new(AllDomain::new(), AllDomain::new()),
+        Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {
-                let count = counts.entry(v.clone()).or_insert_with(TO::zero);
-                *count = TO::one().saturating_add(count);
+                let count = counts.entry(v.clone()).or_insert_with(TV::zero);
+                *count = TV::one().saturating_add(count);
             });
             counts
         }),
@@ -179,7 +178,7 @@ mod tests {
     #[test]
     fn test_make_count_by() -> Fallible<()> {
         let arg = vec![true, true, true, false, true, false, false, false, true, true];
-        let transformation = make_count_by::<L2Distance<f64>, bool, i8>(arg.len())?;
+        let transformation = make_count_by::<L2Distance<f64>, bool, i8>()?;
         let ret = transformation.invoke(&arg)?;
         let mut expected = HashMap::new();
         expected.insert(true, 6);

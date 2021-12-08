@@ -219,30 +219,30 @@
         ],
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
-    "make_count_by_ptr": {
-        "description": "Make a Measurement that uses propose-test-release to count by an unknown set of categories.",
+    "make_base_ptr": {
+        "description": "Make a Measurement that uses propose-test-release to privatize a hashmap of counts.",
         "features": ["floating-point", "contrib"],
         "args": [
             {
                 "name": "scale",
                 "c_type": "void *",
-                "rust_type": "TOC",
+                "rust_type": "TV",
                 "description": "Noise scale parameter."
             },
             {
                 "name": "threshold",
                 "c_type": "void *",
-                "rust_type": "TOC",
+                "rust_type": "TV",
                 "description": "Exclude counts that are less than this minimum value."
             },
             {
-                "name": "TIA",
-                "description": "Atomic type of input data- must be hashable/categorical.",
+                "name": "TK",
+                "description": "Type of Key. Must be hashable/categorical.",
                 "is_type": true
             },
             {
-                "name": "TOC",
-                "description": "Data type of output count- must be float.",
+                "name": "TV",
+                "description": "Type of Value. Must be float.",
                 "is_type": true
             }
         ],
