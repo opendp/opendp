@@ -1,3 +1,8 @@
+.. testsetup::
+
+    from opendp.mod import enable_features
+    enable_features('contrib', 'floating-point')
+
 .. _combinator-constructors:
 
 Combinator Constructors
@@ -24,11 +29,6 @@ Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
 In the following example we chain :py:func:`opendp.meas.make_base_geometric` with :py:func:`opendp.trans.make_bounded_sum`.
-
-.. testsetup::
-
-    from opendp.mod import enable_features
-    enable_features('contrib')
 
 .. doctest::
 
