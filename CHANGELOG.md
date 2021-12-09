@@ -3,25 +3,30 @@
 This file documents the version history of OpenDP.
 
 
-## [0.4.0] - 2021-11-15
-[0.4.0]: https://github.com/opendp/opendp/compare/v0.3.0...v0.4.0
+## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
 ### Added
 - `make_randomized_response_bool` and `make_randomized_response` for local differential privacy.
-- `make_base_gaussian` now has an optional boolean to enable tighter analytic gaussian bounds.
+- `make_base_analytic_gaussian` for a tighter, analytic calibration of the gaussian mechanism.  
 - `make_population_amplification` combinator for privacy amplification by subsampling.
 - `make_drop_null` transformation for dropping null values in nullish data.
 - `make_find`, `make_find_bin` and `make_index` transformations for categorical relabeling and binning.
-- `make_count_by_ptr` for stability-based histograms.
-- Added floating-point numbers to the admissible output types on integer queries like `make_count`, `make_count_by_categories` and `make_count_distinct`.
-- Simple attack notebook (thanks to https://github.com/orespo)
+- `make_base_alp` for histograms via approximate laplace projections from Christian Lebeda (https://github.com/ChristianLebeda)
+- `make_base_ptr` for stability histograms via propose-test-release.
+- Added floating-point numbers to the admissible output types on integer queries like `make_count`, `make_count_by`, `make_count_by_categories` and `make_count_distinct`.
+- Simple attack notebook from Oren Renard (https://github.com/orespo)
+- Support for Numpy data types.
+
+### Fixed
+- Resolved memory leaks in FFI
 
 ### Changed
 - moved windows patch directory into `/rust`
 - added minimum rust version of 1.56 and updated to the 2021 edition.
+- dropped sized-ness domain requirements from `make_count_by`
 
 ### Security
-- `make_base_stability` underestimated the sensitivity of queries. Removed in favor of `make_count_by_ptr`.
+- `make_base_stability` underestimated the sensitivity of queries. Removed in favor of `make_base_ptr`.
 - Floating-point arithmetic throughout the library now has explicit rounding modes such that the budget is always slightly overestimated. There is still some potential for small floating-point leaks via rounding in floating-point aggregations.
 - Fixed integer truncation issue in the sized bounded sum privacy relation.
 - The resize relation is now looser to account for a worst-case situation where d_in records removed, and d_in new records are imputed.
