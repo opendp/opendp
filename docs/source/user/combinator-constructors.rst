@@ -1,3 +1,8 @@
+.. testsetup::
+
+    from opendp.mod import enable_features
+    enable_features('contrib', 'floating-point')
+
 .. _combinator-constructors:
 
 Combinator Constructors
@@ -24,11 +29,6 @@ Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
 In the following example we chain :py:func:`opendp.meas.make_base_geometric` with :py:func:`opendp.trans.make_bounded_sum`.
-
-.. testsetup::
-
-    from opendp.mod import enable_features
-    enable_features('contrib')
 
 .. doctest::
 
@@ -106,7 +106,37 @@ Progress on more general composition constructors can be found in the following 
 Amplification
 -------------
 
-Population amplification based on sampling has an implementation but is not yet finalized.
-Progress on this can be found in the following PR:
+If your dataset is a simple sample from a larger population,
+you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator.
 
-:#233: `population amplification <https://github.com/opendp/opendp/pull/233>`_
+In order to demonstrate this API, we'll first create a measurement with a sized input domain.
+The resulting measurement expects the size of the input dataset to be 10.
+
+.. doctest::
+
+    >>> from opendp.trans import make_sized_bounded_mean
+    >>> from opendp.meas import make_base_laplace
+    >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> make_base_laplace(scale=0.5)
+    >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
+
+We can now use the amplification combinator to construct an amplified measurement.
+The function on the amplified measurement is identical to the standard measurement.
+
+.. doctest::
+
+    >>> from opendp.comb import make_population_amplification
+    >>> amplified = make_population_amplification(meas, population_size=100)
+    >>> print("amplified mean:", amplified([1.] * 10)) # -> .97 # doctest: +SKIP
+
+The privacy relation on the amplified measurement takes into account that the input dataset of size 10
+is a simple sample of individuals from a theoretical larger dataset that captures the entire population, with 100 rows.
+
+.. doctest::
+
+    >>> # Where we once had a privacy utilization of 2 epsilon...
+    >>> assert meas.check(2, 2.)
+    ...
+    >>> # ...we now have a privacy utilization of ~.4941 epsilon.
+    >>> assert amplified.check(2, .4941)
+
+The efficacy of this combinator improves as n gets larger.
