@@ -9,13 +9,6 @@ Please keep this up to date, following the [instructions](#instructions) below.
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
 ### Added
-- Release helper script
-
-
-
-## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
-
-### Added
 - `make_randomized_response_bool` and `make_randomized_response` for local differential privacy.
 - `make_base_analytic_gaussian` for a tighter, analytic calibration of the gaussian mechanism.  
 - `make_population_amplification` combinator for privacy amplification by subsampling.
@@ -26,6 +19,7 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - Added floating-point numbers to the admissible output types on integer queries like `make_count`, `make_count_by`, `make_count_by_categories` and `make_count_distinct`.
 - Simple attack notebook from Oren Renard (https://github.com/orespo)
 - Support for Numpy data types.
+- Release helper script
 
 ### Fixed
 - Resolved memory leaks in FFI
