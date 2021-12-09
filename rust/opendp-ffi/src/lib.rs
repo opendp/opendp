@@ -111,7 +111,7 @@ macro_rules! try_ {
 // *mut T -> Option<&T> -> Fallible<&T> -> &T
 macro_rules! try_as_ref {
     ($value:expr) => {
-        try_!(crate::util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))));
+        try_!(crate::util::as_ref($value).ok_or_else(|| opendp::err!(FFI, concat!("null pointer: ", stringify!($value)))))
     }
 }
 

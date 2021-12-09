@@ -11,7 +11,7 @@ __all__ = [
     "make_base_geometric",
     "make_randomized_response_bool",
     "make_randomized_response",
-    "make_count_by_ptr"
+    "make_base_ptr"
 ]
 
 
@@ -246,21 +246,21 @@ def make_randomized_response(
     return c_to_py(unwrap(function(categories, prob, constant_time, T, Q), Measurement))
 
 
-def make_count_by_ptr(
+def make_base_ptr(
     scale,
     threshold,
-    TIA: RuntimeTypeDescriptor,
-    TOC: RuntimeTypeDescriptor = None
+    TK: RuntimeTypeDescriptor,
+    TV: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that uses propose-test-release to count by an unknown set of categories.
+    """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
     :param scale: Noise scale parameter.
     :param threshold: Exclude counts that are less than this minimum value.
-    :param TIA: Atomic type of input data- must be hashable/categorical.
-    :type TIA: RuntimeTypeDescriptor
-    :param TOC: Data type of output count- must be float.
-    :type TOC: RuntimeTypeDescriptor
-    :return: A count_by_ptr step.
+    :param TK: Type of Key. Must be hashable/categorical.
+    :type TK: RuntimeTypeDescriptor
+    :param TV: Type of Value. Must be float.
+    :type TV: RuntimeTypeDescriptor
+    :return: A base_ptr step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -269,18 +269,18 @@ def make_count_by_ptr(
     assert_features("floating-point", "contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
-    TOC = RuntimeType.parse_or_infer(type_name=TOC, public_example=scale)
+    TK = RuntimeType.parse(type_name=TK)
+    TV = RuntimeType.parse_or_infer(type_name=TV, public_example=scale)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TOC)
-    threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TOC)
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    TOC = py_to_c(TOC, c_type=ctypes.c_char_p)
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
+    threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_meas__make_count_by_ptr
+    function = lib.opendp_meas__make_base_ptr
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, threshold, TIA, TOC), Measurement))
+    return c_to_py(unwrap(function(scale, threshold, TK, TV), Measurement))

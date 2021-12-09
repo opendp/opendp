@@ -193,14 +193,9 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_count_by": {
-        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_resize` to establish dataset size. \nThis transformation depends on a measurement that has not yet been implemented.",
+        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown.",
         "features": ["contrib"],
         "args": [
-            {
-                "name": "size",
-                "c_type": "unsigned int",
-                "description": "Number of records in input data."
-            },
             {
                 "name": "MO",
                 "hint": "SensitivityMetric",
@@ -208,20 +203,20 @@
                 "description": "Output Metric."
             },
             {
-                "name": "TIA",
+                "name": "TK",
                 "is_type": true,
-                "description": "Atomic Input Type. Categorical/hashable input data type. Input data must be Vec<TI>."
+                "description": "Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>."
             },
             {
-                "name": "TOA",
+                "name": "TV",
                 "is_type": true,
-                "description": "Atomic Output Type. Express counts in terms of this integral type.",
+                "description": "Type of Value. Express counts in terms of this integral type.",
                 "default": "i32"
             }
         ],
         "ret": {
             "c_type": "FfiResult<AnyTransformation *>",
-            "description": "The carrier type is HashMap<TI, TO>- the counts for each unique data input."
+            "description": "The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK)."
         }
     },
     "make_count_by_categories": {

@@ -11,7 +11,7 @@ use opendp::traits::{InfCast, CheckNull, InfMul, InfAdd, InfLn, InfSqrt};
 
 use crate::any::AnyMeasurement;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::util::{c_bool, to_bool, Type};
+use crate::util::Type;
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(
