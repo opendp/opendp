@@ -21,9 +21,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+          cache: pip
+
       - name: Assert version
         run: |
-          pip install toml
+          pip install -r requirements-assert_version.txt
           python tools/assert_version.py
 
 
@@ -143,6 +149,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.6
+          cache: pip
 
       - name: Prepare for libs
         run: mkdir -p rust/target/release
@@ -166,10 +173,12 @@ jobs:
           path: rust/target/release
 
       - name: Create Python package
-        run: python tools/build_tool.py python
+        run: bash tools/python_build.sh -i
 
       - name: Publish Python package
-        run: python tools/publish_tool.py python
+        run: |
+          pip install -r requirements-publish_tool.txt
+          python tools/publish_tool.py python
 
 
   rust-publish:
@@ -185,6 +194,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.6
+          cache: pip
 
       - name: Publish Rust crate
-        run: python tools/publish_tool.py rust
+        run: |
+          pip install -r requirements-publish_tool.txt
+          python tools/publish_tool.py rust
