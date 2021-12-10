@@ -37,17 +37,14 @@ function run() {
 }
 
 function init() {
-  log "Update pip"
-  run python -m pip install --upgrade pip
-
   log "Install dependencies"
-  run pip install --upgrade twine wheel
+  run pip install wheel
 }
 
 function build() {
   log "Copy shared libraries"
   run mkdir -p python/src/opendp/lib
-  for LIB in x86_64-pc-windows-gnu/release/opendp_ffi.dll release/libopendp_ffi.dylib release/libopendp_ffi.so; do
+  for LIB in release/opendp_ffi.dll release/libopendp_ffi.dylib release/libopendp_ffi.so; do
     [[ -f rust/target/$LIB ]] && run cp rust/target/$LIB python/src/opendp/lib
   done
 
