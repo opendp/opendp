@@ -8,6 +8,10 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+
+## [0.4.0] - 2021-12-10
+[0.4.0]: https://github.com/opendp/opendp/compare/v0.3.0...v0.4.0
+
 ### Added
 - `make_randomized_response_bool` and `make_randomized_response` for local differential privacy.
 - `make_base_analytic_gaussian` for a tighter, analytic calibration of the gaussian mechanism.  
