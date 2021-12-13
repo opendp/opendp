@@ -28,19 +28,19 @@ The :py:func:`opendp.comb.make_chain_mt` constructor similarly creates a new Mea
 Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
-In the following example we chain :py:func:`opendp.meas.make_base_geometric` with :py:func:`opendp.trans.make_bounded_sum`.
+In the following example we chain :py:func:`opendp.meas.make_base_discrete_laplace` with :py:func:`opendp.trans.make_bounded_sum`.
 
 .. doctest::
 
     >>> from opendp.trans import make_bounded_sum
-    >>> from opendp.meas import make_base_geometric
+    >>> from opendp.meas import make_base_discrete_laplace
     >>> from opendp.comb import make_chain_mt
     ...
     >>> # call a constructor to produce a transformation
     >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
     >>> # call a constructor to produce a measurement
-    >>> base_geometric = make_base_geometric(scale=1.0)
-    >>> noisy_sum = make_chain_mt(base_geometric, bounded_sum)
+    >>> base_discrete_laplace = make_base_discrete_laplace(scale=1.0)
+    >>> noisy_sum = make_chain_mt(base_discrete_laplace, bounded_sum)
     ...
     >>> # investigate the privacy relation
     >>> symmetric_distance = 1
@@ -57,25 +57,25 @@ The syntax automatically chooses between :func:`make_chain_mt <opendp.mod.make_c
 
 .. doctest::
 
-    >>> noisy_sum = bounded_sum >> base_geometric
+    >>> noisy_sum = bounded_sum >> base_discrete_laplace
 
 .. _chaining-mismatch:
 
 In this example the chaining was successful because:
 
-* bounded_sum's output domain is equivalent to base_geometric's input domain
-* bounded_sum's output metric is equivalent to base_geometric's input metric
+* bounded_sum's output domain is equivalent to base_discrete_laplace's input domain
+* bounded_sum's output metric is equivalent to base_discrete_laplace's input metric
 
 Chaining fails if we were to adjust the domains such that they won't match.
 In the below example, the adjustment is subtle, but the bounds were adjusted to floats.
 ``make_bounded_sum`` is equally capable of summing floats,
-but the chaining fails because the sum emits floats and the geometric mechanism expects integers.
+but the chaining fails because the sum emits floats and the discrete_laplace mechanism expects integers.
 
 .. doctest::
 
     >>> from opendp.mod import OpenDPException
     >>> try:
-    ...     make_bounded_sum(bounds=(0., 1.)) >> base_geometric
+    ...     make_bounded_sum(bounds=(0., 1.)) >> base_discrete_laplace
     ... except OpenDPException as err:
     ...     print(err.message[:-1])
     Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297

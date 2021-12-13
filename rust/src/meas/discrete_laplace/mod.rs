@@ -5,12 +5,12 @@ use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMet
 use crate::dist::{MaxDivergence, L1Distance, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::samplers::SampleTwoSidedGeometric;
+use crate::samplers::SampleDiscreteLaplace;
 use num::Float;
 use crate::traits::{DistanceConstant, InfCast, CheckNull, TotalOrd};
 
 
-pub trait GeometricDomain: Domain {
+pub trait DiscreteLaplaceDomain: Domain {
     type InputMetric: SensitivityMetric<Distance=Self::Atom> + Default;
     // Atom is an alias for Self::InputMetric::Distance.
     // It would be possible to fill this with associated type defaults: https://github.com/rust-lang/rust/issues/29661
@@ -20,35 +20,35 @@ pub trait GeometricDomain: Domain {
 }
 
 
-impl<T> GeometricDomain for AllDomain<T>
-    where T: 'static + Clone + SampleTwoSidedGeometric + CheckNull {
+impl<T> DiscreteLaplaceDomain for AllDomain<T>
+    where T: 'static + Clone + SampleDiscreteLaplace + CheckNull {
     type InputMetric = AbsoluteDistance<T>;
     type Atom = T;
 
     fn new() -> Self { AllDomain::new() }
     fn noise_function(scale: f64, bounds: Option<(T, T)>) -> Function<Self, Self> {
         Function::new_fallible(move |arg: &Self::Carrier|
-            T::sample_two_sided_geometric(arg.clone(), scale, bounds.clone()))
+            T::sample_discrete_laplace(arg.clone(), scale, bounds.clone()))
     }
 }
 
-impl<T> GeometricDomain for VectorDomain<AllDomain<T>>
-    where T: 'static + Clone + SampleTwoSidedGeometric + CheckNull {
+impl<T> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>>
+    where T: 'static + Clone + SampleDiscreteLaplace + CheckNull {
     type InputMetric = L1Distance<T>;
     type Atom = T;
 
     fn new() -> Self { VectorDomain::new_all() }
     fn noise_function(scale: f64, bounds: Option<(T, T)>) -> Function<Self, Self> {
         Function::new_fallible(move |arg: &Self::Carrier| arg.iter()
-            .map(|v| T::sample_two_sided_geometric(v.clone(), scale, bounds.clone()))
+            .map(|v| T::sample_discrete_laplace(v.clone(), scale, bounds.clone()))
             .collect())
     }
 }
 
-pub fn make_base_geometric<D, QO>(
+pub fn make_base_discrete_laplace<D, QO>(
     scale: QO, bounds: Option<(D::Atom, D::Atom)>
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
-    where D: 'static + GeometricDomain,
+    where D: 'static + DiscreteLaplaceDomain,
           D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
           QO: 'static + Float + DistanceConstant<D::Atom>,
           f64: InfCast<QO> {
@@ -86,8 +86,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_geometric_mechanism_bounded() {
-        let measurement = make_base_geometric::<AllDomain<_>, f64>(10.0, Some((200, 210))).unwrap_test();
+    fn test_make_discrete_laplace_mechanism_bounded() {
+        let measurement = make_base_discrete_laplace::<AllDomain<_>, f64>(10.0, Some((200, 210))).unwrap_test();
         let arg = 205;
         let _ret = measurement.invoke(&arg).unwrap_test();
         println!("{:?}", _ret);
@@ -96,8 +96,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_vector_geometric_mechanism_bounded() {
-        let measurement = make_base_geometric::<VectorDomain<_>, f64>(10.0, Some((200, 210))).unwrap_test();
+    fn test_make_vector_discrete_laplace_mechanism_bounded() {
+        let measurement = make_base_discrete_laplace::<VectorDomain<_>, f64>(10.0, Some((200, 210))).unwrap_test();
         let arg = vec![1, 2, 3, 4];
         let _ret = measurement.invoke(&arg).unwrap_test();
         println!("{:?}", _ret);
@@ -106,8 +106,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_geometric_mechanism() {
-        let measurement = make_base_geometric::<AllDomain<_>, f64>(10.0, None).unwrap_test();
+    fn test_make_discrete_laplace_mechanism() {
+        let measurement = make_base_discrete_laplace::<AllDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = 205;
         let _ret = measurement.invoke(&arg).unwrap_test();
         println!("{:?}", _ret);
@@ -116,8 +116,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_vector_geometric_mechanism() {
-        let measurement = make_base_geometric::<VectorDomain<_>, f64>(10.0, None).unwrap_test();
+    fn test_make_vector_discrete_laplace_mechanism() {
+        let measurement = make_base_discrete_laplace::<VectorDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = vec![1, 2, 3, 4];
         let _ret = measurement.invoke(&arg).unwrap_test();
         println!("{:?}", _ret);

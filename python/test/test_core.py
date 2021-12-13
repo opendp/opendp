@@ -11,8 +11,8 @@ def test_type_getters():
     assert transformation.output_distance_type == "f64"
     assert transformation.input_carrier_type == "Vec<f64>"
 
-    from opendp.meas import make_base_geometric
-    measurement = make_base_geometric(scale=1.5)
+    from opendp.meas import make_base_discrete_laplace
+    measurement = make_base_discrete_laplace(scale=1.5)
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
     assert measurement.input_carrier_type == "i32"
@@ -20,7 +20,7 @@ def test_type_getters():
 
 def test_chain():
     from opendp.trans import make_count
-    from opendp.meas import make_base_laplace, make_base_geometric
+    from opendp.meas import make_base_laplace, make_base_discrete_laplace
     enable_features("floating-point", "contrib")
 
     data = [1, 2, 3, 4, 5]
@@ -30,10 +30,10 @@ def test_chain():
     base_laplace = make_base_laplace(scale=1.)
     print("base laplace:", base_laplace(10.))
 
-    base_geometric = make_base_geometric(scale=0.5)
-    print("base_geometric:", base_geometric(1))
+    base_discrete_laplace = make_base_discrete_laplace(scale=0.5)
+    print("base_discrete_laplace:", base_discrete_laplace(1))
 
-    chain = count >> base_geometric
+    chain = count >> base_discrete_laplace
     print("chained measurement check:", chain.check(d_in=1, d_out=1000., debug=True))
 
     print("evaluate chain:", chain(data))

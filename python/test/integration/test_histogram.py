@@ -6,7 +6,7 @@ enable_features('contrib')
 def test_count_by_categories():
     """Compute histogram with known category set"""
     from opendp.trans import make_count_by_categories, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_geometric
+    from opendp.meas import make_base_discrete_laplace
     from opendp.typing import L1Distance, VectorDomain, AllDomain
     from opendp.mod import binary_search_chain
     preprocess = (
@@ -16,7 +16,7 @@ def test_count_by_categories():
     )
 
     noisy_histogram_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s, D=VectorDomain[AllDomain[int]]),
+        lambda s: preprocess >> make_base_discrete_laplace(s, D=VectorDomain[AllDomain[int]]),
         d_in=1, d_out=1.)
 
     assert noisy_histogram_from_dataframe.check(1, 1.)

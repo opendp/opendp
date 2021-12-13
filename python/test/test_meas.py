@@ -50,28 +50,28 @@ def test_base_vector_gaussian():
     assert meas.check(1., (1.3, .000001))
 
 
-def test_base_geometric():
-    from opendp.meas import make_base_geometric
-    meas = make_base_geometric(scale=2., bounds=(1, 10))
-    print("base_geometric in constant time:", meas(100))
+def test_base_discrete_laplace():
+    from opendp.meas import make_base_discrete_laplace
+    meas = make_base_discrete_laplace(scale=2., bounds=(1, 10))
+    print("base_discrete_laplace in constant time:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
-    meas = make_base_geometric(scale=2.)
-    print("base_geometric:", meas(100))
+    meas = make_base_discrete_laplace(scale=2.)
+    print("base_discrete_laplace:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
 
-def test_base_vector_geometric():
-    from opendp.meas import make_base_geometric
-    meas = make_base_geometric(scale=2., D="VectorDomain<AllDomain<i32>>")
-    print("vector base_geometric:", meas([100, 10, 12]))
+def test_base_vector_discrete_laplace():
+    from opendp.meas import make_base_discrete_laplace
+    meas = make_base_discrete_laplace(scale=2., D="VectorDomain<AllDomain<i32>>")
+    print("vector base_discrete_laplace:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
-    meas = make_base_geometric(scale=2., bounds=(10, 100), D="VectorDomain<AllDomain<i32>>")
-    print("constant time vector base_geometric:", meas([100, 10, 12]))
+    meas = make_base_discrete_laplace(scale=2., bounds=(10, 100), D="VectorDomain<AllDomain<i32>>")
+    print("constant time vector base_discrete_laplace:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 

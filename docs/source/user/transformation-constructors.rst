@@ -298,7 +298,7 @@ This output metric can be chained with most noise-addition measurements intercha
 
 However, aggregators that produce vector-valued statistics like :func:`opendp.trans.make_count_by_categories`
 provide the option to choose the output metric: ``L1Distance[TOA]`` or ``L2Distance[TOA]``.
-These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like :func:`opendp.meas.make_base_geometric` and :func:`opendp.meas.make_base_laplace`.
+These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like :func:`opendp.meas.make_base_discrete_laplace` and :func:`opendp.meas.make_base_laplace`.
 If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.meas.make_base_gaussian`.
 
 The constructor :func:`opendp.meas.make_count_by` does a similar aggregation as :func:`opendp.trans.make_count_by_categories <make_count_by_categories>`,

@@ -14,9 +14,14 @@ pub mod gaussian;
 pub use crate::meas::gaussian::*;
 
 #[cfg(feature="contrib")]
-pub mod geometric;
+pub mod discrete_gaussian;
 #[cfg(feature="contrib")]
-pub use crate::meas::geometric::*;
+pub use crate::meas::discrete_gaussian::*;
+
+#[cfg(feature="contrib")]
+pub mod discrete_laplace;
+#[cfg(feature="contrib")]
+pub use crate::meas::discrete_laplace::*;
 
 
 #[cfg(all(feature="floating-point", feature="contrib"))]

@@ -30,7 +30,7 @@ Papers
 
 `Mechanism Design via Differential Privacy <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/mdviadp.pdf>`_ (Exponential mechanism)
 
-`Differential Privacy on Finite Computers <https://arxiv.org/pdf/1709.05396.pdf>`_ (Geometric mechanism)
+`Differential Privacy on Finite Computers <https://arxiv.org/pdf/1709.05396.pdf>`_ (Discrete Laplace mechanism)
 
 `Privacy-preserving Statistical Estimation with Optimal Convergence Rates <https://cs-people.bu.edu/ads22/pubs/2011/stoc194-smith.pdf>`_ (Sample/aggregate and quantiles)
 

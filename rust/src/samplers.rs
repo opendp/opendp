@@ -9,7 +9,7 @@ use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 use crate::error::Fallible;
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
-use crate::traits::{TotalOrd, FloatBits, InfExp, InfSub, InfAdd, AlertingSub, CastInternalReal, InfDiv};
+use crate::traits::{TotalOrd, FloatBits, InfExp, InfSub, InfAdd, AlertingSub, CastInternalReal, InfDiv, RoundCast};
 
 #[cfg(feature="use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
@@ -331,9 +331,9 @@ impl<T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded> Sample
     }
 }
 
-pub trait SampleTwoSidedGeometric: SampleGeometric {
+pub trait SampleDiscreteLaplace: SampleGeometric {
 
-    /// Sample from the censored two-sided geometric distribution with parameter `prob`.
+    /// Sample from the censored discrete laplace distribution with parameter `scale`.
     /// If `bounds` is None, there are no timing protections, and the support is:
     ///     [Self::MIN, Self::MAX]
     /// If `bounds` is Some, execution runs in constant time, and the support is
@@ -347,21 +347,21 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     /// * `bounds` - If Some, run the algorithm in constant time with both inputs and outputs clamped to this value.
     ///
     /// # Return
-    /// A draw from the two-sided censored geometric distribution defined above.
+    /// A draw from the censored discrete laplace distribution defined above.
     ///
     /// # Example
     /// ```
     /// use opendp::samplers::SampleTwoSidedGeometric;
-    /// let geom = u8::sample_two_sided_geometric(0, 0.1, Some((20, 30)));
+    /// let geom = u8::sample_discrete_laplace(0, 0.1, Some((20, 30)));
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();
     /// ```
-    fn sample_two_sided_geometric(
+    fn sample_discrete_laplace(
         shift: Self, scale: f64, bounds: Option<(Self, Self)>
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub> SampleTwoSidedGeometric for T {
+impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub> SampleDiscreteLaplace for T {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the
@@ -375,7 +375,7 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
     ///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
     ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
     ///             the analyst can deduce that the input was greater than or equal to upper
-    fn sample_two_sided_geometric(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+    fn sample_discrete_laplace(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
         if scale.is_zero() {return Ok(shift)}
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
@@ -411,6 +411,57 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
         } else {
             noised
         })
+    }
+}
+
+
+pub trait SampleDiscreteGaussian: SampleDiscreteLaplace {
+
+    /// Sample from the censored discrete gaussian distribution with noise scale `prob`.
+    /// If `bounds` is None, there are no timing protections, and the support is:
+    ///     [Self::MIN, Self::MAX]
+    /// If `bounds` is Some, execution runs in constant time, and the support is
+    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    ///
+    /// Tail probabilities accumulate at the extrema of the support.
+    ///
+    /// # Arguments
+    /// * `shift` - Parameter to shift the output by
+    /// * `scale` - Parameter to scale the output by
+    /// * `bounds` - If Some, run the algorithm in constant time with both inputs and outputs clamped to this value.
+    ///
+    /// # Return
+    /// A draw from the censored discrete gaussian distribution defined above.
+    ///
+    /// # Example
+    /// ```
+    /// use opendp::samplers::SampleDiscreteGaussian;
+    /// let geom = u8::sample_discrete_gaussian(0, 0.1, Some((20, 30)));
+    /// # use opendp::error::ExplainUnwrap;
+    /// # geom.unwrap_test();
+    /// ```
+    fn sample_discrete_gaussian(
+        shift: Self, scale: f64, bounds: Option<(Self, Self)>
+    ) -> Fallible<Self>;
+}
+
+impl<T: SampleDiscreteLaplace + One + Clone> SampleDiscreteGaussian for T
+    where f64: RoundCast<T> {
+    fn sample_discrete_gaussian(shift: Self, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self> {
+        let t = scale.floor() + 1.;
+        let shift_ = f64::round_cast(shift.clone())?;
+        loop {
+            // TODO: evaluate effect of floating-point rounding on rejection probability
+            //       how much does FP rounding affect gaussianity?
+            let y: T = T::sample_discrete_laplace(shift.clone(), scale, bounds.clone())?;
+            let y_: f64 = f64::round_cast(y.clone())?;
+
+            let mag = (y_ - shift_).abs();
+            let nl_prob = (mag - scale.powi(2) / t).powi(2) / (2. * scale.powi(2));
+            if bool::sample_bernoulli((-nl_prob).exp(), bounds.is_some())? {
+                return Ok(y)
+            }
+        }
     }
 }
 
@@ -729,14 +780,14 @@ mod test_samplers {
 
     #[test]
     #[cfg(feature="test-plot")]
-    fn plot_geometric() -> Fallible<()> {
+    fn plot_discrete_laplace() -> Fallible<()> {
 
         let shift = 0;
         let scale = 5.;
 
-        let title = format!("Geometric(shift={}, scale={}) distribution", shift, scale);
+        let title = format!("DiscreteLaplace(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| i8::sample_two_sided_geometric(0, 1., None))
+            .map(|_| i8::sample_discrete_laplace(0, 1., None))
             .collect::<Fallible<Vec<i8>>>()?;
 
         use vega_lite_4::*;

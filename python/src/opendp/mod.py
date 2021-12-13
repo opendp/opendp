@@ -16,22 +16,22 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> enable_features("contrib")
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> from opendp.meas import make_base_geometric
-    >>> base_geometric: Measurement = make_base_geometric(scale=2.)
+    >>> from opendp.meas import make_base_discrete_laplace
+    >>> base_discrete_laplace: Measurement = make_base_discrete_laplace(scale=2.)
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> base_geometric.invoke(100)  # -> 101   # doctest: +SKIP
-    >>> base_geometric(100)  # -> 99           # doctest: +SKIP
+    >>> base_discrete_laplace.invoke(100)  # -> 101   # doctest: +SKIP
+    >>> base_discrete_laplace(100)  # -> 99           # doctest: +SKIP
     ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
-    >>> assert base_geometric.check(1, 0.5)
+    >>> assert base_discrete_laplace.check(1, 0.5)
     ...
     >>> # chain with a transformation from the trans module
     >>> from opendp.trans import make_count
     >>> chained = (
     ...     make_count(TIA=int) >>
-    ...     base_geometric
+    ...     base_discrete_laplace
     ... )
     ...
     >>> # the resulting measurement has the same features

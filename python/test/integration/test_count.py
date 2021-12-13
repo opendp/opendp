@@ -6,7 +6,7 @@ enable_features('contrib')
 
 def test_count():
     from opendp.trans import make_count, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_geometric
+    from opendp.meas import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
@@ -15,7 +15,7 @@ def test_count():
     )
 
     noisy_count_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 
     assert noisy_count_from_dataframe.check(1, 1.)
@@ -28,7 +28,7 @@ def test_count():
 
 def test_count_distinct():
     from opendp.trans import make_count_distinct, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_geometric
+    from opendp.meas import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
@@ -37,7 +37,7 @@ def test_count_distinct():
     )
 
     noisy_count_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 
     assert noisy_count_from_dataframe.check(1, 1.)

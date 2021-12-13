@@ -8,7 +8,7 @@ __all__ = [
     "make_base_laplace",
     "make_base_gaussian",
     "make_base_analytic_gaussian",
-    "make_base_geometric",
+    "make_base_discrete_laplace",
     "make_randomized_response_bool",
     "make_randomized_response",
     "make_base_ptr"
@@ -123,23 +123,23 @@ def make_base_analytic_gaussian(
     return c_to_py(unwrap(function(scale, D), Measurement))
 
 
-def make_base_geometric(
+def make_base_discrete_laplace(
     scale,
     bounds: Any = None,
     D: RuntimeTypeDescriptor = "AllDomain<i32>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the geometric(`scale`) distribution to the input.
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
     
-    :param scale: noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviation.
+    :param scale: noise scale parameter for the discrete_laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
     :type bounds: Any
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the sensitivity, scale, and budget.
     :type QO: :ref:`RuntimeTypeDescriptor`
-    :return: A base_geometric step.
+    :return: A base_discrete_laplace step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -160,7 +160,7 @@ def make_base_geometric(
     QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_meas__make_base_geometric
+    function = lib.opendp_meas__make_base_discrete_laplace
     function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     

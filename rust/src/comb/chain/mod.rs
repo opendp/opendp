@@ -240,7 +240,7 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Fallible<Tr
 
 #[cfg(test)]
 mod tests_shr {
-    use crate::meas::geometric::make_base_geometric;
+    use crate::meas::discrete_laplace::make_base_discrete_laplace;
     use crate::trans::{make_bounded_sum, make_cast_default, make_clamp, make_split_lines};
 
     use super::*;
@@ -252,7 +252,7 @@ mod tests_shr {
             make_cast_default()? >>
             make_clamp((0, 1))? >>
             make_bounded_sum((0, 1))? >>
-            make_base_geometric(1., Some((0, 10)))?
+            make_base_discrete_laplace(1., Some((0, 10)))?
         ).map(|_| ())
     }
 }

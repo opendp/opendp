@@ -255,7 +255,7 @@ mod tests {
         // Noisy count
         let measurement1 = (
             make_count()? >>
-            make_base_geometric(1.0 / d_out_query, Some(count_bounds))?
+            make_base_discrete_laplace(1.0 / d_out_query, Some(count_bounds))?
         )?.into_poly();
         let query1 = (measurement1, d_out_query);
         let _result1: i32 = queryable.eval_poly(&query1)?;

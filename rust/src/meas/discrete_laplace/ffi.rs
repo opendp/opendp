@@ -9,11 +9,11 @@ use crate::dom::{AllDomain, VectorDomain};
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util;
 use crate::ffi::util::Type;
-use crate::meas::{GeometricDomain, make_base_geometric};
+use crate::meas::{DiscreteLaplaceDomain, make_base_discrete_laplace};
 use crate::traits::{DistanceConstant, InfCast, InfDiv, InfMul, TotalOrd};
 
 #[no_mangle]
-pub extern "C" fn opendp_meas__make_base_geometric(
+pub extern "C" fn opendp_meas__make_base_discrete_laplace(
     scale: *const c_void,
     bounds: *const AnyObject,
     D: *const c_char, QO: *const c_char,
@@ -21,7 +21,7 @@ pub extern "C" fn opendp_meas__make_base_geometric(
     fn monomorphize<D, QO>(
         scale: *const c_void, bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyMeasurement>
-        where D: 'static + GeometricDomain,
+        where D: 'static + DiscreteLaplaceDomain,
               D::Atom: 'static + TotalOrd + Clone + DistanceConstant<QO>,
               QO: 'static + Float + InfCast<D::Atom> + TotalOrd + InfDiv + InfMul,
               f64: InfCast<QO> {
@@ -29,7 +29,7 @@ pub extern "C" fn opendp_meas__make_base_geometric(
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             Some(try_!(bounds.downcast_ref::<(D::Atom, D::Atom)>()).clone())
         } else { None };
-        make_base_geometric::<D, QO>(scale, bounds).into_any()
+        make_base_discrete_laplace::<D, QO>(scale, bounds).into_any()
     }
     let D = try_!(Type::try_from(D));
     let QO = try_!(Type::try_from(QO));
@@ -58,8 +58,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_base_simple_geometric() -> Fallible<()> {
-        let measurement = Result::from(opendp_meas__make_base_geometric(
+    fn test_make_base_discrete_laplace() -> Fallible<()> {
+        let measurement = Result::from(opendp_meas__make_base_discrete_laplace(
             util::into_raw(0.0) as *const c_void,
             std::ptr::null(),
             "AllDomain<i32>".to_char_p(),
@@ -73,8 +73,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_base_simple_constant_time_geometric() -> Fallible<()> {
-        let measurement = Result::from(opendp_meas__make_base_geometric(
+    fn test_make_base_discrete_laplace_constant_time() -> Fallible<()> {
+        let measurement = Result::from(opendp_meas__make_base_discrete_laplace(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(AnyObject::new((0, 100))),
             "AllDomain<i32>".to_char_p(),

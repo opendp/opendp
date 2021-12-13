@@ -52,7 +52,7 @@ def test_sized_bounded_int_sum():
     from opendp.trans import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_resize, make_sized_bounded_sum
-    from opendp.meas import make_base_geometric
+    from opendp.meas import make_base_discrete_laplace
     from opendp.mod import binary_search_chain, enable_features
 
     enable_features("floating-point", "contrib")
@@ -78,7 +78,7 @@ def test_sized_bounded_int_sum():
     )
 
     noisy_known_n_sum_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 
     assert noisy_known_n_sum_from_dataframe.check(1, 1.)
@@ -135,7 +135,7 @@ def test_bounded_int_sum():
     from opendp.trans import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_sum
-    from opendp.meas import make_base_geometric
+    from opendp.meas import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
 
     bounds = (0, 20)
@@ -150,7 +150,7 @@ def test_bounded_int_sum():
     )
 
     noisy_sum_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_discrete_laplace(s),
         d_in=1, d_out=1.)
 
     assert noisy_sum_from_dataframe.check(1, 1.)
