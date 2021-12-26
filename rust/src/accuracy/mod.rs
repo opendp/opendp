@@ -61,6 +61,7 @@ pub fn accuracy_to_gaussian_scale<T>(accuracy: T, alpha: T) -> Fallible<T>
 pub mod test {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};
+    use crate::dist::SmoothedMaxDivergence;
 
     use super::*;
     use crate::meas::{make_base_laplace, make_base_gaussian, make_base_geometric};
@@ -212,7 +213,7 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-        let base_gaussian = make_base_gaussian::<AllDomain<f64>>(scale)?;
+        let base_gaussian = make_base_gaussian::<AllDomain<f64>, _>(scale, SmoothedMaxDivergence::default())?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)

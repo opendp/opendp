@@ -48,6 +48,120 @@ impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
 
+// Divergence measure from: https://arxiv.org/pdf/1905.02383.pdf
+#[derive(Clone)]
+pub struct GaussianTradeOff<T> {
+    _phantom: PhantomData<T>
+}
+
+impl<T> Default for GaussianTradeOff<T> {
+    fn default() -> Self {
+        GaussianTradeOff {_phantom: PhantomData}
+    }
+}
+impl<T> Debug for GaussianTradeOff<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "GaussianTradeOff()")
+    }
+}
+// The Gaussian Differential Privacy distance type consists of just mu
+impl<T: Clone> Measure for GaussianTradeOff<T> {
+    type Distance = T;
+}
+// All instances of the gaussian tradeoff measure are equivalent
+impl<T> PartialEq for GaussianTradeOff<T> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+
+// Divergence measure from https://arxiv.org/pdf/1702.07476.pdf
+#[derive(Clone)]
+pub struct RenyiDivergence<T> {
+    _phantom: PhantomData<T>,
+    pub alpha: i32
+}
+impl<T> RenyiDivergence<T> {
+    pub fn new(alpha: i32) -> Self {
+        RenyiDivergence { _phantom: Default::default(), alpha }
+    }
+}
+
+impl<T> Debug for RenyiDivergence<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RenyiDivergence()")
+    }
+}
+impl<T> Default for RenyiDivergence<T> {
+    fn default() -> Self {
+        RenyiDivergence {
+            _phantom: PhantomData,
+            // TODO: this is not valid! We can't just hardcode alpha!
+            alpha: 0
+        }
+    }
+}
+// The Gaussian Differential Privacy distance type consists of just mu
+impl<T: Clone> Measure for RenyiDivergence<T> {
+    type Distance = T;
+}
+// All instances of the gaussian tradeoff measure are equivalent
+impl<T> PartialEq for RenyiDivergence<T> {
+    fn eq(&self, other: &Self) -> bool { self.alpha == other.alpha }
+}
+
+// for zero-concentrated DP, where the union bound is considered over all alpha in [1, inf]
+// See https://arxiv.org/pdf/1605.02065.pdf#page=4 Definition 1.1
+#[derive(Clone)]
+pub struct UnionRenyiDivergence<T> {
+    _phantom: PhantomData<T>
+}
+
+impl<T> Default for UnionRenyiDivergence<T> {
+    fn default() -> Self {
+        UnionRenyiDivergence {_phantom: PhantomData}
+    }
+}
+impl<T> Debug for UnionRenyiDivergence<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UnionRenyiDivergence()")
+    }
+}
+// The zCDP Differential Privacy distance type consists of just rho
+impl<T: Clone> Measure for UnionRenyiDivergence<T> {
+    type Distance = T;
+}
+// All instances of the gaussian tradeoff measure are equivalent
+impl<T> PartialEq for UnionRenyiDivergence<T> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+
+
+// for approximate zero-concentrated DP, where the union bound is considered over all alpha in [1, inf]
+// See https://arxiv.org/pdf/1605.02065.pdf#page=4 Definition 1.1
+#[derive(Clone)]
+pub struct SmoothedUnionRenyiDivergence<T> {
+    _phantom: PhantomData<T>
+}
+
+impl<T> Default for SmoothedUnionRenyiDivergence<T> {
+    fn default() -> Self {
+        SmoothedUnionRenyiDivergence {_phantom: PhantomData}
+    }
+}
+impl<T> Debug for SmoothedUnionRenyiDivergence<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SmoothedUnionRenyiDivergence()")
+    }
+}
+// The zCDP Differential Privacy distance type consists of just rho
+impl<T: Clone> Measure for SmoothedUnionRenyiDivergence<T> {
+    type Distance = T;
+}
+// All instances of the gaussian tradeoff measure are equivalent
+impl<T> PartialEq for SmoothedUnionRenyiDivergence<T> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+
+
 /// Metrics
 #[derive(Clone)]
 pub struct SymmetricDistance;
