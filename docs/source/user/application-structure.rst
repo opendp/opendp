@@ -51,7 +51,7 @@ The noise scale may be either laplace or gaussian.
 :laplacian: | Applies to any L1 noise addition mechanism.
   | :func:`make_base_laplace() <opendp.meas.make_base_laplace>`
   | :func:`make_base_geometric() <opendp.meas.make_base_geometric>`
-  | :func:`make_count_by_ptr() <opendp.meas.make_count_by_ptr>`
+  | :func:`make_base_ptr() <opendp.meas.make_base_ptr>`
 :gaussian: | Applies to any L2 noise addition mechanism.
   | :func:`make_base_gaussian() <opendp.meas.make_base_gaussian>`
 

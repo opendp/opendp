@@ -66,10 +66,10 @@ mod test {
         let meas = (make_sized_bounded_mean(10, (0., 10.))? >> make_base_laplace(0.5)?)?;
         let amp = make_population_amplification(&meas, 100)?;
         amp.function.eval(&vec![1.; 10])?;
-        assert!(meas.privacy_relation.eval(&1, &1.)?);
-        assert!(!meas.privacy_relation.eval(&1, &0.999)?);
-        assert!(amp.privacy_relation.eval(&1, &0.159)?);
-        assert!(!amp.privacy_relation.eval(&1, &0.158)?);
+        assert!(meas.privacy_relation.eval(&2, &2.)?);
+        assert!(!meas.privacy_relation.eval(&2, &1.999)?);
+        assert!(amp.privacy_relation.eval(&2, &0.4941)?);
+        assert!(!amp.privacy_relation.eval(&2, &0.494)?);
         Ok(())
     }
 }

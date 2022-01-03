@@ -12,6 +12,31 @@ else:
     from typing import GenericMeta as _GenericAlias
 
 ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
+try:
+    import numpy as np
+    # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
+    ELEMENTARY_TYPES.update({
+        # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
+        np.str_: 'String',  # np.unicode_
+        np.bool8: 'bool',  # np.bool_
+        np.int8: 'i8',  # np.byte
+        np.int16: 'i16',  # np.short
+        np.int32: 'i32',  # np.intc
+        np.int64: 'i64',  # np.int_
+        np.longlong: 'i128',
+        np.uint8: 'u8',  # np.ubyte
+        np.uint16: 'u16',  # np.ushort
+        np.uint32: 'u32',  # np.uintc
+        np.uint64: 'u64',
+        np.ulonglong: 'u128',
+        # np.intp: 'isize',  # not used in OpenDP
+        # np.uintp: 'usize', # an alias for one of np.uint* that would overwrite the respective key
+        # np.float16: 'f16',  # not used in OpenDP
+        np.float32: 'f32',
+        np.float64: 'f64',  # np.double, np.float_
+    })
+except ImportError:
+    np = None
 
 # all ways of providing type information
 RuntimeTypeDescriptor = Union[
@@ -176,6 +201,18 @@ class RuntimeType(object):
                     "cannot infer atomic type of empty list")
             ])
 
+        if np is not None and isinstance(public_example, np.ndarray):
+            if public_example.ndim == 0:
+                return cls.infer(public_example.item())
+
+            if public_example.ndim == 1:
+                inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
+                if inner_type is None:
+                    raise UnknownTypeException(f"Unknown numpy array dtype: {public_example.dtype.type}")
+                return RuntimeType('Vec', [inner_type])
+
+            raise UnknownTypeException("arrays with greater than one axis are not yet supported")
+
         if isinstance(public_example, dict):
             return RuntimeType('HashMap', [
                 cls.infer(next(iter(public_example.keys()))),
@@ -185,7 +222,7 @@ class RuntimeType(object):
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
 
-        raise UnknownTypeException(public_example)
+        raise UnknownTypeException(type(public_example))
 
     @classmethod
     def parse_or_infer(

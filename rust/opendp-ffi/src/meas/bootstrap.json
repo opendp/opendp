@@ -41,10 +41,37 @@
                 "description": "noise scale parameter to the gaussian distribution"
             },
             {
-                "name": "analytic",
-                "c_type": "bool",
-                "default": false,
-                "description": "enable to use a privacy relation corresponding to the analytic gaussian mechanism"
+                "name": "D",
+                "default": "AllDomain<T>",
+                "generics": ["T"],
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
+                "is_type": true
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "D", "scale"
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
+    },
+    "make_base_analytic_gaussian": {
+        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.\nThe privacy relation is based on the analytic gaussian mechanism.",
+        "features": ["floating-point", "contrib"],
+        "args": [
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "noise scale parameter to the gaussian distribution"
             },
             {
                 "name": "D",
@@ -192,30 +219,30 @@
         ],
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
-    "make_count_by_ptr": {
-        "description": "Make a Measurement that uses propose-test-release to count by an unknown set of categories.",
+    "make_base_ptr": {
+        "description": "Make a Measurement that uses propose-test-release to privatize a hashmap of counts.",
         "features": ["floating-point", "contrib"],
         "args": [
             {
                 "name": "scale",
                 "c_type": "void *",
-                "rust_type": "TOC",
+                "rust_type": "TV",
                 "description": "Noise scale parameter."
             },
             {
                 "name": "threshold",
                 "c_type": "void *",
-                "rust_type": "TOC",
+                "rust_type": "TV",
                 "description": "Exclude counts that are less than this minimum value."
             },
             {
-                "name": "TIA",
-                "description": "Atomic type of input data- must be hashable/categorical.",
+                "name": "TK",
+                "description": "Type of Key. Must be hashable/categorical.",
                 "is_type": true
             },
             {
-                "name": "TOC",
-                "description": "Data type of output count- must be float.",
+                "name": "TV",
+                "description": "Type of Value. Must be float.",
                 "is_type": true
             }
         ],

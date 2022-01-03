@@ -7,10 +7,11 @@ from opendp.typing import *
 __all__ = [
     "make_base_laplace",
     "make_base_gaussian",
+    "make_base_analytic_gaussian",
     "make_base_geometric",
     "make_randomized_response_bool",
     "make_randomized_response",
-    "make_count_by_ptr"
+    "make_base_ptr"
 ]
 
 
@@ -51,15 +52,12 @@ def make_base_laplace(
 
 def make_base_gaussian(
     scale,
-    analytic: bool = False,
     D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
     
     :param scale: noise scale parameter to the gaussian distribution
-    :param analytic: enable to use a privacy relation corresponding to the analytic gaussian mechanism
-    :type analytic: bool
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: RuntimeTypeDescriptor
     :return: A base_gaussian step.
@@ -77,15 +75,50 @@ def make_base_gaussian(
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
-    analytic = py_to_c(analytic, c_type=ctypes.c_bool)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, analytic, D), Measurement))
+    return c_to_py(unwrap(function(scale, D), Measurement))
+
+
+def make_base_analytic_gaussian(
+    scale,
+    D: RuntimeTypeDescriptor = "AllDomain<T>"
+) -> Measurement:
+    """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+    Adjust D to noise vector-valued data.
+    The privacy relation is based on the analytic gaussian mechanism.
+    
+    :param scale: noise scale parameter to the gaussian distribution
+    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+    :type D: RuntimeTypeDescriptor
+    :return: A base_analytic_gaussian step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("floating-point", "contrib")
+    
+    # Standardize type arguments.
+    D = RuntimeType.parse(type_name=D, generics=["T"])
+    T = get_domain_atom_or_infer(D, scale)
+    D = D.substitute(T=T)
+    
+    # Convert arguments to c types.
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    D = py_to_c(D, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_base_analytic_gaussian
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(scale, D), Measurement))
 
 
 def make_base_geometric(
@@ -213,21 +246,21 @@ def make_randomized_response(
     return c_to_py(unwrap(function(categories, prob, constant_time, T, Q), Measurement))
 
 
-def make_count_by_ptr(
+def make_base_ptr(
     scale,
     threshold,
-    TIA: RuntimeTypeDescriptor,
-    TOC: RuntimeTypeDescriptor = None
+    TK: RuntimeTypeDescriptor,
+    TV: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that uses propose-test-release to count by an unknown set of categories.
+    """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
     :param scale: Noise scale parameter.
     :param threshold: Exclude counts that are less than this minimum value.
-    :param TIA: Atomic type of input data- must be hashable/categorical.
-    :type TIA: RuntimeTypeDescriptor
-    :param TOC: Data type of output count- must be float.
-    :type TOC: RuntimeTypeDescriptor
-    :return: A count_by_ptr step.
+    :param TK: Type of Key. Must be hashable/categorical.
+    :type TK: RuntimeTypeDescriptor
+    :param TV: Type of Value. Must be float.
+    :type TV: RuntimeTypeDescriptor
+    :return: A base_ptr step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -236,18 +269,18 @@ def make_count_by_ptr(
     assert_features("floating-point", "contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
-    TOC = RuntimeType.parse_or_infer(type_name=TOC, public_example=scale)
+    TK = RuntimeType.parse(type_name=TK)
+    TV = RuntimeType.parse_or_infer(type_name=TV, public_example=scale)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TOC)
-    threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TOC)
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    TOC = py_to_c(TOC, c_type=ctypes.c_char_p)
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
+    threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_meas__make_count_by_ptr
+    function = lib.opendp_meas__make_base_ptr
     function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, threshold, TIA, TOC), Measurement))
+    return c_to_py(unwrap(function(scale, threshold, TK, TV), Measurement))

@@ -47,10 +47,26 @@ You can choose whether to construct scalar or vector-valued versions by setting 
      - ``VectorDomain<AllDomain<T>>``
      - ``L2Distance<T>``
      - ``SmoothedMaxDivergence<T>``
-   * - :func:`opendp.meas.make_count_by_ptr`
-     - ``SizedDomain<MapDomain<AllDomain<TIA>, AllDomain<TOA>>>``
+   * - :func:`opendp.meas.make_base_analytic_gaussian`
+     - ``AllDomain<T>``
+     - ``AbsoluteDistance<T>``
+     - ``SmoothedMaxDivergence<T>``
+   * - :func:`opendp.meas.make_base_analytic_gaussian`
+     - ``VectorDomain<AllDomain<T>>``
+     - ``L2Distance<T>``
+     - ``SmoothedMaxDivergence<T>``
+   * - :func:`opendp.meas.make_base_ptr`
+     - ``MapDomain<AllDomain<TIA>, AllDomain<TOA>>``
      - ``L1Distance<T>``
      - ``SmoothedMaxDivergence<T>``
+   * - :func:`opendp.meas.make_randomized_response_bool`
+     - ``AllDomain<bool>``
+     - ``SymmetricDistance``
+     - ``MaxDivergence<T>``
+   * - :func:`opendp.meas.make_randomized_response`
+     - ``AllDomain<T>``
+     - ``SymmetricDistance``
+     - ``MaxDivergence<T>``
 
 .. _floating-point:
 
@@ -58,7 +74,7 @@ Floating-Point
 --------------
 
 Given the context of measurements, this section goes into greater detail than :ref:`limitations` on floating-point issues.
-Be warned that :func:`opendp.meas.make_base_laplace`, :func:`opendp.meas.make_base_gaussian` and :func:`opendp.meas.make_count_by_ptr`
+Be warned that :func:`opendp.meas.make_base_laplace`, :func:`opendp.meas.make_base_gaussian` and :func:`opendp.meas.make_base_ptr`
 depend on continuous distributions that are poorly approximated by finite computers.
 
 At this time these mechanisms are present in the library, but require explicit opt-in:
@@ -71,9 +87,13 @@ At this time these mechanisms are present in the library, but require explicit o
 The canonical paper on this and introduction of the snapping mechanism is here:
 `On Significance of the Least Significant Bits For Differential Privacy <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_.
 
-Precautions have been made to sample noise using the MPFR library, to avoid artifacts in noise,
-but our noise postprocessing re-introduces artifacts.
-We are developing alternative mechanisms for answering continuous queries.
+Precautions have been made to sample noise using the GNU MPFR library in a way
+that provides cryptographically secure, non-porous noise at standard scale.
+Noise at arbitrary scale is achieved through a combination of preprocessing and postprocessing
+that preserves the properties of differential privacy.
+
+Precautions have also been made to explicitly specify floating-point rounding modes
+in such a way that the privacy budget is always slightly overestimated.
 
 We acknowledge the snapping mechanism and have an implementation of it `in PR #84 <https://github.com/opendp/opendp/pull/84>`_.
 

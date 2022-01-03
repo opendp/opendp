@@ -48,8 +48,10 @@ pub fn make_base_geometric<D, QO>(
     where D: 'static + GeometricDomain,
           D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
           QO: 'static + Float + DistanceConstant<D::Atom>,
-          f64: From<QO> {
-    if scale.is_sign_negative() { return fallible!(MakeMeasurement, "scale must not be negative") }
+          f64: InfCast<QO> {
+    if scale.is_sign_negative() {
+        return fallible!(MakeMeasurement, "scale must not be negative")
+    }
     if bounds.as_ref().map(|(lower, upper)| lower > upper).unwrap_or(false) {
         return fallible!(MakeMeasurement, "lower may not be greater than upper")
     }
@@ -57,10 +59,23 @@ pub fn make_base_geometric<D, QO>(
     Ok(Measurement::new(
         D::new(),
         D::new(),
-        D::noise_function(f64::from(scale), bounds),
+        D::noise_function(f64::inf_cast(scale)?, bounds),
         D::InputMetric::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(scale.recip())))
+        PrivacyRelation::new_all(
+            move |d_in: &D::Atom, d_out: &QO| {
+                let d_in = QO::inf_cast(d_in.clone())?;
+                if d_in.is_sign_negative() {
+                    return fallible!(InvalidDistance, "sensitivity must be non-negative")
+                }
+                if d_out.is_sign_negative() {
+                    return fallible!(InvalidDistance, "epsilon must be non-negative")
+                }
+                // d_out * scale >= d_in
+                Ok(d_out.neg_inf_mul(&scale)? >= d_in)
+            },
+            Some(move |d_out: &QO| D::Atom::inf_cast(d_out.neg_inf_mul(&scale)?)))
+    ))
 }
 
 #[cfg(test)]

@@ -3,8 +3,10 @@ from collections import Counter
 
 import matplotlib.pyplot as plt
 import numpy as np
-from opendp.meas import make_count_by_ptr
+from opendp.meas import make_base_ptr
+from opendp.trans import make_count_by
 from opendp.mod import enable_features, binary_search_param
+from opendp.typing import L1Distance
 
 enable_features("floating-point", "contrib")
 
@@ -36,18 +38,18 @@ def privatize_vocabulary(word_count, dataset_distance, budget):
     :param budget:
     :return: privatized vocabulary as a string set of words
     """
-
+    count_by = make_count_by(TK=str, TV=float, MO=L1Distance[float])
     # solve for scale and threshold
     scale = binary_search_param(
-        lambda s: make_count_by_ptr(scale=s, threshold=1e8, TIA=str),
+        lambda s: count_by >> make_base_ptr(scale=s, threshold=1e8, TK=str),
         d_in=dataset_distance, d_out=budget)
     threshold = binary_search_param(
-        lambda t: make_count_by_ptr(scale=scale, threshold=t, TIA=str),
+        lambda t: count_by >> make_base_ptr(scale=scale, threshold=t, TK=str),
         d_in=dataset_distance, d_out=budget)
 
     print("chosen scale and threshold:", scale, threshold)
 
-    base_stability = make_count_by_ptr(scale=scale, threshold=threshold, TIA=str)
+    base_stability = count_by >> make_base_ptr(scale=scale, threshold=threshold, TK=str)
 
     privatized_count = base_stability(word_count)
 
