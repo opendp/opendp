@@ -135,6 +135,63 @@ so long as you pass the DA (atomic domain) type argument.
      - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
      - ``VectorDomain<AllDomain<TA>>``
 
+Indexing
+--------
+Indexing operations provide a way to relabel categorical data, or bin numeric data into categorical data.
+These operations work with `usize` data types: an integral data type representing an index.
+:func:`opendp.trans.make_find` finds the index of each input datum in a set of categories.
+In other words, it transforms a categorical data vector to a vector of numeric indices.
+
+.. testsetup::
+
+    from opendp.trans import make_find, make_impute_constant, make_find_bin, make_index
+    from opendp.typing import *
+    from opendp.mod import enable_features
+    enable_features('contrib')
+
+.. doctest::
+
+    >>> finder = (
+    ...     make_find(categories=["A", "B", "C"]) >>
+    ...     # impute any input datum that are not a part of the categories list as 3
+    ...     make_impute_constant(3, DA=OptionNullDomain[AllDomain["usize"]])
+    ... )
+    >>> finder(["A", "B", "C", "A", "D"])
+    [0, 1, 2, 0, 3]
+
+:func:`opendp.trans.make_find_bin` is a binning operation that transforms numerical input data to a vector of bin indices.
+
+.. doctest::
+
+    >>> binner = make_find_bin(edges=[1., 2., 10.])
+    >>> binner([0., 1., 3., 15.])
+    [0, 1, 2, 3]
+
+:func:`opendp.trans.make_index` uses each indicial input datum as an index into a category set.
+
+.. doctest::
+
+    >>> indexer = make_index(categories=["A", "B", "C"], null="D")
+    >>> indexer([0, 1, 2, 3, 2342])
+    ['A', 'B', 'C', 'D', 'D']
+
+You can use combinations of the indicial transformers to map hashable data to integers, bin numeric types, relabel hashable types, and label bins.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Indexer
+     - Input Domain
+     - Output Domain
+   * - :func:`opendp.trans.make_find`
+     - ``VectorDomain<AllDomain<TIA>>``
+     - ``VectorDomain<OptionNullDomain<AllDomain<usize>>>``
+   * - :func:`opendp.trans.make_find_bin`
+     - ``VectorDomain<AllDomain<TIA>>``
+     - ``VectorDomain<AllDomain<usize>>``
+   * - :func:`opendp.trans.make_index`
+     - ``VectorDomain<AllDomain<usize>>``
+     - ``VectorDomain<AllDomain<TOA>>``
 
 Clamping
 --------
@@ -207,9 +264,8 @@ provide the option to choose the output metric: ``L1Distance[TOA]`` or ``L2Dista
 These default to ``L1Distance[TOA]``, which chains with L1 noise mechanisms like :func:`opendp.meas.make_base_geometric` and :func:`opendp.meas.make_base_laplace`.
 If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mechanisms like :func:`opendp.meas.make_base_gaussian`.
 
-The constructor :func:`opendp.meas.make_count_by_ptr` does a similar aggregation as :func:`opendp.trans.make_count_by_categories <make_count_by_categories>`,
-but does not need a category set (instead using the propose-test-release framework).
-It differs from `make_count_by_categories` in that it is itself a measurement; it already applies its own noise.
+The constructor :func:`opendp.meas.make_count_by` does a similar aggregation as :func:`opendp.trans.make_count_by_categories <make_count_by_categories>`,
+but does not need a category set (you instead chain with :func:`opendp.meas.make_base_ptr`, which uses the propose-test-release framework).
 
 The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
 
@@ -228,7 +284,7 @@ The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time becau
    * - :func:`opendp.trans.make_count_by_categories`
      - ``VectorDomain<BoundedDomain<TIA>>``
      - ``VectorDomain<AllDomain<TOA>>``
-   * - :func:`opendp.meas.make_count_by_ptr`
+   * - :func:`opendp.meas.make_count_by`
      - ``VectorDomain<BoundedDomain<TI>>``
      - ``MapDomain<AllDomain<TI>,AllDomain<TO>>``
    * - :func:`opendp.trans.make_bounded_sum`

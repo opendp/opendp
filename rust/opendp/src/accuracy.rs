@@ -209,7 +209,7 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-        let base_gaussian = make_base_gaussian::<AllDomain<f64>>(scale, false)?;
+        let base_gaussian = make_base_gaussian::<AllDomain<f64>>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)

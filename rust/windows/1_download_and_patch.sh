@@ -1,3 +1,5 @@
+# this script should be run in an MSYS2 shell
+
 # exit immediately upon failure, print commands while running
 set -e -x
 
@@ -5,13 +7,11 @@ set -e -x
 # 1. The gmp-mpfr-sys crate is very particular about the library version being used
 # 2. pacman only stores latest
 # 3. the binaries linked by precompiled .a files differ across machines
-curl.exe https://gmplib.org/download/gmp/gmp-6.2.0.tar.bz2 -o gmp-6.2.0.tar.bz2
-7z x gmp-6.2.0.tar.bz2
-7z x gmp-6.2.0.tar
+curl https://gmplib.org/download/gmp/gmp-6.2.0.tar.bz2 -o gmp-6.2.0.tar.bz2
+tar xf gmp-6.2.0.tar.bz2
 
-curl.exe https://www.mpfr.org/mpfr-4.0.2/mpfr-4.0.2.tar.gz -o mpfr-4.0.2.tar.gz
-7z x mpfr-4.0.2.tar.gz
-7z x mpfr-4.0.2.tar
+curl https://www.mpfr.org/mpfr-4.0.2/mpfr-4.0.2.tar.gz -o mpfr-4.0.2.tar.gz
+tar xf mpfr-4.0.2.tar.gz
 
 # clone the gmp-mpfr-sys crate
 rm -rf gmp-mpfr-sys-1.2.4
@@ -19,7 +19,7 @@ git clone https://gitlab.com/tspiteri/gmp-mpfr-sys.git gmp-mpfr-sys-1.2.4
 cd gmp-mpfr-sys-1.2.4 || exit
 git checkout tags/v1.2.4
 # patch the gmp-mpfr-sys build.rs to use the pre-built static libs
-git apply ../gmp-mpfr-sys-1.2.4.patch
+git apply --ignore-whitespace ../gmp-mpfr-sys-1.2.4.patch
 cd ..
 
 # clone the rug crate
@@ -28,7 +28,7 @@ git clone https://gitlab.com/tspiteri/rug.git rug-1.9.0
 cd rug-1.9.0 || exit
 git checkout tags/v1.9.0
 # patch the rug cargo.toml to use the pre-built static libs
-git apply ../rug-1.9.0.patch
+git apply --ignore-whitespace ../rug-1.9.0.patch
 cd ..
 
 CARGO_TOML_PATH="$(realpath "../opendp/Cargo.toml")"

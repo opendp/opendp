@@ -3,6 +3,9 @@ on:
   release:
     types:
       - published
+env:
+  FEATURES: untrusted
+
 
 jobs:
   credential-check:
@@ -18,59 +21,57 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+          cache: pip
+
       - name: Assert version
         run: |
-          pip install toml
-          (cd .github && python assert_version.py)
+          pip install -r tools/requirements-assert_version.txt
+          python tools/assert_version.py
+
 
   python-pre-publish-windows:
     runs-on: windows-latest
     needs: credential-check
     env:
       MSYS: winsymlinks:nativestrict
+    defaults:
+      run:
+        shell: msys2 {0}
     steps:
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          install: git mingw-w64-x86_64-toolchain openssl-devel m4 vim diffutils make
+          path-type: inherit
+          install: m4
 
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up rust, 7zip, curl
-        run: |
-          rustup self uninstall -y
-          choco install rust
-          choco install 7zip
-          choco install curl
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~\.cargo\bin
+            ~\.cargo\registry\index
+            ~\.cargo\registry\cache
+            ~\.cargo\git\db
+            ~\AppData\Local\gmp-mpfr-sys
+            rust\target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/*/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Patch Rust compiler
-        shell: msys2 {0}
-        run: cp -f /mingw64/x86_64-w64-mingw32/lib/{*.a,*.o} /c/ProgramData/chocolatey/lib/rust/tools/lib/rustlib/x86_64-pc-windows-gnu/lib/self-contained
-
-      - name: Prepare OpenDP Patch
-        run: |
-          chmod +x rust/windows/1_download_and_patch.sh
-          (cd rust/windows && bash 1_download_and_patch.sh)
-
-      - name: Patch OpenDP
-        shell: msys2 -leo pipefail {0}
-        run: |
-          chmod +x rust/windows/2_build_dependencies.sh
-          (cd rust/windows && bash 2_build_dependencies.sh)
-
-      - name: Build windows binaries
-        shell: msys2 -leo pipefail {0}
-        run: |
-          export PATH=$PATH:/c/ProgramData/chocolatey/bin
-          export RUSTFLAGS="-L native=C:\ProgramData\chocolatey\lib\rust\tools\lib\rustlib\x86_64-pc-windows-gnu\lib\self-contained"
-          cargo build --target=x86_64-pc-windows-gnu --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
+      - name: Create Rust build for windows
+        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
 
       - name: Upload .dll
         uses: actions/upload-artifact@v2
         with:
           name: lib_dll
-          path: rust/target/x86_64-pc-windows-gnu/release/opendp_ffi.dll
+          path: rust/target/release/opendp_ffi.dll
 
 
   python-pre-publish-mac:
@@ -80,8 +81,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Build mac binaries
-        run: cargo +stable build --verbose --release --manifest-path=rust/Cargo.toml --features=untrusted
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/Library/Caches/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/*/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for macos
+        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v2
@@ -99,10 +113,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Build manylinux binaries
-        run: |
-          chmod +x .github/build_manylinux_binaries.sh
-          docker run --rm -v `pwd`:/io $DOCKER_IMAGE /io/.github/build_manylinux_binaries.sh
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cache/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/*/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for linux
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -f \"$FEATURES\""
 
       - name: Upload .so
         uses: actions/upload-artifact@v2
@@ -112,12 +137,10 @@ jobs:
 
 
   python-publish:
-    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
     runs-on: ubuntu-20.04
+    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
     env:
-      # https://pypi.org/help/#apitoken
-      TWINE_USERNAME: __token__
-      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -126,65 +149,54 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.6
+          cache: pip
 
       - name: Prepare for libs
-        run: mkdir -p python/src/opendp/lib
-
-      - name: Download mac lib
-        uses: actions/download-artifact@v2
-        with:
-          name: lib_dylib
-          path: python/src/opendp/lib
-
-      - name: Download linux lib
-        uses: actions/download-artifact@v2
-        with:
-          name: lib_so
-          path: python/src/opendp/lib
+        run: mkdir -p rust/target/release
 
       - name: Download windows lib
         uses: actions/download-artifact@v2
         with:
           name: lib_dll
-          path: python/src/opendp/lib
+          path: rust/target/release
 
-      - name: Install dependencies
+      - name: Download macos lib
+        uses: actions/download-artifact@v2
+        with:
+          name: lib_dylib
+          path: rust/target/release
+
+      - name: Download linux lib
+        uses: actions/download-artifact@v2
+        with:
+          name: lib_so
+          path: rust/target/release
+
+      - name: Create Python package
+        run: bash tools/python_build.sh -i
+
+      - name: Publish Python package
         run: |
-          python -m pip install --upgrade pip
-          pip install twine wheel
-
-      - name: Copy README.md
-        run: cp README.md python/README.md
-
-      - name: Build bdist
-        run: |
-          (cd python && python3 setup.py bdist_wheel -d wheelhouse)
-
-      - name: PyPi OpenDP upload
-        run: |
-          python3 -m twine upload --verbose --skip-existing python/wheelhouse/*
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py python
 
 
   rust-publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: credential-check
-    defaults:
-      run:
-        working-directory: rust
     env:
-      CARGO_TERM_COLOR: always
+      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Login
-        run: cargo login ${{ secrets.CRATES_IO_API_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+          cache: pip
 
-      - name: Publish Cargo OpenDP
-        run: cargo publish --verbose --manifest-path=opendp/Cargo.toml
-
-      - name: Let crates.io index settle
-        run: sleep 60
-
-      - name: Publish Cargo OpenDP-FFI
-        run: cargo publish --verbose --manifest-path=opendp-ffi/Cargo.toml
+      - name: Publish Rust crate
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py rust

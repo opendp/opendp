@@ -24,7 +24,7 @@ use std::rc::Rc;
 
 use crate::dom::PairDomain;
 use crate::error::*;
-use crate::traits::{DistanceConstant, InfCast};
+use crate::traits::{DistanceConstant, InfCast, InfMul, InfDiv};
 use crate::dist::IntDistance;
 use std::fmt::Debug;
 
@@ -39,9 +39,13 @@ pub trait Domain: Clone + PartialEq + Debug {
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-#[derive(Clone)]
 pub struct Function<DI: Domain, DO: Domain> {
     pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
+}
+impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+    fn clone(&self) -> Self {
+        Function {function: self.function.clone()}
+    }
 }
 
 impl<DI: Domain, DO: Domain> Function<DI, DO> {
@@ -125,10 +129,18 @@ impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct PrivacyRelation<MI: Metric, MO: Measure> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
+}
+
+impl<MI: Metric, MO: Measure> Clone for PrivacyRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        PrivacyRelation {
+            relation: self.relation.clone(),
+            backward_map: self.backward_map.clone()
+        }
+    }
 }
 
 impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
@@ -158,9 +170,9 @@ impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
         MO::Distance: DistanceConstant<MI::Distance> {
         PrivacyRelation::new_all(
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.clone() / c.clone())?))))
+                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)
@@ -237,11 +249,20 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
 ///
 /// A `StabilityRelation` is implemented as a function that takes an input and output [`Metric::Distance`],
 /// and returns a boolean indicating if the relation holds.
-#[derive(Clone)]
 pub struct StabilityRelation<MI: Metric, MO: Metric> {
     pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
     pub forward_map: Option<Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>>,
     pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
+}
+
+impl<MI: Metric, MO: Metric> Clone for StabilityRelation<MI, MO> {
+    fn clone(&self) -> Self {
+        StabilityRelation {
+            relation: self.relation.clone(),
+            forward_map: self.forward_map.clone(),
+            backward_map: self.backward_map.clone()
+        }
+    }
 }
 
 impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
@@ -266,19 +287,30 @@ impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
             backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
         }
     }
+    pub fn new_from_forward(
+        forward_map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + Clone + 'static
+    ) -> Self
+        where MI::Distance: 'static, MO::Distance: 'static + PartialOrd + Clone {
+        StabilityRelation::new_all(
+            enclose!(forward_map, move |d_in: &MI::Distance, d_out: &MO::Distance|
+                Ok(d_out.clone() >= forward_map(d_in)?)),
+            Some(forward_map),
+            None::<fn(&_)->_>
+        )
+    }
     pub fn new_from_constant(c: MO::Distance) -> Self where
         MI::Distance: InfCast<MO::Distance> + Clone,
         MO::Distance: DistanceConstant<MI::Distance> {
         StabilityRelation::new_all(
             // relation
             enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())? * c.clone())),
+                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
             // forward map
             Some(enclose!(c, move |d_in: &MI::Distance|
-                Ok(MO::Distance::inf_cast(d_in.clone())? * c.clone()))),
+                Ok(MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?))),
             // backward map
             Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.clone() / c.clone())?))))
+                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
     }
     pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
         (self.relation)(input_distance, output_distance)
@@ -338,6 +370,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityRelation<MI, MO> {
 
 
 /// A randomized mechanism with certain privacy characteristics.
+#[derive(Clone)]
 pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
     pub output_domain: DO,
@@ -376,6 +409,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
 }
 
 /// A data transformation with certain stability characteristics.
+#[derive(Clone)]
 pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,
     pub output_domain: DO,

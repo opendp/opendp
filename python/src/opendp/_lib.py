@@ -43,14 +43,6 @@ class AnyObject(ctypes.Structure):
     pass  # Opaque struct
 
 
-class AnyMetricDistance(ctypes.Structure):
-    pass  # Opaque struct
-
-
-class AnyMeasureDistance(ctypes.Structure):
-    pass  # Opaque struct
-
-
 class AnyMeasurement(ctypes.Structure):
     pass  # Opaque struct
 
@@ -66,17 +58,22 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
 class AnyObjectPtr(ctypes.POINTER(AnyObject)):
     _type_ = AnyObject
 
-
-class AnyMeasureDistancePtr(ctypes.POINTER(AnyMeasureDistance)):
-    _type_ = AnyMeasureDistance
-
-
-class AnyMetricDistancePtr(ctypes.POINTER(AnyMetricDistance)):
-    _type_ = AnyMetricDistance
+    def __del__(self):
+        from opendp._data import object_free
+        object_free(self)
 
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _type_ = FfiSlice
+    _dependencies = {}
+
+    def depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
+
+    def __del__(self):
+        """When self is deleted, stop keeping dependencies alive by freeing the reference."""
+        FfiSlicePtr._dependencies.pop(id(self), None)
 
 
 class FfiError(ctypes.Structure):
