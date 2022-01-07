@@ -88,17 +88,9 @@ AllocCBType = ctypes.CFUNCTYPE(None, ctypes.POINTER(FFI_Array))
 lib_path = "../../rust/target/debug/libopendp_ffi.dylib"
 lib = ctypes.cdll.LoadLibrary(lib_path)
 
-arrow_init = lib.opendp__arrow_init
-arrow_init.argtypes = [AllocCBType]
-arrow_init.restype = None
-
 arrow_identity = lib.opendp__arrow_identity
 arrow_identity.argtypes = [FFI_Array, FFI_Array]
 arrow_identity.restype = None
-
-arrow_identity_cb = lib.opendp__arrow_identity_cb
-arrow_identity_cb.argtypes = [FFI_Array]
-arrow_identity_cb.restype = FFI_Array
 
 arrow_sort = lib.opendp__arrow_sort
 arrow_sort.argtypes = [FFI_Array, FFI_Array]
@@ -117,33 +109,9 @@ arrow_produce = lib.opendp__arrow_produce
 arrow_produce.argtypes = [FFI_Array]
 arrow_produce.restype = None
 
-
-
 arrow_alloc = lib.opendp__arrow_alloc
 arrow_alloc.argtypes = []
 arrow_alloc.restype = FFI_Array
-
-arrow_free = lib.opendp__arrow_free
-arrow_free.argtypes = [FFI_Array]
-arrow_free.restype = None
-
-_leaks = []
-
-def alloc(ffi_array_ptr):
-    global _leaks
-    print(f"python: alloc()")
-    ffi_array = ffi_array_ptr.contents
-    arrow_array = FFI_ArrowArray()
-    arrow_schema = FFI_ArrowSchema()
-    _leaks += [arrow_array, arrow_schema]
-    ffi_array.array = ctypes.pointer(arrow_array)
-    ffi_array.schema = ctypes.pointer(arrow_schema)
-
-alloc_cb = AllocCBType(alloc)
-
-
-def init():
-    arrow_init(alloc_cb)
 
 
 def _ptr_to_int(ptr):
@@ -164,50 +132,32 @@ def from_ffi(ffi_array):
 
 def do_identity():
     arg = pa.array([1, 2, None, 4])
-    print(f"python: arg = {arg}")
+    # print(f"python: arg = {arg}")
 
     ffi_arg = to_ffi(arg)
     ffi_res = FFI_Array.new_empty()
     arrow_identity(ffi_arg, ffi_res)
 
     res = from_ffi(ffi_res)
-    print(f"python: res = {res}")
-    arrow_free(ffi_arg)
-    # print(f"python: ffi_arg.array = {ctypes.cast(ffi_arg.array.contents.release, ctypes.c_void_p)}")
-    # ffi_arg.array.contents.release = ctypes.cast(ctypes.c_void_p(123), ctypes.POINTER(ctypes.CFUNCTYPE(None, ctypes.POINTER(FFI_ArrowArray))))
-    # # ffi_arg.array.contents.release = None
-    # print(f"python: ffi_arg.array = {ctypes.cast(ffi_arg.array.contents.release, ctypes.c_void_p)}")
-
-
-def do_identity_cb():
-    arg = pa.array([1, 2, None, 4])
-    print(f"python: arg = {arg}")
-
-    ffi_arg = to_ffi(arg)
-    print(f"python: did to_ffi")
-    ffi_res = arrow_identity_cb(ffi_arg)
-    print(f"python: did identity_cb")
-
-    res = from_ffi(ffi_res)
-    print(f"python: res = {res}")
+    # print(f"python: res = {res}")
 
 
 def do_sort():
     arg = pa.array([1, 2, None, 4])
-    print(f"python: arg = {arg}")
+    # print(f"python: arg = {arg}")
 
     ffi_arg = to_ffi(arg)
     ffi_res = FFI_Array.new_empty()
     arrow_sort(ffi_arg, ffi_res)
 
     res = from_ffi(ffi_res)
-    print(f"python: res = {res}")
+    # print(f"python: res = {res}")
 
 
 def do_add():
     arg0 = pa.array([1, 2, None, 4])
     arg1 = pa.array([1, 2, 3, None])
-    print(f"python: arg0 = {arg0}, arg1 = {arg1}")
+    # print(f"python: arg0 = {arg0}, arg1 = {arg1}")
 
     ffi_arg0 = to_ffi(arg0)
     ffi_arg1 = to_ffi(arg1)
@@ -215,7 +165,7 @@ def do_add():
     arrow_add(ffi_arg0, ffi_arg1, ffi_res)
 
     res = from_ffi(ffi_res)
-    print(f"python: res = {res}")
+    # print(f"python: res = {res}")
 
 
 def do_consume():
@@ -233,20 +183,17 @@ def do_produce():
 
     res = from_ffi(ffi_res)
     # print(f"python: res = {res}")
-    # arrow_free(ffi_res)
 
 
 if __name__ == "__main__":
-    init()
-    for i in range(200000):
-    # for i in range(2):
+    for i in range(10000):
         if (i + 1) % 1000 == 0:
             print(i + 1)
-        # do_identity()
-        # do_sort()
-        # do_add()
+        do_identity()
+        do_sort()
+        do_add()
         # do_consume()
-        do_produce()
+        # do_produce()
     print("YEAH")
     import time
     time.sleep(10)
