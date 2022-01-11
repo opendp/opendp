@@ -219,6 +219,57 @@ impl<D: Domain> Domain for VectorDomain<D> {
     }
 }
 
+
+use arrow::datatypes::{ArrowNativeType, ArrowPrimitiveType};
+use arrow::array::PrimitiveArray;
+/// A Domain that contains vectors of (homogeneous) values.
+pub struct ArrayDomain<D: Domain, T: ArrowPrimitiveType<Native = D::Carrier>> {
+    pub element_domain: D,
+    pub _marker: PhantomData<T>,
+}
+impl<D: Domain, T: ArrowPrimitiveType<Native = D::Carrier>> Debug for ArrayDomain<D, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ArrayDomain({:?})", self.element_domain)
+    }
+}
+impl<D: Domain + Default, T: ArrowPrimitiveType<Native = D::Carrier>> Default for ArrayDomain<D, T> {
+    fn default() -> Self { Self::new(D::default()) }
+}
+impl<D: Domain, T: ArrowPrimitiveType<Native = D::Carrier>> ArrayDomain<D, T> {
+    pub fn new(element_domain: D) -> Self {
+        ArrayDomain { element_domain, _marker: PhantomData }
+    }
+}
+impl<T: ArrowPrimitiveType> ArrayDomain<AllDomain<T::Native>, T> where T::Native: CheckNull {
+    pub fn new_all() -> Self {
+        Self::new(AllDomain::<T::Native>::new())
+    }
+}
+impl<D: Domain, T: ArrowPrimitiveType<Native = D::Carrier>> Clone for ArrayDomain<D, T> {
+    fn clone(&self) -> Self {
+        Self::new(self.element_domain.clone())
+    }
+}
+impl<D: Domain, T: ArrowPrimitiveType<Native = D::Carrier>> PartialEq for ArrayDomain<D, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.element_domain.eq(&other.element_domain)
+    }
+}
+
+impl<D, T> Domain for ArrayDomain<D, T> where
+    D: Domain,
+    D::Carrier: ArrowNativeType,
+    T: ArrowPrimitiveType<Native = D::Carrier> {
+    type Carrier = PrimitiveArray<T>;
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        for e in val.values() {
+            if !self.element_domain.member(e)? {return Ok(false)}
+        }
+        Ok(true)
+    }
+}
+
+
 /// A Domain that specifies the length of the enclosed domain
 #[derive(Clone, PartialEq)]
 pub struct SizedDomain<D: Domain> {

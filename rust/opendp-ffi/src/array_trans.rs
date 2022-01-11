@@ -1,9 +1,10 @@
+use std::marker::PhantomData;
 use std::ops::Add;
 use std::sync::Arc;
 
 use arrow::array::{ArrayRef, PrimitiveArray};
 use arrow::compute::kernels::aggregate;
-use arrow::datatypes::{ArrowNumericType, DataType, Float64Type, Int32Type};
+use arrow::datatypes::{ArrowNumericType, ArrowPrimitiveType, DataType, Float64Type, Int32Type};
 
 pub fn sum_ffi(array: ArrayRef) -> ArrayRef {
     fn dispatch<T>(array: ArrayRef) -> ArrayRef
@@ -30,4 +31,17 @@ where
     T::Native: Add<Output = T::Native>,
 {
     aggregate::sum(array)
+}
+
+pub trait Dom {
+    type Carrier;
+}
+
+pub struct ArrayDom<D: Dom, T: ArrowPrimitiveType<Native = D::Carrier>> {
+    _element_domain: D,
+    _marker: PhantomData<T>,
+}
+
+impl<D: Dom, T: ArrowPrimitiveType<Native = D::Carrier>> Dom for ArrayDom<D, T> {
+    type Carrier = PrimitiveArray<T>;
 }

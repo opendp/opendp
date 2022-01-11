@@ -1,11 +1,14 @@
-use num::{Float};
+use arrow::array::Array;
+use arrow::datatypes::ArrowPrimitiveType;
+use num::Float;
 
-use crate::core::{Measurement, Function, PrivacyRelation, Domain, SensitivityMetric};
-use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
+use crate::core::{Domain, Function, Measurement, PrivacyRelation, SensitivityMetric};
+use crate::dist::{AbsoluteDistance, L1Distance, MaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
-use crate::samplers::{SampleLaplace};
+use crate::dom::ArrayDomain;
 use crate::error::*;
-use crate::traits::{InfCast, CheckNull, TotalOrd, InfMul};
+use crate::samplers::SampleLaplace;
+use crate::traits::{CheckNull, InfCast, InfMul, TotalOrd};
 
 pub trait LaplaceDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -32,9 +35,47 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
 
     fn new() -> Self { VectorDomain::new_all() }
     fn noise_function(scale: T) -> Function<Self, Self> {
-        Function::new_fallible(move |arg: &Self::Carrier| arg.iter()
-            .map(|v| T::sample_laplace(*v, scale, false))
-            .collect())
+        Function::new_fallible(move |arg: &Self::Carrier| -> Fallible<Self::Carrier> {
+            arg.iter()
+                .map(|v| T::sample_laplace(*v, scale, false))
+                .collect()
+        })
+    }
+}
+
+impl<T> LaplaceDomain for ArrayDomain<AllDomain<T::Native>, T> where
+    T: ArrowPrimitiveType,
+    T::Native: 'static + SampleLaplace + Float + CheckNull {
+    type Metric = L1Distance<T::Native>;
+    type Atom = T::Native;
+
+    fn new() -> Self { ArrayDomain::new_all() }
+    fn noise_function(scale: Self::Atom) -> Function<Self, Self> {
+        Function::new_fallible(move |arg: &Self::Carrier| -> Fallible<Self::Carrier> {
+            // if arg.null_count() != 0 {
+            //     return fallible!(FailedFunction, "Inputs may not be null")
+            // }
+            arg.values().iter().map(|v|
+                T::Native::sample_laplace(*v, scale, false).map(Some))
+                .collect()
+
+
+            // arg.values().iter()
+            // .map(|v| T::Native::sample_laplace(*v, scale, false))
+            // .collect()
+            // arg.iter().map(|v| v.ok_or_else(|| err!(FailedFunction, "Inputs may not be null"))
+            //         .and_then(|v| T::Native::sample_laplace(v, scale, false))
+            //         .map(Some))
+            //     .collect()
+
+            // // Start with Iterator over Option<T>
+            // let temp = arg.iter();
+            // // Map sample_laplace over each element (using inner map to get into Option). This yields Iterator over
+            // let temp = temp.map(|v| v.map(|v| T::Native::sample_laplace(v.clone(), scale, false)));
+            // let temp = temp.map(|v| v.transpose());
+            // let temp: Fallible<PrimitiveArray<T>> = temp.collect();
+            // temp
+        })
     }
 }
 
@@ -68,8 +109,9 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::trans::make_sized_bounded_mean;
+
+    use super::*;
 
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
