@@ -83,7 +83,7 @@ Assuming your base environment is ready, start by cloning the `opendp git repo <
 
 .. prompt:: bash
 
-    git clone git@github.com:opendp/opendp.git
+    git clone https://github.com/opendp/opendp.git
     cd opendp
 
 Next, you'll need to build the Rust binaries. This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo:
