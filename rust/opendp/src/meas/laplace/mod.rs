@@ -1,4 +1,3 @@
-use arrow::array::Array;
 use arrow::datatypes::ArrowPrimitiveType;
 use num::Float;
 

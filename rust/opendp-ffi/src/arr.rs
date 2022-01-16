@@ -71,6 +71,7 @@ pub extern "C" fn opendp__arrow_add(ffi_arg0: FFI_Array, ffi_arg1: FFI_Array, ff
 
     let arg0 = arg0.as_any().downcast_ref::<Int64Array>().unwrap();
     let arg1 = arg1.as_any().downcast_ref::<Int64Array>().unwrap();
+    let _i = arg0.values().iter();
     let res = compute::add(&arg0, &arg1).unwrap();
     let res = Arc::new(res);
     // println!("rust, res = {:?}", res);

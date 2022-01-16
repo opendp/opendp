@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use std::ops::Add;
+use std::ops::{Add, Mul};
 use std::sync::Arc;
 
 use arrow::array::{ArrayRef, PrimitiveArray};

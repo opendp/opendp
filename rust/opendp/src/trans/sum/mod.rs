@@ -77,6 +77,31 @@ pub fn make_bounded_sum_array<T>(
             lower.alerting_abs()?.total_max(upper.alerting_abs()?)?)))
 }
 
+
+
+
+
+use std::ops::Mul;
+
+pub fn double<'a, V, T>(v: &V) -> V where
+    V: IntoIterator<Item = &'a T> + FromIterator<T>,
+    T: 'a + Mul<i32, Output = T> {
+    v.into_iter().map(|e| e * 2).collect()
+}
+
+#[cfg(test)]
+mod array_tests {
+    use super::*;
+
+    #[test]
+    fn test_double() {
+        let arg = vec![1, 2, 3];
+        let res = double(&arg);
+        assert_eq!(res, vec![2, 4, 6]);
+    }
+}
+
+
 pub fn make_sized_bounded_sum_array<T>(
     size: usize, bounds: (T::Native, T::Native)
 ) -> Fallible<Transformation<SizedDomain<ArrayDomain<BoundedDomain<T::Native>, T>>, AllDomain<T::Native>, SymmetricDistance, AbsoluteDistance<T::Native>>> where
