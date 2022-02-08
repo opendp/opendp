@@ -208,14 +208,14 @@
                 "description": "Output Metric."
             },
             {
-                "name": "TIA",
+                "name": "TK",
                 "is_type": true,
-                "description": "Atomic Input Type. Categorical/hashable input data type. Input data must be Vec<TI>."
+                "description": "Type of Key. Categorical/hashable input data type. Input data must be Vec<TI>."
             },
             {
-                "name": "TOA",
+                "name": "TV",
                 "is_type": true,
-                "description": "Atomic Output Type. Express counts in terms of this integral type.",
+                "description": "Type of Value. Express counts in terms of this integral type.",
                 "default": "i32"
             }
         ],

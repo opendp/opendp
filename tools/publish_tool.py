@@ -25,8 +25,6 @@ def rust(args):
     run_command("Logging into crates.io", f"cargo login")
     dry_run_arg = " --dry-run" if args.dry_run else ""
     run_command("Publishing opendp crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp/Cargo.toml")
-    run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-    run_command("Publishing opendp-ffi crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp-ffi/Cargo.toml")
 
 
 def python(args):
