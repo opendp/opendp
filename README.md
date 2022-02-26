@@ -57,4 +57,4 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 ## Contributing
 
 OpenDP is a community effort, and we welcome your contributions to its development! 
-If you'd like to participate, please see the [Contributing section of the Developer Guide](https://docs.opendp.org/en/stable/developer/intro.html)
+If you'd like to participate, please see the [Contributing section of the Developer Guide](https://docs.opendp.org/en/stable/developer/contribution-process.html)
