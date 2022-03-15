@@ -89,7 +89,7 @@ def _main(argv):
     subparser.add_argument("-nr", "--no-release-mode", dest="release_mode", action="store_false")
     subparser.add_argument("-t", "--run-tests", dest="run_tests", action="store_true", default=True)
     subparser.add_argument("-nt", "--no-run-tests", dest="run_tests", action="store_false")
-    subparser.add_argument("-f", "--features", default="untrusted")
+    subparser.add_argument("-f", "--features", default="untrusted,ffi")
 
     subparser = subparsers.add_parser("python", help="Build Python library")
     subparser.set_defaults(func=python)

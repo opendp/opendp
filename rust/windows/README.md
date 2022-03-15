@@ -66,7 +66,7 @@ These instructions are part of the process for preparing a multiplatform OpenDP 
    ```
    If you add the RUSTFLAGS command to .bashrc, you don't need to set it every time you run cargo commands.
    Use `cargo build --release` for slower compilation and faster runtime.
-   The .dll located in `/rust/target/{release|debug}/opendp_ffi.dll` can be used in language bindings.
+   The .dll located in `/rust/target/{release|debug}/opendp.dll` can be used in language bindings.
    The python package should just work as-is once the build succeeds.
 
 

@@ -171,15 +171,13 @@ def version(args):
     log(f"Updating version -> {resolved_target_version}")
     versioned_files = [
         "VERSION",
-        "rust/opendp/Cargo.toml",
-        "rust/opendp-ffi/Cargo.toml",
+        "rust/Cargo.toml",
         "python/setup.cfg",
     ]
     log(f"Updating versioned files")
     inplace_arg = "-i ''" if platform.system() == "Darwin" else "-i"
     run_command(None, f"echo {resolved_target_version} >VERSION")
     run_command(None, f"sed {inplace_arg} 's/^version = \"{cached_version}\"$/version = \"{resolved_target_version}\"/' rust/opendp/Cargo.toml")
-    run_command(None, f"sed {inplace_arg} 's/^version = \"{cached_version}\"$/version = \"{resolved_target_version}\"/' rust/opendp-ffi/Cargo.toml")
     run_command(None, f"sed {inplace_arg} 's/^version = {cached_version}$/version = {resolved_target_version}/' python/setup.cfg")
     commit("versioned files", versioned_files, f"RELEASE_TOOL: Set version to {resolved_target_version}.")
 
