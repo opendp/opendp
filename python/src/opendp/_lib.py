@@ -21,9 +21,9 @@ if os.environ.get('OPENDP_HEADLESS', "false") == "false":
         raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
 
     platform_to_name = {
-        "darwin": "libopendp_ffi.dylib",
-        "linux": "libopendp_ffi.so",
-        "win32": "opendp_ffi.dll",
+        "darwin": "libopendp.dylib",
+        "linux": "libopendp.so",
+        "win32": "opendp.dll",
     }
     if sys.platform not in platform_to_name:
         raise Exception("Platform not supported", sys.platform)

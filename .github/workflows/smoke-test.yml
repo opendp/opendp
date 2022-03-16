@@ -30,7 +30,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Build
-        run: cargo build --verbose --features=untrusted
+        run: cargo build --verbose --features=untrusted,ffi
 
       - name: Test
         run: cargo test --verbose
@@ -39,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: libs
-          path: rust/target/debug/libopendp_ffi.so
+          path: rust/target/debug/libopendp.so
 
 
   python-test:

@@ -4,7 +4,7 @@ on:
     types:
       - published
 env:
-  FEATURES: untrusted
+  FEATURES: untrusted,ffi
 
 
 jobs:
@@ -71,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: lib_dll
-          path: rust/target/release/opendp_ffi.dll
+          path: rust/target/release/opendp.dll
 
 
   python-pre-publish-mac:
@@ -101,7 +101,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: lib_dylib
-          path: rust/target/release/libopendp_ffi.dylib
+          path: rust/target/release/libopendp.dylib
 
 
   python-pre-publish-linux:
@@ -133,7 +133,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: lib_so
-          path: rust/target/release/libopendp_ffi.so
+          path: rust/target/release/libopendp.so
 
 
   python-publish:

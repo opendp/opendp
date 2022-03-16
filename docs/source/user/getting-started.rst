@@ -86,6 +86,10 @@ Assuming your base environment is ready, start by cloning the `opendp git repo <
     git clone git@github.com:opendp/opendp.git
     cd opendp
 
+If you get the error ``git@github.com: Permission denied (publickey)``,
+then either `set up an SSH key <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account>`_
+or clone with https: ``git clone https://github.com/opendp/opendp.git``.
+
 Next, you'll need to build the Rust binaries. This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo:
 
 .. prompt:: bash
