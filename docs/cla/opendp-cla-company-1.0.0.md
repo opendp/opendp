@@ -24,7 +24,7 @@ This Contributor License Agreement (the “CLA”) is entered into by and betwee
 |-------------------------------------|-------------------------------------|
 | Signature: _______________________  | Signature: _______________________  |
 | Print Name: _______________________ | Print Name: _______________________ |
-| Date: _______________________       | Date: _______________________       | 
+| Date: _______________________       | Date: _______________________       |
 
 \newpage
 
@@ -42,8 +42,8 @@ By signing below, you are representing that you have the authority to provide th
 |-------------------------------------|
 | Signature: _______________________  |
 | Print Name: _______________________ |
-| Company: _______________________    | 
-| Date: _______________________       | 
+| Company: _______________________    |
+| Date: _______________________       |
 
 \newpage
 
