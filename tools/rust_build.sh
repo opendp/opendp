@@ -94,8 +94,9 @@ function run_cargo() {
   local ACTION=$1
   local CMD=(cargo)
   [[ $TOOLCHAIN != UNSET ]] && CMD+=(+"$TOOLCHAIN")
-  CMD+=(--verbose --color=always $ACTION --manifest-path=rust/Cargo.toml --features="$FEATURES")
+  CMD+=(--verbose --color=always $ACTION)
   [[ $TARGET != UNSET ]] && CMD+=" --target $TARGET"
+  CMD+=(--manifest-path=rust/Cargo.toml --features="$FEATURES")
   [[ $RELEASE_MODE == true ]] && CMD+=(--release)
   run "${CMD[@]}"
 }
