@@ -77,7 +77,7 @@ jobs:
 
   python-pre-publish-mac:
     runs-on: macos-11
-    needs: credential-check
+    # needs: credential-check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
