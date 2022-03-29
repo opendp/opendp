@@ -93,8 +93,8 @@ function init_linux() {
 function run_cargo() {
   local ACTION=$1
   local CMD=(cargo)
-  [[ $TOOLCHAIN != UNSET ]] && CMD+=(+"$TOOLCHAIN")
-  [[ $TARGET != UNSET ]] && CMD+=" --target $TARGET"
+  # [[ $TOOLCHAIN != UNSET ]] && CMD+=(+"$TOOLCHAIN")
+  [[ $TARGET != UNSET ]] && CMD+= --target $TARGET
   CMD+=(--verbose --color=always $ACTION --manifest-path=rust/Cargo.toml --features="$FEATURES")
   [[ $RELEASE_MODE == true ]] && CMD+=(--release)
   run "${CMD[@]}"
