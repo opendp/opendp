@@ -113,7 +113,7 @@ if [[ $INIT == true ]]; then
   *)       echo"Unknown platform $PLATFORM" >&2 && exit 1 ;;
   esac
 
-  [[ $TARGET != UNSET ]] && cargo add $target
+  [[ $TARGET != UNSET ]] && cargo add $TARGET
 fi
 
 if [[ $TEST == true ]]; then
