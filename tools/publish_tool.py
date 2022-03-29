@@ -24,7 +24,7 @@ def rust(args):
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     run_command("Logging into crates.io", f"cargo login")
     dry_run_arg = " --dry-run" if args.dry_run else ""
-    run_command("Publishing opendp crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp/Cargo.toml")
+    run_command("Publishing opendp crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/Cargo.toml")
 
 
 def python(args):

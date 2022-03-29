@@ -61,7 +61,7 @@ jobs:
             ~\.cargo\git\db
             ~\AppData\Local\gmp-mpfr-sys
             rust\target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/*/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for windows
@@ -75,7 +75,7 @@ jobs:
 
 
   python-pre-publish-mac:
-    runs-on: macos-10.15
+    runs-on: macos-11
     needs: credential-check
     steps:
       - name: Checkout repository
@@ -91,11 +91,27 @@ jobs:
             ~/.cargo/git/db
             ~/Library/Caches/gmp-mpfr-sys
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/*/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Create Rust build for macos
-        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
+      - name: Create Rust build for macos x86_64
+        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
+        env:
+          CC: clang -target x86_64-apple-darwin
+
+      - name: Create Rust build for macos aarch64 (no tests)
+        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES"
+        env:
+          CC: clang -target aarch64-apple-darwin
+
+      - name: Create universal binary of Rust build for macos
+        # https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary#Update-the-Architecture-List-of-Custom-Makefiles
+        run: |
+          mkdir -p rust/target/release
+          lipo \
+              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
+              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
+              -output rust/target/release/libopendp.dylib -create
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v2
@@ -123,7 +139,7 @@ jobs:
             ~/.cargo/git/db
             ~/.cache/gmp-mpfr-sys
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/*/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Create Rust build for linux
