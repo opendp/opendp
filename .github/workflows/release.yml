@@ -3,6 +3,7 @@ on:
   release:
     types:
       - published
+  pull_request:
 env:
   FEATURES: untrusted,ffi
 
@@ -75,7 +76,7 @@ jobs:
 
 
   python-pre-publish-mac:
-    runs-on: macos-10.15
+    runs-on: macos-11
     needs: credential-check
     steps:
       - name: Checkout repository
@@ -94,14 +95,24 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/*/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Create Rust build for macos
-        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
+      - name: Create Rust build for macos x86_64
+        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
+
+      - name: Create Rust build for macos aarch64
+        run: bash tools/rust_build.sh -i -r -t -g aarch64-apple-darwin -f "$FEATURES"
+
+      - name: create a universal binary
+        # https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary#Update-the-Architecture-List-of-Custom-Makefiles
+        run: lipo -create \
+              -output target/opendp-universal-apple-darwin-release \
+              target/aarch64-apple-darwin/release/opendp \
+              target/x86_64-apple-darwin/release/opendp
 
       - name: Upload .dylib
         uses: actions/upload-artifact@v2
         with:
           name: lib_dylib
-          path: rust/target/release/libopendp.dylib
+          path: rust/target/opendp-universal-apple-darwin-release/libopendp.dylib
 
 
   python-pre-publish-linux:

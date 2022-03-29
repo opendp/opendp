@@ -4,22 +4,24 @@
 set -e -u
 
 function usage() {
-  echo "Usage: $(basename "$0") [-irt] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-f <FEATURES>]" >&2
+  echo "Usage: $(basename "$0") [-irt] [-p <PLATFORM>] [-c <TOOLCHAIN>] [-g <TARGET>] [-f <FEATURES>]" >&2
 }
 
 INIT=false
 RELEASE_MODE=false
 TEST=false
 PLATFORM=UNSET
+TARGET=UNSET
 TOOLCHAIN=stable
 FEATURES=default
-while getopts ":irtp:c:f:" OPT; do
+while getopts ":irtp:c:g:f:" OPT; do
   case "$OPT" in
   i) INIT=true ;;
   r) RELEASE_MODE=true ;;
   t) TEST=true ;;
   p) PLATFORM="$OPTARG" ;;
   c) TOOLCHAIN="$OPTARG" ;;
+  g) TARGET="$OPTARG" ;;
   f) FEATURES="$OPTARG" ;;
   *) usage && exit 1 ;;
   esac
@@ -74,7 +76,8 @@ function init_windows() {
 }
 
 function init_macos() {
-  log "No prep for macos"
+  export SDKROOT=$(xcrun -sdk macosx --show-sdk-path) 
+  export MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version) 
 }
 
 function init_linux() {
@@ -91,6 +94,7 @@ function run_cargo() {
   local ACTION=$1
   local CMD=(cargo)
   [[ $TOOLCHAIN != UNSET ]] && CMD+=(+"$TOOLCHAIN")
+  [[ $TARGET != UNSET ]] && CMD+=(+"--target $TARGET")
   CMD+=(--verbose --verbose --color=always $ACTION --manifest-path=rust/Cargo.toml --features="$FEATURES")
   [[ $RELEASE_MODE == true ]] && CMD+=(--release)
   run "${CMD[@]}"
@@ -108,6 +112,8 @@ if [[ $INIT == true ]]; then
   linux)   init_linux ;;
   *)       echo"Unknown platform $PLATFORM" >&2 && exit 1 ;;
   esac
+
+  [[ $TARGET != UNSET ]] && cargo add $target
 fi
 
 if [[ $TEST == true ]]; then
