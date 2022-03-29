@@ -9,29 +9,29 @@ env:
 
 
 jobs:
-  credential-check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check if user is an administrator
-        uses: lannonbr/repo-permission-check-action@2.0.0
-        with:
-          permission: admin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # credential-check:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check if user is an administrator
+  #       uses: lannonbr/repo-permission-check-action@2.0.0
+  #       with:
+  #         permission: admin
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkout repository
-        uses: actions/checkout@v2
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v2
 
-      # - name: Set up Python
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: 3.6
-      #     cache: pip
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: 3.6
+  #         cache: pip
 
-      # - name: Assert version
-      #   run: |
-      #     pip install -r tools/requirements-assert_version.txt
-      #     python tools/assert_version.py
+  #     - name: Assert version
+  #       run: |
+  #         pip install -r tools/requirements-assert_version.txt
+  #         python tools/assert_version.py
 
 
   # python-pre-publish-windows:
