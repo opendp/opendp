@@ -1,0 +1,73 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[top=1in, right=1in, left=1in, bottom=1.5in]{geometry}
+
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{xr}
+\usepackage[outputdir=./out]{minted}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  linkbordercolor={0 0 1}
+}
+
+
+% Pseudocode
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\setminted[python]{
+    firstline=2,
+    firstnumber=1,
+    linenos=true,
+    numbersep=5pt,
+    gobble=0,
+    frame=leftline,
+    framerule=0.4pt,
+    framesep=2mm,
+    funcnamehighlighting=true,
+    tabsize=4,
+    obeytabs=false,
+    mathescape=false
+    showspaces=false,
+    showtabs =false,
+    texcomments=true,
+    fontsize=\small
+}
+% Commands
+\newcommand{\dependsOn}[2]{\immediate\write18{
+    mkdir -p out_deps && 
+    git show #1:#2 > ./out_deps/$(basename #2)
+}}
+
+\newcommand{\MultiSet}{\mathrm{MultiSet}}
+\newcommand{\MultiSets}{\mathrm{MultiSets}}
+\newcommand{\len}{\mathrm{len}}
+\newcommand{\din}{\mathrm{d_{in}}}
+\newcommand{\dout}{\mathrm{d_{out}}}
+\newcommand{\Relation}{\mathrm{Relation}}
+\newcommand{\question}[1]{\textcolor{red}{\textbf{Question:} #1}}
+\newcommand{\ellOne}{\mathrm{\ell_1}}
+\newcommand{\maxUsize}{\texttt{usize::MAX}}
+\newcommand{\function}{\texttt{function}}
+\newcommand{\True}{\texttt{True}}
+\newcommand{\todo}[1]{{\begin{center} \textcolor{teal}{{\huge TODO:} #1}\end{center}}}
+\newcommand{\notebig}[1]{{ \textcolor{red}{{\huge Note:} #1}}}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\theoremstyle{definition}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{observation}{Observation}
+\newtheorem{note}{Note}
+\newtheorem{hope}{Hope}
+\newtheorem{warning}{Warning}
+\newtheorem{problem}{Problem}
+\newtheorem{fear}{Fear}

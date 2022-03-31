@@ -99,7 +99,7 @@ pub trait SampleBernoulli<T>: Sized {
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self>;
 }
 
-impl<T: Copy + One + Zero + PartialOrd + SampleExponent> SampleBernoulli<T> for bool
+impl<T: Copy + One + Zero + PartialOrd + SampleUniformExponent> SampleBernoulli<T> for bool
     where T::Bits: PartialOrd {
 
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
@@ -110,9 +110,9 @@ impl<T: Copy + One + Zero + PartialOrd + SampleExponent> SampleBernoulli<T> for 
         }
 
         // repeatedly flip fair coin (up to 1023 times) and identify index (0-based) of first heads
-        let first_heads_index = T::sample_exponent(constant_time)?;
+        let first_heads_index = T::sample_uniform_exponent(constant_time)?;
 
-        // if prob == 1., return after retrieving censored_specific_geom, to protect constant time
+        // if prob == 1., return after retrieving first_heads_index, to protect constant time
         // if prob == 1., then exponent is T::EXPONENT_PROB and mantissa is zero
         if prob == T::one() { return Ok(true) }
 
@@ -188,7 +188,7 @@ impl SampleUniform for f64 {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
 
         // A saturated mantissa with implicit bit is ~2
-        let exponent: i16 = -(1 + f64::sample_exponent(constant_time)? as i16);
+        let exponent: i16 = -(1 + f64::sample_uniform_exponent(constant_time)? as i16);
 
         let mantissa: u64 = {
             let mut mantissa_buffer = [0u8; 8];
@@ -233,8 +233,8 @@ fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Opti
 
     } else {
         // retrieve up to B bytes, each containing 8 trials
+        let mut buffer = [0_u8; 1];
         for i in 0..B {
-            let mut buffer = vec![0_u8; 1];
             fill_bytes(&mut buffer)?;
 
             if buffer[0] > 0 {
@@ -245,11 +245,11 @@ fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Opti
     })
 }
 
-pub trait SampleExponent: FloatBits {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits>;
+pub trait SampleUniformExponent: FloatBits {
+    fn sample_uniform_exponent(constant_time: bool) -> Fallible<Self::Bits>;
 }
-impl SampleExponent for f64 {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
+impl SampleUniformExponent for f64 {
+    fn sample_uniform_exponent(constant_time: bool) -> Fallible<Self::Bits> {
         // return index of the first true bit in a randomly sampled 128 byte buffer
         // return 1022 if no events occurred because 1023 is specially reserved for inf, -inf, NaN
         //     (incurs a slight violation of DP)
@@ -257,8 +257,8 @@ impl SampleExponent for f64 {
         Ok(cmp::min(sample, 1022) as Self::Bits)
     }
 }
-impl SampleExponent for f32 {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
+impl SampleUniformExponent for f32 {
+    fn sample_uniform_exponent(constant_time: bool) -> Fallible<Self::Bits> {
         // return index of the first true bit in a randomly sampled 16 byte buffer
         // return 126 if no events occurred because 127 is specially reserved for inf, -inf, NaN
         //     (incurs a slight violation of DP)
@@ -268,13 +268,13 @@ impl SampleExponent for f32 {
 }
 
 
-pub trait SampleGeometric: Sized {
+pub trait SampleGeometric<S>: Sized {
 
     /// Sample from the censored geometric distribution with parameter `prob`.
     /// If `trials` is None, there are no timing protections, and the support is:
     ///     [Self::MIN, Self::MAX]
-    /// If `trials` is Some, execution runs in constant time, and the support is
-    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    /// If `trials` is Some(t), execution runs in constant time, and the support is
+    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `t`}}
     ///
     /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
     ///
@@ -294,15 +294,18 @@ pub trait SampleGeometric: Sized {
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();
     /// ```
-    fn sample_geometric(shift: Self, positive: bool, prob: f64, trials: Option<Self>) -> Fallible<Self>;
+    fn sample_geometric(shift: Self, positive: bool, prob: S, trials: Option<Self>) -> Fallible<Self>;
 }
 
-impl<T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded> SampleGeometric for T {
+impl<T, S> SampleGeometric<S> for T
+    where T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded,
+          S: num::Float + Copy + One + Zero + PartialOrd + SampleUniformExponent,
+          S::Bits: PartialOrd {
 
-    fn sample_geometric(mut shift: Self, positive: bool, prob: f64, mut trials: Option<Self>) -> Fallible<Self> {
+    fn sample_geometric(mut shift: Self, positive: bool, prob: S, mut trials: Option<Self>) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
-        if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
+        if !(S::zero()..=S::one()).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
         let bound = if positive { Self::max_value() } else { Self::min_value() };
         let mut success: bool = false;
@@ -331,7 +334,7 @@ impl<T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded> Sample
     }
 }
 
-pub trait SampleTwoSidedGeometric: SampleGeometric {
+pub trait SampleTwoSidedGeometric<S>: SampleGeometric<S> {
 
     /// Sample from the censored two-sided geometric distribution with parameter `prob`.
     /// If `bounds` is None, there are no timing protections, and the support is:
@@ -357,11 +360,13 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     /// # geom.unwrap_test();
     /// ```
     fn sample_two_sided_geometric(
-        shift: Self, scale: f64, bounds: Option<(Self, Self)>
+        shift: Self, scale: S, bounds: Option<(Self, Self)>
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub> SampleTwoSidedGeometric for T {
+impl<T, S> SampleTwoSidedGeometric<S> for T
+    where T: Clone + SampleGeometric<S> + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub,
+          S: num::Float + InfExp + InfSub + InfDiv + InfAdd + SampleUniform {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the
@@ -375,7 +380,7 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
     ///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
     ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
     ///             the analyst can deduce that the input was greater than or equal to upper
-    fn sample_two_sided_geometric(mut shift: T, scale: f64, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+    fn sample_two_sided_geometric(mut shift: T, scale: S, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
         if scale.is_zero() {return Ok(shift)}
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
@@ -384,7 +389,7 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
         } else {None};
 
         // make alpha conservatively larger
-        let inf_alpha: f64 = (-scale.recip()).inf_exp()?;
+        let inf_alpha: S = (-scale.recip()).inf_exp()?;
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
@@ -394,16 +399,16 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
 
         // TODO: check MIR for reordering that moves these samples inside the conditional
         // TODO: benchmark execution time on different inputs
-        let uniform = f64::sample_standard_uniform(bounds.is_some())?;
+        let uniform = S::sample_standard_uniform(bounds.is_some())?;
         let direction = bool::sample_standard_bernoulli()?;
         // make prob conservatively smaller, because a smaller probability means greater noise
         let geometric = T::sample_geometric(
-            shift.clone(), direction, (1.).neg_inf_sub(&inf_alpha)?, trials)?;
+            shift.clone(), direction, S::one().neg_inf_sub(&inf_alpha)?, trials)?;
 
         // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
         // rounding should always make threshold smaller
-        let threshold = (1.).neg_inf_sub(&inf_alpha)?.neg_inf_div(
-            &(1.).inf_add(&inf_alpha)?)?;
+        let threshold = S::one().neg_inf_sub(&inf_alpha)?.neg_inf_div(
+            &S::one().inf_add(&inf_alpha)?)?;
         let noised = if uniform < threshold { shift } else { geometric };
 
         Ok(if let Some((lower, upper)) = bounds {

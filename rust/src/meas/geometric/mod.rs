@@ -10,37 +10,39 @@ use num::Float;
 use crate::traits::{DistanceConstant, InfCast, CheckNull, TotalOrd};
 
 
-pub trait GeometricDomain: Domain {
+pub trait GeometricDomain<S>: Domain {
     type InputMetric: SensitivityMetric<Distance=Self::Atom> + Default;
     // Atom is an alias for Self::InputMetric::Distance.
     // It would be possible to fill this with associated type defaults: https://github.com/rust-lang/rust/issues/29661
     type Atom;
     fn new() -> Self;
-    fn noise_function(scale: f64, bounds: Option<(Self::Atom, Self::Atom)>) -> Function<Self, Self>;
+    fn noise_function(scale: S, bounds: Option<(Self::Atom, Self::Atom)>) -> Function<Self, Self>;
 }
 
 
-impl<T> GeometricDomain for AllDomain<T>
-    where T: 'static + Clone + SampleTwoSidedGeometric + CheckNull {
+impl<T, S> GeometricDomain<S> for AllDomain<T>
+    where T: 'static + Clone + SampleTwoSidedGeometric<S> + CheckNull,
+          S: 'static + Clone {
     type InputMetric = AbsoluteDistance<T>;
     type Atom = T;
 
     fn new() -> Self { AllDomain::new() }
-    fn noise_function(scale: f64, bounds: Option<(T, T)>) -> Function<Self, Self> {
+    fn noise_function(scale: S, bounds: Option<(T, T)>) -> Function<Self, Self> {
         Function::new_fallible(move |arg: &Self::Carrier|
-            T::sample_two_sided_geometric(arg.clone(), scale, bounds.clone()))
+            T::sample_two_sided_geometric(arg.clone(), scale.clone(), bounds.clone()))
     }
 }
 
-impl<T> GeometricDomain for VectorDomain<AllDomain<T>>
-    where T: 'static + Clone + SampleTwoSidedGeometric + CheckNull {
+impl<T, S> GeometricDomain<S> for VectorDomain<AllDomain<T>>
+    where T: 'static + Clone + SampleTwoSidedGeometric<S> + CheckNull,
+          S: 'static + Clone {
     type InputMetric = L1Distance<T>;
     type Atom = T;
 
     fn new() -> Self { VectorDomain::new_all() }
-    fn noise_function(scale: f64, bounds: Option<(T, T)>) -> Function<Self, Self> {
+    fn noise_function(scale: S, bounds: Option<(T, T)>) -> Function<Self, Self> {
         Function::new_fallible(move |arg: &Self::Carrier| arg.iter()
-            .map(|v| T::sample_two_sided_geometric(v.clone(), scale, bounds.clone()))
+            .map(|v| T::sample_two_sided_geometric(v.clone(), scale.clone(), bounds.clone()))
             .collect())
     }
 }
@@ -48,7 +50,7 @@ impl<T> GeometricDomain for VectorDomain<AllDomain<T>>
 pub fn make_base_geometric<D, QO>(
     scale: QO, bounds: Option<(D::Atom, D::Atom)>
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
-    where D: 'static + GeometricDomain,
+    where D: 'static + GeometricDomain<QO>,
           D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
           QO: 'static + Float + DistanceConstant<D::Atom>,
           f64: InfCast<QO> {
@@ -62,7 +64,7 @@ pub fn make_base_geometric<D, QO>(
     Ok(Measurement::new(
         D::new(),
         D::new(),
-        D::noise_function(f64::inf_cast(scale)?, bounds),
+        D::noise_function(scale, bounds),
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyRelation::new_all(
