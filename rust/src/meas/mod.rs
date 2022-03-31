@@ -8,6 +8,12 @@ pub mod laplace;
 #[cfg(all(feature="floating-point", feature="contrib"))]
 pub use crate::meas::laplace::*;
 
+
+#[cfg(all(feature="floating-point", feature="contrib"))]
+pub mod discrete_laplace;
+#[cfg(all(feature="floating-point", feature="contrib"))]
+pub use crate::meas::discrete_laplace::*;
+
 #[cfg(all(feature="floating-point", feature="contrib"))]
 pub mod gaussian;
 #[cfg(all(feature="floating-point", feature="contrib"))]
