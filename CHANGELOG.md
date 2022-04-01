@@ -8,6 +8,13 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+### Added
+- Support for Apple silicon (`aarch64-apple-darwin` target)
+- More example notebooks
+
+### Changed
+- Switched to a single Rust crate (merged `opendp-ffi` into `opendp`)
+
 
 ## [0.4.0] - 2021-12-10
 [0.4.0]: https://github.com/opendp/opendp/compare/v0.3.0...v0.4.0
