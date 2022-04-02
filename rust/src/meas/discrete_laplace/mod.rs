@@ -3,22 +3,25 @@ mod ffi;
 
 use num::{Float, One, Zero};
 
-use crate::core::{Domain, Function, Measurement, PrivacyRelation, SensitivityMetric};
-use crate::dist::{AbsoluteDistance, MaxDivergence, L1Distance};
+use crate::core::{Domain, Measurement, SensitivityMetric};
+use crate::dist::{AbsoluteDistance, L1Distance, MaxDivergence};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
+use crate::meas::make_base_geometric;
 use crate::samplers::{
-    SampleLaplace, SampleTwoSidedGeometric, SampleUniform, SampleUniformExponent,
+    SampleLaplace, SampleUniform, SampleUniformExponent,
 };
 use crate::traits::{
     CheckNull, InfAdd, InfCast, InfDiv, InfExp, InfMul, InfSub, RoundCast, TotalOrd,
 };
+use crate::trans::{make_integerize, make_lipschitz_extension, LipschitzDomain};
 
-pub trait LaplaceDomain: Domain {
+type IntegerAtom = i64;
+
+pub trait LaplaceDomain: LipschitzDomain {
     type Metric: SensitivityMetric<Distance = Self::Atom> + Default;
     type Atom;
-    fn new() -> Self;
-    fn noise_function(k: Self::Atom, scale: Self::Atom, bounds: Option<(i64, i64)>) -> Function<Self, Self>;
+    type IntegerDomain: Domain;
 }
 
 impl<T> LaplaceDomain for AllDomain<T>
@@ -42,17 +45,7 @@ where
 {
     type Metric = AbsoluteDistance<T>;
     type Atom = Self::Carrier;
-
-    fn new() -> Self {
-        AllDomain::new()
-    }
-    fn noise_function(l: Self::Atom, scale: Self::Atom, bounds: Option<(i64, i64)>) -> Function<Self, Self> {
-        Function::new_fallible(move |arg: &Self::Carrier| {
-            let int_value = i64::round_cast(arg.clone() * l)?;
-            let pri_value = i64::sample_two_sided_geometric(int_value, scale, bounds)?;
-            Self::Carrier::round_cast(pri_value)
-        })
-    }
+    type IntegerDomain = AllDomain<IntegerAtom>;
 }
 
 impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
@@ -76,19 +69,7 @@ where
 {
     type Metric = L1Distance<T>;
     type Atom = T;
-
-    fn new() -> Self {
-        VectorDomain::new_all()
-    }
-    fn noise_function(l: Self::Atom, scale: Self::Atom, bounds: Option<(i64, i64)>) -> Function<Self, Self> {
-        Function::new_fallible(move |arg: &Self::Carrier| {
-            arg.iter().map(|v| {
-                let int_value = i64::round_cast(v.clone() * l)?;
-                let pri_value = i64::sample_two_sided_geometric(int_value, scale, bounds)?;
-                Self::Atom::round_cast(pri_value)
-            }).collect()
-        })
-    }
+    type IntegerDomain = VectorDomain<AllDomain<IntegerAtom>>;
 }
 
 pub fn make_base_discrete_laplace<D>(
@@ -97,7 +78,7 @@ pub fn make_base_discrete_laplace<D>(
     granularity: Option<D::Atom>,
 ) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
 where
-    D: LaplaceDomain,
+    D: LaplaceDomain + Default,
     D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<f64> + CheckNull + TotalOrd + InfMul,
     i64: RoundCast<D::Atom>,
 {
@@ -110,31 +91,19 @@ where
     // derive the constant to convert to int space
     let c: D::Atom = (-granularity.log2().ceil()).exp2();
     // translate bounds to int space
-    let bounds: Option<(i64, i64)> = bounds.map(|(l, u): (_, _)| 
-        Result::<_, Error>::Ok((i64::round_cast(l * c)?, i64::round_cast(u * c)?))).transpose()?;
+    let bounds: Option<(i64, i64)> = bounds
+        .map(|(l, u): (_, _)| {
+            Result::<_, Error>::Ok((i64::round_cast(l * c)?, i64::round_cast(u * c)?))
+        })
+        .transpose()?;
 
     let scale: D::Atom = scale * c;
 
-    Ok(Measurement::new(
-        D::new(),
-        D::new(),
-        D::noise_function(c, scale.clone(), bounds),
-        D::Metric::default(),
-        MaxDivergence::default(),
-        PrivacyRelation::new_all(
-            move |d_in: &D::Atom, d_out: &D::Atom| {
-                if d_in.is_sign_negative() {
-                    return fallible!(InvalidDistance, "sensitivity must be non-negative");
-                }
-                if d_out.is_sign_negative() {
-                    return fallible!(InvalidDistance, "epsilon must be non-negative");
-                }
-                // d_out * scale >= d_in
-                Ok(d_out.neg_inf_mul(&scale)? >= d_in.clone())
-            },
-            Some(move |d_out: &D::Atom| d_out.neg_inf_mul(&scale)),
-        ),
-    ))
+    make_lipschitz_extension::<D, D::Metric>(c)?
+        >> make_integerize::<D, D::IntegerDomain, D::Metric>()?
+        >> make_base_geometric::<D::IntegerDomain, D::Atom>(scale, bounds)?
+        >> make_integerize::<D::IntegerDomain, D, D::Metric>()?
+        >> make_lipschitz_extension::<D, D::Metric>(c.recip())
 }
 
 #[cfg(test)]
@@ -144,8 +113,8 @@ mod tests {
 
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
-        let chain =
-            (make_sized_bounded_mean(3, (10.0, 12.0))? >> make_base_discrete_laplace(1.0, None, None)?)?;
+        let chain = (make_sized_bounded_mean(3, (10.0, 12.0))?
+            >> make_base_discrete_laplace(1.0, None, None)?)?;
         let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
         Ok(())
     }
