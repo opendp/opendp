@@ -9,9 +9,25 @@
 \begin{document}
 
 \maketitle
+
+The discrete laplace measurement adds an approximation to laplacian noise to an input argument.
+We can't just add laplacian noise directly, because it doesn't admit $\epsilon$ differential privacy.
+
+Instead use a discrete version of laplacian noise, sampled from the two-sided geometric distribution.
+To use this distribution, must first scale up the inputs to be represented in an integer space.
+
+We essentially discretize the set of real numbers into integers, noise the integers, and then scale back to the real number line (floats).
+
+To transform into the integer space, we need to rescale the inputs by some factor c, and then cast to the nearest integer.
+We track the stability of these transforms indirectly through the $\texttt{make\_lipschitz\_extension}$ and $\texttt{make\_integerize}$ transformation constructors.
+The $\texttt{make\_base\_discrete\_laplace}$ is simply a chain of existing transformations, measurements and postprocessing.
+
+
 \section{Pseudocode}
 \label{sec:python-pseudocode}
 
 \inputminted{python}{pseudocode.py}
+
+\section{Proof: Privacy Relation}
 
 \end{document}
