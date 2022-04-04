@@ -84,6 +84,7 @@ macro_rules! cartesian {
     ([$($a:tt)*], $lower:tt, $diag:tt, $upper:tt) =>
         (cartesian!{@diag[], [$($a)*], [], [$($a)*], $lower, $diag, $upper});
 }
+pub(crate) use cartesian;
 
 
 // TRAIT ExactIntCast

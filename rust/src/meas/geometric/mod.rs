@@ -52,8 +52,7 @@ pub fn make_base_geometric<D, QO>(
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
     where D: 'static + GeometricDomain<QO>,
           D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
-          QO: 'static + Float + DistanceConstant<D::Atom>,
-          f64: InfCast<QO> {
+          QO: 'static + Float + DistanceConstant<D::Atom>, {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
