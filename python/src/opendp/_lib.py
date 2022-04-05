@@ -10,16 +10,13 @@ ATOM_EQUIVALENCE_CLASSES = {
     'bool': ['bool']
 }
 
-lib = None
-if os.environ.get('OPENDP_HEADLESS', "false") == "false":
-    lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
-    if not os.path.exists(lib_dir):
-        # fall back to default location of binaries in a developer install
-        build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
-        lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
-    if not os.path.exists(lib_dir):
-        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
+if not os.path.exists(lib_dir):
+    # fall back to default location of binaries in a developer install
+    build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
+    lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
 
+if os.path.exists(lib_dir):
     platform_to_name = {
         "darwin": "libopendp.dylib",
         "linux": "libopendp.so",
@@ -30,6 +27,12 @@ if os.environ.get('OPENDP_HEADLESS', "false") == "false":
     lib_name = platform_to_name[sys.platform]
 
     lib = ctypes.cdll.LoadLibrary(os.path.join(lib_dir, lib_name))
+
+elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
+    lib = None
+
+else:
+    raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
 
 
 class FfiSlice(ctypes.Structure):

@@ -4,13 +4,13 @@ import sys
 import os
 from datetime import datetime
 
-# We're inside source when this runs.
-sys.path.append(os.path.abspath('../../python/src'))
-# print("*****************************************")
-# [print(p) for p in sys.path]
-# print("*****************************************")
+# docs should be built without needing import the library binary for the specified version
+os.environ["OPENDP_HEADLESS"] = "true"
 
-print("*****************************************")
+# We're inside source when this runs.
+# Docs would be the same for all versions. Fix from: https://github.com/Holzhaus/sphinx-multiversion/issues/42
+rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default="."), "..", "..", "python", "src")
+sys.path.insert(0, rootdir)
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -119,7 +119,6 @@ rustdoc_cmd = '(cd ../rust && cargo doc --no-deps --target-dir ../docs/source/ap
 # TODO: Figure out how to use locally generated Rust docs for latest branch only.
 #smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd, rustdoc_cmd])
 smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd])
-
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
 #html_file_suffix = None
