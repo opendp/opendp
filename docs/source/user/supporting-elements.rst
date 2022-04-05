@@ -189,7 +189,7 @@ Be careful: even a dataset query to determine the greatest number of contributio
 Type Arguments
 --------------
 
-Many of the API docs reference this type on type arguments like `TIA` or `D`.
+Many of the API docs reference RuntimeTypeDescriptor on type arguments like `TIA` or `D`.
 When you want to describe the type of a domain, metric, measure, or other elements, you can do so via a type descriptor.
 The canonical form is a literal string, like `"i32"` to denote that the type should be a 32-bit integer,
 or `"SymmetricDistance"` to denote the type of a metric.
