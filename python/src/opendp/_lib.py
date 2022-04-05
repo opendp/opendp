@@ -29,7 +29,6 @@ if os.path.exists(lib_dir):
     lib = ctypes.cdll.LoadLibrary(os.path.join(lib_dir, lib_name))
 
 elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
-    print("Not using lib.")
     lib = None
 
 else:
