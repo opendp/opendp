@@ -55,3 +55,8 @@ crate-type = ["rlib", "cdylib"]
 [dev-dependencies]
 # this enables the "untrusted" feature flag by default when doing tests
 opendp = { path = ".", features = ["untrusted"] }
+criterion = "0.3"
+
+[[bench]]
+name = "mod"
+harness = false
