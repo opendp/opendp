@@ -5,7 +5,7 @@ use crate::{
     dist::{AbsoluteDistance, LpDistance},
     dom::{AllDomain, VectorDomain},
     error::{ExplainUnwrap, Fallible},
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, RoundCast, InfAdd},
+    traits::{AlertingAbs, CheckNull, DistanceConstant, InfAdd, InfCast, RoundCast},
 };
 
 pub trait LipschitzMulDomain: Domain {
@@ -59,14 +59,14 @@ where
     ))
 }
 
-pub trait LipschitzCastDomain<DO>: Domain
+pub trait LipschitzCastDomain<DI>: Domain
 where
-    DO: Domain,
+    DI: Domain,
 {
-    fn transform(v: &Self::Carrier) -> DO::Carrier;
+    fn transform(v: &DI::Carrier) -> Self::Carrier;
 }
 
-impl<TI, TO> LipschitzCastDomain<AllDomain<TO>> for AllDomain<TI>
+impl<TI, TO> LipschitzCastDomain<AllDomain<TI>> for AllDomain<TO>
 where
     TI: CheckNull + Clone,
     TO: RoundCast<TI> + CheckNull,
@@ -77,13 +77,13 @@ where
     }
 }
 
-impl<DI, DO> LipschitzCastDomain<VectorDomain<DO>> for VectorDomain<DI>
+impl<DI, DO> LipschitzCastDomain<VectorDomain<DI>> for VectorDomain<DO>
 where
-    DI: LipschitzCastDomain<DO>,
-    DO: Domain,
+    DI: Domain,
+    DO: LipschitzCastDomain<DI>,
 {
     fn transform(v: &Vec<DI::Carrier>) -> Vec<DO::Carrier> {
-        v.iter().map(DI::transform).collect()
+        v.iter().map(DO::transform).collect()
     }
 }
 
@@ -105,6 +105,13 @@ pub trait GreatestDifference<TI> {
     const C: Self;
 }
 
+macro_rules! impl_greatest_cast_0 {
+    ($tyi:ty, $tyo:ty) => {
+        impl GreatestDifference<$tyi> for $tyo {
+            const C: Self = 0;
+        }
+    };
+}
 macro_rules! impl_greatest_cast_1 {
     ($tyi:ty, $tyo:ty) => {
         impl GreatestDifference<$tyi> for $tyo {
@@ -121,38 +128,60 @@ macro_rules! impl_greatest_cast_inf {
 }
 
 use crate::traits::cartesian;
-
 // integers
-cartesian! {[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_greatest_cast_1}
-// top right
-cartesian!([f32, f64], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_greatest_cast_1);
-// bottom left
-cartesian!([u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], [f32, f64], impl_greatest_cast_inf);
-// bottom right
-cartesian!([f32, f64], [f32, f64], impl_greatest_cast_inf);
-
+cartesian! {[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_greatest_cast_1, impl_greatest_cast_0, impl_greatest_cast_1}
+// float to int
+cartesian!(
+    [f32, f64],
+    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128],
+    impl_greatest_cast_1
+);
+// int to float (essentially unimplemented; the bounds are infinitely loose)
+cartesian!(
+    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128],
+    [f32, f64],
+    impl_greatest_cast_inf
+);
+// float to float
+impl GreatestDifference<f64> for f32 {
+    const C: Self = f32::INFINITY;
+}
+impl GreatestDifference<f32> for f64 {
+    const C: Self = f64::INFINITY;
+}
+impl GreatestDifference<f32> for f32 {
+    const C: Self = 0.;
+}
+impl GreatestDifference<f64> for f64 {
+    const C: Self = 0.;
+}
 /// Create a data transformation that rounds a float to the nearest integer on an arbitrary input domain.
 ///
 pub fn make_lipschitz_cast<DI, DO, MI, MO>() -> Fallible<Transformation<DI, DO, MI, MO>>
 where
-    (MI, MO): SameMetric<MI, MO>,
     DI: Domain + Default,
-    DO: Domain + Default,
+    DO: LipschitzCastDomain<DI> + Default,
     MI: Metric,
     MO: Metric,
-    MO::Distance: 'static + InfCast<MI::Distance> + GreatestDifference<MI::Distance> + InfAdd + Clone + PartialOrd,
     MI::Distance: 'static + Clone,
-    DI: LipschitzCastDomain<DO>,
+    MO::Distance: 'static
+        + Clone
+        + InfCast<MI::Distance>
+        + GreatestDifference<MI::Distance>
+        + InfAdd
+        + PartialOrd,
+    (MI, MO): SameMetric<MI, MO>,
 {
     Ok(Transformation::new(
         DI::default(),
         DO::default(),
-        Function::new(|arg: &DI::Carrier| DI::transform(arg)),
+        Function::new(|arg: &DI::Carrier| DO::transform(arg)),
         MI::default(),
         MO::default(),
         StabilityRelation::new_all(
             |d_in: &MI::Distance, d_out: &MO::Distance| {
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_add(&MO::Distance::C)?)
+                Ok(d_out.clone()
+                    >= MO::Distance::inf_cast(d_in.clone())?.inf_add(&MO::Distance::C)?)
             },
             Some(|d_in: &MI::Distance| {
                 Ok(MO::Distance::inf_cast(d_in.clone())?.inf_add(&MO::Distance::C)?)
@@ -176,8 +205,12 @@ pub mod test {
 
     #[test]
     fn test_integerize() -> Fallible<()> {
-        let integerizer =
-            make_lipschitz_cast::<AllDomain<f64>, AllDomain<i64>, AbsoluteDistance<f64>, AbsoluteDistance<i64>>()?;
+        let integerizer = make_lipschitz_cast::<
+            AllDomain<f64>,
+            AllDomain<i64>,
+            AbsoluteDistance<f64>,
+            AbsoluteDistance<i64>,
+        >()?;
         assert_eq!(integerizer.invoke(&1.3)?, 1);
         println!("{:?}", integerizer.invoke(&1.3));
         Ok(())

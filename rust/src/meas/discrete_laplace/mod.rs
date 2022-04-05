@@ -20,19 +20,17 @@ use super::GeometricDomain;
 
 pub trait DiscreteLaplaceDomain<I>:
     LipschitzMulDomain + LipschitzCastDomain<Self::IntegerDomain>
-// where
-//     (Self::Metric, Self::IntegerMetric): SameMetric<Self::Metric, Self::IntegerMetric>,
-//     (Self::IntegerMetric, Self::Metric): SameMetric<Self::IntegerMetric, Self::Metric>,
 {
     type Metric: SensitivityMetric<Distance = Self::Atom> + Default;
     type IntegerMetric: Metric<Distance = I>;
     type IntegerDomain: GeometricDomain<Self::Atom, Atom = I, InputMetric = Self::IntegerMetric>
+        + LipschitzCastDomain<Self>
         + Default;
 }
 
 impl<T, I> DiscreteLaplaceDomain<I> for AllDomain<T>
 where
-    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T>,
+    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T> + RoundCast<I>,
     I: 'static + RoundCast<T> + CheckNull + Integer + Clone + SampleTwoSidedGeometric<T>,
 {
     type Metric = AbsoluteDistance<T>;
@@ -42,7 +40,7 @@ where
 
 impl<T, I> DiscreteLaplaceDomain<I> for VectorDomain<AllDomain<T>>
 where
-    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T>,
+    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T> + RoundCast<I>,
     I: 'static + RoundCast<T> + CheckNull + Integer + Clone + SampleTwoSidedGeometric<T>,
 {
     type Metric = L1Distance<T>;
@@ -79,7 +77,7 @@ where
         + GreatestDifference<D::Atom>
         + InfAdd,
     D::Metric: LipschitzMulMetric + Default,
-    D::IntegerDomain: LipschitzCastDomain<D> + GeometricDomain<D::Atom, Atom = I>,
+    D::IntegerDomain: GeometricDomain<D::Atom, Atom = I>,
     I: 'static
         + InfCast<D::Atom>
         + RoundCast<D::Atom>
@@ -123,7 +121,7 @@ mod tests {
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
         let chain = (make_sized_bounded_mean(3, (10.0, 12.0))?
-            >> make_base_discrete_laplace::<_, i64>(1.0, None, None)?)?;
+            >> make_base_discrete_laplace::<_, i64>(1.0f64, None, None)?)?;
         let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
         Ok(())
     }
