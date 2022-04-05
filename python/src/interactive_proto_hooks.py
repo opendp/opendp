@@ -37,7 +37,10 @@ class NestedQueryable:
         self.parent = parent
         self.children = []
         self.state = initial_state
-        self.transition = transition  # fn: (self, target_index_path, state, question) -> (state, answer)
+        self.transition = transition  # fn: (Q x S) -> (A x S)
+        self.pre_transition = None    # fn: (Q x S) -> (M x S')
+        self.response_map = {}        # fn: I -> M x S -> M' x S
+        self.post_transition = None   # fn: (M' x S') -> (A x S)
 
     def query(self, question):
         (answer, new_state) = self.transition(self, question, self.state)
