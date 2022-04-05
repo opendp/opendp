@@ -5,84 +5,79 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
-    "_error_free",
-    "_transformation_free",
-    "_measurement_free",
-    "transformation_check",
-    "measurement_check",
     "measurement_invoke",
     "transformation_invoke",
+    "transformation_check",
+    "measurement_check",
     "transformation_input_carrier_type",
     "measurement_input_carrier_type",
     "transformation_input_distance_type",
     "transformation_output_distance_type",
     "measurement_input_distance_type",
-    "measurement_output_distance_type"
+    "measurement_output_distance_type",
+    "_error_free",
+    "_transformation_free",
+    "_measurement_free"
 ]
 
 
-def _error_free(
-    error: FfiError
-) -> bool:
-    """Internal function. Free the memory associated with `error`.
+def measurement_invoke(
+    measurement: Measurement,
+    arg: Any
+) -> Any:
+    """Invoke the `measurement` with `arg`. Returns a differentially private release.
     
-    :param error: 
-    :type error: FfiError
-    :return: true indicates successful free
-    :rtype: bool
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    """
-    # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_core___error_free
-    function.argtypes = [ctypes.POINTER(FfiError)]
-    function.restype = ctypes.c_bool
-    
-    return c_to_py(function(error))
-
-
-def _transformation_free(
-    transformation: Transformation
-):
-    """Internal function. Free the memory associated with `transformation`.
-    
-    :param transformation: 
-    :type transformation: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_core___transformation_free
-    function.argtypes = [Transformation]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(transformation), ctypes.c_void_p))
-
-
-def _measurement_free(
-    measurement: Measurement
-):
-    """Internal function. Free the memory associated with `measurement`.
-    
-    :param measurement: 
+    :param measurement: Measurement to invoke.
     :type measurement: Measurement
+    :param arg: Input data to supply to the measurement. A member of the measurement's input domain.
+    :type arg: Any
+    :return: Differentially private release.
+    :rtype: Any
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement)
+    arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=measurement_input_carrier_type(measurement))
+    
     # Call library function.
-    function = lib.opendp_core___measurement_free
-    function.argtypes = [Measurement]
+    function = lib.opendp_core__measurement_invoke
+    function.argtypes = [Measurement, AnyObjectPtr]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(measurement), ctypes.c_void_p))
+    return c_to_py(unwrap(function(measurement, arg), AnyObjectPtr))
+
+
+def transformation_invoke(
+    transformation: Transformation,
+    arg: Any
+) -> Any:
+    """Invoke the `transformation` with `arg`. 
+    The response is not differentially private as it has not been chained with a measurement.
+    
+    :param transformation: Transformation to invoke.
+    :type transformation: Transformation
+    :param arg: Input data to supply to the measurement. A member of the transformations's input domain.
+    :type arg: Any
+    :return: Non-differentially private answer to the query.
+    :rtype: Any
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    transformation = py_to_c(transformation, c_type=Transformation)
+    arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=transformation_input_carrier_type(transformation))
+    
+    # Call library function.
+    function = lib.opendp_core__transformation_invoke
+    function.argtypes = [Transformation, AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation, arg), AnyObjectPtr))
 
 
 def transformation_check(
@@ -149,65 +144,6 @@ def measurement_check(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement, d_in, d_out), BoolPtr))
-
-
-def measurement_invoke(
-    measurement: Measurement,
-    arg: Any
-) -> Any:
-    """Invoke the `measurement` with `arg`. Returns a differentially private release.
-    
-    :param measurement: Measurement to invoke.
-    :type measurement: Measurement
-    :param arg: Input data to supply to the measurement. A member of the measurement's input domain.
-    :type arg: Any
-    :return: Differentially private release.
-    :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement)
-    arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=measurement_input_carrier_type(measurement))
-    
-    # Call library function.
-    function = lib.opendp_core__measurement_invoke
-    function.argtypes = [Measurement, AnyObjectPtr]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(measurement, arg), AnyObjectPtr))
-
-
-def transformation_invoke(
-    transformation: Transformation,
-    arg: Any
-) -> Any:
-    """Invoke the `transformation` with `arg`. 
-    The response is not differentially private as it has not been chained with a measurement.
-    
-    :param transformation: Transformation to invoke.
-    :type transformation: Transformation
-    :param arg: Input data to supply to the measurement. A member of the transformations's input domain.
-    :type arg: Any
-    :return: Non-differentially private answer to the query.
-    :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    transformation = py_to_c(transformation, c_type=Transformation)
-    arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=transformation_input_carrier_type(transformation))
-    
-    # Call library function.
-    function = lib.opendp_core__transformation_invoke
-    function.argtypes = [Transformation, AnyObjectPtr]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(transformation, arg), AnyObjectPtr))
 
 
 def transformation_input_carrier_type(
@@ -352,3 +288,67 @@ def measurement_output_distance_type(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement), ctypes.c_char_p))
+
+
+def _error_free(
+    error: FfiError
+) -> bool:
+    """Internal function. Free the memory associated with `error`.
+    
+    :param error: 
+    :type error: FfiError
+    :return: true indicates successful free
+    :rtype: bool
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    """
+    # No type arguments to standardize.
+    # No arguments to convert to c types.
+    # Call library function.
+    function = lib.opendp_core___error_free
+    function.argtypes = [ctypes.POINTER(FfiError)]
+    function.restype = ctypes.c_bool
+    
+    return c_to_py(function(error))
+
+
+def _transformation_free(
+    transformation: Transformation
+):
+    """Internal function. Free the memory associated with `transformation`.
+    
+    :param transformation: 
+    :type transformation: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # No arguments to convert to c types.
+    # Call library function.
+    function = lib.opendp_core___transformation_free
+    function.argtypes = [Transformation]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation), ctypes.c_void_p))
+
+
+def _measurement_free(
+    measurement: Measurement
+):
+    """Internal function. Free the memory associated with `measurement`.
+    
+    :param measurement: 
+    :type measurement: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # No arguments to convert to c types.
+    # Call library function.
+    function = lib.opendp_core___measurement_free
+    function.argtypes = [Measurement]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement), ctypes.c_void_p))

@@ -22,7 +22,7 @@ def laplacian_scale_to_accuracy(
     :param scale: Laplacian noise scale.
     :param alpha: Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1].
     :param T: Data type of scale and alpha
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: Accuracy estimate at a level-alpha.
     :rtype: Any
     :raises AssertionError: if an argument's type differs from the expected type
@@ -55,7 +55,7 @@ def accuracy_to_laplacian_scale(
     :param accuracy: Desired accuracy.
     :param alpha: Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1).
     :param T: Data type of accuracy and alpha
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: Laplacian noise scale that meets the accuracy requirement at a level-alpha.
     :rtype: Any
     :raises AssertionError: if an argument's type differs from the expected type
@@ -88,7 +88,7 @@ def gaussian_scale_to_accuracy(
     :param scale: Gaussian noise scale.
     :param alpha: Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1].
     :param T: Data type of scale and alpha
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: Accuracy estimate at a level-alpha.
     :rtype: Any
     :raises AssertionError: if an argument's type differs from the expected type
@@ -121,7 +121,7 @@ def accuracy_to_gaussian_scale(
     :param accuracy: Desired accuracy.
     :param alpha: Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1).
     :param T: Data type of accuracy and alpha
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: Gaussian noise scale that meets the accuracy requirement at a level-alpha.
     :rtype: Any
     :raises AssertionError: if an argument's type differs from the expected type

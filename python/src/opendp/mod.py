@@ -48,6 +48,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     def invoke(self, arg):
         """Create a differentially-private release with `arg`.
+
+        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release. 
         
         :param arg: Input to the measurement.
         :return: differentially-private release
@@ -57,7 +59,9 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         return measurement_invoke(self, arg)
 
     def check(self, d_in, d_out, *, debug=False) -> bool:
-        """Check if the measurement satisfies the privacy relation at `d_in`, `d_out`.
+        """Check if the measurement is (`d_in`, `d_out`)-close.
+        If true, implies that if the distance between inputs is at most `d_in`, then the privacy usage is at most `d_out`.
+        See also :func:`~Transformation.check`, a similar check for transformations.
         
         :param d_in: Distance in terms of the input metric.
         :param d_out: Distance in terms of the output measure.
@@ -168,7 +172,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         return transformation_invoke(self, arg)
 
     def check(self, d_in, d_out, *, debug=False):
-        """Check if the transformation satisfies the stability relation at `d_in`, `d_out`.
+        """Check if the transformation is (`d_in`, `d_out`)-close.
+        If true, implies that if the distance between inputs is at most `d_in`, then the distance between outputs is at most `d_out`.
+        See also :func:`~Measurement.check`, a similar check for measurements.
 
         :param d_in: Distance in terms of the input metric.
         :param d_out: Distance in terms of the output metric.

@@ -24,7 +24,7 @@ def make_base_laplace(
     
     :param scale: Noise scale parameter of the laplace distribution.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
-    :type D: RuntimeTypeDescriptor
+    :type D: :ref:`RuntimeTypeDescriptor`
     :return: A base_laplace step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -59,7 +59,7 @@ def make_base_gaussian(
     
     :param scale: noise scale parameter to the gaussian distribution
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
-    :type D: RuntimeTypeDescriptor
+    :type D: :ref:`RuntimeTypeDescriptor`
     :return: A base_gaussian step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -95,7 +95,7 @@ def make_base_analytic_gaussian(
     
     :param scale: noise scale parameter to the gaussian distribution
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
-    :type D: RuntimeTypeDescriptor
+    :type D: :ref:`RuntimeTypeDescriptor`
     :return: A base_analytic_gaussian step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -134,9 +134,9 @@ def make_base_geometric(
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
     :type bounds: Any
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
-    :type D: RuntimeTypeDescriptor
+    :type D: :ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the sensitivity, scale, and budget.
-    :type QO: RuntimeTypeDescriptor
+    :type QO: :ref:`RuntimeTypeDescriptor`
     :return: A base_geometric step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -176,7 +176,7 @@ def make_randomized_response_bool(
     :param constant_time: Set to true to enable constant time
     :type constant_time: bool
     :param Q: Data type of probability and budget.
-    :type Q: RuntimeTypeDescriptor
+    :type Q: :ref:`RuntimeTypeDescriptor`
     :return: A randomized_response_bool step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -216,9 +216,9 @@ def make_randomized_response(
     :param constant_time: Set to true to enable constant time
     :type constant_time: bool
     :param T: Data type of a category.
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :param Q: Data type of probability and budget.
-    :type Q: RuntimeTypeDescriptor
+    :type Q: :ref:`RuntimeTypeDescriptor`
     :return: A randomized_response step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -257,9 +257,9 @@ def make_base_ptr(
     :param scale: Noise scale parameter.
     :param threshold: Exclude counts that are less than this minimum value.
     :param TK: Type of Key. Must be hashable/categorical.
-    :type TK: RuntimeTypeDescriptor
+    :type TK: :ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Must be float.
-    :type TV: RuntimeTypeDescriptor
+    :type TV: :ref:`RuntimeTypeDescriptor`
     :return: A base_ptr step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type

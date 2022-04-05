@@ -9,6 +9,14 @@ Refer to the :ref:`transformation` section for an explanation of what a transfor
 As covered in the :ref:`chaining` section, the intermediate :ref:`domains <domains>` need to match when chaining.
 Each transformation has a carefully chosen input domain and output domain that supports their relation.
 
+.. note::
+  If you pass information collected directly from the dataset into constructors, the privacy budget will be underestimated.
+  Constructor arguments should be either:
+
+  * Public information, like information from a codebook or prior domain expertise
+  * Other DP releases on the data
+
+
 Preprocessing is the series of transformations that shape the data into a domain that is conformable with the aggregator.
 
 You will need to choose the proper transformations from the sections below in order to chain with the aggregator you intend to use.
