@@ -383,7 +383,7 @@ def binary_search(
     >>> assert binary_search(lambda x: x < 5, bounds=(0, 10)) == 4
     >>> # Float binary search
     >>> assert binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. < 1e-8
-    >>> assert binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. > -1e-8
+    >>> assert binary_search(lambda x: x < 5., bounds=(0., 10.)) - 5. > -1e-8
 
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
