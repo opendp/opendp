@@ -126,4 +126,5 @@ def unwrap(result, type_) -> Any:
     if not _error_free(err):
         raise OpenDPException("Failed to free error.")
 
+    # rust stack traces follow from here:
     raise OpenDPException(variant, message, backtrace)

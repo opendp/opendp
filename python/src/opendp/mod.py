@@ -268,18 +268,21 @@ class OpenDPException(Exception):
         return re.split(r"\s*[0-9]+: ", self.raw_traceback)
     
     def frames(self):
-        return [f for f in self.raw_frames() if f.startswith("opendp")]
+        def format_frame(frame):
+            return "\n  ".join(l.strip() for l in frame.split("\n"))
+        return [format_frame(f) for f in self.raw_frames() if f.startswith("opendp")]
 
     def __str__(self) -> str:
-        response = self.variant
+        response = ''
+        if self.raw_traceback:
+            # join and split by newlines because frames may be multi-line
+            lines = "\n".join(self.frames()[::-1]).split('\n')
+            response += "Continued Rust stack trace:\n" + '\n'.join('    ' + line for line in lines)
+
+        response += '\n  ' + self.variant
 
         if self.message:
             response += f'("{self.message}")'
-
-        if self.raw_traceback:
-            # join and split by newlines because frames may be multi-line
-            lines = "\n".join(self.frames()).split('\n')
-            response += "\n" + '\n'.join('    ' + line for line in lines)
             
         return response
 
