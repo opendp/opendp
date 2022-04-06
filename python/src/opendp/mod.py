@@ -308,7 +308,9 @@ def binary_search_chain(
         d_in, d_out,
         bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
         tolerance=None) -> Union[Transformation, Measurement]:
-    """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
+    """Useful to find the Transformation or Measurement parameterized with the most ideal constructor argument.
+    
+    Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
     `bounds` defaults to (0., MAX_FINITE_FLOAT).
@@ -327,6 +329,9 @@ def binary_search_chain(
 
     :example:
 
+    >>> # This example finds a base_laplace measurement with 
+    >>> #   the smallest noise scale that is still (d_in, d_out)-close.
+    ...
     >>> from opendp.mod import binary_search_chain, enable_features
     >>> from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
     >>> from opendp.meas import make_base_laplace
@@ -354,7 +359,9 @@ def binary_search_param(
         d_in, d_out,
         bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
         tolerance=None) -> Union[float, int]:
-    """Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
+    """Useful to solve for the most ideal constructor argument.
+    
+    Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
     `bounds` defaults to (0., MAX_FINITE_FLOAT).
@@ -362,6 +369,9 @@ def binary_search_param(
 
     :example:
 
+    >>> # This example finds the smallest noise scale  
+    >>> #   for a base_laplace measurement that is still (d_in, d_out)-close.
+    ...
     >>> from opendp.mod import binary_search_param, enable_features
     >>> from opendp.meas import make_base_laplace
     ...
