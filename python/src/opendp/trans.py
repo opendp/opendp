@@ -380,26 +380,20 @@ def make_count_distinct(
 
 
 def make_count_by(
-    size: int,
     MO: SensitivityMetric,
     TK: RuntimeTypeDescriptor,
     TV: RuntimeTypeDescriptor = "i32"
 ) -> Transformation:
     """Make a Transformation that computes the count of each unique value in data. 
-    This assumes that the category set is unknown. 
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
-    Use `make_resize` to establish dataset size. 
-    This transformation depends on a measurement that has not yet been implemented.
+    This assumes that the category set is unknown.
     
-    :param size: Number of records in input data.
-    :type size: int
     :param MO: Output Metric.
     :type MO: SensitivityMetric
-    :param TK: Type of Key. Categorical/hashable input data type. Input data must be Vec<TI>.
+    :param TK: Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
     :type TK: :ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Express counts in terms of this integral type.
     :type TV: :ref:`RuntimeTypeDescriptor`
-    :return: The carrier type is HashMap<TI, TO>- the counts for each unique data input.
+    :return: The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -413,17 +407,16 @@ def make_count_by(
     TV = RuntimeType.parse(type_name=TV)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
     TK = py_to_c(TK, c_type=ctypes.c_char_p)
     TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_count_by
-    function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, MO, TK, TV), Transformation))
+    return c_to_py(unwrap(function(MO, TK, TV), Transformation))
 
 
 def make_count_by_categories(
