@@ -324,14 +324,14 @@ def binary_search_chain(
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
+    :rtype: Union[Transformation, Measurement]
     :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
 
 
-    :example:
+    :examples:
 
-    >>> # This example finds a base_laplace measurement with 
-    >>> #   the smallest noise scale that is still (d_in, d_out)-close.
-    ...
+    Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
+
     >>> from opendp.mod import binary_search_chain, enable_features
     >>> from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
     >>> from opendp.meas import make_base_laplace
@@ -350,6 +350,21 @@ def binary_search_chain(
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
     >>> assert chain.check(1, 1.)
+
+
+    Build a (2 neighboring, 1. epsilon)-close sized bounded sum with geometric(100.) noise.
+    It should have the widest possible admissible clamping bounds (-b, b).
+
+    >>> from opendp.trans import make_sized_bounded_sum
+    >>> from opendp.meas import make_base_geometric
+    ...
+    >>> def make_sum(b):
+    ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_geometric(100.)
+    ...
+    >>> # `meas` is a Measurement with the widest possible clamping bounds.
+    >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
+    ...
+    >>> # If you want the discovered clamping bound, use `binary_search_param` instead.
     """
     return make_chain(binary_search_param(make_chain, d_in, d_out, bounds, tolerance))
 
@@ -367,11 +382,20 @@ def binary_search_param(
     `bounds` defaults to (0., MAX_FINITE_FLOAT).
     If `bounds` are float, `tolerance` defaults to 1e-8.
 
-    :example:
+    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
+    :param d_in: desired input distance of the computation chain
+    :param d_out: desired output distance of the computation chain
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :return: the nearest passing value to the decision point of the relation
+    :rtype: Union[float, int]
+    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
 
-    >>> # This example finds the smallest noise scale  
-    >>> #   for a base_laplace measurement that is still (d_in, d_out)-close.
-    ...
+
+    :examples:
+
+    Find the smallest noise scale for a base_laplace measurement that is still (d_in, d_out)-close.
+
     >>> from opendp.mod import binary_search_param, enable_features
     >>> from opendp.meas import make_base_laplace
     ...
@@ -384,13 +408,30 @@ def binary_search_param(
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
     >>> assert make_base_laplace(scale).check(0.1, 1.)
 
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
-    :return: the nearest passing value to the decision point of the relation
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+
+    A policy research organization wants to know the smallest sample size necessary to release an "accurate" epsilon=1 DP mean income. 
+    Determine the smallest dataset size such that, with 95% confidence, 
+    the DP release differs from the clipped dataset's mean by no more than 1000. 
+    Assume that neighboring datasets have a symmetric distance at most 2. 
+    Also assume a clipping bound of 500,000.
+
+    >>> # we first work out the necessary noise scale to satisfy the above constraints.
+    >>> from opendp.accuracy import accuracy_to_laplacian_scale
+    >>> necessary_scale = accuracy_to_laplacian_scale(accuracy=1000., alpha=.05)
+    ...
+    >>> # we then write a function that make a computation chain with a given data size
+    >>> def make_mean(data_size):
+    ...    return (
+    ...        make_sized_bounded_mean(data_size, (0., 500_000.)) >> 
+    ...        make_base_laplace(necessary_scale)
+    ...    )
+    ...
+    >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement
+    >>> binary_search_param(
+    ...     make_mean, 
+    ...     d_in=2, d_out=1.,
+    ...     bounds=(1, 1000000))
+    1498
     """
     if bounds is None:
         import sys
@@ -406,7 +447,15 @@ def binary_search(
 
     If `bounds` are float, `tolerance` defaults to 1e-8.
 
-    :example:
+    :param predicate: a monotonic unary function from a number to a boolean
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
+    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :return: the discovered parameter within the bounds
+    :rtype: Union[float, int]
+    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+
+
+    :examples:
 
     >>> from opendp.mod import binary_search
     >>> # Integer binary search
@@ -416,11 +465,38 @@ def binary_search(
     >>> assert 0.000 < binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. < 1e-8
     >>> assert -1e-8 < binary_search(lambda x: x < 5., bounds=(0., 10.)) - 5. < 0.00
 
-    :param predicate: a monotonic unary function from a number to a boolean
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
-    :return: the discovered parameter within the bounds
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+
+    Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
+    Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
+
+    .. testsetup:: *
+
+        from opendp.typing import L2Distance, VectorDomain, AllDomain
+        from opendp.trans import make_sized_bounded_mean
+        from opendp.meas import make_base_gaussian
+        from opendp.mod import enable_features
+        enable_features("contrib", "floating-point")
+
+    >>> # build a histogram that emits float counts
+    >>> dp_mean = (
+    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >>
+    ...     make_base_gaussian(1.)
+    ... )
+    ...
+    >>> binary_search(
+    ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
+    ...     bounds = (0., 1.))
+    0.6105625927448273
+
+    Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
+
+    >>> from opendp.trans import make_count_by_categories
+    >>> histogram = make_count_by_categories(categories=["a"], MO=L2Distance[int])
+    ...
+    >>> binary_search(
+    ...     lambda d_out: histogram.check(3, d_out), 
+    ...     bounds = (0, 100))
+    3
     """
     assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
     lower, upper = sorted(bounds)
