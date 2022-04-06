@@ -13,6 +13,10 @@ To subscribe to the `mailing list`_, please use the `sign up form`_.
 
 .. _sign up form: https://harvard.az1.qualtrics.com/jfe/form/SV_3yCVtAEzVsadAfX
 
+Feel free to join our `Slack`_.
+
+.. _Slack: https://join.slack.com/t/opendp/shared_invite/zt-zw7o1k2s-dHg8NQE8WTfAGFnN_cwomA
+
 You can reach OpenDP on Twitter at `@opendp_org`_.
 
 .. _@opendp_org: https://twitter.com/opendp_org
