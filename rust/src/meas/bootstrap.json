@@ -31,7 +31,7 @@
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_gaussian": {
-        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
+        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.\nThe output epsilon may be no greater than one.\nUse make_base_analytic_gaussian for a tighter analysis that supports epsilon > 1.",
         "features": ["floating-point", "contrib"],
         "args": [
             {

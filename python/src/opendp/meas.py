@@ -56,6 +56,8 @@ def make_base_gaussian(
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
+    The output epsilon may be no greater than one.
+    Use make_base_analytic_gaussian for a tighter analysis that supports epsilon > 1.
     
     :param scale: noise scale parameter for the gaussian distribution. `scale` == standard_deviance.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
