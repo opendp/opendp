@@ -70,9 +70,9 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
     >>> from opendp.accuracy import accuracy_to_gaussian_scale
     >>> confidence = 95
     >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
-    `1.020426913849308`
+    1.020426913849308
 
-There is another example of building a confidence interval at the end of the page.
+There is another example of building a confidence interval at the end of the page, `as well as a notebook about the limitations<https://github.com/opendp/opendp/blob/main/python/example/accuracy_pitfalls.ipynb>_`.
 
 You can generally plug the distribution (laplace or gaussian), scale, accuracy and alpha
 into the following statement to interpret these functions:
