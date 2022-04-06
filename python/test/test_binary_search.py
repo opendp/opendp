@@ -1,4 +1,4 @@
-from opendp.mod import binary_search_param, enable_features
+from opendp.mod import binary_search_param, enable_features, binary_search
 from opendp.trans import make_bounded_sum, make_clamp
 from opendp.meas import make_base_laplace
 
@@ -32,3 +32,9 @@ def test_stuck():
         bounds=(0.0, real_v * 2.0),
         d_out=(epsilon))
     print(discovered_scale)
+
+def test_binary_search():
+    assert binary_search(lambda x: x <= -5) == -5
+    assert binary_search(lambda x: x <= 5) == 5
+    assert binary_search(lambda x: x >= -5) == -5
+    assert binary_search(lambda x: x >= 5) == 5

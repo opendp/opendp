@@ -424,6 +424,8 @@ def binary_search(
         tolerance=None):
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
+    If bounds are not passed, conducts an exponential search.
+
     :example:
 
     >>> from opendp.mod import binary_search
@@ -468,10 +470,13 @@ def binary_search(
     3
     """
     if bounds is None:
-        k = 0
-        while not predicate(2. ** k):
-            k += 1
-        bounds = (2. ** (k - 1) if k else 0., 2. ** k)
+        zero = predicate(0.)
+        def find_k(sign):
+            for k in range(1024):
+                if zero != predicate(sign * 2. ** k):
+                    return sign, k
+        sign, k = find_k(1) or find_k(-1)
+        bounds = (sign * 2. ** (k - 1) if k else 0., sign * 2. ** k)
 
     assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
     lower, upper = sorted(bounds)
