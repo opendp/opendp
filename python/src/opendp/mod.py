@@ -258,17 +258,29 @@ class OpenDPException(Exception):
 
     .. todo:: Link to generated rust documentation for ErrorVariant.
     """
-    def __init__(self, variant: str, message: str = None, inner_traceback: str = None):
+    def __init__(self, variant: str, message: str = None, raw_traceback: str = None):
         self.variant = variant
         self.message = message
-        self.inner_traceback = inner_traceback
+        self.raw_traceback = raw_traceback
+
+    def raw_frames(self):
+        import re
+        return re.split("\s*[0-9]+: ", self.raw_traceback)
+    
+    def frames(self):
+        return [f for f in self.raw_frames() if f.startswith("opendp")]
 
     def __str__(self) -> str:
         response = self.variant
+
         if self.message:
             response += f'("{self.message}")'
-        if self.inner_traceback:
-            response += "\n" + '\n'.join('\t' + line for line in self.inner_traceback.split('\n'))
+
+        if self.raw_traceback:
+            # join and split by newlines because frames may be multi-line
+            lines = "\n".join(self.frames()).split('\n')
+            response += "\n" + '\n'.join('    ' + line for line in lines)
+            
         return response
 
 
