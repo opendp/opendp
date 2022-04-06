@@ -256,7 +256,7 @@ class OpenDPException(Exception):
     The variant attribute corresponds to `one of the following variants <https://github.com/opendp/opendp/blob/53ec58d01762ca5ceee08590d7e7b725bbdafcf6/rust/opendp/src/error.rs#L46-L87>`_ and can be matched on.
     Error variants may change in library updates.
 
-    .. todo:: Link to generated rust documentation for ErrorVariant.
+    See `Rust ErrorVariant <https://docs.rs/opendp/latest/opendp/error/enum.ErrorVariant.html>`_ for values variant may take on.
     """
     def __init__(self, variant: str, message: str = None, raw_traceback: str = None):
         self.variant = variant
@@ -265,7 +265,7 @@ class OpenDPException(Exception):
 
     def raw_frames(self):
         import re
-        return re.split("\s*[0-9]+: ", self.raw_traceback)
+        return re.split(r"\s*[0-9]+: ", self.raw_traceback)
     
     def frames(self):
         return [f for f in self.raw_frames() if f.startswith("opendp")]

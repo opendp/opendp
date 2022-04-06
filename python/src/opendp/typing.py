@@ -170,7 +170,7 @@ class RuntimeType(object):
     @classmethod
     def _parse_args(cls, args, generics=None):
         import re
-        return [cls.parse(v, generics=generics) for v in re.split(",\\s*(?![^()<>]*\\))", args)]
+        return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
     @classmethod
     def infer(cls, public_example: Any) -> Union["RuntimeType", str]:
