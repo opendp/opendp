@@ -21,7 +21,7 @@ You can choose whether to construct scalar or vector-valued versions by setting 
 
    * - Measurement
      - Input Domain
-     - Output Metric
+     - Input Metric
      - Output Measure
    * - :func:`opendp.meas.make_base_geometric`
      - ``AllDomain<T>``

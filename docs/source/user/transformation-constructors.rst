@@ -43,21 +43,27 @@ You need to chain with ``make_select_column`` first.
    * - Preprocessor
      - Input Domain
      - Output Domain
+     - Input/Output Metric
    * - :func:`opendp.trans.make_split_dataframe`
      - ``AllDomain<String>``
      - ``DataFrameDomain<K>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_select_column`
      - ``DataFrameDomain<K>``
      - ``VectorDomain<AllDomain<TOA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_split_lines`
      - ``AllDomain<String>``
      - ``VectorDomain<AllDomain<String>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_split_records`
      - ``VectorDomain<AllDomain<String>>``
      - ``VectorDomain<VectorDomain<AllDomain<String>>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_create_dataframe`
      - ``VectorDomain<VectorDomain<AllDomain<String>>>``
      - ``DataFrameDomain<K>``
+     - ``SymmetricDistance``
 
 Casting
 -------
@@ -77,24 +83,31 @@ you can chain this caster at the start of a computation pipeline to make ``d_in`
    * - Caster
      - Input Domain
      - Output Domain
+     - Input/Output Metric
    * - :func:`opendp.trans.make_cast`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<OptionNullDomain<AllDomain<TOA>>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_cast_default`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<AllDomain<TOA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_cast_inherent`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<InherentNullDomain<AllDomain<TOA>>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_is_equal`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<AllDomain<bool>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_is_null`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<AllDomain<bool>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_cast_metric`
      - ``VectorDomain<AllDomain<TA>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``MI/MO``
 
 
 Imputation
@@ -127,21 +140,27 @@ so long as you pass the DA (atomic domain) type argument.
    * - Imputer
      - Input Domain
      - Output Domain
+     - Input/Output Metric
    * - :func:`opendp.trans.make_impute_constant`
      - ``VectorDomain<OptionNullDomain<AllDomain<TA>>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_impute_constant`
      - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_impute_uniform_float`
      - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_drop_null`
      - ``VectorDomain<OptionNullDomain<AllDomain<TA>>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_drop_null`
      - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
 
 Indexing
 --------
@@ -191,15 +210,19 @@ You can use combinations of the indicial transformers to map hashable data to in
    * - Indexer
      - Input Domain
      - Output Domain
+     - Input/Output Metric
    * - :func:`opendp.trans.make_find`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<OptionNullDomain<AllDomain<usize>>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_find_bin`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<AllDomain<usize>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_index`
      - ``VectorDomain<AllDomain<usize>>``
      - ``VectorDomain<AllDomain<TOA>>``
+     - ``SymmetricDistance``
 
 Clamping
 --------
@@ -219,12 +242,15 @@ Only chain with a clamp transformation if the aggregator you intend to use needs
    * - Clamper
      - Input Domain
      - Output Domain
+     - Input/Output Metric
    * - :func:`opendp.trans.make_clamp`
      - ``VectorDomain<AllDomain<TA>>``
      - ``VectorDomain<BoundedDomain<TA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_unclamp`
      - ``VectorDomain<BoundedDomain<TA>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
 
 
 Resizing
@@ -250,12 +276,15 @@ We intend to merge these in the future.
    * - Resizer
      - Input Domain
      - Output Domain
+     - Input/Output Metric
    * - :func:`opendp.trans.make_resize`
      - ``VectorDomain<AllDomain<TA>>``
      - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
    * - :func:`opendp.trans.make_bounded_resize`
      - ``VectorDomain<BoundedDomain<TA>>``
      - ``VectorDomain<BoundedDomain<TA>>``
+     - ``SymmetricDistance``
 
 
 .. _aggregators:
@@ -283,30 +312,50 @@ The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time becau
    * - Aggregator
      - Input Domain
      - Output Domain
+     - Input Metric
+     - Output Metric
    * - :func:`opendp.trans.make_count`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``AllDomain<TO>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_count_distinct`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``AllDomain<TO>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_count_by_categories`
      - ``VectorDomain<BoundedDomain<TIA>>``
      - ``VectorDomain<AllDomain<TOA>>``
+     - ``SymmetricDistance``
+     - ``L1Distance<TOA>/L2Distance<TOA>``
    * - :func:`opendp.meas.make_count_by`
      - ``VectorDomain<BoundedDomain<TI>>``
      - ``MapDomain<AllDomain<TI>,AllDomain<TO>>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_bounded_sum`
      - ``VectorDomain<BoundedDomain<T>>``
      - ``AllDomain<T>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_sized_bounded_sum`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
      - ``AllDomain<T>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_sized_bounded_mean`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
      - ``AllDomain<T>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_sized_bounded_variance`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
      - ``AllDomain<T>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
    * - make_sized_bounded_covariance (Rust only)
      - ``SizedDomain<VectorDomain<BoundedDomain<(T,T)>>>``
      - ``AllDomain<T>``
+     - ``SymmetricDistance``
+     - ``AbsoluteDistance<TO>``
