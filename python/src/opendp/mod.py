@@ -313,9 +313,6 @@ def binary_search_chain(
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    `bounds` defaults to (0., MAX_FINITE_FLOAT).
-    If `bounds` are float, `tolerance` defaults to 1e-8.
-
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 
     :param make_chain: a unary function that maps from a number to a Transformation or Measurement
@@ -379,22 +376,7 @@ def binary_search_param(
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    `bounds` defaults to (0., MAX_FINITE_FLOAT).
-    If `bounds` are float, `tolerance` defaults to 1e-8.
-
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
-    :return: the nearest passing value to the decision point of the relation
-    :rtype: Union[float, int]
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
-
-
-    :examples:
-
-    Find the smallest noise scale for a base_laplace measurement that is still (d_in, d_out)-close.
+    :example:
 
     >>> from opendp.mod import binary_search_param, enable_features
     >>> from opendp.meas import make_base_laplace
@@ -433,29 +415,16 @@ def binary_search_param(
     ...     bounds=(1, 1000000))
     1498
     """
-    if bounds is None:
-        import sys
-        bounds = (0., sys.float_info.max)
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, tolerance)
 
 
 def binary_search(
         predicate: Callable[[Union[float, int]], bool],
-        bounds: Union[Tuple[float, float], Tuple[int, int]],
+        bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
         tolerance=None):
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
-    If `bounds` are float, `tolerance` defaults to 1e-8.
-
-    :param predicate: a monotonic unary function from a number to a boolean
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
-    :return: the discovered parameter within the bounds
-    :rtype: Union[float, int]
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
-
-
-    :examples:
+    :example:
 
     >>> from opendp.mod import binary_search
     >>> # Integer binary search
@@ -498,6 +467,12 @@ def binary_search(
     ...     bounds = (0, 100))
     3
     """
+    if bounds is None:
+        k = 0
+        while not predicate(2. ** k):
+            k += 1
+        bounds = (2. ** (k - 1) if k else 0., 2. ** k)
+
     assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
     lower, upper = sorted(bounds)
 
@@ -506,7 +481,7 @@ def binary_search(
     assert maximize != minimize, "the decision boundary of the predicate is outside the bounds"
 
     if isinstance(lower, float):
-        tolerance = 1.0e-8 if tolerance is None else tolerance
+        tolerance = 0. if tolerance is None else tolerance
         half = lambda x: x / 2.
     elif isinstance(lower, int):
         tolerance = tolerance or 1  # the lower and upper bounds never meet due to int truncation
@@ -514,8 +489,15 @@ def binary_search(
     else:
         raise AssertionError("bounds must be either float or int")
 
+    mid = lower
     while upper - lower > tolerance:
-        mid = lower + half(upper - lower)  # avoid overflow
+        new_mid = lower + half(upper - lower)  # avoid overflow
+
+        # avoid an infinite loop from float roundoff
+        if new_mid == mid:
+            break
+
+        mid = new_mid
         if predicate(mid) == minimize:
             upper = mid
         else:
