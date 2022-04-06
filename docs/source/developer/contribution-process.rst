@@ -8,6 +8,14 @@ We're aiming to keep this process approachable to people of all skill levels.
 Without compromising the integrity of the library,
 there is reasonable variation in how strictly we adhere to this process in accordance to the depth of your contribution.
 
+Contributor License Agreement
+-----------------------------
+
+In anticipation of making code contributions, please be aware that the OpenDP Project requires contributors to sign
+a Contributor License Agreement.
+We use a bot for automated verification of license status, so your first OpenDP pull request will be tagged with
+instructions for completing the agreement.
+But if you'd like to get a head start, you can view our :ref:`cla` documentation.
 
 Development Setup
 -----------------
