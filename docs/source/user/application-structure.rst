@@ -46,6 +46,12 @@ Determining Accuracy
 The library contains utilities to estimate accuracy at a given noise scale and statistical significance level
 or derive the necessary noise scale to meet a given target accuracy and statistical significance level.
 
+.. note::
+
+    This confidence interval is specifically for the input to the noise addition mechanism.
+    We cannot privately compensate for the bias introduced from clipping or other preprocessing.
+    `There is a notebook demonstrating this limitation. <https://github.com/opendp/opendp/blob/main/python/example/accuracy_pitfalls.ipynb>`_
+
 The noise distribution may be either laplace or gaussian.
 
 :laplacian: | Applies to any L1 noise addition mechanism.
@@ -72,7 +78,7 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
     >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
     1.020426913849308
 
-There is another example of building a confidence interval at the end of the page, `as well as a notebook about the limitations<https://github.com/opendp/opendp/blob/main/python/example/accuracy_pitfalls.ipynb>_`.
+There is another example of building a confidence interval at the end of the page.
 
 You can generally plug the distribution (laplace or gaussian), scale, accuracy and alpha
 into the following statement to interpret these functions:
