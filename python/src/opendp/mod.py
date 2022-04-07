@@ -321,7 +321,8 @@ def binary_search_chain(
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
+    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
 
     :examples:
@@ -375,6 +376,14 @@ def binary_search_param(
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
+    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
+    :param d_in: desired input distance of the computation chain
+    :param d_out: desired output distance of the computation chain
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :return: the nearest passing value to the decision point of the relation
+    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
+    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
+
     :example:
 
     >>> from opendp.mod import binary_search_param, enable_features
@@ -411,13 +420,6 @@ def binary_search_param(
     ...     d_in=2, d_out=1.,
     ...     bounds=(1, 1000000))
     1498
-
-    :param make_chain: a unary function that maps from a number to a Transformation or Measurement
-    :param d_in: desired input distance of the computation chain
-    :param d_out: desired output distance of the computation chain
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
-    :return: the nearest passing value to the decision point of the relation
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
@@ -431,15 +433,22 @@ def binary_search(
 
     If bounds are not passed, conducts an exponential search.
 
+    :param predicate: a monotonic unary function from a number to a boolean
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
+    :param T: type of argument to predicate, one of {float, int}
+    :return: the discovered parameter within the bounds
+    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
+    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
+
     :example:
 
     >>> from opendp.mod import binary_search
-    >>> # Integer binary search
-    >>> assert binary_search(lambda x: x > 5, bounds=(0, 10)) == 6
-    >>> assert binary_search(lambda x: x < 5, bounds=(0, 10)) == 4
     >>> # Float binary search
-    >>> assert 0.000 < binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. < 1e-8
-    >>> assert -1e-8 < binary_search(lambda x: x < 5., bounds=(0., 10.)) - 5. < 0.00
+    >>> assert binary_search(lambda x: x >= 5.) == 5.
+    >>> assert binary_search(lambda x: x <= 5.) == 5.
+    >>> # Integer binary search
+    >>> assert binary_search(lambda x: x > 5, T=int) == 6
+    >>> assert binary_search(lambda x: x < 5, T=int) == 4
 
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
@@ -472,11 +481,6 @@ def binary_search(
     ...     lambda d_out: histogram.check(3, d_out), 
     ...     bounds = (0, 100))
     3
-
-    :param predicate: a monotonic unary function from a number to a boolean
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
-    :return: the discovered parameter within the bounds
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
     """
     if bounds is None:
         bounds = exponential_bounds_search(predicate, T)
@@ -484,12 +488,14 @@ def binary_search(
     if bounds is None:
         raise ValueError("unable to infer bounds")
 
-    assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
+    if len(set(map(type, bounds))) != 1:
+        raise TypeError("bounds must share the same type")
     lower, upper = sorted(bounds)
 
     maximize = predicate(lower)  # if the lower bound passes, we should maximize
     minimize = predicate(upper)  # if the upper bound passes, we should minimize
-    assert maximize != minimize, "the decision boundary of the predicate is outside the bounds"
+    if maximize == minimize:
+        raise ValueError("the decision boundary of the predicate is outside the bounds")
 
     if isinstance(lower, float):
         tolerance = 0.
@@ -498,7 +504,7 @@ def binary_search(
         tolerance = 1  # the lower and upper bounds never meet due to int truncation
         half = lambda x: x // 2
     else:
-        raise AssertionError("bounds must be either float or int")
+        raise TypeError("bounds must be either float or int")
 
     mid = lower
     while upper - lower > tolerance:
@@ -531,7 +537,9 @@ def exponential_bounds_search(predicate: Callable[[Union[float, int]], bool], T)
     
     :param predicate: a monotonic unary function from a number to a boolean
     :param T: type of argument to predicate, one of {float, int}
-    :
+    :returns a tuple of float or int bounds that the decision boundary lies within
+    :raises TypeError: if the type is not inferrable. Pass T.
+    :raises ValueError: if the predicate function is constant
     """
 
     # try to infer T
@@ -551,7 +559,7 @@ def exponential_bounds_search(predicate: Callable[[Union[float, int]], bool], T)
         elif check_type(0):
             T = int
         else:
-            raise ValueError("unable to infer type `T`; pass the type `T` or bounds")
+            raise TypeError("unable to infer type `T`; pass the type `T` or bounds")
 
     # core search functionality
     base = {int: 2, float: 2.}[T]
