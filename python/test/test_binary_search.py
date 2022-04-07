@@ -1,5 +1,5 @@
 from opendp.mod import binary_search_param, enable_features, binary_search
-from opendp.trans import make_bounded_sum, make_clamp
+from opendp.trans import make_bounded_sum, make_clamp, make_sized_bounded_sum, make_sized_bounded_mean
 from opendp.meas import make_base_laplace
 
 enable_features('floating-point', 'contrib')
@@ -34,7 +34,21 @@ def test_stuck():
     print(discovered_scale)
 
 def test_binary_search():
-    assert binary_search(lambda x: x <= -5) == -5
-    assert binary_search(lambda x: x <= 5) == 5
-    assert binary_search(lambda x: x >= -5) == -5
-    assert binary_search(lambda x: x >= 5) == 5
+    assert binary_search(lambda x: x <= -5, T=int) == -5
+    assert binary_search(lambda x: x <= 5, T=int) == 5
+    assert binary_search(lambda x: x >= -5, T=int) == -5
+    assert binary_search(lambda x: x >= 5, T=int) == 5
+
+
+def test_type_inference():
+    def chainer(b):
+        return make_sized_bounded_sum(1000, (-b, b))
+    assert binary_search_param(chainer, 2, 100) == 50
+
+    def mean_chainer_n(n):
+        return make_sized_bounded_mean(n, (-20., 20.))
+    assert binary_search_param(mean_chainer_n, 2, 1.) == 40
+
+    def mean_chainer_b(b):
+        return make_sized_bounded_mean(1000, (-b, b))
+    assert binary_search_param(mean_chainer_b, 2, 1.) == 500.
