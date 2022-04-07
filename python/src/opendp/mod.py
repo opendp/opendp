@@ -1,5 +1,5 @@
 import ctypes
-from typing import Union, Tuple, Callable
+from typing import Union, Tuple, Callable, Optional
 
 from opendp._lib import AnyMeasurement, AnyTransformation
 
@@ -529,16 +529,19 @@ def binary_search(
     return (value, get_sign(minimize)) if return_sign else value
 
 
-def exponential_bounds_search(predicate: Callable[[Union[float, int]], bool], T):
+def exponential_bounds_search(
+    predicate: Callable[[Union[float, int]], bool], 
+    T: Optional[type]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 
-        by searching bands on the ok side of the exception boundary.
+    by searching bands on the ok side of the exception boundary.
     
+
     :param predicate: a monotonic unary function from a number to a boolean
     :param T: type of argument to predicate, one of {float, int}
-    :returns a tuple of float or int bounds that the decision boundary lies within
-    :raises TypeError: if the type is not inferrable. Pass T.
+    :return: a tuple of float or int bounds that the decision boundary lies within
+    :raises TypeError: if the type is not inferrable (pass T)
     :raises ValueError: if the predicate function is constant
     """
 
