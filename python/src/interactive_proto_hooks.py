@@ -33,6 +33,60 @@ class FlatQueryable:
 # post-filter:  A -> A
 # incorporate:  I x S -> S
 
+
+class HooksQueryable:
+    # evaluate:     Q           ->  A
+
+    # eval0:        Q x S       ->  A x S
+    # eval1:        Q           ->  Q
+    # eval2:        A           ->  A
+    # response:     Q           ->  M'
+
+    def __init__(self, parent, initial_state, transition, respond):
+        self.parent = parent
+        self.state = initial_state
+        self.transition = transition  # fn: (Q x S) -> (A x S)
+        self.respond = respond
+
+    def evaluate(self, question):
+        # If we have no parent, just call transition directly.
+        if self.parent is None:
+            (answer, new_state) = self.transition(self, question, self.state)
+            self.state = new_state
+            return answer
+
+        else:
+            pass
+
+
+
+
+class HooksQueryable2:
+    # evaluate:     Q           ->  A
+
+    # eval0:        Q x S       ->  A x S
+    # eval1:        Q x S       ->  M x S'
+    # response:     M x Sp      ->  M' x Sp
+    # eval2:        M' x S'     ->  A x S
+
+    def __init__(self, parent, initial_state, transition, respond):
+        self.parent = parent
+        self.state = initial_state
+        self.transition = transition  # fn: (Q x S) -> (A x S)
+        self.respond = respond
+
+    def evaluate(self, question):
+        # If we have no parent, just call transition directly.
+        if self.parent is None:
+            (answer, new_state) = self.transition(self, question, self.state)
+            self.state = new_state
+            return answer
+
+        else:
+            pass
+
+
+
 class NestedQueryable:
 
     def __init__(self, parent, index, initial_state, transition):
