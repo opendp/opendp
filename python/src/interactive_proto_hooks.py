@@ -29,6 +29,9 @@ class FlatQueryable:
         return answer
 
 
+# pre-filter:   Q -> M x Q
+# post-filter:  A -> A
+# incorporate:  I x S -> S
 
 class NestedQueryable:
 
