@@ -9,7 +9,7 @@ os.environ["OPENDP_HEADLESS"] = "true"
 
 # We're inside source when this runs.
 # Docs would be the same for all versions. Fix from: https://github.com/Holzhaus/sphinx-multiversion/issues/42
-rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default="."), "..", "..", "python", "src")
+rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default=os.getcwd()), "..", "..", "python", "src")
 sys.path.insert(0, rootdir)
 
 extensions = [

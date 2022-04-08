@@ -8,6 +8,7 @@ repository = "https://github.com/opendp/opendp"
 version = "0.0.0-development"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
+build = "build/main.rs"
 
 [dependencies]
 rand = "0.7.3"

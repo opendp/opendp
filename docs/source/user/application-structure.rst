@@ -46,7 +46,13 @@ Determining Accuracy
 The library contains utilities to estimate accuracy at a given noise scale and statistical significance level
 or derive the necessary noise scale to meet a given target accuracy and statistical significance level.
 
-The noise scale may be either laplace or gaussian.
+.. note::
+
+    This confidence interval is specifically for the input to the noise addition mechanism.
+    We cannot privately compensate for the bias introduced from clipping or other preprocessing.
+    `There is a notebook demonstrating this limitation. <https://github.com/opendp/opendp/blob/main/python/example/accuracy_pitfalls.ipynb>`_
+
+The noise distribution may be either laplace or gaussian.
 
 :laplacian: | Applies to any L1 noise addition mechanism.
   | :func:`make_base_laplace() <opendp.meas.make_base_laplace>`
@@ -55,16 +61,26 @@ The noise scale may be either laplace or gaussian.
 :gaussian: | Applies to any L2 noise addition mechanism.
   | :func:`make_base_gaussian() <opendp.meas.make_base_gaussian>`
 
-The library provides the following functions for converting to and from noise scales:
+The library provides the following functions for converting between noise scale and accuracy:
 
 * :func:`opendp.accuracy.laplacian_scale_to_accuracy`
 * :func:`opendp.accuracy.accuracy_to_laplacian_scale`
 * :func:`opendp.accuracy.gaussian_scale_to_accuracy`
 * :func:`opendp.accuracy.accuracy_to_gaussian_scale`
 
-These functions take either scale or accuracy, and alpha, a statistical significance parameter.
+To demonstrate, the following snippet finds the necessary gaussian scale such that the input to 
+:code:`make_base_gaussian(scale=1.)` differs from the release by no more than 2 with 95% confidence.
 
-You can generally plug the distribution, scale, accuracy and alpha
+.. doctest::
+
+    >>> from opendp.accuracy import accuracy_to_gaussian_scale
+    >>> confidence = 95
+    >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
+    1.020426913849308
+
+There is another example of building a confidence interval at the end of the page.
+
+You can generally plug the distribution (laplace or gaussian), scale, accuracy and alpha
 into the following statement to interpret these functions:
 
 .. code-block:: python

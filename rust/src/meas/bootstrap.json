@@ -7,7 +7,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "Noise scale parameter of the laplace distribution."
+                "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
                 "name": "D",
@@ -31,14 +31,14 @@
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_gaussian": {
-        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
+        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.\nThe output epsilon may be no greater than one.\nUse make_base_analytic_gaussian for a tighter analysis that supports epsilon > 1.",
         "features": ["floating-point", "contrib"],
         "args": [
             {
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "noise scale parameter to the gaussian distribution"
+                "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
             },
             {
                 "name": "D",
@@ -71,7 +71,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "noise scale parameter to the gaussian distribution"
+                "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
             },
             {
                 "name": "D",
@@ -104,7 +104,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "QO",
-                "description": "noise scale parameter to the geometric distribution"
+                "description": "noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
                 "name": "bounds",
@@ -227,7 +227,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "TV",
-                "description": "Noise scale parameter."
+                "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
                 "name": "threshold",

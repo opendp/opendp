@@ -15,6 +15,9 @@ pub fn make_sized_bounded_mean<T>(
     T: DistanceConstant<IntDistance> + ExactIntCast<usize>, for <'a> T: Sum<&'a T>
     + InfSub + CheckNull + Float + InfDiv,
     IntDistance: InfCast<T> {
+    if size == 0 {
+        return fallible!(MakeTransformation, "dataset size must be positive");
+    }
     let _size = T::exact_int_cast(size)?;
     let _2 = T::exact_int_cast(2)?;
     let (lower, upper) = bounds.clone();

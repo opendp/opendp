@@ -50,7 +50,7 @@ def slice_as_object(
     :param slice: 
     :type slice: FfiSlicePtr
     :param T: 
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
     :rtype: Any
     :raises AssertionError: if an argument's type differs from the expected type

@@ -51,6 +51,7 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 
 * Ask questions on our [discussions forum](https://github.com/opendp/opendp/discussions)
 * Open issues on our [issue tracker](https://github.com/opendp/opendp/issues)
+* Join our [Slack](https://join.slack.com/t/opendp/shared_invite/zt-zw7o1k2s-dHg8NQE8WTfAGFnN_cwomA)
 * Send general queries to [info@opendp.org](mailto:info@opendp.org)
 * Reach us on Twitter at [@opendp_org](https://twitter.com/opendp_org)
 

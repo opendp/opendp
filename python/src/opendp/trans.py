@@ -46,9 +46,9 @@ def make_cast(
     Failure to parse results in None, else Some<TOA>.
     
     :param TIA: atomic input data type to cast from
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TOA: atomic data type to cast into
-    :type TOA: RuntimeTypeDescriptor
+    :type TOA: :ref:`RuntimeTypeDescriptor`
     :return: A cast step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -80,9 +80,9 @@ def make_cast_default(
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. If cast fails, fill with default.
     
     :param TIA: atomic input data type to cast from
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TOA: atomic data type to cast into
-    :type TOA: RuntimeTypeDescriptor
+    :type TOA: :ref:`RuntimeTypeDescriptor`
     :return: A cast_default step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -116,7 +116,7 @@ def make_is_equal(
     :param value: value to check against
     :type value: Any
     :param TIA: atomic input data type
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :return: A is_equal step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -146,7 +146,7 @@ def make_is_null(
     """Make a Transformation that checks if each element in a vector is null.
     
     :param DIA: atomic input domain
-    :type DIA: RuntimeTypeDescriptor
+    :type DIA: :ref:`RuntimeTypeDescriptor`
     :return: A is_null step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -177,9 +177,9 @@ def make_cast_inherent(
     If cast fails, fill with `TO`'s null value.
     
     :param TIA: input data type to cast from
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TOA: data type to cast into
-    :type TOA: RuntimeTypeDescriptor
+    :type TOA: :ref:`RuntimeTypeDescriptor`
     :return: A cast_inherent step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -216,7 +216,7 @@ def make_cast_metric(
     :param MO: output dataset metric
     :type MO: DatasetMetric
     :param TA: atomic type of data
-    :type TA: RuntimeTypeDescriptor
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A cast_metric step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -254,7 +254,7 @@ def make_clamp(
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param TA: atomic data type
-    :type TA: RuntimeTypeDescriptor
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A clamp step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -287,7 +287,7 @@ def make_unclamp(
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param TA: atomic data type
-    :type TA: RuntimeTypeDescriptor
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A unclamp step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -318,9 +318,9 @@ def make_count(
     """Make a Transformation that computes a count of the number of records in data.
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TO: Output Type. Must be numeric.
-    :type TO: RuntimeTypeDescriptor
+    :type TO: :ref:`RuntimeTypeDescriptor`
     :return: A count step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -352,9 +352,9 @@ def make_count_distinct(
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TO: Output Type. Must be numeric.
-    :type TO: RuntimeTypeDescriptor
+    :type TO: :ref:`RuntimeTypeDescriptor`
     :return: A count_distinct step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -390,9 +390,9 @@ def make_count_by(
     :param MO: Output Metric.
     :type MO: SensitivityMetric
     :param TK: Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
-    :type TK: RuntimeTypeDescriptor
+    :type TK: :ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Express counts in terms of this integral type.
-    :type TV: RuntimeTypeDescriptor
+    :type TV: :ref:`RuntimeTypeDescriptor`
     :return: The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -433,9 +433,9 @@ def make_count_by_categories(
     :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TOA: express counts in terms of this numeric type
-    :type TOA: RuntimeTypeDescriptor
+    :type TOA: :ref:`RuntimeTypeDescriptor`
     :return: A count_by_categories step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -523,7 +523,7 @@ def make_create_dataframe(
     :param col_names: Column names for each record entry.
     :type col_names: Any
     :param K: categorical/hashable data type of column names
-    :type K: RuntimeTypeDescriptor
+    :type K: :ref:`RuntimeTypeDescriptor`
     :return: A create_dataframe step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -560,7 +560,7 @@ def make_split_dataframe(
     :param col_names: Column names for each record entry.
     :type col_names: Any
     :param K: categorical/hashable data type of column names
-    :type K: RuntimeTypeDescriptor
+    :type K: :ref:`RuntimeTypeDescriptor`
     :return: A split_dataframe step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -595,9 +595,9 @@ def make_select_column(
     :param key: categorical/hashable data type of the key/column name
     :type key: Any
     :param K: data type of the key
-    :type K: RuntimeTypeDescriptor
+    :type K: :ref:`RuntimeTypeDescriptor`
     :param TOA: atomic data type to downcast to
-    :type TOA: RuntimeTypeDescriptor
+    :type TOA: :ref:`RuntimeTypeDescriptor`
     :return: A select_column step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -630,9 +630,9 @@ def make_identity(
     """Make a Transformation that simply passes the data through.
     
     :param D: Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>
-    :type D: RuntimeTypeDescriptor
+    :type D: :ref:`RuntimeTypeDescriptor`
     :param M: metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
-    :type M: RuntimeTypeDescriptor
+    :type M: :ref:`RuntimeTypeDescriptor`
     :return: A transformation where the input and output domain are D and the input and output metric are M
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -668,7 +668,7 @@ def make_impute_constant(
     :param constant: Value to replace nulls with.
     :type constant: Any
     :param DA: domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
-    :type DA: RuntimeTypeDescriptor
+    :type DA: :ref:`RuntimeTypeDescriptor`
     :return: A impute_constant step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -700,7 +700,7 @@ def make_drop_null(
     """Make a Transformation that drops null values.
     
     :param DA: atomic domain of input data that contains nulls. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
-    :type DA: RuntimeTypeDescriptor
+    :type DA: :ref:`RuntimeTypeDescriptor`
     :return: A drop_null step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -732,7 +732,7 @@ def make_impute_uniform_float(
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param TA: type of data being imputed
-    :type TA: RuntimeTypeDescriptor
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A impute_uniform_float step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -765,7 +765,7 @@ def make_find(
     :param categories: The set of categories to find indexes from.
     :type categories: Any
     :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :return: A find step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -798,7 +798,7 @@ def make_find_bin(
     :param edges: The set of edges to split bins by.
     :type edges: Any
     :param TIA: numerical input type. Input data must be Vec<TIA>.
-    :type TIA: RuntimeTypeDescriptor
+    :type TIA: :ref:`RuntimeTypeDescriptor`
     :return: A find_bin step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -834,7 +834,7 @@ def make_index(
     :param null: Category to return if the index is out-of-range of the category set.
     :type null: Any
     :param TOA: atomic output type. Output data will be Vec<TIA>.
-    :type TOA: RuntimeTypeDescriptor
+    :type TOA: :ref:`RuntimeTypeDescriptor`
     :return: A index step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -873,7 +873,7 @@ def make_sized_bounded_mean(
     :param bounds: Tuple of inclusive lower and upper bounds of the input data.
     :type bounds: Tuple[Any, Any]
     :param T: atomic data type
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_mean step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -910,7 +910,7 @@ def make_resize(
     :param constant: Value to impute with.
     :type constant: Any
     :param TA: Atomic type.
-    :type TA: RuntimeTypeDescriptor
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -949,7 +949,7 @@ def make_bounded_resize(
     :type bounds: Tuple[Any, Any]
     :param constant: Value to impute with.
     :param TA: Atomic type. If not passed, TA is inferred from the lower bound.
-    :type TA: RuntimeTypeDescriptor
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -985,7 +985,7 @@ def make_bounded_sum(
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
     :param T: atomic type of data
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: A bounded_sum step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1023,7 +1023,7 @@ def make_sized_bounded_sum(
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
     :param T: atomic type of data
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_sum step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1065,7 +1065,7 @@ def make_sized_bounded_variance(
     :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
     :type ddof: int
     :param T: atomic data type
-    :type T: RuntimeTypeDescriptor
+    :type T: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_variance step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
