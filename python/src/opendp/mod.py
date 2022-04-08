@@ -470,7 +470,7 @@ def binary_search(
     >>> binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
     ...     bounds = (0., 1.))
-    0.6105625927448273
+    0.6105625903337409
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
