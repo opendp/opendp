@@ -9,6 +9,11 @@ pub mod covariance;
 pub use crate::transformations::covariance::*;
 
 #[cfg(feature="contrib")]
+pub mod b_ary_tree;
+#[cfg(feature="contrib")]
+pub use crate::trans::b_ary_tree::*;
+
+#[cfg(feature="contrib")]
 pub mod dataframe;
 #[cfg(feature="contrib")]
 pub use crate::transformations::dataframe::*;
