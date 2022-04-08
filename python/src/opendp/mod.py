@@ -565,21 +565,21 @@ def exponential_bounds_search(
             raise TypeError("unable to infer type `T`; pass the type `T` or bounds")
 
     # core search functionality
-    base = {int: 2, float: 2.}[T]
-
     def signed_band_search(center, at_center, sign):
         """identify which band (of eight) the decision boundary lies in, 
         starting from `center` in the direction indicated by `sign`"""
 
         if T == int:
-            bands = [center, center + 1, *(center + sign * base ** 16 * k for k in range(1, 9))]
+            # searching bands of [(k - 1) * 2^16, k * 2^16].
+            # center + 1 included because zero is prone to error
+            bands = [center, center + 1, *(center + sign * 2 ** 16 * k for k in range(1, 9))]
 
         if T == float:
             # searching bands of [2^((k - 1)^2), 2^(k^2)].
             # exponent has ten bits (2.^1024 overflows) so k must be in [0, 32).
             # unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,
             #    only check k in [0, 8). Set your own bounds if this is not sufficient
-            bands = [center, *(center + sign * base ** k ** 2 for k in range(1024 // 32 // 4))]
+            bands = [center, *(center + sign * 2. ** k ** 2 for k in range(1024 // 32 // 4))]
 
         for i in range(1, len(bands)):
             # looking for a change in sign that indicates the decision boundary is within this band
