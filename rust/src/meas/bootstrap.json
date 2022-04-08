@@ -7,7 +7,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviance."
+                "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
                 "name": "D",
@@ -38,7 +38,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviance."
+                "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
             },
             {
                 "name": "D",
@@ -71,7 +71,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviance."
+                "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
             },
             {
                 "name": "D",
@@ -104,7 +104,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "QO",
-                "description": "noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviance."
+                "description": "noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
                 "name": "bounds",
@@ -227,7 +227,7 @@
                 "name": "scale",
                 "c_type": "void *",
                 "rust_type": "TV",
-                "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviance."
+                "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
                 "name": "threshold",

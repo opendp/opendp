@@ -12,12 +12,12 @@
                 "name": "alpha",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1]."
+                "description": "Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1]."
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "Data type of scale and alpha"
+                "description": "Data type of `scale` and `alpha`"
             }
         ],
         "ret": {
@@ -27,30 +27,30 @@
         }
     },
     "accuracy_to_laplacian_scale": {
-        "description": "Convert a desired accuracy (tolerance) into a laplacian noise scale at a statistical significance level `alpha`.",
+        "description": "Convert a desired `accuracy` (tolerance) into a laplacian noise scale at a statistical significance level `alpha`.",
         "args": [
             {
                 "name": "accuracy",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "Desired accuracy."
+                "description": "Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism."
             },
             {
                 "name": "alpha",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1)."
+                "description": "Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1]."
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "Data type of accuracy and alpha"
+                "description": "Data type of `accuracy` and `alpha`"
             }
         ],
         "ret": {
             "c_type": "FfiResult<AnyObject *>",
             "rust_type": "T",
-            "description": "Laplacian noise scale that meets the accuracy requirement at a given level-`alpha`."
+            "description": "Laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`."
         }
     },
     "gaussian_scale_to_accuracy": {
@@ -66,12 +66,12 @@
                 "name": "alpha",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "Statistical significance, level-alpha, or (1. - alpha)100% confidence. Must be within (0, 1]."
+                "description": "Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1]."
             },
             {
                 "name": "T",
                 "is_type": true,
-                "description": "Data type of scale and alpha"
+                "description": "Data type of `scale` and `alpha`"
             }
         ],
         "ret": {
@@ -81,13 +81,13 @@
         }
     },
     "accuracy_to_gaussian_scale": {
-        "description": "Convert a desired accuracy (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.",
+        "description": "Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.",
         "args": [
             {
                 "name": "accuracy",
                 "c_type": "void *",
                 "rust_type": "T",
-                "description": "Desired accuracy."
+                "description": "Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism."
             },
             {
                 "name": "alpha",
@@ -98,13 +98,13 @@
             {
                 "name": "T",
                 "is_type": true,
-                "description": "Data type of accuracy and alpha"
+                "description": "Data type of `accuracy` and `alpha`"
             }
         ],
         "ret": {
             "c_type": "FfiResult<AnyObject *>",
             "rust_type": "T",
-            "description": "Gaussian noise scale that meets the accuracy requirement at a given level-`alpha`."
+            "description": "Gaussian noise scale that meets the `accuracy` requirement at a given level-`alpha`."
         }
     }
 }

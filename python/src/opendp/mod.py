@@ -308,7 +308,7 @@ def binary_search_chain(
         d_in, d_out,
         bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
         tolerance=None) -> Union[Transformation, Measurement]:
-    """Useful to find the Transformation or Measurement parameterized with the most ideal constructor argument.
+    """Useful to find the Transformation or Measurement parameterized with the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
@@ -374,7 +374,7 @@ def binary_search_param(
         d_in, d_out,
         bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
         tolerance=None) -> Union[float, int]:
-    """Useful to solve for the most ideal constructor argument.
+    """Useful to solve for the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
