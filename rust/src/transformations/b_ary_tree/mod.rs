@@ -295,17 +295,25 @@ pub mod test_b_trees {
         Ok(())
     }
 
-    // #[test]
-    // fn test_identity() -> Fallible<()> {
-    //     let b = 2;
-    //     let meas = (make_b_ary_tree::<i32, L1Distance<i32>>(10, b)?
-    //         >> make_base_geometric(1., None)?)?;
-        
-    //     let post = make_b_ary_tree_consistent::<i32, f64>(b)?;
+    #[test]
+    fn test_identity() -> Fallible<()> {
+        let b = 2;
+        let trans = make_b_ary_tree::<i32, L1Distance<i32>>(10, b)?;
+        let meas = (trans.clone() >> make_base_geometric(0., None)?)?;
+        let post = make_b_ary_tree_consistent::<i32, f64>(b)?;
 
-    //     meas >> post;
-    //     println!("consistent {:?}", meas.invoke(&vec![1; 10])?);
+        let noisy_tree = meas.invoke(&vec![1; 10])?;
+        let consi_leaves = post.invoke(&noisy_tree)?;
+        let consi_tree = make_b_ary_tree::<f64, L1Distance<f64>>(10, b)?.invoke(&consi_leaves)?;
 
-    //     Ok(())
-    // }
+        println!("noisy      leaves {:?}", noisy_tree[15..].to_vec());
+        println!("consistent leaves {:?}", consi_leaves);
+
+        println!("noisy      tree {:?}", noisy_tree);
+        println!("consistent tree {:?}", consi_tree);
+
+        let noisy_tree_f = noisy_tree.into_iter().map(f64::from).collect::<Vec<f64>>();
+        assert_eq!(noisy_tree_f, consi_tree);
+        Ok(())
+    }
 }
