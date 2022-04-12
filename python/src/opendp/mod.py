@@ -437,7 +437,7 @@ def binary_search(
 
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
-    :param T: type of argument to predicate, one of {float, int}
+    :param T: type of argument to `predicate`, one of {float, int}
     :param return_sign: if True, also return the direction away from the decision boundary
     :return: the discovered parameter within the bounds
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
