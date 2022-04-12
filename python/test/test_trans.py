@@ -197,7 +197,7 @@ def test_bounded_sum():
     try:
         query(FLOAT_DATA)
         raise ValueError("should not accept float data")
-    except AssertionError:
+    except TypeError:
         pass
 
 

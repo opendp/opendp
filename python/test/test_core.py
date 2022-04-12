@@ -52,11 +52,11 @@ def test_bisect():
 
 def test_bisect_edge():
     from opendp.mod import binary_search
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         binary_search(lambda x: x > 5., (0., 5.))
     assert binary_search(lambda x: x > 0, (0, 1)) == 1
     assert binary_search(lambda x: x < 1, (0, 1)) == 0
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         binary_search(lambda x: x < 1, (0, 0))
 
     assert binary_search(lambda x: x > 5, bounds=(0, 10)) == 6

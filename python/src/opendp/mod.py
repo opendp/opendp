@@ -1,5 +1,5 @@
 import ctypes
-from typing import Union, Tuple, Callable
+from typing import Union, Tuple, Callable, Optional
 
 from opendp._lib import AnyMeasurement, AnyTransformation
 
@@ -307,14 +307,11 @@ def binary_search_chain(
         make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
         d_in, d_out,
         bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
-        tolerance=None) -> Union[Transformation, Measurement]:
+        T=None) -> Union[Transformation, Measurement]:
     """Useful to find the Transformation or Measurement parameterized with the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
-
-    `bounds` defaults to (0., MAX_FINITE_FLOAT).
-    If `bounds` are float, `tolerance` defaults to 1e-8.
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
 
@@ -322,10 +319,11 @@ def binary_search_chain(
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
+    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
 
     :examples:
@@ -344,7 +342,7 @@ def binary_search_chain(
     ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
     ...
-    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
+    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
     ...
@@ -366,48 +364,40 @@ def binary_search_chain(
     ...
     >>> # If you want the discovered clamping bound, use `binary_search_param` instead.
     """
-    return make_chain(binary_search_param(make_chain, d_in, d_out, bounds, tolerance))
+    return make_chain(binary_search_param(make_chain, d_in, d_out, bounds, T))
 
 
 def binary_search_param(
         make_chain: Callable[[Union[float, int]], Union[Transformation, Measurement]],
         d_in, d_out,
         bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
-        tolerance=None) -> Union[float, int]:
+        T=None) -> Union[float, int]:
     """Useful to solve for the ideal constructor argument.
     
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
-    `bounds` defaults to (0., MAX_FINITE_FLOAT).
-    If `bounds` are float, `tolerance` defaults to 1e-8.
-
     :param make_chain: a unary function that maps from a number to a Transformation or Measurement
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
-    :rtype: Union[float, int]
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
+    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
-
-    :examples:
-
-    Find the smallest noise scale for a base_laplace measurement that is still (d_in, d_out)-close.
+    :example:
 
     >>> from opendp.mod import binary_search_param, enable_features
     >>> from opendp.meas import make_base_laplace
     ...
-    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain within `tolerance` of the decision boundary.
+    >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The first argument is any function that returns your complete computation chain
     >>> #     when passed a single numeric parameter.
     >>> scale = binary_search_param(make_base_laplace, d_in=0.1, d_out=1.)
-    >>> # The discovered scale differs by at most `tolerance` from the ideal scale (0.1).
-    >>> assert scale - 0.1 < 1e-8
+    >>> assert scale == 0.1
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
     >>> assert make_base_laplace(scale).check(0.1, 1.)
-
 
     A policy research organization wants to know the smallest sample size necessary to release an "accurate" epsilon=1 DP mean income. 
     Determine the smallest dataset size such that, with 95% confidence, 
@@ -433,38 +423,35 @@ def binary_search_param(
     ...     bounds=(1, 1000000))
     1498
     """
-    if bounds is None:
-        import sys
-        bounds = (0., sys.float_info.max)
-    return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, tolerance)
+    return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
 
 def binary_search(
         predicate: Callable[[Union[float, int]], bool],
-        bounds: Union[Tuple[float, float], Tuple[int, int]],
-        tolerance=None):
+        bounds: Union[Tuple[float, float], Tuple[int, int]] = None,
+        T=None,
+        return_sign=False):
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
-    If `bounds` are float, `tolerance` defaults to 1e-8.
+    If bounds are not passed, conducts an exponential search.
 
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
-    :param tolerance: the discovered parameter differs by at most `tolerance` from the ideal parameter
+    :param T: type of argument to `predicate`, one of {float, int}
+    :param return_sign: if True, also return the direction away from the decision boundary
     :return: the discovered parameter within the bounds
-    :rtype: Union[float, int]
-    :raises AssertionError: if the arguments are ill-formed (type issues, decision boundary not within `bounds`)
+    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
+    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
-
-    :examples:
+    :example:
 
     >>> from opendp.mod import binary_search
-    >>> # Integer binary search
-    >>> assert binary_search(lambda x: x > 5, bounds=(0, 10)) == 6
-    >>> assert binary_search(lambda x: x < 5, bounds=(0, 10)) == 4
     >>> # Float binary search
-    >>> assert 0.000 < binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. < 1e-8
-    >>> assert -1e-8 < binary_search(lambda x: x < 5., bounds=(0., 10.)) - 5. < 0.00
-
+    >>> assert binary_search(lambda x: x >= 5.) == 5.
+    >>> assert binary_search(lambda x: x <= 5.) == 5.
+    >>> # Integer binary search
+    >>> assert binary_search(lambda x: x > 5, T=int) == 6
+    >>> assert binary_search(lambda x: x < 5, T=int) == 4
 
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
@@ -486,7 +473,7 @@ def binary_search(
     >>> binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
     ...     bounds = (0., 1.))
-    0.6105625927448273
+    0.6105625903337409
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
@@ -498,28 +485,136 @@ def binary_search(
     ...     bounds = (0, 100))
     3
     """
-    assert len(set(map(type, bounds))) == 1, "bounds must share the same type"
+    if bounds is None:
+        bounds = exponential_bounds_search(predicate, T)
+
+    if bounds is None:
+        raise ValueError("unable to infer bounds")
+
+    if len(set(map(type, bounds))) != 1:
+        raise TypeError("bounds must share the same type")
     lower, upper = sorted(bounds)
 
     maximize = predicate(lower)  # if the lower bound passes, we should maximize
     minimize = predicate(upper)  # if the upper bound passes, we should minimize
-    assert maximize != minimize, "the decision boundary of the predicate is outside the bounds"
+    if maximize == minimize:
+        raise ValueError("the decision boundary of the predicate is outside the bounds")
 
     if isinstance(lower, float):
-        tolerance = 1.0e-8 if tolerance is None else tolerance
+        tolerance = 0.
         half = lambda x: x / 2.
     elif isinstance(lower, int):
-        tolerance = tolerance or 1  # the lower and upper bounds never meet due to int truncation
+        tolerance = 1  # the lower and upper bounds never meet due to int truncation
         half = lambda x: x // 2
     else:
-        raise AssertionError("bounds must be either float or int")
+        raise TypeError("bounds must be either float or int")
 
+    mid = lower
     while upper - lower > tolerance:
-        mid = lower + half(upper - lower)  # avoid overflow
+        new_mid = lower + half(upper - lower)  # avoid overflow
+
+        # avoid an infinite loop from float roundoff
+        if new_mid == mid:
+            break
+
+        mid = new_mid
         if predicate(mid) == minimize:
             upper = mid
         else:
             lower = mid
 
     # one bound is always false, the other true. Return the truthy bound
-    return upper if minimize else lower
+    value = upper if minimize else lower
+
+    # optionally return sign
+    if return_sign:
+        return value, 1 if minimize else -1
+    
+    return value
+
+
+def exponential_bounds_search(
+    predicate: Callable[[Union[float, int]], bool], 
+    T: Optional[type]) -> Optional[Union[Tuple[float, float], Tuple[int, int]]]:
+    """Determine bounds for a binary search via an exponential search,
+    in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
+    Will attempt to recover once if `predicate` throws an exception, 
+    by searching bands on the ok side of the exception boundary.
+    
+
+    :param predicate: a monotonic unary function from a number to a boolean
+    :param T: type of argument to predicate, one of {float, int}
+    :return: a tuple of float or int bounds that the decision boundary lies within
+    :raises TypeError: if the type is not inferrable (pass T)
+    :raises ValueError: if the predicate function is constant
+    """
+
+    # try to infer T
+    if T is None:
+        def check_type(v):
+            try:
+                predicate(v)
+            except TypeError:
+                return False
+            except OpenDPException as e:
+                if "No match for concrete type" in e.message:
+                    return False
+            return True
+        
+        if check_type(0.):
+            T = float
+        elif check_type(0):
+            T = int
+        else:
+            raise TypeError("unable to infer type `T`; pass the type `T` or bounds")
+
+    # core search functionality
+    def signed_band_search(center, at_center, sign):
+        """identify which band (of eight) the decision boundary lies in, 
+        starting from `center` in the direction indicated by `sign`"""
+
+        if T == int:
+            # searching bands of [(k - 1) * 2^16, k * 2^16].
+            # center + 1 included because zero is prone to error
+            bands = [center, center + 1, *(center + sign * 2 ** 16 * k for k in range(1, 9))]
+
+        if T == float:
+            # searching bands of [2^((k - 1)^2), 2^(k^2)].
+            # exponent has ten bits (2.^1024 overflows) so k must be in [0, 32).
+            # unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,
+            #    only check k in [0, 8). Set your own bounds if this is not sufficient
+            bands = [center, *(center + sign * 2. ** k ** 2 for k in range(1024 // 32 // 4))]
+
+        for i in range(1, len(bands)):
+            # looking for a change in sign that indicates the decision boundary is within this band
+            if at_center != predicate(bands[i]):
+                # return the band
+                return tuple(sorted(bands[i - 1:i + 1]))
+        
+        # No band found!
+        return None
+
+    try:
+        center = {int: 0, float: 0.}[T]
+        at_center = predicate(center)
+        # search positive bands, then negative bands
+        return signed_band_search(center, at_center, 1) or signed_band_search(center, at_center, -1)
+    except:
+        pass
+
+    # predicate has thrown an exception
+    # 1. Treat exceptions as a secondary decision boundary, and find the edge value
+    # 2. Return a bound by searching from the exception edge, in the direction away from the exception
+    def exception_predicate(v):
+        try:
+            predicate(v)
+            return True
+        except:
+            return False
+    exception_bounds = exponential_bounds_search(exception_predicate, T=T)
+    if exception_bounds is None:
+        raise ValueError("predicate always fails")
+
+    center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
+    at_center = predicate(center)
+    return signed_band_search(center, at_center, sign)
