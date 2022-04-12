@@ -319,6 +319,7 @@ def binary_search_chain(
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
@@ -380,6 +381,7 @@ def binary_search_param(
     :param d_in: desired input distance of the computation chain
     :param d_out: desired output distance of the computation chain
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `make_chain`
+    :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
     :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
@@ -436,6 +438,7 @@ def binary_search(
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
     :param T: type of argument to predicate, one of {float, int}
+    :param return_sign: if True, also return the direction away from the decision boundary
     :return: the discovered parameter within the bounds
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
     :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
@@ -524,9 +527,10 @@ def binary_search(
     value = upper if minimize else lower
 
     # optionally return sign
-    def get_sign(v):
-        return 1 if minimize else -1
-    return (value, get_sign(minimize)) if return_sign else value
+    if return_sign:
+        return value, 1 if minimize else -1
+    
+    return value
 
 
 def exponential_bounds_search(
@@ -586,6 +590,9 @@ def exponential_bounds_search(
             if at_center != predicate(bands[i]):
                 # return the band
                 return tuple(sorted(bands[i - 1:i + 1]))
+        
+        # No band found!
+        return None
 
     try:
         center = {int: 0, float: 0.}[T]
@@ -597,7 +604,7 @@ def exponential_bounds_search(
 
     # predicate has thrown an exception
     # 1. Treat exceptions as a secondary decision boundary, and find the edge value
-    # 2. Return a bound by search from the exception edge, in the direction away from the exception
+    # 2. Return a bound by searching from the exception edge, in the direction away from the exception
     def exception_predicate(v):
         try:
             predicate(v)
