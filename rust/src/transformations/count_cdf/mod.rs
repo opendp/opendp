@@ -106,7 +106,7 @@ where
         VectorDomain::new_all(),
         Function::new_fallible(move |arg: &Vec<T>| {
             // one fewer args than bin edges, or one greater args than bin edges are allowed
-            if bin_edges.len().abs_diff(arg.len()) != 1 {
+            if abs_diff(bin_edges.len(), arg.len()) != 1 {
                 return fallible!(
                     FailedFunction,
                     "there must be one more bin edge than there are counts"
@@ -181,6 +181,14 @@ where
                 .collect())
         }),
     )
+}
+
+fn abs_diff<T: PartialOrd + Sub<Output=T>>(a: T, b: T) -> T {
+    if a < b {
+        b - a
+    } else {
+        a - b
+    }
 }
 
 /// Compute number of elements less than each edge
