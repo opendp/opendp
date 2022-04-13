@@ -11,6 +11,7 @@ edition = "2018"
 build = "build/main.rs"
 
 [dependencies]
+opendp_derive = {path = "opendp_derive"}
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
