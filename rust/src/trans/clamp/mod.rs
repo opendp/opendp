@@ -7,12 +7,11 @@ use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 
-
 #[opendp_derive::ffi(
     module("trans"),
     features("contrib"),
     types(TA(example(get_first(bounds)))),
-    dispatch(TA = "@numeric"),
+    dispatch(TA = "@numbers")
 )]
 /// Make a Transformation that clamps numeric data in Vec<`TA`> to `bounds`.
 /// If datum is less than lower, let datum be lower.
@@ -27,23 +26,36 @@ use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 /// # Return
 /// A clamp transformation mapping vectors to vectors
 pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (TA, TA)
-) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<BoundedDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
+    bounds: (TA, TA),
+) -> Fallible<
+    Transformation<
+        VectorDomain<AllDomain<TA>>,
+        VectorDomain<BoundedDomain<TA>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+> {
     make_row_by_row_fallible(
         AllDomain::new(),
         BoundedDomain::new_closed(bounds.clone())?,
-        move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
+        move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()),
+    )
 }
 
 pub fn make_unclamp<TA: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (Bound<TA>, Bound<TA>)
-) -> Fallible<Transformation<VectorDomain<BoundedDomain<TA>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
-    make_row_by_row(
-        BoundedDomain::new(bounds)?,
-        AllDomain::new(),
-        |arg| arg.clone())
+    bounds: (Bound<TA>, Bound<TA>),
+) -> Fallible<
+    Transformation<
+        VectorDomain<BoundedDomain<TA>>,
+        VectorDomain<AllDomain<TA>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+> {
+    make_row_by_row(BoundedDomain::new(bounds)?, AllDomain::new(), |arg| {
+        arg.clone()
+    })
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,27 +1,38 @@
 #![allow(dead_code)]
 
 use proc_macro::TokenStream;
+use std::io::Write;
 
 use quote::quote;
-use syn::{AttributeArgs, ItemFn, parse_macro_input, Type, Visibility, WhereClause, TypeParamBound, Token, NestedMeta};
+use syn::{
+    parse_macro_input, AttributeArgs, ItemFn, NestedMeta, Token, Type, TypeParamBound, Visibility,
+    WhereClause,
+};
 
-
-mod parse;
 mod generate;
+mod parse;
 
-use crate::ffi::parse::{parse_macro_config, parse_doc_comments, normalize_function};
-
+use crate::ffi::parse::{normalize_function, parse_doc_comments, parse_macro_config};
 
 macro_rules! extract {
-    ($value:expr, $pattern:pat => $extracted_value:expr) => (match $value {
-        $pattern => $extracted_value,
-        _ => panic!(concat!(stringify!($value), " doesn't match ", stringify!($pattern))),
-    })
+    ($value:expr, $pattern:pat => $extracted_value:expr) => {
+        match $value {
+            $pattern => $extracted_value,
+            _ => panic!(concat!(
+                stringify!($value),
+                " doesn't match ",
+                stringify!($pattern)
+            )),
+        }
+    };
 }
-pub(crate) use extract;
-use syn::punctuated::Punctuated;
-use std::collections::HashMap;
 use crate::ffi::generate::gen_function;
+pub(crate) use extract;
+use std::{
+    collections::HashMap,
+    process::{Command, Stdio},
+};
+use syn::punctuated::Punctuated;
 
 // metadata for each function in a module
 pub(crate) struct Function {
@@ -45,12 +56,12 @@ pub(crate) struct Function {
     // syn tree for the function's where clause
     where_clause: Option<WhereClause>,
     // TODO: parse into representation
-    dispatch: Vec<Dispatch>
+    dispatch: Vec<Dispatch>,
 }
 
 pub(crate) struct Dispatch {
     cond: Option<String>,
-    prod: HashMap<String, String>
+    prod: HashMap<String, String>,
 }
 
 // Metadata for function arguments, derived types and returns.
@@ -79,19 +90,17 @@ pub(crate) struct Argument {
     // do_not_convert: bool,
     // // when is_type, use this as an example to infer the type
     // example: Option<RuntimeType>
-    meta: Vec<NestedMeta>
+    meta: Vec<NestedMeta>,
 }
 
 pub(crate) struct Generic {
     name: String,
     description: Vec<String>,
     bounds: Punctuated<TypeParamBound, Token![+]>,
-    meta: Vec<NestedMeta>
+    meta: Vec<NestedMeta>,
 }
 
-
 pub(crate) fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
-
     let mut item_: TokenStream = item.clone();
 
     let config = parse_macro_config(parse_macro_input!(attr as AttributeArgs));
@@ -107,14 +116,45 @@ pub(crate) fn ffi_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let doc_comments = parse_doc_comments(attrs);
 
     let function = normalize_function(sig, doc_comments, config);
+    let function_name = function.name.clone();
 
-    let function = gen_function(function);
+    let function_item = gen_function(function);
 
     // current state of the generated function:
-    println!("{}", quote!(#function));
+    reformat(quote!(#function_item), function_name);
 
     // for now, just return the base function as-is, without adding the extern fn
-    item_.extend(TokenStream::from(quote!(#function)));
+    item_.extend(TokenStream::from(quote!(#function_item)));
 
     item_
+}
+
+/// nodemon --exec "cargo build --features untrusted" --watch src --watch opendp_derive -e rs
+fn reformat(text: impl std::fmt::Display, name: String) {
+    let mut rustfmt = Command::new("rustfmt")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    write!(rustfmt.stdin.take().unwrap(), "{}", text).unwrap();
+    let output = rustfmt.wait_with_output().unwrap();
+    let formatted = String::from_utf8(output.stdout).unwrap();
+
+    let mut bat = Command::new("bat")
+        .arg("--paging")
+        .arg("never")
+        .arg("-l")
+        .arg("rust")
+        .arg("--color=always")
+        .arg(format!("--file-name={}", name))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    write!(bat.stdin.take().unwrap(), "{}", formatted).unwrap();
+    let output = bat.wait_with_output().unwrap();
+    let highlighted = String::from_utf8(output.stdout).unwrap();
+
+    print!("\x1B[2J\x1B[1;1H");
+    println!("{}", highlighted)
 }

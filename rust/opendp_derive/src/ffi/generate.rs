@@ -2,13 +2,15 @@
 use std::iter::FromIterator;
 
 use quote::{format_ident, quote};
-use syn::{FnArg, GenericArgument, ItemFn, Pat, Path, PathArguments, PatIdent, PatType, Token, Type, TypePath, TypePtr, TypeTuple};
+use syn::{FnArg, GenericArgument, ItemFn, Pat, Path, PathArguments, PatIdent, PatType, Token, Type, TypePath, TypePtr, TypeTuple, Expr};
 use syn::punctuated::Punctuated;
 
 use crate::ffi::{extract, Function, Argument};
 use crate::ffi::parse::path_to_str;
 use std::collections::HashSet;
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Ident};
+
+use super::Generic;
 
 pub(crate) fn gen_function(function: Function) -> ItemFn {
     let ffi_name = format_ident!("opendp_{}__{}_AUTO",
@@ -58,12 +60,14 @@ pub(crate) fn gen_function(function: Function) -> ItemFn {
     //     .map(|arg| c_to_rust_expr(arg, &generic_names))
     //     .fold()
 
+    let dispatcher = gen_dispatcher(function.generics);
+
     syn::parse(quote!{
         #[no_mangle]
         extern "C" fn #ffi_name(#args) -> #ret_type {
             use std::convert::TryFrom;
             #parse_types
-            unimplemented!()
+            #dispatcher
         }
     }.into()).expect("failed to parse generated function")
 }
@@ -120,4 +124,39 @@ fn is_generic(ty: Type, generics: &HashSet<String>) -> bool {
             .any(|elem| is_generic(elem.clone(), generics)),
         _ => panic!("testing for genericity is only implemented for path and tuple types")
     }
+}
+
+
+
+fn get_dispatch_types(label: String, features: Vec<String>) -> Vec<String> {
+    match label.as_str() {
+        "@numbers" => {
+            let mut types = vec!["u8", "u32", "u64", "u128", "i8", "i16", "i32", "i64", "i128", "usize", "bool", "String"];
+            if features.contains(&"floating-point".to_string()) {
+                types.extend(vec!["f32", "f64"]);
+            }
+            types.into_iter().map(String::from).collect()
+        },
+        _ => label.split(",").map(String::from).collect()
+    }
+}
+
+// fn cartesian<T: Clone>(axes: Vec<Vec<T>>) -> Vec<Vec<T>> {
+//     axes.into_iter().reduce(|a, b| )
+// }
+
+fn gen_dispatcher(types: Vec<Generic>) -> TokenStream {
+    let match_key = Punctuated::<Ident, Token![,]>::from_iter(types.iter().map(|t| format_ident!("{}", t.name)));
+
+    // let arms = types.into_iter().flat_map()
+    quote!(match (#match_key) {
+        
+        _ => unimplemented!()
+    };)
+}
+
+fn gen_caller() -> Expr {
+    // 1. downcast types
+    // 2. call constructor
+    unimplemented!()
 }
