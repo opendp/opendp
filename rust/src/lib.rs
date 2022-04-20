@@ -173,8 +173,10 @@ pub mod core;
 pub mod data;
 pub mod dist;
 pub mod dom;
+#[cfg(feature="contrib")]
 pub mod interactive;
 pub mod meas;
+#[cfg(feature="contrib")]
 pub mod poly;
 pub mod samplers;
 pub mod traits;

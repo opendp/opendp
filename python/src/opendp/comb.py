@@ -83,7 +83,7 @@ def make_sequential_composition_static_distances(
     :param measurement_pairs: A list of measurements to compose.
     :type measurement_pairs: Any
     :param QO: Type of output distance.
-    :type QO: RuntimeTypeDescriptor
+    :type QO: :ref:`RuntimeTypeDescriptor`
     :return: Measurement representing the composed transformations.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type

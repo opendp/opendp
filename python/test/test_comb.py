@@ -16,3 +16,18 @@ def test_amplification():
     assert not meas.check(2, 1.999)
     assert amplified.check(2, .4941)
     assert not amplified.check(2, .494)
+
+
+def test_basic_composition_multi():
+    from opendp.comb import make_sequential_composition_static_distances
+    from opendp.meas import make_base_geometric
+    composed = make_sequential_composition_static_distances([
+        (make_base_geometric(scale=2.), 1.),
+        (make_base_geometric(scale=2.), 1.)
+    ])
+    print("composed successfully")
+
+    print(composed.check(1, 2.))
+
+if __name__ == "__main__":
+    test_basic_composition_multi()

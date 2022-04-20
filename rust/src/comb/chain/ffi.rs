@@ -3,7 +3,10 @@ use crate::comb::{make_basic_composition, make_chain_mt, make_chain_tt, make_seq
 use crate::core::FfiResult;
 
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementOutExt};
+use crate::ffi::util::{Type, AnyObjectPtr, AnyMeasurementPtr};
 use crate::ffi::any::Downcast;
+use crate::error::Fallible;
+use std::convert::TryFrom;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -33,18 +36,43 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_sequential_composition_static_distances(
-    d_in: *const AnyObject,
     measurement_pairs: *const AnyObject,
-    _QO: *const c_char
+    QO: *const c_char
 ) -> FfiResult<*mut AnyMeasurement> {
-    let d_in: &AnyObject = try_as_ref!(d_in);
-    let measurement_pairs: Vec<(&AnyMeasurement, AnyObject)> = try_!(try_!(try_as_ref!(measurement_pairs)
-        .downcast_ref::<Vec<AnyObject>>())
-        .into_iter().map(|pair| pair.downcast_ref::<(AnyObject, AnyObject)>()
-            .and_then(|(meas, dist)| Ok((meas.downcast_ref::<AnyMeasurement>()?, dist.clone()))))
-        .collect());
+    println!("in opendp_comb__make_sequential_composition_static_distances");
 
-    make_sequential_composition_static_distances(d_in.clone(), measurement_pairs)
+    // should be f32 or f64
+    let QO = try_!(Type::try_from(QO));
+    println!("QO {}", QO.to_string());
+
+    // dereference the pointer to measurement pairs, an AnyObject that holds a Vec<AnyObjectPtr>
+    let measurement_pairs: &AnyObject = try_as_ref!(measurement_pairs);
+    println!("measurement_pairs.type_ {}", measurement_pairs.type_.to_string());
+
+    // downcast the AnyObject to a Vec<AnyObjectPtr>
+    let vec_any_ptr: &Vec<AnyObjectPtr> = try_!(measurement_pairs.downcast_ref());
+    println!("vec_any {} (should be 2 in this test)", vec_any_ptr.len());
+
+    // for each element, downcast the AnyObjectPtr to a &(AnyMeasurementPtr, QO), and then
+    // 1. wrap in a new tuple
+    // 2. dereference the measurement
+    // 3. wrap the distance in an anyobject
+    fn monomorphize<QO: 'static + Clone>(any_ref: &AnyObject) -> Fallible<(&AnyMeasurement, AnyObject)> {
+        let tuple = any_ref.downcast_ref::<(AnyMeasurementPtr, QO)>()?;
+        Ok((try_as_ref!(tuple.0), AnyObject::new(tuple.1.clone())))
+    }
+    
+    let measurement_pairs: Vec<(&AnyMeasurement, AnyObject)> = try_!(vec_any_ptr
+        .into_iter()
+        .map(|&any_ptr| {
+            let any_ref = try_as_ref!(any_ptr);
+            println!("any_ref.type_ {}", any_ref.type_.to_string());
+            dispatch!(monomorphize, [(QO, [f32, f64])], (any_ref))
+        })
+        .collect());
+    
+    println!("meas pairs made");
+    make_sequential_composition_static_distances(measurement_pairs)
         .map(IntoAnyMeasurementOutExt::into_any_out).into()
 }
 

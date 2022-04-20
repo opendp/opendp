@@ -57,7 +57,7 @@ pub fn accuracy_to_gaussian_scale<T>(accuracy: T, alpha: T) -> Fallible<T>
 }
 
 
-#[cfg(test)]
+#[cfg(all(test, feature="untrusted"))]
 pub mod test {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};

@@ -53,9 +53,11 @@ indexmap = { version = "1.6.2", features = ["serde"] }
 crate-type = ["rlib", "cdylib"]
 
 
-[dev-dependencies]
+# [dev-dependencies]
 # this enables the "untrusted" feature flag by default when doing tests
-opendp = { path = ".", features = ["untrusted"] }
+# incompatible with rust analyzer because of https://github.com/rust-lang/rust-analyzer/issues/2414
+# opendp = { path = ".", features = ["untrusted"] }
+
 
 [package.metadata.docs.rs]
 features = ["untrusted", "ffi"]

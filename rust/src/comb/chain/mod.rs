@@ -103,7 +103,6 @@ impl<Q: InfAdd + Zero + Clone> ComposableMeasure for SmoothedMaxDivergence<Q> {
 }
 
 pub fn make_sequential_composition_static_distances<DI, DO, MI, MO>(
-    d_in: MI::Distance,
     measurement_pairs: Vec<(&Measurement<DI, DO, MI, MO>, MO::Distance)>
 ) -> Fallible<Measurement<DI, VectorDomain<DO>, MI, MO>>
     where DI: 'static + Domain,
@@ -116,21 +115,20 @@ pub fn make_sequential_composition_static_distances<DI, DO, MI, MO>(
     if measurement_pairs.is_empty() {
         return fallible!(MakeMeasurement, "Must have at least one measurement")
     }
-
-    for (measurement, d_mid) in &measurement_pairs {
-        if !measurement.privacy_relation.eval(&d_in, d_mid)? {
-            return fallible!(MakeMeasurement, "one of the relations does not pass with its respective d_mid");
-        }
-    }
+    println!("unzipping (meas, dist) pairs");
 
     let (measurements, d_mids): (Vec<_>, Vec<_>) =
         measurement_pairs.into_iter().unzip();
 
+    println!("retrieving ideal inputs/outputs {}", measurements.len());
+    
+    println!("{:?}", 23);
     let input_domain = measurements[0].input_domain.clone();
     let output_domain = measurements[0].output_domain.clone();
     let input_metric = measurements[0].input_metric.clone();
     let output_measure = measurements[0].output_measure.clone();
 
+    println!("checking all measurements match");
     if !measurements.iter().all(|v| input_domain == v.input_domain) {
         return fallible!(DomainMismatch, "All input domains must be the same");
     }
@@ -143,11 +141,14 @@ pub fn make_sequential_composition_static_distances<DI, DO, MI, MO>(
     if !measurements.iter().all(|v| output_measure == v.output_measure) {
         return fallible!(MetricMismatch, "All output measures must be the same");
     }
+    println!("collecting functions and relations");
 
     let functions = measurements.iter()
         .map(|m| m.function.clone()).collect::<Vec<_>>();
-    let d_out = output_measure.compose(&d_mids)?;
+    let relations = measurements.iter()
+        .map(|m| m.privacy_relation.clone()).collect::<Vec<_>>();
 
+    println!("making measurement");
     Ok(Measurement::new(
         input_domain,
         VectorDomain::new(output_domain),
@@ -155,8 +156,16 @@ pub fn make_sequential_composition_static_distances<DI, DO, MI, MO>(
             functions.iter().map(|f| f.eval(arg)).collect()),
         input_metric,
         output_measure.clone(),
-        PrivacyRelation::new(move |d_in_prime: &MI::Distance, d_out_prime: &MO::Distance|
-            d_in_prime <= &d_in && &d_out <= d_out_prime)
+        PrivacyRelation::new_fallible(move |d_in: &MI::Distance, d_out: &MO::Distance| {
+
+            for (relation, d_mid) in relations.iter().zip(d_mids.iter()) {
+                if !relation.eval(d_in, d_mid)? {
+                    return fallible!(FailedRelation, "one of the relations does not pass with its respective d_mid");
+                }
+            }
+            let d_out_prime = output_measure.compose(&d_mids)?;
+            Ok(&d_out_prime <= d_out)
+        })
     ))
 }
 
@@ -266,12 +275,12 @@ mod tests {
 
     #[test]
     fn test_make_sequential_composition_static_distances() -> Fallible<()> {
-        let laplace = make_base_laplace::<AllDomain<_>>(1.)?;
+        let laplace = make_base_laplace::<AllDomain<_>>(1.0f64)?;
         let measurements = vec![
             (&laplace, 1.),
             (&laplace, 1.),
         ];
-        let composition = make_sequential_composition_static_distances(1., &measurements)?;
+        let composition = make_sequential_composition_static_distances(measurements)?;
         let arg = 99.;
         let ret = composition.function.eval(&arg)?;
 
