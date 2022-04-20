@@ -145,16 +145,3 @@ def test_randomized_response_bool():
     assert not meas.check(1, math.log(2.999))
 
 
-def test_basic_composition_multi():
-    from opendp.comb import make_sequential_composition_static_distances
-    from opendp.meas import make_base_geometric
-    composed = make_sequential_composition_static_distances([
-        (make_base_geometric(scale=2.), 1.),
-        (make_base_geometric(scale=2.), 1.)
-    ])
-
-    print(composed.check(1, 2.))
-
-if __name__ == "__main__":
-    test_basic_composition_multi()
-

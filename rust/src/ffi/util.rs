@@ -95,7 +95,7 @@ impl ToString for Type {
     fn to_string(&self) -> String {
         let get_id_str = |type_id: &TypeId| Type::of_id(type_id)
             .as_ref().map(ToString::to_string)
-            .unwrap_or_else(|_| "?".to_string());
+            .unwrap_or_else(|_| format!("{:?} {:?}", type_id, TypeId::of::<f64>()));
 
         match &self.contents {
             TypeContents::PLAIN(v) => v.to_string(),
@@ -237,7 +237,7 @@ lazy_static! {
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyObjectPtr],
-            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, AnyObjectPtr>],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],
