@@ -13,6 +13,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, Downcast};
+use crate::data::ffi::util::AnyObjectPtr;
 use crate::ffi::util;
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, c_bool, Type, TypeContents};
 
@@ -26,18 +27,18 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
         }
         let plain = util::as_ref(raw.ptr as *const T)
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create an object"))?.clone();
-        Ok(AnyObject::new(plain))
+        Ok(AnyObject::new_clone(plain))
     }
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
-        Ok(AnyObject::new(string))
+        Ok(AnyObject::new_clone(string))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
         let vec = slice.iter()
             .map(|str_ptr| Ok(util::to_str(*str_ptr)?.to_owned()))
             .collect::<Fallible<Vec<String>>>()?;
-        Ok(AnyObject::new(vec))
+        Ok(AnyObject::new_clone(vec))
     }
     fn raw_to_slice<T: Clone>(_raw: &FfiSlice) -> Fallible<AnyObject> {
         // TODO: Need to do some extra wrapping to own the slice here.
@@ -46,8 +47,10 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
     #[allow(clippy::unnecessary_wraps)]
     fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
+        println!("slice to vec");
         let vec = slice.to_vec();
-        Ok(AnyObject::new(vec))
+        println!("slice to vec after");
+        Ok(AnyObject::new_clone(vec))
     }
     fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 2 {
@@ -58,7 +61,7 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
         let tuple = util::as_ref(slice[0] as *const T0).cloned()
             .zip(util::as_ref(slice[1] as *const T1).cloned())
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
-        Ok(AnyObject::new(tuple))
+        Ok(AnyObject::new_clone(tuple))
     }
     fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
@@ -73,7 +76,7 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
         let map = keys.iter().cloned()
             .zip(vals.iter().cloned())
             .collect::<HashMap<K, V>>();
-        Ok(AnyObject::new(map))
+        Ok(AnyObject::new_clone(map))
     }
     match T.contents {
         TypeContents::PLAIN("String") => {
@@ -85,23 +88,21 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
-            println!("raw_to_hashmap: {:?}", element.descriptor);
+            println!("from rust, raw_to_vec: {:?}", element.descriptor);
             match element.descriptor.as_str() {
                 "String" => raw_to_vec_string(raw),
                 "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
-                "AnyObject" => raw_to_vec::<AnyObject>(raw),
-                // "(AnyMeasurementPtr, f32)" => raw_to_vec::<(AnyMeasurementPtr, f32)>(raw),
-                // "(AnyMeasurementPtr, f64)" => raw_to_vec::<AnyObjectPtr>(raw),
+                "AnyObjectPtr" => raw_to_vec::<AnyObjectPtr>(raw),
                 "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw))
-            }
+            } 
         }
         TypeContents::TUPLE(ref element_ids) => {
             if element_ids.len() != 2 {
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
             let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
-            println!("from rust, dispatching types: {:?}", types);
+            println!("from rust, dispatching types: {:?}", types.iter().map(Type::to_string).collect::<Vec<_>>());
             if types.first() == Some(&Type::of::<AnyMeasurementPtr>()) {
                 dispatch!(raw_to_tuple, [(types[0], [AnyMeasurementPtr]), (types[1], [f64, f32])], (raw))
             } else {
@@ -174,8 +175,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let data: &HashMap<K, V> = obj.downcast_ref()?;
 
         // wrap keys and values up in an AnyObject
-        let keys = AnyObject::new(data.keys().cloned().collect::<Vec<K>>());
-        let vals = AnyObject::new(data.values().cloned().collect::<Vec<V>>());
+        let keys = AnyObject::new_clone(data.keys().cloned().collect::<Vec<K>>());
+        let vals = AnyObject::new_clone(data.values().cloned().collect::<Vec<V>>());
 
         // wrap the whole map up together in an FfiSlice
         let map = vec![util::into_raw(keys), util::into_raw(vals)];

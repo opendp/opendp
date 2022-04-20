@@ -2,8 +2,8 @@ use crate::comb::{make_chain_mt, make_chain_tt, make_sequential_composition_stat
 use crate::core::FfiResult;
 
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementOutExt};
-use crate::ffi::any::Downcast;
 use crate::ffi::util::AnyMeasurementPtr;
+use crate::ffi::any::Downcast;
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
