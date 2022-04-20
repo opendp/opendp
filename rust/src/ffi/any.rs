@@ -142,18 +142,27 @@ impl AnyObject {
         }
         fn monomorphize_clone<T: 'static + Clone>() -> Fallible<fn(&AnyObject) -> AnyObject> {
             Ok(|self_| AnyObject::new(self_.downcast_ref::<T>()
-                .expect("Clone called on non-cloneable AnyObject").clone()))
+                .expect("Downcast will always be of same type").clone()))
         }
 
         let type_ = Type::of::<T>();
+        println!("new Type {}", type_.to_string());
 
-        Self {
+        AnyObject {
             partial_eq_glue: dispatch!(monomorphize_partial_eq, [(type_, @hashable)], ()).ok().map(Glue::new),
             partial_cmp_glue: dispatch!(monomorphize_partial_cmp, [(type_, @hashable)], ()).ok().map(Glue::new),
+            // CAUTION: oftentimes clone_glue is None, because T is not in @primitives
             clone_glue: dispatch!(monomorphize_clone, [(type_, @primitives)], ()).ok().map(Glue::new),
             type_,
             value: AnyBox::new(value),
         }
+    }
+
+    pub fn new_clone<T: 'static + Clone>(value: T) -> Self {
+        let mut new = Self::new(value);
+        println!("new_clone Type {}", new.type_.to_string());
+        new.clone_glue = Some(Glue::new(|self_: &Self| AnyObject::new(self_.downcast_ref::<T>().expect("Downcast will always be of same type").clone())));
+        new
     }
 
     #[cfg(test)]
@@ -183,7 +192,9 @@ impl PartialOrd for AnyObject {
 }
 impl Clone for AnyObject {
     fn clone(&self) -> Self {
-        self.clone_glue.as_ref().map(|glue| glue(self)).unwrap()
+        println!("cloning now");
+        println!("AnyObject type: {}", self.type_.to_string());
+        self.clone_glue.as_ref().expect("Clone glue is missing")(self)
     }
 }
 

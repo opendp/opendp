@@ -273,7 +273,7 @@ class RuntimeType(object):
         """
 
         # TODO: this is ugly!
-        if expected == "AnyObject":
+        if expected == "AnyObjectPtr":
             return
 
         ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
@@ -368,6 +368,22 @@ class PrivacyMeasure(RuntimeType):
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
 ZeroConcentratedDivergence = PrivacyMeasure('ZeroConcentratedDivergence')
+
+class Carrier(RuntimeType):
+    def __getitem__(self, subdomain):
+        return Carrier(self.origin, [self.parse(type_name=subdomain)])
+
+Vec = Carrier('Vec')
+i8 = RuntimeType('i8')
+i16 = RuntimeType('i16')
+i32 = RuntimeType('i32')
+i64 = RuntimeType('i64')
+u8 = RuntimeType('u8')
+u16 = RuntimeType('u16')
+u32 = RuntimeType('u32')
+u64 = RuntimeType('u64')
+f32 = RuntimeType('f32')
+f64 = RuntimeType('f64')
 
 
 class Domain(RuntimeType):
