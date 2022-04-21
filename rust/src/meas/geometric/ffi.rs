@@ -22,7 +22,7 @@ pub extern "C" fn opendp_meas__make_base_geometric(
         scale: *const c_void, bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + GeometricDomain<QO>,
-              D::Atom: 'static + TotalOrd + Clone + DistanceConstant<QO>,
+              D::Atom: 'static + Ord + Clone + DistanceConstant<QO>,
               QO: 'static + Float + InfCast<D::Atom> + TotalOrd + InfDiv + InfMul,
               f64: InfCast<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();

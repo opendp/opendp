@@ -8,8 +8,7 @@ use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::SampleTwoSidedGeometric;
 use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, InfAdd, InfCast, RoundCast};
 use crate::trans::{
-    make_lipschitz_cast, make_lipschitz_mul, GreatestDifference, LipschitzCastDomain,
-    LipschitzMulDomain, LipschitzMulMetric, SameMetric,
+    GreatestDifference, LipschitzCastDomain, LipschitzMulDomain, LipschitzMulMetric,
 };
 
 use crate::meas::GeometricDomain;

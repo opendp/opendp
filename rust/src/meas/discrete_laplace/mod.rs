@@ -1,5 +1,5 @@
-#[cfg(feature = "ffi")]
-mod ffi;
+// #[cfg(feature = "ffi")]
+// mod ffi;
 
 mod traits;
 pub use traits::*;
@@ -10,7 +10,7 @@ use crate::core::Measurement;
 use crate::dist::{AbsoluteDistance, MaxDivergence};
 use crate::error::*;
 use crate::meas::make_base_geometric;
-use crate::traits::{InfAdd, InfCast, RoundCast, TotalOrd};
+use crate::traits::{InfAdd, InfCast, RoundCast};
 use crate::trans::{make_lipschitz_cast, make_lipschitz_mul, GreatestDifference, SameMetric};
 
 
@@ -25,7 +25,7 @@ where
         + InfCast<D::Atom>
         + RoundCast<D::Atom>
         + Clone
-        + TotalOrd
+        + Ord
         + GreatestDifference<D::Atom>
         + InfAdd,
     // metrics match, but associated distance types may vary
@@ -59,7 +59,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{dom::VectorDomain, trans::make_sized_bounded_mean};
+    use crate::{dom::{VectorDomain, AllDomain}, trans::make_sized_bounded_mean};
 
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
