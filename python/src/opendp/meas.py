@@ -54,9 +54,9 @@ def make_base_laplace(
 def make_base_discrete_laplace(
     scale,
     bounds: Any = None,
-    granularity = 0.00000000000001,
+    granularity = 0.00006103515625,
     D: RuntimeTypeDescriptor = "AllDomain<f64>",
-    I: RuntimeTypeDescriptor = "i64"
+    I: RuntimeTypeDescriptor = "i32"
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
@@ -64,7 +64,7 @@ def make_base_discrete_laplace(
     :param scale: noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviation.
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
     :type bounds: Any
-    :param granularity: Gap between each neighbor in the discretized space.
+    :param granularity: Gap between each neighbor in the discretized space. Defaults to 2^{-14}.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
     :param I: Data type of the integer space where noise is added.

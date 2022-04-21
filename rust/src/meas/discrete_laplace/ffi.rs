@@ -41,7 +41,6 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace(
         } else {
             None
         };
-
         let granularity = util::as_ref(granularity as *const D::Atom).cloned();
         make_base_discrete_laplace::<D, I>(scale, bounds, granularity).into_any()
     }

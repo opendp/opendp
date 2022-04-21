@@ -103,3 +103,17 @@ def test_randomized_response_bool():
     import math
     assert meas.check(1, math.log(3.))
     assert not meas.check(1, math.log(2.999))
+
+
+# def test_bench_laplace():
+#     from timeit import timeit
+#     reps = 1000
+
+#     from opendp.meas import make_base_discrete_laplace, make_base_laplace
+#     disc_lap = make_base_discrete_laplace(1., granularity=1e-13)
+#     cont_lap = make_base_laplace(1.)
+
+#     print("discrete laplace:  ", timeit(lambda: disc_lap(0.), number=reps))
+#     print("continuous laplace:", timeit(lambda: cont_lap(0.), number=reps))
+    
+# test_bench_laplace()
