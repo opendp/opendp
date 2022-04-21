@@ -51,8 +51,8 @@
                 "name": "granularity",
                 "c_type": "void *",
                 "rust_type": "OptionT",
-                "default": 1e-14,
-                "description": "Gap between each neighbor in the discretized space."
+                "default": 0.00006103515625,
+                "description": "Gap between each neighbor in the discretized space. Defaults to 2^{-14}."
             },
             {
                 "name": "D",
@@ -62,7 +62,7 @@
             },
             {
                 "name": "I",
-                "default": "i64",
+                "default": "i32",
                 "description": "Data type of the integer space where noise is added.",
                 "is_type": true
             }

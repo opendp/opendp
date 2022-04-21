@@ -1,6 +1,6 @@
 \input{../../mod.sty}
 
-\title{OpenDP \texttt{make\_base\_laplace}}
+\title{OpenDP \texttt{make\_base\_discrete\_laplace}}
 \author{security@opendp.org}
 
 \dependsOn{HEAD}{../../definitions.tex}
@@ -11,6 +11,7 @@
 \maketitle
 
 The discrete laplace measurement adds an approximation to laplacian noise to an input argument.
+
 We can't just add laplacian noise directly, because it doesn't admit $\epsilon$ differential privacy.
 
 Instead use a discrete version of laplacian noise, sampled from the two-sided geometric distribution.
