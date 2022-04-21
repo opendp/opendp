@@ -1,3 +1,6 @@
+#[cfg(feature = "ffi")]
+mod ffi;
+
 use std::ops::Mul;
 
 use num::{Float, Integer};
@@ -18,10 +21,40 @@ use crate::trans::{
 
 use super::GeometricDomain;
 
-pub trait DiscreteLaplaceDomain<I>:
-    LipschitzMulDomain + LipschitzCastDomain<Self::IntegerDomain>
+// Helper trait to obscure trait bounds on Atom
+pub trait BoundedLipschitzMulDomain<I>: LipschitzMulDomain<Atom = Self::BoundedAtom>
+where
+    I: InfCast<Self::BoundedAtom>,
 {
-    type Metric: SensitivityMetric<Distance = Self::Atom> + Default;
+    type BoundedAtom: Float
+        + AlertingAbs
+        + DistanceConstant<Self::Atom>
+        + DistanceConstant<I>
+        + DefaultGranularity
+        + GreatestDifference<Self::Atom>
+        + InfAdd;
+}
+impl<T, I> BoundedLipschitzMulDomain<I> for T
+where
+    T: LipschitzMulDomain,
+    I: InfCast<Self::Atom>,
+    Self::Atom: Float
+        + AlertingAbs
+        + DistanceConstant<Self::Atom>
+        + DistanceConstant<I>
+        + DefaultGranularity
+        + GreatestDifference<Self::Atom>
+        + InfAdd,
+{
+    type BoundedAtom = Self::Atom;
+}
+
+pub trait DiscreteLaplaceDomain<I>:
+    'static + BoundedLipschitzMulDomain<I> + LipschitzCastDomain<Self::IntegerDomain> + Default
+where
+    I: InfCast<Self::BoundedAtom>,
+{
+    type Metric: SensitivityMetric<Distance = Self::Atom> + Default + LipschitzMulMetric;
     type IntegerMetric: Metric<Distance = I>;
     type IntegerDomain: GeometricDomain<Self::Atom, Atom = I, InputMetric = Self::IntegerMetric>
         + LipschitzCastDomain<Self>
@@ -30,8 +63,20 @@ pub trait DiscreteLaplaceDomain<I>:
 
 impl<T, I> DiscreteLaplaceDomain<I> for AllDomain<T>
 where
-    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T> + RoundCast<I>,
-    I: 'static + RoundCast<T> + CheckNull + Integer + Clone + SampleTwoSidedGeometric<T>,
+    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T> + RoundCast<I>
+    + AlertingAbs
+    + DistanceConstant<Self::Atom>
+    + DistanceConstant<I>
+    + DefaultGranularity
+    + GreatestDifference<Self::Atom>
+    + InfAdd,
+    I: 'static
+        + RoundCast<T>
+        + CheckNull
+        + Integer
+        + Clone
+        + SampleTwoSidedGeometric<T>
+        + InfCast<T>,
 {
     type Metric = AbsoluteDistance<T>;
     type IntegerMetric = AbsoluteDistance<I>;
@@ -40,8 +85,20 @@ where
 
 impl<T, I> DiscreteLaplaceDomain<I> for VectorDomain<AllDomain<T>>
 where
-    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T> + RoundCast<I>,
-    I: 'static + RoundCast<T> + CheckNull + Integer + Clone + SampleTwoSidedGeometric<T>,
+    T: 'static + Float + CheckNull + for<'a> Mul<&'a T, Output = T> + RoundCast<I>
+    + AlertingAbs
+    + DistanceConstant<Self::Atom>
+    + DistanceConstant<I>
+    + DefaultGranularity
+    + GreatestDifference<Self::Atom>
+    + InfAdd,
+    I: 'static
+        + RoundCast<T>
+        + CheckNull
+        + Integer
+        + Clone
+        + SampleTwoSidedGeometric<T>
+        + InfCast<T>,
 {
     type Metric = L1Distance<T>;
     type IntegerMetric = L1Distance<I>;
@@ -68,16 +125,7 @@ pub fn make_base_discrete_laplace<D, I>(
     granularity: Option<D::Atom>,
 ) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
 where
-    D: 'static + DiscreteLaplaceDomain<I> + Default,
-    D::Atom: Float
-        + AlertingAbs
-        + DistanceConstant<D::Atom>
-        + DistanceConstant<I>
-        + DefaultGranularity
-        + GreatestDifference<D::Atom>
-        + InfAdd,
-    D::Metric: LipschitzMulMetric + Default,
-    D::IntegerDomain: GeometricDomain<D::Atom, Atom = I>,
+    D: DiscreteLaplaceDomain<I>,
     I: 'static
         + InfCast<D::Atom>
         + RoundCast<D::Atom>
@@ -86,6 +134,7 @@ where
         + TotalOrd
         + GreatestDifference<D::Atom>
         + InfAdd,
+    // metrics match, but associated distance types may vary
     (D::Metric, D::IntegerMetric): SameMetric<D::Metric, D::IntegerMetric>,
 {
     if scale.is_sign_negative() {
