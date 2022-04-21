@@ -6,6 +6,7 @@ from opendp.typing import *
 
 __all__ = [
     "make_base_laplace",
+    "make_base_discrete_laplace",
     "make_base_gaussian",
     "make_base_analytic_gaussian",
     "make_base_geometric",
@@ -48,6 +49,54 @@ def make_base_laplace(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(scale, D), Measurement))
+
+
+def make_base_discrete_laplace(
+    scale,
+    bounds: Any = None,
+    granularity = 0.00000000000001,
+    D: RuntimeTypeDescriptor = "AllDomain<f64>",
+    I: RuntimeTypeDescriptor = "i64"
+) -> Measurement:
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
+    Adjust D to noise vector-valued data.
+    
+    :param scale: noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviation.
+    :param bounds: Set bounds on the count to make the algorithm run in constant-time.
+    :type bounds: Any
+    :param granularity: Gap between each neighbor in the discretized space.
+    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+    :type D: :ref:`RuntimeTypeDescriptor`
+    :param I: Data type of the integer space where noise is added.
+    :type I: :ref:`RuntimeTypeDescriptor`
+    :return: A base_discrete_laplace step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    D = RuntimeType.parse(type_name=D)
+    I = RuntimeType.parse(type_name=I)
+    T = get_domain_atom(D)
+    OptionTT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
+    OptionT = RuntimeType(origin='Option', args=[T])
+    
+    # Convert arguments to c types.
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionTT)
+    granularity = py_to_c(granularity, c_type=ctypes.c_void_p, type_name=OptionT)
+    D = py_to_c(D, c_type=ctypes.c_char_p)
+    I = py_to_c(I, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_base_discrete_laplace
+    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(scale, bounds, granularity, D, I), Measurement))
 
 
 def make_base_gaussian(
