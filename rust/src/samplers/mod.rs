@@ -1,29 +1,41 @@
+pub mod geometric;
+use geometric::SampleGeometric;
+
 use std::cmp;
-use std::ops::{AddAssign, Neg, Sub, SubAssign, Mul};
+use std::ops::{Mul, Neg, Sub};
 
 use ieee754::Ieee754;
-use num::{Bounded, clamp, One, Zero};
-#[cfg(feature="use-mpfr")]
-use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
+use num::{clamp, Bounded, One, Zero};
+#[cfg(feature = "use-mpfr")]
+use rug::{
+    rand::{ThreadRandGen, ThreadRandState},
+    Float,
+};
 
 use crate::error::Fallible;
-#[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
+use crate::traits::{
+    AlertingSub, CastInternalReal, FloatBits, InfAdd, InfDiv, InfExp, InfSub, TotalOrd,
+};
+#[cfg(any(not(feature = "use-mpfr"), not(feature = "use-openssl")))]
 use rand::Rng;
-use crate::traits::{TotalOrd, FloatBits, InfExp, InfSub, InfAdd, AlertingSub, CastInternalReal, InfDiv};
 
-#[cfg(feature="use-openssl")]
+#[cfg(feature = "use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     use openssl::rand::rand_bytes;
     if let Err(e) = rand_bytes(buffer) {
         fallible!(FailedFunction, "OpenSSL error: {:?}", e)
-    } else { Ok(()) }
+    } else {
+        Ok(())
+    }
 }
 
-#[cfg(not(feature="use-openssl"))]
+#[cfg(not(feature = "use-openssl"))]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     if let Err(e) = rand::thread_rng().try_fill(buffer) {
         fallible!(FailedFunction, "Rand error: {:?}", e)
-    } else { Ok(()) }
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(feature = "use-mpfr")]
@@ -37,7 +49,7 @@ impl GeneratorOpenSSL {
     }
 }
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 impl ThreadRandGen for GeneratorOpenSSL {
     fn gen(&mut self) -> u32 {
         let mut buffer = [0u8; 4];
@@ -100,13 +112,13 @@ pub trait SampleBernoulli<T>: Sized {
 }
 
 impl<T: Copy + One + Zero + PartialOrd + SampleUniformExponent> SampleBernoulli<T> for bool
-    where T::Bits: PartialOrd {
-
+where
+    T::Bits: PartialOrd,
+{
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
-
         // ensure that prob is a valid probability
         if !(T::zero()..=T::one()).contains(&prob) {
-            return fallible!(FailedFunction, "probability is not within [0, 1]")
+            return fallible!(FailedFunction, "probability is not within [0, 1]");
         }
 
         // repeatedly flip fair coin (up to 1023 times) and identify index (0-based) of first heads
@@ -114,7 +126,9 @@ impl<T: Copy + One + Zero + PartialOrd + SampleUniformExponent> SampleBernoulli<
 
         // if prob == 1., return after retrieving first_heads_index, to protect constant time
         // if prob == 1., then exponent is T::EXPONENT_PROB and mantissa is zero
-        if prob == T::one() { return Ok(true) }
+        if prob == T::one() {
+            return Ok(true);
+        }
 
         // number of leading zeros in binary representation of prob
         //    cast is non-saturating because exponent only uses first 11 bits
@@ -129,7 +143,10 @@ impl<T: Copy + One + Zero + PartialOrd + SampleUniformExponent> SampleBernoulli<
             // all other digits out-of-bounds are not float-approximated/are-implicitly-zero
             i if i > num_leading_zeros + T::MANTISSA_BITS => false,
             // retrieve the bit from the mantissa at `i` slots shifted from the left
-            i => prob.to_bits() & (T::Bits::one() << (T::MANTISSA_BITS + num_leading_zeros - i)) != T::Bits::zero()
+            i => {
+                prob.to_bits() & (T::Bits::one() << (T::MANTISSA_BITS + num_leading_zeros - i))
+                    != T::Bits::zero()
+            }
         })
     }
 }
@@ -139,17 +156,24 @@ pub trait SampleRademacher: Sized {
     fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self>;
 }
 
-impl<T: Neg<Output=T> + One> SampleRademacher for T {
+impl<T: Neg<Output = T> + One> SampleRademacher for T {
     fn sample_standard_rademacher() -> Fallible<Self> {
-        Ok(if bool::sample_standard_bernoulli()? {T::one()} else {T::one().neg()})
+        Ok(if bool::sample_standard_bernoulli()? {
+            T::one()
+        } else {
+            T::one().neg()
+        })
     }
     fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self> {
-        Ok(if bool::sample_bernoulli(prob, constant_time)? {T::one()} else {T::one().neg()})
+        Ok(if bool::sample_bernoulli(prob, constant_time)? {
+            T::one()
+        } else {
+            T::one().neg()
+        })
     }
 }
 
 pub trait SampleUniform: Sized {
-
     /// Returns a random sample from Uniform[0,1).
     ///
     /// This algorithm is taken from [Mironov (2012)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.366.5957&rep=rep1&type=pdf)
@@ -186,7 +210,6 @@ pub trait SampleUniform: Sized {
 
 impl SampleUniform for f64 {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
-
         // A saturated mantissa with implicit bit is ~2
         let exponent: i16 = -(1 + f64::sample_uniform_exponent(constant_time)? as i16);
 
@@ -223,14 +246,15 @@ fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Opti
     Ok(if constant_time {
         let mut buffer = [0_u8; B];
         fill_bytes(&mut buffer)?;
-        buffer.iter().enumerate()
+        buffer
+            .iter()
+            .enumerate()
             // ignore samples that contain no events
             .filter(|(_, &sample)| sample > 0)
             // compute the index of the smallest event in the batch
             .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
             // retrieve the smallest index
             .min()
-
     } else {
         // retrieve up to B bytes, each containing 8 trials
         let mut buffer = [0_u8; 1];
@@ -238,7 +262,7 @@ fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Opti
             fill_bytes(&mut buffer)?;
 
             if buffer[0] > 0 {
-                return Ok(Some(i * 8 + buffer[0].leading_zeros() as usize))
+                return Ok(Some(i * 8 + buffer[0].leading_zeros() as usize));
             }
         }
         None
@@ -267,75 +291,7 @@ impl SampleUniformExponent for f32 {
     }
 }
 
-
-pub trait SampleGeometric<S>: Sized {
-
-    /// Sample from the censored geometric distribution with parameter `prob`.
-    /// If `trials` is None, there are no timing protections, and the support is:
-    ///     [Self::MIN, Self::MAX]
-    /// If `trials` is Some(t), execution runs in constant time, and the support is
-    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `t`}}
-    ///
-    /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
-    ///
-    /// # Arguments
-    /// * `shift` - Parameter to shift the output by
-    /// * `positive` - If true, positive noise is added, else negative
-    /// * `prob` - Parameter for the geometric distribution, the probability of success on any given trial.
-    /// * `trials` - If Some, run the algorithm in constant time with exactly this many trials.
-    ///
-    /// # Return
-    /// A draw from the censored geometric distribution defined above.
-    ///
-    /// # Example
-    /// ```
-    /// use opendp::samplers::SampleGeometric;
-    /// let geom = u8::sample_geometric(0, true, 0.1, Some(20));
-    /// # use opendp::error::ExplainUnwrap;
-    /// # geom.unwrap_test();
-    /// ```
-    fn sample_geometric(shift: Self, positive: bool, prob: S, trials: Option<Self>) -> Fallible<Self>;
-}
-
-impl<T, S> SampleGeometric<S> for T
-    where T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded,
-          S: num::Float + Copy + One + Zero + PartialOrd + SampleUniformExponent,
-          S::Bits: PartialOrd {
-
-    fn sample_geometric(mut shift: Self, positive: bool, prob: S, mut trials: Option<Self>) -> Fallible<Self> {
-
-        // ensure that prob is a valid probability
-        if !(S::zero()..=S::one()).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
-
-        let bound = if positive { Self::max_value() } else { Self::min_value() };
-        let mut success: bool = false;
-
-        // loop must increment at least once
-        loop {
-            // make steps on `shift` until there is a successful trial or have reached the boundary
-            if !success && shift != bound {
-                if positive { shift += T::one() } else { shift -= T::one() }
-            }
-
-            // stopping criteria
-            if let Some(trials) = trials.as_mut() {
-                // in the constant-time regime, decrement trials until zero
-                if trials.is_zero() { break }
-                *trials -= T::one();
-            } else if success {
-                // otherwise break on first success
-                break
-            }
-
-            // run a trial-- do we stop?
-            success |= bool::sample_bernoulli(prob, trials.is_some())?;
-        }
-        Ok(shift)
-    }
-}
-
 pub trait SampleTwoSidedGeometric<S>: SampleGeometric<S> {
-
     /// Sample from the censored two-sided geometric distribution with parameter `prob`.
     /// If `bounds` is None, there are no timing protections, and the support is:
     ///     [Self::MIN, Self::MAX]
@@ -360,13 +316,17 @@ pub trait SampleTwoSidedGeometric<S>: SampleGeometric<S> {
     /// # geom.unwrap_test();
     /// ```
     fn sample_two_sided_geometric(
-        shift: Self, scale: S, bounds: Option<(Self, Self)>
+        shift: Self,
+        scale: S,
+        bounds: Option<(Self, Self)>,
     ) -> Fallible<Self>;
 }
 
 impl<T, S> SampleTwoSidedGeometric<S> for T
-    where T: Clone + SampleGeometric<S> + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub,
-          S: num::Float + InfExp + InfSub + InfDiv + InfAdd + SampleUniform {
+where
+    T: Clone + SampleGeometric<S> + Sub<Output = T> + Bounded + Zero + One + TotalOrd + AlertingSub,
+    S: num::Float + InfExp + InfSub + InfDiv + InfAdd + SampleUniform,
+{
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the
@@ -380,13 +340,23 @@ impl<T, S> SampleTwoSidedGeometric<S> for T
     ///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
     ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
     ///             the analyst can deduce that the input was greater than or equal to upper
-    fn sample_two_sided_geometric(mut shift: T, scale: S, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
-        if scale.is_zero() {return Ok(shift)}
+    fn sample_two_sided_geometric(
+        mut shift: T,
+        scale: S,
+        bounds: Option<(Self, Self)>,
+    ) -> Fallible<Self> {
+        if scale.is_zero() {
+            return Ok(shift);
+        }
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
-            if lower == upper {return Ok(lower)}
+            if lower == upper {
+                return Ok(lower);
+            }
             Some(upper.alerting_sub(&lower)?.alerting_sub(&T::one())?)
-        } else {None};
+        } else {
+            None
+        };
 
         // make alpha conservatively larger
         let inf_alpha: S = (-scale.recip()).inf_exp()?;
@@ -403,13 +373,22 @@ impl<T, S> SampleTwoSidedGeometric<S> for T
         let direction = bool::sample_standard_bernoulli()?;
         // make prob conservatively smaller, because a smaller probability means greater noise
         let geometric = T::sample_geometric(
-            shift.clone(), direction, S::one().neg_inf_sub(&inf_alpha)?, trials)?;
+            shift.clone(),
+            direction,
+            S::one().neg_inf_sub(&inf_alpha)?,
+            trials,
+        )?;
 
         // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
         // rounding should always make threshold smaller
-        let threshold = S::one().neg_inf_sub(&inf_alpha)?.neg_inf_div(
-            &S::one().inf_add(&inf_alpha)?)?;
-        let noised = if uniform < threshold { shift } else { geometric };
+        let threshold = S::one()
+            .neg_inf_sub(&inf_alpha)?
+            .neg_inf_div(&S::one().inf_add(&inf_alpha)?)?;
+        let noised = if uniform < threshold {
+            shift
+        } else {
+            geometric
+        };
 
         Ok(if let Some((lower, upper)) = bounds {
             clamp(noised, lower, upper)
@@ -423,20 +402,23 @@ impl<T, S> SampleTwoSidedGeometric<S> for T
 /// This removes the duplicate -0. member of the output space,
 /// which could hold an unintended bit of information
 fn censor_neg_zero<T: Zero>(v: T) -> T {
-    if v.is_zero() { T::zero() } else { v }
+    if v.is_zero() {
+        T::zero()
+    } else {
+        v
+    }
 }
 
 /// MPFR sets flags for [certain floating-point operations](https://docs.rs/gmp-mpfr-sys/1.4.7/gmp_mpfr_sys/C/MPFR/constant.MPFR_Interface.html#index-mpfr_005fclear_005fflags)
 /// Clears all flags (underflow, overflow, divide-by-0, nan, inexact, erange).
 fn censor_flags() {
-    use gmp_mpfr_sys::mpfr::{clear_flags};
-    unsafe {clear_flags()}
+    use gmp_mpfr_sys::mpfr::clear_flags;
+    unsafe { clear_flags() }
 }
 
 pub trait SampleLaplace: SampleRademacher + Sized {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self>;
 }
-
 
 pub trait SampleGaussian: Sized {
     /// Generates a draw from a Gaussian(loc, scale) distribution using the MPFR library.
@@ -472,16 +454,24 @@ pub trait SampleGaussian: Sized {
 /// To be valid, T::MANTISSA_BITS_U32 must be equal to the `noise` precision.
 #[cfg(feature = "use-mpfr")]
 fn perturb<T>(value: T, scale: T, noise: Float) -> T
-    where T: Clone + CastInternalReal + Mul<Output=T> + Zero {
+where
+    T: Clone + CastInternalReal + Mul<Output = T> + Zero,
+{
     use rug::float::Round;
-    use rug::ops::{DivAssignRound, AddAssignRound};
+    use rug::ops::{AddAssignRound, DivAssignRound};
 
     let mut value = value.into_internal();
     // when scaling into the noise coordinate space, round down so that noise is overestimated
     value.div_assign_round(&scale.clone().into_internal(), Round::Zero);
     // the noise itself is never scaled. Round away from zero to offset the scaling bias
     value.add_assign_round(
-        &noise, if value.is_sign_positive() {Round::Up} else {Round::Down});
+        &noise,
+        if value.is_sign_positive() {
+            Round::Up
+        } else {
+            Round::Down
+        },
+    );
     // postprocess back to original coordinate space
     //     (remains differentially private via postprocessing)
     let value = T::from_internal(value) * scale;
@@ -497,8 +487,8 @@ fn perturb<T>(value: T, scale: T, noise: Float) -> T
 
 #[cfg(test)]
 mod test_mpfr {
+    use gmp_mpfr_sys::mpfr::{clear_inexflag, clear_underflow, inexflag_p, underflow_p};
     use rug::Float;
-    use gmp_mpfr_sys::mpfr::{inexflag_p, clear_inexflag, underflow_p, clear_underflow};
     use std::ops::MulAssign;
 
     #[test]
@@ -510,20 +500,20 @@ mod test_mpfr {
     }
     #[test]
     fn test_inexflag() {
-        println!("inexflag before:  {:?}", unsafe {inexflag_p()});
+        println!("inexflag before:  {:?}", unsafe { inexflag_p() });
         let a = Float::with_val(53, 0.1);
         let b = Float::with_val(53, 0.2);
         let _ = a + b;
 
-        println!("inexflag after:   {:?}", unsafe {inexflag_p()});
-        unsafe {clear_inexflag()}
+        println!("inexflag after:   {:?}", unsafe { inexflag_p() });
+        unsafe { clear_inexflag() }
 
-        println!("inexflag cleared: {:?}", unsafe {inexflag_p()});
+        println!("inexflag cleared: {:?}", unsafe { inexflag_p() });
     }
 
     #[test]
     fn test_underflow_flag() {
-        println!("flag before:       {:?}", unsafe {underflow_p()});
+        println!("flag before:       {:?}", unsafe { underflow_p() });
         // taking advantage of subnormal representation, which is smaller than f64::MIN_POSITIVE
         let smallest_float = f64::from_bits(1);
         println!("smallest float:    {:e}", smallest_float);
@@ -533,23 +523,29 @@ mod test_mpfr {
         // somehow rug represents numbers beyond the given precision
         println!("smaller rug:       {:?}", a.clone() / 2.);
         // tetrate to force underflow
-        for _ in 0..32 { a.mul_assign(&a.clone()); }
+        for _ in 0..32 {
+            a.mul_assign(&a.clone());
+        }
         println!("underflow rug:     {:?}", a);
 
-        println!("flag after:        {:?}", unsafe {underflow_p()});
-        unsafe {clear_underflow()}
+        println!("flag after:        {:?}", unsafe { underflow_p() });
+        unsafe { clear_underflow() }
 
-        println!("flag cleared:      {:?}", unsafe {underflow_p()});
+        println!("flag cleared:      {:?}", unsafe { underflow_p() });
     }
 }
 
-
 #[cfg(feature = "use-mpfr")]
-impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> SampleLaplace for T {
+impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output = T>> SampleLaplace for T {
     fn sample_laplace(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
-        if scale.is_zero() { return Ok(shift) }
+        if scale.is_zero() {
+            return Ok(shift);
+        }
         if constant_time {
-            return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
+            return fallible!(
+                FailedFunction,
+                "mpfr samplers do not support constant time execution"
+            );
         }
 
         // initialize randomness
@@ -558,8 +554,8 @@ impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> Samp
             let mut state = ThreadRandState::new_custom(&mut rng);
 
             // see https://arxiv.org/pdf/1303.6257.pdf, algorithm V for exact standard exponential deviates
-            let exponential = rug::Float::with_val(
-                Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state));
+            let exponential =
+                rug::Float::with_val(Self::MANTISSA_DIGITS, rug::Float::random_exp(&mut state));
             // adding a random sign to the exponential deviate does not induce gaps or stacks
             exponential * T::sample_standard_rademacher()?.into_internal()
         };
@@ -570,7 +566,9 @@ impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> Samp
 }
 
 #[cfg(not(feature = "use-mpfr"))]
-impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademacher> SampleLaplace for T {
+impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademacher> SampleLaplace
+    for T
+{
     fn sample_laplace(shift: Self, scale: Self, _constant_time: bool) -> Fallible<Self> {
         let mut rng = rand::thread_rng();
         let mut u: T = T::zero();
@@ -582,12 +580,16 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
 }
 
 #[cfg(feature = "use-mpfr")]
-impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
-
+impl<T: Clone + CastInternalReal + Zero + Mul<Output = T>> SampleGaussian for T {
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
-        if scale.is_zero() { return Ok(shift) }
+        if scale.is_zero() {
+            return Ok(shift);
+        }
         if constant_time {
-            return fallible!(FailedFunction, "mpfr samplers do not support constant time execution")
+            return fallible!(
+                FailedFunction,
+                "mpfr samplers do not support constant time execution"
+            );
         }
 
         // initialize randomness
@@ -604,7 +606,6 @@ impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
         Ok(perturb(shift, scale, gauss))
     }
 }
-
 
 #[cfg(not(feature = "use-mpfr"))]
 impl SampleGaussian for f64 {
@@ -655,6 +656,31 @@ macro_rules! impl_sample_uniform_unsigned_int {
 }
 impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
+macro_rules! impl_sample_uniform_signed_int {
+    ($($ty:ty),+) => ($(
+        impl SampleUniformInt for $ty {
+            fn sample_uniform_int() -> Fallible<Self> {
+                let mut buffer = [0; core::mem::size_of::<Self>()];
+                fill_bytes(&mut buffer).unwrap();
+                Ok(Self::from_be_bytes(buffer))
+            }
+            fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
+                // v % upper is unbiased for any v < MAX - MAX % upper, because
+                // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
+                loop {
+                    // algorithm is only valid when sample_uniform_int is non-negative
+                    let mut v = Self::sample_uniform_int()?;
+                    if v < 0 { v += Self::MIN };
+                    if v <= Self::MAX - Self::MAX % upper {
+                        return Ok(v % upper)
+                    }
+                }
+            }
+        }
+    )+)
+}
+impl_sample_uniform_signed_int!(i8, i16, i32, i64, i128, isize);
+
 #[cfg(test)]
 mod test_uniform_int {
     use super::*;
@@ -693,11 +719,22 @@ mod test_samplers {
         std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * p)
     }
 
-    macro_rules! c {($expr:expr; $ty:ty) => ({let t: $ty = NumCast::from($expr).unwrap(); t})}
+    macro_rules! c {
+        ($expr:expr; $ty:ty) => {{
+            let t: $ty = NumCast::from($expr).unwrap();
+            t
+        }};
+    }
 
-    fn test_proportion_parameters<T, FS: Fn() -> T>(sampler: FS, p_pop: T, alpha: f64, err_margin: T) -> bool
-        where T: Sum<T> + Sub<Output=T> + Div<Output=T> + Real + Debug + One {
-
+    fn test_proportion_parameters<T, FS: Fn() -> T>(
+        sampler: FS,
+        p_pop: T,
+        alpha: f64,
+        err_margin: T,
+    ) -> bool
+    where
+        T: Sum<T> + Sub<Output = T> + Div<Output = T> + Real + Debug + One,
+    {
         // |z_{alpha/2}|
         let z_stat = c!(normal_cdf_inverse(alpha / 2.).abs(); T);
 
@@ -707,8 +744,11 @@ mod test_samplers {
         // confidence interval for the mean
         let abs_p_tol = z_stat * (p_pop * (T::one() - p_pop) / n).sqrt(); // almost the same as err_margin
 
-        println!("sampling {:?} observations to detect a change in proportion with {:.4?}% confidence",
-                 c!(n; u32), (1. - alpha) * 100.);
+        println!(
+            "sampling {:?} observations to detect a change in proportion with {:.4?}% confidence",
+            c!(n; u32),
+            (1. - alpha) * 100.
+        );
 
         // take n samples from the distribution, compute average as empirical proportion
         let p_emp: T = (0..c!(n; u32)).map(|_| sampler()).sum::<T>() / n;
@@ -716,7 +756,10 @@ mod test_samplers {
         let passed = (p_emp - p_pop).abs() < abs_p_tol;
 
         println!("stat: (tolerance, pop, emp, passed)");
-        println!("    proportion:     {:?}, {:?}, {:?}, {:?}", abs_p_tol, p_pop, p_emp, passed);
+        println!(
+            "    proportion:     {:?}, {:?}, {:?}, {:?}",
+            abs_p_tol, p_pop, p_emp, passed
+        );
         println!();
 
         passed
@@ -724,18 +767,27 @@ mod test_samplers {
 
     #[test]
     fn test_bernoulli() {
-        [0.2, 0.5, 0.7, 0.9].iter().for_each(|p|
-            assert!(test_proportion_parameters(
-                || if bool::sample_bernoulli(*p, false).unwrap() {1.} else {0.},
-                *p, 0.00001, *p / 100.),
-                    "empirical evaluation of the bernoulli({:?}) distribution failed", p)
-        )
+        [0.2, 0.5, 0.7, 0.9].iter().for_each(|p| {
+            assert!(
+                test_proportion_parameters(
+                    || if bool::sample_bernoulli(*p, false).unwrap() {
+                        1.
+                    } else {
+                        0.
+                    },
+                    *p,
+                    0.00001,
+                    *p / 100.
+                ),
+                "empirical evaluation of the bernoulli({:?}) distribution failed",
+                p
+            )
+        })
     }
 
     #[test]
-    #[cfg(feature="test-plot")]
+    #[cfg(feature = "test-plot")]
     fn plot_geometric() -> Fallible<()> {
-
         let shift = 0;
         let scale = 5.;
 
@@ -762,11 +814,13 @@ mod test_samplers {
                         .build()?)
                     .build()?,
             )
-            .build()?.show().unwrap();
+            .build()?
+            .show()
+            .unwrap();
         Ok(())
     }
 
-    #[cfg(feature="test-plot")]
+    #[cfg(feature = "test-plot")]
     fn plot_continuous(title: String, data: Vec<f64>) -> Fallible<()> {
         use vega_lite_4::*;
 
@@ -787,12 +841,14 @@ mod test_samplers {
                         .build()?)
                     .build()?,
             )
-            .build()?.show().unwrap_test();
+            .build()?
+            .show()
+            .unwrap_test();
         Ok(())
     }
 
     #[test]
-    #[cfg(feature="test-plot")]
+    #[cfg(feature = "test-plot")]
     fn plot_laplace() -> Fallible<()> {
         let shift = 0.;
         let scale = 5.;
@@ -806,9 +862,8 @@ mod test_samplers {
         Ok(())
     }
 
-
     #[test]
-    #[cfg(feature="test-plot")]
+    #[cfg(feature = "test-plot")]
     fn plot_gaussian() -> Fallible<()> {
         let shift = 0.;
         let scale = 5.;
