@@ -150,6 +150,7 @@ impl FloatBits for f64 {
     //     subtract one to exclude all numbers >= 1f64
     //     subtract one for zero indexing
     const EXPONENT_PROB: u64 = 1022;
+    // const EXPONENT_PROB: u64 = (Self::EXPONENT_BITS - 1).pow(2) - 2;
     fn to_bits(self) -> Self::Bits { self.to_bits() }
 }
 
