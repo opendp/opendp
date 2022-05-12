@@ -1,89 +1,50 @@
-# Prototype of interactive measurements with facilities for enforcing constraints across hierarchies of queryables.
-#
-# This is a sort of synthesis of Salil's method of hook functions, and Michael's approach of using an index
-# to target specific child queryables. What I like about it is the natural interface: You operate on a child
-# queryable directly, using the same interface as always; any housekeeping happens automatically behind the scenes.
-# In the case of sequential composition, a sub-queryable is implicitly "retired" whenever a new sibling is spawned.
-#
-# This works by building an explicit hierarchy of queryables, and forwarding queries through the ancestor chain
-# (starting at the root). This allows ancestors to update their state and maintain any constraints.
+class Queryable:
 
-# More here: https://docs.google.com/document/d/1hHTrXFgTlxHL4KidO_9MxHbjMSnPO6vccuTqVezRrG0/edit?usp=sharing
-#
-# NOTES:
-# * For simplicity, this omits domains, and uses a static privacy loss instead of a relation.
-# * This retains the original taxonomy of InteractiveMeasurement being the general type, with Measurement a subtype.
-# * eval() is the public method to invoke InteractiveMeasurements. eval1() is for (non-Interactive)Measurements.
-# * Unlike this previous prototype, this one supports arbitrary recursion of Queryables.
-
-
-class FlatQueryable:
-
-    def __init__(self, initial_state, transition):
+    def __init__(self, parent, data, initial_state):
+        self.parent = parent
+        self.data = data
         self.state = initial_state
-        self.transition = transition  # fn: (question, state) -> (state, answer)
 
-    def query(self, question):
-        (answer, new_state) = self.transition(self, question, self.state)
+    def evaluate(self, question):
+        (answer, new_state) = self._eval(question)
         self.state = new_state
         return answer
 
+    def _eval(self, question):
+        return question.evaluate(self.data)
 
-# pre-filter:   Q -> M x Q
-# post-filter:  A -> A
-# incorporate:  I x S -> S
+    def _register_self(self, privacy_loss):
+        pass
+
+    def _register_child(self, index, privacy_loss):
+        pass
 
 
-class HooksQueryable:
-    # evaluate:     Q           ->  A
+class FilterQueryable:
 
-    # eval0:        Q x S       ->  A x S
-    # eval1:        Q           ->  Q
-    # eval2:        A           ->  A
-    # response:     Q           ->  M'
+    def __init__(self, parent, budget):
+        super().__init__(parent, budget)
 
-    def __init__(self, parent, initial_state, transition, respond):
-        self.parent = parent
-        self.state = initial_state
-        self.transition = transition  # fn: (Q x S) -> (A x S)
-        self.respond = respond
+    def _eval(self, question, state):
+        raise Exception
 
-    def evaluate(self, question):
-        # If we have no parent, just call transition directly.
-        if self.parent is None:
-            (answer, new_state) = self.transition(self, question, self.state)
-            self.state = new_state
-            return answer
-
-        else:
-            pass
+    def _register(self, child_index, privacy):
+        raise Exception
 
 
 
 
-class HooksQueryable2:
-    # evaluate:     Q           ->  A
+# PARENT    CHILD       QUERY           ACTION
+# filter    filter      measurement     child adds and checks loss, child sends zero loss to parent, parent adds and checks loss
+# filter    odometer    measurement     child adds loss, child sends total loss to parent, parent adds and checks loss
+# odometer  odometer    measurement     child adds loss, child sends total loss to parent, parent adds loss
+# odometer  filter      measurement     child adds and checks loss, sends zero loss to parent, parent adds loss
 
-    # eval0:        Q x S       ->  A x S
-    # eval1:        Q x S       ->  M x S'
-    # response:     M x Sp      ->  M' x Sp
-    # eval2:        M' x S'     ->  A x S
+# filter    filter      odometer        no effect?
+# filter    odometer    odometer        no effect?
+# odometer  odometer    odometer        no effect?
+# odometer  filter      odometer        no effect?
 
-    def __init__(self, parent, initial_state, transition, respond):
-        self.parent = parent
-        self.state = initial_state
-        self.transition = transition  # fn: (Q x S) -> (A x S)
-        self.respond = respond
-
-    def evaluate(self, question):
-        # If we have no parent, just call transition directly.
-        if self.parent is None:
-            (answer, new_state) = self.transition(self, question, self.state)
-            self.state = new_state
-            return answer
-
-        else:
-            pass
 
 
 
