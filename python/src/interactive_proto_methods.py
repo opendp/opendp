@@ -25,29 +25,42 @@ class NestingQueryable(Queryable):
         if isinstance(answer, NestingQueryable):
             answer.parent = self
             answer.index = len(self.children)
-            self.children.append(answer)
-            if isinstance(query, InteractiveMeasurement):
-                if not self.validate_child_change(answer.index, query.privacy_loss):
-                    raise Exception("Not allowed")
+            new_children = self.children + [answer]
+            if isinstance(query, InteractiveMeasurement) \
+               and not self._validate_child_change(new_children, answer.index, query.privacy_loss):
+                return "Not allowed"
+            else:
+                self.children = new_children
         return answer
 
     def validate_child_change(self, child_index, child_proposed_privacy_loss):
+        return self._validate_child_change(self.children, child_index, child_proposed_privacy_loss)
+
+    def _validate_child_change(self, children, child_index, child_proposed_privacy_loss):
         child_privacy_losses = [child.privacy_loss if child.index != child_index else child_proposed_privacy_loss \
-                                for child in self.children]
+                                for child in children]
         proposed_privacy_loss = self._compose_children(child_privacy_losses)
-        return self._validate_pre(proposed_privacy_loss) \
-               and (self.parent == None or self.parent._validate_child_change_explicit_children(self.index, proposed_privacy_loss)) \
-               and self._validate_post(proposed_privacy_loss)
+        if self._validate_self_change(child_index, proposed_privacy_loss) \
+                and (self.parent == None or self.parent._validate_child_change_explicit_children(self.index, proposed_privacy_loss)):
+            self.privacy_loss = proposed_privacy_loss
+            return True
+        else:
+            return False
 
-    def _validate_pre(self, proposed_privacy_loss):
-        return True
-
-    def _validate_post(self, proposed_privacy_loss):
-        self.privacy_loss = proposed_privacy_loss
-        return True
-
-    def _compose_children(self, privacy_losses):
+    def _validate_self_change(self, originating_child_index, proposed_privacy_loss):
         raise Exception  # FOR SUBCLASSES TO IMPLEMENT
+
+    def _compose_children(self, child_privacy_losses):
+        raise Exception  # FOR SUBCLASSES TO IMPLEMENT
+
+
+class OdometerQueryable(NestingQueryable):
+
+    def __init__(self, data, parent):
+        super().__init__(data, parent)
+
+    def _validate_self_change(self, child_index, proposed_privacy_loss):
+        return True
 
 
 class FilterQueryable(NestingQueryable):
@@ -56,8 +69,17 @@ class FilterQueryable(NestingQueryable):
         super().__init__(data, parent)
         self.budget = budget
 
-    def _validate_pre(self, proposed_privacy_loss):
+    def _validate_self_change(self, child_index, proposed_privacy_loss):
         return proposed_privacy_loss <= self.budget
+
+
+class SequentialQueryable(NestingQueryable):
+
+    def __init__(self, data, parent):
+        super().__init__(data, parent)
+
+    def _validate_self_change(self, child_index, proposed_privacy_loss):
+        return child_index == len(self.children) - 1
 
 
 

@@ -1,63 +1,72 @@
 class Queryable:
 
-    def __init__(self):
-        pass
+    def __init__(self, initial_state, eval):
+        self.state = initial_state
+        self.eval = eval
 
     def evaluate(self, query):
-        return self._eval(query)  # Assumes subclass updates state in _eval().
-
-    def _eval(self, query):
-        raise Exception  # FOR SUBCLASSES TO IMPLEMENT
+        answer, new_state = self.eval(query, self.state)
+        self.state = new_state
+        return answer
 
 
 class NestingQueryable(Queryable):
 
-    def __init__(self, data, parent):
-        super().__init__()
-        self.data = data
-        self.parent = parent
-        self.index = -1
-        self.children = []
-        self.privacy_loss = 0
+    def __init__(self, data, parent=None, index=-1, subclass_state=None):
+        children = []
+        privacy_loss = 0
+        initial_state = (data, parent, index, children, privacy_loss, subclass_state)
 
-    def _eval(self, query):
-        answer = query.evaluate(self.data)
-        if isinstance(answer, NestingQueryable):
-            answer.parent = self
-            answer.index = len(self.children)
-            self.children.append(answer)
-            if isinstance(query, InteractiveMeasurement):
-                if not self.validate_child_change(answer.index, query.privacy_loss):
-                    raise Exception("Not allowed")
-        return answer
+        def eval(query, state):
+            (data, parent, index, children, privacy_loss, subclass_state) = state  # Unpack state
+            answer = query.invoke(data)  # Invoke query on data
+            if isinstance(answer, NestingQueryable):
+                child_index = len(children)
+                children += [answer]
+                answer._graft(self, child_index)
+                if isinstance(query, InteractiveMeasurement):
+                    if self.validate_child_change(child_index, query.privacy_loss):
+                        privacy_loss = self.privacy_loss()  # Re-cache, as it may have changed in validate_child_change()
+                    else:
+                        answer = "Not allowed"
+            new_state = (data, parent, index, children, privacy_loss, subclass_state)
+            return (answer, new_state)
+
+        super().__init__(initial_state, eval)
+
+    def index(self):
+        return self.state[2]
+
+    def privacy_loss(self):
+        return self.state[4]
+
+    def _graft(self, parent, index):
+        (data, _parent, _index, children, privacy_loss, subclass_state) = self.state
+        self.state = (data, parent, index, children, privacy_loss, subclass_state)
 
     def validate_child_change(self, child_index, child_proposed_privacy_loss):
-        child_privacy_losses = [child.privacy_loss if child.index != child_index else child_proposed_privacy_loss \
-                                for child in self.children]
+        (data, parent, index, children, privacy_loss, subclass_state) = self.state  # Unpack state
+        proposed_privacy_loss = self._validate_child_change(parent, index, children, child_index, child_proposed_privacy_loss)
+        if proposed_privacy_loss is not None:
+            return True
+        else:
+            return False
+
+    def _validate_child_change(self, parent, index, children, child_index, child_proposed_privacy_loss):
+        child_privacy_losses = [child.privacy_loss() if child.index() != child_index else child_proposed_privacy_loss \
+                                for child in children]
         proposed_privacy_loss = self._compose_children(child_privacy_losses)
-        return self._validate_pre(proposed_privacy_loss) \
-               and (self.parent == None or self.parent._validate_child_change_explicit_children(self.index, proposed_privacy_loss)) \
-               and self._validate_post(proposed_privacy_loss)
+        if self._validate_self_change(child_index, proposed_privacy_loss) \
+                and (parent == None or parent._validate_child_change_explicit_children(index, proposed_privacy_loss)):
+            return proposed_privacy_loss
+        else:
+            return None
 
-    def _validate_pre(self, proposed_privacy_loss):
-        return True
-
-    def _validate_post(self, proposed_privacy_loss):
-        self.privacy_loss = proposed_privacy_loss
-        return True
-
-    def _compose_children(self, privacy_losses):
+    def _validate_self_change(self, originating_child_index, proposed_privacy_loss):
         raise Exception  # FOR SUBCLASSES TO IMPLEMENT
 
-
-class FilterQueryable(NestingQueryable):
-
-    def __init__(self, data, parent, budget):
-        super().__init__(data, parent)
-        self.budget = budget
-
-    def _validate_pre(self, proposed_privacy_loss):
-        return proposed_privacy_loss <= self.budget
+    def _compose_children(self, child_privacy_losses):
+        raise Exception  # FOR SUBCLASSES TO IMPLEMENT
 
 
 
@@ -77,21 +86,27 @@ class FilterQueryable(NestingQueryable):
 
 
 
+class Invokable:  # Common interface for InteractiveMeasurement & Odometer
 
+    def __init__(self, function):
+        self.function = function
 
-class InteractiveMeasurement:
-    def __init__(self, function, privacy_loss):
-        self.function = function          # fn: InputDomain -> Queryable
-        self.privacy_loss = privacy_loss  # Fixed privacy loss
-    def invoke(self, data) -> Queryable:    # Convenience method to invoke function
+    def invoke(self, data):  # Convenience method to invoke function
         return self.function(data)
+
+
+class InteractiveMeasurement(Invokable):
+
+    def __init__(self, function, privacy_loss):
+        super().__init__(function)
+        self.privacy_loss = privacy_loss  # Fixed privacy loss
 
 
 class Measurement(InteractiveMeasurement):
     def __init__(self, function, privacy_loss):
         def interactive_function(data):  # Wrapper function that creates a dummy Queryable
-            initial_state = function(data)
-            def transition(_self, target_index_path, state, _question):
+            initial_state = function(data)  # Invoke function once, store result as state
+            def transition(_self, state, _question):
                 return (state, state)
             return Queryable(initial_state, transition)
         super().__init__(interactive_function, privacy_loss)
@@ -100,7 +115,7 @@ class Measurement(InteractiveMeasurement):
         return queryable.evaluate(None)
 
 
-class Odometer:
+class Odometer(Invokable):
     pass
 
 
