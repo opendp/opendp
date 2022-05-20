@@ -16,7 +16,7 @@ class NestingQueryable(Queryable):
             if isinstance(answer, NestingQueryable):
                 new_children = self.children + [answer]
                 if isinstance(query, InteractiveMeasurement):
-                    if not self._validate_child_change_explicit_children(answer.index, query.privacy_loss):
+                    if not self._validate_child_change_explicit_children(new_children, len(new_children) - 1, query.privacy_loss):
                         return "Not allowed"
                 self.children = new_children
             return answer
@@ -49,6 +49,15 @@ class NestingQueryable(Queryable):
             return False
 
 
+class FixedQueryable(Queryable):
+
+    def __init__(self, answer):
+        def _eval(self, _query):
+            return self.answer
+        super().__init__(_eval)
+        self.answer = answer
+
+
 class Invokable:  # Common interface for InteractiveMeasurement & Odometer
 
     def __init__(self, function):
@@ -67,11 +76,9 @@ class InteractiveMeasurement(Invokable):
 
 class Measurement(InteractiveMeasurement):
     def __init__(self, function, privacy_loss):
-        def interactive_function(data):  # Wrapper function that creates a dummy Queryable
+        def interactive_function(data):  # Wrapper function that creates a FixedQueryable
             answer = function(data)  # Invoke function once, store result as state
-            def _eval(self, _question):
-                return answer
-            return Queryable(_eval)
+            return FixedQueryable(answer)
         super().__init__(interactive_function, privacy_loss)
     def invoke1(self, data):                # Convenience method to invoke function, get result from null query
         queryable = self.invoke(data)
