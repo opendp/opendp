@@ -1,11 +1,11 @@
 use num::Zero;
 
 use crate::{
-    core::{Function, StabilityRelation, Transformation},
+    core::{Function, StabilityMap, Transformation},
     dist::{AbsoluteDistance, IntDistance, SymmetricDistance},
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd},
+    traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd},
 };
 
 use super::AddIsExact;
@@ -31,7 +31,6 @@ where
         + SaturatingAdd
         + AddIsExact
         + IsMonotonic,
-    IntDistance: InfCast<T>,
 {
     if !T::is_monotonic(bounds.clone()) {
         return fallible!(
@@ -48,7 +47,7 @@ where
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
+        StabilityMap::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
     ))
 }
 
@@ -71,7 +70,6 @@ where
         + SaturatingAdd
         + AddIsExact
         + IsMonotonic,
-    IntDistance: InfCast<T>,
 {
     if !T::is_monotonic(bounds.clone()) {
         return fallible!(
@@ -89,7 +87,7 @@ where
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_forward(
+        StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
             //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2).and_then(|d_in| d_in.inf_mul(&range)),

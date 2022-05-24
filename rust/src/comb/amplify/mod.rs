@@ -1,8 +1,8 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use crate::core::{Domain, Measurement, Metric, PrivacyRelation, Measure};
-use crate::dist::{SmoothedMaxDivergence, MaxDivergence};
+use crate::core::{Domain, Measurement, Metric, PrivacyMap, Measure};
+use crate::dist::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::dom::SizedDomain;
 use crate::error::Fallible;
 use num::Float;
@@ -25,7 +25,7 @@ impl<Q> AmplifiableMeasure for MaxDivergence<Q>
         Ok((epsilon.exp_m1() / sampling_rate).ln_1p())
     }
 }
-impl<Q> AmplifiableMeasure for SmoothedMaxDivergence<Q>
+impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
     where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
     fn amplify(&self, (epsilon, delta): &(Q, Q), population_size: usize, sample_size: usize) -> Fallible<(Q, Q)> {
         let sampling_rate = Q::exact_int_cast(sample_size)? / Q::exact_int_cast(population_size)?;
@@ -47,12 +47,11 @@ pub fn make_population_amplification<DIA, DO, MI, MO>(
         return fallible!(MakeMeasurement, "population size cannot be less than sample size") 
     }
 
-    let privacy_relation = measurement.privacy_relation;
+    let privacy_map = measurement.privacy_map;
     let output_measure: MO = measurement.output_measure.clone();
 
-    measurement.privacy_relation = PrivacyRelation::new_fallible(
-        move |d_in, d_out: &MO::Distance| privacy_relation.eval(
-            d_in, &output_measure.amplify(d_out, population_size, sample_size)?));
+    measurement.privacy_map = PrivacyMap::new_fallible(
+        move |d_in| output_measure.amplify(&privacy_map.eval(d_in)?, population_size, sample_size));
 
     Ok(measurement)
 }
@@ -69,10 +68,10 @@ mod test {
         let meas = (make_sized_bounded_mean(10, (0., 10.))? >> make_base_laplace(0.5)?)?;
         let amp = make_population_amplification(&meas, 100)?;
         amp.function.eval(&vec![1.; 10])?;
-        assert!(meas.privacy_relation.eval(&2, &2.)?);
-        assert!(!meas.privacy_relation.eval(&2, &1.999)?);
-        assert!(amp.privacy_relation.eval(&2, &0.4941)?);
-        assert!(!amp.privacy_relation.eval(&2, &0.494)?);
+        assert!(meas.check(&2, &2.)?);
+        assert!(!meas.check(&2, &1.999)?);
+        assert!(amp.check(&2, &0.4941)?);
+        assert!(!amp.check(&2, &0.494)?);
         Ok(())
     }
 }

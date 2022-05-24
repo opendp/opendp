@@ -5,7 +5,7 @@ use std::ops::{Add, Mul, Sub};
 
 use num::Float;
 
-use crate::core::{Domain, Transformation, Function, StabilityRelation};
+use crate::core::{Domain, Transformation, Function, StabilityMap};
 use crate::dom::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::dom::InherentNull;
@@ -108,7 +108,7 @@ pub fn make_drop_null<DA>(
             arg.iter().filter_map(DA::option).collect()),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(1)
+        StabilityMap::new_from_constant(1)
     ))
 }
 

@@ -58,6 +58,11 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         from opendp.core import measurement_invoke
         return measurement_invoke(self, arg)
 
+    def map(self, d_in):
+        """Map an input distance `d_in` to an output distance."""
+        from opendp.core import measurement_map
+        return measurement_map(self, d_in)
+
     def check(self, d_in, d_out, *, debug=False) -> bool:
         """Check if the measurement is (`d_in`, `d_out`)-close.
         If true, implies that if the distance between inputs is at most `d_in`, then the privacy usage is at most `d_out`.
@@ -171,6 +176,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         from opendp.core import transformation_invoke
         return transformation_invoke(self, arg)
 
+    def map(self, d_in):
+        """Map an input distance `d_in` to an output distance."""
+        from opendp.core import transformation_map
+        return transformation_map(self, d_in)
+
     def check(self, d_in, d_out, *, debug=False):
         """Check if the transformation is (`d_in`, `d_out`)-close.
         If true, implies that if the distance between inputs is at most `d_in`, then the distance between outputs is at most `d_out`.
@@ -245,6 +255,19 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             _transformation_free(self)
         except ImportError:
             pass
+
+
+class SMDCurve(object):
+    def __init__(self, curve):
+        self.curve = curve
+
+    def epsilon(self, delta, T=None):
+        from opendp._data import smd_curve_epsilon
+        return smd_curve_epsilon(self.curve, delta, T=T)
+    
+    def delta(self, epsilon, T=None):
+        from opendp._data import smd_curve_delta
+        return smd_curve_delta(self.curve, epsilon, T=T)
 
 
 class UnknownTypeException(Exception):
@@ -554,9 +577,11 @@ def exponential_bounds_search(
         def check_type(v):
             try:
                 predicate(v)
-            except TypeError:
+            except TypeError as e:
+                print(e)
                 return False
             except OpenDPException as e:
+                print(e)
                 if "No match for concrete type" in e.message:
                     return False
             return True

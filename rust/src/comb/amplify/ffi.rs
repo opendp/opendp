@@ -4,7 +4,7 @@ use num::Float;
 
 use crate::comb::{AmplifiableMeasure, IsSizedDomain, make_population_amplification};
 use crate::core::FfiResult;
-use crate::dist::{MaxDivergence, SmoothedMaxDivergence};
+use crate::dist::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
@@ -27,7 +27,7 @@ impl AmplifiableMeasure for AnyMeasure {
             }
             let measure_type = Type::of_id(&measure.measure.value.type_id())?;
             dispatch!(monomorphize2, [
-                (measure_type, [MaxDivergence<QO>, SmoothedMaxDivergence<QO>])
+                (measure_type, [MaxDivergence<QO>, FixedSmoothedMaxDivergence<QO>])
             ], (measure, budget, population_size, sample_size))
         }
 
