@@ -1,9 +1,9 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use crate::core::{Domain, Function, Metric, StabilityRelation, Transformation};
-use crate::dist::{InsertDeleteDistance, IntDistance, SymmetricDistance};
-use crate::dom::{SizedDomain, VectorDomain};
+use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
+use crate::dist::{SymmetricDistance, InsertDeleteDistance, IntDistance};
+use crate::dom::{VectorDomain, SizedDomain};
 use crate::error::Fallible;
 use crate::samplers::Shuffle;
 use crate::traits::CheckNull;
@@ -72,7 +72,7 @@ where
         // The resulting dataset will be `vec![value]`.
         // `vec![constant]` and `vec![value]` differ by an addition and deletion, or distance 2.
         // In the worst case, for each addition in the input, there are two changes in the output
-        StabilityRelation::new_from_constant(2),
+        StabilityMap::new_from_constant(2),
     ))
 }
 

@@ -1,13 +1,13 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use crate::core::{Function, Measurement, PrivacyRelation, Domain, SensitivityMetric};
+use crate::core::{Function, Measurement, PrivacyMap, Domain, SensitivityMetric};
 use crate::dist::{MaxDivergence, L1Distance, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleTwoSidedGeometric;
 use num::Float;
-use crate::traits::{DistanceConstant, InfCast, CheckNull, TotalOrd};
+use crate::traits::{InfCast, CheckNull, TotalOrd, InfDiv};
 
 
 pub trait GeometricDomain: Domain {
@@ -50,7 +50,7 @@ pub fn make_base_geometric<D, QO>(
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
     where D: 'static + GeometricDomain,
           D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
-          QO: 'static + Float + DistanceConstant<D::Atom>,
+          QO: 'static + Float + InfCast<D::Atom> + InfDiv,
           f64: InfCast<QO> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
@@ -65,19 +65,15 @@ pub fn make_base_geometric<D, QO>(
         D::noise_function(f64::inf_cast(scale)?, bounds),
         D::InputMetric::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_all(
-            move |d_in: &D::Atom, d_out: &QO| {
+        PrivacyMap::new_fallible(
+            move |d_in: &D::Atom| {
                 let d_in = QO::inf_cast(d_in.clone())?;
                 if d_in.is_sign_negative() {
                     return fallible!(InvalidDistance, "sensitivity must be non-negative")
                 }
-                if d_out.is_sign_negative() {
-                    return fallible!(InvalidDistance, "epsilon must be non-negative")
-                }
-                // d_out * scale >= d_in
-                Ok(d_out.neg_inf_mul(&scale)? >= d_in)
-            },
-            Some(move |d_out: &QO| D::Atom::inf_cast(d_out.neg_inf_mul(&scale)?)))
+                // d_in / scale
+                d_in.inf_div(&scale)
+            })
     ))
 }
 

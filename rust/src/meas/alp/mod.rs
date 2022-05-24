@@ -5,7 +5,7 @@ use std::rc::Rc;
 use num::{Integer, ToPrimitive};
 use rug::{Float, float::Round, ops::AddAssignRound, ops::DivAssignRound};
 
-use crate::core::{Measurement, Function, PrivacyRelation};
+use crate::core::{Measurement, Function, PrivacyMap};
 use crate::dist::{L1Distance, MaxDivergence};
 use crate::dom::{AllDomain, MapDomain};
 use crate::error::Fallible;
@@ -186,7 +186,7 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
         }),
         L1Distance::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(scale)
+        PrivacyMap::new_from_constant(scale)
     ))
 }
 
@@ -255,7 +255,7 @@ pub fn make_alp_histogram_post_process<K, C, T>(
         Function::new_fallible(move |x| function.eval(x).map(post_process)),
         m.input_metric.clone(),
         m.output_measure.clone(),
-        m.privacy_relation.clone()))
+        m.privacy_map.clone()))
 }
 
 #[cfg(test)]
@@ -316,8 +316,7 @@ mod tests {
         let beta = 10;
         let alp = make_base_alp_with_hashers::<u32, u32, f64>(1., 1.0, beta, index_identify_functions(beta))?;
 
-        assert!(alp.privacy_relation.eval(&1, &1.)?);
-        assert!(!alp.privacy_relation.eval(&1, &0.999)?);
+        assert_eq!(alp.map(&1)?, 1.);
 
         let mut x = HashMap::new();
         x.insert(42, 10);
@@ -408,8 +407,7 @@ mod tests {
 
         let wrapped = make_alp_histogram_post_process(&alp)?;
         
-        assert!(wrapped.privacy_relation.eval(&1, &2.)?);
-        assert!(!wrapped.privacy_relation.eval(&1, &1.999)?);
+        assert_eq!(wrapped.map(&1)?, 2.);
 
         let mut query = wrapped.function.eval(&x)?;
 

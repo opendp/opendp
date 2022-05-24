@@ -4,12 +4,12 @@ mod ffi;
 use std::collections::HashSet;
 use std::hash::Hash;
 
-use crate::core::{Function, Measurement, PrivacyRelation};
+use crate::core::{Function, Measurement, PrivacyMap};
 use crate::dist::{MaxDivergence, SymmetricDistance, IntDistance};
 use crate::dom::AllDomain;
 use crate::error::Fallible;
 use crate::samplers::{SampleBernoulli, SampleUniformInt};
-use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfCast, InfLn, InfSub};
+use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfCast, InfLn, InfSub, InfDiv};
 use num::Float;
 
 // There are two constructors:
@@ -29,7 +29,7 @@ pub fn make_randomized_response_bool<Q>(
     prob: Q, constant_time: bool
 ) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, SymmetricDistance, MaxDivergence<Q>>>
     where bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfSub + InfLn,
+          Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn,
           IntDistance: InfCast<Q> {
 
     // number of categories t is 2, and probability is bounded below by 1/t
@@ -46,7 +46,7 @@ pub fn make_randomized_response_bool<Q>(
         }),
         SymmetricDistance::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(
+        PrivacyMap::new_from_constant(
             // ln(p / (1 - prob))
             prob.inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?),
     ))
@@ -57,7 +57,7 @@ pub fn make_randomized_response<T, Q>(
 ) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<Q>>>
     where T: 'static + Clone + Eq + Hash + CheckNull,
           bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn,
+          Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv,
           IntDistance: InfCast<Q> {
 
     let categories = categories.into_iter().collect::<Vec<_>>();
@@ -92,7 +92,7 @@ pub fn make_randomized_response<T, Q>(
         }),
         SymmetricDistance::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_from_constant(
+        PrivacyMap::new_from_constant(
             // d_out >= d_in * (p / p').ln()
             // where off-diagonal probability p' = (1 - p) / (t - 1)
             // d_out >= d_in * (p / (1 - p) * (t - 1)).ln()

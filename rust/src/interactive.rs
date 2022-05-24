@@ -1,7 +1,7 @@
 use std::any::Any;
 use std::rc::Rc;
 
-use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation};
+use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap};
 use crate::dom::AllDomain;
 use crate::error::*;
 use crate::traits::{CheckNull, InfSub};
@@ -96,8 +96,8 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> wh
     }
 
     /// Checks that there is adequate budget in this Queryable state.
-    fn check_budget(&self, privacy_relation: &PrivacyRelation<MI, MO>, d_out_query: &MO::Distance) -> Fallible<()> {
-        privacy_relation.eval(&self.d_in_budget, d_out_query)?;
+    fn check_budget(&self, privacy_map: &PrivacyMap<MI, MO>, d_out_query: &MO::Distance) -> Fallible<()> {
+        privacy_map.eval(&self.d_in_budget)?;
         if d_out_query > &self.d_out_budget {
             return fallible!(FailedRelation, "not enough budget")
         }
@@ -113,7 +113,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> AcState<DI, DO, MI, MO> wh
     fn transition(self, (measurement, d_out_query): &AcQuery<DI, DO, MI, MO>) -> Fallible<(Self, DO::Carrier)>
         where MO::Distance: Clone + PartialOrd + InfSub {
         self.check_types(measurement)?;
-        self.check_budget(&measurement.privacy_relation, d_out_query)?;
+        self.check_budget(&measurement.privacy_map, d_out_query)?;
         let res = measurement.invoke(&self.data)?;
         let new = self.update(d_out_query)?;
         Ok((new, res))
@@ -149,7 +149,10 @@ pub fn make_adaptive_composition<DI, DO, MI, MO>(
         })),
         input_metric,
         output_measure,
-        PrivacyRelation::new(move |d_in, d_out| d_in <= &d_in_budget && d_out <= &d_out_budget),
+        PrivacyMap::new_fallible(move |d_in| {
+            if d_in <= &d_in_budget {return fallible!(FailedRelation)}
+            Ok(d_out_budget.clone())
+        }),
     )
 }
 
@@ -172,7 +175,7 @@ mod tests {
             Function::new(|a: &i32| TO::from(a.clone())),
             AbsoluteDistance::<f64>::default(),
             MaxDivergence::<f64>::default(),
-            PrivacyRelation::new(|d_in, d_out| d_out <= d_in),
+            PrivacyMap::new(|d_in| *d_in),
         )
     }
 

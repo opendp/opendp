@@ -15,9 +15,7 @@ mod operations;
 /// - QO also clearly needs to support Mul and PartialOrd used in the general form above.
 /// - Div is used for the backward map:
 ///     How do you translate d_out to a d_in that can be used as a hint? |d_out| d_out / c
-pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + InfDiv + InfMul + TotalOrd
-    where TI: InfCast<Self> {}
+pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + InfMul + TotalOrd {}
 
 impl<TI, TO> DistanceConstant<TI> for TO
-    where TI: InfCast<Self>,
-          TO: 'static + Clone + InfCast<TI> + InfDiv + InfMul + TotalOrd {}
+    where TO: 'static + Clone + InfCast<TI> + InfMul + TotalOrd {}

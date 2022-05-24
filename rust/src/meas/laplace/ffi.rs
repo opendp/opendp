@@ -10,7 +10,7 @@ use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{LaplaceDomain, make_base_laplace};
 use crate::samplers::SampleLaplace;
-use crate::traits::{CheckNull, InfCast, InfMul, TotalOrd};
+use crate::traits::{CheckNull, InfCast, InfMul, TotalOrd, InfDiv};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(
@@ -19,7 +19,7 @@ pub extern "C" fn opendp_meas__make_base_laplace(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + LaplaceDomain,
-              D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + CheckNull + TotalOrd + InfMul {
+              D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + InfDiv + CheckNull + TotalOrd + InfMul {
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_laplace::<D>(scale).into_any()
     }

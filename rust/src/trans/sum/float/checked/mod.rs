@@ -1,5 +1,5 @@
 use crate::{
-    core::{Function, StabilityRelation, Transformation},
+    core::{Function, Transformation, StabilityMap},
     dist::{AbsoluteDistance, IntDistance, SymmetricDistance},
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
@@ -51,7 +51,7 @@ where
         }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
+        StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
             //       <= d_in * max(|L|, U) + 2 * error
@@ -96,7 +96,7 @@ where
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
+        StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
             //       <= d_in * (U - L) + 2 * error

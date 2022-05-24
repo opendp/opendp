@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Function, StabilityRelation, Transformation},
+    core::{Domain, Function, StabilityMap, Transformation},
     dist::IntDistance,
     dom::SizedDomain,
     error::Fallible, samplers::Shuffle,
@@ -31,7 +31,7 @@ where
         }),
         MI::default(),
         MI::OrderedMetric::default(),
-        StabilityRelation::new_from_constant(1),
+        StabilityMap::new_from_constant(1),
     ))
 }
 
@@ -47,7 +47,7 @@ where
         Function::new(|val: &D::Carrier| val.clone()),
         MI::default(),
         MI::UnorderedMetric::default(),
-        StabilityRelation::new_from_constant(1),
+        StabilityMap::new_from_constant(1),
     ))
 }
 
@@ -65,7 +65,7 @@ where
         Function::new(|arg: &D::Carrier| arg.clone()),
         MI::default(),
         MI::UnboundedMetric::default(),
-        StabilityRelation::new_from_forward(|d_in| Ok(d_in * 2)),
+        StabilityMap::new(|d_in| d_in * 2),
     ))
 }
 
@@ -83,7 +83,7 @@ where
         Function::new(|arg: &D::Carrier| arg.clone()),
         MI::default(),
         MI::BoundedMetric::default(),
-        StabilityRelation::new_from_forward(|d_in| Ok(d_in / 2)),
+        StabilityMap::new(|d_in| d_in / 2),
     ))
 }
 

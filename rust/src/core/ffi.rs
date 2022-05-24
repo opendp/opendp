@@ -6,8 +6,8 @@ use std::os::raw::c_char;
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
-use crate::ffi::util;
-use crate::ffi::util::{c_bool, into_c_char_p};
+use crate::ffi::util::{self, c_bool};
+use crate::ffi::util::into_c_char_p;
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -185,6 +185,17 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
 }
 
 #[no_mangle]
+pub extern "C" fn opendp_core__transformation_map(
+    transformation: *const AnyTransformation,
+    distance_in: *const AnyObject
+) -> FfiResult<*mut AnyObject> {
+    let transformation = try_as_ref!(transformation);
+    let distance_in = try_as_ref!(distance_in);
+    let distance_out = transformation.map(&distance_in);
+    distance_out.into()
+}
+
+#[no_mangle]
 pub extern "C" fn opendp_core__transformation_check(
     transformation: *const AnyTransformation,
     distance_in: *const AnyObject,
@@ -195,6 +206,17 @@ pub extern "C" fn opendp_core__transformation_check(
     let distance_out = try_as_ref!(distance_out);
     let status = try_!(transformation.check(&distance_in, &distance_out));
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_map(
+    transformation: *const AnyMeasurement,
+    distance_in: *const AnyObject
+) -> FfiResult<*mut AnyObject> {
+    let transformation = try_as_ref!(transformation);
+    let distance_in = try_as_ref!(distance_in);
+    let distance_out = transformation.map(&distance_in);
+    distance_out.into()
 }
 
 #[no_mangle]
@@ -273,7 +295,7 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMe
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{Function, Measurement, PrivacyRelation, Transformation};
+    use crate::core::{Function, Measurement, PrivacyMap, Transformation};
     use crate::dist::{MaxDivergence, SymmetricDistance};
     use crate::dom::AllDomain;
     use crate::ffi::any::{Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
@@ -355,7 +377,7 @@ mod tests {
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             MaxDivergence::default(),
-            PrivacyRelation::new(|_d_in, _d_out| true),
+            PrivacyMap::new(|_d_in| f64::INFINITY),
         )
     }
 

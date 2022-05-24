@@ -8,9 +8,8 @@
 use std::any;
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
-use std::rc::Rc;
 
-use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
+use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
 use crate::err;
 use crate::error::*;
 
@@ -308,57 +307,33 @@ impl<DO> IntoAnyFunctionOutExt for Function<AnyDomain, DO>
     }
 }
 
-fn make_any_relation<QI: 'static, QO: 'static, AQI: Downcast, AQO: Downcast>(relation: &Rc<dyn Fn(&QI, &QO) -> Fallible<bool>>) -> impl Fn(&AQI, &AQO) -> Fallible<bool> + 'static {
-    let relation = relation.clone();
-    move |d_in: &AQI, d_out: &AQO| {
-        let d_in = d_in.downcast_ref()?;
-        let d_out = d_out.downcast_ref()?;
-        relation(d_in, d_out)
-    }
-}
-
-fn make_any_map<QI, QO, AQI>(
-    map: &Option<Rc<dyn Fn(&QI) -> Fallible<QO>>>
-) -> Option<impl Fn(&AQI) -> Fallible<AnyObject>>
-    where QI: 'static,
-          QO: 'static,
-          AQI: Downcast {
-    map.clone().map(|map|
-        move |d_in: &AQI| map(d_in.downcast_ref()?).map(AnyObject::new))
-}
-
-pub type AnyPrivacyRelation = PrivacyRelation<AnyMetric, AnyMeasure>;
+pub type AnyPrivacyRelation = PrivacyMap<AnyMetric, AnyMeasure>;
 
 pub trait IntoAnyPrivacyRelationExt {
     fn into_any(self) -> AnyPrivacyRelation;
 }
 
-impl<MI: Metric, MO: Measure> IntoAnyPrivacyRelationExt for PrivacyRelation<MI, MO>
+impl<MI: Metric, MO: Measure> IntoAnyPrivacyRelationExt for PrivacyMap<MI, MO>
     where MI::Distance: 'static,
           MO::Distance: 'static {
     fn into_any(self) -> AnyPrivacyRelation {
-        AnyPrivacyRelation::new_all(
-            make_any_relation(&self.relation),
-            make_any_map(&self.backward_map),
-        )
+        let map = self.0;
+        AnyPrivacyRelation::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
     }
 }
 
-pub type AnyStabilityRelation = StabilityRelation<AnyMetric, AnyMetric>;
+pub type AnyStabilityRelation = StabilityMap<AnyMetric, AnyMetric>;
 
 pub trait IntoAnyStabilityRelationExt {
     fn into_any(self) -> AnyStabilityRelation;
 }
 
-impl<MI: Metric, MO: Metric> IntoAnyStabilityRelationExt for StabilityRelation<MI, MO>
+impl<MI: Metric, MO: Metric> IntoAnyStabilityRelationExt for StabilityMap<MI, MO>
     where MI::Distance: 'static,
           MO::Distance: 'static {
     fn into_any(self) -> AnyStabilityRelation {
-        AnyStabilityRelation::new_all(
-            make_any_relation(&self.relation),
-            make_any_map(&self.forward_map),
-            make_any_map(&self.backward_map),
-        )
+        let map = self.0;
+        AnyStabilityRelation::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
     }
 }
 
@@ -375,8 +350,8 @@ pub trait IntoAnyMeasurementExt {
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
-          MI::Distance: 'static + Clone + PartialOrd,
-          MO::Distance: 'static + Clone + PartialOrd {
+          MI::Distance: 'static + Clone,
+          MO::Distance: 'static + Clone {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),
@@ -384,7 +359,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
             self.function.into_any(),
             AnyMetric::new(self.input_metric),
             AnyMeasure::new(self.output_measure),
-            self.privacy_relation.into_any(),
+            self.privacy_map.into_any(),
         )
     }
 }
@@ -404,7 +379,7 @@ impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, D
             self.function.into_any_out(),
             self.input_metric,
             self.output_measure,
-            self.privacy_relation,
+            self.privacy_map,
         )
     }
 }
@@ -431,7 +406,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
             self.function.into_any(),
             AnyMetric::new(self.input_metric),
             AnyMetric::new(self.output_metric),
-            self.stability_relation.into_any(),
+            self.stability_map.into_any(),
         )
     }
 }

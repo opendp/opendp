@@ -3,12 +3,12 @@ mod ffi;
 
 use num::{Float};
 
-use crate::core::{Measurement, Function, PrivacyRelation, Domain, SensitivityMetric};
+use crate::core::{Measurement, Function, PrivacyMap, Domain, SensitivityMetric};
 use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
 use crate::dom::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::error::*;
-use crate::traits::{InfCast, CheckNull, TotalOrd, InfMul};
+use crate::traits::{InfCast, CheckNull, TotalOrd, InfMul, InfDiv};
 
 pub trait LaplaceDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
@@ -43,7 +43,7 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
-          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + CheckNull + TotalOrd + InfMul {
+          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + InfDiv + CheckNull + TotalOrd + InfMul {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -53,18 +53,14 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
         D::noise_function(scale.clone()),
         D::Metric::default(),
         MaxDivergence::default(),
-        PrivacyRelation::new_all(
-            move |d_in: &D::Atom, d_out: &D::Atom| {
+        PrivacyMap::new_fallible(
+            move |d_in: &D::Atom| {
                 if d_in.is_sign_negative() {
                     return fallible!(InvalidDistance, "sensitivity must be non-negative")
                 }
-                if d_out.is_sign_negative() {
-                    return fallible!(InvalidDistance, "epsilon must be non-negative")
-                }
-                // d_out * scale >= d_in
-                Ok(d_out.neg_inf_mul(&scale)? >= d_in.clone())
-            },
-            Some(move |d_out: &D::Atom| d_out.neg_inf_mul(&scale)))
+                // d_in / scale
+                d_in.clone().inf_div(&scale)
+            })
     ))
 }
 

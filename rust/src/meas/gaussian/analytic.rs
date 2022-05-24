@@ -1,5 +1,21 @@
 use statrs::function::erf;
 
+use crate::{error::Fallible, util::search::{binary_search, exponential_bounds_search}};
+
+
+pub(super) fn get_analytic_gaussian_epsilon(sensitivity: f64, scale: f64, delta: f64) -> Fallible<f64> {
+    let predicate = move |&eps: &f64| scale >= get_analytic_gaussian_sigma(sensitivity, eps, delta);
+    let bounds = exponential_bounds_search(&predicate)
+        .ok_or_else(|| err!(FailedFunction, "unable to infer bounds"))?;
+    binary_search(predicate, bounds)
+}
+
+pub(super) fn get_analytic_gaussian_delta(sensitivity: f64, scale: f64, epsilon: f64) -> Fallible<f64> {
+    let predicate = move |&del: &f64| scale >= get_analytic_gaussian_sigma(sensitivity, epsilon, del);
+    let bounds = exponential_bounds_search(&predicate)
+        .ok_or_else(|| err!(FailedFunction, "unable to infer bounds"))?;
+    binary_search(predicate, bounds)
+}
 
 /// Algorithm to compute sigma for use in the analytic gaussian mechanism
 /// Using Alg.1 and p.19 of [Balle (2018)](https://arxiv.org/pdf/1805.06530.pdf)
@@ -28,7 +44,7 @@ pub(super) fn get_analytic_gaussian_sigma(sensitivity: f64, epsilon: f64, delta:
         // run a binary search over either B+ or B- to find s*.
         // by Alg.1, if δ ≥ δ_0, then compute a proxy for u* or v* called s*.
         let tol: f64 = 1e-10f64;
-        let s_final = binary_search(s_inf, s_sup, epsilon, delta, delta_0, tol);
+        let s_final = binary_search_s(s_inf, s_sup, epsilon, delta, delta_0, tol);
 
         // differentiate s* between the u* and v* based on the sign
         let sign = if delta > delta_0 { -1. } else { 1. };
@@ -50,7 +66,7 @@ pub(super) fn get_analytic_gaussian_sigma(sensitivity: f64, epsilon: f64, delta:
 /// * `delta` - Additive privacy loss parameter.
 /// * `delta_0` - threshold at which sign should be flipped
 /// * `tol` - tolerance for error in delta
-fn binary_search(
+fn binary_search_s(
     mut s_inf: f64, mut s_sup: f64, epsilon: f64, delta: f64, delta_0: f64, tol: f64,
 ) -> f64 {
     // evaluate either B+ or B- on s

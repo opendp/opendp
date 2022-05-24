@@ -29,7 +29,7 @@ use std::rc::Rc;
 
 use crate::dom::PairDomain;
 use crate::error::*;
-use crate::traits::{DistanceConstant, InfCast, InfMul, InfDiv};
+use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use crate::dist::IntDistance;
 use std::fmt::Debug;
 
@@ -100,153 +100,44 @@ pub trait DatasetMetric: Metric<Distance=IntDistance> {}
 pub trait SensitivityMetric: Metric {}
 
 
-// HINTS
-#[derive(Clone)]
-pub struct HintMt<MI: Metric, MO: Measure, MX: Metric> {
-    pub hint: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance>>,
-}
-
-impl<MI: Metric, MO: Measure, MX: Metric> HintMt<MI, MO, MX> {
-    pub fn new(hint: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance> + 'static) -> Self {
-        HintMt { hint: Rc::new(hint) }
-    }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<MX::Distance> {
-        (self.hint)(input_distance, output_distance)
-    }
-}
-
-#[derive(Clone)]
-pub struct HintTt<MI: Metric, MO: Metric, MX: Metric> {
-    pub hint: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance>>,
-}
-
-impl<MI: Metric, MO: Metric, MX: Metric> HintTt<MI, MO, MX> {
-    pub fn new_fallible(hint: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<MX::Distance> + 'static) -> Self {
-        HintTt { hint: Rc::new(hint) }
-    }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<MX::Distance> {
-        (self.hint)(input_distance, output_distance)
-    }
-}
-
-
 /// A boolean relation evaluating the privacy of a [`Measurement`].
 ///
 /// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
 /// and returns a boolean indicating if the relation holds.
-pub struct PrivacyRelation<MI: Metric, MO: Measure> {
-    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
-    pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
-}
+pub struct PrivacyMap<MI: Metric, MO: Measure>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
 
-impl<MI: Metric, MO: Measure> Clone for PrivacyRelation<MI, MO> {
+impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
     fn clone(&self) -> Self {
-        PrivacyRelation {
-            relation: self.relation.clone(),
-            backward_map: self.backward_map.clone()
-        }
+        PrivacyMap(self.0.clone())
     }
 }
 
-impl<MI: Metric, MO: Measure> PrivacyRelation<MI, MO> {
-    pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
-        PrivacyRelation {
-            relation: Rc::new(move |d_in: &MI::Distance, d_out: &MO::Distance| Ok(relation(d_in, d_out))),
-            backward_map: None,
-        }
+impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
+        PrivacyMap(Rc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static) -> Self {
-        PrivacyRelation {
-            relation: Rc::new(relation),
-            backward_map: None,
-        }
-    }
-    pub fn new_all(
-        relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static,
-        backward_map: Option<impl Fn(&MO::Distance) -> Fallible<MI::Distance> + 'static>,
-    ) -> Self {
-        PrivacyRelation {
-            relation: Rc::new(relation),
-            backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
-        }
+    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
+        PrivacyMap(Rc::new(map))
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: InfCast<MO::Distance> + Clone,
+        MI::Distance: Clone,
         MO::Distance: DistanceConstant<MI::Distance> {
-        PrivacyRelation::new_all(
-            enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
-            Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
+        PrivacyMap::new_fallible(move |d_in: &MI::Distance|
+            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c))
     }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
-        (self.relation)(input_distance, output_distance)
+    pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
+        (self.0)(input_distance)
     }
 }
 
-fn chain_option_maps<QI, QX, QO>(
-    map1: &Option<Rc<dyn Fn(&QX) -> Fallible<QO>>>,
-    map0: &Option<Rc<dyn Fn(&QI) -> Fallible<QX>>>,
-) -> Option<impl Fn(&QI) -> Fallible<QO>> {
-    if let (Some(map0), Some(map1)) = (map0, map1) {
-        Some(enclose!((map0, map1), move |d_in: &QI| map1(&map0(d_in)?)))
-    } else {
-        None
-    }
-}
-
-impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
+impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
     pub fn make_chain<MX: 'static + Metric>(
-        relation1: &PrivacyRelation<MX, MO>,
-        relation0: &StabilityRelation<MI, MX>,
-        hint: Option<&HintMt<MI, MO, MX>>,
+        map1: &PrivacyMap<MX, MO>,
+        map0: &StabilityMap<MI, MX>,
     ) -> Self {
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, hint)
-        } else {
-            Self::make_chain_no_hint(relation1, relation0)
-        }
-    }
-
-    fn make_chain_no_hint<MX: 'static + Metric>(
-        relation1: &PrivacyRelation<MX, MO>,
-        relation0: &StabilityRelation<MI, MX>,
-    ) -> Self {
-        let hint = if let Some(forward_map) = &relation0.forward_map {
-            Some(HintMt::new(enclose!(forward_map, move |d_in, _d_out| forward_map(d_in))))
-        } else if let Some(backward_map) = &relation1.backward_map {
-            Some(HintMt::new(enclose!(backward_map, move |_d_in, d_out| backward_map(d_out))))
-        } else {
-            None
-        };
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, &hint)
-        } else {
-            // TODO: Implement binary search for hints.
-            unimplemented!("Binary search for hints not implemented, must have maps or supply explicit hint.")
-        }
-    }
-
-    fn make_chain_hint<MX: 'static + Metric>(relation1: &PrivacyRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: &HintMt<MI, MO, MX>) -> Self {
-        let PrivacyRelation {
-            relation: relation1,
-            backward_map: backward_map1
-        } = relation1;
-
-        let StabilityRelation {
-            relation: relation0,
-            forward_map: _,
-            backward_map: backward_map0,
-        } = relation0;
-
-        let h = hint.hint.clone();
-
-        PrivacyRelation::new_all(
-            enclose!((relation1, relation0), move |d_in: &MI::Distance, d_out: &MO::Distance| {
-                let d_mid = h(d_in, d_out)?;
-                Ok(relation0(d_in, &d_mid)? && relation1(&d_mid, d_out)?)
-            }),
-            chain_option_maps(backward_map0, backward_map1))
+        let map1 = map1.0.clone();
+        let map0 = map0.0.clone();
+        PrivacyMap(Rc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
     }
 }
 
@@ -254,122 +145,37 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyRelation<MI, MO> {
 ///
 /// A `StabilityRelation` is implemented as a function that takes an input and output [`Metric::Distance`],
 /// and returns a boolean indicating if the relation holds.
-pub struct StabilityRelation<MI: Metric, MO: Metric> {
-    pub relation: Rc<dyn Fn(&MI::Distance, &MO::Distance) -> Fallible<bool>>,
-    pub forward_map: Option<Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>>,
-    pub backward_map: Option<Rc<dyn Fn(&MO::Distance) -> Fallible<MI::Distance>>>,
-}
+pub struct StabilityMap<MI: Metric, MO: Metric>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
 
-impl<MI: Metric, MO: Metric> Clone for StabilityRelation<MI, MO> {
+impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
     fn clone(&self) -> Self {
-        StabilityRelation {
-            relation: self.relation.clone(),
-            forward_map: self.forward_map.clone(),
-            backward_map: self.backward_map.clone()
-        }
+        StabilityMap(self.0.clone())
     }
 }
 
-impl<MI: Metric, MO: Metric> StabilityRelation<MI, MO> {
-    pub fn new(relation: impl Fn(&MI::Distance, &MO::Distance) -> bool + 'static) -> Self {
-        StabilityRelation {
-            relation: Rc::new(move |d_in: &MI::Distance, d_out: &MO::Distance| Ok(relation(d_in, d_out))),
-            forward_map: None,
-            backward_map: None,
-        }
+impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
+        StabilityMap(Rc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static) -> Self {
-        StabilityRelation { relation: Rc::new(relation), forward_map: None, backward_map: None }
-    }
-    pub fn new_all(
-        relation: impl Fn(&MI::Distance, &MO::Distance) -> Fallible<bool> + 'static,
-        forward_map: Option<impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static>,
-        backward_map: Option<impl Fn(&MO::Distance) -> Fallible<MI::Distance> + 'static>,
-    ) -> Self {
-        StabilityRelation {
-            relation: Rc::new(relation),
-            forward_map: forward_map.map(|h| Rc::new(h) as Rc<_>),
-            backward_map: backward_map.map(|h| Rc::new(h) as Rc<_>),
-        }
-    }
-    pub fn new_from_forward(
-        forward_map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + Clone + 'static
-    ) -> Self
-        where MI::Distance: 'static, MO::Distance: 'static + PartialOrd + Clone {
-        StabilityRelation::new_all(
-            enclose!(forward_map, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= forward_map(d_in)?)),
-            Some(forward_map),
-            None::<fn(&_)->_>
-        )
+    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
+        StabilityMap(Rc::new(map))
     }
     pub fn new_from_constant(c: MO::Distance) -> Self where
-        MI::Distance: InfCast<MO::Distance> + Clone,
+        MI::Distance: Clone,
         MO::Distance: DistanceConstant<MI::Distance> {
-        StabilityRelation::new_all(
-            // relation
-            enclose!(c, move |d_in: &MI::Distance, d_out: &MO::Distance|
-                Ok(d_out.clone() >= MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?)),
-            // forward map
-            Some(enclose!(c, move |d_in: &MI::Distance|
-                Ok(MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)?))),
-            // backward map
-            Some(enclose!(c, move |d_out: &MO::Distance|
-                Ok(MI::Distance::inf_cast(d_out.inf_div(&c)?)?))))
+        StabilityMap::new_fallible(move |d_in: &MI::Distance|
+            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c))
     }
-    pub fn eval(&self, input_distance: &MI::Distance, output_distance: &MO::Distance) -> Fallible<bool> {
-        (self.relation)(input_distance, output_distance)
+    pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
+        (self.0)(input_distance)
     }
 }
 
-impl<MI: 'static + Metric, MO: 'static + Metric> StabilityRelation<MI, MO> {
-    pub fn make_chain<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: Option<&HintTt<MI, MO, MX>>) -> Self {
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, hint)
-        } else {
-            Self::make_chain_no_hint(relation1, relation0)
-        }
-    }
-
-    fn make_chain_no_hint<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>) -> Self {
-        let hint = if let Some(forward_map) = &relation0.forward_map {
-            let forward_map = forward_map.clone();
-            Some(HintTt::new_fallible(move |d_in, _d_out| forward_map(d_in)))
-        } else if let Some(backward_map) = &relation1.backward_map {
-            let backward_map = backward_map.clone();
-            Some(HintTt::new_fallible(move |_d_in, d_out| backward_map(d_out)))
-        } else {
-            None
-        };
-        if let Some(hint) = hint {
-            Self::make_chain_hint(relation1, relation0, &hint)
-        } else {
-            // TODO: Implement binary search for hints.
-            unimplemented!("Binary search for hints not implemented, must have maps or supply explicit hint.")
-        }
-    }
-
-    fn make_chain_hint<MX: 'static + Metric>(relation1: &StabilityRelation<MX, MO>, relation0: &StabilityRelation<MI, MX>, hint: &HintTt<MI, MO, MX>) -> Self {
-        let StabilityRelation {
-            relation: relation0,
-            forward_map: forward_map0,
-            backward_map: backward_map0
-        } = relation0;
-
-        let StabilityRelation {
-            relation: relation1,
-            forward_map: forward_map1,
-            backward_map: backward_map1
-        } = relation1;
-
-        let h = hint.hint.clone();
-        StabilityRelation::new_all(
-            enclose!((relation1, relation0), move |d_in: &MI::Distance, d_out: &MO::Distance| {
-                let d_mid = h(d_in, d_out)?;
-                Ok(relation0(d_in, &d_mid)? && relation1(&d_mid, d_out)?)
-            }),
-            chain_option_maps(forward_map1, forward_map0),
-            chain_option_maps(backward_map0, backward_map1))
+impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
+    pub fn make_chain<MX: 'static + Metric>(map1: &StabilityMap<MX, MO>, map0: &StabilityMap<MI, MX>) -> Self {
+        let map1 = map1.0.clone();
+        let map0 = map0.0.clone();
+        StabilityMap(Rc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
     }
 }
 
@@ -382,7 +188,7 @@ pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub function: Function<DI, DO>,
     pub input_metric: MI,
     pub output_measure: MO,
-    pub privacy_relation: PrivacyRelation<MI, MO>,
+    pub privacy_map: PrivacyMap<MI, MO>,
 }
 
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
@@ -392,7 +198,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
         function: Function<DI, DO>,
         input_metric: MI,
         output_measure: MO,
-        privacy_relation: PrivacyRelation<MI, MO>,
+        privacy_relation: PrivacyMap<MI, MO>,
     ) -> Self {
         Self {
             input_domain,
@@ -400,7 +206,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
             function,
             input_metric,
             output_measure,
-            privacy_relation,
+            privacy_map: privacy_relation,
         }
     }
 
@@ -408,8 +214,13 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
         self.function.eval(arg)
     }
 
-    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool> {
-        self.privacy_relation.eval(d_in, d_out)
+    pub fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance> {
+        self.privacy_map.eval(d_in)
+    }
+
+    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
+        where MO::Distance: TotalOrd {
+        Ok(d_out >= &self.map(d_in)?)
     }
 }
 
@@ -421,7 +232,7 @@ pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub function: Function<DI, DO>,
     pub input_metric: MI,
     pub output_metric: MO,
-    pub stability_relation: StabilityRelation<MI, MO>,
+    pub stability_map: StabilityMap<MI, MO>,
 }
 
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
@@ -431,7 +242,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         function: Function<DI, DO>,
         input_metric: MI,
         output_metric: MO,
-        stability_relation: StabilityRelation<MI, MO>,
+        stability_relation: StabilityMap<MI, MO>,
     ) -> Self {
         Self {
             input_domain,
@@ -439,7 +250,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
             function,
             input_metric,
             output_metric,
-            stability_relation,
+            stability_map: stability_relation,
         }
     }
 
@@ -447,8 +258,13 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         self.function.eval(arg)
     }
 
-    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool> {
-        self.stability_relation.eval(d_in, d_out)
+    pub fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance> {
+        self.stability_map.eval(d_in)
+    }
+
+    pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
+        where MO::Distance: TotalOrd {
+        Ok(d_out >= &self.map(d_in)?)
     }
 }
 
@@ -468,7 +284,7 @@ mod tests {
         let function = Function::new(|arg: &i32| arg.clone());
         let input_metric = L1Distance::<i32>::default();
         let output_metric = L1Distance::<i32>::default();
-        let stability_relation = StabilityRelation::new_from_constant(1);
+        let stability_relation = StabilityMap::new_from_constant(1);
         let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
         let arg = 99;
         let ret = identity.invoke(&arg).unwrap_test();
