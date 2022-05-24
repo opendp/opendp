@@ -7,7 +7,7 @@ use std::hash::Hash;
 
 use num::{One, Zero, Float};
 
-use crate::core::{Function, SensitivityMetric, StabilityRelation, Transformation};
+use crate::core::{Function, SensitivityMetric, StabilityMap, Transformation};
 use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
 use crate::dom::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
@@ -26,7 +26,7 @@ pub fn make_count<TIA, TO>(
             TO::exact_int_cast(arg.len()).unwrap_or(TO::MAX_CONSECUTIVE)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(TO::one())))
+        StabilityMap::new_from_constant(TO::one())))
 }
 
 
@@ -44,7 +44,7 @@ pub fn make_count_distinct<TIA, TO>(
         }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(TO::one())))
+        StabilityMap::new_from_constant(TO::one())))
 }
 
 pub trait CountByCategoriesConstant<QO> {
@@ -90,7 +90,7 @@ pub fn make_count_by_categories<MO, TI, TO>(
         }),
         SymmetricDistance::default(),
         MO::default(),
-        StabilityRelation::new_from_constant(MO::get_stability_constant())))
+        StabilityMap::new_from_constant(MO::get_stability_constant())))
 }
 
 pub trait CountByConstant<QO> {
@@ -126,7 +126,7 @@ pub fn make_count_by<MO, TK, TV>(
         }),
         SymmetricDistance::default(),
         MO::default(),
-        StabilityRelation::new_from_constant(MO::get_stability_constant()?)))
+        StabilityMap::new_from_constant(MO::get_stability_constant()?)))
 }
 
 

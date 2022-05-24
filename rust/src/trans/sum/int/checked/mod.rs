@@ -1,7 +1,7 @@
 use std::iter::Sum;
 
 use crate::{
-    core::{Function, StabilityRelation, Transformation},
+    core::{Function, StabilityMap, Transformation},
     dist::{AbsoluteDistance, IntDistance, SymmetricDistance},
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
@@ -45,7 +45,7 @@ where
         Function::new(|arg: &Vec<T>| arg.iter().sum()),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_forward(
+        StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
             //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2).and_then(|d_in| d_in.inf_mul(&range)),

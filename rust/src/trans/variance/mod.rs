@@ -6,18 +6,18 @@ use std::ops::{Add, Div, Sub, Mul};
 
 use num::{Float, One, Zero};
 
-use crate::core::{Function, StabilityRelation, Transformation};
+use crate::core::{Function, StabilityMap, Transformation};
 use crate::dist::{AbsoluteDistance, IntDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfSub, InfAdd, InfMul};
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfSub, InfAdd, InfMul, InfDiv};
 
 pub fn make_sized_bounded_variance<T>(
     size: usize, bounds: (T, T), ddof: usize
 ) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
     T: DistanceConstant<IntDistance> + Float + One + Sub<Output=T> + Div<Output=T>
     + Sum<T> + for<'a> Sum<&'a T> + ExactIntCast<usize>
-    + InfMul + InfSub + InfAdd + CheckNull,
+    + InfMul + InfSub + InfAdd + CheckNull + InfDiv,
     for<'a> &'a T: Sub<Output=T> + Add<&'a T, Output=T>,
     IntDistance: InfCast<T> {
 
@@ -45,7 +45,7 @@ pub fn make_sized_bounded_variance<T>(
         }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(
+        StabilityMap::new_from_constant(
             range.inf_mul(&range)?
                 .inf_mul(&_size)?
                 .inf_div(&_size.neg_inf_add(&_1)?)?
@@ -62,7 +62,7 @@ pub fn make_sized_bounded_covariance<T>(
 ) -> Fallible<Transformation<CovarianceDomain<T>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
     T: ExactIntCast<usize> + DistanceConstant<IntDistance> + Zero
     + Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + Sum<T>
-    + InfAdd + InfSub + CheckNull,
+    + InfAdd + InfSub + InfDiv + CheckNull,
     for<'a> T: Div<&'a T, Output=T> + Add<&'a T, Output=T>,
     for<'a> &'a T: Sub<Output=T>,
     IntDistance: InfCast<T> {
@@ -99,7 +99,7 @@ pub fn make_sized_bounded_covariance<T>(
         })),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(
+        StabilityMap::new_from_constant(
             range_0.inf_mul(&range_1)?
                 .inf_mul(&_size)?
                 .inf_div(&_size.neg_inf_add(&_1)?)?

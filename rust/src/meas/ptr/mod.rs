@@ -8,8 +8,8 @@ use std::hash::Hash;
 
 use num::Float;
 
-use crate::core::{Function, Measurement, PrivacyRelation};
-use crate::dist::{IntDistance, L1Distance, SmoothedMaxDivergence};
+use crate::core::{Function, Measurement, PrivacyMap};
+use crate::dist::{IntDistance, L1Distance, SmoothedMaxDivergence, SMDCurve};
 use crate::dom::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::samplers::SampleLaplace;
@@ -22,7 +22,7 @@ pub fn make_base_ptr<TK, TV>(
     scale: TV, threshold: TV,
 ) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
     where TK: Eq + Hash + Clone + CheckNull,
-          TV: 'static + Float + CheckNull + InfCast<IntDistance> + SampleLaplace {
+          TV: 'static + Float + CheckNull + InfCast<IntDistance> + SampleLaplace + std::fmt::Debug {
     let _2 = TV::inf_cast(2)?;
     Ok(Measurement::new(
         MapDomain::new(AllDomain::new(), AllDomain::new()),
@@ -38,18 +38,33 @@ pub fn make_base_ptr<TK, TV>(
         }),
         L1Distance::default(),
         SmoothedMaxDivergence::default(),
-        PrivacyRelation::new_fallible(move |&d_in: &TV, &(eps, del): &(TV, TV)| {
-            if eps.is_sign_negative() || eps.is_zero() {
-                return fallible!(FailedRelation, "epsilon must be positive");
-            }
-            if del.is_sign_negative() || del.is_zero() {
-                return fallible!(FailedRelation, "delta must be positive");
-            }
+        PrivacyMap::new_fallible(move |&d_in: &TV| {
+            Ok(SMDCurve::new(
+                move |&del: &TV| {
+                    if del.is_sign_negative() || del.is_zero() {
+                        return fallible!(FailedRelation, "delta must be positive");
+                    }
+                    let min_eps = d_in / scale;
+                    let min_threshold = (d_in / (_2 * del)).ln() * scale + d_in;
+                    if threshold < min_threshold {
+                        return fallible!(FailedRelation, "threshold must be at least {:?}", min_threshold);
+                    }
+                    Ok(min_eps)
+                },
+                move |&eps: &TV| {
+                    if eps.is_sign_negative() || eps.is_zero() {
+                        return fallible!(FailedRelation, "epsilon must be positive");
+                    }
 
-            let ideal_scale = d_in / eps;
-            let ideal_threshold = (d_in / (_2 * del)).ln() * ideal_scale + d_in;
+                    let min_eps = d_in / scale;
+                    if eps < min_eps {
+                        return fallible!(FailedRelation, "epsilon must be at least {:?}", min_eps);
+                    }
 
-            Ok(scale >= ideal_scale && threshold >= ideal_threshold)
+                    let min_del = d_in * (-(threshold - d_in) / scale).exp() / _2;
+                    Ok(min_del)
+                }
+            ))
         })))
 }
 
@@ -78,7 +93,9 @@ mod tests {
             &vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
         println!("stability eval: {:?}", ret);
 
-        assert!(measurement.check(&max_influence, &(epsilon, delta))?);
+        let epsilon = measurement.map(&max_influence)?.epsilon(&delta)?;
+        println!("{:?}", epsilon);
+        // assert!();
         Ok(())
     }
 }

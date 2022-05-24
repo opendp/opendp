@@ -59,7 +59,7 @@ impl<DI, DO, MI, MO> Measurement<DI, DO, MI, MO>
             self.function.into_poly(),
             self.input_metric,
             self.output_measure,
-            self.privacy_relation,
+            self.privacy_map,
         )
     }
 }
@@ -80,7 +80,7 @@ impl<DI, DO, MI, MO> Transformation<DI, DO, MI, MO>
             self.function.into_poly(),
             self.input_metric,
             self.output_metric,
-            self.stability_relation,
+            self.stability_map,
         )
     }
 }

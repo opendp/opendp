@@ -3,7 +3,7 @@ mod ffi;
 
 use num::One;
 
-use crate::core::{Domain, Function, Metric, StabilityRelation, Transformation, DatasetMetric};
+use crate::core::{Domain, Function, Metric, StabilityMap, Transformation, DatasetMetric};
 use crate::error::*;
 use crate::traits::{DistanceConstant, CheckNull};
 use crate::dom::{VectorDomain, AllDomain};
@@ -26,7 +26,7 @@ pub(crate) fn make_row_by_row<'a, DIA, DOA, M>(
             arg.iter().map(|v| atom_function(v)).collect()),
         M::default(),
         M::default(),
-        StabilityRelation::new_from_constant(1)))
+        StabilityMap::new_from_constant(1)))
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -45,7 +45,7 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
             arg.iter().map(|v| atom_function(v)).collect()),
         M::default(),
         M::default(),
-        StabilityRelation::new_from_constant(1)))
+        StabilityMap::new_from_constant(1)))
 }
 
 /// Constructs a [`Transformation`] representing the identity function.
@@ -58,7 +58,7 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
         Function::new(|arg: &D::Carrier| arg.clone()),
         metric.clone(),
         metric,
-        StabilityRelation::new_from_constant(M::Distance::one())))
+        StabilityMap::new_from_constant(M::Distance::one())))
 }
 
 /// A [`Transformation`] that checks equality elementwise with `value`.

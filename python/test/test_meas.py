@@ -2,8 +2,14 @@ from opendp.mod import enable_features
 
 enable_features('floating-point', 'contrib')
 
+def test_base_gaussian_curve():
+    from opendp.meas import make_base_gaussian
+    curve = make_base_gaussian(4.).map(1.)
+    print(curve.epsilon(1e-3))
+    print(curve.delta(.9438225714337242))
 
-def test_base_gaussian():
+
+def test_base_gaussian_search():
     from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
     from opendp.mod import binary_search_param
     print("Analytic", binary_search_param(
@@ -18,7 +24,8 @@ def test_base_laplace():
     from opendp.meas import make_base_laplace
     meas = make_base_laplace(scale=10.5)
     print("base laplace:", meas(100.))
-    assert meas.check(1., 1.3)
+    print("epsilon", meas.map(1.))
+    assert meas.check(1., .096)
 
 
 def test_base_vector_laplace():

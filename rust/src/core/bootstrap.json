@@ -49,6 +49,31 @@
             "description": "Non-differentially private answer to the query."
         }
     },
+    "transformation_map": {
+        "description": "Use the `transformation` to map a given `d_in` to `d_out`.",
+        "args": [
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *",
+                "description": "Transformation to check the map distances with."
+            },
+            {
+                "name": "d_in",
+                "c_type": "const AnyObject *",
+                "rust_type": {
+                    "function": "transformation_input_distance_type",
+                    "params": [
+                        "transformation"
+                    ]
+                },
+                "description": "Distance in terms of the input metric."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const AnyObject *>",
+            "description": "Distance in terms of the output metric."
+        }
+    },
     "transformation_check": {
         "description": "Check the stability relation of the `transformation` at the given `d_in`, `d_out`.",
         "args": [
@@ -84,6 +109,31 @@
             "c_type": "FfiResult<bool *>",
             "hint": "bool",
             "description": "True indicates that the relation passed at the given distance."
+        }
+    },
+    "measurement_map": {
+        "description": "Use the `measurement` to map a given `d_in` to `d_out`.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *",
+                "description": "Measurement to check the map distances with."
+            },
+            {
+                "name": "d_in",
+                "c_type": "const AnyObject *",
+                "rust_type": {
+                    "function": "measurement_input_distance_type",
+                    "params": [
+                        "measurement"
+                    ]
+                },
+                "description": "Distance in terms of the input metric."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<const AnyObject *>",
+            "description": "Distance in terms of the output measure."
         }
     },
     "measurement_check": {

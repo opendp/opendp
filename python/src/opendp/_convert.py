@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement
+from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve
 from opendp.typing import RuntimeType
 
 try:
@@ -88,9 +88,12 @@ def c_to_py(value):
     """
     if isinstance(value, AnyObjectPtr):
         from opendp._data import object_type, object_as_slice, to_string, slice_free
+        obj_type = object_type(value)
+        if "SMDCurve" in obj_type:
+            return SMDCurve(value)
         ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, object_type(value))
+            return _slice_to_py(ffi_slice, obj_type)
         except UnknownTypeException:
             raise
         except Exception as err:

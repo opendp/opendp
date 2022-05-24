@@ -1,8 +1,8 @@
 //! Various implementations of Metric/Measure (and associated Distance).
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, rc::Rc};
 
-use crate::core::{DatasetMetric, Measure, Metric, SensitivityMetric};
+use crate::{core::{DatasetMetric, Measure, Metric, SensitivityMetric}, error::Fallible};
 use std::fmt::{Debug, Formatter};
 
 // default type for distances between datasets
@@ -44,7 +44,58 @@ impl<Q> Debug for SmoothedMaxDivergence<Q> {
         write!(f, "SmoothedMaxDivergence()")
     }
 }
+
 impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
+    type Distance = SMDCurve<Q>;
+}
+
+pub struct SMDCurve<Q> {
+    pub epsilon: Rc<dyn Fn(&Q) -> Fallible<Q>>,
+    pub delta: Rc<dyn Fn(&Q) -> Fallible<Q>>,
+}
+
+impl<Q> Clone for SMDCurve<Q> {
+    fn clone(&self) -> Self {
+        Self { epsilon: self.epsilon.clone(), delta: self.delta.clone() }
+    }
+}
+
+impl<Q> SMDCurve<Q> {
+    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static, delta: impl Fn(&Q) -> Fallible<Q> + 'static) -> Self {
+        SMDCurve {
+            epsilon: Rc::new(epsilon),
+            delta: Rc::new(delta),
+        }
+    }
+
+    // these functions allow direct invocation as a method, making parens unnecessary
+    pub fn epsilon(&self, delta: &Q) -> Fallible<Q> {
+        (self.epsilon)(delta)
+    }
+
+    pub fn delta(&self, epsilon: &Q) -> Fallible<Q> {
+        (self.delta)(epsilon)
+    }
+}
+
+#[derive(Clone)]
+pub struct FixedSmoothedMaxDivergence<Q>(PhantomData<Q>);
+
+impl<Q> Default for FixedSmoothedMaxDivergence<Q> {
+    fn default() -> Self { FixedSmoothedMaxDivergence(PhantomData) }
+}
+
+impl<Q> PartialEq for FixedSmoothedMaxDivergence<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+
+impl<Q> Debug for FixedSmoothedMaxDivergence<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "FixedSmoothedMaxDivergence()")
+    }
+}
+
+impl<Q: Clone> Measure for FixedSmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
 

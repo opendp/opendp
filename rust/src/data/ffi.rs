@@ -6,6 +6,8 @@ use std::hash::Hash;
 use std::os::raw::c_char;
 use std::slice;
 
+use crate::dist::SMDCurve;
+use crate::traits::TotalOrd;
 use crate::{err, fallible, try_, try_as_ref};
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
@@ -203,7 +205,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
             } else { fallible!(FFI, "unrecognized generic {:?}", name) }
         }
-        _ => { dispatch!(plain_to_raw, [(&obj.type_, @primitives)], (obj)) }
+        // This list is explicit because it allows us to avoid including u32 in the @primitives
+        _ => { dispatch!(plain_to_raw, [(&obj.type_, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (obj)) }
     }.into()
 }
 
@@ -250,6 +253,61 @@ impl std::fmt::Debug for AnyObject {
             AnyObject
         ])], (self)).unwrap_or("[Non-debuggable]".to_string()).as_str())
     }
+}
+
+impl PartialEq for AnyObject {
+    fn eq(&self, other: &Self) -> bool {
+        fn monomorphize<T: 'static + PartialEq>(this: &AnyObject, other: &AnyObject) -> Fallible<bool> {
+            Ok(this.downcast_ref::<T>()? == other.downcast_ref::<T>()?)
+        }
+
+        let type_arg = &self.type_;
+        dispatch!(monomorphize, [(type_arg, @hashable)], (self, other)).unwrap_or(false)
+    }
+}
+
+impl PartialOrd for AnyObject {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        fn monomorphize<T: 'static + PartialOrd>(this: &AnyObject, other: &AnyObject) -> Fallible<Option<std::cmp::Ordering>> {
+            Ok(this.downcast_ref::<T>()?.partial_cmp(other.downcast_ref::<T>()?))
+        }
+
+        let type_arg = &self.type_;
+        dispatch!(monomorphize, [(type_arg, @numbers)], (self, other)).unwrap_or(None)
+    }
+}
+
+impl TotalOrd for AnyObject {
+    fn total_cmp(&self, other: &Self) -> Fallible<std::cmp::Ordering> {
+        fn monomorphize<T: 'static + TotalOrd>(this: &AnyObject, other: &AnyObject) -> Fallible<std::cmp::Ordering> {
+            this.downcast_ref::<T>()?.total_cmp(other.downcast_ref::<T>()?)
+        }
+
+        let type_arg = &self.type_;
+        dispatch!(monomorphize, [(type_arg, @numbers)], (self, other))
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_epsilon(curve: *const AnyObject, delta: *const AnyObject) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: 'static>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
+        let delta = delta.downcast_ref::<T>()?;
+        curve.downcast_ref::<SMDCurve<T>>()?.epsilon(delta).map(AnyObject::new)
+    }
+    let curve = try_as_ref!(curve);
+    let delta = try_as_ref!(delta);
+    dispatch!(monomorphize, [(&delta.type_, @floats)], (curve, delta)).into()
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_data__smd_curve_delta(curve: *const AnyObject, epsilon: *const AnyObject) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: 'static>(curve: &AnyObject, epsilon: &AnyObject) -> Fallible<AnyObject> {
+        let epsilon = epsilon.downcast_ref::<T>()?;
+        curve.downcast_ref::<SMDCurve<T>>()?.delta(epsilon).map(AnyObject::new)
+    }
+    let curve = try_as_ref!(curve);
+    let epsilon = try_as_ref!(epsilon);
+    dispatch!(monomorphize, [(&epsilon.type_, @floats)], (curve, epsilon)).into()
 }
 
 #[no_mangle]
