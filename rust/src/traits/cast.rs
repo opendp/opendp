@@ -128,16 +128,19 @@ macro_rules! impl_exact_int_cast_int_float {
 }
 
 cartesian!([u8, u16, i8, i16], [f32, f64], impl_exact_int_cast_from);
-cartesian!([u64, u128, i64, i128, usize], [f32, f64], impl_exact_int_cast_int_float);
+cartesian!([u64, u128, i64, i128, usize, isize], [f32, f64], impl_exact_int_cast_int_float);
 impl_exact_int_cast_int_float!(u32, f32);
 impl_exact_int_cast_from!(u32, f64);
 impl_exact_int_cast_int_float!(i32, f32);
 impl_exact_int_cast_from!(i32, f64);
 
 // usize conversions
-cartesian!([usize], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_exact_int_cast_try_from);
-cartesian!([u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], [usize], impl_exact_int_cast_try_from);
+cartesian!([usize, isize], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_exact_int_cast_try_from);
+cartesian!([u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], [usize, isize], impl_exact_int_cast_try_from);
 impl_exact_int_cast_from!(usize, usize);
+impl_exact_int_cast_from!(isize, isize);
+impl_exact_int_cast_try_from!(usize, isize);
+impl_exact_int_cast_try_from!(isize, usize);
 
 
 // TRAIT InfCast
@@ -146,7 +149,7 @@ macro_rules! impl_inf_cast_exact {
         fn inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
     })
 }
-cartesian!([u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize], impl_inf_cast_exact);
+cartesian!([u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize], impl_inf_cast_exact);
 
 
 macro_rules! impl_inf_cast_from {
@@ -162,7 +165,7 @@ macro_rules! impl_exact_int_bounds {
         const MIN_CONSECUTIVE: Self = Self::MIN;
     })*)
 }
-impl_exact_int_bounds!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl_exact_int_bounds!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 impl ExactIntBounds for f64 {
     const MAX_CONSECUTIVE: Self = 9_007_199_254_740_992.0;
     const MIN_CONSECUTIVE: Self = -9_007_199_254_740_992.0;
@@ -332,7 +335,7 @@ macro_rules! impl_round_cast_self_string_bool {
         }
     }
 }
-cartesian! {[u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64], impl_round_cast_num, impl_round_cast_self_string_bool, impl_round_cast_num}
+cartesian! {[u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64], impl_round_cast_num, impl_round_cast_self_string_bool, impl_round_cast_num}
 
 // final four casts among bool and string
 impl RoundCast<bool> for bool { fn round_cast(v: bool) -> Fallible<Self> { Ok(v) } }

@@ -49,7 +49,8 @@
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
 //!     let epsilon = 1.0;
-//!     let sigma = (bounds.1 - bounds.0) / epsilon;
+//!     // remove some epsilon to account for floating-point error
+//!     let sigma = (bounds.1 - bounds.0) / (epsilon - 0.0001);
 //!
 //!     // Construct a Transformation to load the numbers.
 //!     let split_lines = make_split_lines()?;

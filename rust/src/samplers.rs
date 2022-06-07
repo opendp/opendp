@@ -36,8 +36,8 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     } else { Ok(()) }
 }
 
-struct GeneratorOpenDP {
-    error: Fallible<()>,
+pub struct GeneratorOpenDP {
+    pub error: Fallible<()>,
 }
 
 impl GeneratorOpenDP {

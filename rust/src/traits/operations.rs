@@ -85,7 +85,7 @@ macro_rules! impl_total_ord_for_ord {
         fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
-impl_total_ord_for_ord!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl_total_ord_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {

@@ -1,5 +1,7 @@
 #[cfg(feature = "use-mpfr")]
-use rug::ops::{AddAssignRound, DivAssignRound, MulAssignRound, SubAssignRound};
+use rug::ops::{AddAssignRound, DivAssignRound, MulAssignRound, SubAssignRound, PowAssignRound};
+
+use crate::traits::ExactIntCast;
 
 use crate::error::Fallible;
 #[cfg(feature="use-mpfr")]
@@ -34,6 +36,12 @@ pub trait AlertingDiv: Sized {
     fn alerting_div(&self, v: &Self) -> Fallible<Self>;
 }
 
+/// Raising to the power that returns an error if overflowing.
+pub trait AlertingPow: Sized {
+    /// Returns `Ok(self^v)` if the result does not overflow, else `Err(Error)`
+    fn alerting_pow(&self, p: &Self) -> Fallible<Self>;
+}
+
 /// Addition that saturates at the numeric bounds instead of overflowing.
 pub trait SaturatingAdd: Sized {
     /// Returns `self + v`, saturating at the relevant high or low boundary of the type.
@@ -56,6 +64,12 @@ pub trait InfLn: Sized {
 pub trait InfSqrt: Sized {
     fn inf_sqrt(self) -> Fallible<Self>;
     fn neg_inf_sqrt(self) -> Fallible<Self>;
+}
+
+/// Computes self to the power with specified rounding that returns an error if overflowing.
+pub trait InfPow: Sized {
+    fn inf_pow(&self, p: &Self) -> Fallible<Self>;
+    fn neg_inf_pow(&self, p: &Self) -> Fallible<Self>;
 }
 
 /// Performs addition with rounding towards infinity that returns an error if overflowing.
@@ -109,7 +123,7 @@ macro_rules! impl_alerting_abs_signed_int {
         }
     })+)
 }
-impl_alerting_abs_signed_int!(i8, i16, i32, i64, i128);
+impl_alerting_abs_signed_int!(i8, i16, i32, i64, i128, isize);
 macro_rules! impl_alerting_abs_unsigned_int {
     ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
         fn alerting_abs(&self) -> Fallible<Self> {
@@ -174,9 +188,20 @@ macro_rules! impl_alerting_int {
                     self, v))
             }
         })+
+
+        $(impl AlertingPow for $t {
+            #[inline]
+            fn alerting_pow(&self, p: &Self) -> Fallible<Self> {
+                let p = u32::exact_int_cast(*p)?;
+                <$t>::checked_pow(*self, p).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{}.pow({}) overflows. Consider tightening your parameters.",
+                    self, p))
+            }
+        })+
     };
 }
-impl_alerting_int!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl_alerting_int!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 macro_rules! impl_alerting_float {
     ($($t:ty),+) => {
         $(impl SaturatingAdd for $t {
@@ -214,6 +239,15 @@ macro_rules! impl_alerting_float {
         $(impl AlertingSub for $t {
             fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
                 let y = self - v;
+                y.is_finite().then(|| y).ok_or_else(|| err!(
+                    FailedFunction,
+                    "{} - {} is not finite. Consider tightening your parameters.",
+                    self, v))
+            }
+        })+
+        $(impl AlertingPow for $t {
+            fn alerting_pow(&self, v: &Self) -> Fallible<Self> {
+                let y = self.powf(*v);
                 y.is_finite().then(|| y).ok_or_else(|| err!(
                     FailedFunction,
                     "{} - {} is not finite. Consider tightening your parameters.",
@@ -301,7 +335,7 @@ macro_rules! impl_int_inf {
         })+
     }
 }
-impl_int_inf!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize);
+impl_int_inf!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
 macro_rules! impl_float_inf_bi {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
@@ -352,6 +386,7 @@ impl_float_inf_bi!(f64, f32; InfAdd, inf_add, neg_inf_add, add_assign_round, ale
 impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub_assign_round, alerting_sub);
 impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul_assign_round, alerting_mul);
 impl_float_inf_bi!(f64, f32; InfDiv, inf_div, neg_inf_div, div_assign_round, alerting_div);
+impl_float_inf_bi!(f64, f32; InfPow, inf_pow, neg_inf_pow, pow_assign_round, alerting_pow);
 
 
 impl<T1: InfSub, T2: InfSub> InfSub for (T1, T2) {

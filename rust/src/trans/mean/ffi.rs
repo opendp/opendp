@@ -42,7 +42,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_bounded_sum_n() -> Fallible<()> {
+    fn test_make_sized_bounded_mean() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_mean(
             3 as c_uint,
             util::into_raw(AnyObject::new((0., 10.))),
