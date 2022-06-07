@@ -3,6 +3,7 @@ use std::ops::{AddAssign, Neg, Sub, SubAssign, Mul};
 
 use ieee754::Ieee754;
 use num::{Bounded, clamp, One, Zero};
+use rand::RngCore;
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 
@@ -27,12 +28,12 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
 }
 
 #[cfg(feature = "use-mpfr")]
-struct GeneratorOpenSSL {
-    error: Fallible<()>,
+pub struct GeneratorOpenSSL {
+    pub error: Fallible<()>,
 }
 
 impl GeneratorOpenSSL {
-    fn new() -> Self {
+    pub fn new() -> Self {
         GeneratorOpenSSL { error: Ok(()) }
     }
 }
@@ -45,6 +46,30 @@ impl ThreadRandGen for GeneratorOpenSSL {
             self.error = Err(e)
         }
         u32::from_ne_bytes(buffer)
+    }
+}
+
+impl RngCore for GeneratorOpenSSL {
+    fn next_u32(&mut self) -> u32 {
+        let mut buffer = [0u8; 4];
+        self.fill_bytes(&mut buffer);
+        u32::from_ne_bytes(buffer)
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut buffer = [0u8; 8];
+        self.fill_bytes(&mut buffer);
+        u64::from_ne_bytes(buffer)
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        if let Err(e) = fill_bytes(dest) {
+            self.error = Err(e)
+        }
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        fill_bytes(dest).map_err(rand::Error::new)
     }
 }
 

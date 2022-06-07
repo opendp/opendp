@@ -72,7 +72,7 @@ In particular, in pipelines that load dataframes from CSV files, it is very comm
 
 Depending on the caster you choose, the output data may be null and you will be required to chain with an imputer.
 
-There is an unusual caster in this section that allows you to cast from a ``SubstituteDistance`` metric to a ``SymmetricDistance`` metric.
+There is an unusual caster in this section that allows you to cast from a ``ChangeOneDistance`` metric to a ``SymmetricDistance`` metric.
 It is noted in the `linked dev issue <https://github.com/opendp/opendp/issues/156#issuecomment-867900184>`_ that most transformations need only be defined for ``SymmetricDistance``.
 If you are more comfortable working with substitution distances,
 you can chain this caster at the start of a computation pipeline to make ``d_in`` a substitution distance instead of a symmetric distance.

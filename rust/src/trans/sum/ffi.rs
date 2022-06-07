@@ -1,16 +1,12 @@
 use std::convert::TryFrom;
-use std::iter::Sum;
-use std::ops::Sub;
 use std::os::raw::{c_char, c_uint};
 
-use num::Zero;
-
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::dist::IntDistance;
+
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, ExactIntCast, InfCast, InfDiv, InfSub, SaturatingAdd};
+use crate::trans::sum::{MakeBoundedSum, MakeSizedBoundedSum};
 use crate::trans::{make_bounded_sum, make_sized_bounded_sum};
 
 #[no_mangle]
@@ -21,8 +17,7 @@ pub extern "C" fn opendp_trans__make_bounded_sum(
     fn monomorphize<T>(
         bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + SaturatingAdd + Zero + CheckNull + AlertingAbs,
-              IntDistance: InfCast<T> {
+        where T: 'static + MakeBoundedSum {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_bounded_sum::<T>(bounds).into_any()
     }
@@ -37,10 +32,10 @@ pub extern "C" fn opendp_trans__make_sized_bounded_sum(
     size: c_uint, bounds: *const AnyObject,
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + ExactIntCast<usize> + CheckNull + InfDiv + InfSub,
-              for<'a> T: Sum<&'a T>,
-              IntDistance: InfCast<T> {
+    fn monomorphize<T>(
+        size: usize, bounds: *const AnyObject
+    ) -> FfiResult<*mut AnyTransformation>
+        where T: 'static + MakeSizedBoundedSum {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_sum::<T>(size, bounds).into_any()
     }

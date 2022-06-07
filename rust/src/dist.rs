@@ -71,25 +71,67 @@ impl Metric for SymmetricDistance {
 impl DatasetMetric for SymmetricDistance {}
 
 #[derive(Clone)]
-pub struct SubstituteDistance;
+pub struct InsertDeleteDistance;
 
-impl Default for SubstituteDistance {
-    fn default() -> Self { SubstituteDistance }
+impl Default for InsertDeleteDistance {
+    fn default() -> Self { InsertDeleteDistance }
 }
 
-impl PartialEq for SubstituteDistance {
+impl PartialEq for InsertDeleteDistance {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-impl Debug for SubstituteDistance {
+impl Debug for InsertDeleteDistance {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "SubstituteDistance()")
+        write!(f, "InsertDeleteDistance()")
     }
 }
-impl Metric for SubstituteDistance {
+impl Metric for InsertDeleteDistance {
     type Distance = IntDistance;
 }
 
-impl DatasetMetric for SubstituteDistance {}
+impl DatasetMetric for InsertDeleteDistance {}
+
+#[derive(Clone)]
+pub struct ChangeOneDistance;
+
+impl Default for ChangeOneDistance {
+    fn default() -> Self { ChangeOneDistance }
+}
+
+impl PartialEq for ChangeOneDistance {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+impl Debug for ChangeOneDistance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ChangeOneDistance()")
+    }
+}
+impl Metric for ChangeOneDistance {
+    type Distance = IntDistance;
+}
+
+impl DatasetMetric for ChangeOneDistance {}
+
+#[derive(Clone)]
+pub struct HammingDistance;
+
+impl Default for HammingDistance {
+    fn default() -> Self { HammingDistance }
+}
+
+impl PartialEq for HammingDistance {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+impl Debug for HammingDistance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "HammingDistance()")
+    }
+}
+impl Metric for HammingDistance {
+    type Distance = IntDistance;
+}
+
+impl DatasetMetric for HammingDistance {}
 
 // Sensitivity in P-space
 pub struct LpDistance<Q, const P: usize>(PhantomData<Q>);
@@ -116,7 +158,7 @@ impl<Q, const P: usize> SensitivityMetric for LpDistance<Q, P> {}
 pub type L1Distance<Q> = LpDistance<Q, 1>;
 pub type L2Distance<Q> = LpDistance<Q, 2>;
 
-
+/// Represents a metric where d(a, b) = |a - b|
 pub struct AbsoluteDistance<Q>(PhantomData<Q>);
 impl<Q> Default for AbsoluteDistance<Q> {
     fn default() -> Self { AbsoluteDistance(PhantomData) }
@@ -137,3 +179,28 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
+
+
+
+
+pub struct Modular<M: Metric>(M);
+impl<M: Metric + Default> Default for Modular<M> {
+    fn default() -> Self { Modular(M::default()) }
+}
+
+impl<M: Metric + Clone> Clone for Modular<M> {
+    fn clone(&self) -> Self { Self(self.0.clone()) }
+}
+impl<M: Metric + PartialEq> PartialEq for Modular<M> {
+    fn eq(&self, other: &Self) -> bool { self.0 == other.0 }
+}
+impl<M: Metric + Debug> Debug for Modular<M> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Modular({:?})", self.0)
+    }
+}
+impl<M: Metric> Metric for Modular<M> {
+    type Distance = M::Distance;
+}
+impl<M: Metric> SensitivityMetric for Modular<M> {}
+

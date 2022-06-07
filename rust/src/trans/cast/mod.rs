@@ -1,8 +1,8 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use crate::core::{DatasetMetric, Domain, Function, StabilityRelation, Transformation};
-use crate::dist::{SubstituteDistance, SymmetricDistance, IntDistance};
+use crate::core::Transformation;
+use crate::dist::SymmetricDistance;
 use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{RoundCast, CheckNull};
@@ -40,45 +40,9 @@ pub fn make_cast_inherent<TIA, TOA>(
         |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL))
 }
 
-pub trait DatasetMetricCast {
-    fn stability_constant() -> IntDistance;
-}
-
-macro_rules! impl_metric_cast {
-    ($ty:ty, $constant:literal) => {
-         impl DatasetMetricCast for $ty {
-            fn stability_constant() -> IntDistance {
-                $constant
-            }
-        }
-    }
-}
-impl_metric_cast!((SubstituteDistance, SymmetricDistance), 2);
-impl_metric_cast!((SymmetricDistance, SubstituteDistance), 1);
-impl_metric_cast!((SymmetricDistance, SymmetricDistance), 1);
-impl_metric_cast!((SubstituteDistance, SubstituteDistance), 1);
-
-pub fn make_cast_metric<D, MI, MO>(
-    domain: D
-) -> Fallible<Transformation<D, D, MI, MO>>
-    where D: Domain + Clone,
-          D::Carrier: Clone,
-          MI: DatasetMetric, MO: DatasetMetric,
-          (MI, MO): DatasetMetricCast {
-
-    Ok(Transformation::new(
-        domain.clone(),
-        domain,
-        Function::new(|val: &D::Carrier| val.clone()),
-        MI::default(),
-        MO::default(),
-        StabilityRelation::new_from_constant(<(MI, MO)>::stability_constant())
-    ))
-}
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{SubstituteDistance, SymmetricDistance};
     use crate::error::ExplainUnwrap;
 
     use super::*;
@@ -177,16 +141,6 @@ mod tests {
         let res = caster.invoke(&data)?;
         assert!(res[0].is_nan());
         assert_eq!(res[1..], vec![1., 1.]);
-        Ok(())
-    }
-
-    #[test]
-    fn test_cast_metric() -> Fallible<()> {
-        let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
-        let caster = make_cast_metric::<VectorDomain<AllDomain<_>>, SubstituteDistance, SymmetricDistance>(VectorDomain::new_all())?;
-        let _res = caster.invoke(&data)?;
-        assert!(!caster.check(&1, &1)?);
-        assert!(caster.check(&1, &2)?);
         Ok(())
     }
 }
