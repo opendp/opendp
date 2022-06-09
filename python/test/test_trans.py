@@ -54,33 +54,26 @@ def test_impute_uniform():
     assert -1. <= caster([float('nan')])[0] <= 2.
 
 
-def test_cast_metric():
-    from opendp.trans import make_cast_metric
-    caster = make_cast_metric(SubstituteDistance, SymmetricDistance, TA=float)
-    assert caster([1., 2.]) == [1., 2.]
-    assert not caster.check(1, 1)
-
-
 def test_identity():
     from opendp.trans import make_identity
     from opendp.typing import VectorDomain, AllDomain
     # test int
-    transformation = make_identity(VectorDomain[AllDomain[int]], SubstituteDistance)
+    transformation = make_identity(VectorDomain[AllDomain[int]], ChangeOneDistance)
     arg = [123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AllDomain[float]], SubstituteDistance)
+    transformation = make_identity(VectorDomain[AllDomain[float]], ChangeOneDistance)
     arg = [123.123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AllDomain[str]], SubstituteDistance)
+    transformation = make_identity(VectorDomain[AllDomain[str]], ChangeOneDistance)
     arg = ["hello, world"]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity("VectorDomain<AllDomain<i32>>", SubstituteDistance)
+    transformation = make_identity("VectorDomain<AllDomain<i32>>", ChangeOneDistance)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == arg

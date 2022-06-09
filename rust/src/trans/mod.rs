@@ -54,6 +54,11 @@ pub mod cast;
 pub use crate::trans::cast::*;
 
 #[cfg(feature="contrib")]
+pub mod cast_metric;
+#[cfg(feature="contrib")]
+pub use crate::trans::cast_metric::*;
+
+#[cfg(feature="contrib")]
 pub mod resize;
 #[cfg(feature="contrib")]
 pub use crate::trans::resize::*;

@@ -80,21 +80,117 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_cast_metric": {
-        "description": "Make a Transformation that converts the dataset metric from type `MI` to type `MO`.",
+    "make_random_ordering": {
+        "description": "Make a Transformation that converts the unordered dataset metric `SymmetricDistance` to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation. \nOperates exclusively on VectorDomain<AllDomain<`TA`>>.",
         "features": ["contrib"],
         "args": [
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_random_ordering": {
+        "description": "Make a Transformation that converts the unordered dataset metric `MI` to the respective ordered dataset metric by assigning a random permutatation. \nOperates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>. \nIf `MI` is \"SymmetricDistance\", then output metric is \"InsertDeleteDistance\", and respectively \"ChangeOneDistance\" maps to \"HammingDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
             {
                 "name": "MI",
                 "hint": "DatasetMetric",
                 "is_type": true,
+                "default": "SymmetricDistance",
                 "description": "input dataset metric"
             },
             {
-                "name": "MO",
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_unordered": {
+        "description": "Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance` to the respective unordered dataset metric SymmetricDistance with a no-op. \nOperates exclusively on VectorDomain<AllDomain<`TA`>>. \nIf `MI` is \"InsertDeleteDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"ChangeOneDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_unordered": {
+        "description": "Make a Transformation that converts the ordered dataset metric `MI` to the respective unordered dataset metric with a no-op. \nOperates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>. \nIf `MI` is \"InsertDeleteDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"ChangeOneDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
                 "hint": "DatasetMetric",
                 "is_type": true,
-                "description": "output dataset metric"
+                "default": "InsertDeleteDistance",
+                "description": "input dataset metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_metric_bounded": {
+        "description": "Make a Transformation that converts the unbounded dataset metric `MI` to the respective bounded dataset metric with a no-op. \nIf \"SymmetricDistance\", then output metric is \"ChangeOneDistance\", and respectively \"InsertDeleteDistance\" maps to \"HammingDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "input dataset metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_metric_unbounded": {
+        "description": "Make a Transformation that converts the bounded dataset metric `MI` to the respective unbounded dataset metric with a no-op. \nIf \"ChangeOneDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"InsertDeleteDistance\".",
+        "features": ["contrib"],
+        "args": [
+                        {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "ChangeOneDistance",
+                "description": "input dataset metric."
             },
             {
                 "name": "TA",

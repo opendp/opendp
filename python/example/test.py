@@ -2,7 +2,7 @@ from opendp.trans import *
 from opendp.meas import *
 from opendp.comb import *
 
-from opendp.typing import SubstituteDistance, VectorDomain, AllDomain
+from opendp.typing import ChangeOneDistance, VectorDomain, AllDomain
 from opendp.mod import enable_features
 enable_features("contrib")
 
@@ -13,7 +13,7 @@ enable_features("contrib")
 def main():
 
     # HELLO WORLD
-    identity = make_identity(D=VectorDomain[AllDomain[str]], M=SubstituteDistance)
+    identity = make_identity(D=VectorDomain[AllDomain[str]], M=ChangeOneDistance)
     arg = ["hello, world!"]
     res = identity(arg)
     print(res)

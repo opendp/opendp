@@ -438,7 +438,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{MaxDivergence, SmoothedMaxDivergence, SubstituteDistance, SymmetricDistance};
+    use crate::dist::{MaxDivergence, SmoothedMaxDivergence, ChangeOneDistance, SymmetricDistance};
     use crate::dom::{AllDomain, BoundedDomain};
     use crate::error::*;
     use crate::meas;
@@ -472,7 +472,7 @@ mod tests {
 
         let metric1 = AnyMetric::new(SymmetricDistance::default());
         let metric2 = AnyMetric::new(SymmetricDistance::default());
-        let metric3 = AnyMetric::new(SubstituteDistance::default());
+        let metric3 = AnyMetric::new(ChangeOneDistance::default());
         assert_eq!(metric1, metric2);
         assert_ne!(metric1, metric3);
 

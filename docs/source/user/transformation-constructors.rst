@@ -72,11 +72,6 @@ In particular, in pipelines that load dataframes from CSV files, it is very comm
 
 Depending on the caster you choose, the output data may be null and you will be required to chain with an imputer.
 
-There is an unusual caster in this section that allows you to cast from a ``SubstituteDistance`` metric to a ``SymmetricDistance`` metric.
-It is noted in the `linked dev issue <https://github.com/opendp/opendp/issues/156#issuecomment-867900184>`_ that most transformations need only be defined for ``SymmetricDistance``.
-If you are more comfortable working with substitution distances,
-you can chain this caster at the start of a computation pipeline to make ``d_in`` a substitution distance instead of a symmetric distance.
-
 .. list-table::
    :header-rows: 1
 
@@ -104,10 +99,6 @@ you can chain this caster at the start of a computation pipeline to make ``d_in`
      - ``VectorDomain<AllDomain<TIA>>``
      - ``VectorDomain<AllDomain<bool>>``
      - ``SymmetricDistance``
-   * - :func:`opendp.trans.make_cast_metric`
-     - ``VectorDomain<AllDomain<TA>>``
-     - ``VectorDomain<AllDomain<TA>>``
-     - ``MI/MO``
 
 
 Imputation
@@ -251,6 +242,85 @@ Only chain with a clamp transformation if the aggregator you intend to use needs
      - ``VectorDomain<BoundedDomain<TA>>``
      - ``VectorDomain<AllDomain<TA>>``
      - ``SymmetricDistance``
+
+Dataset Ordering
+----------------
+Most dataset-to-dataset transformations are not sensitive to the order of elements within the dataset.
+This includes all row-by-row transformations. 
+These transformations that are not sensitive to operate with SymmetricDistances.
+
+Transformations that are sensitive to the order of elements in the dataset use the InsertDeleteDistance metric instead.
+It is common for aggregators to be sensitive to the dataset ordering.
+
+The following transformations are used to relate dataset metrics that are not sensitive to ordering (``SymmetricDistance`` and ``ChangeOneDistance``) 
+to metrics that are sensitive to ordering (``InsertDeleteDistance`` and ``HammingDistance`` respectively).
+
+Take note that there are separate constructors for metric casts on sized vs unsized datasets.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Caster
+     - Input/Output Domain
+     - Input Metric
+     - Output Metric
+   * - :func:`opendp.trans.make_random_ordering`
+     - ``VectorDomain<AllDomain<TA>>``
+     - ``SymmetricDistance``
+     - ``InsertDeleteDistance``
+   * - :func:`opendp.trans.make_sized_random_ordering`
+     - ``Sized<VectorDomain<AllDomain<TA>>>``
+     - ``SymmetricDistance``
+     - ``InsertDeleteDistance``
+   * - :func:`opendp.trans.make_sized_random_ordering`
+     - ``Sized<VectorDomain<AllDomain<TA>>>``
+     - ``ChangeOneDistance``
+     - ``HammingDistance``
+   * - :func:`opendp.trans.make_unordered`
+     - ``VectorDomain<AllDomain<TA>>``
+     - ``InsertDeleteDistance``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_sized_unordered`
+     - ``Sized<VectorDomain<AllDomain<TA>>>``
+     - ``InsertDeleteDistance``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_sized_unordered`
+     - ``Sized<VectorDomain<AllDomain<TA>>>``
+     - ``HammingDistance``
+     - ``ChangeOneDistance``
+
+
+Bounded Metrics
+---------------
+You may be more familiar with "bounded" differential privacy, where dataset distances are expressed in terms of the number of changed rows.
+Expressing dataset distances in this manner is more restrictive, as edit distances are only valid for datasets with a fixed size.
+Generally speaking, if a dataset differs from a neighboring dataset by no more than ``k`` edits, then they differ by no more than ``2k`` additions and removals.
+We therefore write all transformations in terms of the more general "unbounded"-dp metrics ``SymmetricDistance`` and ``InsertDeleteDistance``, 
+and provide the following constructors to convert to/from "bounded"-dp metrics ``ChangeOneDistance`` and ``HammingDistance`` respectively.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Caster
+     - Input/Output Domain
+     - Input Metric
+     - Output Metric
+   * - :func:`opendp.trans.make_metric_bounded`
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SymmetricDistance``
+     - ``ChangeOneDistance``
+   * - :func:`opendp.trans.make_metric_bounded`
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``InsertDeleteDistance``
+     - ``HammingDistance``
+   * - :func:`opendp.trans.make_metric_unbounded`
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``ChangeOneDistance``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_metric_unbounded`
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``HammingDistance``
+     - ``InsertDeleteDistance``
 
 
 Resizing

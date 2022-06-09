@@ -7,6 +7,9 @@ use std::ops::Mul;
 use ieee754::Ieee754;
 use num::{Bounded, clamp, One, Zero};
 
+use rand::RngCore;
+use rand::prelude::SliceRandom;
+
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 
@@ -53,6 +56,41 @@ impl ThreadRandGen for GeneratorOpenSSL {
             self.error = Err(e)
         }
         u32::from_ne_bytes(buffer)
+    }
+}
+
+impl RngCore for GeneratorOpenSSL {
+    fn next_u32(&mut self) -> u32 {
+        let mut buffer = [0u8; 4];
+        self.fill_bytes(&mut buffer);
+        u32::from_ne_bytes(buffer)
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut buffer = [0u8; 8];
+        self.fill_bytes(&mut buffer);
+        u64::from_ne_bytes(buffer)
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        if let Err(e) = fill_bytes(dest) {
+            self.error = Err(e)
+        }
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        fill_bytes(dest).map_err(rand::Error::new)
+    }
+}
+
+pub trait Shuffle {
+    fn shuffle(&mut self) -> Fallible<()>;
+}
+impl<T> Shuffle for Vec<T> {
+    fn shuffle(&mut self) -> Fallible<()> {
+        let mut rng = GeneratorOpenSSL::new();
+        SliceRandom::shuffle(self.as_mut_slice(), &mut rng);
+        rng.error
     }
 }
 
