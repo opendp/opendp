@@ -1,17 +1,7 @@
-use crate::{core::{Domain, Metric}, error::Fallible, samplers::Shuffle, dist::{SymmetricDistance, InsertDeleteDistance, ChangeOneDistance, HammingDistance}};
-
-pub trait ShuffleableDomain: Domain {
-    fn shuffle(val: Self::Carrier) -> Fallible<Self::Carrier>;
-}
-impl<D: Domain> ShuffleableDomain for D
-where
-    D::Carrier: Shuffle,
-{
-    fn shuffle(mut val: Self::Carrier) -> Fallible<Self::Carrier> {
-        val.shuffle()?;
-        Ok(val)
-    }
-}
+use crate::{
+    core::Metric,
+    dist::{ChangeOneDistance, HammingDistance, InsertDeleteDistance, SymmetricDistance},
+};
 
 pub trait UnorderedMetric: Metric {
     type OrderedMetric: Metric<Distance = Self::Distance>;
