@@ -32,11 +32,11 @@ jobs:
       - name: Build
         run: cargo build --verbose --features untrusted,bindings-python
       
-      - name: check --no-default-features
-        run: cargo check --verbose --no-default-features --features untrusted,bindings-python
+      - name: Check --no-default-features
+        run: cargo check --verbose --no-default-features --features untrusted,ffi
 
       - name: Test
-        run: cargo test --verbose
+        run: cargo test --verbose --features untrusted,ffi
 
       - name: Upload libs
         uses: actions/upload-artifact@v2

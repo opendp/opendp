@@ -231,6 +231,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature="untrusted")]
     #[test]
     fn test_adaptive_composition_chain() -> Fallible<()> {
         // Definitions
