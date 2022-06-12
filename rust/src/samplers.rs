@@ -34,19 +34,19 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
 }
 
 #[cfg(feature="use-mpfr")]
-struct GeneratorOpenDP {
+struct GeneratorOpenSSL {
     error: Fallible<()>,
 }
 
 #[cfg(feature="use-mpfr")]
-impl GeneratorOpenDP {
+impl GeneratorOpenSSL {
     fn new() -> Self {
-        GeneratorOpenDP { error: Ok(()) }
+        GeneratorOpenSSL { error: Ok(()) }
     }
 }
 
 #[cfg(feature="use-mpfr")]
-impl ThreadRandGen for GeneratorOpenDP {
+impl ThreadRandGen for GeneratorOpenSSL {
     fn gen(&mut self) -> u32 {
         let mut buffer = [0u8; 4];
         if let Err(e) = fill_bytes(&mut buffer) {
@@ -557,7 +557,7 @@ impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> Samp
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenDP::new();
+        let mut rng = GeneratorOpenSSL::new();
         let laplace = {
             let mut state = ThreadRandState::new_custom(&mut rng);
 
@@ -596,7 +596,7 @@ impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenDP::new();
+        let mut rng = GeneratorOpenSSL::new();
         let gauss = {
             let mut state = ThreadRandState::new_custom(&mut rng);
 
