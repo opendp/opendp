@@ -22,33 +22,47 @@ Download Python from the `Python website`_.
 Clone the OpenDP Repo
 ---------------------
 
-If you don't have write access to the OpenDP repository, you will first need to make a fork.
-`The GitHub documentation explains this process well <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_.
+If you don't have write access to the OpenDP repository, you will either need to request to join the organization or make a fork.
+`The GitHub documentation explains forking <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_.
 
 Clone the repo (or your fork) and change into the ``opendp`` directory that's created.
 
 .. code-block:: bash
 
-    git clone https://github.com/opendp/opendp.git
+    git clone git@github.com:opendp/opendp.git
     cd opendp
+
+
+If you have not `set up SSH <https://docs.github.com/en/authentication/connecting-to-github-with-ssh>`_, you can clone with https instead:
+
+.. code-block:: bash
+
+    git clone https://github.com/opendp/opendp.git
+
 
 Building OpenDP
 ===============
-
-Build OpenDP
-------------
 
 Change to the ``rust`` directory before attempting a build, run the tests, and then return to the ``opendp`` directory.
 
 .. code-block:: bash
 
     cd rust
-    cargo build
-    cargo test
+    cargo build --features untrusted,bindings-python
+    cargo test --features untrusted,bindings-python
     cd ..
 
-Add `--features=untrusted` to the `cargo` commands to include non-secure floating-point and contrib features like `make_base_laplace`.
-Refer to the :ref:`developer-faq` section if you run into compilation problems.
+Features are optional. The ``untrusted`` feature includes non-secure floating-point and contrib features like ``make_base_laplace``,
+and the ``bindings-python`` feature updates the python bindings when you build.
+
+Refer to the :ref:`developer-faq` if you run into compilation problems.
+
+.. note::
+
+    There is a more involved `setup guide <https://github.com/opendp/opendp/tree/main/rust/windows>`_ for Windows users.
+    You can compromise to simple and vulnerable builds instead, by adding the ``--no-default-features`` flag to cargo commands.
+    Be advised this flag disables GMP's exact float handling, as well as OpenSSL's secure noise generation.
+
 
 Install Python Dependencies
 ---------------------------
@@ -58,29 +72,29 @@ Change to the ``python`` directory, create a Python virtual environment, activat
 .. code-block:: bash
 
     cd python
+
+    # recommended. conda is just as valid
     python3 -m venv venv
     source venv/bin/activate
+
     pip install flake8 pytest
-    mkdir src/opendp/lib
     pip install -e .
 
-The developer install will not work if you don't use the `-e` flag when installing with pip!
+The `-e` flag is significant! It stands for "editable", meaning you only have to run this command once.
 
-Run the Tests
--------------
+Testing Python
+--------------
 
-From the ``python`` directory, set an environment variable to the location of the OpenDP library you built. Then run the tests.
+Run the tests from the ``python`` directory. 
 
 .. code-block:: bash
 
-    export OPENDP_LIB_DIR=../rust/target/debug
     pytest -v
+
+If pytest is not found, don't forget to activate your virtual environment.
 
 Documentation
 =============
-
-Documentation Source
---------------------
 
 The source for this documentation can be found in the "docs" directory at https://github.com/opendp/opendp
 
@@ -95,14 +109,75 @@ Tooling
 
 There are many development environments that work with Rust. Here are a few:
 
+* `VS Code <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_
 * `Intellij IDEA <https://plugins.jetbrains.com/plugin/8182-rust>`_
-* `VS Code <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust>`_
 * `Sublime <https://github.com/rust-lang/rust-enhanced>`_
 
 Use whatever developer tooling you are comfortable with.
-The benefit to using Intellij IDEA is that the core developers use it,
-which makes it possible for one of us to actually join your IDE with the `CodeWithMe Plugin <https://www.jetbrains.com/code-with-me/>`_,
-and talk through issues.
+
+
+A few notes on VS Code:
+
+* Be sure to install the `rust-analyzer <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_ plugin, not the rust plugin
+* Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings-python"``
+* Look for ``Problems`` in the bottom panel for live compilation errors as you work
+* Other useful extensions are "Better Toml", "crates" and "LaTex Workshop".
+* Latex Workshop configuration starter:
+
+.. raw:: html
+
+   <details style="margin:-1em 0 2em 4em">
+   <summary><a>settings.json</a></summary>
+
+.. code-block:: json
+
+    {
+        "latex-workshop.latex.outDir": "%DIR%/out/",
+        "latex-workshop.latex.recipes": [
+            {
+                "name": "latexmk",
+                "tools": [
+                    "latexmk"
+                ]
+            }
+        ],
+        "latex-workshop.latex.tools": [
+            {
+                "name": "latexmk",
+                "command": "latexmk",
+                "args": [
+                    "-synctex=1",
+                    "-interaction=nonstopmode",
+                    "-file-line-error",
+                    "-recorder",
+                    "-pdf",
+                    "--shell-escape",
+                    "-aux-directory=out",
+                    "-output-directory=out",
+                    "%DOC%"
+                ]
+            },
+            {
+                "name": "pdflatex",
+                "command": "pdflatex",
+                "args": [
+                    "-synctex=1",
+                    "-interaction=nonstopmode",
+                    "-file-line-error",
+                    "-aux-directory=out",
+                    "-output-directory=out",
+                    "%DOC%"
+                ]
+            }
+        ],
+        "latex-workshop.view.pdf.viewer": "tab"
+    }
+
+.. raw:: html
+
+   </details>
+
+
 
 A few notes on Intellij IDEA:
 
@@ -110,5 +185,3 @@ A few notes on Intellij IDEA:
 * Be sure to open the project at the root of the git repository
 * Be sure to install the Python and Rust plugins for interactivity
 * Be sure to "attach" the Cargo.toml in the red banner the first time you open a Rust source file
-
-To reiterate, of course, use whatever developer tooling you are comfortable with!
