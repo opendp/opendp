@@ -30,7 +30,10 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Build
-        run: cargo build --verbose --features=untrusted,ffi
+        run: cargo build --verbose --features untrusted,bindings-python
+      
+      - name: check --no-default-features
+        run: cargo check --verbose --no-default-features --features untrusted,bindings-python
 
       - name: Test
         run: cargo test --verbose

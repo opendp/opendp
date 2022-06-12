@@ -122,12 +122,60 @@ A few notes on VS Code:
 * Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings-python"``
 * Look for ``Problems`` in the bottom panel for live compilation errors as you work
 * Other useful extensions are "Better Toml", "crates" and "LaTex Workshop".
-* Latex Workshop configuration starter:
+* Starter json configurations:
 
 .. raw:: html
 
    <details style="margin:-1em 0 2em 4em">
-   <summary><a>settings.json</a></summary>
+   <summary><a>Expand Me</a></summary>
+
+Starter ``/.vscode/tasks.json``. 
+These tasks can be used to directly build OpenDP.
+`See also the VSCode documentation on tasks. <https://code.visualstudio.com/docs/editor/tasks>`_
+
+.. code-block:: json
+
+    {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "type": "cargo",
+                "command": "build",
+                "problemMatcher": [
+                    "$rustc"
+                ],
+                "args": [
+                    "--manifest-path=./rust/Cargo.toml"
+                ],
+                "group": "build",
+                "label": "rust: cargo build",
+                "presentation": {
+                    "clear": true
+                }
+            },
+            {
+                "type": "cargo",
+                "command": "build",
+                "problemMatcher": [
+                    "$rustc"
+                ],
+                "args": [
+                    "--manifest-path=./rust/Cargo.toml",
+                    "--features", "bindings-python untrusted"
+                ],
+                "group": "build",
+                "label": "rust: cargo build ffi",
+                "presentation": {
+                    "clear": true
+                }
+            }
+        ]
+    }
+
+
+Starter `settings.json` for LaTex Workshop. 
+Access this file through the LaTex Workshop extension settings.
+This configuration emits outputs into ``./out/``
 
 .. code-block:: json
 
@@ -185,3 +233,4 @@ A few notes on Intellij IDEA:
 * Be sure to open the project at the root of the git repository
 * Be sure to install the Python and Rust plugins for interactivity
 * Be sure to "attach" the Cargo.toml in the red banner the first time you open a Rust source file
+* Use run configurations to `build the rust library <https://plugins.jetbrains.com/plugin/8182-rust/docs/cargo-command-configuration.html#cargo-command-config>`_ and run tests
