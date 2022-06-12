@@ -4,7 +4,11 @@ use num::{NumCast, One, Zero};
 #[cfg(feature = "use-mpfr")]
 use rug::Float;
 
+#[cfg(not(feature = "use-mpfr"))]
+use crate::samplers::SampleGaussian;
+
 use crate::error::Fallible;
+#[cfg(feature="use-mpfr")]
 use crate::traits::FloatBits;
 
 // general overview of casters:
@@ -43,6 +47,7 @@ pub trait CastInternalReal: FloatBits + Sized {
 
 #[cfg(not(feature = "use-mpfr"))]
 pub trait CastInternalReal: rand::distributions::uniform::SampleUniform + SampleGaussian {
+    const MANTISSA_DIGITS: u32;
     fn from_internal(v: Self) -> Self;
     fn into_internal(self) -> Self;
 }

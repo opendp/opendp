@@ -2,6 +2,7 @@
 use rug::ops::{AddAssignRound, DivAssignRound, MulAssignRound, SubAssignRound};
 
 use crate::error::Fallible;
+#[cfg(feature="use-mpfr")]
 use crate::traits::CastInternalReal;
 
 /// Computes the absolute value and returns an error if overflowing.
@@ -331,14 +332,14 @@ macro_rules! impl_float_inf_bi {
         #[cfg(not(feature="use-mpfr"))]
         impl $name for $ty {
             fn $method_inf(&self, other: &Self) -> Fallible<Self> {
-                let this = self.$fallback(other);
+                let this = self.$fallback(other)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
                     self, other))
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
-                let this = self.$fallback(other);
+                let this = self.$fallback(other)?;
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),

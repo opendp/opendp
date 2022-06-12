@@ -1,15 +1,22 @@
 use std::cmp;
-use std::ops::{AddAssign, Neg, Sub, SubAssign, Mul};
+use std::ops::{AddAssign, Neg, Sub, SubAssign};
+
+#[cfg(feature="use-mpfr")]
+use std::ops::Mul;
 
 use ieee754::Ieee754;
 use num::{Bounded, clamp, One, Zero};
+
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 
 use crate::error::Fallible;
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
-use crate::traits::{TotalOrd, FloatBits, InfExp, InfSub, InfAdd, AlertingSub, CastInternalReal, InfDiv};
+use crate::traits::{TotalOrd, FloatBits, InfExp, InfSub, InfAdd, AlertingSub, InfDiv};
+
+#[cfg(feature="use-mpfr")]
+use crate::traits::{CastInternalReal};
 
 #[cfg(feature="use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
@@ -26,19 +33,20 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     } else { Ok(()) }
 }
 
-#[cfg(feature = "use-mpfr")]
-struct GeneratorOpenSSL {
+#[cfg(feature="use-mpfr")]
+struct GeneratorOpenDP {
     error: Fallible<()>,
 }
 
-impl GeneratorOpenSSL {
+#[cfg(feature="use-mpfr")]
+impl GeneratorOpenDP {
     fn new() -> Self {
-        GeneratorOpenSSL { error: Ok(()) }
+        GeneratorOpenDP { error: Ok(()) }
     }
 }
 
 #[cfg(feature="use-mpfr")]
-impl ThreadRandGen for GeneratorOpenSSL {
+impl ThreadRandGen for GeneratorOpenDP {
     fn gen(&mut self) -> u32 {
         let mut buffer = [0u8; 4];
         if let Err(e) = fill_bytes(&mut buffer) {
@@ -423,6 +431,7 @@ fn censor_neg_zero<T: Zero>(v: T) -> T {
 
 /// MPFR sets flags for [certain floating-point operations](https://docs.rs/gmp-mpfr-sys/1.4.7/gmp_mpfr_sys/C/MPFR/constant.MPFR_Interface.html#index-mpfr_005fclear_005fflags)
 /// Clears all flags (underflow, overflow, divide-by-0, nan, inexact, erange).
+#[cfg(feature="use-mpfr")]
 fn censor_flags() {
     use gmp_mpfr_sys::mpfr::{clear_flags};
     unsafe {clear_flags()}
@@ -548,7 +557,7 @@ impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> Samp
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenSSL::new();
+        let mut rng = GeneratorOpenDP::new();
         let laplace = {
             let mut state = ThreadRandState::new_custom(&mut rng);
 
@@ -572,7 +581,8 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
         while u.abs().is_zero() {
             u = rng.gen_range(T::from(-1.).unwrap(), T::from(1.).unwrap())
         }
-        Ok(shift + u.signum() * u.abs().ln() * scale)
+        let value = shift + u.signum() * u.abs().ln() * scale;
+        Ok(censor_neg_zero(value))
     }
 }
 
@@ -586,7 +596,7 @@ impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenSSL::new();
+        let mut rng = GeneratorOpenDP::new();
         let gauss = {
             let mut state = ThreadRandState::new_custom(&mut rng);
 
@@ -606,7 +616,8 @@ impl SampleGaussian for f64 {
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self> {
         let uniform_sample = f64::sample_standard_uniform(constant_time)?;
         use statrs::function::erf;
-        Ok(shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample))
+        let value = shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample);
+        Ok(censor_neg_zero(value))
     }
 }
 
