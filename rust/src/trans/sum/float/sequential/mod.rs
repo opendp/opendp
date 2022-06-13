@@ -112,7 +112,7 @@ where
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
-            T::inf_cast(*d_in)?
+            T::inf_cast(*d_in / 2)?
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
         }),
