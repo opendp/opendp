@@ -12,7 +12,7 @@ use crate::samplers::SampleGaussian;
 use crate::traits::{InfCast, CheckNull, InfMul, InfAdd, InfLn, InfSqrt, InfDiv, InfSub, InfExp};
 mod analytic;
 
-use self::analytic::{get_analytic_gaussian_epsilon, get_analytic_gaussian_delta};
+use self::analytic::get_analytic_gaussian_epsilon;
 
 // const ADDITIVE_GAUSS_CONST: f64 = 8. / 9. + (2. / std::f64::consts::PI).ln();
 const ADDITIVE_GAUSS_CONST: f64 = 0.4373061836;
@@ -83,13 +83,6 @@ pub fn make_base_gaussian<D>(
                         return fallible!(FailedRelation, "the gaussian mechanism has an epsilon of at most one")
                     }
                     Ok(eps)
-                },
-                move |eps: &D::Atom| {
-                    if eps > &D::Atom::one() {
-                        return fallible!(FailedRelation, "the gaussian mechanism has an epsilon of at most one")
-                    }
-                    let term1 = scale.neg_inf_mul(eps)?.neg_inf_div(&d_in)?;
-                    additive_gauss_const.inf_sub(&term1.neg_inf_mul(&term1)?)?.inf_div(&_2)?.inf_exp()
                 }
             ))
         }),
@@ -126,13 +119,6 @@ pub fn make_base_analytic_gaussian<D>(
                         return fallible!(InvalidDistance, "delta must be positive")
                     }
                     get_analytic_gaussian_epsilon(d_in, scale, del).and_then(D::Atom::inf_cast)
-                },
-                move |eps: &D::Atom| {
-                    let eps = f64::inf_cast(eps.clone())?;
-                    if eps < 0. {
-                        return fallible!(InvalidDistance, "epsilon must be non-negative")
-                    }
-                    get_analytic_gaussian_delta(d_in, scale, eps).and_then(D::Atom::inf_cast)
                 }
             ))
         }),
@@ -194,7 +180,6 @@ mod tests {
         let _ret = measurement.invoke(&arg)?;
 
         assert!(measurement.map(&0.1)?.epsilon(&0.00001)? <= 0.5);
-        assert!(measurement.map(&0.1)?.delta(&0.5)? <= 0.00001);
         Ok(())
     }
 }
