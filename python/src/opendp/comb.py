@@ -8,7 +8,8 @@ __all__ = [
     "make_chain_mt",
     "make_chain_tt",
     "make_basic_composition",
-    "make_population_amplification"
+    "make_population_amplification",
+    "make_fix_delta"
 ]
 
 
@@ -115,7 +116,7 @@ def make_population_amplification(
     :type measurement: Measurement
     :param population_size: Number of records in population.
     :type population_size: int
-    :return: New measurement with the same function, but an adjusted privacy relation.
+    :return: New measurement with the same function, but an adjusted privacy map.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -132,3 +133,32 @@ def make_population_amplification(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement, population_size), Measurement))
+
+
+def make_fix_delta(
+    measurement: Measurement,
+    delta: Any
+) -> Measurement:
+    """Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
+    
+    :param measurement: The measurement with a privacy curve to be fixed.
+    :type measurement: Measurement
+    :param delta: The parameter to fix the privacy curve with.
+    :type delta: Any
+    :return: New measurement with the same function, but a fixed output measure and privacy map.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement)
+    delta = py_to_c(delta, c_type=AnyObjectPtr)
+    
+    # Call library function.
+    function = lib.opendp_comb__make_fix_delta
+    function.argtypes = [Measurement, AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement, delta), Measurement))
