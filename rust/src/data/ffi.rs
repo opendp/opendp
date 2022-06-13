@@ -300,17 +300,6 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(curve: *const AnyObject, delta:
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data__smd_curve_delta(curve: *const AnyObject, epsilon: *const AnyObject) -> FfiResult<*mut AnyObject> {
-    fn monomorphize<T: 'static>(curve: &AnyObject, epsilon: &AnyObject) -> Fallible<AnyObject> {
-        let epsilon = epsilon.downcast_ref::<T>()?;
-        curve.downcast_ref::<SMDCurve<T>>()?.delta(epsilon).map(AnyObject::new)
-    }
-    let curve = try_as_ref!(curve);
-    let epsilon = try_as_ref!(epsilon);
-    dispatch!(monomorphize, [(&epsilon.type_, @floats)], (curve, epsilon)).into()
-}
-
-#[no_mangle]
 pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
     util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
         |e| FfiResult::Err(util::into_raw(FfiError::from(e))),

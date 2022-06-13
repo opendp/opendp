@@ -13,8 +13,7 @@ __all__ = [
     "slice_free",
     "str_free",
     "bool_free",
-    "smd_curve_epsilon",
-    "smd_curve_delta"
+    "smd_curve_epsilon"
 ]
 
 
@@ -243,38 +242,3 @@ def smd_curve_epsilon(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(curve, delta, T), AnyObjectPtr))
-
-
-def smd_curve_delta(
-    curve: Any,
-    epsilon: Any,
-    T: RuntimeTypeDescriptor = None
-) -> Any:
-    """Internal function. Use an SMDCurve to find delta at a given `epsilon`.
-    
-    :param curve: 
-    :type curve: Any
-    :param epsilon: 
-    :type epsilon: Any
-    :param T: 
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: Delta at a given `epsilon`.
-    :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=epsilon)
-    
-    # Convert arguments to c types.
-    curve = py_to_c(curve, c_type=AnyObjectPtr)
-    epsilon = py_to_c(epsilon, c_type=AnyObjectPtr, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_data__smd_curve_delta
-    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(curve, epsilon, T), AnyObjectPtr))
