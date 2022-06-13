@@ -198,7 +198,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
         function: Function<DI, DO>,
         input_metric: MI,
         output_measure: MO,
-        privacy_relation: PrivacyMap<MI, MO>,
+        privacy_map: PrivacyMap<MI, MO>,
     ) -> Self {
         Self {
             input_domain,
@@ -206,7 +206,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
             function,
             input_metric,
             output_measure,
-            privacy_map: privacy_relation,
+            privacy_map,
         }
     }
 
@@ -242,7 +242,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         function: Function<DI, DO>,
         input_metric: MI,
         output_metric: MO,
-        stability_relation: StabilityMap<MI, MO>,
+        stability_map: StabilityMap<MI, MO>,
     ) -> Self {
         Self {
             input_domain,
@@ -250,7 +250,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
             function,
             input_metric,
             output_metric,
-            stability_map: stability_relation,
+            stability_map,
         }
     }
 
