@@ -1,7 +1,7 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use num::{Float};
+use num::{Float, Zero};
 
 use crate::core::{Measurement, Function, PrivacyMap, Domain, SensitivityMetric};
 use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
@@ -43,7 +43,7 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
-          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + InfDiv + CheckNull + TotalOrd + InfMul {
+          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + InfDiv + CheckNull + TotalOrd + InfMul + Zero {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -57,6 +57,9 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
             move |d_in: &D::Atom| {
                 if d_in.is_sign_negative() {
                     return fallible!(InvalidDistance, "sensitivity must be non-negative")
+                }
+                if scale.is_zero() {
+                    return Ok(D::Atom::infinity())
                 }
                 // d_in / scale
                 d_in.clone().inf_div(&scale)

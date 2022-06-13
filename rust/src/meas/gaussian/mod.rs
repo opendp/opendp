@@ -1,7 +1,7 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use num::{Float, One};
+use num::{Float, One, Zero};
 
 use crate::core::{Domain, Function, Measurement, PrivacyMap, SensitivityMetric};
 use crate::dist::{AbsoluteDistance, L2Distance, SmoothedMaxDivergence, SMDCurve};
@@ -56,7 +56,7 @@ pub fn make_base_gaussian<D>(
 ) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
           f64: InfCast<D::Atom>,
-          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + InfSub + InfDiv + CheckNull + InfMul + InfAdd + InfLn + InfSqrt + InfExp {
+          D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + InfSub + InfDiv + CheckNull + InfMul + InfAdd + InfLn + InfSqrt + InfExp + Zero {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }
@@ -76,6 +76,14 @@ pub fn make_base_gaussian<D>(
 
             Ok(SMDCurve::new(
                 move |del: &D::Atom| {
+                    if !del.is_sign_positive() {
+                        return fallible!(FailedRelation, "delta must be positive")
+                    }
+
+                    if scale.is_zero() {
+                        return Ok(D::Atom::infinity())
+                    }
+
                     let eps = d_in.inf_mul(&additive_gauss_const.inf_add(
                         &_2.inf_mul(&del.recip().inf_ln()?)?)?.inf_sqrt()?)?.inf_div(&scale)?;
                     

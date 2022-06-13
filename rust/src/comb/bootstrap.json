@@ -75,8 +75,26 @@
         ],
         "ret": {
             "c_type": "FfiResult<AnyMeasurement *>",
-            "description": "New measurement with the same function, but an adjusted privacy relation."
+            "description": "New measurement with the same function, but an adjusted privacy map."
         }
-
+    },
+    "make_fix_delta": {
+        "description": "Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *",
+                "description": "The measurement with a privacy curve to be fixed."
+            },
+            {
+                "name": "delta",
+                "c_type": "const AnyObject *",
+                "description": "The parameter to fix the privacy curve with."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "New measurement with the same function, but a fixed output measure and privacy map."
+        }
     }
 }
