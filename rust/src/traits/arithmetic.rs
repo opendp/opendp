@@ -78,7 +78,7 @@ pub trait InfPow: Sized {
     fn neg_inf_pow(&self, p: &Self) -> Fallible<Self>;
 }
 
-/// Performs addition with rounding towards infinity that returns an error if overflowing.
+/// Performs addition with specified rounding that returns an error if overflowing.
 pub trait InfAdd: Sized {
     /// Alerting addition with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
@@ -88,7 +88,7 @@ pub trait InfAdd: Sized {
     fn neg_inf_add(&self, v: &Self) -> Fallible<Self>;
 }
 
-/// Performs subtraction with rounding towards infinity that returns an error if overflowing.
+/// Performs subtraction with specified rounding that returns an error if overflowing.
 pub trait InfSub: Sized {
     /// Alerting subtraction with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
@@ -98,7 +98,7 @@ pub trait InfSub: Sized {
     fn neg_inf_sub(&self, v: &Self) -> Fallible<Self>;
 }
 
-/// Performs multiplication with rounding that returns an error if overflowing.
+/// Performs multiplication with specified rounding that returns an error if overflowing.
 pub trait InfMul: Sized {
     /// Alerting multiplication with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
@@ -108,7 +108,7 @@ pub trait InfMul: Sized {
     fn neg_inf_mul(&self, v: &Self) -> Fallible<Self>;
 }
 
-/// Performs division with rounding towards infinity that returns an error if overflowing.
+/// Performs division with specified rounding that returns an error if overflowing.
 pub trait InfDiv: Sized {
     /// Alerting division with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
@@ -116,6 +116,26 @@ pub trait InfDiv: Sized {
     /// Alerting division with rounding towards -infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
     fn neg_inf_div(&self, v: &Self) -> Fallible<Self>;
+}
+
+ /// Exponentiates and subtracts one with specified rounding.
+pub trait InfExpM1: Sized {
+    /// Alerting exp_m1 with rounding towards infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn inf_exp_m1(self) -> Fallible<Self>;
+    /// Alerting exp_m1 with rounding towards -infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn neg_inf_exp_m1(self) -> Fallible<Self>;
+}
+
+ /// Exponentiates and subtracts one with specified rounding.
+ pub trait InfLn1P: Sized {
+    /// Alerting ln_1p with rounding towards infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn inf_ln_1p(self) -> Fallible<Self>;
+    /// Alerting ln_1p with rounding towards -infinity.
+    /// Returns `Ok` if the result does not overflow, else `Err`
+    fn neg_inf_ln_1p(self) -> Fallible<Self>;
 }
 
 // BEGIN IMPLEMENTATIONS
@@ -314,6 +334,8 @@ macro_rules! impl_float_inf_uni {
 impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln_round, ln);
 impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2_round, log2);
 impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp_round, exp);
+impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p_round, ln_1p);
+impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1_round, exp_m1);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt_round, sqrt);
 
 
