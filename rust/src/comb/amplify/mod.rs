@@ -6,8 +6,7 @@ use crate::dist::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::dom::SizedDomain;
 use crate::error::Fallible;
 use num::Float;
-use crate::traits::ExactIntCast;
-use std::ops::Div;
+use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P};
 
 pub trait IsSizedDomain: Domain { fn get_size(&self) -> Fallible<usize>; }
 impl<D: Domain> IsSizedDomain for SizedDomain<D> {
@@ -19,17 +18,17 @@ pub trait AmplifiableMeasure: Measure {
 }
 
 impl<Q> AmplifiableMeasure for MaxDivergence<Q>
-    where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
+    where Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + Float {
     fn amplify(&self, epsilon: &Q, population_size: usize, sample_size: usize) -> Fallible<Q> {
         let sampling_rate = Q::exact_int_cast(sample_size)? / Q::exact_int_cast(population_size)?;
-        Ok((epsilon.exp_m1() / sampling_rate).ln_1p())
+        epsilon.inf_exp_m1()?.inf_mul(&sampling_rate)?.inf_ln_1p()
     }
 }
 impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
-    where Q: ExactIntCast<usize> + Div<Output=Q> + Float {
+    where Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + Float {
     fn amplify(&self, (epsilon, delta): &(Q, Q), population_size: usize, sample_size: usize) -> Fallible<(Q, Q)> {
         let sampling_rate = Q::exact_int_cast(sample_size)? / Q::exact_int_cast(population_size)?;
-        Ok(((epsilon.exp_m1() / sampling_rate).ln_1p(), *delta / sampling_rate))
+        Ok((epsilon.inf_exp_m1()?.inf_mul(&sampling_rate)?.inf_ln_1p()?, delta.inf_mul(&sampling_rate)?))
     }
 }
 

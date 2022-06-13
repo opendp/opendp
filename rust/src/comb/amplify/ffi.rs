@@ -9,13 +9,13 @@ use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{CheckNull, ExactIntCast, TotalOrd};
+use crate::traits::{CheckNull, ExactIntCast, TotalOrd, InfMul, InfExpM1, InfLn1P};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
         &self, budget: &AnyObject, population_size: usize, sample_size: usize,
     ) -> Fallible<AnyObject> {
-        fn monomorphize1<QO: 'static + Float + ExactIntCast<usize>>(
+        fn monomorphize1<QO: 'static + Float + ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P>(
             measure: &AnyMeasure, budget: &AnyObject, population_size: usize, sample_size: usize,
         ) -> Fallible<AnyObject> {
             fn monomorphize2<M: 'static + AmplifiableMeasure>(

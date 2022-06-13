@@ -14,7 +14,7 @@ def test_amplification():
     print("amplified base laplace:", amplified([1.] * 10))
     assert meas.check(2, 2.)
     assert not meas.check(2, 1.999)
-    assert amplified.check(2, .4941)
+    assert amplified.check(2, 1.494)
     assert not amplified.check(2, .494)
 
 def test_fix_delta():
@@ -23,6 +23,6 @@ def test_fix_delta():
 
     base_gaussian = make_base_gaussian(10.)
     print(base_gaussian.map(1.).epsilon(1e-6))
-    fixed_base_gaussian = make_fix_delta(base_gaussian, -1e-6)
+    fixed_base_gaussian = make_fix_delta(base_gaussian, 1e-6)
 
     print(fixed_base_gaussian.map(1.))
