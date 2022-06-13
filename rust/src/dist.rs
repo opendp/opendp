@@ -49,32 +49,23 @@ impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
     type Distance = SMDCurve<Q>;
 }
 
-pub struct SMDCurve<Q> {
-    pub epsilon: Rc<dyn Fn(&Q) -> Fallible<Q>>,
-    pub delta: Rc<dyn Fn(&Q) -> Fallible<Q>>,
-}
+// a curve mapping from delta to epsilon
+pub struct SMDCurve<Q>(Rc<dyn Fn(&Q) -> Fallible<Q>>);
 
 impl<Q> Clone for SMDCurve<Q> {
     fn clone(&self) -> Self {
-        Self { epsilon: self.epsilon.clone(), delta: self.delta.clone() }
+        Self(self.0.clone())
     }
 }
 
 impl<Q> SMDCurve<Q> {
-    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static, delta: impl Fn(&Q) -> Fallible<Q> + 'static) -> Self {
-        SMDCurve {
-            epsilon: Rc::new(epsilon),
-            delta: Rc::new(delta),
-        }
+    pub fn new(epsilon: impl Fn(&Q) -> Fallible<Q> + 'static) -> Self {
+        SMDCurve(Rc::new(epsilon))
     }
 
     // these functions allow direct invocation as a method, making parens unnecessary
     pub fn epsilon(&self, delta: &Q) -> Fallible<Q> {
-        (self.epsilon)(delta)
-    }
-
-    pub fn delta(&self, epsilon: &Q) -> Fallible<Q> {
-        (self.delta)(epsilon)
+        (self.0)(delta)
     }
 }
 

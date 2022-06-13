@@ -97,17 +97,5 @@
             "c_type": "FfiResult<const AnyObject *>",
             "description": "Epsilon at a given `delta`."
         }
-    },
-    "smd_curve_delta": {
-        "description": "Internal function. Use an SMDCurve to find delta at a given `epsilon`.",
-        "args": [
-            {"name": "curve", "c_type": "const AnyObject *"},
-            {"name": "epsilon", "c_type": "const AnyObject *", "rust_type": "T"},
-            {"name": "T", "is_type": true}
-        ],
-        "ret": {
-            "c_type": "FfiResult<const AnyObject *>",
-            "description": "Delta at a given `epsilon`."
-        }
     }
 }

@@ -6,7 +6,6 @@ def test_base_gaussian_curve():
     from opendp.meas import make_base_gaussian
     curve = make_base_gaussian(4.).map(1.)
     print(curve.epsilon(1e-3))
-    print(curve.delta(.9438225714337242))
 
 
 def test_base_gaussian_search():

@@ -50,19 +50,6 @@ pub fn make_base_ptr<TK, TV>(
                         return fallible!(FailedRelation, "threshold must be at least {:?}", min_threshold);
                     }
                     Ok(min_eps)
-                },
-                move |&eps: &TV| {
-                    if eps.is_sign_negative() || eps.is_zero() {
-                        return fallible!(FailedRelation, "epsilon must be positive");
-                    }
-
-                    let min_eps = d_in / scale;
-                    if eps < min_eps {
-                        return fallible!(FailedRelation, "epsilon must be at least {:?}", min_eps);
-                    }
-
-                    let min_del = d_in * (-(threshold - d_in) / scale).exp() / _2;
-                    Ok(min_del)
                 }
             ))
         })))

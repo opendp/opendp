@@ -10,13 +10,6 @@ pub(super) fn get_analytic_gaussian_epsilon(sensitivity: f64, scale: f64, delta:
     binary_search(predicate, bounds)
 }
 
-pub(super) fn get_analytic_gaussian_delta(sensitivity: f64, scale: f64, epsilon: f64) -> Fallible<f64> {
-    let predicate = move |&del: &f64| scale >= get_analytic_gaussian_sigma(sensitivity, epsilon, del);
-    let bounds = exponential_bounds_search(&predicate)
-        .ok_or_else(|| err!(FailedFunction, "unable to infer bounds"))?;
-    binary_search(predicate, bounds)
-}
-
 /// Algorithm to compute sigma for use in the analytic gaussian mechanism
 /// Using Alg.1 and p.19 of [Balle (2018)](https://arxiv.org/pdf/1805.06530.pdf)
 ///
