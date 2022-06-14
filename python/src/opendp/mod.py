@@ -480,13 +480,14 @@ def binary_search(
         from opendp.typing import L2Distance, VectorDomain, AllDomain
         from opendp.trans import make_sized_bounded_mean
         from opendp.meas import make_base_gaussian
+        from opendp.comb import make_fix_delta
         from opendp.mod import enable_features
         enable_features("contrib", "floating-point")
 
     >>> # build a histogram that emits float counts
-    >>> dp_mean = (
+    >>> dp_mean = make_fix_delta(
     ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >>
-    ...     make_base_gaussian(1.)
+    ...     make_base_gaussian(1.), 1e-8
     ... )
     ...
     >>> binary_search(
