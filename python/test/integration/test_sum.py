@@ -9,6 +9,7 @@ def test_sized_bounded_float_sum():
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_resize, make_sized_bounded_sum
     from opendp.meas import make_base_laplace, make_base_gaussian
+    from opendp.comb import make_fix_delta
     from opendp.mod import binary_search_chain, enable_features
 
     enable_features("floating-point", "contrib")
@@ -39,7 +40,7 @@ def test_sized_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_known_n_sum_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_gaussian(s),
+        lambda s: make_fix_delta(preprocess >> make_base_gaussian(s), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_known_n_sum_from_dataframe.check(1, 1.)
@@ -97,6 +98,7 @@ def test_bounded_float_sum():
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_sum
     from opendp.meas import make_base_laplace, make_base_gaussian
+    from opendp.comb import make_fix_delta
     from opendp.mod import binary_search_chain, enable_features
 
     enable_features("floating-point")
@@ -122,7 +124,7 @@ def test_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_sum_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_gaussian(s),
+        lambda s: make_fix_delta(preprocess >> make_base_gaussian(s), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_sum_from_dataframe.check(1, 1.)
