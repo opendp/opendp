@@ -1,7 +1,7 @@
 //! Wrappers for glue functions. Useful for doing type erasure.
 //!
 //! It might make sense to move this down into the opendp crate, and use it for Function and
-//! PrivacyRelation/StabilityRelation, but that can be done later if this works out.
+//! PrivacyMap/StabilityMap, but that can be done later if this works out.
 
 use std::ops::Deref;
 use std::rc::Rc;
