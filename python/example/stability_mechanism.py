@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from opendp.meas import make_base_ptr
 from opendp.trans import make_count_by
+from opendp.comb import make_fix_delta
 from opendp.mod import enable_features, binary_search_param
 from opendp.typing import L1Distance
 
@@ -39,13 +40,12 @@ def privatize_vocabulary(word_count, dataset_distance, budget):
     :return: privatized vocabulary as a string set of words
     """
     count_by = make_count_by(TK=str, TV=float, MO=L1Distance[float])
-    # solve for scale and threshold
-    scale = binary_search_param(
-        lambda s: count_by >> make_base_ptr(scale=s, threshold=1e8, TK=str),
-        d_in=dataset_distance, d_out=budget)
-    threshold = binary_search_param(
-        lambda t: count_by >> make_base_ptr(scale=scale, threshold=t, TK=str),
-        d_in=dataset_distance, d_out=budget)
+    def privatize(s, t=1e8):
+        return make_fix_delta(count_by >> make_base_ptr(scale=s, threshold=t, TK=str), budget[1])
+
+    # solve for scale and threshold    
+    scale = binary_search_param(lambda s: privatize(s=s), dataset_distance, budget)
+    threshold = binary_search_param(lambda t: privatize(s=scale, t=t), dataset_distance, budget)
 
     print("chosen scale and threshold:", scale, threshold)
 

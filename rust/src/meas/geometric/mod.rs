@@ -71,6 +71,9 @@ pub fn make_base_geometric<D, QO>(
                 if d_in.is_sign_negative() {
                     return fallible!(InvalidDistance, "sensitivity must be non-negative")
                 }
+                if scale.is_zero() {
+                    return Ok(QO::infinity())
+                }
                 // d_in / scale
                 d_in.inf_div(&scale)
             })
