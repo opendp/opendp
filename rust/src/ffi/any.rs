@@ -307,33 +307,33 @@ impl<DO> IntoAnyFunctionOutExt for Function<AnyDomain, DO>
     }
 }
 
-pub type AnyPrivacyRelation = PrivacyMap<AnyMetric, AnyMeasure>;
+pub type AnyPrivacyMap = PrivacyMap<AnyMetric, AnyMeasure>;
 
-pub trait IntoAnyPrivacyRelationExt {
-    fn into_any(self) -> AnyPrivacyRelation;
+pub trait IntoAnyPrivacyMapExt {
+    fn into_any(self) -> AnyPrivacyMap;
 }
 
-impl<MI: Metric, MO: Measure> IntoAnyPrivacyRelationExt for PrivacyMap<MI, MO>
+impl<MI: Metric, MO: Measure> IntoAnyPrivacyMapExt for PrivacyMap<MI, MO>
     where MI::Distance: 'static,
           MO::Distance: 'static {
-    fn into_any(self) -> AnyPrivacyRelation {
+    fn into_any(self) -> AnyPrivacyMap {
         let map = self.0;
-        AnyPrivacyRelation::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
+        AnyPrivacyMap::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
     }
 }
 
-pub type AnyStabilityRelation = StabilityMap<AnyMetric, AnyMetric>;
+pub type AnyStabilityMap = StabilityMap<AnyMetric, AnyMetric>;
 
-pub trait IntoAnyStabilityRelationExt {
-    fn into_any(self) -> AnyStabilityRelation;
+pub trait IntoAnyStabilityMapExt {
+    fn into_any(self) -> AnyStabilityMap;
 }
 
-impl<MI: Metric, MO: Metric> IntoAnyStabilityRelationExt for StabilityMap<MI, MO>
+impl<MI: Metric, MO: Metric> IntoAnyStabilityMapExt for StabilityMap<MI, MO>
     where MI::Distance: 'static,
           MO::Distance: 'static {
-    fn into_any(self) -> AnyStabilityRelation {
+    fn into_any(self) -> AnyStabilityMap {
         let map = self.0;
-        AnyStabilityRelation::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
+        AnyStabilityMap::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
     }
 }
 

@@ -6,7 +6,7 @@
 //! * Domain
 //! * Metric/Measure
 //! * Function
-//! * PrivacyRelation/StabilityRelation
+//! * StabilityMap/PrivacyMap
 
 // Generic legend
 // M: Metric and Measure
@@ -100,10 +100,10 @@ pub trait DatasetMetric: Metric<Distance=IntDistance> {}
 pub trait SensitivityMetric: Metric {}
 
 
-/// A boolean relation evaluating the privacy of a [`Measurement`].
+/// A map evaluating the privacy of a [`Measurement`].
 ///
-/// A `PrivacyRelation` is implemented as a function that takes an input [`Metric::Distance`] and output [`Measure::Distance`],
-/// and returns a boolean indicating if the relation holds.
+/// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
+/// and returns the smallest admissible output distance between neighboring output distributions.
 pub struct PrivacyMap<MI: Metric, MO: Measure>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
 
 impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
@@ -141,10 +141,10 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
     }
 }
 
-/// A boolean relation evaluating the stability of a [`Transformation`].
+/// A map evaluating the stability of a [`Transformation`].
 ///
-/// A `StabilityRelation` is implemented as a function that takes an input and output [`Metric::Distance`],
-/// and returns a boolean indicating if the relation holds.
+/// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
+/// and returns the smallest admissible output distance between neighboring output datasets.
 pub struct StabilityMap<MI: Metric, MO: Metric>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
 
 impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
