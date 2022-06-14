@@ -54,6 +54,7 @@ def test_count_by_ptr():
     """Compute histogram with unknown category set"""
     from opendp.trans import make_split_dataframe, make_select_column, make_count_by
     from opendp.meas import make_base_ptr
+    from opendp.comb import make_fix_delta
     from opendp.typing import L1Distance
     from opendp.mod import binary_search_param, enable_features
     enable_features("floating-point")
@@ -65,14 +66,14 @@ def test_count_by_ptr():
     )
     budget = (1., 1e-8)
     scale = binary_search_param(
-        lambda s: preprocess >> make_base_ptr(scale=s, threshold=1e8, TK=str),
+        lambda s: make_fix_delta(preprocess >> make_base_ptr(scale=s, threshold=1e8, TK=str), budget[1]),
         d_in=1, d_out=budget)
     threshold = binary_search_param(
-        lambda t: preprocess >> make_base_ptr(scale=scale, threshold=t, TK=str),
-        d_in=1, d_out=budget)
+        lambda t: make_fix_delta(preprocess >> make_base_ptr(scale=scale, threshold=t, TK=str), budget[1]),
+        d_in=1, d_out=budget, bounds=(0., 10000.))
 
     laplace_histogram_from_dataframe = \
-        preprocess >> make_base_ptr(scale=scale, threshold=threshold, TK=str)
+        make_fix_delta(preprocess >> make_base_ptr(scale=scale, threshold=threshold, TK=str), budget[1])
 
     assert laplace_histogram_from_dataframe.check(1, budget)
 

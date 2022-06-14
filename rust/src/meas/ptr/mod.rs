@@ -47,7 +47,7 @@ pub fn make_base_ptr<TK, TV>(
                     let min_eps = d_in / scale;
                     let min_threshold = (d_in / (_2 * del)).ln() * scale + d_in;
                     if threshold < min_threshold {
-                        return fallible!(FailedRelation, "threshold must be at least {:?}", min_threshold);
+                        return fallible!(RelationDebug, "threshold must be at least {:?}", min_threshold);
                     }
                     Ok(min_eps)
                 }
