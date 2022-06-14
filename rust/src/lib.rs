@@ -9,8 +9,8 @@
 //! [`Function`]: core::Function
 //! [`Metric`]: core::Metric
 //! [`Measure`]: core::Measure
-//! [`PrivacyRelation`]: core::PrivacyRelation
-//! [`StabilityRelation`]: core::StabilityRelation
+//! [`PrivacyMap`]: core::PrivacyMap
+//! [`StabilityMap`]: core::StabilityMap
 //! [`Measurement`]: core::Measurement
 //! [`Transformation`]: core::Transformation
 //!
@@ -55,17 +55,17 @@
 //!     // Construct a Transformation to load the numbers.
 //!     let split_lines = make_split_lines()?;
 //!     let cast = make_cast_default::<String, f64>()?;
-//!     let load_numbers = make_chain_tt(&cast, &split_lines, None)?;
+//!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
 //!     let clamp = make_clamp(bounds)?;
 //!     let bounded_sum = make_bounded_sum(bounds)?;
 //!     let laplace = make_base_laplace(sigma)?;
-//!     let intermediate = make_chain_tt(&bounded_sum, &clamp, None)?;
-//!     let noisy_sum = make_chain_mt(&laplace, &intermediate, None)?;
+//!     let intermediate = make_chain_tt(&bounded_sum, &clamp)?;
+//!     let noisy_sum = make_chain_mt(&laplace, &intermediate)?;
 //!
 //!     // Put it all together.
-//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers, None)?;
+//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers)?;
 //!
 //!     // Notice that you can write the same pipeline more succinctly with `>>`.
 //!     let pipeline = (
@@ -109,11 +109,11 @@
 //! 1. Choose the appropriate input and output [`Domain`].
 //! 2. Write a closure that implements the [`Function`].
 //! 3. Choose the appropriate input and output [`Metric`]/[`Measure`].
-//! 4. Write a closure that implements the [`PrivacyRelation`]/[`StabilityRelation`].
+//! 4. Write a closure that implements the [`PrivacyMap`]/[`StabilityMap`].
 //!
 //! #### Example Transformation Constructor
 //! ```
-//!# use opendp::core::{Transformation, StabilityRelation, Function};
+//!# use opendp::core::{Transformation, StabilityMap, Function};
 //!# use opendp::dist::AbsoluteDistance;
 //!# use opendp::dom::AllDomain;
 //! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
@@ -122,7 +122,7 @@
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = AbsoluteDistance::default();
 //!     let output_metric = AbsoluteDistance::default();
-//!     let stability_relation = StabilityRelation::new_from_constant(1);
+//!     let stability_relation = StabilityMap::new_from_constant(1);
 //!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
 //! }
 //! make_i32_identity();
