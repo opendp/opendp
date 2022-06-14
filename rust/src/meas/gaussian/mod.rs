@@ -10,6 +10,8 @@ use crate::error::*;
 use crate::samplers::SampleGaussian;
 
 use crate::traits::{InfCast, CheckNull, InfMul, InfAdd, InfLn, InfSqrt, InfDiv, InfSub, InfExp};
+
+
 mod analytic;
 
 use self::analytic::get_analytic_gaussian_epsilon;
@@ -55,7 +57,6 @@ pub fn make_base_gaussian<D>(
     scale: D::Atom
 ) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
     where D: GaussianDomain,
-          f64: InfCast<D::Atom>,
           D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + InfSub + InfDiv + CheckNull + InfMul + InfAdd + InfLn + InfSqrt + InfExp + Zero {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
@@ -88,7 +89,7 @@ pub fn make_base_gaussian<D>(
                         &_2.inf_mul(&del.recip().inf_ln()?)?)?.inf_sqrt()?)?.inf_div(&scale)?;
                     
                     if eps > D::Atom::one() {
-                        return fallible!(FailedRelation, "the gaussian mechanism has an epsilon of at most one")
+                        return fallible!(RelationDebug, "The gaussian mechanism has an epsilon of at most one. Epsilon is greater than one at the given delta.")
                     }
                     Ok(eps)
                 }
@@ -126,7 +127,7 @@ pub fn make_base_analytic_gaussian<D>(
                     if del <= 0. {
                         return fallible!(InvalidDistance, "delta must be positive")
                     }
-                    get_analytic_gaussian_epsilon(d_in, scale, del).and_then(D::Atom::inf_cast)
+                    D::Atom::inf_cast(get_analytic_gaussian_epsilon(d_in, scale, del))
                 }
             ))
         }),
@@ -145,39 +146,6 @@ mod tests {
         let _ret = measurement.invoke(&arg)?;
 
         assert!(measurement.map(&0.1)?.epsilon(&0.00001)? <= 0.5);
-        Ok(())
-    }
-
-    fn catastrophic_analytic_check(scale: f64, d_in: f64, d_out: (f64, f64)) -> bool {
-        let (eps, del) = d_out;
-        // simple shortcut to check the analytic gaussian.
-        // suffers from catastrophic cancellation
-        use statrs::function::erf;
-        fn phi(t: f64) -> f64 {
-            0.5 * (1. + erf::erf(t / 2.0_f64.sqrt()))
-        }
-
-        let prob_l_xy = phi(d_in / (2. * scale) - eps * scale / d_in);
-        let prob_l_yx = phi(-d_in / (2. * scale) - eps * scale / d_in);
-        del >= prob_l_xy - eps.exp() * prob_l_yx
-    }
-
-    #[test]
-    fn test_make_gaussian_mechanism_analytic() -> Fallible<()> {
-        let d_in = 1.;
-        let d_out = (1., 1e-5);
-        let scale = 3.730632;
-
-        let measurement = make_base_analytic_gaussian::<AllDomain<_>>(scale)?;
-        let arg = 0.0;
-        let _ret = measurement.invoke(&arg)?;
-
-        assert!(measurement.map(&d_in)?.epsilon(&d_out.1)? <= d_out.0);
-        // use the simpler version of the check that suffers from catastrophic cancellation,
-        // to check the more complicated algorithm for finding the analytic gaussian scale
-        assert!(catastrophic_analytic_check(scale, d_in, d_out));
-        assert!(!catastrophic_analytic_check(scale - 1e-6, d_in, d_out));
-
         Ok(())
     }
 

@@ -10,14 +10,22 @@ def test_base_gaussian_curve():
 
 def test_base_gaussian_search():
     from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
+    from opendp.comb import make_fix_delta
     from opendp.mod import binary_search_param
+
+    fixed_meas = make_fix_delta(make_base_analytic_gaussian(1.), 1e-5)
+    ideal_dist = fixed_meas.map(1.)
+    print("ideal dist", ideal_dist)
+    print("check with ideal dist:", fixed_meas.check(1., ideal_dist))
+
     print("Analytic", binary_search_param(
-        make_base_analytic_gaussian,
+        lambda s: make_fix_delta(make_base_analytic_gaussian(s), 1e-5),
         d_in=1., d_out=(1., 1e-5)))
     print("Standard", binary_search_param(
-        make_base_gaussian,
+        lambda s: make_fix_delta(make_base_gaussian(s), 1e-5),
         d_in=1., d_out=(1., 1e-5)))
 
+test_base_gaussian_search()
 
 def test_base_laplace():
     from opendp.meas import make_base_laplace
