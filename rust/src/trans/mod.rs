@@ -44,6 +44,16 @@ pub mod index;
 pub use crate::trans::index::*;
 
 #[cfg(feature="contrib")]
+pub mod lipschitz_cast;
+#[cfg(feature="contrib")]
+pub use crate::trans::lipschitz_cast::*;
+
+#[cfg(feature="contrib")]
+pub mod lipschitz_mul;
+#[cfg(feature="contrib")]
+pub use crate::trans::lipschitz_mul::*;
+
+#[cfg(feature="contrib")]
 pub mod clamp;
 #[cfg(feature="contrib")]
 pub use crate::trans::clamp::*;
