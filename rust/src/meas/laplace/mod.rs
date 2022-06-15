@@ -4,8 +4,8 @@ mod ffi;
 use num::{Float, Zero};
 
 use crate::core::{Measurement, Function, PrivacyMap, Domain, SensitivityMetric};
-use crate::dist::{L1Distance, MaxDivergence, AbsoluteDistance};
-use crate::dom::{AllDomain, VectorDomain};
+use crate::core::{L1Distance, MaxDivergence, AbsoluteDistance};
+use crate::core::{AllDomain, VectorDomain};
 use crate::samplers::{SampleLaplace};
 use crate::error::*;
 use crate::traits::{InfCast, CheckNull, TotalOrd, InfMul, InfDiv};
@@ -71,7 +71,7 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{trans::make_sized_bounded_mean, dist::SymmetricDistance};
+    use crate::{trans::make_sized_bounded_mean, core::SymmetricDistance};
 
     #[test]
     fn test_chain_laplace() -> Fallible<()> {

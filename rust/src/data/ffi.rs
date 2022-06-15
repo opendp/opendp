@@ -6,7 +6,7 @@ use std::hash::Hash;
 use std::os::raw::c_char;
 use std::slice;
 
-use crate::dist::SMDCurve;
+use crate::core::SMDCurve;
 use crate::traits::TotalOrd;
 use crate::{err, fallible, try_, try_as_ref};
 use crate::core::{FfiError, FfiResult, FfiSlice};

@@ -5,7 +5,7 @@ use std::os::raw::c_char;
 use num::Float;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain};
+use crate::core::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};

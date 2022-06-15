@@ -114,8 +114,8 @@
 //! #### Example Transformation Constructor
 //! ```
 //!# use opendp::core::{Transformation, StabilityMap, Function};
-//!# use opendp::dist::AbsoluteDistance;
-//!# use opendp::dom::AllDomain;
+//!# use opendp::core::AbsoluteDistance;
+//!# use opendp::core::AllDomain;
 //! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
 //!     let input_domain = AllDomain::new();
 //!     let output_domain = AllDomain::new();
@@ -175,8 +175,6 @@ pub mod error;
 
 pub mod core;
 pub mod data;
-pub mod dist;
-pub mod dom;
 #[cfg(feature="contrib")]
 pub mod interactive;
 pub mod meas;

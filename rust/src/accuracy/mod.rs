@@ -65,7 +65,7 @@ pub mod test {
     use super::*;
     use crate::meas::{make_base_laplace, make_base_gaussian, make_base_geometric};
     use crate::error::ExplainUnwrap;
-    use crate::dom::AllDomain;
+    use crate::core::AllDomain;
 
     fn print_statement<T: Copy + Debug + One + From<i8> + Sub<Output=T> + Mul<Output=T>>(dist: &str, scale: T, accuracy: T, alpha: T) {
         let _100 = T::from(100);

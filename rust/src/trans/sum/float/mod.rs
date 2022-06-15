@@ -9,7 +9,7 @@ pub use ordered::*;
 use num::{One, Zero};
 
 use crate::{
-    dist::IntDistance,
+    core::IntDistance,
     error::Fallible,
     traits::{
         AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfCast, InfDiv, InfLog2, InfMul,
