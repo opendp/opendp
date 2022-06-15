@@ -5,7 +5,7 @@ use num::Float;
 
 use crate::{err, try_, try_as_ref};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::dom::{AllDomain, VectorDomain};
+use crate::core::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{LaplaceDomain, make_base_laplace};

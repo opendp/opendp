@@ -2,8 +2,8 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint, c_void};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::dist::{InsertDeleteDistance, SymmetricDistance, IntDistance};
-use crate::dom::{AllDomain, BoundedDomain};
+use crate::core::{InsertDeleteDistance, SymmetricDistance, IntDistance};
+use crate::core::{AllDomain, BoundedDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::any::Downcast;

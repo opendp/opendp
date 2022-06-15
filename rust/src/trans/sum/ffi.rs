@@ -3,7 +3,7 @@ use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric};
 
-use crate::dist::{InsertDeleteDistance, SymmetricDistance};
+use crate::core::{InsertDeleteDistance, SymmetricDistance};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;

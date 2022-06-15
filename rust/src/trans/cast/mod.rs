@@ -2,8 +2,8 @@
 mod ffi;
 
 use crate::core::Transformation;
-use crate::dist::SymmetricDistance;
-use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
+use crate::core::SymmetricDistance;
+use crate::core::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{RoundCast, CheckNull};
 use crate::trans::make_row_by_row;

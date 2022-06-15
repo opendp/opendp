@@ -4,8 +4,8 @@ mod ffi;
 use num::Float;
 
 use crate::core::{Metric, Transformation};
-use crate::dist::AbsoluteDistance;
-use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::core::AbsoluteDistance;
+use crate::core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::ExactIntCast;
 
@@ -40,7 +40,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::SymmetricDistance;
+    use crate::core::SymmetricDistance;
     use crate::error::ExplainUnwrap;
     use crate::trans::mean::make_sized_bounded_mean;
 

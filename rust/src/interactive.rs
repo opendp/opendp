@@ -2,7 +2,7 @@ use std::any::Any;
 use std::rc::Rc;
 
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap};
-use crate::dom::AllDomain;
+use crate::core::AllDomain;
 use crate::error::*;
 use crate::traits::{CheckNull, InfSub};
 
@@ -159,8 +159,8 @@ pub fn make_adaptive_composition<DI, DO, MI, MO>(
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{MaxDivergence, AbsoluteDistance, SymmetricDistance};
-    use crate::dom::VectorDomain;
+    use crate::core::{MaxDivergence, AbsoluteDistance, SymmetricDistance};
+    use crate::core::VectorDomain;
     use crate::error::*;
     use crate::meas::*;
     use crate::poly::PolyDomain;

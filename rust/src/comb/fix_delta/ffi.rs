@@ -1,6 +1,6 @@
 use crate::{
     core::FfiResult,
-    dist::{FixedSmoothedMaxDivergence, SMDCurve, SmoothedMaxDivergence},
+    core::{FixedSmoothedMaxDivergence, SMDCurve, SmoothedMaxDivergence},
     error::Fallible,
     ffi::{any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast}, util::Type},
 };

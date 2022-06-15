@@ -6,7 +6,7 @@ use num::Float;
 
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::dist::IntDistance;
+use crate::core::IntDistance;
 use crate::err;
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;

@@ -9,8 +9,8 @@ use std::hash::Hash;
 use num::Float;
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::dist::{IntDistance, L1Distance, SmoothedMaxDivergence, SMDCurve};
-use crate::dom::{AllDomain, MapDomain};
+use crate::core::{IntDistance, L1Distance, SmoothedMaxDivergence, SMDCurve};
+use crate::core::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::samplers::SampleLaplace;
 use crate::traits::{CheckNull, InfCast};

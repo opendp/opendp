@@ -4,8 +4,8 @@ mod ffi;
 use num::Float as _;
 
 use crate::core::Transformation;
-use crate::dist::{AbsoluteDistance, SymmetricDistance};
-use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::core::{AbsoluteDistance, SymmetricDistance};
+use crate::core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{AlertingSub, ExactIntCast};
 

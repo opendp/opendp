@@ -1,6 +1,6 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, PrivacyMap},
-    dist::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
+    core::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
     error::Fallible,
 };
 
