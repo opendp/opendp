@@ -66,8 +66,8 @@ mod test {
         let meas = (make_sized_bounded_mean(10, (0., 10.))? >> make_base_laplace(0.5)?)?;
         let amp = make_population_amplification(&meas, 100)?;
         amp.function.eval(&vec![1.; 10])?;
-        assert!(meas.check(&2, &2.)?);
-        assert!(!meas.check(&2, &1.999)?);
+        assert!(meas.check(&2, &(2. + 1e-6))?);
+        assert!(!meas.check(&2, &2.)?);
         assert!(amp.check(&2, &0.4941)?);
         assert!(!amp.check(&2, &0.494)?);
         Ok(())
