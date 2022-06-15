@@ -172,7 +172,7 @@ def test_bounded_mean():
     from opendp.trans import make_sized_bounded_mean
     query = make_sized_bounded_mean(size=9, bounds=(0., 10.))
     assert query(FLOAT_DATA) == 5.
-    assert query.check(2, 10. / 9.)
+    assert query.check(2, 10. / 9. + 1e-6)
 
 
 def test_bounded_sum():
