@@ -1259,6 +1259,39 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
+    "make_sized_bounded_sum_of_squared_deviances": {
+        "description": "Make a Transformation that computes the sum of squared deviances of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
     "make_sized_bounded_variance": {
         "description": "Make a Transformation that computes the variance of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
         "features": ["contrib"],

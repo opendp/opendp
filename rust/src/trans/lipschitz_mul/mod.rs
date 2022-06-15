@@ -3,38 +3,35 @@ use crate::{
     dist::{AbsoluteDistance, LpDistance},
     dom::{AllDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, SaturatingMul},
+    traits::{AlertingAbs, CheckNull, SaturatingMul, InfMul},
 };
 
 pub fn make_lipschitz_mul<D, M>(l: D::Atom) -> Fallible<Transformation<D, D, M, M>>
 where
     D: LipschitzMulDomain,
-    D::Atom: AlertingAbs,
     M: LipschitzMulMetric<Distance = D::Atom>,
-    M::Distance: DistanceConstant<M::Distance>,
 {
     Ok(Transformation::new(
         D::default(),
         D::default(),
-        Function::new(enclose!(l, move |arg: &D::Carrier| D::transform(
-            l.clone(),
-            arg
-        ))),
+        Function::new(enclose!(l, move |arg: &D::Carrier| {
+            D::transform(l.clone(), arg)
+        })),
         M::default(),
         M::default(),
-        StabilityMap::new_from_constant(l.alerting_abs()?),
+        StabilityMap::new_fallible(move |d_in: &M::Distance| d_in.inf_mul(&l.alerting_abs()?)),
     ))
 }
 
 /// Implemented for any domain that supports multiplication lipschitz extensions
 pub trait LipschitzMulDomain: Domain + Default {
-    type Atom;
+    type Atom: 'static + AlertingAbs + InfMul + Clone;
     fn transform(l: Self::Atom, v: &Self::Carrier) -> Self::Carrier;
 }
 
 impl<T> LipschitzMulDomain for AllDomain<T>
 where
-    T: SaturatingMul + CheckNull,
+    T: 'static + AlertingAbs + InfMul + Clone + SaturatingMul + CheckNull,
 {
     type Atom = T;
     fn transform(l: T, v: &T) -> T {
@@ -44,7 +41,7 @@ where
 
 impl<T> LipschitzMulDomain for VectorDomain<AllDomain<T>>
 where
-    T: Clone + SaturatingMul + CheckNull,
+    T: 'static + AlertingAbs + InfMul + Clone + SaturatingMul + CheckNull,
 {
     type Atom = T;
     fn transform(l: T, v: &Vec<T>) -> Vec<T> {
