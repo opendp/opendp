@@ -8,7 +8,7 @@ use crate::core::{Function, Measurement, PrivacyMap};
 use crate::core::{MaxDivergence, SymmetricDistance, IntDistance};
 use crate::core::AllDomain;
 use crate::error::Fallible;
-use crate::samplers::{SampleBernoulli, SampleUniformInt};
+use crate::traits::samplers::{SampleBernoulli, SampleUniformInt};
 use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfLn, InfSub, InfDiv};
 use num::Float;
 

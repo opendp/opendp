@@ -5,7 +5,7 @@ use num::{NumCast, One, Zero};
 use rug::Float;
 
 #[cfg(not(feature = "use-mpfr"))]
-use crate::samplers::SampleGaussian;
+use crate::traits::samplers::SampleGaussian;
 
 use crate::error::Fallible;
 #[cfg(feature="use-mpfr")]

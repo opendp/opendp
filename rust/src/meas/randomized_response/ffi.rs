@@ -12,7 +12,7 @@ use crate::err;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::meas::{make_randomized_response, make_randomized_response_bool};
-use crate::samplers::SampleBernoulli;
+use crate::traits::samplers::SampleBernoulli;
 use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfLn, InfSub, InfDiv};
 
 #[no_mangle]

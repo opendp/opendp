@@ -11,7 +11,7 @@ use crate::err;
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{make_base_ptr};
-use crate::samplers::SampleLaplace;
+use crate::traits::samplers::SampleLaplace;
 use crate::traits::{CheckNull, InfCast};
 
 #[no_mangle]

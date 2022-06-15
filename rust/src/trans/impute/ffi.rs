@@ -9,7 +9,7 @@ use crate::core::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain}
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::samplers::SampleUniform;
+use crate::traits::samplers::SampleUniform;
 use crate::traits::CheckNull;
 use crate::trans::{DropNullDomain, ImputeConstantDomain, make_drop_null, make_impute_constant, make_impute_uniform_float};
 

@@ -9,7 +9,7 @@ use crate::core::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{GaussianDomain, make_base_analytic_gaussian, make_base_gaussian};
-use crate::samplers::SampleGaussian;
+use crate::traits::samplers::SampleGaussian;
 use crate::traits::{CheckNull, InfAdd, InfCast, InfLn, InfMul, InfSqrt, InfDiv, InfSub, InfExp};
 
 #[no_mangle]
