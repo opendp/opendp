@@ -13,7 +13,7 @@ use crate::{
     error::Fallible,
     traits::{
         AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfCast, InfDiv, InfLog2, InfMul,
-        InfPow, InfSub, SaturatingAdd, TotalOrd,
+        InfPow, InfSub, SaturatingAdd, TotalOrd, SaturatingMul,
     },
 };
 
@@ -39,6 +39,7 @@ pub trait Float:
     + One
     + AlertingAbs
     + SaturatingAdd
+    + SaturatingMul
 {
 }
 impl<T> Float for T where
@@ -63,6 +64,7 @@ impl<T> Float for T where
         + One
         + AlertingAbs
         + SaturatingAdd
+        + SaturatingMul
 {
 }
 
