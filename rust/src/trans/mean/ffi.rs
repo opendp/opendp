@@ -1,27 +1,31 @@
 use std::convert::TryFrom;
-use std::iter::Sum;
-use std::ops::Sub;
 use std::os::raw::{c_char, c_uint};
 
 use num::Float;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::dist::IntDistance;
+use crate::dist::AbsoluteDistance;
+use crate::dom::AllDomain;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{AlertingMul, CheckNull, DistanceConstant, ExactIntCast, InfCast, InfDiv, InfSub};
-use crate::trans::make_sized_bounded_mean;
+use crate::traits::ExactIntCast;
+use crate::trans::{
+    make_sized_bounded_mean, LipschitzMulDomain, LipschitzMulMetric, MakeSizedBoundedSum,
+};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_sized_bounded_mean(
-    size: c_uint, bounds: *const AnyObject,
+    size: c_uint,
+    bounds: *const AnyObject,
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize> + AlertingMul + CheckNull + InfSub + InfDiv,
-              for<'a> T: Sum<&'a T>,
-              IntDistance: InfCast<T> {
+    where
+        T: 'static + MakeSizedBoundedSum + ExactIntCast<usize> + Float,
+        AllDomain<T>: LipschitzMulDomain<Atom=T>,
+        AbsoluteDistance<T>: LipschitzMulMetric<Distance = T>,
+    {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_mean::<T>(size, bounds).into_any()
     }
@@ -29,7 +33,6 @@ pub extern "C" fn opendp_trans__make_sized_bounded_mean(
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @floats)], (size, bounds))
 }
-
 
 #[cfg(test)]
 mod tests {

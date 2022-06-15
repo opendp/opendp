@@ -12,8 +12,8 @@ def test_amplification():
 
     amplified = make_population_amplification(meas, population_size=100)
     print("amplified base laplace:", amplified([1.] * 10))
-    assert meas.check(2, 2.)
-    assert not meas.check(2, 1.999)
+    assert meas.check(2, 2. + 1e-6)
+    assert not meas.check(2, 2.)
     assert amplified.check(2, 1.494)
     assert not amplified.check(2, .494)
 

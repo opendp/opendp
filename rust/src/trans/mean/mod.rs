@@ -1,47 +1,41 @@
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
 
-use crate::core::{Transformation, Function, StabilityMap};
-use std::iter::Sum;
-use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckNull, InfDiv, InfSub};
+use num::Float;
+
+use crate::core::Transformation;
+use crate::dist::{AbsoluteDistance, SymmetricDistance};
+use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain};
-use crate::dist::{SymmetricDistance, AbsoluteDistance, IntDistance};
-use num::{Float};
+use crate::traits::ExactIntCast;
+
+use super::{
+    make_lipschitz_mul, make_sized_bounded_sum, LipschitzMulDomain, LipschitzMulMetric,
+    MakeSizedBoundedSum,
+};
 
 pub fn make_sized_bounded_mean<T>(
-    size: usize, bounds: (T, T)
-) -> Fallible<Transformation<SizedDomain<VectorDomain<BoundedDomain<T>>>, AllDomain<T>, SymmetricDistance, AbsoluteDistance<T>>> where
-    T: DistanceConstant<IntDistance> + ExactIntCast<usize>, for <'a> T: Sum<&'a T>
-    + InfSub + CheckNull + Float + InfDiv,
-    IntDistance: InfCast<T> {
+    size: usize,
+    bounds: (T, T),
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<BoundedDomain<T>>>,
+        AllDomain<T>,
+        SymmetricDistance,
+        AbsoluteDistance<T>,
+    >,
+>
+where
+    T: 'static + MakeSizedBoundedSum + ExactIntCast<usize> + Float,
+    AllDomain<T>: LipschitzMulDomain<Atom = T>,
+    AbsoluteDistance<T>: LipschitzMulMetric<Distance = T>,
+{
     if size == 0 {
         return fallible!(MakeTransformation, "dataset size must be positive");
     }
-    let _size = T::exact_int_cast(size)?;
-    let _2 = T::exact_int_cast(2)?;
-    let (lower, upper) = bounds.clone();
-
-    lower.inf_mul(&_size).or(upper.inf_mul(&_size))
-        .map_err(|_| err!(MakeTransformation, "potential for overflow when computing function"))?;
-
-    let c = upper.inf_sub(&lower)?.inf_div(&_size)?;
-    Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new(
-            BoundedDomain::new_closed(bounds)?), size),
-        AllDomain::new(),
-        Function::new(move |arg: &Vec<T>| arg.iter().sum::<T>() / _size),
-        SymmetricDistance::default(),
-        AbsoluteDistance::default(),
-        StabilityMap::new_fallible(
-            // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
-            //    so floor division is acceptable
-            move |d_in: &IntDistance| T::inf_cast(d_in / 2)
-                .and_then(|d_in| d_in.inf_mul(&c)))
-    ))
+    let size_ = T::exact_int_cast(size)?;
+    make_sized_bounded_sum(size, bounds)? >> make_lipschitz_mul(size_.recip())?
 }
-
-
 
 #[cfg(test)]
 mod tests {
