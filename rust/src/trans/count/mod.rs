@@ -8,8 +8,8 @@ use std::hash::Hash;
 use num::{One, Zero, Float};
 
 use crate::core::{Function, SensitivityMetric, StabilityMap, Transformation};
-use crate::dist::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
-use crate::dom::{AllDomain, MapDomain, VectorDomain};
+use crate::core::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
+use crate::core::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
 
@@ -132,7 +132,7 @@ pub fn make_count_by<MO, TK, TV>(
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::{L2Distance};
+    use crate::core::{L2Distance};
     use crate::trans::count::make_count_by_categories;
 
     use super::*;

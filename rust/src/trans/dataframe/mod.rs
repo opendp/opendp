@@ -9,9 +9,9 @@ use std::iter::repeat;
 
 use crate::core::{Function, StabilityMap, Transformation};
 use crate::data::Column;
-use crate::dom::{AllDomain, MapDomain, VectorDomain};
+use crate::core::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
-use crate::dist::SymmetricDistance;
+use crate::core::SymmetricDistance;
 use crate::traits::CheckNull;
 
 pub type DataFrame<K> = HashMap<K, Column>;

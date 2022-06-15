@@ -2,8 +2,8 @@
 mod ffi;
 
 use crate::core::{Function, Measurement, PrivacyMap, Domain, SensitivityMetric};
-use crate::dist::{MaxDivergence, L1Distance, AbsoluteDistance};
-use crate::dom::{AllDomain, VectorDomain};
+use crate::core::{MaxDivergence, L1Distance, AbsoluteDistance};
+use crate::core::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleTwoSidedGeometric;
 use num::Float;

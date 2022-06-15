@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Function, StabilityMap, Transformation},
-    dist::IntDistance,
-    dom::SizedDomain,
+    core::IntDistance,
+    core::SizedDomain,
     error::Fallible, samplers::Shuffle,
 };
 
@@ -90,7 +90,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{dom::VectorDomain, dist::SymmetricDistance};
+    use crate::core::{VectorDomain, SymmetricDistance};
 
     use super::*;
 

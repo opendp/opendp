@@ -87,8 +87,8 @@ impl<DI, DO, MI, MO> Transformation<DI, DO, MI, MO>
 
 #[cfg(all(test, feature="untrusted"))]
 mod tests {
-    use crate::dist::ChangeOneDistance;
-    use crate::dom::AllDomain;
+    use crate::core::ChangeOneDistance;
+    use crate::core::AllDomain;
     use crate::error::*;
     use crate::meas;
     use crate::trans;
