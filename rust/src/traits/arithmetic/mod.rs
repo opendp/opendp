@@ -1,6 +1,5 @@
 #[cfg(feature = "use-mpfr")]
 use rug::ops::{AddAssignRound, DivAssignRound, MulAssignRound, SubAssignRound, PowAssignRound};
-
 use crate::traits::ExactIntCast;
 
 use crate::error::Fallible;

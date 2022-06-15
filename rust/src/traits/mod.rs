@@ -1,10 +1,14 @@
-pub use arithmetic::*;
-pub use cast::*;
-pub use operations::*;
 
 mod arithmetic;
+pub use arithmetic::*;
+
 mod cast;
+pub use cast::*;
+
 mod operations;
+pub use operations::*;
+
+pub mod samplers;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 /// Encapsulates the necessary traits for the new_from_constant method on relations.

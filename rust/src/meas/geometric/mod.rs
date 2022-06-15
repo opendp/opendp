@@ -6,7 +6,7 @@ use crate::measures::MaxDivergence;
 use crate::metrics::{L1Distance, AbsoluteDistance};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::samplers::SampleTwoSidedGeometric;
+use crate::traits::samplers::SampleTwoSidedGeometric;
 use num::Float;
 use crate::traits::{InfCast, CheckNull, TotalOrd, InfDiv};
 

@@ -7,7 +7,7 @@ use crate::core::{Measurement, Function, PrivacyMap, Domain, SensitivityMetric};
 use crate::measures::MaxDivergence;
 use crate::metrics::{L1Distance, AbsoluteDistance};
 use crate::domains::{AllDomain, VectorDomain};
-use crate::samplers::{SampleLaplace};
+use crate::traits::samplers::{SampleLaplace};
 use crate::error::*;
 use crate::traits::{InfCast, CheckNull, TotalOrd, InfMul, InfDiv};
 

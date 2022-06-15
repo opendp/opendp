@@ -8,7 +8,7 @@ use num::Float;
 use crate::core::{Domain, Transformation, Function, StabilityMap};
 use crate::domains::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain, InherentNull};
 use crate::error::Fallible;
-use crate::samplers::SampleUniform;
+use crate::traits::samplers::SampleUniform;
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 use crate::metrics::SymmetricDistance;
 use crate::traits::CheckNull;

@@ -2,7 +2,8 @@ use crate::{
     core::{Domain, Function, StabilityMap, Transformation},
     metrics::IntDistance,
     domains::SizedDomain,
-    error::Fallible, samplers::Shuffle,
+    error::Fallible, 
+    traits::samplers::Shuffle,
 };
 
 use self::traits::{

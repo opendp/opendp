@@ -12,7 +12,7 @@ use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, CheckNull, InfCast, CastInternalReal};
-use crate::samplers::{fill_bytes, SampleBernoulli};
+use crate::traits::samplers::{fill_bytes, SampleBernoulli};
 use std::collections::hash_map::DefaultHasher;
 
 const ALPHA_DEFAULT : u32 = 4;

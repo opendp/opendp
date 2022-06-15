@@ -9,7 +9,7 @@ use crate::measures::MaxDivergence;
 use crate::metrics::{SymmetricDistance, IntDistance};
 use crate::domains::AllDomain;
 use crate::error::Fallible;
-use crate::samplers::{SampleBernoulli, SampleUniformInt};
+use crate::traits::samplers::{SampleBernoulli, SampleUniformInt};
 use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfLn, InfSub, InfDiv};
 use num::Float;
 
