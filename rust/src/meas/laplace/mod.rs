@@ -6,7 +6,7 @@ use num::{Float, Zero};
 use crate::core::{Measurement, Function, PrivacyMap, Domain, SensitivityMetric};
 use crate::core::{L1Distance, MaxDivergence, AbsoluteDistance};
 use crate::core::{AllDomain, VectorDomain};
-use crate::samplers::{SampleLaplace};
+use crate::traits::samplers::{SampleLaplace};
 use crate::error::*;
 use crate::traits::{InfCast, CheckNull, TotalOrd, InfMul, InfDiv};
 

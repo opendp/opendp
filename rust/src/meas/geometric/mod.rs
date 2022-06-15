@@ -5,7 +5,7 @@ use crate::core::{Function, Measurement, PrivacyMap, Domain, SensitivityMetric};
 use crate::core::{MaxDivergence, L1Distance, AbsoluteDistance};
 use crate::core::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::samplers::SampleTwoSidedGeometric;
+use crate::traits::samplers::SampleTwoSidedGeometric;
 use num::Float;
 use crate::traits::{InfCast, CheckNull, TotalOrd, InfDiv};
 

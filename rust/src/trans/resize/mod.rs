@@ -5,7 +5,7 @@ use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
 use crate::core::{SymmetricDistance, InsertDeleteDistance, IntDistance};
 use crate::core::{VectorDomain, SizedDomain};
 use crate::error::Fallible;
-use crate::samplers::Shuffle;
+use crate::traits::samplers::Shuffle;
 use crate::traits::CheckNull;
 use std::cmp::Ordering;
 

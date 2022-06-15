@@ -3,8 +3,7 @@ use crate::{
     core::{AbsoluteDistance, IntDistance, SymmetricDistance},
     core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    samplers::Shuffle,
-    traits::{InfAdd, InfCast, InfMul, InfSub},
+    traits::{InfAdd, InfCast, InfMul, InfSub, samplers::Shuffle},
     trans::CanSumOverflow,
 };
 

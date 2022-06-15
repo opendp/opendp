@@ -9,7 +9,7 @@ use crate::core::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{LaplaceDomain, make_base_laplace};
-use crate::samplers::SampleLaplace;
+use crate::traits::samplers::SampleLaplace;
 use crate::traits::{CheckNull, InfCast, InfMul, TotalOrd, InfDiv};
 
 #[no_mangle]

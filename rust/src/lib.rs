@@ -179,7 +179,6 @@ pub mod data;
 pub mod interactive;
 pub mod meas;
 pub mod poly;
-pub mod samplers;
 pub mod traits;
 pub mod trans;
 pub mod comb;
