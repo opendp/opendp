@@ -9,7 +9,7 @@ use std::str::Utf8Error;
 
 use crate::trans::{Sequential, Pairwise};
 use crate::{err, fallible};
-use crate::core::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence, InsertDeleteDistance, HammingDistance};
+use crate::core::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence, InsertDeleteDistance, HammingDistance, ZeroConcentratedDivergence};
 use crate::error::*;
 use crate::ffi::any::AnyObject;
 use crate::core::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
@@ -253,6 +253,7 @@ lazy_static! {
             // measures
             type_vec![MaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![SmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![ZeroConcentratedDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len());

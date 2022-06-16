@@ -348,6 +348,7 @@ class PrivacyMeasure(RuntimeType):
 
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
+ZeroConcentratedDivergence = PrivacyMeasure('ZeroConcentratedDivergence')
 
 
 class Domain(RuntimeType):
