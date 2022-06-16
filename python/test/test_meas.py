@@ -1,4 +1,5 @@
 from opendp.mod import enable_features
+from opendp.typing import ZeroConcentratedDivergence
 
 enable_features('floating-point', 'contrib')
 
@@ -41,7 +42,7 @@ def test_base_vector_laplace():
     assert meas.check(1., 1.3)
 
 
-def test_base_gaussian_max_divergence():
+def test_base_gaussian_smoothed_max_divergence():
     from opendp.meas import make_base_gaussian
 
     meas = make_base_gaussian(scale=10.5)
@@ -50,6 +51,16 @@ def test_base_gaussian_max_divergence():
     epsilon = meas.map(d_in=1.).epsilon(delta=.000001)
     print("epsilon:", epsilon)
     assert epsilon > .5
+
+
+def test_base_gaussian_zcdp():
+    from opendp.meas import make_base_gaussian
+
+    meas = make_base_gaussian(scale=1.5, MO=ZeroConcentratedDivergence[float])
+    print("base gaussian:", meas(100.))
+
+    rho = meas.map(d_in=1.)
+    print("rho:", rho)
 
 
 def test_base_analytic_gaussian():

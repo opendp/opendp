@@ -101,3 +101,28 @@ impl<Q> Debug for FixedSmoothedMaxDivergence<Q> {
 impl<Q: Clone> Measure for FixedSmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
+
+
+#[derive(Clone)]
+pub struct ZeroConcentratedDivergence<Q>(PhantomData<Q>);
+impl<Q> Default for ZeroConcentratedDivergence<Q> {
+    fn default() -> Self {
+        ZeroConcentratedDivergence(PhantomData)
+    }
+}
+
+impl<Q> PartialEq for ZeroConcentratedDivergence<Q> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<Q> Debug for ZeroConcentratedDivergence<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ZeroConcentratedDivergence()")
+    }
+}
+
+impl<Q: Clone> Measure for ZeroConcentratedDivergence<Q> {
+    type Distance = Q;
+}
