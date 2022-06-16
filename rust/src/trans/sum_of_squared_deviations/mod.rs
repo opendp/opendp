@@ -15,7 +15,7 @@ use crate::traits::{
     InfPow, InfSub,
 };
 
-pub fn make_sized_bounded_sum_of_squared_deviances<T>(
+pub fn make_sized_bounded_sum_of_squared_deviations<T>(
     size: usize,
     bounds: (T, T),
 ) -> Fallible<
@@ -78,7 +78,7 @@ where
     // (1)  >= sum_i (d_i^2 - pert_max)
     //      = sum_i d_i^1 - n pert_max
 
-    // Let e_var = n^2 / 2^k, the error from computing the sum of deviances
+    // Let e_var = n^2 / 2^k, the error from computing the sum of deviations
     let var_error = _size
         .inf_mul(&_size)?
         .inf_div(&_2.inf_pow(&mantissa_bits)?)?;
@@ -123,7 +123,7 @@ where
 
 type CovarianceDomain<T> = SizedDomain<VectorDomain<BoundedDomain<(T, T)>>>;
 
-pub fn make_sized_bounded_sum_of_product_deviances<T>(
+pub fn make_sized_bounded_sum_of_product_deviations<T>(
     size: usize,
     bounds_0: (T, T),
     bounds_1: (T, T),
@@ -234,14 +234,14 @@ mod tests {
         let arg = vec![1., 2., 3., 4., 5.];
 
         let transformation_sample =
-            make_sized_bounded_sum_of_squared_deviances(5, (0., 10.)).unwrap_test();
+            make_sized_bounded_sum_of_squared_deviations(5, (0., 10.)).unwrap_test();
         let ret = transformation_sample.invoke(&arg).unwrap_test();
         let expected = 10.;
         assert_eq!(ret, expected);
         assert!(transformation_sample.check(&1, &(100. / 5.)).unwrap_test());
 
         let transformation_pop =
-            make_sized_bounded_sum_of_squared_deviances(5, (0., 10.)).unwrap_test();
+            make_sized_bounded_sum_of_squared_deviations(5, (0., 10.)).unwrap_test();
         let ret = transformation_pop.invoke(&arg).unwrap_test();
         let expected = 10.0;
         assert_eq!(ret, expected);
@@ -255,14 +255,14 @@ mod tests {
         let arg = vec![(1., 3.), (2., 4.), (3., 5.), (4., 6.), (5., 7.)];
 
         let transformation_sample =
-            make_sized_bounded_sum_of_product_deviances(5, (0., 2.), (10., 12.)).unwrap_test();
+            make_sized_bounded_sum_of_product_deviations(5, (0., 2.), (10., 12.)).unwrap_test();
         let ret = transformation_sample.invoke(&arg).unwrap_test();
         let expected = 10.0;
         assert_eq!(ret, expected);
         assert!(transformation_sample.check(&1, &(100. / 5.)).unwrap_test());
 
         let transformation_pop =
-            make_sized_bounded_sum_of_product_deviances(5, (0., 2.), (10., 12.)).unwrap_test();
+            make_sized_bounded_sum_of_product_deviations(5, (0., 2.), (10., 12.)).unwrap_test();
         let ret = transformation_pop.invoke(&arg).unwrap_test();
         let expected = 10.0;
         assert_eq!(ret, expected);

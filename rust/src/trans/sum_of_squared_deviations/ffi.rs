@@ -14,10 +14,10 @@ use crate::traits::{
     AlertingAbs, CheckNull, DistanceConstant, ExactIntCast, FloatBits, InfAdd, InfCast, InfDiv,
     InfPow, InfSub,
 };
-use crate::trans::make_sized_bounded_sum_of_squared_deviances;
+use crate::trans::make_sized_bounded_sum_of_squared_deviations;
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_sized_bounded_sum_of_squared_deviances(
+pub extern "C" fn opendp_trans__make_sized_bounded_sum_of_squared_deviations(
     size: c_uint,
     bounds: *const AnyObject,
     T: *const c_char,
@@ -41,7 +41,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_sum_of_squared_deviances(
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_sized_bounded_sum_of_squared_deviances::<T>(size, bounds).into_any()
+        make_sized_bounded_sum_of_squared_deviations::<T>(size, bounds).into_any()
     }
 
     let size = size as usize;

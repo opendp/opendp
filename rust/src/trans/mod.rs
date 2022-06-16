@@ -19,9 +19,9 @@ pub mod sum;
 pub use crate::trans::sum::*;
 
 #[cfg(feature="contrib")]
-pub mod sum_of_squared_deviances;
+pub mod sum_of_squared_deviations;
 #[cfg(feature="contrib")]
-pub use crate::trans::sum_of_squared_deviances::*;
+pub use crate::trans::sum_of_squared_deviations::*;
 
 #[cfg(feature="contrib")]
 pub mod count;
