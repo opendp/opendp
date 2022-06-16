@@ -133,8 +133,8 @@ is a simple sample of individuals from a theoretical larger dataset that capture
 
 .. doctest::
 
-    >>> # Where we once had a privacy utilization of 2 epsilon...
-    >>> assert meas.check(2, 2.)
+    >>> # Where we once had a privacy utilization of ~2 epsilon...
+    >>> assert meas.check(2, 2. + 1e-6)
     ...
     >>> # ...we now have a privacy utilization of ~.4941 epsilon.
     >>> assert amplified.check(2, .4941)

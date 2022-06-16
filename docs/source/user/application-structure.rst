@@ -197,7 +197,7 @@ can be used to convert the earlier discovered noise scale parameter into an accu
     ...  f"the DP estimate differs from the true value by no more than {accuracy} "
     ...  f"at a statistical significance level alpha of {alpha}, "
     ...  f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence.")
-    'When the laplace scale is 2.0000000000000004, the DP estimate differs from the true value by no more than 5.991464547107983 at a statistical significance level alpha of 0.05, or with (1 - 0.05)100% = 95.0% confidence.'
+    'When the laplace scale is 2.0000000000000338, the DP estimate differs from the true value by no more than 5.991464547108083 at a statistical significance level alpha of 0.05, or with (1 - 0.05)100% = 95.0% confidence.'
 
 Please be aware that the preprocessing (impute, clamp, resize) can introduce bias that the accuracy estimate cannot account for.
 In this example, since the sensitive dataset is short two exams,
