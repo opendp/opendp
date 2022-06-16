@@ -1,4 +1,3 @@
-#[cfg(feature="use-mpfr")]
 use num::Zero;
 
 use crate::error::Fallible;
@@ -50,7 +49,6 @@ pub trait SampleGaussian: Sized {
 /// If v is -0., return 0., otherwise return v.
 /// This removes the duplicate -0. member of the output space,
 /// which could hold an unintended bit of information
-#[cfg(feature = "use-mpfr")]
 fn censor_neg_zero<T: Zero>(v: T) -> T {
     if v.is_zero() { T::zero() } else { v }
 }
@@ -181,7 +179,8 @@ impl<T: num::Float + rand::distributions::uniform::SampleUniform + SampleRademac
         while u.abs().is_zero() {
             u = rng.gen_range(T::from(-1.).unwrap(), T::from(1.).unwrap())
         }
-        Ok(shift + u.signum() * u.abs().ln() * scale)
+        let value = shift + u.signum() * u.abs().ln() * scale;
+        Ok(censor_neg_zero(value))
     }
 }
 
@@ -216,7 +215,8 @@ impl SampleGaussian for f64 {
         use crate::traits::samplers::uniform::SampleUniform;
         let uniform_sample = f64::sample_standard_uniform(constant_time)?;
         use statrs::function::erf;
-        Ok(shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample))
+        let value = shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample);
+        Ok(censor_neg_zero(value))
     }
 }
 
@@ -226,7 +226,8 @@ impl SampleGaussian for f32 {
         use crate::traits::samplers::uniform::SampleUniform;
         let uniform_sample = f64::sample_standard_uniform(constant_time)?;
         use statrs::function::erf;
-        Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
+        let value = shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32);
+        Ok(censor_neg_zero(value))
     }
 }
 
