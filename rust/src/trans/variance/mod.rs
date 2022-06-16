@@ -16,8 +16,8 @@ use crate::traits::{
 };
 
 use super::{
-    make_lipschitz_mul, make_sized_bounded_sum_of_product_deviances,
-    make_sized_bounded_sum_of_squared_deviances,
+    make_lipschitz_mul, make_sized_bounded_sum_of_product_deviations,
+    make_sized_bounded_sum_of_squared_deviations,
 };
 
 pub fn make_sized_bounded_variance<T>(
@@ -54,7 +54,7 @@ where
     for<'a> &'a T: Sub<Output = T> + Add<&'a T, Output = T>,
 {
     let dof = size.alerting_sub(&ddof)?;
-    make_sized_bounded_sum_of_squared_deviances(size, bounds)?
+    make_sized_bounded_sum_of_squared_deviations(size, bounds)?
         >> make_lipschitz_mul(T::exact_int_cast(dof)?.recip())?
 }
 
@@ -87,7 +87,7 @@ where
     for<'a> &'a T: Sub<Output = T>,
 {
     let dof = size.alerting_sub(&ddof)?;
-    make_sized_bounded_sum_of_product_deviances(size, bounds_0, bounds_1)?
+    make_sized_bounded_sum_of_product_deviations(size, bounds_0, bounds_1)?
         >> make_lipschitz_mul(T::exact_int_cast(dof)?.recip())?
 }
 

@@ -1259,8 +1259,8 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
-    "make_sized_bounded_sum_of_squared_deviances": {
-        "description": "Make a Transformation that computes the sum of squared deviances of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+    "make_sized_bounded_sum_of_squared_deviations": {
+        "description": "Make a Transformation that computes the sum of squared deviations of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
         "features": ["contrib"],
         "args": [
             {
