@@ -28,7 +28,7 @@ pub trait SampleGeometric: Sized {
     ///
     /// # Example
     /// ```
-    /// use opendp::samplers::SampleGeometric;
+    /// use opendp::traits::samplers::SampleGeometric;
     /// let geom = u8::sample_geometric(0, true, 0.1, Some(20));
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();
@@ -90,7 +90,7 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     ///
     /// # Example
     /// ```
-    /// use opendp::samplers::SampleTwoSidedGeometric;
+    /// use opendp::traits::samplers::SampleTwoSidedGeometric;
     /// let geom = u8::sample_two_sided_geometric(0, 0.1, Some((20, 30)));
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();

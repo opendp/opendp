@@ -40,7 +40,7 @@ pub trait SampleGaussian: Sized {
     ///
     /// # Example
     /// ```
-    /// use opendp::samplers::SampleGaussian;
+    /// use opendp::traits::samplers::SampleGaussian;
     /// let gaussian = f64::sample_gaussian(0.0, 1.0, false);
     /// ```
     fn sample_gaussian(shift: Self, scale: Self, constant_time: bool) -> Fallible<Self>;

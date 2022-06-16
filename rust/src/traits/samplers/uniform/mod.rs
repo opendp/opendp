@@ -33,7 +33,7 @@ pub trait SampleUniform: Sized {
     /// # Example
     /// ```
     /// // valid draw from Unif[0,1)
-    /// use opendp::samplers::SampleUniform;
+    /// use opendp::traits::samplers::SampleUniform;
     /// let unif = f64::sample_standard_uniform(false);
     /// # use opendp::error::ExplainUnwrap;
     /// # unif.unwrap_test();
