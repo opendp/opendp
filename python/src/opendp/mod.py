@@ -37,7 +37,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> # the resulting measurement has the same features
     >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
     >>> # check the chained measurement's relation at
-    >>> #     (1, 0.5): (SubstituteDistance, MaxDivergence)
+    >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
     >>> assert chained.check(1, 0.5)
     """
     _type_ = AnyMeasurement

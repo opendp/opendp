@@ -7,6 +7,9 @@ use std::ops::Mul;
 use ieee754::Ieee754;
 use num::{Bounded, clamp, One, Zero};
 
+use rand::RngCore;
+use rand::prelude::SliceRandom;
+
 #[cfg(feature="use-mpfr")]
 use rug::{Float, rand::{ThreadRandGen, ThreadRandState}};
 
@@ -33,26 +36,59 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     } else { Ok(()) }
 }
 
-#[cfg(feature="use-mpfr")]
-struct GeneratorOpenSSL {
+struct GeneratorOpenDP {
     error: Fallible<()>,
 }
 
-#[cfg(feature="use-mpfr")]
-impl GeneratorOpenSSL {
+impl GeneratorOpenDP {
     fn new() -> Self {
-        GeneratorOpenSSL { error: Ok(()) }
+        GeneratorOpenDP { error: Ok(()) }
     }
 }
 
 #[cfg(feature="use-mpfr")]
-impl ThreadRandGen for GeneratorOpenSSL {
+impl ThreadRandGen for GeneratorOpenDP {
     fn gen(&mut self) -> u32 {
         let mut buffer = [0u8; 4];
         if let Err(e) = fill_bytes(&mut buffer) {
             self.error = Err(e)
         }
         u32::from_ne_bytes(buffer)
+    }
+}
+
+impl RngCore for GeneratorOpenDP {
+    fn next_u32(&mut self) -> u32 {
+        let mut buffer = [0u8; 4];
+        self.fill_bytes(&mut buffer);
+        u32::from_ne_bytes(buffer)
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut buffer = [0u8; 8];
+        self.fill_bytes(&mut buffer);
+        u64::from_ne_bytes(buffer)
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        if let Err(e) = fill_bytes(dest) {
+            self.error = Err(e)
+        }
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        fill_bytes(dest).map_err(rand::Error::new)
+    }
+}
+
+pub trait Shuffle {
+    fn shuffle(&mut self) -> Fallible<()>;
+}
+impl<T> Shuffle for Vec<T> {
+    fn shuffle(&mut self) -> Fallible<()> {
+        let mut rng = GeneratorOpenDP::new();
+        SliceRandom::shuffle(self.as_mut_slice(), &mut rng);
+        rng.error
     }
 }
 
@@ -557,7 +593,7 @@ impl<T: Clone + CastInternalReal + SampleRademacher + Zero + Mul<Output=T>> Samp
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenSSL::new();
+        let mut rng = GeneratorOpenDP::new();
         let laplace = {
             let mut state = ThreadRandState::new_custom(&mut rng);
 
@@ -596,7 +632,7 @@ impl<T: Clone + CastInternalReal + Zero + Mul<Output=T>> SampleGaussian for T {
         }
 
         // initialize randomness
-        let mut rng = GeneratorOpenSSL::new();
+        let mut rng = GeneratorOpenDP::new();
         let gauss = {
             let mut state = ThreadRandState::new_custom(&mut rng);
 

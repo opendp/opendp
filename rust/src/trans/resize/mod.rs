@@ -21,13 +21,17 @@ pub fn make_resize_constant<DA>(
         VectorDomain::new(atom_domain.clone()),
         SizedDomain::new(VectorDomain::new(atom_domain), size),
         Function::new(move |arg: &Vec<DA::Carrier>| match arg.len().cmp(&size) {
-            Ordering::Less => arg.iter().chain(vec![&constant; size - arg.len()]).cloned().collect(),
+            Ordering::Less => arg
+                .iter()
+                .chain(vec![&constant; size - arg.len()])
+                .cloned()
+                .collect(),
             Ordering::Equal => arg.clone(),
-            Ordering::Greater => arg[..size].to_vec()
+            Ordering::Greater => arg[..size].to_vec(),
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityRelation::new_from_constant(2)
+        StabilityRelation::new_from_constant(2),
     ))
 }
 

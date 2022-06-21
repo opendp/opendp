@@ -8,7 +8,7 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use crate::{err, fallible};
-use crate::dist::{SubstituteDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence};
+use crate::dist::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence, InsertDeleteDistance, HammingDistance};
 use crate::error::*;
 use crate::ffi::any::AnyObject;
 use crate::dom::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
@@ -240,7 +240,7 @@ lazy_static! {
             type_vec![[SizedDomain VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // metrics
-            type_vec![SubstituteDistance, SymmetricDistance],
+            type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
