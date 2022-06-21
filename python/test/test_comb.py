@@ -31,14 +31,26 @@ def test_fix_delta():
 
 def test_make_sequential_composition_static_distances():
     from opendp.comb import make_sequential_composition_static_distances
-    from opendp.meas import make_base_geometric
+    from opendp.meas import make_base_geometric, make_base_laplace
+    from opendp.trans import make_count
     composed = make_sequential_composition_static_distances([
-        make_base_geometric(scale=2.), 
-        make_base_geometric(scale=2.)
+        make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
+        # make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
+        # make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
+        # make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
+        # make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
+        # make_count(TIA=int, TO=float) >> make_base_laplace(scale=2.),
     ])
+
+    # composed = make_sequential_composition_static_distances([
+    #     make_base_geometric(scale=2.), 
+    #     make_base_geometric(scale=2.)
+    # ])
     print("composed successfully")
 
     print(composed.check(1, 2.))
+    print(composed.map(3))
+    print(composed([22, 12]))
 
 if __name__ == "__main__":
     test_make_sequential_composition_static_distances()

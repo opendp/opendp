@@ -295,13 +295,9 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMe
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{Function, Measurement, PrivacyMap, Transformation};
-    use crate::core::{MaxDivergence, SymmetricDistance};
-    use crate::core::AllDomain;
+    use crate::comb::tests::{make_test_measurement, make_test_transformation};
     use crate::ffi::any::{Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
     use crate::ffi::util::ToCharP;
-    use crate::traits::CheckNull;
-    use crate::trans;
 
     use super::*;
 
@@ -367,23 +363,6 @@ mod tests {
         }));
         let res = Fallible::from(ffi_res);
         assert_eq!(res, fallible!(FailedFunction, "Eat my shorts!"));
-    }
-
-    // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
-        Measurement::new(
-            AllDomain::new(),
-            AllDomain::new(),
-            Function::new(|arg: &T| arg.clone()),
-            SymmetricDistance::default(),
-            MaxDivergence::default(),
-            PrivacyMap::new(|_d_in| f64::INFINITY),
-        )
-    }
-
-    // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_transformation<T: Clone + CheckNull>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
-        trans::make_identity(AllDomain::<T>::new(), SymmetricDistance::default()).unwrap_test()
     }
 
     #[test]
