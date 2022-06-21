@@ -39,11 +39,13 @@
 //! Here's a simple example of using OpenDP from Rust to create a private sum:
 //! ```
 //! use opendp::error::Fallible;
-//! use opendp::trans::{make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
-//! use opendp::comb::{make_chain_tt, make_chain_mt};
-//! use opendp::meas::make_base_laplace;
 //!
+//! #[cfg(feature = "untrusted")]
 //! pub fn example() -> Fallible<()> {
+//!     use opendp::trans::{make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
+//!     use opendp::comb::{make_chain_tt, make_chain_mt};
+//!     use opendp::meas::make_base_laplace;
+//! 
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
 //!     let epsilon = 1.0;
@@ -81,6 +83,7 @@
 //!     println!("release = {}", release);
 //!     Ok(())
 //! }
+//! #[cfg(feature = "untrusted")]
 //! example().unwrap();
 //! ```
 //!
@@ -173,6 +176,7 @@ pub mod core;
 pub mod data;
 pub mod dist;
 pub mod dom;
+#[cfg(feature="contrib")]
 pub mod interactive;
 pub mod meas;
 pub mod poly;

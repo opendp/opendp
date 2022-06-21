@@ -85,14 +85,14 @@ impl<DI, DO, MI, MO> Transformation<DI, DO, MI, MO>
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature="untrusted"))]
 mod tests {
     use crate::dist::SubstituteDistance;
     use crate::dom::AllDomain;
     use crate::error::*;
     use crate::meas;
     use crate::trans;
-
+    
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
         let op_plain = meas::make_base_laplace::<AllDomain<_>>(0.0)?;
