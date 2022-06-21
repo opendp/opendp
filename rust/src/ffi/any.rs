@@ -12,7 +12,7 @@ use std::fmt::{Debug, Formatter};
 
 use num::Zero;
 
-use crate::comb::ComposableMeasure;
+use crate::comb::SequentialCompositionStaticDistancesMeasure;
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation, MaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence};
 use crate::err;
 use crate::error::*;
@@ -146,7 +146,6 @@ impl AnyObject {
         }
 
         let type_ = Type::of::<T>();
-        println!("new Type {}", type_.to_string());
 
         AnyObject {
             partial_eq_glue: dispatch!(monomorphize_partial_eq, [(type_, @hashable)], ()).ok().map(Glue::new),
@@ -160,7 +159,6 @@ impl AnyObject {
 
     pub fn new_clone<T: 'static + Clone>(value: T) -> Self {
         let mut new = Self::new(value);
-        println!("new_clone Type {}", new.type_.to_string());
         new.clone_glue = Some(Glue::new(|self_: &Self| AnyObject::new(self_.downcast_ref::<T>().expect("Downcast will always be of same type").clone())));
         new
     }
@@ -192,8 +190,6 @@ impl PartialOrd for AnyObject {
 }
 impl Clone for AnyObject {
     fn clone(&self) -> Self {
-        println!("cloning now");
-        println!("AnyObject type: {}", self.type_.to_string());
         self.clone_glue.as_ref().expect("Clone glue is missing")(self)
     }
 }
@@ -259,13 +255,13 @@ impl AnyMeasure {
     }
 }
 
-impl ComposableMeasure for AnyMeasure {
+impl SequentialCompositionStaticDistancesMeasure for AnyMeasure {
     fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
         fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
             self_: &AnyMeasure, d_i: &Vec<AnyObject>
         ) -> Fallible<AnyObject> {
 
-            fn monomorphize2<M: 'static + ComposableMeasure>(
+            fn monomorphize2<M: 'static + SequentialCompositionStaticDistancesMeasure>(
                 self_: &AnyMeasure, d_i: &Vec<AnyObject>
             ) -> Fallible<AnyObject>
                 where M::Distance: Clone {

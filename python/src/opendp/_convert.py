@@ -78,7 +78,6 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     if c_type == FfiSlicePtr:
         assert type_name is not None
-        print("py_to_c: c_type is FfiSlicePtr", type_name, value)
         return _py_to_slice(value, type_name)
 
     if isinstance(value, RuntimeType):
@@ -103,25 +102,15 @@ def c_to_py(value):
     :return: copy of data in python representation
     """
     if isinstance(value, AnyObjectPtr):
-        from opendp._data import object_type, object_as_slice, to_string, slice_free
+        from opendp._data import object_type, object_as_slice, slice_free
         obj_type = object_type(value)
         if "SMDCurve" in obj_type:
             return SMDCurve(value)
         ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, obj_type)
-        except UnknownTypeException:
-            raise
-        except Exception as err:
-            print("MASKED ERROR:", err)
-            print("using string fallback")
-            # raise err
-            # If we fail, resort to string representation.
-            # TODO: Remove this fallback once we have composition and/or tuples sorted out.
-            return to_string(value)
+            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
         finally:
-            pass
-            # slice_free(ffi_slice)
+            slice_free(ffi_slice)
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
@@ -155,20 +144,20 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     :param type_name: rust type name that determines the python type to unload into
     :return: a standard python reference-counted data type
     """
-    if type_name in ATOM_MAP:
+    if isinstance(type_name, str) and type_name in ATOM_MAP:
         return _slice_to_scalar(raw, type_name)
-
-    if type_name.startswith("Vec<") and type_name.endswith('>'):
-        return _slice_to_vector(raw, type_name)
-
-    if type_name.startswith("HashMap<") and type_name.endswith('>'):
-        return _slice_to_hashmap(raw)
-
-    if type_name.startswith('(') and type_name.endswith(')'):
-        return _slice_to_tuple(raw, type_name)
-
+    
     if type_name == "String":
         return _slice_to_string(raw)
+
+    if type_name.origin == "Vec":
+        return _slice_to_vector(raw, type_name)
+
+    if type_name.origin == "HashMap":
+        return _slice_to_hashmap(raw)
+
+    if type_name.origin == "Tuple":
+        return _slice_to_tuple(raw, type_name)
 
     raise UnknownTypeException(type_name)
 
@@ -264,6 +253,10 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> List[Any]:
     assert type_name.origin == 'Vec'
     assert len(type_name.args) == 1, "Vec only has one generic argument"
     inner_type_name = type_name.args[0]
+
+    if inner_type_name == 'AnyObject':
+        array = ctypes.cast(raw.contents.ptr, AnyObjectPtr)[0:raw.contents.len]
+        return list(map(lambda v: c_to_py(AnyObjectPtr(v)), array))
 
     if inner_type_name == 'String':
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
