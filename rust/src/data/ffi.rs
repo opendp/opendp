@@ -47,10 +47,7 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
     #[allow(clippy::unnecessary_wraps)]
     fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
-        println!("slice to vec");
-        let vec = slice.to_vec();
-        println!("slice to vec after");
-        Ok(AnyObject::new_clone(vec))
+        Ok(AnyObject::new_clone(slice.to_vec()))
     }
     fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 2 {
@@ -88,7 +85,6 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
-            println!("from rust, raw_to_vec: {:?}", element.descriptor);
             match element.descriptor.as_str() {
                 "String" => raw_to_vec_string(raw),
                 "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
@@ -102,14 +98,9 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
             let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
-            println!("from rust, dispatching types: {:?}", types.iter().map(Type::to_string).collect::<Vec<_>>());
-            if types.first() == Some(&Type::of::<AnyMeasurementPtr>()) {
-                dispatch!(raw_to_tuple, [(types[0], [AnyMeasurementPtr]), (types[1], [f64, f32])], (raw))
-            } else {
-                // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
-                // because the only likely way to get a tuple of AnyObjects is as the output of composition.
-                dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
-            }
+            // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
+            // because the only likely way to get a tuple of AnyObjects is as the output of composition.
+            dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
         }
         TypeContents::GENERIC { name, args } => {
             if name == "HashMap" {
@@ -197,7 +188,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             if element.descriptor == "String" {
                 vec_string_to_raw(obj)
             } else {
-                dispatch!(vec_to_raw, [(element, @primitives)], (obj))
+                dispatch!(vec_to_raw, [(element, @primitives_plus)], (obj))
             }
         }
         TypeContents::TUPLE(element_ids) => {
