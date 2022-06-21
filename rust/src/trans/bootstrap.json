@@ -80,7 +80,7 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_random_ordering": {
+    "make_ordered_random": {
         "description": "Make a Transformation that converts the unordered dataset metric `SymmetricDistance` to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation. \nOperates exclusively on VectorDomain<AllDomain<`TA`>>.",
         "features": ["contrib"],
         "args": [
@@ -92,7 +92,7 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_sized_random_ordering": {
+    "make_sized_ordered_random": {
         "description": "Make a Transformation that converts the unordered dataset metric `MI` to the respective ordered dataset metric by assigning a random permutatation. \nOperates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>. \nIf `MI` is \"SymmetricDistance\", then output metric is \"InsertDeleteDistance\", and respectively \"ChangeOneDistance\" maps to \"HammingDistance\".",
         "features": ["contrib"],
         "args": [
@@ -100,6 +100,40 @@
                 "name": "size",
                 "c_type": "unsigned int",
                 "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "input dataset metric"
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_bounded_ordered_random": {
+        "description": "Make a Transformation that converts the unordered dataset metric `MI` to the respective ordered dataset metric by assigning a random permutatation. \nOperates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>. \nIf `MI` is \"SymmetricDistance\", then output metric is \"InsertDeleteDistance\", and respectively \"ChangeOneDistance\" maps to \"HammingDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
             },
             {
                 "name": "MI",
@@ -143,6 +177,40 @@
                 "is_type": true,
                 "default": "InsertDeleteDistance",
                 "description": "input dataset metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_bounded_unordered": {
+        "description": "Make a Transformation that converts the ordered dataset metric `MI` to the respective unordered dataset metric with a no-op. \nOperates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>. \nIf `MI` is \"InsertDeleteDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"ChangeOneDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "InsertDeleteDistance",
+                "description": "input dataset metric"
             },
             {
                 "name": "TA",

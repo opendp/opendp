@@ -264,30 +264,30 @@ Take note that there are separate constructors for metric casts on sized vs unsi
      - Input/Output Domain
      - Input Metric
      - Output Metric
-   * - :func:`opendp.trans.make_random_ordering`
+   * - :func:`opendp.trans.make_ordered_random`
      - ``VectorDomain<AllDomain<TA>>``
      - ``SymmetricDistance``
      - ``InsertDeleteDistance``
-   * - :func:`opendp.trans.make_sized_random_ordering`
-     - ``Sized<VectorDomain<AllDomain<TA>>>``
-     - ``SymmetricDistance``
-     - ``InsertDeleteDistance``
-   * - :func:`opendp.trans.make_sized_random_ordering`
-     - ``Sized<VectorDomain<AllDomain<TA>>>``
-     - ``ChangeOneDistance``
-     - ``HammingDistance``
+   * - :func:`opendp.trans.make_sized_ordered_random`
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SymmetricDistance/ChangeOneDistance``
+     - ``InsertDeleteDistance/HammingDistance``
+   * - :func:`opendp.trans.make_sized_bounded_ordered_random`
+     - ``SizedDomain<VectorDomain<BoundedDomain<TA>>>``
+     - ``SymmetricDistance/ChangeOneDistance``
+     - ``InsertDeleteDistance/HammingDistance``
    * - :func:`opendp.trans.make_unordered`
      - ``VectorDomain<AllDomain<TA>>``
      - ``InsertDeleteDistance``
      - ``SymmetricDistance``
    * - :func:`opendp.trans.make_sized_unordered`
-     - ``Sized<VectorDomain<AllDomain<TA>>>``
-     - ``InsertDeleteDistance``
-     - ``SymmetricDistance``
-   * - :func:`opendp.trans.make_sized_unordered`
-     - ``Sized<VectorDomain<AllDomain<TA>>>``
-     - ``HammingDistance``
-     - ``ChangeOneDistance``
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SymmetricDistance/ChangeOneDistance``
+     - ``InsertDeleteDistance/HammingDistance``
+   * - :func:`opendp.trans.make_sized_bounded_unordered`
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SymmetricDistance/ChangeOneDistance``
+     - ``InsertDeleteDistance/HammingDistance``
 
 
 Bounded Metrics

@@ -13,7 +13,7 @@ use self::traits::{
 mod ffi;
 mod traits;
 
-pub fn make_random_ordering<D, MI>(
+pub fn make_ordered_random<D, MI>(
     domain: D,
 ) -> Fallible<Transformation<D, D, MI, MI::OrderedMetric>>
 where
@@ -93,7 +93,7 @@ mod test {
     #[test]
     fn test_ordering() -> Fallible<()> {
         let domain = VectorDomain::new_all();
-        let ord_trans = make_random_ordering::<_, SymmetricDistance>(domain.clone())?;
+        let ord_trans = make_ordered_random::<_, SymmetricDistance>(domain.clone())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(ord_trans.invoke(&data)?.len(), 3);
 
