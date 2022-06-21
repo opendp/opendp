@@ -2,11 +2,11 @@ use crate::{
     core::{Domain, Function, StabilityRelation, Transformation},
     dist::IntDistance,
     dom::SizedDomain,
-    error::Fallible,
+    error::Fallible, samplers::Shuffle,
 };
 
 use self::traits::{
-    BoundedMetric, OrderedMetric, ShuffleableDomain, UnboundedMetric, UnorderedMetric,
+    BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric,
 };
 
 #[cfg(feature = "ffi")]
@@ -17,14 +17,18 @@ pub fn make_ordered_random<D, MI>(
     domain: D,
 ) -> Fallible<Transformation<D, D, MI, MI::OrderedMetric>>
 where
-    D: ShuffleableDomain,
-    D::Carrier: Clone,
+    D: Domain,
+    D::Carrier: Clone + Shuffle,
     MI: UnorderedMetric<Distance = IntDistance>,
 {
     Ok(Transformation::new(
         domain.clone(),
         domain,
-        Function::new_fallible(|val: &D::Carrier| D::shuffle(val.clone())),
+        Function::new_fallible(|arg: &D::Carrier| {
+            let mut data = arg.clone();
+            data.shuffle()?;
+            Ok(data)
+        }),
         MI::default(),
         MI::OrderedMetric::default(),
         StabilityRelation::new_from_constant(1),

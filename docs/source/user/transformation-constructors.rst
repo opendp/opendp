@@ -340,6 +340,8 @@ At this time, there are two separate resize transforms:
 one that works on unbounded data, and one that works on bounded data.
 We intend to merge these in the future.
 
+The input and output metrics may be configured to any combination of ``SymmetricDistance`` and ``InsertDeleteDistance``.
+
 .. list-table::
    :header-rows: 1
 
@@ -349,12 +351,12 @@ We intend to merge these in the future.
      - Input/Output Metric
    * - :func:`opendp.trans.make_resize`
      - ``VectorDomain<AllDomain<TA>>``
-     - ``VectorDomain<AllDomain<TA>>``
-     - ``SymmetricDistance``
+     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SymmetricDistance/InsertDeleteDistance``
    * - :func:`opendp.trans.make_bounded_resize`
      - ``VectorDomain<BoundedDomain<TA>>``
      - ``VectorDomain<BoundedDomain<TA>>``
-     - ``SymmetricDistance``
+     - ``SymmetricDistance/InsertDeleteDistance``
 
 
 .. _aggregators:

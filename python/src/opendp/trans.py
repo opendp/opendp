@@ -1176,7 +1176,9 @@ def make_sized_bounded_mean(
 def make_resize(
     size: int,
     constant: Any,
-    TA: RuntimeTypeDescriptor = None
+    TA: RuntimeTypeDescriptor = None,
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
+    MO: RuntimeTypeDescriptor = "InsertDeleteDistance"
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     
@@ -1186,6 +1188,10 @@ def make_resize(
     :type constant: Any
     :param TA: Atomic type.
     :type TA: :ref:`RuntimeTypeDescriptor`
+    :param MI: Input metric.
+    :type MI: :ref:`RuntimeTypeDescriptor`
+    :param MO: Output metric.
+    :type MO: :ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1196,25 +1202,31 @@ def make_resize(
     
     # Standardize type arguments.
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=constant)
+    MI = RuntimeType.parse(type_name=MI)
+    MO = RuntimeType.parse(type_name=MO)
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=TA)
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_resize
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, constant, TA), Transformation))
+    return c_to_py(unwrap(function(size, constant, TA, MI, MO), Transformation))
 
 
 def make_bounded_resize(
     size: int,
     bounds: Tuple[Any, Any],
     constant,
-    TA: RuntimeTypeDescriptor = None
+    TA: RuntimeTypeDescriptor = None,
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
+    MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     
@@ -1225,6 +1237,10 @@ def make_bounded_resize(
     :param constant: Value to impute with.
     :param TA: Atomic type. If not passed, TA is inferred from the lower bound.
     :type TA: :ref:`RuntimeTypeDescriptor`
+    :param MI: Input metric.
+    :type MI: :ref:`RuntimeTypeDescriptor`
+    :param MO: Output metric.
+    :type MO: :ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1235,19 +1251,23 @@ def make_bounded_resize(
     
     # Standardize type arguments.
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
+    MI = RuntimeType.parse(type_name=MI)
+    MO = RuntimeType.parse(type_name=MO)
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
     constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=TA)
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_resize
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, constant, TA), Transformation))
+    return c_to_py(unwrap(function(size, bounds, constant, TA, MI, MO), Transformation))
 
 
 def make_bounded_sum(

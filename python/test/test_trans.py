@@ -245,14 +245,14 @@ def test_count_by_categories():
 def test_resize():
     from opendp.trans import make_bounded_resize
     query = make_bounded_resize(size=4, bounds=(0, 10), constant=0)
-    assert query([-1, 2, 5]) == [-1, 2, 5, 0]
+    assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 4)
 
     from opendp.trans import make_resize
     query = make_resize(size=4, constant=0)
-    assert query([-1, 2, 5]) == [-1, 2, 5, 0]
+    assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 4)
