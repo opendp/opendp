@@ -12,6 +12,7 @@ pub(super) fn get_analytic_gaussian_epsilon(sensitivity: f64, sigma: f64, delta:
         return f64::INFINITY
     }
     // threshold to choose whether alpha is larger or smaller than one
+    // when alpha = 1, then u = 0. Find the delta when alpha is zero. 
     let delta_0 = b_neg(sensitivity, sigma, 0.);
 
     // Branching cases are merged, and a new case added for when alpha exactly 1
@@ -61,9 +62,9 @@ fn binary_search_s(
 ) -> f64 {
     // evaluate either B+ or B- on s
     let s_to_delta = |s: f64| if delta > delta_0 {
-        b_neg(sensitivity, sigma, s)
-    } else {
         b_pos(sensitivity, sigma, s)
+    } else {
+        b_neg(sensitivity, sigma, s)
     };
 
     loop {
@@ -107,9 +108,9 @@ fn doubling_trick(
 
     // return false when bounds should no longer be doubled
     let predicate = |s: f64| if delta > delta_0 {
-        b_neg(sensitivity, sigma, s) < delta
+        b_pos(sensitivity, sigma, s) < delta
     } else {
-        b_pos(sensitivity, sigma, s) > delta
+        b_neg(sensitivity, sigma, s) > delta
     };
 
     // continue doubling the bounds until Theorem 8's comparison with delta is not satisfied
@@ -121,26 +122,27 @@ fn doubling_trick(
     (s_inf, s_sup)
 }
 
-/// B-: Reduced form of inequality (6) for optimization when alpha > 1.
+/// B-: Reduced form of inequality (6) for optimization when alpha < 1.
+/// Refer to p.19 Proof of Theorem 9, but use alternate substitution for ε and v
+/// 1. Substitute ε = α(∆/σ)^2 into inequality (6)
+/// 2. Substitute u = (α−1)^2/4
+fn b_neg(sens: f64, sigma: f64, s: f64) -> f64 {
+    let t1 = (1. + 2. * s.sqrt()) * (sens / sigma).powi(2) / 2.;
+    // println!("neg lt:     {}", phi(-sens * s.sqrt() / sigma));
+    // println!("neg t1.exp: {}", t1.exp());
+    // println!("neg t2.phi: {}", phi(-sens / sigma * (1. + 2. * s.sqrt())));
+    phi(-sens * s.sqrt() / sigma) - t1.exp() * phi(-sens / sigma * (1. + s.sqrt()))
+}
+
+/// B+: Reduced form of inequality (6) for optimization when alpha > 1.
 /// Refer to p.19 Proof of Theorem 9, but use alternate substitution for ε and v
 /// 1. Substitute ε = α(∆/σ)^2 into inequality (6)
 /// 2. Substitute v = (1-α)^2/4
 fn b_pos(sens: f64, sigma: f64, s: f64) -> f64 {
     let t1 = (1. + 2. * s.sqrt()) * (sens / sigma).powi(2) / 2.;
+    // println!("pos lt:     {}", phi(sens * s.sqrt() / sigma));
     // println!("pos t1.exp: {}", t1.exp());
     // println!("pos t2.phi: {}", phi(-sens / sigma * (1. + 2. * s.sqrt())));
-    phi(-sens * s.sqrt() / sigma) - t1.exp() * phi(-sens / sigma * (1. + s.sqrt()))
-}
-
-/// B+: Reduced form of inequality (6) for optimization when alpha < 1.
-/// Refer to p.19 Proof of Theorem 9, but use alternate substitution for ε and v
-/// 1. Substitute ε = α(∆/σ)^2 into inequality (6)
-/// 2. Substitute u = (α−1)^2/4
-fn b_neg(sens: f64, sigma: f64, s: f64) -> f64 {
-    let t1 = (1. - 2. * s.sqrt()) * (sens / sigma).powi(2) / 2.;
-    // println!("neg lt:     {}", phi(sens * s.sqrt() / sigma));
-    // println!("neg t1.exp: {}", t1.exp());
-    // println!("neg t2.phi: {}", phi(-sens / sigma * (1. + 2. * s.sqrt())));
     phi(sens * s.sqrt() / sigma) - t1.exp() * phi(-sens / sigma * (1. + s.sqrt()))
 }
 
@@ -160,8 +162,9 @@ mod tests {
 
     use super::*;
 
+    // these are more accurate
     #[test]
-    fn test_analytic_pos() {
+    fn test_analytic_neg() {
         let tests = vec![
             (15.552795737560736, 7.5742261696821, (1.6623883316111547, 8.954557110260894e-05)),
             (25.927138353305395, 8.169823627211475, (1.0326333767062592, 7.250444741274898e-05)),
@@ -179,8 +182,9 @@ mod tests {
         }
     }
 
+    // not as accurate
     #[test]
-    fn test_analytic_neg() {
+    fn test_analytic_pos() {
         let tests = vec![
             (3.3784348369854293, 0.027475858897771484, (8.948891788456845e-09, 0.003244471792578877)),
             (6.4908971942181575, 0.02788850904671463, (9.783720228927065e-09, 0.0017140720016322816)),
@@ -205,7 +209,7 @@ mod tests {
 
         let epsilon = measurement.map(&d_in)?.epsilon(&d_out.1)?;
 
-        println!("epsilon {}, d_out.0 {}, diff {}", epsilon, d_out.0, epsilon - d_out.0);
+        println!("epsilon {}, d_out.0 {}, diff {}, ratio {}", epsilon, d_out.0, epsilon - d_out.0, epsilon / d_out.0);
         // upper bound is pretty loose. b_neg is suffering from instability
         assert!(epsilon <= d_out.0 + 1e-3);
         assert!(epsilon >= d_out.0);
@@ -222,10 +226,6 @@ mod tests {
         let (eps, del) = d_out;
         // simple shortcut to check the analytic gaussian.
         // suffers from catastrophic cancellation
-        fn phi(t: f64) -> f64 {
-            0.5 * (1. + erf::erf(t / 2.0_f64.sqrt()))
-        }
-
         let prob_l_xy = phi(d_in / (2. * scale) - eps * scale / d_in);
         let prob_l_yx = phi(-d_in / (2. * scale) - eps * scale / d_in);
         del >= prob_l_xy - eps.exp() * prob_l_yx
