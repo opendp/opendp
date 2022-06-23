@@ -138,7 +138,7 @@ macro_rules! impl_sample_uniform_unsigned_int {
         impl SampleUniformInt for $ty {
             fn sample_uniform_int() -> Fallible<Self> {
                 let mut buffer = [0; core::mem::size_of::<Self>()];
-                fill_bytes(&mut buffer).unwrap();
+                fill_bytes(&mut buffer)?;
                 Ok(Self::from_be_bytes(buffer))
             }
             fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
