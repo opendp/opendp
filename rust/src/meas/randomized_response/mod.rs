@@ -40,8 +40,7 @@ pub fn make_randomized_response_bool<Q>(
         AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(move |arg: &bool| {
-            let lie = bool::sample_bernoulli(prob, constant_time)?;
-            Ok(if bool::sample_bernoulli(prob, constant_time)? { *arg } else { lie })
+            Ok(if bool::sample_bernoulli(prob, constant_time)? { *arg } else { !arg })
         }),
         SymmetricDistance::default(),
         MaxDivergence::default(),
