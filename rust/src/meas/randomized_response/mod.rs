@@ -6,7 +6,7 @@ use std::hash::Hash;
 
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::measures::MaxDivergence;
-use crate::metrics::{SymmetricDistance, IntDistance};
+use crate::metrics::{IntDistance, ChangeOneDistance};
 use crate::domains::AllDomain;
 use crate::error::Fallible;
 use crate::traits::samplers::{SampleBernoulli, SampleUniformInt};
@@ -28,7 +28,7 @@ use num::Float;
 
 pub fn make_randomized_response_bool<Q>(
     prob: Q, constant_time: bool
-) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, SymmetricDistance, MaxDivergence<Q>>>
+) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, ChangeOneDistance, MaxDivergence<Q>>>
     where bool: SampleBernoulli<Q>,
           Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn {
 
@@ -43,7 +43,7 @@ pub fn make_randomized_response_bool<Q>(
         Function::new_fallible(move |arg: &bool| {
             Ok(if bool::sample_bernoulli(prob, constant_time)? { *arg } else { !arg })
         }),
-        SymmetricDistance::default(),
+        ChangeOneDistance::default(),
         MaxDivergence::default(),
         PrivacyMap::new_from_constant(
             // ln(p / (1 - prob))
@@ -53,7 +53,7 @@ pub fn make_randomized_response_bool<Q>(
 
 pub fn make_randomized_response<T, Q>(
     categories: HashSet<T>, prob: Q, constant_time: bool
-) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<Q>>>
+) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, ChangeOneDistance, MaxDivergence<Q>>>
     where T: 'static + Clone + Eq + Hash + CheckNull,
           bool: SampleBernoulli<Q>,
           Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv {
@@ -88,7 +88,7 @@ pub fn make_randomized_response<T, Q>(
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),
-        SymmetricDistance::default(),
+        ChangeOneDistance::default(),
         MaxDivergence::default(),
         PrivacyMap::new_from_constant(
             // d_out >= d_in * (p / p').ln()
