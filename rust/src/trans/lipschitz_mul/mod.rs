@@ -1,11 +1,9 @@
-use std::ops::Mul;
-
 use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation},
     dist::{AbsoluteDistance, LpDistance},
     dom::{AllDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant},
+    traits::{AlertingAbs, CheckNull, DistanceConstant, SaturatingMul},
 };
 
 pub fn make_lipschitz_mul<D, M>(l: D::Atom) -> Fallible<Transformation<D, D, M, M>>
@@ -36,21 +34,21 @@ pub trait LipschitzMulDomain: Domain + Default {
 
 impl<T> LipschitzMulDomain for AllDomain<T>
 where
-    T: for<'a> Mul<&'a T, Output = T> + CheckNull,
+    T: SaturatingMul + CheckNull,
 {
     type Atom = T;
     fn transform(l: T, v: &T) -> T {
-        l * v
+        l.saturating_mul(v)
     }
 }
 
 impl<T> LipschitzMulDomain for VectorDomain<AllDomain<T>>
 where
-    T: Clone + for<'a> Mul<&'a T, Output = T> + CheckNull,
+    T: Clone + SaturatingMul + CheckNull,
 {
     type Atom = T;
     fn transform(l: T, v: &Vec<T>) -> Vec<T> {
-        v.iter().map(|v_i| l.clone() * v_i).collect()
+        v.iter().map(|v_i| l.saturating_mul(v_i)).collect()
     }
 }
 
