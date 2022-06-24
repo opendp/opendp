@@ -48,6 +48,12 @@ pub trait SaturatingAdd: Sized {
     fn saturating_add(&self, v: &Self) -> Self;
 }
 
+/// Multiplication that saturates at the numeric bounds instead of overflowing.
+pub trait SaturatingMul: Sized {
+    /// Returns `self * v`, saturating at the relevant high or low boundary of the type.
+    fn saturating_mul(&self, v: &Self) -> Self;
+}
+
 /// Exponentiates with specified rounding that returns an error if overflowing.
 pub trait InfExp: Sized {
     fn inf_exp(self) -> Fallible<Self>;
@@ -177,6 +183,11 @@ macro_rules! impl_alerting_int {
             fn saturating_add(&self, v: &Self) -> Self {
                 <$t>::saturating_add(*self, *v)
             }
+        })
+        +$(impl SaturatingMul for $t {
+            fn saturating_mul(&self, v: &Self) -> Self {
+                <$t>::saturating_mul(*self, *v)
+            }
         })+
         $(impl AlertingMul for $t {
             #[inline]
@@ -233,6 +244,11 @@ macro_rules! impl_alerting_float {
         $(impl SaturatingAdd for $t {
             fn saturating_add(&self, v: &Self) -> Self {
                 (self + v).clamp(<$t>::MIN, <$t>::MAX)
+            }
+        })+
+        $(impl SaturatingMul for $t {
+            fn saturating_mul(&self, v: &Self) -> Self {
+                (self * v).clamp(<$t>::MIN, <$t>::MAX)
             }
         })+
         $(impl AlertingMul for $t {
