@@ -77,9 +77,9 @@ where
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
-            //       <= d_in * max(|L|, U) + 2 * accuracy
-            //       =  d_in * max(|L|, U) + 2 * n^2/2^k * max(|L|, U)
-            //       =  (d_in + n^2/2^(k - 1)) * max(|L|, U)
+            //       <= d_in * (U - L) + 2 * accuracy
+            //       =  d_in * (U - L) + 2 * n^2/2^k * (U - L)
+            //       =  (d_in + n^2/2^(k - 1)) * (U - L)
             T::inf_cast(*d_in)?.inf_add(&accuracy)?.inf_mul(&ideal_sensitivity)
         }),
     ))
