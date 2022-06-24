@@ -179,28 +179,3 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
-
-
-
-
-pub struct Modular<M: Metric>(M);
-impl<M: Metric + Default> Default for Modular<M> {
-    fn default() -> Self { Modular(M::default()) }
-}
-
-impl<M: Metric + Clone> Clone for Modular<M> {
-    fn clone(&self) -> Self { Self(self.0.clone()) }
-}
-impl<M: Metric + PartialEq> PartialEq for Modular<M> {
-    fn eq(&self, other: &Self) -> bool { self.0 == other.0 }
-}
-impl<M: Metric + Debug> Debug for Modular<M> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Modular({:?})", self.0)
-    }
-}
-impl<M: Metric> Metric for Modular<M> {
-    type Distance = M::Distance;
-}
-impl<M: Metric> SensitivityMetric for Modular<M> {}
-

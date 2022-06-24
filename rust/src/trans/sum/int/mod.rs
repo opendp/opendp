@@ -1,8 +1,8 @@
 mod checked;
 pub use checked::*;
 
-mod modular;
-pub use modular::*;
+mod monotonic;
+pub use monotonic::*;
 
 mod ordered;
 pub use ordered::*;

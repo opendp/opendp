@@ -12,13 +12,22 @@ use crate::dist::{AbsoluteDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
-use crate::trans::make_random_ordering;
+use crate::trans::make_ordered_random;
 
+pub fn make_bounded_sum<T: MakeBoundedSum>(bounds: (T, T)) -> Fallible<BoundedSumTrans<T>> {
+    T::make_bounded_sum(bounds)
+}
+pub fn make_sized_bounded_sum<T: MakeSizedBoundedSum>(
+    size: usize,
+    bounds: (T, T),
+) -> Fallible<SizedBoundedSumTrans<T>> {
+    T::make_sized_bounded_sum(size, bounds)
+}
+
+// implementations delegate to:
 // make_(sized_)?bounded_sum
-// make_(sized_)?bounded_int_(ordered|split|checked|modular)_sum
-// make_(sized_)?bounded_float_(sequential|pairwise|kahan|rtz)_sum
-
-const DEFAULT_SIZE_LIMIT: usize = 65536;
+// make_(sized_)?bounded_int_(checked|monotonic|ordered|split)_sum
+// make_(sized_)?bounded_float_sequential_sum
 
 type BoundedSumTrans<T> = Transformation<
     VectorDomain<BoundedDomain<T>>,
@@ -31,26 +40,24 @@ pub trait MakeBoundedSum: Sized + CheckNull + Clone + TotalOrd {
     fn make_bounded_sum(bounds: (Self, Self)) -> Fallible<BoundedSumTrans<Self>>;
 }
 
-pub fn make_bounded_sum<T: MakeBoundedSum>(bounds: (T, T)) -> Fallible<BoundedSumTrans<T>> {
-    T::make_bounded_sum(bounds)
-}
-
 macro_rules! impl_make_bounded_sum_int {
     ($($ty:ty)+) => ($(impl MakeBoundedSum for $ty {
         fn make_bounded_sum(bounds: (Self, Self)) -> Fallible<BoundedSumTrans<Self>> {
-            make_bounded_int_split_sum(bounds)
+            make_bounded_int_monotonic_sum(bounds)
+                .or_else(|_| make_bounded_int_split_sum(bounds))
         }
     })+);
 }
 impl_make_bounded_sum_int! { u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize }
 
+const DEFAULT_SIZE_LIMIT: usize = 65536;
 macro_rules! impl_make_bounded_sum_float {
     ($($ty:ty)+) => ($(impl MakeBoundedSum for $ty {
         fn make_bounded_sum(bounds: (Self, Self)) -> Fallible<BoundedSumTrans<Self>> {
             let domain = VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?);
             (
-                make_random_ordering(domain)? >>
-                make_bounded_float_sequential_sum(DEFAULT_SIZE_LIMIT, bounds)?
+                make_ordered_random(domain)? >>
+                make_bounded_float_ordered_sum(DEFAULT_SIZE_LIMIT, bounds)?
             )
         }
     })+);
@@ -73,7 +80,9 @@ pub trait MakeSizedBoundedSum: Sized + CheckNull + Clone + TotalOrd {
 macro_rules! impl_make_sized_bounded_sum_int {
     ($($ty:ty)+) => ($(impl MakeSizedBoundedSum for $ty {
         fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<Self>> {
-            make_sized_bounded_int_split_sum(size, bounds)
+            make_sized_bounded_int_checked_sum(size, bounds)
+                .or_else(|_| make_sized_bounded_int_monotonic_sum(size, bounds))
+                .or_else(|_| make_sized_bounded_int_split_sum(size, bounds))
         }
     })+);
 }
@@ -82,18 +91,11 @@ macro_rules! impl_make_sized_bounded_sum_float {
     ($($ty:ty)+) => ($(impl MakeSizedBoundedSum for $ty {
         fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<Self>> {
             let domain = SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?), size);
-            make_random_ordering(domain)? >> make_sized_bounded_float_sequential_sum(size, bounds)?
+            make_ordered_random(domain)? >> make_sized_bounded_float_ordered_sum(size, bounds)?
         }
     })+);
 }
 impl_make_sized_bounded_sum_float! { f32 f64 }
-
-pub fn make_sized_bounded_sum<T: MakeSizedBoundedSum>(
-    size: usize,
-    bounds: (T, T),
-) -> Fallible<SizedBoundedSumTrans<T>> {
-    T::make_sized_bounded_sum(size, bounds)
-}
 
 #[cfg(test)]
 mod tests {

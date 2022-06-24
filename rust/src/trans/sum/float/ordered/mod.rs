@@ -14,7 +14,7 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub fn make_bounded_float_sequential_sum<T>(
+pub fn make_bounded_float_ordered_sum<T>(
     size_limit: usize,
     bounds: (T, T),
 ) -> Fallible<
@@ -68,7 +68,7 @@ where
     ))
 }
 
-pub fn make_sized_bounded_float_sequential_sum<T>(
+pub fn make_sized_bounded_float_ordered_sum<T>(
     size: usize,
     bounds: (T, T),
 ) -> Fallible<

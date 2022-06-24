@@ -14,10 +14,10 @@ use crate::traits::{
     AlertingAbs, CheckNull, DistanceConstant, ExactIntCast, FloatBits, InfAdd, InfCast, InfDiv,
     InfMul, InfPow, InfSub, SaturatingAdd,
 };
-use crate::trans::{make_bounded_float_sequential_sum, make_sized_bounded_float_sequential_sum};
+use crate::trans::{make_bounded_float_ordered_sum, make_sized_bounded_float_ordered_sum};
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_bounded_float_sequential_sum(
+pub extern "C" fn opendp_trans__make_bounded_float_ordered_sum(
     size_limit: c_uint,
     bounds: *const AnyObject,
     T: *const c_char,
@@ -45,7 +45,7 @@ pub extern "C" fn opendp_trans__make_bounded_float_sequential_sum(
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_bounded_float_sequential_sum::<T>(size_limit, bounds).into_any()
+        make_bounded_float_ordered_sum::<T>(size_limit, bounds).into_any()
     }
     let size_limit = size_limit as usize;
     let T = try_!(Type::try_from(T));
@@ -55,7 +55,7 @@ pub extern "C" fn opendp_trans__make_bounded_float_sequential_sum(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_sized_bounded_float_sequential_sum(
+pub extern "C" fn opendp_trans__make_sized_bounded_float_ordered_sum(
     size: c_uint,
     bounds: *const AnyObject,
     T: *const c_char,
@@ -77,7 +77,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_float_sequential_sum(
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_sized_bounded_float_sequential_sum::<T>(size, bounds).into_any()
+        make_sized_bounded_float_ordered_sum::<T>(size, bounds).into_any()
     }
     let size = size as usize;
     let T = try_!(Type::try_from(T));
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_make_bounded_sum() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_bounded_float_sequential_sum(
+        let transformation = Result::from(opendp_trans__make_bounded_float_ordered_sum(
             100, // I know the dataset is small; it is no larger than 100
             util::into_raw(AnyObject::new((0., 10.))),
             "f64".to_char_p(),
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_make_bounded_sum_n() -> Fallible<()> {
-        let transformation = Result::from(opendp_trans__make_sized_bounded_float_sequential_sum(
+        let transformation = Result::from(opendp_trans__make_sized_bounded_float_ordered_sum(
             3 as c_uint,
             util::into_raw(AnyObject::new((0., 10.))),
             "f64".to_char_p(),
