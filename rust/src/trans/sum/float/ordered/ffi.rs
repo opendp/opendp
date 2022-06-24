@@ -34,6 +34,7 @@ pub extern "C" fn opendp_trans__make_bounded_float_ordered_sum(
             + ExactIntCast<IntDistance>
             + ExactIntCast<T::Bits>
             + InfAdd
+            + InfSub
             + InfMul
             + InfDiv
             + InfPow

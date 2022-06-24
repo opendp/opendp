@@ -33,6 +33,7 @@ where
         + ExactIntCast<IntDistance>
         + ExactIntCast<T::Bits>
         + InfAdd
+        + InfSub
         + InfMul
         + InfDiv
         + InfPow
@@ -48,22 +49,28 @@ where
     let mantissa_bits = T::exact_int_cast(T::MANTISSA_BITS)?;
     let _2 = T::one().inf_add(&T::one())?;
 
-    let relaxation = size_limit_
+    let accuracy = size_limit_
         .inf_mul(&size_limit_)?
-        .inf_div(&_2.inf_pow(&mantissa_bits)?)?;
+        .inf_div(&_2.inf_pow(&mantissa_bits.neg_inf_sub(&T::one())?)?)?;
     let ideal_sensitivity = lower.alerting_abs()?.total_max(upper)?;
 
     Ok(Transformation::new(
         VectorDomain::new(BoundedDomain::new_closed(bounds)?),
         AllDomain::new(),
-        Function::new(move |arg: &Vec<T>| arg.iter().take(size_limit)
-            .fold(T::zero(), |acc, v| acc.saturating_add(v))),
+        Function::new(move |arg: &Vec<T>| {
+            arg.iter()
+                .take(size_limit)
+                .fold(T::zero(), |acc, v| acc.saturating_add(v))
+        }),
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
-            T::inf_cast(*d_in)?
-                .inf_mul(&ideal_sensitivity)?
-                .inf_add(&relaxation)
+            // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
+            //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
+            //       <= d_in * max(|L|, U) + 2 * accuracy
+            //       =  d_in * max(|L|, U) + 2 * n^2/2^k * max(|L|, U)
+            //       =  (d_in + n^2/2^(k - 1)) * max(|L|, U)
+            T::inf_cast(*d_in)?.inf_add(&accuracy)?.inf_mul(&ideal_sensitivity)
         }),
     ))
 }
@@ -99,22 +106,28 @@ where
     let mantissa_bits = T::exact_int_cast(T::MANTISSA_BITS)?;
     let _2 = T::one().inf_add(&T::one())?;
 
-    let relaxation = size_
+    let accuracy = size_
         .inf_mul(&size_)?
-        .inf_div(&_2.inf_pow(&mantissa_bits)?)?;
+        .inf_div(&_2.inf_pow(&mantissa_bits.neg_inf_sub(&T::one())?)?)?;
     let ideal_sensitivity = upper.inf_sub(&lower)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
         AllDomain::new(),
-        Function::new(move |arg: &Vec<T>| arg.iter().take(size)
-            .fold(T::zero(), |acc, v| acc.saturating_add(v))),
+        Function::new(move |arg: &Vec<T>| {
+            arg.iter()
+                .take(size)
+                .fold(T::zero(), |acc, v| acc.saturating_add(v))
+        }),
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
-            T::inf_cast(*d_in / 2)?
-                .inf_mul(&ideal_sensitivity)?
-                .inf_add(&relaxation)
+            // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
+            //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
+            //       <= d_in * max(|L|, U) + 2 * accuracy
+            //       =  d_in * max(|L|, U) + 2 * n^2/2^k * max(|L|, U)
+            //       =  (d_in + n^2/2^(k - 1)) * max(|L|, U)
+            T::inf_cast(*d_in)?.inf_add(&accuracy)?.inf_mul(&ideal_sensitivity)
         }),
     ))
 }
