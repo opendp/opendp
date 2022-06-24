@@ -27,7 +27,7 @@ pub fn make_sized_bounded_sum<T: MakeSizedBoundedSum>(
 // implementations delegate to:
 // make_(sized_)?bounded_sum
 // make_(sized_)?bounded_int_(checked|monotonic|ordered|split)_sum
-// make_(sized_)?bounded_float_sequential_sum
+// make_(sized_)?bounded_float_(checked|ordered)_sum
 
 type BoundedSumTrans<T> = Transformation<
     VectorDomain<BoundedDomain<T>>,
@@ -90,8 +90,13 @@ impl_make_sized_bounded_sum_int! { u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128
 macro_rules! impl_make_sized_bounded_sum_float {
     ($($ty:ty)+) => ($(impl MakeSizedBoundedSum for $ty {
         fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<Self>> {
-            let domain = SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?), size);
-            make_ordered_random(domain)? >> make_sized_bounded_float_ordered_sum(size, bounds)?
+
+            // 1. use the checked sum first, as floats are unlikely to overflow
+            make_sized_bounded_float_checked_sum(size, bounds).or_else(|_| {
+                let domain = SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?), size);
+                // 2. fall back to ordered summation
+                make_ordered_random(domain)? >> make_sized_bounded_float_ordered_sum(size, bounds)?
+            })
         }
     })+);
 }
