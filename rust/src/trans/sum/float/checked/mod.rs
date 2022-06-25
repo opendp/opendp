@@ -7,7 +7,7 @@ use crate::{
     traits::{ExactIntCast, InfAdd, InfCast, InfMul, InfSub},
 };
 
-use super::{Float, Pairwise, Sequential, SumError};
+use super::{Float, Pairwise, Sequential, SumRelaxation};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -24,12 +24,13 @@ pub fn make_bounded_float_checked_sum<S>(
     >,
 >
 where
-    S: CheckedSum,
+    S: UncheckedSum,
     S::Item: 'static + Float,
 {
     let size_limit_ = S::Item::exact_int_cast(size_limit)?;
     let (lower, upper) = bounds.clone();
 
+    // Run a static check. 
     lower
         .inf_mul(&size_limit_)
         .or(upper.inf_mul(&size_limit_))
@@ -40,8 +41,8 @@ where
             )
         })?;
 
-    let error = S::error(size_limit, lower.clone(), upper.clone())?;
     let ideal_sensitivity = upper.inf_sub(&lower)?;
+    let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
         SizedDomain::new(
@@ -54,19 +55,18 @@ where
             if arg.len() > size_limit {
                 data.shuffle()?
             }
-            Ok(S::infallible_sum(&data[..size_limit.min(data.len())]))
+            Ok(S::unchecked_sum(&data[..size_limit.min(data.len())]))
         }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
-            //       <= d_in * max(|L|, U) + 2 * accuracy
-            //       =  d_in * max(|L|, U) + 2 * n^2/2^k * max(|L|, U)
-            //       =  d_in * max(|L|, U) + n^2/2^(k - 1) * max(|L|, U)
+            //       <= d_in * max(|L|, U) + 2 * error
+            //       =  d_in * max(|L|, U) + relaxation
             S::Item::inf_cast(*d_in)?
                 .inf_mul(&ideal_sensitivity)?
-                .inf_add(&error)
+                .inf_add(&relaxation)
         }),
     ))
 }
@@ -83,13 +83,13 @@ pub fn make_sized_bounded_float_checked_sum<S>(
     >,
 >
 where
-    S: CheckedSum,
+    S: UncheckedSum,
     S::Item: 'static + Float,
 {
     let size_ = S::Item::exact_int_cast(size)?;
     let (lower, upper) = bounds.clone();
-    let error = S::error(size, lower.clone(), upper.clone())?;
 
+    // Run a static check. 
     lower
         .inf_mul(&size_)
         .or(upper.inf_mul(&size_))
@@ -101,43 +101,44 @@ where
         })?;
 
     let ideal_sensitivity = upper.inf_sub(&lower)?;
+    let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
         AllDomain::new(),
-        Function::new(move |arg: &Vec<S::Item>| S::infallible_sum(arg)),
+        // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
+        Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
             //       <= d_in * (U - L) + 2 * error
-            //       =  d_in * (U - L) + 2 * n^2/2^k * max(|L|, U)
-            //       =  d_in * (U - L) + n^2/2^(k - 1) * max(|L|, U)
+            //       =  d_in * (U - L) + relaxation
             S::Item::inf_cast(*d_in)?
                 .inf_mul(&ideal_sensitivity)?
-                .inf_add(&error)
+                .inf_add(&relaxation)
         }),
     ))
 }
 
-pub trait CheckedSum: SumError {
-    fn infallible_sum(arg: &[Self::Item]) -> Self::Item;
+pub trait UncheckedSum: SumRelaxation {
+    fn unchecked_sum(arg: &[Self::Item]) -> Self::Item;
 }
-impl<T: Float> CheckedSum for Sequential<T> {
-    fn infallible_sum(arg: &[T]) -> T {
+impl<T: Float> UncheckedSum for Sequential<T> {
+    fn unchecked_sum(arg: &[T]) -> T {
         arg.iter().cloned().sum()
     }
 }
 
-impl<T: Float> CheckedSum for Pairwise<T> {
-    fn infallible_sum(arg: &[T]) -> T {
+impl<T: Float> UncheckedSum for Pairwise<T> {
+    fn unchecked_sum(arg: &[T]) -> T {
         match arg.len() {
             0 => T::zero(),
             1 => arg[0].clone(),
             n => {
                 let m = n / 2;
-                Self::infallible_sum(&arg[..m]) + Self::infallible_sum(&arg[m..])
+                Self::unchecked_sum(&arg[..m]) + Self::unchecked_sum(&arg[m..])
             }
         }
     }

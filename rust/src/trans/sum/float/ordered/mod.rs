@@ -6,7 +6,7 @@ use crate::{
     traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd},
 };
 
-use super::{Float, Pairwise, Sequential, SumError};
+use super::{Float, Pairwise, Sequential, SumRelaxation};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -27,9 +27,8 @@ where
     S::Item: 'static + Float,
 {
     let (lower, upper) = bounds.clone();
-
-    let error = S::error(size_limit, lower.clone(), upper.clone())?;
     let ideal_sensitivity = lower.alerting_abs()?.total_max(upper)?;
+    let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
         VectorDomain::new(BoundedDomain::new_closed(bounds)?),
@@ -42,12 +41,11 @@ where
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
-            //       <= d_in * max(|L|, U) + 2 * accuracy
-            //       =  d_in * max(|L|, U) + 2 * n^2/2^k * max(|L|, U)
-            //       =  d_in * max(|L|, U) + n^2/2^(k - 1) * max(|L|, U)
+            //       <= d_in * max(|L|, U) + 2 * error
+            //       =  d_in * max(|L|, U) + relaxation
             S::Item::inf_cast(*d_in)?
                 .inf_mul(&ideal_sensitivity)?
-                .inf_add(&error)
+                .inf_add(&relaxation)
         }),
     ))
 }
@@ -68,8 +66,8 @@ where
     S::Item: 'static + Float,
 {
     let (lower, upper) = bounds.clone();
-    let error = S::error(size, lower.clone(), upper.clone())?;
     let ideal_sensitivity = upper.inf_sub(&lower)?;
+    let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
@@ -80,17 +78,16 @@ where
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
-            //       <= d_in * (U - L) + 2 * accuracy
-            //       =  d_in * (U - L) + 2 * n^2/2^k * (U - L)
-            //       =  (d_in + n^2/2^(k - 1)) * (U - L)
+            //       <= d_in * (U - L) + 2 * error
+            //       =  d_in * (U - L) + relaxation
             S::Item::inf_cast(*d_in)?
                 .inf_mul(&ideal_sensitivity)?
-                .inf_add(&error)
+                .inf_add(&relaxation)
         }),
     ))
 }
 
-pub trait SaturatingSum: SumError {
+pub trait SaturatingSum: SumRelaxation {
     fn saturating_sum(arg: &[Self::Item]) -> Self::Item;
 }
 

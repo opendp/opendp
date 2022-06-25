@@ -19,6 +19,8 @@ use crate::{
 
 pub trait Float:
     CheckNull
+    + num::Bounded
+    + num::Float
     + Clone
     + TotalOrd
     + ExactIntCast<usize>
@@ -40,6 +42,8 @@ pub trait Float:
 }
 impl<T> Float for T where
     T: CheckNull
+        + num::Bounded
+        + num::Float
         + Clone
         + TotalOrd
         + ExactIntCast<usize>
@@ -66,15 +70,14 @@ pub struct Sequential<T>(PhantomData<T>);
 // Marker type to represent pairwise, or cascading summation
 pub struct Pairwise<T>(PhantomData<T>);
 
-pub trait SumError {
+pub trait SumRelaxation {
     type Item: Float;
-    fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item>;
+    fn relaxation(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item>;
 }
 
-
-impl<T: Float> SumError for Sequential<T> {
+impl<T: Float> SumRelaxation for Sequential<T> {
     type Item = T;
-    fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
+    fn relaxation(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
         let size = T::exact_int_cast(size)?;
         let mantissa_bits = T::exact_int_cast(T::MANTISSA_BITS)?;
         let _2 = T::exact_int_cast(2)?;
@@ -86,9 +89,9 @@ impl<T: Float> SumError for Sequential<T> {
     }
 }
 
-impl<T: Float> SumError for Pairwise<T> {
+impl<T: Float> SumRelaxation for Pairwise<T> {
     type Item = T;
-    fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
+    fn relaxation(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
         let size = T::exact_int_cast(size)?;
         let mantissa_bits = T::exact_int_cast(T::MANTISSA_BITS)?;
         let _2 = T::exact_int_cast(2)?;
