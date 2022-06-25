@@ -66,29 +66,6 @@ pub struct Sequential<T>(PhantomData<T>);
 // Marker type to represent pairwise, or cascading summation
 pub struct Pairwise<T>(PhantomData<T>);
 
-pub trait SaturatingSum: SumError {
-    fn saturating_sum(arg: &[Self::Item]) -> Self::Item;
-}
-
-impl<T: Float> SaturatingSum for Sequential<T> {
-    fn saturating_sum(arg: &[T]) -> T {
-        arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))
-    }
-}
-
-impl<T: Float> SaturatingSum for Pairwise<T> {
-    fn saturating_sum(arg: &[T]) -> T {
-        match arg.len() {
-            0 => T::zero(),
-            1 => arg[0].clone(),
-            n => {
-                let m = n / 2;
-                Self::infallible_sum(&arg[..m]).saturating_add(&Self::infallible_sum(&arg[m..]))
-            }
-        }
-    }
-}
-
 pub trait SumError {
     type Item: Float;
     fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item>;

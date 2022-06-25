@@ -3,11 +3,10 @@ use crate::{
     dist::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    samplers::Shuffle,
     traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd},
 };
 
-use super::{Float, SaturatingSum};
+use super::{Float, Pairwise, Sequential, SumError};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -35,12 +34,8 @@ where
     Ok(Transformation::new(
         VectorDomain::new(BoundedDomain::new_closed(bounds)?),
         AllDomain::new(),
-        Function::new_fallible(move |arg: &Vec<S::Item>| {
-            let mut data = arg.clone();
-            if arg.len() > size_limit {
-                data.shuffle()?
-            }
-            Ok(S::saturating_sum(&data[..size_limit.min(data.len())]))
+        Function::new(move |arg: &Vec<S::Item>| {
+            S::saturating_sum(&arg[..size_limit.min(arg.len())])
         }),
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),
@@ -93,4 +88,27 @@ where
                 .inf_add(&error)
         }),
     ))
+}
+
+pub trait SaturatingSum: SumError {
+    fn saturating_sum(arg: &[Self::Item]) -> Self::Item;
+}
+
+impl<T: Float> SaturatingSum for Sequential<T> {
+    fn saturating_sum(arg: &[T]) -> T {
+        arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))
+    }
+}
+
+impl<T: Float> SaturatingSum for Pairwise<T> {
+    fn saturating_sum(arg: &[T]) -> T {
+        match arg.len() {
+            0 => T::zero(),
+            1 => arg[0].clone(),
+            n => {
+                let m = n / 2;
+                Self::saturating_sum(&arg[..m]).saturating_add(&Self::saturating_sum(&arg[m..]))
+            }
+        }
+    }
 }
