@@ -201,16 +201,16 @@ def test_sized_bounded_sum():
     assert query.check(1, 10. + 1e-12)
 
     query = make_sized_bounded_sum(size=10_000, bounds=(0., 10.))
-    assert query.check(1, 10. + 1e-6)
+    assert query.check(1, 10. + 1e-9)
 
     query = make_sized_bounded_sum(size=100_000, bounds=(0., 10.))
-    assert query.check(1, 10. + 1e-4)
+    assert query.check(1, 10. + 1e-8)
 
     query = make_sized_bounded_sum(size=1_000_000, bounds=(0., 10.))
-    assert query.check(1, 10. + 1e-2)
+    assert query.check(1, 10. + 1e-7)
 
     query = make_sized_bounded_sum(size=10_000_000, bounds=(0., 10.))
-    assert query.check(1, 10. + 1.)
+    assert query.check(1, 10. + 1e-5)
 
 
 def test_bounded_variance():

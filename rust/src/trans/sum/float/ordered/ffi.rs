@@ -2,19 +2,14 @@ use std::convert::TryFrom;
 use std::iter::Sum;
 use std::os::raw::{c_char, c_uint};
 
-use num::{One, Zero};
-
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
 use crate::dist::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{
-    AlertingAbs, CheckNull, DistanceConstant, ExactIntCast, FloatBits, InfAdd, InfCast, InfDiv,
-    InfMul, InfPow, InfSub, SaturatingAdd,
-};
-use crate::trans::{make_bounded_float_ordered_sum, make_sized_bounded_float_ordered_sum};
+use crate::traits::InfCast;
+use crate::trans::{make_bounded_float_ordered_sum, make_sized_bounded_float_ordered_sum, Float, Pairwise};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_float_ordered_sum(
@@ -27,26 +22,11 @@ pub extern "C" fn opendp_trans__make_bounded_float_ordered_sum(
         bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance>
-            + Zero
-            + One
-            + ExactIntCast<usize>
-            + ExactIntCast<IntDistance>
-            + ExactIntCast<T::Bits>
-            + InfAdd
-            + InfSub
-            + InfMul
-            + InfDiv
-            + InfPow
-            + FloatBits
-            + AlertingAbs
-            + SaturatingAdd
-            + CheckNull,
-        for<'a> T: Sum<&'a T>,
+        T: 'static + Float,
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_bounded_float_ordered_sum::<T>(size_limit, bounds).into_any()
+        make_bounded_float_ordered_sum::<Pairwise<T>>(size_limit, bounds).into_any()
     }
     let size_limit = size_limit as usize;
     let T = try_!(Type::try_from(T));
@@ -63,22 +43,12 @@ pub extern "C" fn opendp_trans__make_sized_bounded_float_ordered_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance>
-            + Zero
-            + ExactIntCast<T::Bits>
-            + InfAdd
-            + InfPow
-            + One
-            + FloatBits
-            + ExactIntCast<usize>
-            + InfSub
-            + SaturatingAdd
-            + CheckNull,
+        T: 'static + Float,
         for<'a> T: Sum<&'a T>,
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_sized_bounded_float_ordered_sum::<T>(size, bounds).into_any()
+        make_sized_bounded_float_ordered_sum::<Pairwise<T>>(size, bounds).into_any()
     }
     let size = size as usize;
     let T = try_!(Type::try_from(T));

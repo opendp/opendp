@@ -57,7 +57,7 @@ macro_rules! impl_make_bounded_sum_float {
             let domain = VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?);
             (
                 make_ordered_random(domain)? >>
-                make_bounded_float_ordered_sum(DEFAULT_SIZE_LIMIT, bounds)?
+                make_bounded_float_ordered_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
             )
         }
     })+);
@@ -92,10 +92,10 @@ macro_rules! impl_make_sized_bounded_sum_float {
         fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<Self>> {
 
             // 1. use the checked sum first, as floats are unlikely to overflow
-            make_sized_bounded_float_checked_sum(size, bounds).or_else(|_| {
+            make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds).or_else(|_| {
                 let domain = SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?), size);
                 // 2. fall back to ordered summation
-                make_ordered_random(domain)? >> make_sized_bounded_float_ordered_sum(size, bounds)?
+                make_ordered_random(domain)? >> make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)?
             })
         }
     })+);

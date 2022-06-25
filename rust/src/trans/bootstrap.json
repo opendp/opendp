@@ -851,6 +851,39 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
+    "make_bounded_float_checked_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats with unknown dataset size. \nThis computes the sum on up to `size_limit` rows randomly selected from the input.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size_limit",
+                "c_type": "unsigned int",
+                "description": "Limit on number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
     "make_sized_bounded_float_checked_sum": {
         "description": "Make a Transformation that computes the sum of bounded floats with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.",
         "features": ["contrib"],

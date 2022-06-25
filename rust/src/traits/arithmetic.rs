@@ -54,10 +54,16 @@ pub trait InfExp: Sized {
     fn neg_inf_exp(self) -> Fallible<Self>;
 }
 
-/// Computes the logarithm with specified rounding that returns an error if overflowing.
+/// Computes the natural logarithm with specified rounding that returns an error if overflowing.
 pub trait InfLn: Sized {
     fn inf_ln(self) -> Fallible<Self>;
     fn neg_inf_ln(self) -> Fallible<Self>;
+}
+
+/// Computes the base 2 logarithm with specified rounding that returns an error if overflowing.
+pub trait InfLog2: Sized {
+    fn inf_log2(self) -> Fallible<Self>;
+    fn neg_inf_log2(self) -> Fallible<Self>;
 }
 
 /// Computes the square root with specified rounding that returns an error if overflowing.
@@ -306,6 +312,7 @@ macro_rules! impl_float_inf_uni {
     }
 }
 impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln_round, ln);
+impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2_round, log2);
 impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp_round, exp);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt_round, sqrt);
 
