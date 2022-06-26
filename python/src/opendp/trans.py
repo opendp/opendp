@@ -1367,7 +1367,7 @@ def make_sized_bounded_sum(
 def make_bounded_float_checked_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats with unknown dataset size. 
     This computes the sum on up to `size_limit` rows randomly selected from the input.
@@ -1376,8 +1376,8 @@ def make_bounded_float_checked_sum(
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+    :type S: :ref:`RuntimeTypeDescriptor`
     :return: A bounded_float_checked_sum step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1387,25 +1387,27 @@ def make_bounded_float_checked_sum(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_domain_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
     
     # Convert arguments to c types.
     size_limit = py_to_c(size_limit, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_float_checked_sum
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size_limit, bounds, T), Transformation))
+    return c_to_py(unwrap(function(size_limit, bounds, S), Transformation))
 
 
 def make_sized_bounded_float_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
@@ -1414,8 +1416,8 @@ def make_sized_bounded_float_checked_sum(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+    :type S: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_float_checked_sum step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1425,25 +1427,27 @@ def make_sized_bounded_float_checked_sum(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_domain_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_float_checked_sum
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, S), Transformation))
 
 
 def make_bounded_float_ordered_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
@@ -1452,8 +1456,8 @@ def make_bounded_float_ordered_sum(
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+    :type S: :ref:`RuntimeTypeDescriptor`
     :return: A bounded_float_ordered_sum step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1463,25 +1467,27 @@ def make_bounded_float_ordered_sum(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_domain_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
     
     # Convert arguments to c types.
     size_limit = py_to_c(size_limit, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_float_ordered_sum
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size_limit, bounds, T), Transformation))
+    return c_to_py(unwrap(function(size_limit, bounds, S), Transformation))
 
 
 def make_sized_bounded_float_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
@@ -1491,8 +1497,8 @@ def make_sized_bounded_float_ordered_sum(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+    :type S: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_float_ordered_sum step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1502,19 +1508,21 @@ def make_sized_bounded_float_ordered_sum(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_domain_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_float_ordered_sum
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, S), Transformation))
 
 
 def make_sized_bounded_int_checked_sum(
