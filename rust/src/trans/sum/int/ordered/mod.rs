@@ -5,7 +5,7 @@ use crate::{
     dist::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd},
+    traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd},
 };
 
 use super::AddIsExact;
@@ -25,7 +25,6 @@ pub fn make_bounded_int_ordered_sum<T>(
 >
 where
     T: DistanceConstant<IntDistance> + CheckNull + Zero + AlertingAbs + SaturatingAdd + AddIsExact,
-    IntDistance: InfCast<T>,
 {
     let (lower, upper) = bounds.clone();
     Ok(Transformation::new(
@@ -51,7 +50,6 @@ pub fn make_sized_bounded_int_ordered_sum<T>(
 >
 where
     T: DistanceConstant<IntDistance> + InfSub + CheckNull + Zero + SaturatingAdd + AddIsExact,
-    IntDistance: InfCast<T>,
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;

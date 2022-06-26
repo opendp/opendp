@@ -13,7 +13,7 @@ use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::meas::{make_randomized_response, make_randomized_response_bool};
 use crate::samplers::SampleBernoulli;
-use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfLn, InfSub, InfDiv};
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfLn, InfSub, InfDiv};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_randomized_response_bool(
@@ -23,8 +23,7 @@ pub extern "C" fn opendp_meas__make_randomized_response_bool(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<Q>(prob: *const c_void, constant_time: bool) -> FfiResult<*mut AnyMeasurement>
         where bool: SampleBernoulli<Q>,
-              Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn,
-              IntDistance: InfCast<Q> {
+              Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn {
         let prob = *try_as_ref!(prob as *const Q);
         make_randomized_response_bool::<Q>(prob, constant_time).into_any()
     }
@@ -50,8 +49,7 @@ pub extern "C" fn opendp_meas__make_randomized_response(
     ) -> FfiResult<*mut AnyMeasurement>
         where T: 'static + Clone + Eq + Hash + CheckNull,
               bool: SampleBernoulli<Q>,
-              Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv,
-              IntDistance: InfCast<Q> {
+              Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv {
         let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<T>>()).clone();
         let prob = *try_as_ref!(prob as *const Q);
         make_randomized_response::<T, Q>(
