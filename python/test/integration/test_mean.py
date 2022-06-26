@@ -33,7 +33,7 @@ def test_dp_mean():
         # Clamp values
         make_clamp(bounds) >>
         # Resize dataset length
-        make_bounded_resize(n, bounds, impute_constant, MO=SymmetricDistance) >>
+        make_bounded_resize(n, bounds, impute_constant) >>
         # Aggregate with mean
         make_sized_bounded_mean(n, bounds) >>
         # Noise

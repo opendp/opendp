@@ -1,4 +1,3 @@
-from opendp.typing import SymmetricDistance
 
 
 def test_sized_bounded_variance():
@@ -26,7 +25,7 @@ def test_sized_bounded_variance():
         # Clamp values
         make_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_bounded_resize(size=size, bounds=bounds, constant=0., MO=SymmetricDistance) >>
+        make_bounded_resize(size=size, bounds=bounds, constant=0.) >>
         # Aggregate with variance
         make_sized_bounded_variance(size=size, bounds=bounds)
     )

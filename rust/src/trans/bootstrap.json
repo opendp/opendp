@@ -781,7 +781,7 @@
             {
                 "name": "MO",
                 "is_type": true,
-                "default": "InsertDeleteDistance",
+                "default": "SymmetricDistance",
                 "description": "Output metric."
             }
         ],

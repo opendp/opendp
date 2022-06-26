@@ -1237,7 +1237,7 @@ def make_bounded_resize(
     constant,
     TA: RuntimeTypeDescriptor = None,
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    MO: RuntimeTypeDescriptor = "InsertDeleteDistance"
+    MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     

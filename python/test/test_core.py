@@ -74,7 +74,7 @@ def test_bisect_chain():
 
     pre = (
         make_clamp(bounds=(0., 1.)) >>
-        make_bounded_resize(size=10, bounds=(0., 1.), constant=0., MO=SymmetricDistance) >>
+        make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
         make_sized_bounded_mean(size=10, bounds=(0., 1.))
     )
     chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
