@@ -94,11 +94,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_bounded_sum() -> Fallible<()> {
+    fn test_make_bounded_float_ordered_sum() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_bounded_float_ordered_sum(
             100, // I know the dataset is small; it is no larger than 100
             util::into_raw(AnyObject::new((0., 10.))),
-            "f64".to_char_p(),
+            "Pairwise<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1., 2., 3.]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
@@ -108,11 +108,11 @@ mod tests {
     }
 
     #[test]
-    fn test_make_bounded_sum_n() -> Fallible<()> {
+    fn test_make_sized_bounded_float_ordered_sum() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_float_ordered_sum(
             3 as c_uint,
             util::into_raw(AnyObject::new((0., 10.))),
-            "f64".to_char_p(),
+            "Pairwise<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1., 2., 3.]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
