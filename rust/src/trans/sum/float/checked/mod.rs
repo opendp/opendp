@@ -4,7 +4,8 @@ use crate::{
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     samplers::Shuffle,
-    traits::{ExactIntCast, InfAdd, InfCast, InfMul, InfSub},
+    traits::{InfAdd, InfCast, InfMul, InfSub},
+    trans::CanSumOverflow
 };
 
 use super::{Float, Pairwise, Sequential, SumRelaxation};
@@ -17,7 +18,7 @@ pub fn make_bounded_float_checked_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<S::Item>>>,
+        VectorDomain<BoundedDomain<S::Item>>,
         AllDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
@@ -27,28 +28,17 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
 {
-    let size_limit_ = S::Item::exact_int_cast(size_limit)?;
-    let (lower, upper) = bounds.clone();
+    if S::Item::sum_can_overflow(size_limit, bounds) {
+        return fallible!(MakeTransformation, "potential for overflow when computing function")
+    }
 
-    // Run a static check. 
-    lower
-        .inf_mul(&size_limit_)
-        .or(upper.inf_mul(&size_limit_))
-        .map_err(|_| {
-            err!(
-                MakeTransformation,
-                "potential for overflow when computing function"
-            )
-        })?;
-
+    let (lower, upper) = bounds.clone();   
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        SizedDomain::new(
+        
             VectorDomain::new(BoundedDomain::new_closed(bounds)?),
-            size_limit,
-        ),
         AllDomain::new(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
@@ -86,20 +76,11 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
 {
-    let size_ = S::Item::exact_int_cast(size)?;
-    let (lower, upper) = bounds.clone();
+    if S::Item::sum_can_overflow(size, bounds) {
+        return fallible!(MakeTransformation, "potential for overflow when computing function")
+    }
 
-    // Run a static check. 
-    lower
-        .inf_mul(&size_)
-        .or(upper.inf_mul(&size_))
-        .map_err(|_| {
-            err!(
-                MakeTransformation,
-                "potential for overflow when computing function"
-            )
-        })?;
-
+    let (lower, upper) = bounds.clone();   
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     let relaxation = S::relaxation(size, lower, upper)?;
 

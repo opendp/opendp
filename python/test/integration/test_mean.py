@@ -1,6 +1,7 @@
 from opendp.trans import *
 from opendp.meas import *
 from opendp.mod import enable_features
+from opendp.typing import SymmetricDistance
 
 enable_features("floating-point", "contrib")
 
@@ -32,7 +33,7 @@ def test_dp_mean():
         # Clamp values
         make_clamp(bounds) >>
         # Resize dataset length
-        make_bounded_resize(n, bounds, impute_constant) >>
+        make_bounded_resize(n, bounds, impute_constant, MO=SymmetricDistance) >>
         # Aggregate with mean
         make_sized_bounded_mean(n, bounds) >>
         # Noise

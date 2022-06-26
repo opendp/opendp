@@ -30,10 +30,10 @@ where
         + AlertingAbs
         + SaturatingAdd
         + AddIsExact
-        + CheckSameSign,
+        + IsMonotonic,
     IntDistance: InfCast<T> 
 {
-    if !T::same_sign(bounds.clone()) {
+    if !T::is_monotonic(bounds.clone()) {
         return fallible!(MakeTransformation, "monotonic summation requires bounds to share the same sign");
     }
 
@@ -70,10 +70,10 @@ where
         + Zero
         + SaturatingAdd
         + AddIsExact
-        + CheckSameSign,
+        + IsMonotonic,
     IntDistance: InfCast<T> 
 {
-    if !T::same_sign(bounds.clone()) {
+    if !T::is_monotonic(bounds.clone()) {
         return fallible!(MakeTransformation, "monotonic summation requires bounds to share the same sign");
     }
 
@@ -97,13 +97,13 @@ where
 }
 
 /// Checks if two elements of type T have the same sign
-pub trait CheckSameSign: Sized {
-    fn same_sign(values: (Self, Self)) -> bool;
+pub trait IsMonotonic: Sized {
+    fn is_monotonic(bounds: (Self, Self)) -> bool;
 }
 
 macro_rules! impl_same_sign_signed_int {
-    ($($ty:ty)+) => ($(impl CheckSameSign for $ty {
-        fn same_sign((a, b): (Self, Self)) -> bool {
+    ($($ty:ty)+) => ($(impl IsMonotonic for $ty {
+        fn is_monotonic((a, b): (Self, Self)) -> bool {
             a == 0 || b == 0 || (a > 0) == (b > 0)
         }
     })+)
@@ -111,8 +111,8 @@ macro_rules! impl_same_sign_signed_int {
 impl_same_sign_signed_int! { i8 i16 i32 i64 i128 isize }
 
 macro_rules! impl_same_sign_unsigned_int {
-    ($($ty:ty)+) => ($(impl CheckSameSign for $ty {
-        fn same_sign(_: (Self, Self)) -> bool {
+    ($($ty:ty)+) => ($(impl IsMonotonic for $ty {
+        fn is_monotonic(_: (Self, Self)) -> bool {
             true
         }
     })+)

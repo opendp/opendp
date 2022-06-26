@@ -17,6 +17,8 @@ use crate::{
     },
 };
 
+use super::CanSumOverflow;
+
 pub trait Float:
     CheckNull
     + num::Bounded
@@ -38,6 +40,7 @@ pub trait Float:
     + One
     + AlertingAbs
     + SaturatingAdd
+    + CanSumOverflow
 {
 }
 impl<T> Float for T where
@@ -61,6 +64,7 @@ impl<T> Float for T where
         + One
         + AlertingAbs
         + SaturatingAdd
+        + CanSumOverflow
 {
 }
 

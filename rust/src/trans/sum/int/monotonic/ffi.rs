@@ -10,7 +10,7 @@ use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd};
-use crate::trans::{make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum, AddIsExact, CheckSameSign};
+use crate::trans::{make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum, AddIsExact, IsMonotonic};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_int_monotonic_sum(
@@ -25,7 +25,7 @@ pub extern "C" fn opendp_trans__make_bounded_int_monotonic_sum(
             + AlertingAbs
             + SaturatingAdd
             + AddIsExact 
-            + CheckSameSign,
+            + IsMonotonic,
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
@@ -45,7 +45,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_int_monotonic_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance> + InfSub + CheckNull + Zero + SaturatingAdd + AddIsExact + CheckSameSign,
+        T: DistanceConstant<IntDistance> + InfSub + CheckNull + Zero + SaturatingAdd + AddIsExact + IsMonotonic,
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();

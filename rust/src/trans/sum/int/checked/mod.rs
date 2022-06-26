@@ -5,7 +5,8 @@ use crate::{
     core::{Transformation, Function, StabilityRelation}, 
     dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain}, 
     dist::{SymmetricDistance, AbsoluteDistance, IntDistance}, 
-    traits::{DistanceConstant, CheckNull, InfCast, ExactIntCast, InfSub, InfDiv}
+    traits::{DistanceConstant, CheckNull, InfCast, InfSub, InfDiv}, 
+    trans::CanSumOverflow
 };
 
 use super::AddIsExact;
@@ -26,27 +27,19 @@ pub fn make_sized_bounded_int_checked_sum<T>(
 >
 where
     T: DistanceConstant<IntDistance>
-        + ExactIntCast<usize>
         + InfSub
         + CheckNull
         + InfDiv
-        + AddIsExact,
+        + AddIsExact
+        + CanSumOverflow,
     for<'a> T: Sum<&'a T>,
     IntDistance: InfCast<T>,
 {
-    let size_ = T::exact_int_cast(size)?;
+    if T::sum_can_overflow(size, bounds.clone()) {
+        return fallible!(MakeTransformation, "potential for overflow when computing function")
+    }
+
     let (lower, upper) = bounds.clone();
-
-    lower
-        .inf_mul(&size_)
-        .or(upper.inf_mul(&size_))
-        .map_err(|_| {
-            err!(
-                MakeTransformation,
-                "potential for overflow when computing function"
-            )
-        })?;
-
     let range = upper.inf_sub(&lower)?;
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),

@@ -781,7 +781,7 @@
             {
                 "name": "MO",
                 "is_type": true,
-                "default": "SymmetricDistance",
+                "default": "InsertDeleteDistance",
                 "description": "Output metric."
             }
         ],
@@ -803,6 +803,12 @@
                 },
                 "hint": "Tuple[Any, Any]",
                 "description": "Tuple of lower and upper bounds for data in the input domain"
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance."
             },
             {
                 "name": "T",
@@ -836,6 +842,12 @@
                 },
                 "hint": "Tuple[Any, Any]",
                 "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "default": "InsertDeleteDistance",
+                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance."
             },
             {
                 "name": "T",

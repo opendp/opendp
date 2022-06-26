@@ -1237,7 +1237,7 @@ def make_bounded_resize(
     constant,
     TA: RuntimeTypeDescriptor = None,
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    MO: RuntimeTypeDescriptor = "SymmetricDistance"
+    MO: RuntimeTypeDescriptor = "InsertDeleteDistance"
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     
@@ -1283,6 +1283,7 @@ def make_bounded_resize(
 
 def make_bounded_sum(
     bounds: Tuple[Any, Any],
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data. 
@@ -1290,6 +1291,8 @@ def make_bounded_sum(
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
+    :param MI: input metric. One of SymmetricDistance or InsertDeleteDistance.
+    :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic type of data
     :type T: :ref:`RuntimeTypeDescriptor`
     :return: A bounded_sum step.
@@ -1301,23 +1304,26 @@ def make_bounded_sum(
     assert_features("contrib")
     
     # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_sum
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(bounds, T), Transformation))
+    return c_to_py(unwrap(function(bounds, MI, T), Transformation))
 
 
 def make_sized_bounded_sum(
     size: int,
     bounds: Tuple[Any, Any],
+    MI: RuntimeTypeDescriptor = "InsertDeleteDistance",
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known dataset size. 
@@ -1328,6 +1334,8 @@ def make_sized_bounded_sum(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
+    :param MI: input metric. One of SymmetricDistance or InsertDeleteDistance.
+    :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic type of data
     :type T: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_sum step.
@@ -1339,19 +1347,21 @@ def make_sized_bounded_sum(
     assert_features("contrib")
     
     # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, MI, T), Transformation))
 
 
 def make_bounded_float_checked_sum(
