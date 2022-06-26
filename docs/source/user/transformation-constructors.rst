@@ -401,7 +401,7 @@ The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time becau
      - ``VectorDomain<AllDomain<TOA>>``
      - ``SymmetricDistance``
      - ``L1Distance<TOA>/L2Distance<TOA>``
-   * - :func:`opendp.meas.make_count_by`
+   * - :func:`opendp.trans.make_count_by`
      - ``VectorDomain<BoundedDomain<TI>>``
      - ``MapDomain<AllDomain<TI>,AllDomain<TO>>``
      - ``SymmetricDistance``
@@ -409,12 +409,12 @@ The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time becau
    * - :func:`opendp.trans.make_bounded_sum`
      - ``VectorDomain<BoundedDomain<T>>``
      - ``AllDomain<T>``
-     - ``SymmetricDistance``
+     - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_sized_bounded_sum`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
      - ``AllDomain<T>``
-     - ``SymmetricDistance``
+     - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.trans.make_sized_bounded_mean`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
@@ -431,3 +431,75 @@ The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time becau
      - ``AllDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
+
+
+:func:`opendp.trans.make_bounded_sum` and :func:`opendp.trans.make_sized_bounded_sum` make a best guess as to which summation strategy to use.
+Should you need it, the following constructors give greater control over the sum.
+
+.. raw:: html
+
+   <details style="margin:-1em 0 2em 4em">
+   <summary><a>Expand Me</a></summary>
+
+The following strategies are ordered by computational efficiency:
+
+* ``checked`` can be used when the dataset size multiplied by the bounds doesn't overflow.
+* ``monotonic`` can be used when the bounds share the same sign.
+* ``ordered`` can be used when the input metric is ``InsertDeleteDistance``.
+* ``split`` separately sums positive and negative numbers, and then adds these sums together.
+
+.. ``monotonic``, ``ordered`` and ``split`` are implemented with saturation arithmetic. 
+.. ``checked``, ``monotonic`` and ``split`` protect against underestimating sensitivity by preserving associativity.
+
+All four algorithms are valid for integers, but only ``checked`` and ``ordered`` are available for floats.
+There are separate constructors for integers and floats, because floats additionally need a dataset truncation and a slightly larger sensitivity.
+The increase in float sensitivity accounts for inexact floating-point arithmetic, and is calibrated according to the length of the mantissa and underlying summation algorithm. 
+
+Floating-point summation may be further configured to either ``Sequential<T>`` or ``Pairwise<T>`` (default).
+Sequential summation results in an ``O(n^2)`` increase in sensitivity, while pairwise summation results only in a ``O(log_2(n)n))`` increase.
+
+
+.. list-table::
+   :header-rows: 1
+
+   * - Aggregator
+     - Input Domain
+     - Input Metric
+   * - :func:`opendp.trans.make_sized_bounded_int_checked_sum`
+     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_bounded_int_monotonic_sum`
+     - ``VectorDomain<BoundedDomain<T>>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_sized_bounded_int_monotonic_sum`
+     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_bounded_int_ordered_sum`
+     - ``VectorDomain<BoundedDomain<T>>``
+     - ``InsertDeleteDistance``
+   * - :func:`opendp.trans.make_sized_bounded_int_ordered_sum`
+     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``InsertDeleteDistance``
+   * - :func:`opendp.trans.make_bounded_int_split_sum`
+     - ``VectorDomain<BoundedDomain<T>>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_sized_bounded_int_split_sum`
+     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_bounded_float_checked_sum`
+     - ``VectorDomain<BoundedDomain<T>>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_sized_bounded_float_checked_sum`
+     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.trans.make_bounded_float_ordered_sum`
+     - ``VectorDomain<BoundedDomain<T>>``
+     - ``InsertDeleteDistance``
+   * - :func:`opendp.trans.make_sized_bounded_float_ordered_sum`
+     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``InsertDeleteDistance``
+
+
+.. raw:: html
+
+   </details>
