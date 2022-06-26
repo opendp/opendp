@@ -160,7 +160,7 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
                                 AlpDomain<K, T>,
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + CheckNull,
-          C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+          C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + ToPrimitive,
           T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
           AlpState<K,T> : CheckNull {
     

@@ -9,7 +9,7 @@ use crate::dist::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd};
+use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd};
 use crate::trans::{
     make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum, AddIsExact, IsMonotonic,
 };
@@ -28,7 +28,6 @@ pub extern "C" fn opendp_trans__make_bounded_int_monotonic_sum(
             + SaturatingAdd
             + AddIsExact
             + IsMonotonic,
-        IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_bounded_int_monotonic_sum::<T>(bounds).into_any()
@@ -54,7 +53,6 @@ pub extern "C" fn opendp_trans__make_sized_bounded_int_monotonic_sum(
             + SaturatingAdd
             + AddIsExact
             + IsMonotonic,
-        IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_int_monotonic_sum::<T>(size, bounds).into_any()
