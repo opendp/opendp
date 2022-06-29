@@ -25,7 +25,7 @@ where
 
 /// Implemented for any domain that supports multiplication lipschitz extensions
 pub trait LipschitzMulDomain: Domain + Default {
-    type Atom: 'static + AlertingAbs + InfMul + Clone;
+    type Atom: 'static + AlertingAbs + InfMul + Clone + SaturatingMul + CheckNull;
     fn transform(l: Self::Atom, v: &Self::Carrier) -> Self::Carrier;
 }
 
