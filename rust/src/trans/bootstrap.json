@@ -1279,12 +1279,24 @@
                 "description": "Tuple of lower and upper bounds for input data"
             },
             {
-                "name": "T",
+                "name": "S",
                 "is_type": true,
-                "description": "atomic data type",
-                "example": {
-                    "function": "get_first",
-                    "params": ["bounds"]
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
                 }
             }
         ],
@@ -1318,12 +1330,24 @@
                 "description": "Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate."
             },
             {
-                "name": "T",
+                "name": "S",
                 "is_type": true,
-                "description": "atomic data type",
-                "example": {
-                    "function": "get_first",
-                    "params": ["bounds"]
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
                 }
             }
         ],

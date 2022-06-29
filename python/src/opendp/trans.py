@@ -1785,7 +1785,7 @@ def make_sized_bounded_int_split_sum(
 def make_sized_bounded_sum_of_squared_deviations(
     size: int,
     bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of squared deviations of bounded data. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
@@ -1795,8 +1795,8 @@ def make_sized_bounded_sum_of_squared_deviations(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
-    :param T: atomic data type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+    :type S: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_sum_of_squared_deviations step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1806,26 +1806,28 @@ def make_sized_bounded_sum_of_squared_deviations(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_domain_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_sum_of_squared_deviations
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, S), Transformation))
 
 
 def make_sized_bounded_variance(
     size: int,
     bounds: Tuple[Any, Any],
     ddof: int = 1,
-    T: RuntimeTypeDescriptor = None
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the variance of bounded data. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
@@ -1837,8 +1839,8 @@ def make_sized_bounded_variance(
     :type bounds: Tuple[Any, Any]
     :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
     :type ddof: int
-    :param T: atomic data type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+    :type S: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_variance step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1848,17 +1850,19 @@ def make_sized_bounded_variance(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_domain_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     ddof = py_to_c(ddof, c_type=ctypes.c_uint)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_variance
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_uint, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, ddof, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, ddof, S), Transformation))
