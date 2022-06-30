@@ -80,7 +80,7 @@ where
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
             //       <= d_in * (U - L) + 2 * error
             //       =  d_in * (U - L) + relaxation
-            S::Item::inf_cast(*d_in)?
+            S::Item::inf_cast(d_in / 2)?
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
         }),
