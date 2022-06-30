@@ -5,8 +5,7 @@ use crate::core::{Domain, Measurement, Metric, PrivacyMap, Measure};
 use crate::dist::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::dom::SizedDomain;
 use crate::error::Fallible;
-use num::Float;
-use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P};
+use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P, InfDiv};
 
 pub trait IsSizedDomain: Domain { fn get_size(&self) -> Fallible<usize>; }
 impl<D: Domain> IsSizedDomain for SizedDomain<D> {
@@ -18,17 +17,17 @@ pub trait AmplifiableMeasure: Measure {
 }
 
 impl<Q> AmplifiableMeasure for MaxDivergence<Q>
-    where Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + Float {
+    where Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone {
     fn amplify(&self, epsilon: &Q, population_size: usize, sample_size: usize) -> Fallible<Q> {
-        let sampling_rate = Q::exact_int_cast(sample_size)? / Q::exact_int_cast(population_size)?;
-        epsilon.inf_exp_m1()?.inf_mul(&sampling_rate)?.inf_ln_1p()
+        let sampling_rate = Q::exact_int_cast(sample_size)?.inf_div(&Q::exact_int_cast(population_size)?)?;
+        epsilon.clone().inf_exp_m1()?.inf_mul(&sampling_rate)?.inf_ln_1p()
     }
 }
 impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
-    where Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + Float {
+    where Q: ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone {
     fn amplify(&self, (epsilon, delta): &(Q, Q), population_size: usize, sample_size: usize) -> Fallible<(Q, Q)> {
-        let sampling_rate = Q::exact_int_cast(sample_size)? / Q::exact_int_cast(population_size)?;
-        Ok((epsilon.inf_exp_m1()?.inf_mul(&sampling_rate)?.inf_ln_1p()?, delta.inf_mul(&sampling_rate)?))
+        let sampling_rate = Q::exact_int_cast(sample_size)?.inf_div(&Q::exact_int_cast(population_size)?)?;
+        Ok((epsilon.clone().inf_exp_m1()?.inf_mul(&sampling_rate)?.inf_ln_1p()?, delta.inf_mul(&sampling_rate)?))
     }
 }
 
