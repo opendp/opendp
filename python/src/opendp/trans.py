@@ -1149,6 +1149,7 @@ def make_index(
 def make_sized_bounded_mean(
     size: int,
     bounds: Tuple[Any, Any],
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the mean of bounded data. 
@@ -1159,6 +1160,8 @@ def make_sized_bounded_mean(
     :type size: int
     :param bounds: Tuple of inclusive lower and upper bounds of the input data.
     :type bounds: Tuple[Any, Any]
+    :param MI: input metric. One of SymmetricDistance or InsertDeleteDistance
+    :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic data type
     :type T: :ref:`RuntimeTypeDescriptor`
     :return: A sized_bounded_mean step.
@@ -1170,19 +1173,21 @@ def make_sized_bounded_mean(
     assert_features("contrib")
     
     # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_sized_bounded_mean
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, T), Transformation))
+    return c_to_py(unwrap(function(size, bounds, MI, T), Transformation))
 
 
 def make_resize(

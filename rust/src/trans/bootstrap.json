@@ -687,6 +687,12 @@
                 "description": "Tuple of inclusive lower and upper bounds of the input data."
             },
             {
+                "name": "MI",
+                "is_type": true,
+                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance",
+                "default": "SymmetricDistance"
+            },
+            {
                 "name": "T",
                 "is_type": true,
                 "description": "atomic data type",
