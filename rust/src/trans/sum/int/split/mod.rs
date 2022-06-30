@@ -133,10 +133,7 @@ mod test {
         let trans = make_sized_bounded_int_split_sum(4, (1i32, 10))?;
         let sum = trans.invoke(&vec![1, 2, 3, 4])?;
         assert_eq!(sum, 10);
-
-        // should fail under these conditions
-        assert!(make_sized_bounded_int_split_sum(2, (-1i32, 1)).is_err());
-
+        
         Ok(())
     }
 }

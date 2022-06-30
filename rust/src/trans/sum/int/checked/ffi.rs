@@ -52,13 +52,13 @@ mod tests {
     fn test_make_sized_bounded_int_checked_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_int_checked_sum(
             3 as c_uint,
-            util::into_raw(AnyObject::new((0., 10.))),
-            "f64".to_char_p(),
+            util::into_raw(AnyObject::new((0i32, 10i32))),
+            "i32".to_char_p(),
         ))?;
-        let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
+        let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
-        let res: f64 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 6.0);
+        let res: i32 = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, 6);
         Ok(())
     }
 }
