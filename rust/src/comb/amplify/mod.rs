@@ -56,6 +56,7 @@ pub fn make_population_amplification<DIA, DO, MI, MO>(
 
 #[cfg(test)]
 mod test {
+    use crate::dist::SymmetricDistance;
     use crate::error::Fallible;
     use crate::trans::make_sized_bounded_mean;
     use crate::meas::make_base_laplace;
@@ -63,7 +64,7 @@ mod test {
 
     #[test]
     fn test_amplifier() -> Fallible<()> {
-        let meas = (make_sized_bounded_mean(10, (0., 10.))? >> make_base_laplace(0.5)?)?;
+        let meas = (make_sized_bounded_mean::<SymmetricDistance, _>(10, (0., 10.))? >> make_base_laplace(0.5)?)?;
         let amp = make_population_amplification(&meas, 100)?;
         amp.function.eval(&vec![1.; 10])?;
         assert!(meas.check(&2, &(2. + 1e-6))?);
