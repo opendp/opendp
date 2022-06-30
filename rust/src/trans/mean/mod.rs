@@ -3,8 +3,8 @@ mod ffi;
 
 use num::Float;
 
-use crate::core::Transformation;
-use crate::dist::{AbsoluteDistance, SymmetricDistance};
+use crate::core::{Metric, Transformation};
+use crate::dist::AbsoluteDistance;
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::ExactIntCast;
@@ -14,19 +14,20 @@ use super::{
     MakeSizedBoundedSum,
 };
 
-pub fn make_sized_bounded_mean<T>(
+pub fn make_sized_bounded_mean<MI, T>(
     size: usize,
     bounds: (T, T),
 ) -> Fallible<
     Transformation<
         SizedDomain<VectorDomain<BoundedDomain<T>>>,
         AllDomain<T>,
-        SymmetricDistance,
+        MI,
         AbsoluteDistance<T>,
     >,
 >
 where
-    T: 'static + MakeSizedBoundedSum + ExactIntCast<usize> + Float,
+    MI: 'static + Metric,
+    T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float,
     AllDomain<T>: LipschitzMulDomain<Atom = T>,
     AbsoluteDistance<T>: LipschitzMulMetric<Distance = T>,
 {
@@ -34,17 +35,19 @@ where
         return fallible!(MakeTransformation, "dataset size must be positive");
     }
     let size_ = T::exact_int_cast(size)?;
-    make_sized_bounded_sum(size, bounds)? >> make_lipschitz_mul(size_.recip())?
+    make_sized_bounded_sum::<MI, T>(size, bounds)? >> make_lipschitz_mul(size_.recip())?
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::dist::SymmetricDistance;
     use crate::error::ExplainUnwrap;
     use crate::trans::mean::make_sized_bounded_mean;
 
     #[test]
     fn test_make_bounded_mean_hamming() {
-        let transformation = make_sized_bounded_mean(5, (0., 10.)).unwrap_test();
+        let transformation =
+            make_sized_bounded_mean::<SymmetricDistance, f64>(5, (0., 10.)).unwrap_test();
         let arg = vec![1., 2., 3., 4., 5.];
         let ret = transformation.invoke(&arg).unwrap_test();
         let expected = 3.;
@@ -54,7 +57,8 @@ mod tests {
 
     #[test]
     fn test_make_bounded_mean_symmetric() {
-        let transformation = make_sized_bounded_mean(5, (0., 10.)).unwrap_test();
+        let transformation =
+            make_sized_bounded_mean::<SymmetricDistance, _>(5, (0f64, 10.)).unwrap_test();
         let arg = vec![1., 2., 3., 4., 5.];
         let ret = transformation.invoke(&arg).unwrap_test();
         let expected = 3.;

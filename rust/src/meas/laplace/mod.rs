@@ -71,12 +71,12 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::trans::make_sized_bounded_mean;
+    use crate::{trans::make_sized_bounded_mean, dist::SymmetricDistance};
 
     #[test]
     fn test_chain_laplace() -> Fallible<()> {
         let chain = (
-            make_sized_bounded_mean(3, (10.0, 12.0))? >>
+            make_sized_bounded_mean::<SymmetricDistance, _>(3, (10.0, 12.0))? >>
             make_base_laplace(1.0)?
         )?;
         let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
