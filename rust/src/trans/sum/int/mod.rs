@@ -10,7 +10,6 @@ pub use ordered::*;
 mod split;
 pub use split::*;
 
-
 pub trait AddIsExact {}
 macro_rules! impl_addition_is_exact {
     ($($ty:ty)+) => ($(impl AddIsExact for $ty {})+)

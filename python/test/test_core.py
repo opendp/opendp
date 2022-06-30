@@ -1,6 +1,5 @@
 import pytest
 
-from opendp.typing import *
 from opendp.mod import enable_features
 enable_features('floating-point', 'contrib')
 

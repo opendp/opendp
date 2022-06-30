@@ -5,7 +5,7 @@ use crate::{
     error::Fallible,
     samplers::Shuffle,
     traits::{InfAdd, InfCast, InfMul, InfSub},
-    trans::CanSumOverflow
+    trans::CanSumOverflow,
 };
 
 use super::{Float, Pairwise, Sequential, SumRelaxation};
@@ -29,16 +29,18 @@ where
     S::Item: 'static + Float,
 {
     if S::Item::sum_can_overflow(size_limit, bounds) {
-        return fallible!(MakeTransformation, "potential for overflow when computing function")
+        return fallible!(
+            MakeTransformation,
+            "potential for overflow when computing function"
+        );
     }
 
-    let (lower, upper) = bounds.clone();   
+    let (lower, upper) = bounds.clone();
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        
-            VectorDomain::new(BoundedDomain::new_closed(bounds)?),
+        VectorDomain::new(BoundedDomain::new_closed(bounds)?),
         AllDomain::new(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
@@ -77,10 +79,13 @@ where
     S::Item: 'static + Float,
 {
     if S::Item::sum_can_overflow(size, bounds) {
-        return fallible!(MakeTransformation, "potential for overflow when computing function")
+        return fallible!(
+            MakeTransformation,
+            "potential for overflow when computing function"
+        );
     }
 
-    let (lower, upper) = bounds.clone();   
+    let (lower, upper) = bounds.clone();
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     let relaxation = S::relaxation(size, lower, upper)?;
 
@@ -122,5 +127,42 @@ impl<T: Float> UncheckedSum for Pairwise<T> {
                 Self::unchecked_sum(&arg[..m]) + Self::unchecked_sum(&arg[m..])
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_make_bounded_float_checked_sum() -> Fallible<()> {
+        let trans = make_bounded_float_checked_sum::<Sequential<f64>>(4, (1., 10.))?;
+        let sum = trans.invoke(&vec![1., 2., 3., 4.])?;
+        assert_eq!(sum, 10.);
+
+        let trans = make_bounded_float_checked_sum::<Pairwise<f32>>(4, (1., 10.))?;
+        let sum = trans.invoke(&vec![1., 2., 3., 4.])?;
+        assert_eq!(sum, 10.);
+
+        assert!(make_bounded_float_checked_sum::<Pairwise<f32>>(100000000, (1e20, 1e30)).is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_sized_bounded_float_checked_sum() -> Fallible<()> {
+        let trans = make_sized_bounded_float_checked_sum::<Sequential<f64>>(4, (1., 10.))?;
+        let sum = trans.invoke(&vec![1., 2., 3., 4.])?;
+        assert_eq!(sum, 10.);
+
+        let trans = make_sized_bounded_float_checked_sum::<Pairwise<f32>>(4, (1., 10.))?;
+        let sum = trans.invoke(&vec![1., 2., 3., 4.])?;
+        assert_eq!(sum, 10.);
+
+        assert!(
+            make_sized_bounded_float_checked_sum::<Pairwise<f32>>(100000000, (1e20, 1e30)).is_err()
+        );
+
+        Ok(())
     }
 }

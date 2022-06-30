@@ -1,11 +1,11 @@
 use std::cmp::Ordering;
 
 use crate::{
-    error::Fallible, 
-    core::{Transformation, Function, StabilityRelation}, 
-    dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain},
-    dist::{SymmetricDistance, AbsoluteDistance, IntDistance}, 
-    traits::{DistanceConstant, CheckNull, AlertingAbs, InfCast, SaturatingAdd, InfSub}
+    core::{Function, StabilityRelation, Transformation},
+    dist::{AbsoluteDistance, IntDistance, SymmetricDistance},
+    dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    error::Fallible,
+    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd},
 };
 
 use super::AddIsExact;
@@ -55,11 +55,7 @@ pub fn make_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance>
-        + SplitSatSum
-        + CheckNull
-        + AlertingAbs
-        + AddIsExact,
+    T: DistanceConstant<IntDistance> + SplitSatSum + CheckNull + AlertingAbs + AddIsExact,
     IntDistance: InfCast<T>,
 {
     let (lower, upper) = bounds.clone();
@@ -70,12 +66,9 @@ where
         Function::new(|arg: &Vec<T>| T::split_sat_sum(arg)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(
-            lower.alerting_abs()?.total_max(upper)?,
-        ),
+        StabilityRelation::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
     ))
 }
-
 
 pub fn make_sized_bounded_int_split_sum<T>(
     size: usize,
@@ -89,12 +82,7 @@ pub fn make_sized_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance>
-        + InfSub
-        + SplitSatSum
-        + CheckNull
-        + AlertingAbs
-        + AddIsExact,
+    T: DistanceConstant<IntDistance> + InfSub + SplitSatSum + CheckNull + AlertingAbs + AddIsExact,
     IntDistance: InfCast<T>,
 {
     let (lower, upper) = bounds.clone();
@@ -111,4 +99,44 @@ where
             move |d_in: &IntDistance| T::inf_cast(d_in / 2).and_then(|d_in| d_in.inf_mul(&range)),
         ),
     ))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_make_bounded_int_split_sum() -> Fallible<()> {
+        let trans = make_bounded_int_split_sum((1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        let trans = make_bounded_int_split_sum((1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        // test saturation arithmetic
+        let trans = make_bounded_int_split_sum((1i8, 127))?;
+        let sum = trans.invoke(&vec![-128, 127, 127])?;
+        // negative sum is -128, positive sum is 127; they cancel to -1
+        assert_eq!(sum, -1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_sized_bounded_int_split_sum() -> Fallible<()> {
+        let trans = make_sized_bounded_int_split_sum(4, (1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        let trans = make_sized_bounded_int_split_sum(4, (1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        // should fail under these conditions
+        assert!(make_sized_bounded_int_split_sum(2, (-1i32, 1)).is_err());
+
+        Ok(())
+    }
 }

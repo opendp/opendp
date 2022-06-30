@@ -66,7 +66,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_bounded_int_ordered_sum() -> Fallible<()> {
+    fn test_make_bounded_int_ordered_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_bounded_int_ordered_sum(
             util::into_raw(AnyObject::new((0i32, 10))),
             "i32".to_char_p(),
@@ -79,7 +79,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_sized_bounded_int_ordered_sum() -> Fallible<()> {
+    fn test_make_sized_bounded_int_ordered_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_int_ordered_sum(
             3 as c_uint,
             util::into_raw(AnyObject::new((0i32, 10))),

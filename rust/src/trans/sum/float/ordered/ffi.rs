@@ -94,7 +94,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_bounded_float_ordered_sum() -> Fallible<()> {
+    fn test_make_bounded_float_ordered_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_bounded_float_ordered_sum(
             100, // I know the dataset is small; it is no larger than 100
             util::into_raw(AnyObject::new((0., 10.))),
@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_sized_bounded_float_ordered_sum() -> Fallible<()> {
+    fn test_make_sized_bounded_float_ordered_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_float_ordered_sum(
             3 as c_uint,
             util::into_raw(AnyObject::new((0., 10.))),

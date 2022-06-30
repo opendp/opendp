@@ -1,12 +1,12 @@
 use std::iter::Sum;
 
 use crate::{
-    error::Fallible, 
-    core::{Transformation, Function, StabilityRelation}, 
-    dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain}, 
-    dist::{SymmetricDistance, AbsoluteDistance, IntDistance}, 
-    traits::{DistanceConstant, CheckNull, InfCast, InfSub, InfDiv}, 
-    trans::CanSumOverflow
+    core::{Function, StabilityRelation, Transformation},
+    dist::{AbsoluteDistance, IntDistance, SymmetricDistance},
+    dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    error::Fallible,
+    traits::{CheckNull, DistanceConstant, InfCast, InfDiv, InfSub},
+    trans::CanSumOverflow,
 };
 
 use super::AddIsExact;
@@ -26,17 +26,15 @@ pub fn make_sized_bounded_int_checked_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance>
-        + InfSub
-        + CheckNull
-        + InfDiv
-        + AddIsExact
-        + CanSumOverflow,
+    T: DistanceConstant<IntDistance> + InfSub + CheckNull + InfDiv + AddIsExact + CanSumOverflow,
     for<'a> T: Sum<&'a T>,
     IntDistance: InfCast<T>,
 {
     if T::sum_can_overflow(size, bounds.clone()) {
-        return fallible!(MakeTransformation, "potential for overflow when computing function")
+        return fallible!(
+            MakeTransformation,
+            "potential for overflow when computing function"
+        );
     }
 
     let (lower, upper) = bounds.clone();
@@ -55,3 +53,18 @@ where
     ))
 }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_make_bounded_int_checked_sum() -> Fallible<()> {
+        let trans = make_sized_bounded_int_checked_sum(4, (1, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        // should error under these conditions
+        assert!(make_sized_bounded_int_checked_sum::<u8>(2, (0, 255)).is_err());
+        Ok(())
+    }
+}

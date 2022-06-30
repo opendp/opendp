@@ -79,3 +79,44 @@ pub extern "C" fn opendp_trans__make_sized_bounded_float_checked_sum(
     let T = try_!(S.get_atom());
     dispatch!(monomorphize, [(T, @floats)], (S, size, bounds))
 }
+
+
+
+#[cfg(test)]
+mod tests {
+    use crate::core;
+    use crate::error::Fallible;
+    use crate::ffi::any::{AnyObject, Downcast};
+    use crate::ffi::util;
+    use crate::ffi::util::ToCharP;
+
+    use super::*;
+
+    #[test]
+    fn test_make_bounded_float_checked_sum_ffi() -> Fallible<()> {
+        let transformation = Result::from(opendp_trans__make_bounded_float_checked_sum(
+            3 as c_uint,
+            util::into_raw(AnyObject::new((0., 10.))),
+            "Pairwise<f64>".to_char_p(),
+        ))?;
+        let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
+        let res = core::opendp_core__transformation_invoke(&transformation, arg);
+        let res: f64 = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, 6.0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_sized_bounded_sum_ffi() -> Fallible<()> {
+        let transformation = Result::from(opendp_trans__make_sized_bounded_float_checked_sum(
+            3 as c_uint,
+            util::into_raw(AnyObject::new((0., 10.))),
+            "Sequential<f64>".to_char_p(),
+        ))?;
+        let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
+        let res = core::opendp_core__transformation_invoke(&transformation, arg);
+        let res: f64 = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, 6.0);
+        Ok(())
+    }
+}

@@ -1,7 +1,6 @@
 from opendp.trans import *
 from opendp.meas import *
 from opendp.mod import enable_features
-from opendp.typing import SymmetricDistance
 
 enable_features("floating-point", "contrib")
 

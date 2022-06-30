@@ -1,11 +1,11 @@
 use num::Zero;
 
 use crate::{
-    error::Fallible, 
-    core::{Transformation, Function, StabilityRelation}, 
-    dom::{VectorDomain, BoundedDomain, AllDomain, SizedDomain}, 
-    dist::{AbsoluteDistance, IntDistance, SymmetricDistance}, 
-    traits::{DistanceConstant, CheckNull, InfCast, InfSub, AlertingAbs, SaturatingAdd}
+    core::{Function, StabilityRelation, Transformation},
+    dist::{AbsoluteDistance, IntDistance, SymmetricDistance},
+    dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    error::Fallible,
+    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd},
 };
 
 use super::AddIsExact;
@@ -22,7 +22,7 @@ pub fn make_bounded_int_monotonic_sum<T>(
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
-> 
+>
 where
     T: DistanceConstant<IntDistance>
         + CheckNull
@@ -31,10 +31,13 @@ where
         + SaturatingAdd
         + AddIsExact
         + IsMonotonic,
-    IntDistance: InfCast<T> 
+    IntDistance: InfCast<T>,
 {
     if !T::is_monotonic(bounds.clone()) {
-        return fallible!(MakeTransformation, "monotonic summation requires bounds to share the same sign");
+        return fallible!(
+            MakeTransformation,
+            "monotonic summation requires bounds to share the same sign"
+        );
     }
 
     let (lower, upper) = bounds.clone();
@@ -42,15 +45,12 @@ where
     Ok(Transformation::new(
         VectorDomain::new(BoundedDomain::new_closed(bounds)?),
         AllDomain::new(),
-        Function::new(|arg: &Vec<T>|
-            arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))
-        ),
+        Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(lower.alerting_abs()?.total_max(upper)?)
+        StabilityRelation::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
     ))
 }
-
 
 pub fn make_sized_bounded_int_monotonic_sum<T>(
     size: usize,
@@ -62,7 +62,7 @@ pub fn make_sized_bounded_int_monotonic_sum<T>(
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
-> 
+>
 where
     T: DistanceConstant<IntDistance>
         + InfSub
@@ -71,10 +71,13 @@ where
         + SaturatingAdd
         + AddIsExact
         + IsMonotonic,
-    IntDistance: InfCast<T> 
+    IntDistance: InfCast<T>,
 {
     if !T::is_monotonic(bounds.clone()) {
-        return fallible!(MakeTransformation, "monotonic summation requires bounds to share the same sign");
+        return fallible!(
+            MakeTransformation,
+            "monotonic summation requires bounds to share the same sign"
+        );
     }
 
     let (lower, upper) = bounds.clone();
@@ -83,9 +86,7 @@ where
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
         AllDomain::new(),
-        Function::new(|arg: &Vec<T>|
-            arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))
-        ),
+        Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityRelation::new_from_forward(
@@ -119,3 +120,36 @@ macro_rules! impl_same_sign_unsigned_int {
 }
 impl_same_sign_unsigned_int! { u8 u16 u32 u64 u128 usize }
 
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_make_bounded_int_monotonic_sum() -> Fallible<()> {
+        let trans = make_bounded_int_monotonic_sum((1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        let trans = make_bounded_int_monotonic_sum((1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        // should fail under these conditions
+        assert!(make_bounded_int_monotonic_sum((-1i32, 1)).is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_sized_bounded_int_monotonic_sum() -> Fallible<()> {
+        let trans = make_sized_bounded_int_monotonic_sum(4, (1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        let trans = make_sized_bounded_int_monotonic_sum(4, (1i32, 10))?;
+        let sum = trans.invoke(&vec![1, 2, 3, 4])?;
+        assert_eq!(sum, 10);
+
+        Ok(())
+    }
+}

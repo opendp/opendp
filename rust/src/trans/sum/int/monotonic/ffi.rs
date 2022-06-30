@@ -10,7 +10,9 @@ use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd};
-use crate::trans::{make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum, AddIsExact, IsMonotonic};
+use crate::trans::{
+    make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum, AddIsExact, IsMonotonic,
+};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_bounded_int_monotonic_sum(
@@ -24,7 +26,7 @@ pub extern "C" fn opendp_trans__make_bounded_int_monotonic_sum(
             + Zero
             + AlertingAbs
             + SaturatingAdd
-            + AddIsExact 
+            + AddIsExact
             + IsMonotonic,
         IntDistance: InfCast<T>,
     {
@@ -45,7 +47,13 @@ pub extern "C" fn opendp_trans__make_sized_bounded_int_monotonic_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance> + InfSub + CheckNull + Zero + SaturatingAdd + AddIsExact + IsMonotonic,
+        T: DistanceConstant<IntDistance>
+            + InfSub
+            + CheckNull
+            + Zero
+            + SaturatingAdd
+            + AddIsExact
+            + IsMonotonic,
         IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
@@ -67,7 +75,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_bounded_int_ordered_sum() -> Fallible<()> {
+    fn test_make_bounded_int_monotonic_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_bounded_int_monotonic_sum(
             util::into_raw(AnyObject::new((0i32, 10))),
             "i32".to_char_p(),
@@ -80,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_sized_bounded_int_ordered_sum() -> Fallible<()> {
+    fn test_make_sized_bounded_int_monotonic_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_int_monotonic_sum(
             3 as c_uint,
             util::into_raw(AnyObject::new((0i32, 10))),
