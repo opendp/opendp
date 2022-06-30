@@ -107,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_sized_bounded_sum_ffi() -> Fallible<()> {
+    fn test_make_sized_bounded_float_checked_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_trans__make_sized_bounded_float_checked_sum(
             3 as c_uint,
             util::into_raw(AnyObject::new((0., 10.))),
