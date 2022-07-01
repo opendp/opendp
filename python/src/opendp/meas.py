@@ -35,7 +35,7 @@ def make_base_laplace(
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
-    T = get_domain_atom_or_infer(D, scale)
+    T = get_atom_or_infer(D, scale)
     D = D.substitute(T=T)
     
     # Convert arguments to c types.
@@ -72,7 +72,7 @@ def make_base_gaussian(
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
-    T = get_domain_atom_or_infer(D, scale)
+    T = get_atom_or_infer(D, scale)
     D = D.substitute(T=T)
     
     # Convert arguments to c types.
@@ -108,7 +108,7 @@ def make_base_analytic_gaussian(
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
-    T = get_domain_atom_or_infer(D, scale)
+    T = get_atom_or_infer(D, scale)
     D = D.substitute(T=T)
     
     # Convert arguments to c types.
@@ -150,7 +150,7 @@ def make_base_geometric(
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    T = get_domain_atom(D)
+    T = get_atom(D)
     OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
     
     # Convert arguments to c types.

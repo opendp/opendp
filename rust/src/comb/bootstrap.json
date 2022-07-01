@@ -89,6 +89,17 @@
             {
                 "name": "delta",
                 "c_type": "const AnyObject *",
+                "rust_type": {
+                    "function": "get_atom",
+                    "params": [
+                        {
+                            "function": "measurement_output_distance_type",
+                            "params": [
+                                "measurement"
+                            ]
+                        }
+                    ]
+                },
                 "description": "The parameter to fix the privacy curve with."
             }
         ],

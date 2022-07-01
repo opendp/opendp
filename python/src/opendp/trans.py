@@ -965,7 +965,7 @@ def make_impute_constant(
     
     # Standardize type arguments.
     DA = RuntimeType.parse(type_name=DA, generics=["TA"])
-    TA = get_domain_atom_or_infer(DA, constant)
+    TA = get_atom_or_infer(DA, constant)
     DA = DA.substitute(TA=TA)
     
     # Convert arguments to c types.
@@ -1388,7 +1388,7 @@ def make_bounded_float_checked_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_domain_atom_or_infer(S, get_first(bounds))
+    T = get_atom_or_infer(S, get_first(bounds))
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
@@ -1428,7 +1428,7 @@ def make_sized_bounded_float_checked_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_domain_atom_or_infer(S, get_first(bounds))
+    T = get_atom_or_infer(S, get_first(bounds))
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
@@ -1468,7 +1468,7 @@ def make_bounded_float_ordered_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_domain_atom_or_infer(S, get_first(bounds))
+    T = get_atom_or_infer(S, get_first(bounds))
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
@@ -1509,7 +1509,7 @@ def make_sized_bounded_float_ordered_sum(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_domain_atom_or_infer(S, get_first(bounds))
+    T = get_atom_or_infer(S, get_first(bounds))
     S = S.substitute(T=T)
     
     # Convert arguments to c types.

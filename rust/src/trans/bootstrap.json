@@ -551,7 +551,7 @@
             {
                 "name": "TA",
                 "rust_type": {
-                    "function": "get_domain_atom_or_infer",
+                    "function": "get_atom_or_infer",
                     "params": [
                         "DA", "constant"
                     ]
@@ -894,7 +894,7 @@
             {
                 "name": "T",
                 "rust_type": {
-                    "function": "get_domain_atom_or_infer",
+                    "function": "get_atom_or_infer",
                     "params": [
                         "S", {
                             "function": "get_first",
@@ -939,7 +939,7 @@
             {
                 "name": "T",
                 "rust_type": {
-                    "function": "get_domain_atom_or_infer",
+                    "function": "get_atom_or_infer",
                     "params": [
                         "S", {
                             "function": "get_first",
@@ -984,7 +984,7 @@
             {
                 "name": "T",
                 "rust_type": {
-                    "function": "get_domain_atom_or_infer",
+                    "function": "get_atom_or_infer",
                     "params": [
                         "S", {
                             "function": "get_first",
@@ -1029,7 +1029,7 @@
             {
                 "name": "T",
                 "rust_type": {
-                    "function": "get_domain_atom_or_infer",
+                    "function": "get_atom_or_infer",
                     "params": [
                         "S", {
                             "function": "get_first",
