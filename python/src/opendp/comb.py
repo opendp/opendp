@@ -3,6 +3,7 @@ from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
+from opendp.core import *
 
 __all__ = [
     "make_chain_mt",
@@ -154,7 +155,7 @@ def make_fix_delta(
     # No type arguments to standardize.
     # Convert arguments to c types.
     measurement = py_to_c(measurement, c_type=Measurement)
-    delta = py_to_c(delta, c_type=AnyObjectPtr)
+    delta = py_to_c(delta, c_type=AnyObjectPtr, type_name=get_atom(measurement_output_distance_type(measurement)))
     
     # Call library function.
     function = lib.opendp_comb__make_fix_delta

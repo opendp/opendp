@@ -46,17 +46,20 @@ fn generate_module(
         .collect::<Vec<String>>()
         .join("\n");
 
+    // the comb module needs access to core functions for type introspection on measurements/transformations
+    let comb_import = if module_name == "comb" {"from opendp.core import *\n"} else {""};
+
     format!(r#"# Auto-generated. Do not edit.
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
-
+{comb_import}
 __all__ = [
 {all}
 ]
 
-{functions}"#, all = all, functions = functions)
+{functions}"#)
 }
 
 fn generate_function(

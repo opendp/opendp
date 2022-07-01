@@ -363,16 +363,17 @@ InherentNullDomain = Domain('InherentNullDomain')
 SizedDomain = Domain('SizedDomain')
 
 
-def get_domain_atom(domain):
-    while isinstance(domain, RuntimeType):
-        if isinstance(domain, (UnknownType, GenericType)):
+def get_atom(type_name):
+    type_name = RuntimeType.parse(type_name)
+    while isinstance(type_name, RuntimeType):
+        if isinstance(type_name, (UnknownType, GenericType)):
             return
-        domain = domain.args[0]
-    return domain
+        type_name = type_name.args[0]
+    return type_name
 
 
-def get_domain_atom_or_infer(domain: RuntimeType, example):
-    return get_domain_atom(domain) or RuntimeType.infer(example)
+def get_atom_or_infer(type_name: RuntimeType, example):
+    return get_atom(type_name) or RuntimeType.infer(example)
 
 
 def get_first(value):
