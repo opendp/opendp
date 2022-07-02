@@ -63,9 +63,9 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
 class AnyObjectPtr(ctypes.POINTER(AnyObject)):
     _type_ = AnyObject
 
-    def __del__(self):
-        from opendp._data import object_free
-        object_free(self)
+    # def __del__(self):
+    #     from opendp._data import object_free
+    #     object_free(self)
 
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
@@ -76,9 +76,9 @@ class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
         """Extends the memory lifetime of args to the lifetime of self."""
         FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
 
-    def __del__(self):
-        """When self is deleted, stop keeping dependencies alive by freeing the reference."""
-        FfiSlicePtr._dependencies.pop(id(self), None)
+    # def __del__(self):
+    #     """When self is deleted, stop keeping dependencies alive by freeing the reference."""
+    #     FfiSlicePtr._dependencies.pop(id(self), None)
 
 
 class FfiError(ctypes.Structure):
