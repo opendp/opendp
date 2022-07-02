@@ -119,13 +119,13 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
-    # def __del__(self):
-    #     try:
-    #         from opendp.core import _measurement_free
-    #         _measurement_free(self)
-    #     except ImportError:
-    #         # ImportError: sys.meta_path is None, Python is likely shutting down
-    #         pass
+    def __del__(self):
+        try:
+            from opendp.core import _measurement_free
+            _measurement_free(self)
+        except ImportError:
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)):
@@ -253,12 +253,12 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
-    # def __del__(self):
-    #     try:
-    #         from opendp.core import _transformation_free
-    #         _transformation_free(self)
-    #     except ImportError:
-    #         pass
+    def __del__(self):
+        try:
+            from opendp.core import _transformation_free
+            _transformation_free(self)
+        except ImportError:
+            pass
 
 
 class SMDCurve(object):
