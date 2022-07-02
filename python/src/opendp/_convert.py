@@ -255,8 +255,11 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> List[Any]:
     inner_type_name = type_name.args[0]
 
     if inner_type_name == 'AnyObject':
-        array = ctypes.cast(raw.contents.ptr, AnyObjectPtr)[0:raw.contents.len]
-        return list(map(lambda v: c_to_py(AnyObjectPtr(v)), array))
+        from opendp._data import ffislice_of_anyobjectptrs
+        raw = ffislice_of_anyobjectptrs(raw)
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:raw.contents.len]
+        
+        return list(map(c_to_py, array))
 
     if inner_type_name == 'String':
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]

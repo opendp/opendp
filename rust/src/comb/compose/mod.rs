@@ -164,6 +164,7 @@ mod tests {
         let ret = composition.function.eval(&arg)?;
 
         assert_eq!(ret.len(), 2);
+        println!("return: {:?}", ret);
 
         assert!(composition.check(&1., &2.)?);
         assert!(composition.check(&1., &2.0001)?);
