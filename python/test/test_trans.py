@@ -83,7 +83,7 @@ def test_is_equal():
     from opendp.trans import make_is_equal
     tester = make_is_equal(3)
     assert tester([1, 2, 3]) == [False, False, True]
-
+test_is_equal()
 
 def test_is_null():
     from opendp.trans import make_split_lines, make_cast_inherent, make_is_null
@@ -113,8 +113,9 @@ def test_split_lines__cast__impute():
     )
 
     assert query("1\n2\n3") == [1, 2, 3]
-    assert query.check(1, 1)
-
+    query.check(1, 1)
+    print(query.map(1))
+test_split_lines__cast__impute()
 
 def test_inherent_cast__impute():
     from opendp.trans import make_split_lines, make_cast_inherent, make_impute_constant

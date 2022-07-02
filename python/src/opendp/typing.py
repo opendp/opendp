@@ -370,10 +370,14 @@ SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
 ZeroConcentratedDivergence = PrivacyMeasure('ZeroConcentratedDivergence')
 
 class Carrier(RuntimeType):
-    def __getitem__(self, subdomain):
-        return Carrier(self.origin, [self.parse(type_name=subdomain)])
+    def __getitem__(self, subdomains):
+        if not isinstance(subdomains, tuple):
+            subdomains = (subdomains,)
+        return Carrier(self.origin, [self.parse(type_name=subdomain) for subdomain in subdomains])
+
 
 Vec = Carrier('Vec')
+HashMap = Carrier('HashMap')
 i8 = RuntimeType('i8')
 i16 = RuntimeType('i16')
 i32 = RuntimeType('i32')

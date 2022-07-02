@@ -52,3 +52,5 @@ def test_type_inference():
     def mean_chainer_b(b):
         return make_sized_bounded_mean(1000, (-b, b))
     assert 499.999 < binary_search_param(mean_chainer_b, 2, 1.) < 500.
+    
+test_type_inference()

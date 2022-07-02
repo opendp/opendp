@@ -264,7 +264,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
         where MO::Distance: TotalOrd {
-        Ok(d_out >= &self.map(d_in)?)
+        d_out.total_ge(&self.map(d_in)?)
     }
 }
 
