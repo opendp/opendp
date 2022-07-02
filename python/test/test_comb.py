@@ -1,3 +1,4 @@
+import pytest
 from opendp.mod import enable_features
 from opendp.meas import *
 from opendp.trans import *
@@ -48,6 +49,25 @@ def test_make_sequential_composition_static_distances():
     print("Check:", composed.check(1, 2.))
     print("Forward map:", composed.map(3))
     print("Invocation:", composed.invoke([22, 12]))
+
+
+@pytest.mark.skip(reason="long-running process to detect potential memory leaks")
+def test_make_sequential_composition_static_distances_leak():
+    from opendp.comb import make_sequential_composition_static_distances
+
+    # choose a vector-valued mechanism that should run quickly for large inputs
+    # we want to add as little noise as possible, so that execution time is small
+    meas = make_base_geometric(scale=1e-6, D=VectorDomain[AllDomain[int]])
+
+    # memory usage remains the same when this line is commented,
+    # supporting that AnyObject's free recursively frees children
+    meas = make_sequential_composition_static_distances([meas])
+
+    # watch for leaked AnyObjects with 1 million i32 values
+    # memory would jump by ~40mb every iteration
+    for i in range(1000):
+        print('iteration', i)
+        meas([0] * 10_000_000)
 
 if __name__ == "__main__":
     test_make_sequential_composition_static_distances()

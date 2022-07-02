@@ -252,8 +252,12 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> List[Any]:
         from opendp._data import ffislice_of_anyobjectptrs
         raw = ffislice_of_anyobjectptrs(raw)
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:raw.contents.len]
-        
-        return list(map(c_to_py, array))
+        res = list(map(c_to_py, array))
+        # when the top-level AnyObject is freed, it recursively frees all anyobjects inside of it
+        # adjust the type of constituent AnyObjects so that __delete__ is not called when they are dropped
+        for elem in array:
+            elem.__class__ = ctypes.POINTER(AnyObject)
+        return res
 
     if inner_type_name == 'String':
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
