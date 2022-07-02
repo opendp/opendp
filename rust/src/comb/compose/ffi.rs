@@ -33,9 +33,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_sequential_composition_static_distances() -> Fallible<()> {
-        let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
-        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
+    fn test_make_sequential_composition_static_distances_ffi() -> Fallible<()> {
+        let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any()) as AnyMeasurementPtr;
+        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any()) as AnyMeasurementPtr;
         let measurements = vec![measurement0, measurement1];
         let basic_composition =
             Result::from(opendp_comb__make_sequential_composition_static_distances(
@@ -43,8 +43,9 @@ mod tests {
             ))?;
         let arg = AnyObject::new_raw(999);
         let res = core::opendp_core__measurement_invoke(&basic_composition, arg);
-        let res: (AnyObject, AnyObject) = Fallible::from(res)?.downcast()?;
-        let res: (i32, i32) = (res.0.downcast()?, res.1.downcast()?);
+        let res: Vec<AnyObject> = Fallible::from(res)?.downcast()?;
+        let res = (*res[0].downcast_ref::<i32>()?, *res[1].downcast_ref::<i32>()?);
+        println!("{:?}", res);
         assert_eq!(res, (999, 999));
         Ok(())
     }

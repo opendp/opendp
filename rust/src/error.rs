@@ -17,18 +17,26 @@ macro_rules! err {
     ($variant:ident) => (crate::error::Error {
         variant: crate::error::ErrorVariant::$variant,
         message: None,
-        backtrace: backtrace::Backtrace::new_unresolved()
+        backtrace: err!(@backtrace)
     });
     // error with explicit message
     ($variant:ident, $message:expr) => (crate::error::Error {
         variant: crate::error::ErrorVariant::$variant,
         message: Some($message.to_string()), // ToString is impl'ed for String
-        backtrace: backtrace::Backtrace::new_unresolved()
+        backtrace: err!(@backtrace)
     });
     // args to format into message
     ($variant:ident, $template:expr, $($args:expr),+) =>
         (err!($variant, format!($template, $($args,)+)));
+    
+    // always resolve backtraces in debug mode
+    (@backtrace) => (if cfg!(debug_assertions) { 
+        backtrace::Backtrace::new()
+    } else {
+        backtrace::Backtrace::new_unresolved() 
+    });
 }
+
 
 #[derive(thiserror::Error, Debug)]
 pub struct Error {
