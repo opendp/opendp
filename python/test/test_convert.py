@@ -4,6 +4,7 @@ from opendp._convert import (
     _vector_to_slice, _slice_to_vector,
     _hashmap_to_slice, _slice_to_hashmap,
 )
+from opendp.typing import *
 import pytest
 import sys
 try:
@@ -88,8 +89,8 @@ def test_roundtrip_ffisliceptr_int_lib():
 def test_vec_str():
     data = ["a", "bbb", "c"]
     # partial roundtrip
-    slice = _vector_to_slice(data, type_name="Vec<String>")
-    assert _slice_to_vector(slice, type_name="Vec<String>") == data
+    slice = _vector_to_slice(data, type_name=Vec[str])
+    assert _slice_to_vector(slice, type_name=Vec[str]) == data
 
     # complete roundtrip
     any = py_to_c(data, c_type=AnyObjectPtr)
@@ -98,7 +99,7 @@ def test_vec_str():
 
 def test_hashmap():
     data = {"A": 23, "B": 12, "C": 234}
-    slice = _hashmap_to_slice(data, "HashMap<String, i32>")
+    slice = _hashmap_to_slice(data, HashMap[str, int])
     assert _slice_to_hashmap(slice) == data
 
     # complete roundtrip

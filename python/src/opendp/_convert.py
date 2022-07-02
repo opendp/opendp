@@ -68,12 +68,6 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     if c_type == AnyObjectPtr:
         from opendp._data import slice_as_object
-
-        # TODO: This is ugly!
-        # the nested type will be different than the type_name, because it is now AnyObject
-        # if type_name.origin.startswith("Vec") and isinstance(type_name.args[0], RuntimeType):
-        #     type_name.args[0] = "AnyObjectPtr"
-
         return slice_as_object(value, type_name)
 
     if c_type == FfiSlicePtr:
@@ -81,8 +75,8 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         return _py_to_slice(value, type_name)
 
     if isinstance(value, RuntimeType):
-        if value.origin == "Vec" and str(value.args[0]) not in ATOM_MAP:
-            value.args[0] = "AnyObjectPtr"
+        # if value.origin == "Vec" and str(value.args[0]) not in ATOM_MAP:
+        #     value.args[0] = "AnyObjectPtr"
         value = str(value)
 
     if isinstance(value, str):
@@ -115,13 +109,13 @@ def c_to_py(value):
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
         value_contents = value.value.decode()
-        # str_free(value)
+        str_free(value)
         return value_contents
 
     if isinstance(value, BoolPtr):
         from opendp._data import bool_free
         value_contents = value.contents.value
-        # bool_free(value)
+        bool_free(value)
         return value_contents
 
     if isinstance(value, (Transformation, Measurement)):
