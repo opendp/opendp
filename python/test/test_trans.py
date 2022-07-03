@@ -73,7 +73,7 @@ def test_identity():
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity("VectorDomain<AllDomain<i32>>", ChangeOneDistance)
+    transformation = make_identity("VectorDomain<AllDomain<i64>>", ChangeOneDistance)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == arg

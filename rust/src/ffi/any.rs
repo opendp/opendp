@@ -71,10 +71,10 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for A
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.value.downcast_ref().ok_or_else(|| {
-            let other_type = Type::of_id(&self.value.type_id()).
-                map(|t| format!(" AnyBox contains {:?}.", t))
+            let actual_type = Type::of_id(&self.value.type_id())
+                .map(|t| format!(" AnyBox contains {:?}.", t))
                 .unwrap_or(String::new());
-            err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+            err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), actual_type)
         })
     }
 }

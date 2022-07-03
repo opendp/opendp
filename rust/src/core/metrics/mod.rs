@@ -5,6 +5,8 @@ use std::{marker::PhantomData};
 use crate::core::{DatasetMetric, Metric, SensitivityMetric};
 use std::fmt::{Debug, Formatter};
 
+use super::type_name;
+
 // default type for distances between datasets
 pub type IntDistance = u32;
 
@@ -95,29 +97,29 @@ impl Metric for HammingDistance {
 impl DatasetMetric for HammingDistance {}
 
 // Sensitivity in P-space
-pub struct LpDistance<Q, const P: usize>(PhantomData<Q>);
-impl<Q, const P: usize> Default for LpDistance<Q, P> {
+pub struct LpDistance<const P: usize, Q>(PhantomData<Q>);
+impl<const P: usize, Q> Default for LpDistance<P, Q> {
     fn default() -> Self { LpDistance(PhantomData) }
 }
 
-impl<Q, const P: usize> Clone for LpDistance<Q, P> {
+impl<const P: usize, Q> Clone for LpDistance<P, Q> {
     fn clone(&self) -> Self { Self::default() }
 }
-impl<Q, const P: usize> PartialEq for LpDistance<Q, P> {
+impl<const P: usize, Q> PartialEq for LpDistance<P, Q> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
-impl<Q, const P: usize> Debug for LpDistance<Q, P> {
+impl<const P: usize, Q> Debug for LpDistance<P, Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "L{}Distance()", P)
+        write!(f, "L{}Distance({})", P, type_name!(Q))
     }
 }
-impl<Q, const P: usize> Metric for LpDistance<Q, P> {
+impl<const P: usize, Q> Metric for LpDistance<P, Q> {
     type Distance = Q;
 }
-impl<Q, const P: usize> SensitivityMetric for LpDistance<Q, P> {}
+impl<const P: usize, Q> SensitivityMetric for LpDistance<P, Q> {}
 
-pub type L1Distance<Q> = LpDistance<Q, 1>;
-pub type L2Distance<Q> = LpDistance<Q, 2>;
+pub type L1Distance<Q> = LpDistance<1, Q>;
+pub type L2Distance<Q> = LpDistance<2, Q>;
 
 /// Represents a metric where d(a, b) = |a - b|
 pub struct AbsoluteDistance<Q>(PhantomData<Q>);
@@ -133,7 +135,7 @@ impl<Q> PartialEq for AbsoluteDistance<Q> {
 }
 impl<Q> Debug for AbsoluteDistance<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "AbsoluteDistance()")
+        write!(f, "AbsoluteDistance({})", type_name!(Q))
     }
 }
 impl<Q> Metric for AbsoluteDistance<Q> {

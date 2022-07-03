@@ -600,7 +600,7 @@ def make_unclamp(
 
 def make_count(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "i32"
+    TO: RuntimeTypeDescriptor = "i64"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
@@ -634,7 +634,7 @@ def make_count(
 
 def make_count_distinct(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "i32"
+    TO: RuntimeTypeDescriptor = "i64"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
@@ -669,7 +669,7 @@ def make_count_distinct(
 def make_count_by(
     MO: SensitivityMetric,
     TK: RuntimeTypeDescriptor,
-    TV: RuntimeTypeDescriptor = "i32"
+    TV: RuntimeTypeDescriptor = "i64"
 ) -> Transformation:
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown.
@@ -708,9 +708,9 @@ def make_count_by(
 
 def make_count_by_categories(
     categories: Any,
-    MO: SensitivityMetric = "L1Distance<i32>",
+    MO: SensitivityMetric = "L1Distance<i64>",
     TIA: RuntimeTypeDescriptor = None,
-    TOA: RuntimeTypeDescriptor = "i32"
+    TOA: RuntimeTypeDescriptor = "i64"
 ) -> Transformation:
     """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.

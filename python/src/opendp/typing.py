@@ -12,7 +12,7 @@ else:
     from typing import GenericMeta as _GenericAlias
 
 ELEMENTARY_TYPES = {
-    int: 'i32',
+    int: 'i64',
     float: 'f64',
     str: 'String',
     bool: 'bool',
@@ -101,7 +101,7 @@ class RuntimeType(object):
         :examples:
 
         >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.parse(int) == "i32"
+        >>> assert RuntimeType.parse(int) == "i64"
         >>> assert RuntimeType.parse("i32") == "i32"
         >>> assert RuntimeType.parse(L1Distance[int]) == "L1Distance<i32>"
         >>> assert RuntimeType.parse(L1Distance["f32"]) == "L1Distance<f32>"
@@ -193,7 +193,7 @@ class RuntimeType(object):
         :examples:
 
         >>> from opendp.typing import RuntimeType, L1Distance
-        >>> assert RuntimeType.infer(23) == "i32"
+        >>> assert RuntimeType.infer(23) == "i64"
         >>> assert RuntimeType.infer(12.) == "f64"
         >>> assert RuntimeType.infer(["A", "B"]) == "Vec<String>"
         >>> assert RuntimeType.infer((12., True, "A")) == "(f64,  bool,String)" # eq doesn't care about whitespace

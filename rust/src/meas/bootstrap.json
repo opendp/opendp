@@ -122,7 +122,7 @@
             },
             {
                 "name": "D",
-                "default": "AllDomain<i32>",
+                "default": "AllDomain<i64>",
                 "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true
             },
