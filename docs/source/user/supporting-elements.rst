@@ -148,7 +148,7 @@ Putting this to practice, the following example checks the stability relation on
 .. doctest::
 
     >>> from opendp.trans import make_clamp
-    >>> clamp = make_clamp(bounds=(1, 10))
+    >>> clamp = make_clamp(bounds=(1, 10), TA="i32")
     ...
     >>> # The maximum number of records that any one individual may influence in your dataset
     >>> in_symmetric_distance = 3

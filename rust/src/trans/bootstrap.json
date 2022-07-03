@@ -722,11 +722,6 @@
                 "description": "Value to impute with."
             },
             {
-                "name": "TA",
-                "is_type": true,
-                "description": "Atomic type."
-            },
-            {
                 "name": "MI",
                 "is_type": true,
                 "default": "SymmetricDistance",
@@ -737,6 +732,11 @@
                 "is_type": true,
                 "default": "InsertDeleteDistance",
                 "description": "Output metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic type."
             }
         ],
         "ret": {
@@ -770,15 +770,6 @@
                 "description": "Value to impute with."
             },
             {
-                "name": "TA",
-                "is_type": true,
-                "description": "Atomic type. If not passed, TA is inferred from the lower bound.",
-                "example": {
-                    "function": "get_first",
-                    "params": ["bounds"]
-                }
-            },
-            {
                 "name": "MI",
                 "is_type": true,
                 "default": "SymmetricDistance",
@@ -789,6 +780,15 @@
                 "is_type": true,
                 "default": "SymmetricDistance",
                 "description": "Output metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic type. If not passed, TA is inferred from the lower bound.",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
             }
         ],
         "ret": {

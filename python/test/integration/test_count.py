@@ -1,5 +1,5 @@
 from opendp.mod import enable_features
-from opendp.typing import AllDomain
+from opendp.typing import AllDomain, i32
 
 enable_features('contrib')
 
@@ -11,11 +11,11 @@ def test_count():
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
         make_select_column("A", TOA=str) >>
-        make_count(TIA=str)
+        make_count(TIA=str, TO=i32)
     )
 
     noisy_count_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_geometric(s, D=AllDomain[i32]),
         d_in=1, d_out=1.)
 
     assert noisy_count_from_dataframe.check(1, 1.)
@@ -33,11 +33,11 @@ def test_count_distinct():
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
         make_select_column("A", TOA=str) >>
-        make_count_distinct(TIA=str)
+        make_count_distinct(TIA=str, TO=i32)
     )
 
     noisy_count_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_geometric(s, D=AllDomain[i32]),
         d_in=1, d_out=1.)
 
     assert noisy_count_from_dataframe.check(1, 1.)

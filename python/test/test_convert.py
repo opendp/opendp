@@ -37,7 +37,7 @@ def test_data_object_str():
 
 def test_data_object_list():
     val_in = [1, 2, 3]
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
+    obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=Vec[i32])
     val_out = c_to_py(obj)
     assert val_out == val_in
 
@@ -99,11 +99,11 @@ def test_vec_str():
 
 def test_hashmap():
     data = {"A": 23, "B": 12, "C": 234}
-    slice = _hashmap_to_slice(data, HashMap[str, int])
+    slice = _hashmap_to_slice(data, HashMap[str, i32])
     assert _slice_to_hashmap(slice) == data
 
     # complete roundtrip
-    any = py_to_c(data, c_type=AnyObjectPtr)
+    any = py_to_c(data, c_type=AnyObjectPtr, type_name=HashMap[str, i32])
     assert c_to_py(any) == data
 
 
@@ -112,12 +112,13 @@ def test_hashmap():
 def test_numpy_data():
     def roundtrip(value, type_name, dtype=None):
         print(c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name)))
-    roundtrip([1, 2], "Vec<i64>", dtype=np.int64)
-    roundtrip(1, "i64", dtype=np.int64)
+    roundtrip([1, 2], "Vec<i32>", dtype=np.int32)
+    roundtrip(1, "i32", dtype=np.int32)
     roundtrip([1., 2.], "Vec<f64>")
     roundtrip(1., "f64")
     roundtrip(["A", "B"], "Vec<String>")
     roundtrip("A", "String")
+
 
 @pytest.mark.skipif('numpy' not in sys.modules,
                     reason="requires the Numpy library")
@@ -125,4 +126,4 @@ def test_numpy_trans():
     from opendp.trans import make_bounded_sum
     from opendp.mod import enable_features
     enable_features("contrib")
-    assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3])) == 6
+    assert make_bounded_sum(bounds=(0, 10), T=i32)(np.array([1, 2, 3])) == 6
