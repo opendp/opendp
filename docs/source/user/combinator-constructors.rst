@@ -79,8 +79,8 @@ but the chaining fails because the sum emits floats and the geometric mechanism 
     ... except OpenDPException as err:
     ...     print(err.message[:-1])
     Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
-        The structure of the intermediate domains are the same, but the types or parameters differ.
-        shared_domain: AllDomain()
+        output_domain: AllDomain(f64)
+        input_domain:  AllDomain(i32)
 
 Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.trans.make_cast>`, :py:func:`make_impute_constant <opendp.trans.make_impute_constant>`, :py:func:`make_clamp <opendp.trans.make_clamp>` and :py:func:`make_bounded_resize <opendp.trans.make_bounded_resize>`.

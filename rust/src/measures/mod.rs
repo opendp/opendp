@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::{error::Fallible, core::Measure};
+use crate::{error::Fallible, core::Measure, domains::type_name};
 
 /// Measures
 #[derive(Clone)]
@@ -20,10 +20,9 @@ impl<Q> PartialEq for MaxDivergence<Q> {
         true
     }
 }
-
 impl<Q> Debug for MaxDivergence<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "MaxDivergence()")
+        write!(f, "MaxDivergence({})", type_name!(Q))
     }
 }
 
@@ -47,7 +46,7 @@ impl<Q> PartialEq for SmoothedMaxDivergence<Q> {
 }
 impl<Q> Debug for SmoothedMaxDivergence<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "SmoothedMaxDivergence()")
+        write!(f, "SmoothedMaxDivergence({})", type_name!(Q))
     }
 }
 
@@ -92,7 +91,7 @@ impl<Q> PartialEq for FixedSmoothedMaxDivergence<Q> {
 
 impl<Q> Debug for FixedSmoothedMaxDivergence<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "FixedSmoothedMaxDivergence()")
+        write!(f, "FixedSmoothedMaxDivergence({})", type_name!(Q))
     }
 }
 
@@ -117,7 +116,7 @@ impl<Q> PartialEq for ZeroConcentratedDivergence<Q> {
 
 impl<Q> Debug for ZeroConcentratedDivergence<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ZeroConcentratedDivergence()")
+        write!(f, "ZeroConcentratedDivergence({})", type_name!(Q))
     }
 }
 

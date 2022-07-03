@@ -13,9 +13,9 @@ def test_type_getters():
 
     from opendp.meas import make_base_geometric
     measurement = make_base_geometric(scale=1.5)
-    assert measurement.input_distance_type == "i32"
+    assert measurement.input_distance_type == "i64"
     assert measurement.output_distance_type == "f64"
-    assert measurement.input_carrier_type == "i32"
+    assert measurement.input_carrier_type == "i64"
 
 
 def test_chain():
