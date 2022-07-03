@@ -1,5 +1,6 @@
 .. testsetup::
 
+    from opendp.typing import *
     from opendp.mod import enable_features
     enable_features('contrib', 'floating-point')
 
@@ -37,9 +38,9 @@ In the following example we chain :py:func:`opendp.meas.make_base_geometric` wit
     >>> from opendp.comb import make_chain_mt
     ...
     >>> # call a constructor to produce a transformation
-    >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
+    >>> bounded_sum = make_bounded_sum(bounds=(0, 1), T=i32)
     >>> # call a constructor to produce a measurement
-    >>> base_geometric = make_base_geometric(scale=1.0)
+    >>> base_geometric = make_base_geometric(scale=1.0, D=AllDomain[i32])
     >>> noisy_sum = make_chain_mt(base_geometric, bounded_sum)
     ...
     >>> # investigate the privacy relation
@@ -80,7 +81,7 @@ but the chaining fails because the sum emits floats and the geometric mechanism 
     ...     print(err.message[:-1])
     Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
         output_domain: AllDomain(f64)
-        input_domain:  AllDomain(i64)
+        input_domain:  AllDomain(i32)
 
 Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.trans.make_cast>`, :py:func:`make_impute_constant <opendp.trans.make_impute_constant>`, :py:func:`make_clamp <opendp.trans.make_clamp>` and :py:func:`make_bounded_resize <opendp.trans.make_bounded_resize>`.

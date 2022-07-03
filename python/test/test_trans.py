@@ -10,19 +10,19 @@ STR_DATA = list(map(str, INT_DATA))
 
 def test_cast_impute():
     from opendp.trans import make_cast, make_impute_constant
-    caster = make_cast(TIA=float, TOA=int) >> make_impute_constant(-1)
+    caster = make_cast(TIA=float, TOA=i32) >> make_impute_constant(-1, DA=OptionNullDomain[AllDomain[i32]])
     assert caster([1., 2., 3.]) == [1, 2, 3]
 
-    caster = make_cast(TIA=float, TOA=int) >> make_impute_constant(1)
+    caster = make_cast(TIA=float, TOA=i32) >> make_impute_constant(1, DA=OptionNullDomain[AllDomain[i32]])
     assert caster([float('nan'), 2.]) == [1, 2]
 
 
 def test_cast_drop_null():
     from opendp.trans import make_cast, make_drop_null, make_cast_inherent
-    caster = make_cast(TIA=str, TOA=int) >> make_drop_null(DA=OptionNullDomain[AllDomain[int]])
+    caster = make_cast(TIA=str, TOA=i32) >> make_drop_null(DA=OptionNullDomain[AllDomain[i32]])
     assert caster(["A", "2", "3"]) == [2, 3]
 
-    caster = make_cast(TIA=float, TOA=int) >> make_drop_null(DA=OptionNullDomain[AllDomain[int]])
+    caster = make_cast(TIA=float, TOA=i32) >> make_drop_null(DA=OptionNullDomain[AllDomain[i32]])
     assert caster([float('nan'), 2.]) == [2]
 
     caster = make_cast_inherent(TIA=str, TOA=float) >> make_drop_null(DA=InherentNullDomain[AllDomain[float]])
@@ -31,7 +31,7 @@ def test_cast_drop_null():
 
 def test_cast_inherent():
     from opendp.trans import make_cast_inherent
-    caster = make_cast_inherent(TIA=int, TOA=float)
+    caster = make_cast_inherent(TIA=i32, TOA=float)
 
     assert caster([1, 2]) == [1., 2.]
 
@@ -44,7 +44,7 @@ def test_impute_constant_inherent():
 
 def test_cast_default():
     from opendp.trans import make_cast_default
-    caster = make_cast_default(TIA=float, TOA=int)
+    caster = make_cast_default(TIA=float, TOA=i32)
     assert caster([float('nan'), 2.]) == [0, 2]
 
 
@@ -58,7 +58,7 @@ def test_identity():
     from opendp.trans import make_identity
     from opendp.typing import VectorDomain, AllDomain
     # test int
-    transformation = make_identity(VectorDomain[AllDomain[int]], ChangeOneDistance)
+    transformation = make_identity(VectorDomain[AllDomain[i32]], ChangeOneDistance)
     arg = [123]
     ret = transformation(arg)
     assert ret == arg
@@ -73,7 +73,7 @@ def test_identity():
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity("VectorDomain<AllDomain<i64>>", ChangeOneDistance)
+    transformation = make_identity("VectorDomain<AllDomain<i32>>", ChangeOneDistance)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == arg
@@ -81,7 +81,7 @@ def test_identity():
 
 def test_is_equal():
     from opendp.trans import make_is_equal
-    tester = make_is_equal(3)
+    tester = make_is_equal(3, TIA=i32)
     assert tester([1, 2, 3]) == [False, False, True]
 
 
@@ -108,8 +108,8 @@ def test_split_lines__cast__impute():
     assert make_split_lines()("1\n2\n3") == ["1", "2", "3"]
     query = (
         make_split_lines() >>
-        make_cast(TIA=str, TOA=int) >>
-        make_impute_constant(constant=2)
+        make_cast(TIA=str, TOA=i32) >>
+        make_impute_constant(constant=2, DA=OptionNullDomain[AllDomain[i32]])
     )
 
     assert query("1\n2\n3") == [1, 2, 3]
@@ -164,7 +164,7 @@ def test_split_dataframe():
 
 def test_clamp():
     from opendp.trans import make_clamp
-    query = make_clamp(bounds=(-1, 1))
+    query = make_clamp(bounds=(-1, 1), TA=i32)
     assert query([-10, 0, 10]) == [-1, 0, 1]
     assert query.check(1, 1)
 
@@ -183,7 +183,7 @@ def test_bounded_sum():
     # TODO: tighten the check
     assert query.check(1, 20.)
 
-    query = make_bounded_sum(bounds=(0, 10))
+    query = make_bounded_sum(bounds=(0, 10), T=i32)
     assert query(INT_DATA) == 45
     # TODO: tighten the check
     assert query.check(1, 20)
@@ -223,7 +223,7 @@ def test_bounded_variance():
 
 def test_count():
     from opendp.trans import make_count
-    transformation = make_count(TIA=int, TO=int)
+    transformation = make_count(TIA=i32, TO=i32)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == 3
@@ -232,7 +232,7 @@ def test_count():
 
 def test_count_distinct():
     from opendp.trans import make_count_distinct
-    transformation = make_count_distinct(str, int)
+    transformation = make_count_distinct(str, i32)
     arg = list(map(str, [1, 2, 3, 2, 7, 3, 4]))
     ret = transformation(arg)
     assert ret == 5
@@ -249,21 +249,21 @@ def test_count_by():
 
 def test_count_by_categories():
     from opendp.trans import make_count_by_categories
-    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
+    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[i32], TOA=i32)
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
 
 
 def test_resize():
     from opendp.trans import make_bounded_resize
-    query = make_bounded_resize(size=4, bounds=(0, 10), constant=0)
+    query = make_bounded_resize(size=4, bounds=(0, 10), constant=0, TA=i32)
     assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)
     assert query.check(2, 4)
 
     from opendp.trans import make_resize
-    query = make_resize(size=4, constant=0)
+    query = make_resize(size=4, constant=0, TA=i32)
     assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)
@@ -272,7 +272,7 @@ def test_resize():
 
 def test_count_by_categories_str():
     from opendp.trans import make_count_by_categories
-    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[int])
+    query = make_count_by_categories(categories=["1", "3", "4"], MO=L1Distance[i32], TOA=i32)
     assert query(STR_DATA) == [1, 1, 1, 6]
     assert query.check(1, 1)
 
@@ -284,7 +284,7 @@ def test_indexing():
     assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
     assert find.check(1, 1)
 
-    binner = make_find_bin(edges=[2, 3, 5])
+    binner = make_find_bin(edges=[2, 3, 5], TIA=i32)
     assert binner(INT_DATA) == [0, 1, 2, 2, 3, 3, 3, 3, 3]
 
     indexer = make_index(categories=["A", "B", "C"], null="NA")
