@@ -331,7 +331,7 @@
             },
             {
                 "name": "TO",
-                "default": "i32",
+                "default": "i64",
                 "is_type": true,
                 "description": "Output Type. Must be numeric."
             }
@@ -349,7 +349,7 @@
             },
             {
                 "name": "TO",
-                "default": "i32",
+                "default": "i64",
                 "is_type": true,
                 "description": "Output Type. Must be numeric."
             }
@@ -375,7 +375,7 @@
                 "name": "TV",
                 "is_type": true,
                 "description": "Type of Value. Express counts in terms of this integral type.",
-                "default": "i32"
+                "default": "i64"
             }
         ],
         "ret": {
@@ -398,7 +398,7 @@
             },
             {
                 "name": "MO",
-                "default": "L1Distance<i32>",
+                "default": "L1Distance<i64>",
                 "hint": "SensitivityMetric",
                 "is_type": true,
                 "description": "output sensitivity metric"
@@ -412,7 +412,7 @@
                 "name": "TOA",
                 "is_type": true,
                 "description": "express counts in terms of this numeric type",
-                "default": "i32"
+                "default": "i64"
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}

@@ -52,7 +52,7 @@ where
 /// Implemented for any metric that supports multiplication lipschitz extensions
 pub trait LipschitzMulMetric: Metric {}
 
-impl<T, const P: usize> LipschitzMulMetric for LpDistance<T, P> {}
+impl<const P: usize, T> LipschitzMulMetric for LpDistance<P, T> {}
 impl<T> LipschitzMulMetric for AbsoluteDistance<T> {}
 
 #[cfg(test)]

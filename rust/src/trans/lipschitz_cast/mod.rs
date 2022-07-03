@@ -88,8 +88,8 @@ impl<MI: Metric, MO: Metric> SameMetric<MI, MO>
     )
 {
 }
-impl<MI: Metric, MO: Metric, const P: usize> SameMetric<MI, MO>
-    for (LpDistance<MI::Distance, P>, LpDistance<MO::Distance, P>)
+impl<const P: usize, MI: Metric, MO: Metric> SameMetric<MI, MO>
+    for (LpDistance<P, MI::Distance>, LpDistance<P, MO::Distance>)
 {
 }
 

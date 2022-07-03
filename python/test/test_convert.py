@@ -112,8 +112,8 @@ def test_hashmap():
 def test_numpy_data():
     def roundtrip(value, type_name, dtype=None):
         print(c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name)))
-    roundtrip([1, 2], "Vec<i32>", dtype=np.int32)
-    roundtrip(1, "i32", dtype=np.int32)
+    roundtrip([1, 2], "Vec<i64>", dtype=np.int64)
+    roundtrip(1, "i64", dtype=np.int64)
     roundtrip([1., 2.], "Vec<f64>")
     roundtrip(1., "f64")
     roundtrip(["A", "B"], "Vec<String>")
@@ -125,4 +125,4 @@ def test_numpy_trans():
     from opendp.trans import make_bounded_sum
     from opendp.mod import enable_features
     enable_features("contrib")
-    assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3], dtype=np.int32)) == 6
+    assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3])) == 6

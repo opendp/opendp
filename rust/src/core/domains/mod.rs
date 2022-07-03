@@ -15,13 +15,18 @@ use crate::error::Fallible;
 use crate::traits::{CheckNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
+// retrieves the type_name for a given type
+macro_rules! type_name {
+    ($ty:ty) => (std::any::type_name::<$ty>().split("::").last().unwrap_or(""))
+}
+pub(crate) use type_name;
 /// A Domain that contains all non-null members of the carrier type.
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
 }
 impl<T> Debug for AllDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "AllDomain()")
+        write!(f, "AllDomain({})", type_name!(T))
     }
 }
 impl<T> Default for AllDomain<T> {
@@ -122,7 +127,7 @@ impl<T: TotalOrd> BoundedDomain<T> {
 }
 impl<T> Debug for BoundedDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "BoundedDomain()")
+        write!(f, "BoundedDomain({})", type_name!(T))
     }
 }
 impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {

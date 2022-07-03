@@ -25,17 +25,17 @@ def test_typing_hint():
     # python < 3.8 should raise a NotImplementedError
     if sys.version_info < (3, 8):
         try:
-            assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)"
+            assert str(RuntimeType.parse(Tuple[int, float])) == "(i64, f64)"
             raise Exception("typing hints should fail with error below python 3.8")
         except NotImplementedError:
             # on python < 3.8 the remaining tests do not apply
             return
 
-    assert str(RuntimeType.parse(Tuple[int, float])) == "(i32, f64)"
-    assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i32, (String))"
-    assert str(RuntimeType.parse(List[int])) == "Vec<i32>"
+    assert str(RuntimeType.parse(Tuple[int, float])) == "(i64, f64)"
+    assert str(RuntimeType.parse(Tuple[int, Tuple[str]])) == "(i64, (String))"
+    assert str(RuntimeType.parse(List[int])) == "Vec<i64>"
     assert str(RuntimeType.parse(List[List[str]])) == "Vec<Vec<String>>"
-    assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i32>, (i32, bool))'
+    assert str(RuntimeType.parse((List[int], (int, bool)))) == '(Vec<i64>, (i64, bool))'
     assert isinstance(RuntimeType.parse('ChangeOneDistance'), DatasetMetric)
     assert isinstance(RuntimeType.parse('L1Distance<f64>'), SensitivityMetric)
 
@@ -49,13 +49,13 @@ def test_typing_hint():
 def test_sensitivity():
     assert isinstance(L1Distance[int], SensitivityMetric)
     assert not isinstance(RuntimeType.parse('(f32)'), SensitivityMetric)
-    assert str(L1Distance[int]) == "L1Distance<i32>"
+    assert str(L1Distance[int]) == "L1Distance<i64>"
 
 
 def test_tuples():
-    assert str(RuntimeType.parse((float, int))) == "(f64, i32)"
-    assert str(RuntimeType.parse(('f32', (int, 'L1Distance<i32>')))) == '(f32, (i32, L1Distance<i32>))'
-    assert str(RuntimeType.parse(('f32', (int, L2Distance[float])))) == '(f32, (i32, L2Distance<f64>))'
+    assert str(RuntimeType.parse((float, int))) == "(f64, i64)"
+    assert str(RuntimeType.parse(('f32', (int, 'L1Distance<i32>')))) == '(f32, (i64, L1Distance<i32>))'
+    assert str(RuntimeType.parse(('f32', (int, L2Distance[float])))) == '(f32, (i64, L2Distance<f64>))'
 
 
 def test_c():
