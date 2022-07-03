@@ -61,12 +61,6 @@ where
     if !measurements.iter().all(|v| input_domain == v.input_domain) {
         return fallible!(DomainMismatch, "All input domains must be the same");
     }
-    // if !measurements
-    //     .iter()
-    //     .all(|v| output_domain == v.output_domain)
-    // {
-    //     return fallible!(DomainMismatch, "All output domains must be the same");
-    // }
     if !measurements.iter().all(|v| input_metric == v.input_metric) {
         return fallible!(MetricMismatch, "All input metrics must be the same");
     }

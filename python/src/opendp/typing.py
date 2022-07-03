@@ -272,10 +272,6 @@ class RuntimeType(object):
         :raises TypeError: if `expected` type differs significantly from `inferred` type
         """
 
-        # TODO: this is ugly!
-        if expected == "AnyObjectPtr":
-            return
-
         ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
         if isinstance(inferred, UnknownType):
             return
@@ -382,10 +378,14 @@ i8 = RuntimeType('i8')
 i16 = RuntimeType('i16')
 i32 = RuntimeType('i32')
 i64 = RuntimeType('i64')
+i128 = RuntimeType('i128')
+isize = RuntimeType('isize')
 u8 = RuntimeType('u8')
 u16 = RuntimeType('u16')
 u32 = RuntimeType('u32')
 u64 = RuntimeType('u64')
+u128 = RuntimeType('u128')
+usize = RuntimeType('usize')
 f32 = RuntimeType('f32')
 f64 = RuntimeType('f64')
 

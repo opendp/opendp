@@ -9,13 +9,6 @@
             "description": "String representation of `this` AnyObject."
         }
     },
-    "ffislice_of_anyobjectptrs": {
-        "description": "Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.",
-        "args": [
-            {"name": "raw", "c_type": "const FfiSlice *"}
-        ],
-        "ret": {"c_type": "FfiResult<const FfiSlice *>", "do_not_convert": true}
-    },
     "slice_as_object": {
         "description": "Internal function. Load data from a `slice` into an AnyObject",
         "args": [
@@ -48,6 +41,13 @@
             "do_not_convert": true,
             "description": "An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages."
         }
+    },
+    "ffislice_of_anyobjectptrs": {
+        "description": "Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.",
+        "args": [
+            {"name": "raw", "c_type": "const FfiSlice *"}
+        ],
+        "ret": {"c_type": "FfiResult<const FfiSlice *>", "do_not_convert": true}
     },
     "object_free": {
         "description": "Internal function. Free the memory associated with `this`, an AnyObject.",

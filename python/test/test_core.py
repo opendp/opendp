@@ -65,21 +65,19 @@ def test_bisect_edge():
     assert binary_search(lambda x: x > 5., bounds=(0., 10.)) - 5. > -1e-8
 
 
-# def test_bisect_chain():
-#     from opendp.mod import binary_search_chain, binary_search_param, enable_features
-#     from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
-#     from opendp.meas import make_base_laplace
-#     enable_features("contrib")
+def test_bisect_chain():
+    from opendp.mod import binary_search_chain, binary_search_param, enable_features
+    from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
+    from opendp.meas import make_base_laplace
+    enable_features("contrib")
 
-#     pre = (
-#         make_clamp(bounds=(0., 1.)) >>
-#         make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
-#         make_sized_bounded_mean(size=10, bounds=(0., 1.))
-#     )
-#     chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
-#     assert chain.check(1, 1.)
+    pre = (
+        make_clamp(bounds=(0., 1.)) >>
+        make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
+        make_sized_bounded_mean(size=10, bounds=(0., 1.))
+    )
+    chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
+    assert chain.check(1, 1.)
 
-#     scale = binary_search_param(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
-#     assert scale - 0.1 < 1e-8
-
-# test_bisect_chain()
+    scale = binary_search_param(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
+    assert scale - 0.1 < 1e-8
