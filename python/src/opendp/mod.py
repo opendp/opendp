@@ -258,6 +258,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             from opendp.core import _transformation_free
             _transformation_free(self)
         except ImportError:
+            # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
 
