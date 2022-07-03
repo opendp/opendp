@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn test_make_base_gaussian() -> Fallible<()> {
         let measurement = Result::from(opendp_meas__make_base_analytic_gaussian(
-            util::into_raw(0.0) as *const c_void, "AllDomain<f64>".to_char_p()))?;
+            0.0 as c_double, "AllDomain<f64>".to_char_p()))?;
         let arg = AnyObject::new_raw(1.0);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);
         let res: f64 = Fallible::from(res)?.downcast()?;
