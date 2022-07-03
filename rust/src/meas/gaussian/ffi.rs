@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::{c_char, c_void, c_double};
 
 use num::Float;
 
@@ -43,19 +43,16 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_analytic_gaussian(
-    scale: *const c_void,
+    scale: c_double,
     D: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement> where
-        D: 'static + GaussianDomain,
-        D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull,
-        f64: InfCast<D::Atom> {
-        let scale = *try_as_ref!(scale as *const D::Atom);
+    fn monomorphize<D>(scale: f64) -> FfiResult<*mut AnyMeasurement> where
+        D: 'static + GaussianDomain<Atom=f64> {
         make_base_analytic_gaussian::<D>(scale).into_any()
     }
     let D = try_!(Type::try_from(D));
     dispatch!(monomorphize, [
-        (D, [AllDomain<f64>, AllDomain<f32>, VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f32>>])
+        (D, [AllDomain<f64>, VectorDomain<AllDomain<f64>>])
     ], (scale))
 }
 
