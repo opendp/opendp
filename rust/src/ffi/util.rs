@@ -217,7 +217,6 @@ macro_rules! type_vec {
 
 pub type AnyMeasurementPtr = *const AnyMeasurement;
 pub type AnyTransformationPtr = *const AnyTransformation;
-pub type AnyObjectPtr = *const AnyObject;
 
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
@@ -226,18 +225,16 @@ lazy_static! {
         let types: Vec<Type> = vec![
             // data types
             vec![t!(())],
-            // types for the compositor
-            vec![t!((AnyMeasurementPtr, f64)), t!((AnyMeasurementPtr, f32))],
             type_vec![bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject],
             type_vec![(bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject)],
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
-            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject, (AnyMeasurementPtr, f64), (AnyMeasurementPtr, f32)>],
+            type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
-            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyObjectPtr],
-            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, AnyObjectPtr>],
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],

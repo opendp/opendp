@@ -7,7 +7,6 @@
 
 use std::any;
 use std::any::Any;
-use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 
 use num::Zero;
@@ -123,44 +122,16 @@ impl AnyBoxClonePartialEqDebug {
 pub struct AnyObject {
     pub type_: Type,
     value: AnyBox,
-    pub partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
-    pub partial_cmp_glue: Option<Glue<fn(&Self, &Self) -> Option<Ordering>>>,
-    pub clone_glue: Option<Glue<fn(&Self) -> Self>>,
 }
 
 impl AnyObject {
     pub fn new<T: 'static>(value: T) -> Self {
-        fn monomorphize_partial_eq<T: 'static + PartialEq>() -> Fallible<fn(&AnyObject, &AnyObject) -> bool> {
-            Ok(|self_, other|
-                self_.downcast_ref::<T>().ok().zip(other.downcast_ref().ok())
-                    .map(|(self_, other)| self_.eq(other)).unwrap_or(false))
-        }
-        fn monomorphize_partial_cmp<T: 'static + PartialOrd>() -> Fallible<fn(&AnyObject, &AnyObject) -> Option<Ordering>> {
-            Ok(|self_, other|
-                self_.downcast_ref::<T>().ok().zip(other.downcast_ref().ok())
-                    .map(|(self_, other)| self_.partial_cmp(other)).unwrap_or(None))
-        }
-        fn monomorphize_clone<T: 'static + Clone>() -> Fallible<fn(&AnyObject) -> AnyObject> {
-            Ok(|self_| AnyObject::new(self_.downcast_ref::<T>()
-                .expect("Downcast will always be of same type").clone()))
-        }
-
         let type_ = Type::of::<T>();
 
         AnyObject {
-            partial_eq_glue: dispatch!(monomorphize_partial_eq, [(type_, @hashable)], ()).ok().map(Glue::new),
-            partial_cmp_glue: dispatch!(monomorphize_partial_cmp, [(type_, @hashable)], ()).ok().map(Glue::new),
-            // CAUTION: oftentimes clone_glue is None, because T is not in @primitives
-            clone_glue: dispatch!(monomorphize_clone, [(type_, @primitives)], ()).ok().map(Glue::new),
             type_,
             value: AnyBox::new(value),
         }
-    }
-
-    pub fn new_clone<T: 'static + Clone>(value: T) -> Self {
-        let mut new = Self::new(value);
-        new.clone_glue = Some(Glue::new(|self_: &Self| AnyObject::new(self_.downcast_ref::<T>().expect("Downcast will always be of same type").clone())));
-        new
     }
 
     #[cfg(test)]
@@ -175,22 +146,6 @@ impl Downcast for AnyObject {
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.value.downcast_ref()
-    }
-}
-
-impl PartialEq for AnyObject {
-    fn eq(&self, other: &Self) -> bool {
-        self.partial_eq_glue.as_ref().map(|glue| glue(self, other)).unwrap_or(false)
-    }
-}
-impl PartialOrd for AnyObject {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.partial_cmp_glue.as_ref().map(|glue| glue(self, other)).unwrap_or(None)
-    }
-}
-impl Clone for AnyObject {
-    fn clone(&self) -> Self {
-        self.clone_glue.as_ref().expect("Clone glue is missing")(self)
     }
 }
 

@@ -6,10 +6,10 @@ from opendp.typing import *
 
 __all__ = [
     "to_string",
-    "ffislice_of_anyobjectptrs",
     "slice_as_object",
     "object_type",
     "object_as_slice",
+    "ffislice_of_anyobjectptrs",
     "object_free",
     "slice_free",
     "str_free",
@@ -41,30 +41,6 @@ def to_string(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(this), ctypes.c_char_p))
-
-
-def ffislice_of_anyobjectptrs(
-    raw: Any
-) -> Any:
-    """Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
-    
-    :param raw: 
-    :type raw: Any
-    :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    raw = py_to_c(raw, c_type=FfiSlicePtr)
-    
-    # Call library function.
-    function = lib.opendp_data__ffislice_of_anyobjectptrs
-    function.argtypes = [FfiSlicePtr]
-    function.restype = FfiResult
-    
-    return unwrap(function(raw), FfiSlicePtr)
 
 
 def slice_as_object(
@@ -146,6 +122,30 @@ def object_as_slice(
     function.restype = FfiResult
     
     return unwrap(function(this), FfiSlicePtr)
+
+
+def ffislice_of_anyobjectptrs(
+    raw: Any
+) -> Any:
+    """Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
+    
+    :param raw: 
+    :type raw: Any
+    :rtype: Any
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    raw = py_to_c(raw, c_type=FfiSlicePtr)
+    
+    # Call library function.
+    function = lib.opendp_data__ffislice_of_anyobjectptrs
+    function.argtypes = [FfiSlicePtr]
+    function.restype = FfiResult
+    
+    return unwrap(function(raw), FfiSlicePtr)
 
 
 def object_free(

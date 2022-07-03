@@ -25,7 +25,6 @@ ATOM_MAP = {
     'bool': ctypes.c_bool,
     'AnyMeasurementPtr': Measurement,
     'AnyTransformationPtr': Transformation,
-    'AnyObjectPtr': AnyObjectPtr,
 }
 
 
@@ -75,8 +74,6 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         return _py_to_slice(value, type_name)
 
     if isinstance(value, RuntimeType):
-        # if value.origin == "Vec" and str(value.args[0]) not in ATOM_MAP:
-        #     value.args[0] = "AnyObjectPtr"
         value = str(value)
 
     if isinstance(value, str):
@@ -165,7 +162,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     :param type_name: rust type name to load value into.
     :return: pointer to an FfiSlice owned by python.
     """
-    if str(type_name) in ATOM_MAP:
+    if isinstance(type_name, str) and type_name in ATOM_MAP:
         return _scalar_to_slice(value, type_name)
 
     if type_name == "String":
@@ -273,6 +270,9 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: RuntimeType) -> FfiSlicePtr
     # TODO: temporary check
     if len(inner_type_names) != 2:
         raise OpenDPException("Only 2-tuples are currently supported.")
+    # TODO: temporary check
+    if len(set(inner_type_names)) > 1:
+        raise OpenDPException("Only homogeneously-typed tuples are currently supported.")
 
     if len(inner_type_names) != len(val):
         raise TypeError("type_name members must have same length as tuple")
@@ -287,20 +287,12 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: RuntimeType) -> FfiSlicePtr
         if inner_type_name not in equivalence_class:
             raise TypeError("Data cannot be represented by the suggested type_name")
 
-    def scalar_to_c(v, name):
-        # some types are already in c representation
-        if name in {"AnyMeasurementPtr", "AnyTransformationPtr", "AnyObjectPtr"}:
-            return v
-        return ctypes.pointer(ATOM_MAP[name](v))
-
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
-    c_reprs = [scalar_to_c(v, name) for v, name in zip(val, inner_type_names)]
-    ptr_data = (ctypes.cast(v, ctypes.c_void_p) for v in c_reprs)
+    ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)
+        for v, name in zip(val, inner_type_names))
 
     array = (ctypes.c_void_p * len(val))(*ptr_data)
-    ffislice = _wrap_in_slice(ctypes.pointer(array), len(val))
-    ffislice.depends_on(c_reprs)
-    return ffislice
+    return _wrap_in_slice(ctypes.pointer(array), len(val))
 
 
 def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]:

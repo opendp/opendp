@@ -18,8 +18,7 @@ impl AmplifiableMeasure for AnyMeasure {
         ) -> Fallible<AnyObject> {
             fn monomorphize2<M: 'static + AmplifiableMeasure>(
                 measure: &AnyMeasure, budget: &AnyObject, population_size: usize, sample_size: usize,
-            ) -> Fallible<AnyObject> 
-                where M::Distance: Clone {
+            ) -> Fallible<AnyObject> {
                 let measure = measure.downcast_ref::<M>()?;
                 let budget = budget.downcast_ref::<M::Distance>()?;
                 measure.amplify(budget, population_size, sample_size).map(AnyObject::new)

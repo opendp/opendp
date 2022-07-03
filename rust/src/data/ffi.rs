@@ -7,67 +7,37 @@ use std::os::raw::c_char;
 use std::slice;
 
 use crate::core::SMDCurve;
+use crate::traits::TotalOrd;
+use crate::{err, fallible, try_, try_as_ref};
 use crate::core::{FfiError, FfiResult, FfiSlice};
-use crate::data::ffi::util::AnyObjectPtr;
 use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, Downcast};
-use crate::ffi::util;
-use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
-use crate::traits::TotalOrd;
+use crate::ffi::util::{self, AnyMeasurementPtr, AnyTransformationPtr};
+use crate::ffi::util::{c_bool, Type, TypeContents};
 
 #[no_mangle]
-pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
-    raw: *const FfiSlice,
-) -> FfiResult<*mut FfiSlice> {
-    // dereference the pointer
-    let raw = try_as_ref!(raw);
-
-    // read contents as a slice of AnyObjects, and then construct a vector of pointers to each of the elements
-    let vec_any_ptrs = unsafe { slice::from_raw_parts(raw.ptr as *const AnyObject, raw.len) }
-        .iter()
-        .map(|v| v as *const AnyObject)
-        .collect::<Vec<_>>();
-
-    // build a new ffislice out of the pointers
-    Ok(FfiSlice::new(vec_any_ptrs.leak() as *mut _ as *mut c_void, raw.len)).into()
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_data__slice_as_object(
-    raw: *const FfiSlice,
-    T: *const c_char,
-) -> FfiResult<*mut AnyObject> {
+pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
     let T = try_!(Type::try_from(T));
     fn raw_to_plain<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 1 {
-            return fallible!(
-                FFI,
-                "The slice length must be one when creating a scalar from FfiSlice"
-            );
+            return fallible!(FFI, "The slice length must be one when creating a scalar from FfiSlice");
         }
         let plain = util::as_ref(raw.ptr as *const T)
-            .ok_or_else(|| {
-                err!(
-                    FFI,
-                    "Attempted to follow a null pointer to create an object"
-                )
-            })?
-            .clone();
-        Ok(AnyObject::new_clone(plain))
+            .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create an object"))?.clone();
+        Ok(AnyObject::new(plain))
     }
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let string = util::to_str(raw.ptr as *const c_char)?.to_owned();
-        Ok(AnyObject::new_clone(string))
+        Ok(AnyObject::new(string))
     }
     fn raw_to_vec_string(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_char, raw.len) };
-        let vec = slice
-            .iter()
+        let vec = slice.iter()
             .map(|str_ptr| Ok(util::to_str(*str_ptr)?.to_owned()))
             .collect::<Fallible<Vec<String>>>()?;
-        Ok(AnyObject::new_clone(vec))
+        Ok(AnyObject::new(vec))
     }
     fn raw_to_slice<T: Clone>(_raw: &FfiSlice) -> Fallible<AnyObject> {
         // TODO: Need to do some extra wrapping to own the slice here.
@@ -76,53 +46,39 @@ pub extern "C" fn opendp_data__slice_as_object(
     #[allow(clippy::unnecessary_wraps)]
     fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
-        Ok(AnyObject::new_clone(slice.to_vec()))
+        let vec = slice.to_vec();
+        Ok(AnyObject::new(vec))
     }
-    fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(
-        raw: &FfiSlice,
-    ) -> Fallible<AnyObject> {
+    fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         if raw.len != 2 {
-            return fallible!(
-                FFI,
-                "The slice length must be two when creating a tuple from FfiSlice"
-            );
+            return fallible!(FFI, "The slice length must be two when creating a tuple from FfiSlice");
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 2) };
 
-        let tuple = util::as_ref(slice[0] as *const T0)
-            .cloned()
+        let tuple = util::as_ref(slice[0] as *const T0).cloned()
             .zip(util::as_ref(slice[1] as *const T1).cloned())
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
-        Ok(AnyObject::new_clone(tuple))
+        Ok(AnyObject::new(tuple))
     }
-    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
-        raw: &FfiSlice,
-    ) -> Fallible<AnyObject> {
+    fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
 
         // unpack keys and values into slices
-        if slice.len() != 2 {
-            return fallible!(FFI, "HashMap FfiSlice must have length 2");
-        }
+        if slice.len() != 2 { return fallible!(FFI, "HashMap FfiSlice must have length 2"); }
         let keys = try_as_ref!(slice[0]).downcast_ref::<Vec<K>>()?;
         let vals = try_as_ref!(slice[1]).downcast_ref::<Vec<V>>()?;
 
         // construct the hashmap
-        if keys.len() != vals.len() {
-            return fallible!(
-                FFI,
-                "HashMap FfiSlice must have an equivalent number of keys and values"
-            );
-        };
-        let map = keys
-            .iter()
-            .cloned()
+        if keys.len() != vals.len() { return fallible!(FFI, "HashMap FfiSlice must have an equivalent number of keys and values"); };
+        let map = keys.iter().cloned()
             .zip(vals.iter().cloned())
             .collect::<HashMap<K, V>>();
-        Ok(AnyObject::new_clone(map))
+        Ok(AnyObject::new(map))
     }
     match T.contents {
-        TypeContents::PLAIN("String") => raw_to_string(raw),
+        TypeContents::PLAIN("String") => {
+            raw_to_string(raw)
+        }
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
             dispatch!(raw_to_slice, [(element, @primitives)], (raw))
@@ -132,7 +88,6 @@ pub extern "C" fn opendp_data__slice_as_object(
             match element.descriptor.as_str() {
                 "String" => raw_to_vec_string(raw),
                 "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
-                "AnyObjectPtr" => raw_to_vec::<AnyObjectPtr>(raw),
                 "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
@@ -141,37 +96,22 @@ pub extern "C" fn opendp_data__slice_as_object(
             if element_ids.len() != 2 {
                 return fallible!(FFI, "Only tuples of length 2 are supported").into();
             }
-            let types = try_!(element_ids
-                .iter()
-                .map(Type::of_id)
-                .collect::<Fallible<Vec<_>>>());
+            let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
             // In the inbound direction, we can handle tuples of primitives only. This is probably OK,
             // because the only likely way to get a tuple of AnyObjects is as the output of composition.
             dispatch!(raw_to_tuple, [(types[0], @primitives), (types[1], @primitives)], (raw))
         }
         TypeContents::GENERIC { name, args } => {
             if name == "HashMap" {
-                if args.len() != 2 {
-                    return err!(FFI, "HashMaps should have 2 type arguments").into();
-                }
+                if args.len() != 2 { return err!(FFI, "HashMaps should have 2 type arguments").into(); }
                 let K = try_!(Type::of_id(&args[0]));
                 let V = try_!(Type::of_id(&args[1]));
                 dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
-            } else {
-                fallible!(FFI, "unrecognized generic {:?}", name)
-            }
+            } else { fallible!(FFI, "unrecognized generic {:?}", name) }
         }
         // This list is explicit because it allows us to avoid including u32 in the @primitives
-        _ => dispatch!(
-            raw_to_plain,
-            [(
-                T,
-                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool]
-            )],
-            (raw)
-        ),
-    }
-    .into()
+        _ => dispatch!(raw_to_plain, [(T, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (raw))
+    }.into()
 }
 
 #[no_mangle]
@@ -180,7 +120,7 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
 
     match util::into_c_char_p(obj.type_.descriptor.to_string()) {
         Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
+        Err(e) => e.into()
     }
 }
 
@@ -194,17 +134,12 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     fn string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let string: &String = obj.downcast_ref()?;
         // FIXME: There's no way to get a CString without copying, so this leaks.
-        Ok(FfiSlice::new(
-            util::into_c_char_p(string.clone())? as *mut c_void,
-            string.len() + 1,
-        ))
+        Ok(FfiSlice::new(util::into_c_char_p(string.clone())? as *mut c_void, string.len() + 1))
     }
     fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec_str: &Vec<String> = obj.downcast_ref()?;
-        let vec = vec_str
-            .iter()
-            .cloned()
-            .map(util::into_c_char_p)
+        let vec = vec_str.iter()
+            .cloned().map(util::into_c_char_p)
             .collect::<Fallible<Vec<*mut c_char>>>()?;
 
         let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
@@ -221,22 +156,17 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }
     fn tuple_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(T0, T1) = obj.downcast_ref()?;
-        Ok(FfiSlice::new(
-            util::into_raw([
-                &tuple.0 as *const T0 as *const c_void,
-                &tuple.1 as *const T1 as *const c_void,
-            ]) as *mut c_void,
-            2,
-        ))
+        Ok(FfiSlice::new(util::into_raw([
+            &tuple.0 as *const T0 as *const c_void,
+            &tuple.1 as *const T1 as *const c_void
+        ]) as *mut c_void, 2))
     }
-    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
-        obj: &AnyObject,
-    ) -> Fallible<FfiSlice> {
+    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let data: &HashMap<K, V> = obj.downcast_ref()?;
 
         // wrap keys and values up in an AnyObject
-        let keys = AnyObject::new_clone(data.keys().cloned().collect::<Vec<K>>());
-        let vals = AnyObject::new_clone(data.values().cloned().collect::<Vec<V>>());
+        let keys = AnyObject::new(data.keys().cloned().collect::<Vec<K>>());
+        let vals = AnyObject::new(data.values().cloned().collect::<Vec<V>>());
 
         // wrap the whole map up together in an FfiSlice
         let map = vec![util::into_raw(keys), util::into_raw(vals)];
@@ -281,6 +211,24 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }.into()
 }
 
+
+#[no_mangle]
+pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
+    raw: *const FfiSlice,
+) -> FfiResult<*mut FfiSlice> {
+    // dereference the pointer
+    let raw = try_as_ref!(raw);
+
+    // read contents as a slice of AnyObjects, and then construct a vector of pointers to each of the elements
+    let vec_any_ptrs = unsafe { slice::from_raw_parts(raw.ptr as *const AnyObject, raw.len) }
+        .iter()
+        .map(|v| v as *const AnyObject)
+        .collect::<Vec<_>>();
+
+    // build a new ffislice out of the pointers
+    Ok(FfiSlice::new(vec_any_ptrs.leak() as *mut _ as *mut c_void, raw.len)).into()
+}
+
 #[no_mangle]
 pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
@@ -302,12 +250,13 @@ pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()
     util::into_owned(this).map(|_| ()).into()
 }
 
+
 impl std::fmt::Debug for AnyObject {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         fn monomorphize<T: 'static + std::fmt::Debug>(this: &AnyObject) -> Fallible<String> {
             Ok(match this.downcast_ref::<T>() {
                 Ok(v) => format!("{:?}", v),
-                Err(e) => e.to_string(),
+                Err(e) => e.to_string()
             })
         }
         let type_arg = &self.type_;
@@ -325,56 +274,47 @@ impl std::fmt::Debug for AnyObject {
     }
 }
 
+impl PartialEq for AnyObject {
+    fn eq(&self, other: &Self) -> bool {
+        fn monomorphize<T: 'static + PartialEq>(this: &AnyObject, other: &AnyObject) -> Fallible<bool> {
+            Ok(this.downcast_ref::<T>()? == other.downcast_ref::<T>()?)
+        }
+
+        let type_arg = &self.type_;
+        dispatch!(monomorphize, [(type_arg, @hashable)], (self, other)).unwrap_or(false)
+    }
+}
+
+impl PartialOrd for AnyObject {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        fn monomorphize<T: 'static + PartialOrd>(this: &AnyObject, other: &AnyObject) -> Fallible<Option<std::cmp::Ordering>> {
+            Ok(this.downcast_ref::<T>()?.partial_cmp(other.downcast_ref::<T>()?))
+        }
+
+        let type_arg = &self.type_;
+        dispatch!(monomorphize, [(type_arg, @numbers)], (self, other)).unwrap_or(None)
+    }
+}
+
 impl TotalOrd for AnyObject {
     fn total_cmp(&self, other: &Self) -> Fallible<std::cmp::Ordering> {
-        fn monomorphize<T: 'static + TotalOrd>(
-            this: &AnyObject,
-            other: &AnyObject,
-        ) -> Fallible<std::cmp::Ordering> {
-            this.downcast_ref::<T>()?
-                .total_cmp(other.downcast_ref::<T>()?)
+        fn monomorphize<T: 'static + TotalOrd>(this: &AnyObject, other: &AnyObject) -> Fallible<std::cmp::Ordering> {
+            this.downcast_ref::<T>()?.total_cmp(other.downcast_ref::<T>()?)
         }
 
         let type_arg = &self.type_;
         // type list is explicit because (f32, f32), (f64, f64) are not in @numbers
-        dispatch!(
-            monomorphize,
-            [(
-                type_arg,
-                [
-                    u8,
-                    u16,
-                    u32,
-                    u64,
-                    u128,
-                    i8,
-                    i16,
-                    i32,
-                    i64,
-                    i128,
-                    usize,
-                    f32,
-                    f64,
-                    (f32, f32),
-                    (f64, f64)
-                ]
-            )],
-            (self, other)
-        )
+        dispatch!(monomorphize, [(type_arg, [
+            u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, (f32, f32), (f64, f64)
+        ])], (self, other))
     }
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_data__smd_curve_epsilon(
-    curve: *const AnyObject,
-    delta: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
+pub extern "C" fn opendp_data__smd_curve_epsilon(curve: *const AnyObject, delta: *const AnyObject) -> FfiResult<*mut AnyObject> {
     fn monomorphize<T: 'static>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
         let delta = delta.downcast_ref::<T>()?;
-        curve
-            .downcast_ref::<SMDCurve<T>>()?
-            .epsilon(delta)
-            .map(AnyObject::new)
+        curve.downcast_ref::<SMDCurve<T>>()?.epsilon(delta).map(AnyObject::new)
     }
     let curve = try_as_ref!(curve);
     let delta = try_as_ref!(delta);
@@ -385,14 +325,13 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(
 pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
     util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
         |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
-        FfiResult::Ok,
-    )
+        FfiResult::Ok)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::error::ExplainUnwrap;
     use crate::error::*;
+    use crate::error::ExplainUnwrap;
     use crate::ffi::util;
     use crate::ffi::util::ToCharP;
 
@@ -460,10 +399,7 @@ mod tests {
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 6);
-        assert_eq!(
-            util::into_string(res.ptr as *mut c_char).unwrap_test(),
-            "Hello"
-        );
+        assert_eq!(util::into_string(res.ptr as *mut c_char).unwrap_test(), "Hello");
         Ok(())
     }
 
@@ -473,10 +409,7 @@ mod tests {
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 3);
-        assert_eq!(
-            util::as_ref(res.ptr as *const [i32; 3]).unwrap_test(),
-            &[1, 2, 3]
-        );
+        assert_eq!(util::as_ref(res.ptr as *const [i32; 3]).unwrap_test(), &[1, 2, 3]);
         Ok(())
     }
 
@@ -487,13 +420,7 @@ mod tests {
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 2);
         let res_ptr = util::as_ref(res.ptr as *const [*mut i32; 2]).unwrap_test();
-        assert_eq!(
-            (
-                util::as_ref(res_ptr[0]).unwrap_test(),
-                util::as_ref(res_ptr[1]).unwrap_test()
-            ),
-            (&999, &-999)
-        );
+        assert_eq!((util::as_ref(res_ptr[0]).unwrap_test(), util::as_ref(res_ptr[1]).unwrap_test()), (&999, &-999));
         Ok(())
     }
 
@@ -505,10 +432,7 @@ mod tests {
         assert_eq!(res.len, 2);
         let res_ptr = util::as_ref(res.ptr as *const [*mut AnyObject; 2]).unwrap_test();
         assert_eq!(
-            (
-                util::as_ref(res_ptr[0]).unwrap_test().downcast_ref()?,
-                util::as_ref(res_ptr[1]).unwrap_test().downcast_ref()?
-            ),
+            (util::as_ref(res_ptr[0]).unwrap_test().downcast_ref()?, util::as_ref(res_ptr[1]).unwrap_test().downcast_ref()?),
             (&999, &999.0)
         );
         Ok(())
