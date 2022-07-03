@@ -76,15 +76,13 @@
         "args": [
             {
                 "name": "scale",
-                "c_type": "void *",
-                "rust_type": "T",
+                "c_type": "double",
                 "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
             },
             {
                 "name": "D",
-                "default": "AllDomain<T>",
-                "generics": ["T"],
-                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
+                "default": "AllDomain<f64>",
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<f64>> or AllDomain<f64>",
                 "is_type": true
             }
         ],
