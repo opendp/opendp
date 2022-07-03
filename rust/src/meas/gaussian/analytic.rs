@@ -1,3 +1,4 @@
+use num::Zero;
 use statrs::function::erf;
 
 /// Algorithm to compute epsilon used by the analytic gaussian mechanism
@@ -8,7 +9,10 @@ use statrs::function::erf;
 /// * `sigma` - Noise scale.
 /// * `delta` - Additive privacy loss parameter.
 pub(super) fn get_analytic_gaussian_epsilon(sensitivity: f64, sigma: f64, delta: f64) -> f64 {
-    if sigma == 0. {
+    if sensitivity.is_zero() {
+        return 0.
+    }
+    if sigma.is_zero() {
         return f64::INFINITY
     }
     // threshold to choose whether alpha is larger or smaller than one

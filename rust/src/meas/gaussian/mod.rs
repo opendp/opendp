@@ -163,12 +163,10 @@ where
 }
 
 pub fn make_base_analytic_gaussian<D>(
-    scale: D::Atom,
-) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<D::Atom>>>
+    scale: f64,
+) -> Fallible<Measurement<D, D, D::Metric, SmoothedMaxDivergence<f64>>>
 where
-    D: GaussianDomain,
-    f64: InfCast<D::Atom>,
-    D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull,
+    D: GaussianDomain<Atom=f64>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
@@ -176,10 +174,10 @@ where
     Ok(Measurement::new(
         D::new(),
         D::new(),
-        D::noise_function(scale.clone()),
+        D::noise_function(scale),
         D::Metric::default(),
         SmoothedMaxDivergence::default(),
-        PrivacyMap::new_fallible(move |&d_in: &D::Atom| {
+        PrivacyMap::new_fallible(move |&d_in: &f64| {
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }
@@ -193,7 +191,7 @@ where
                     if !del.is_sign_positive() {
                         return fallible!(InvalidDistance, "delta must be positive")
                     }
-                    D::Atom::inf_cast(get_analytic_gaussian_epsilon(d_in, scale, del))
+                    Ok(get_analytic_gaussian_epsilon(d_in, scale, del))
                 }
             ))
         }),

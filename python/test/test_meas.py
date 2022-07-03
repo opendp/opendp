@@ -74,6 +74,14 @@ def test_base_analytic_gaussian():
     assert epsilon > 3.
 
 
+def test_base_analytic_gaussian_edge():
+    from opendp.meas import make_base_analytic_gaussian
+    from opendp.comb import make_fix_delta
+
+    print(make_fix_delta(make_base_analytic_gaussian(1.), delta=1e-6).map(0.))
+    print(make_fix_delta(make_base_analytic_gaussian(0.), delta=1e-6).map(1.))
+
+
 def test_base_vector_gaussian():
     from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
     from opendp.comb import make_fix_delta
