@@ -1,4 +1,5 @@
 from opendp.mod import enable_features
+from opendp.typing import *
 
 enable_features('contrib')
 
@@ -12,11 +13,11 @@ def test_count_by_categories():
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
         make_select_column("A", TOA=str) >>
-        make_count_by_categories(categories=["a", "b", "c"], MO=L1Distance[int], TIA=str)
+        make_count_by_categories(categories=["a", "b", "c"], MO=L1Distance[i32], TIA=str, TOA=i32)
     )
 
     noisy_histogram_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s, D=VectorDomain[AllDomain[int]]),
+        lambda s: preprocess >> make_base_geometric(s, D=VectorDomain[AllDomain[i32]]),
         d_in=1, d_out=1.)
 
     assert noisy_histogram_from_dataframe.check(1, 1.)

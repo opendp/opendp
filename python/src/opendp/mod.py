@@ -17,7 +17,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
     >>> from opendp.meas import make_base_geometric
-    >>> base_geometric: Measurement = make_base_geometric(scale=2.)
+    >>> base_geometric: Measurement = make_base_geometric(scale=2., D="AllDomain<i32>")
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> base_geometric.invoke(100)  # -> 101   # doctest: +SKIP
@@ -30,7 +30,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> # chain with a transformation from the trans module
     >>> from opendp.trans import make_count
     >>> chained = (
-    ...     make_count(TIA=int) >>
+    ...     make_count(TIA="i32", TO="i32") >>
     ...     base_geometric
     ... )
     ...
@@ -141,7 +141,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     ...
     >>> # create an instance of Transformation using a constructor from the trans module
     >>> from opendp.trans import make_count
-    >>> count: Transformation = make_count(TIA=int)
+    >>> count: Transformation = make_count(TIA="i32", TO="i32")
     ...
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])  # -> 3  # doctest: +SKIP
@@ -155,8 +155,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> from opendp.trans import make_split_lines, make_cast, make_impute_constant
     >>> chained = (
     ...     make_split_lines() >>
-    ...     make_cast(TIA=str, TOA=int) >>
-    ...     make_impute_constant(constant=0) >>
+    ...     make_cast(TIA=str, TOA="i32") >>
+    ...     make_impute_constant(constant=0, DA="OptionNullDomain<AllDomain<i32>>") >>
     ...     count
     ... )
     ...
@@ -381,10 +381,10 @@ def binary_search_chain(
     >>> from opendp.meas import make_base_geometric
     ...
     >>> def make_sum(b):
-    ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_geometric(100.)
+    ...     return make_sized_bounded_sum(10_000, (-b, b), T="i32") >> make_base_geometric(100., D="AllDomain<i32>")
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
-    >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
+    >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1.)
     ...
     >>> # If you want the discovered clamping bound, use `binary_search_param` instead.
     """
@@ -503,7 +503,7 @@ def binary_search(
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
     >>> from opendp.trans import make_count_by_categories
-    >>> histogram = make_count_by_categories(categories=["a"], MO=L2Distance[int])
+    >>> histogram = make_count_by_categories(categories=["a"], MO=L2Distance["i32"], TOA="i32")
     ...
     >>> binary_search(
     ...     lambda d_out: histogram.check(3, d_out), 
@@ -580,10 +580,8 @@ def exponential_bounds_search(
             try:
                 predicate(v)
             except TypeError as e:
-                print(e)
                 return False
             except OpenDPException as e:
-                print(e)
                 if "No match for concrete type" in e.message:
                     return False
             return True

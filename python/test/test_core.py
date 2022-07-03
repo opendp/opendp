@@ -1,6 +1,7 @@
 import pytest
 
 from opendp.mod import enable_features
+from opendp.typing import *
 enable_features('floating-point', 'contrib')
 
 
@@ -24,13 +25,13 @@ def test_chain():
     enable_features("floating-point", "contrib")
 
     data = [1, 2, 3, 4, 5]
-    count = make_count(TIA=int, TO=int)
+    count = make_count(TIA=i32, TO=i32)
     print("count:", count(data))
 
     base_laplace = make_base_laplace(scale=1.)
     print("base laplace:", base_laplace(10.))
 
-    base_geometric = make_base_geometric(scale=0.5)
+    base_geometric = make_base_geometric(scale=0.5, D=AllDomain[i32])
     print("base_geometric:", base_geometric(1))
 
     chain = count >> base_geometric
@@ -81,3 +82,4 @@ def test_bisect_chain():
 
     scale = binary_search_param(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
     assert scale - 0.1 < 1e-8
+test_bisect_chain()

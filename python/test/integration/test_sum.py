@@ -1,6 +1,4 @@
-
-
-from opendp.typing import InsertDeleteDistance
+from opendp.typing import *
 
 
 def test_sized_bounded_float_sum():
@@ -70,19 +68,19 @@ def test_sized_bounded_int_sum():
         # Selects a column of df, Vec<str>
         make_select_column("A", TOA=str) >>
         # Cast the column as Vec<Optional<int>>
-        make_cast(TIA=str, TOA=int) >>
+        make_cast(TIA=str, TOA=i32) >>
         # Impute missing values to 0, emit Vec<int>
-        make_impute_constant(constant=0) >>
+        make_impute_constant(constant=0, DA=OptionNullDomain[AllDomain[i32]]) >>
         # Clamp values
-        make_clamp(bounds=bounds) >>
+        make_clamp(bounds=bounds, TA=i32) >>
         # Resize dataset length
-        make_bounded_resize(size=size, bounds=bounds, constant=0, MO=InsertDeleteDistance) >>
+        make_bounded_resize(size=size, bounds=bounds, constant=0, MO=InsertDeleteDistance, TA=i32) >>
         # Aggregate with sum
-        make_sized_bounded_sum(size=size, bounds=bounds)
+        make_sized_bounded_sum(size=size, bounds=bounds, T=i32)
     )
 
     noisy_known_n_sum_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_geometric(s, D=AllDomain[i32]),
         d_in=1, d_out=1.)
 
     assert noisy_known_n_sum_from_dataframe.check(1, 1.)
@@ -148,14 +146,14 @@ def test_bounded_int_sum():
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
         make_select_column("A", TOA=str) >>
-        make_cast(TIA=str, TOA=int) >>
-        make_impute_constant(constant=0) >>
-        make_clamp(bounds=bounds) >>
-        make_bounded_sum(bounds=bounds)
+        make_cast(TIA=str, TOA=i32) >>
+        make_impute_constant(constant=0, DA=OptionNullDomain[AllDomain[i32]]) >>
+        make_clamp(bounds=bounds, TA=i32) >>
+        make_bounded_sum(bounds=bounds, T=i32)
     )
 
     noisy_sum_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_geometric(s),
+        lambda s: preprocess >> make_base_geometric(s, D=AllDomain[i32]),
         d_in=1, d_out=1.)
 
     assert noisy_sum_from_dataframe.check(1, 1.)
