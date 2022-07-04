@@ -1,16 +1,12 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use num::Float;
-
 use crate::{err, try_, try_as_ref};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::core::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{LaplaceDomain, make_base_laplace};
-use crate::traits::samplers::SampleLaplace;
-use crate::traits::{CheckNull, InfCast, InfMul, TotalOrd, InfDiv};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_laplace(
@@ -18,8 +14,7 @@ pub extern "C" fn opendp_meas__make_base_laplace(
     D: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement>
-        where D: 'static + LaplaceDomain,
-              D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + InfDiv + CheckNull + TotalOrd + InfMul {
+        where D: 'static + LaplaceDomain {
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_laplace::<D>(scale).into_any()
     }

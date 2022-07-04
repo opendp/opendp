@@ -1,7 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use num::{Float, Zero};
+use num::{Zero, Float as _};
 
 use crate::core::{
     AbsoluteDistance, L2Distance, SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence,
@@ -9,12 +9,8 @@ use crate::core::{
 use crate::core::{AllDomain, VectorDomain};
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap};
 use crate::error::*;
-use crate::traits::samplers::SampleGaussian;
 
-use crate::traits::{
-    CheckNull, ExactIntCast, InfAdd, InfCast, InfDiv, InfExp, InfLn, InfMul, InfPow, InfSqrt,
-    InfSub,
-};
+use crate::traits::{CheckNull, InfCast, Float};
 
 mod analytic;
 
@@ -32,7 +28,7 @@ pub trait GaussianDomain: Domain {
 
 impl<T> GaussianDomain for AllDomain<T>
 where
-    T: 'static + SampleGaussian + Float + CheckNull,
+    T: Float,
 {
     type Metric = AbsoluteDistance<T>;
     type Atom = T;
@@ -49,7 +45,7 @@ where
 
 impl<T> GaussianDomain for VectorDomain<AllDomain<T>>
 where
-    T: 'static + SampleGaussian + Float + CheckNull,
+    T: Float,
 {
     type Metric = L2Distance<T>;
     type Atom = T;
@@ -78,20 +74,7 @@ impl<Q: CheckNull> GaussianMetric for AbsoluteDistance<Q> {}
 impl<MI: GaussianMetric, Q> GaussianMeasure<MI> for SmoothedMaxDivergence<Q>
 where
     MI: Metric<Distance = Q>,
-    Q: 'static
-        + Clone
-        + SampleGaussian
-        + Float
-        + InfCast<f64>
-        + InfSub
-        + InfDiv
-        + CheckNull
-        + InfMul
-        + InfAdd
-        + InfLn
-        + InfSqrt
-        + InfExp
-        + Zero,
+    Q: Float + InfCast<f64>,
 {
     type Atom = Q;
     fn new_forward_map(scale: Q) -> PrivacyMap<MI, Self> {
@@ -132,7 +115,7 @@ where
 impl<MI, Q> GaussianMeasure<MI> for ZeroConcentratedDivergence<Q>
 where
     MI: GaussianMetric<Distance = Q>,
-    Q: 'static + Clone + ExactIntCast<usize> + InfPow + InfDiv,
+    Q: Float,
 {
     type Atom = Q;
 

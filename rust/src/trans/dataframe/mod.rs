@@ -3,7 +3,6 @@ mod ffi;
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::repeat;
 
@@ -12,7 +11,7 @@ use crate::data::Column;
 use crate::core::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::core::SymmetricDistance;
-use crate::traits::CheckNull;
+use crate::traits::{CheckNull, Hashable, Primitive};
 
 pub type DataFrame<K> = HashMap<K, Column>;
 pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
@@ -48,7 +47,7 @@ fn create_dataframe_domain<K: Eq + Hash + CheckNull>() -> DataFrameDomain<K> {
 pub fn make_create_dataframe<K>(
     col_names: Vec<K>
 ) -> Fallible<Transformation<VectorDomain<VectorDomain<AllDomain<String>>>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Eq + Hash + Clone + CheckNull {
+    where K: Hashable {
     Ok(Transformation::new(
         VectorDomain::new(VectorDomain::new_all()),
         create_dataframe_domain(),
@@ -72,7 +71,7 @@ fn split_dataframe<K: Hash + Eq>(separator: &str, col_names: Vec<K>, s: &str) ->
 pub fn make_split_dataframe<K>(
     separator: Option<&str>, col_names: Vec<K>
 ) -> Fallible<Transformation<AllDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Hash + Eq + Clone + CheckNull {
+    where K: Hashable {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
         AllDomain::new(),
@@ -84,8 +83,8 @@ pub fn make_split_dataframe<K>(
 }
 
 pub fn make_select_column<K, TOA>(key: K) -> Fallible<Transformation<DataFrameDomain<K>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
-    where K: 'static + Eq + Hash + Debug + CheckNull,
-          TOA: 'static + Debug + Clone + PartialEq + CheckNull {
+    where K: Hashable,
+          TOA: Primitive {
     Ok(Transformation::new(
         create_dataframe_domain(),
         VectorDomain::new_all(),

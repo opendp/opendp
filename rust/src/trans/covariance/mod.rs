@@ -3,12 +3,12 @@ use crate::{
     core::{AbsoluteDistance, SymmetricDistance},
     core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{ExactIntCast, InfCast, InfAdd, InfDiv, InfMul, InfSub},
+    traits::{ExactIntCast, InfCast, InfAdd, InfDiv, InfMul, InfSub, Float},
 };
 
 use num::{Zero, One};
 
-use super::{Float, UncheckedSum};
+use super::UncheckedSum;
 
 
 #[cfg(feature="ffi")]

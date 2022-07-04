@@ -78,13 +78,13 @@ pub trait InfSqrt: Sized {
 }
 
 /// Computes self to the power with specified rounding that returns an error if overflowing.
-pub trait InfPow: Sized {
+pub trait InfPow: Sized + AlertingPow {
     fn inf_pow(&self, p: &Self) -> Fallible<Self>;
     fn neg_inf_pow(&self, p: &Self) -> Fallible<Self>;
 }
 
 /// Performs addition with specified rounding that returns an error if overflowing.
-pub trait InfAdd: Sized {
+pub trait InfAdd: Sized + AlertingAdd {
     /// Alerting addition with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
     fn inf_add(&self, v: &Self) -> Fallible<Self>;
@@ -94,7 +94,7 @@ pub trait InfAdd: Sized {
 }
 
 /// Performs subtraction with specified rounding that returns an error if overflowing.
-pub trait InfSub: Sized {
+pub trait InfSub: Sized + AlertingSub {
     /// Alerting subtraction with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
     fn inf_sub(&self, v: &Self) -> Fallible<Self>;
@@ -104,7 +104,7 @@ pub trait InfSub: Sized {
 }
 
 /// Performs multiplication with specified rounding that returns an error if overflowing.
-pub trait InfMul: Sized {
+pub trait InfMul: Sized + AlertingMul {
     /// Alerting multiplication with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
     fn inf_mul(&self, v: &Self) -> Fallible<Self>;
@@ -114,7 +114,7 @@ pub trait InfMul: Sized {
 }
 
 /// Performs division with specified rounding that returns an error if overflowing.
-pub trait InfDiv: Sized {
+pub trait InfDiv: Sized + AlertingDiv {
     /// Alerting division with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`
     fn inf_div(&self, v: &Self) -> Fallible<Self>;
@@ -431,14 +431,3 @@ impl_float_inf_bi!(f64, f32; InfSub, inf_sub, neg_inf_sub, sub_assign_round, ale
 impl_float_inf_bi!(f64, f32; InfMul, inf_mul, neg_inf_mul, mul_assign_round, alerting_mul);
 impl_float_inf_bi!(f64, f32; InfDiv, inf_div, neg_inf_div, div_assign_round, alerting_div);
 impl_float_inf_bi!(f64, f32; InfPow, inf_pow, neg_inf_pow, pow_assign_round, alerting_pow);
-
-
-impl<T1: InfSub, T2: InfSub> InfSub for (T1, T2) {
-    fn inf_sub(&self, v: &Self) -> Fallible<Self> {
-        Ok((self.0.inf_sub(&v.0)?, self.1.inf_sub(&v.1)?))
-    }
-
-    fn neg_inf_sub(&self, v: &Self) -> Fallible<Self> {
-        Ok((self.0.neg_inf_sub(&v.0)?, self.1.neg_inf_sub(&v.1)?))
-    }
-}

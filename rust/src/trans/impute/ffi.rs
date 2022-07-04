@@ -1,16 +1,12 @@
 use std::convert::TryFrom;
-use std::ops::{Add, Mul, Sub};
 use std::os::raw::c_char;
-
-use num::Float;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::core::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::traits::samplers::SampleUniform;
-use crate::traits::CheckNull;
+use crate::traits::{CheckNull, Float};
 use crate::trans::{DropNullDomain, ImputeConstantDomain, make_drop_null, make_impute_constant, make_impute_uniform_float};
 
 #[no_mangle]
@@ -23,7 +19,7 @@ pub extern "C" fn opendp_trans__make_impute_uniform_float(
     fn monomorphize<TA>(
         bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where for<'a> TA: 'static + Float + SampleUniform + Clone + Sub<Output=TA> + Mul<&'a TA, Output=TA> + Add<&'a TA, Output=TA> + InherentNull {
+        where TA: Float {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
         make_impute_uniform_float::<TA>(bounds).into_any()
     }

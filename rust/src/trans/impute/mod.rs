@@ -1,37 +1,32 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use std::ops::{Add, Mul, Sub};
-
-use num::Float;
-
 use crate::core::{Domain, Transformation, Function, StabilityMap};
 use crate::core::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::core::InherentNull;
-use crate::traits::samplers::SampleUniform;
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 use crate::core::SymmetricDistance;
-use crate::traits::CheckNull;
+use crate::traits::{CheckNull, Float};
 
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
-/// Maps a Vec<T> -> Vec<T>, where the input is a type with built-in nullity.
-pub fn make_impute_uniform_float<T>(
-    bounds: (T, T)
-) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<T>>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>>
-    where for<'a> T: 'static + Float + SampleUniform + Clone + Sub<Output=T> + Mul<&'a T, Output=T> + Add<&'a T, Output=T> + InherentNull + CheckNull {
+/// Maps a Vec<TA> -> Vec<TA>, where the input is a type with built-in nullity.
+pub fn make_impute_uniform_float<TA>(
+    bounds: (TA, TA)
+) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<TA>>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>>
+    where TA: Float {
     let (lower, upper) = bounds;
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
     if lower > upper { return fallible!(MakeTransformation, "lower may not be greater than upper") }
-    let scale = upper.clone() - lower.clone();
+    let scale = upper - lower;
 
     make_row_by_row_fallible(
         InherentNullDomain::new(AllDomain::new()),
         AllDomain::new(),
         move |v| if v.is_null() {
-            T::sample_standard_uniform(false).map(|v| v * &scale + &lower)
-        } else { Ok(v.clone()) })
+            TA::sample_standard_uniform(false).map(|v| v * scale + lower)
+        } else { Ok(*v) })
 }
 
 // utility trait to impute with a constant, regardless of the representation of null

@@ -7,9 +7,9 @@ use crate::core::{Function, StabilityMap, Transformation};
 use crate::core::{AbsoluteDistance, SymmetricDistance};
 use crate::core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{ExactIntCast, InfAdd, InfCast, InfDiv, InfMul, InfSub};
+use crate::traits::{ExactIntCast, InfAdd, InfCast, InfDiv, InfMul, InfSub, Float};
 
-use super::{Float, UncheckedSum};
+use super::UncheckedSum;
 
 pub fn make_sized_bounded_sum_of_squared_deviations<S>(
     size: usize,

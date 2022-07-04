@@ -5,7 +5,7 @@ use crate::{
     core::{AbsoluteDistance, LpDistance},
     core::{AllDomain, VectorDomain},
     error::Fallible,
-    traits::{CheckNull, InfAdd, InfCast, RoundCast},
+    traits::{CheckNull, InfAdd, InfCast, RoundCast, FiniteBounds, Number},
 };
 
 
@@ -17,12 +17,9 @@ where
     MI: Metric,
     MO: Metric,
     MI::Distance: 'static + Clone,
-    MO::Distance: 'static
-        + Clone
+    MO::Distance: Number
         + InfCast<MI::Distance>
-        + GreatestDifference<MI::Distance>
-        + InfAdd
-        + PartialOrd,
+        + GreatestDifference<MI::Distance>,
     (MI, MO): SameMetric<MI, MO>,
 {
     Ok(Transformation::new(
@@ -64,20 +61,6 @@ where
         v.iter().map(DO::transform).collect()
     }
 }
-
-/// Consts representing the maximum and minimum finite representable values.
-pub trait FiniteBounds {
-    const MAX_FINITE: Self;
-    const MIN_FINITE: Self;
-}
-macro_rules! impl_finite_bounds {
-    ($($ty:ty)+) => ($(impl FiniteBounds for $ty {
-        const MAX_FINITE: Self = Self::MAX;
-        const MIN_FINITE: Self = Self::MIN;
-    })+)
-}
-impl_finite_bounds!(f64 f32 i8 i16 i32 i64 i128 u8 u16 u32 u64 u128);
-
 
 /// Allow the associated type to change, but restrict the metric
 pub trait SameMetric<MI, MO> {}

@@ -3,11 +3,11 @@ use crate::{
     core::{AbsoluteDistance, IntDistance, SymmetricDistance},
     core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{InfAdd, InfCast, InfMul, InfSub, TotalOrd, AlertingAbs, samplers::Shuffle},
+    traits::{InfAdd, InfCast, InfMul, InfSub, samplers::Shuffle, Float, TotalOrd, AlertingAbs},
     trans::CanSumOverflow,
 };
 
-use super::{Float, Pairwise, Sequential, SumRelaxation};
+use super::{Pairwise, Sequential, SumRelaxation};
 
 #[cfg(feature = "ffi")]
 mod ffi;

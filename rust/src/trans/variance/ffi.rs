@@ -7,7 +7,8 @@ use crate::core::AllDomain;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::trans::{make_sized_bounded_variance, UncheckedSum, Sequential, Pairwise, LipschitzMulDomain, LipschitzMulMetric, Float};
+use crate::traits::Float;
+use crate::trans::{make_sized_bounded_variance, UncheckedSum, Sequential, Pairwise, LipschitzMulDomain, LipschitzMulMetric};
 
 
 #[no_mangle]

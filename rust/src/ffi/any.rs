@@ -200,8 +200,7 @@ pub struct AnyMeasure {
 }
 
 impl AnyMeasure {
-    pub fn new<M: 'static + Measure>(measure: M) -> Self
-        where M::Distance: Clone {
+    pub fn new<M: 'static + Measure>(measure: M) -> Self {
         Self {
             measure: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(measure),
             type_: Type::of::<M>(),
@@ -374,8 +373,8 @@ pub trait IntoAnyMeasurementExt {
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
-          MI::Distance: 'static + Clone,
-          MO::Distance: 'static + Clone {
+          MI::Distance: 'static,
+          MO::Distance: 'static {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),

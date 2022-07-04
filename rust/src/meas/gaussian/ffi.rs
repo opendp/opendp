@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void, c_double};
 
-use num::Float;
 
 use crate::{err, try_, try_as_ref};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, SmoothedMaxDivergence, ZeroConcentratedDivergence};
@@ -9,8 +8,7 @@ use crate::core::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{GaussianDomain, make_base_analytic_gaussian, make_base_gaussian, GaussianMeasure};
-use crate::traits::samplers::SampleGaussian;
-use crate::traits::{CheckNull, InfAdd, InfCast, InfLn, InfMul, InfSqrt, InfDiv, InfSub, InfExp, InfPow, ExactIntCast};
+use crate::traits::{Float, InfCast};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(
@@ -19,12 +17,11 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
     MO: *const c_char
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize_1<T>(scale: *const c_void, D: Type, MO: Type) -> FfiResult<*mut AnyMeasurement> where 
-        T: 'static + Clone + SampleGaussian + Float + InfCast<f64> + InfSub + InfDiv + CheckNull + InfMul + InfAdd + InfLn + InfSqrt + InfExp + ExactIntCast<usize> + InfPow {
+        T: Float + InfCast<f64> {
             let scale = *try_as_ref!(scale as *const T);
             fn monomorphize_2<D, MO>(scale: D::Atom) -> FfiResult<*mut AnyMeasurement> where
                 D: 'static + GaussianDomain,
-                MO: 'static + GaussianMeasure<D::Metric, Atom = D::Atom>,
-                MO::Distance: Clone {
+                MO: 'static + GaussianMeasure<D::Metric, Atom = D::Atom> {
                 make_base_gaussian::<D, MO>(scale).into_any()
             }
 

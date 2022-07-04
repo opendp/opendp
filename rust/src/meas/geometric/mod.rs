@@ -5,9 +5,7 @@ use crate::core::{Function, Measurement, PrivacyMap, Domain, SensitivityMetric};
 use crate::core::{MaxDivergence, L1Distance, AbsoluteDistance};
 use crate::core::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::samplers::SampleTwoSidedGeometric;
-use num::Float;
-use crate::traits::{InfCast, CheckNull, TotalOrd, InfDiv};
+use crate::traits::{InfCast, Integer, Float};
 
 
 pub trait GeometricDomain: Domain {
@@ -21,7 +19,7 @@ pub trait GeometricDomain: Domain {
 
 
 impl<T> GeometricDomain for AllDomain<T>
-    where T: 'static + Clone + SampleTwoSidedGeometric + CheckNull {
+    where T: Integer {
     type InputMetric = AbsoluteDistance<T>;
     type Atom = T;
 
@@ -33,7 +31,7 @@ impl<T> GeometricDomain for AllDomain<T>
 }
 
 impl<T> GeometricDomain for VectorDomain<AllDomain<T>>
-    where T: 'static + Clone + SampleTwoSidedGeometric + CheckNull {
+    where T: Integer {
     type InputMetric = L1Distance<T>;
     type Atom = T;
 
@@ -49,8 +47,8 @@ pub fn make_base_geometric<D, QO>(
     scale: QO, bounds: Option<(D::Atom, D::Atom)>
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
     where D: 'static + GeometricDomain,
-          D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
-          QO: 'static + Float + InfCast<D::Atom> + InfDiv,
+          D::Atom: Integer,
+          QO: Float + InfCast<D::Atom>,
           f64: InfCast<QO> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")

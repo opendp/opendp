@@ -3,21 +3,19 @@ mod ffi;
 
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
-use std::hash::Hash;
 
-use num::{One, Zero, Float};
+use num::One;
 
 use crate::core::{Function, SensitivityMetric, StabilityMap, Transformation};
-use crate::core::{AbsoluteDistance, SymmetricDistance, LpDistance, IntDistance};
+use crate::core::{AbsoluteDistance, SymmetricDistance, LpDistance};
 use crate::core::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{DistanceConstant, InfCast, ExactIntCast, SaturatingAdd, CheckNull};
+use crate::traits::{Number, Hashable, Primitive, Float};
 
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
-    where TIA: CheckNull,
-          TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance> + CheckNull,
-          IntDistance: InfCast<TO> {
+    where TIA: Primitive,
+          TO: Number {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
@@ -32,9 +30,8 @@ pub fn make_count<TIA, TO>(
 
 pub fn make_count_distinct<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
-    where TIA: Eq + Hash + CheckNull,
-          TO: ExactIntCast<usize> + One + DistanceConstant<IntDistance> + CheckNull,
-          IntDistance: InfCast<TO> {
+    where TIA: Hashable,
+          TO: Number {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
@@ -59,10 +56,9 @@ pub fn make_count_by_categories<MO, TI, TO>(
     categories: Vec<TI>
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
     where MO: CountByCategoriesConstant<MO::Distance> + SensitivityMetric,
-          MO::Distance: DistanceConstant<IntDistance> + One,
-          TI: 'static + Eq + Hash + CheckNull,
-          TO: Zero + One + SaturatingAdd + CheckNull,
-          IntDistance: InfCast<MO::Distance>{
+          MO::Distance: Number,
+          TI: Hashable,
+          TO: Number {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct")
@@ -96,23 +92,20 @@ pub fn make_count_by_categories<MO, TI, TO>(
 pub trait CountByConstant<QO> {
     fn get_stability_constant() -> Fallible<QO>;
 }
-impl<const P: usize, Q: One + Float + ExactIntCast<usize>> CountByConstant<Q> for LpDistance<P, Q> {
+impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
     fn get_stability_constant() -> Fallible<Q> {
         if P == 0 {return fallible!(MakeTransformation, "P must be positive")}
-        let p = Q::exact_int_cast(P)?;
-        let _2 = Q::exact_int_cast(2)?;
-        Ok(_2.powf(Q::one() / p - Q::one()))
+        Ok(Q::one())
     }
 }
 
-// count with known n, unknown categories
+// count with unknown n, unknown categories
 pub fn make_count_by<MO, TK, TV>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TK>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
-          MO::Distance: DistanceConstant<IntDistance>,
-          TK: 'static + Eq + Hash + Clone + CheckNull,
-          TV: Zero + One + SaturatingAdd + CheckNull,
-          IntDistance: InfCast<MO::Distance> {
+          MO::Distance: Float,
+          TK: Hashable,
+          TV: Number {
     Ok(Transformation::new(
         VectorDomain::new_all(),
         MapDomain::new(AllDomain::new(), AllDomain::new()),

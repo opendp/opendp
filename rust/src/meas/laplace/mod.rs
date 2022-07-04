@@ -1,24 +1,24 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use num::{Float, Zero};
+use num::{Zero, Float as _};
 
 use crate::core::{Measurement, Function, PrivacyMap, Domain, SensitivityMetric};
 use crate::core::{L1Distance, MaxDivergence, AbsoluteDistance};
 use crate::core::{AllDomain, VectorDomain};
-use crate::traits::samplers::{SampleLaplace};
+use crate::traits::Float;
 use crate::error::*;
-use crate::traits::{InfCast, CheckNull, TotalOrd, InfMul, InfDiv};
+use crate::traits::InfDiv;
 
 pub trait LaplaceDomain: Domain {
     type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
-    type Atom;
+    type Atom: Float;
     fn new() -> Self;
     fn noise_function(scale: Self::Atom) -> Function<Self, Self>;
 }
 
 impl<T> LaplaceDomain for AllDomain<T>
-    where T: 'static + SampleLaplace + Float + CheckNull {
+    where T: Float {
     type Metric = AbsoluteDistance<T>;
     type Atom = Self::Carrier;
 
@@ -29,7 +29,7 @@ impl<T> LaplaceDomain for AllDomain<T>
 }
 
 impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
-    where T: 'static + SampleLaplace + Float + CheckNull {
+    where T: Float {
     type Metric = L1Distance<T>;
     type Atom = T;
 
@@ -43,7 +43,7 @@ impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
 
 pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
-          D::Atom: 'static + Clone + SampleLaplace + Float + InfCast<D::Atom> + InfDiv + CheckNull + TotalOrd + InfMul + Zero {
+          D::Atom: Float {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }

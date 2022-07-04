@@ -2,20 +2,19 @@
 mod ffi;
 
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::iter::FromIterator;
 
 use crate::core::Transformation;
 use crate::core::SymmetricDistance;
 use crate::core::{AllDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
-use crate::traits::CheckNull;
+use crate::traits::{Hashable, Number, Primitive};
 use crate::trans::make_row_by_row;
 
 pub fn make_find<TIA>(
     categories: Vec<TIA>
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<OptionNullDomain<AllDomain<usize>>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + CheckNull + Clone + Hash + Eq {
+    where TIA: Hashable {
     let categories_len = categories.len();
     let indexes = HashMap::<TIA, usize>::from_iter(categories.into_iter()
         .enumerate().map(|(i, v)| (v, i)));
@@ -32,7 +31,7 @@ pub fn make_find<TIA>(
 pub fn make_find_bin<TIA>(
     edges: Vec<TIA>
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<usize>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + PartialOrd + CheckNull {
+    where TIA: Number {
     if !edges.windows(2).all(|pair| pair[0] < pair[1]) {
         return fallible!(MakeTransformation, "edges must be unique and ordered")
     }
@@ -46,7 +45,7 @@ pub fn make_find_bin<TIA>(
 pub fn make_index<TOA>(
     categories: Vec<TOA>, null: TOA
 ) -> Fallible<Transformation<VectorDomain<AllDomain<usize>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
-    where TOA: 'static + CheckNull + Clone {
+    where TOA: Primitive {
     make_row_by_row(
         AllDomain::new(), AllDomain::new(),
         move |v| categories.get(*v).unwrap_or(&null).clone())

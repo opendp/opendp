@@ -10,7 +10,7 @@ use crate::core::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain,
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::traits::{CheckNull, DistanceConstant};
+use crate::traits::{CheckNull, DistanceConstant, Primitive};
 use crate::trans::{make_identity, make_is_equal, make_is_null};
 
 #[no_mangle]
@@ -82,7 +82,7 @@ pub extern "C" fn opendp_trans__make_is_equal(
     let TIA = try_!(Type::try_from(TIA));
 
     fn monomorphize<TIA>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
-        TIA: 'static + Clone + PartialEq + CheckNull {
+        TIA: Primitive {
         let value: TIA = try_!(try_as_ref!(value).downcast_ref::<TIA>()).clone();
         make_is_equal::<TIA>(value).into_any()
     }

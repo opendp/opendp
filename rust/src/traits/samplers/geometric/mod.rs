@@ -1,8 +1,8 @@
-use std::ops::{AddAssign, SubAssign, Sub};
+use std::ops::{SubAssign, Sub, AddAssign};
 
-use num::{Bounded, Zero, One, clamp};
+use num::{Zero, One, clamp};
 
-use crate::{error::Fallible, traits::{TotalOrd, AlertingSub, InfExp, InfAdd, InfSub, InfDiv}};
+use crate::{error::Fallible, traits::{AlertingSub, InfExp, InfAdd, InfSub, InfDiv, FiniteBounds, TotalOrd}};
 
 use super::{SampleBernoulli, SampleUniform, SampleStandardBernoulli};
 
@@ -36,14 +36,14 @@ pub trait SampleGeometric: Sized {
     fn sample_geometric(shift: Self, positive: bool, prob: f64, trials: Option<Self>) -> Fallible<Self>;
 }
 
-impl<T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded> SampleGeometric for T {
+impl<T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + FiniteBounds> SampleGeometric for T {
 
     fn sample_geometric(mut shift: Self, positive: bool, prob: f64, mut trials: Option<Self>) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
         if !(0.0..=1.0).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
-        let bound = if positive { Self::max_value() } else { Self::min_value() };
+        let bound = if positive { Self::MAX_FINITE } else { Self::MIN_FINITE };
         let mut success: bool = false;
 
         // loop must increment at least once
@@ -100,7 +100,7 @@ pub trait SampleTwoSidedGeometric: SampleGeometric {
     ) -> Fallible<Self>;
 }
 
-impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub> SampleTwoSidedGeometric for T {
+impl<T: Clone + SampleGeometric + Sub<Output=T> + FiniteBounds + Zero + One + TotalOrd + AlertingSub> SampleTwoSidedGeometric for T {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the

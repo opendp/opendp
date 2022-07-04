@@ -1,19 +1,15 @@
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use std::hash::Hash;
 use std::iter::FromIterator;
 use std::os::raw::{c_char, c_void};
 
-use num::Float;
-
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::core::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::{c_bool, to_bool, Type};
 use crate::meas::{make_randomized_response, make_randomized_response_bool};
 use crate::traits::samplers::SampleBernoulli;
-use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfLn, InfSub, InfDiv};
+use crate::traits::{Float, Hashable};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_randomized_response_bool(
@@ -23,7 +19,7 @@ pub extern "C" fn opendp_meas__make_randomized_response_bool(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<Q>(prob: *const c_void, constant_time: bool) -> FfiResult<*mut AnyMeasurement>
         where bool: SampleBernoulli<Q>,
-              Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn {
+              Q: Float {
         let prob = *try_as_ref!(prob as *const Q);
         make_randomized_response_bool::<Q>(prob, constant_time).into_any()
     }
@@ -47,9 +43,9 @@ pub extern "C" fn opendp_meas__make_randomized_response(
         categories: *const AnyObject, prob: *const c_void,
         constant_time: bool,
     ) -> FfiResult<*mut AnyMeasurement>
-        where T: 'static + Clone + Eq + Hash + CheckNull,
+        where T: Hashable,
               bool: SampleBernoulli<Q>,
-              Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv {
+              Q: Float {
         let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<T>>()).clone();
         let prob = *try_as_ref!(prob as *const Q);
         make_randomized_response::<T, Q>(

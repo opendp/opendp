@@ -2,15 +2,13 @@
 mod ffi;
 
 use std::collections::HashSet;
-use std::hash::Hash;
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::core::{MaxDivergence, ChangeOneDistance, IntDistance};
+use crate::core::{MaxDivergence, ChangeOneDistance};
 use crate::core::AllDomain;
 use crate::error::Fallible;
 use crate::traits::samplers::{SampleBernoulli, SampleUniformInt};
-use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfLn, InfSub, InfDiv};
-use num::Float;
+use crate::traits::{Float, Hashable};
 
 // There are two constructors:
 // 1. make_randomized_response_bool
@@ -29,7 +27,7 @@ pub fn make_randomized_response_bool<Q>(
     prob: Q, constant_time: bool
 ) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, ChangeOneDistance, MaxDivergence<Q>>>
     where bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn {
+          Q: Float {
 
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(Q::exact_int_cast(2)?.recip()..Q::one()).contains(&prob) {
@@ -53,9 +51,9 @@ pub fn make_randomized_response_bool<Q>(
 pub fn make_randomized_response<T, Q>(
     categories: HashSet<T>, prob: Q, constant_time: bool
 ) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, ChangeOneDistance, MaxDivergence<Q>>>
-    where T: 'static + Clone + Eq + Hash + CheckNull,
+    where T: Hashable,
           bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv {
+          Q: Float {
 
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
@@ -103,6 +101,7 @@ pub fn make_randomized_response<T, Q>(
 mod test {
     use super::*;
     use std::iter::FromIterator;
+    use num::Float as _;
 
     #[test]
     fn test_bool() -> Fallible<()> {

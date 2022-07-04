@@ -7,10 +7,10 @@ use crate::core::Transformation;
 use crate::core::{AbsoluteDistance, SymmetricDistance};
 use crate::core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{AlertingSub, ExactIntCast};
+use crate::traits::{AlertingSub, ExactIntCast, Float};
 
 use super::{
-    make_lipschitz_mul, make_sized_bounded_sum_of_squared_deviations, Float, LipschitzMulDomain,
+    make_lipschitz_mul, make_sized_bounded_sum_of_squared_deviations, LipschitzMulDomain,
     LipschitzMulMetric, Pairwise, UncheckedSum,
 };
 

@@ -11,7 +11,7 @@ use crate::core::SymmetricDistance;
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
-pub(crate) fn make_row_by_row<'a, DIA, DOA, M>(
+pub(crate) fn make_row_by_row<DIA, DOA, M>(
     atom_input_domain: DIA,
     atom_output_domain: DOA,
     atom_function: impl 'static + Fn(&DIA::Carrier) -> DOA::Carrier

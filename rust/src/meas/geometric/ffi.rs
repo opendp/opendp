@@ -1,8 +1,6 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use num::Float;
-
 use crate::{err, try_, try_as_ref};
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::core::{AllDomain, VectorDomain};
@@ -10,7 +8,7 @@ use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util;
 use crate::ffi::util::Type;
 use crate::meas::{GeometricDomain, make_base_geometric};
-use crate::traits::{DistanceConstant, InfCast, InfDiv, InfMul, TotalOrd};
+use crate::traits::{InfCast, Integer, Float};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
@@ -22,8 +20,8 @@ pub extern "C" fn opendp_meas__make_base_geometric(
         scale: *const c_void, bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + GeometricDomain,
-              D::Atom: 'static + TotalOrd + Clone + DistanceConstant<QO>,
-              QO: 'static + Float + InfCast<D::Atom> + TotalOrd + InfDiv + InfMul,
+              D::Atom: Integer,
+              QO: Float + InfCast<D::Atom>,
               f64: InfCast<QO> {
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
