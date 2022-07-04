@@ -6,7 +6,8 @@ use crate::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
-    trans::{make_sized_bounded_covariance, Float, Pairwise, Sequential, UncheckedSum},
+    trans::{make_sized_bounded_covariance, Pairwise, Sequential, UncheckedSum},
+    traits::Float
 };
 
 // no entry in bootstrap.json because there's no way to get data into it

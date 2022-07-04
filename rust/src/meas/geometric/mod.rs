@@ -7,8 +7,7 @@ use crate::metrics::{L1Distance, AbsoluteDistance};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::samplers::SampleTwoSidedGeometric;
-use crate::traits::{InfCast, CheckNull, TotalOrd};
-use crate::trans::Float;
+use crate::traits::{InfCast, Float, Integer};
 
 
 pub trait GeometricDomain<P>: Domain {
@@ -22,7 +21,7 @@ pub trait GeometricDomain<P>: Domain {
 
 
 impl<T, P> GeometricDomain<P> for AllDomain<T>
-    where T: 'static + Clone + SampleTwoSidedGeometric<P> + CheckNull,
+    where T: 'static + Integer + SampleTwoSidedGeometric<P>,
         P: 'static + Float {
     type InputMetric = AbsoluteDistance<T>;
     type Atom = T;
@@ -30,12 +29,12 @@ impl<T, P> GeometricDomain<P> for AllDomain<T>
     fn new() -> Self { AllDomain::new() }
     fn noise_function(scale: P, bounds: Option<(T, T)>) -> Function<Self, Self> {
         Function::new_fallible(move |arg: &Self::Carrier|
-            T::sample_two_sided_geometric(arg.clone(), scale, bounds.clone()))
+            T::sample_two_sided_geometric(*arg, scale, bounds))
     }
 }
 
 impl<T, P> GeometricDomain<P> for VectorDomain<AllDomain<T>>
-    where T: 'static + Clone + SampleTwoSidedGeometric<P> + CheckNull,
+    where T: 'static + Integer + SampleTwoSidedGeometric<P>,
         P: 'static + Float {
     type InputMetric = L1Distance<T>;
     type Atom = T;
@@ -43,7 +42,7 @@ impl<T, P> GeometricDomain<P> for VectorDomain<AllDomain<T>>
     fn new() -> Self { VectorDomain::new_all() }
     fn noise_function(scale: P, bounds: Option<(T, T)>) -> Function<Self, Self> {
         Function::new_fallible(move |arg: &Self::Carrier| arg.iter()
-            .map(|v| T::sample_two_sided_geometric(v.clone(), scale, bounds.clone()))
+            .map(|v| T::sample_two_sided_geometric(*v, scale, bounds))
             .collect())
     }
 }
@@ -52,8 +51,8 @@ pub fn make_base_geometric<D, QO>(
     scale: QO, bounds: Option<(D::Atom, D::Atom)>
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
     where D: GeometricDomain<QO>,
-          D::Atom: TotalOrd + Clone,
-          QO: 'static + Float + InfCast<D::Atom> {
+          D::Atom: Integer,
+          QO: Float + InfCast<D::Atom> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
     }

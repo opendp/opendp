@@ -30,7 +30,7 @@ pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<All
 }
 
 /// A [`Transformation`] that casts elements to a type that has an inherent representation of nullity.
-/// Maps a Vec<TI> -> Vec<TO>
+/// Maps a Vec<TIA> -> Vec<TOA>
 pub fn make_cast_inherent<TIA, TOA>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<InherentNullDomain<AllDomain<TOA>>>, SymmetricDistance, SymmetricDistance>>
     where TIA: 'static + Clone + CheckNull, TOA: 'static + RoundCast<TIA> + InherentNull + CheckNull {

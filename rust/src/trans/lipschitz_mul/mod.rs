@@ -7,11 +7,10 @@ use crate::{
     error::Fallible,
     traits::{
         AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfMul, InfPow, InfSub,
-        SaturatingMul, TotalOrd,
+        SaturatingMul, TotalOrd, Float
     },
 };
 
-use super::Float;
 
 #[cfg(feature = "ffi")]
 mod ffi;

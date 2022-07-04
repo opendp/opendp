@@ -10,7 +10,8 @@ use crate::{
         util::Type,
     },
     traits::SaturatingMul,
-    trans::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Float},
+    trans::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric},
+    traits::Float
 };
 
 #[no_mangle]
