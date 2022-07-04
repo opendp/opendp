@@ -180,8 +180,7 @@ mod tests {
         expected.insert(true, 6);
         expected.insert(false, 4);
         assert_eq!(ret, expected);
-        assert!(!transformation.check(&6, &4.2426)?);
-        assert!(transformation.check(&6, &4.24265)?);
+        assert!(transformation.check(&6, &6.)?);
         Ok(())
     }
 }
