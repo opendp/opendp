@@ -1,0 +1,250 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{enumerate} 
+\usepackage{physics}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+ \usepackage{hyperref}
+ \usepackage{tcolorbox}
+\hypersetup{colorlinks,
+    linkcolor=blue,
+    citecolor=blue,      
+    urlcolor=blue,
+}
+\usepackage{graphicx}
+
+
+\oddsidemargin0.1cm 
+\evensidemargin0.8cm
+\textheight22.7cm 
+\textwidth15cm \topmargin-0.5cm
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\newcommand{\vicki}[1]{{ {\color{blue}{(vicki)~#1}}}}
+\newcommand{\hanwen}[1]{{ {\color{purple}{(hanwen)~#1}}}}
+\newcommand{\zach}[1]{{ {\color{red}{(zach)~#1}}}}
+
+\newcommand{\MultiSet}{\mathrm{MultiSet}}
+\newcommand{\len}{\mathrm{len}}
+\newcommand{\din}{\texttt{d\_in}}
+\newcommand{\dout}{\texttt{d\_out}}
+\newcommand{\T}{\texttt{T} }
+\newcommand{\F}{\texttt{F} }
+\newcommand{\Relation}{\texttt{Relation}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\True}{\texttt{True}}
+\newcommand{\False}{\texttt{False}}
+\newcommand{\clamp}{\texttt{clamp}}
+\newcommand{\function}{\texttt{function}}
+\newcommand{\float}{\texttt{float }}
+\newcommand{\questionc}[1]{\textcolor{red}{\textbf{Question:} #1}}
+
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+\newtheorem{observation}{Observation}
+\newtheorem{note}{Note}
+\newtheorem{hope}{Hope}
+\newtheorem{warning}{Warning}
+\newtheorem{problem}{Problem}
+\newtheorem{fear}{Fear}
+\newtheorem{question}{Question}
+
+\title{Privacy Proofs for OpenDP: Binary Randomized Response Measurement}
+\author{Vicki Xu, Hanwen Zhang, Zachary Ratliff}
+\date{Summer 2022}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+%\section{Measurement Description}
+%In binary randomized response, the participant lies with a probability $< \frac{1}{2}$ and tells the truth for the rest of the time. 
+%In Python and in Rust, when booleans are cast to integers, $1$ represents true, $0$ false. 
+%In the function defined line \ref{line:fn}, the true value, \emph{arg}, is taken as input. A boolean is generated in line \ref{line:coinflip} using \texttt{sample\_bernoulli}, which takes in \emph{prob} and \emph{constant\_time} as inputs. As we see from part (a), this means a value of $1$ is generated \emph{prob} percent of the time, and $0$ is generated $1 -$\emph{prob} percent of the time. This is the ``coinflip" step, wherein the computer decides whether to return the true value or the random response. So with probability \emph{prob}, the true value, \emph{arg}, is returned. With probability $1 -$\emph{prob}, the lie, which in the case of the boolean is the opposite (hence $1 - $\emph{arg}), is returned. 
+
+\section{Algorithm Implementation}
+\subsection{Code in Rust}
+
+The current OpenDP library contains the \texttt{make\_randomized\_response\_bool} function implementing the binary randomized response measurement. This is defined in lines 28-53 of the file \texttt{mod.rs} in the Git repository \url{https://github.com/opendp/opendp/blob/main/rust/src/meas/randomized_response/mod.rs#L28-L53}
+
+In \texttt{make\_randomized\_response\_bool}, which accepts a parameter \texttt{prob} of type \texttt{Q} and a parameter \texttt{constant\_time} of type \texttt{bool}, the function takes in a boolean data point \texttt{arg} and returns the truthful value \texttt{arg} with probability \texttt{prob} and the untruthful value $\texttt{!arg}$ with probability $1 - \texttt{prob}$ (in constant time, if the flag is turned on). 
+
+\subsection{Pseudo Code in Python}
+We present a simplified Python-like pseudocode of the Rust implementation below. The necessary definitions for the pseudocode can be found at \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}. % need to fix
+
+\emph{The use of \texttt{code}-style parameters in the preconditions section below (for example, \texttt{input\_domain}) means that this information should be passed along to the \texttt{Measurements} constructor.}
+
+\subsubsection*{Preconditions}
+To ensure the correctness of the output, we require the following preconditions:
+
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{prob} must be of type \texttt{Q}
+        \item Variable \texttt{constant\_time} must be of type \texttt{bool}
+        \item Type \texttt{bool} must have trait \texttt{SampleBernoulli<Q>}
+        \item Type \texttt{Q} must have traits \texttt{float}, \texttt{ExactIntCast<IntDistance>},\\ \texttt{DistanceConstant<IntDistance>}, \texttt{InfSub}, \texttt{InfLn}
+        \item Variable \texttt{IntDistance} must have trait \texttt{InfCast<Q>}
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Postconditions}
+\begin{itemize}
+    \item A \texttt{Measurement} is returned (i.e., if a \texttt{Measurement} cannot be returned successfully, then an error should be returned).
+\end{itemize}
+
+
+\begin{lstlisting}[language=Python, escapechar=|]
+def make_randomized_response_bool(prob : Q, constant_time : bool):
+    input_domain = AllDomain(bool)
+    output_domain = AllDomain(bool)
+    input_metric = DiscreteMetric()
+    similarity_metric = MaxDivergence()
+    
+    if (prob < 0.5 or prob >= 1): |\label{line:range}|
+        raise Exception("probability must be in [0.5, 1)")
+
+    c = inf_ln(inf_div(prob, neg_inf_sub(1, prob)))
+    def privacy_map(d_in: u_32) -> u_32: |\label{line:map}|
+        return d_in * c;
+
+    def function(arg : bool) -> bool: |\label{line:fn}|
+        if (sample_bernoulli(prob, constant_time)): |\label{line:coinflip}|
+            return arg
+        else:
+            return !arg
+    
+    return Measurement(input_domain, output_domain, function, input_metric, similarity_metric, privacy_map)
+
+\end{lstlisting}
+%\hanwen{Just a small detail: in the proof \texttt{privacy\_map} is always referred to as \texttt{map}, should we change the name so that it's the same everywhere?}
+
+\begin{tcolorbox}
+\begin{warning}[Code is not constant-time]
+ \texttt{make\_randomized\_response\_bool} takes in a boolean \texttt{constant\_time} parameter that protects against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+\end{warning}
+\end{tcolorbox}
+
+\section{Proof}
+The necessary definitions for the proof can be found at \href{https://github.com/opendp/whitepapers/blob/proof-defns/proof-defns/proof_defns.pdf}{``List of definitions used in the proofs"}. % may need to keep updating
+\begin{theorem} For every setting of the input parameters \texttt{prob, constant\_time} to \\ \texttt{randomized\_response} such that the given preconditions hold, \texttt{randomized\_response} raises an exception (at compile time or runtime) or returns a valid measurement with the following privacy guarantee:
+\begin{enumerate}  % we can discuss what a ``valid" measurement etc is
+    %\item \textup{(Appropriate randomization.)} The function that maps \texttt{input\_domain} to \texttt{output\_domain} achieves pseudorandomness. 
+    %\item \textup{(Appropriate output domain.)} For every element $v$ in \texttt{input\_domain}, \texttt{function}(v) is in \texttt{output\_domain}. 
+    %\item \textup{(Domain-metric compatibility.)} The domain \texttt{input\_domain} matches one of the possible domains listed in the definition of \texttt{input\_metric}, and the domain \texttt{output\_domain} matches one of the possible domains listed in the definition of \texttt{output\_metric}.
+    \item  \textup{(Domain-metric compatibility.)} The domain \texttt{input\_domain} matches one of the possible domains listed in the definition of \texttt{input\_metric}. 
+    
+    \item \textup{(Privacy guarantee.)} Let \texttt{d\_in} be the associated metric on \texttt{input\_domain} and has the associated type for \texttt{input\_metric}, and let $D$ be the similarity measure on probability distributions with the associated type for \texttt{similarity\_metric}. For every pair of elements $v, w$ in \texttt{input\_domain} and every \texttt{d\_in}, if $v, w$ are \texttt{d\_in}-close under \texttt{input\_metric}, then \texttt{function}(v), \texttt{function}(w) are \texttt{privacy\_map(d\_in)}-close with respect to $D$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof} 
+\hfill
+\begin{enumerate}
+    %\item \textbf{(Appropriate randomization.)} We must prove two things: that \texttt{sample\_bernoulli} implements pseudorandomness, and that \texttt{function(v)} implements randomized response. \vicki{i'm not explaining this very well}. \zach{I think we will end up separating the Bernoulli sampler proof from this one to make things more modular. Then for this proof we can assume that \texttt{sample\_bernoulli} is correct. }
+    
+    %\begin{enumerate}
+    %    \item \textbf{(\texttt{sample\_bernoulli} implements pseudorandomness.)} \vicki{walk through implementation here: https://github.com/opendp/opendp/blob/main/rust/src/samplers.rs to explain how theory corresponds to actual. need to mention that sample\_bernoulli also returns a bool} 
+    %   \item \textbf{(\texttt{function(v)} implements randomized response.)} In binary randomized response, the participant lies with a probability $< \frac{1}{2}$ and tells the truth for the rest of the time. This is the definition of the concept.
+        
+    %   In Python and in Rust, when booleans are cast to integers, $1$ represents true, $0$ false. 
+        
+    %    In the function defined line \ref{line:fn}, the true value, \emph{arg}, is taken as input. A boolean is generated in line \ref{line:coinflip} using \texttt{sample\_bernoulli}, which takes in \emph{prob} and \emph{constant\_time} as inputs. As we see from part (a), this means a value of $1$ is generated \emph{prob} percent of the time, and $0$ is generated $1 -$\emph{prob} percent of the time. This is the ``coinflip" step, wherein the computer decides whether to return the true value or the random response. So with probability \emph{prob}, the true value, \emph{arg}, is returned. With probability $1 -$\emph{prob}, the lie, which in the case of the boolean is the opposite (hence $1 - $\emph{arg}), is returned. 
+        
+    %    Let $p$ represent \emph{prob}; then the expected value of the response is $p \cdot \text{\emph{arg}} + (1 - p)(1 - \text{\emph{arg}})$. \vicki{idk why i did this but may be relevant} 
+    %\end{enumerate}
+    %\item \textbf{(Appropriate output domain.)} In the case of \texttt{binary\_randomized\_response}, this corresponds to showing that for every element $v$ in \texttt{AllDomain(bool)}, the element \texttt{function(v)} belongs to \texttt{AllDomain(bool)}. The type signature of \texttt{function} as defined in line \ref{line:fn} automatically enforces that \texttt{function(v)} has type \texttt{bool}. Since the Rust code successfully compiles, by the type signature the appropriate output domain property must hold. Otherwise, the code will raise an exception for incorrect input type. 
+    
+    %Another way to see this is that \texttt{function(v)} returns either \emph{arg} or \emph{lie}. From the function signature, \emph{arg} is of type \texttt{bool}. As shown above, \texttt{sample\_bernoulli} can either return 0 or 1, so it is therefore also restricted to boolean values. Hence, \emph{lie} must also be boolean. 
+    
+    %Therefore, \texttt{function(v)} is guaranteed to be in \texttt{output\_domain} in all cases.
+    
+    % need to check for overflow? 
+
+    \item \textbf{(Domain-metric compatibility.)} For \texttt{binary\_randomized\_response}, this corresponds to showing \texttt{AllDomain(bool)} is compatible with \texttt{DiscreteMetric}. This follows directly from the definition of \texttt{DiscreteMetric}, as stated in the \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}.
+    
+    \item \textbf{(Privacy guarantee.)} 
+    % We assume proof of correctness of the \texttt{bernoulli\_sampler} as shown in the document ??? (to do). 
+    
+    \begin{tcolorbox}
+\begin{note}[Proof relies on correctness of Bernoulli sampler]
+The following proof makes use of the following lemma that asserts the correctness of the Bernoulli sampler function.
+    \begin{lemma}
+    \texttt{sample\_bernoulli(prob, constant\_time)}, the Bernoulli sampler function used in \texttt{make\_randomized\_response\_bool}, returns \texttt{true} with probability (\texttt{prob}) and returns  \texttt{false} with probability (1 - \texttt{prob}).
+    \end{lemma}
+\end{note}
+\end{tcolorbox}
+    \vicki{to do: need to relax the epsilon-delta defns.} 
+    
+    Let $v$ and $w$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}. Here, the metric is \texttt{DiscreteMetric} which enforces that $\din = 1$ if $v \ne w$ and $\din = 0$ if $v = w$. The case where $v = w$ is trivial so we only consider $v \ne w$ and assume without loss of generality that $v = \texttt{true}$ and $w = \texttt{false}$. For shorthand, we let $p$ represent \texttt{prob}, the probability that \texttt{sample\_bernoulli} returns \texttt{true}. Observe that $p = [0.5, 1.0)$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
+    
+    We now consider the max-divergence $D_{\infty}(Y||Z)$ over the random variables $Y = \function(v)$ and $Z = \function(w)$.
+    
+    \[
+    D_{\infty}(Y||Z) = \max_{S \subseteq Supp(Y)}[\ln (\frac{\Pr[Y \in S]}{\Pr[Z \in S]})] 
+    \]
+    
+    \[
+    = \max(\ln (\frac{\Pr[Y = \texttt{true}]}{\Pr[Z = \texttt{true}]}), \ln(\frac{\Pr[Y = \texttt{false}]}{\Pr[Z = \texttt{false}]}))
+    \]
+    
+    \[
+    = \max(\ln (\frac{p}{1 - p}), \ln(\frac{1 - p}{p}))
+    \]
+    
+    \[
+    = \ln (\frac{p}{1 - p})
+    \]
+    
+    Note that $\ln (\frac{p}{1 - p})$ is $\le \texttt{privacy\_map}(\din)$ when $\din = 1$. Therefore we've shown that for every pair of elements $v,w \in \{\texttt{false}, \texttt{true}\}$ and every $d_{DM}(v,w) \le \din$ with $\din \le 1$, if $v,w$ are $\din$-close then $\function(v),\function(w) \in \{\texttt{false},\texttt{true}\}$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the Max-Divergence). $\square$
+    
+    \textbf{Implementation note:} $c = \texttt{inf\_ln(inf\_div(prob, neg\_inf\_sub(1, prob))))}$ rounds upward in the presence of floating point rounding errors. This is because \texttt{neg\_inf\_sub(1, prob))))} appears in the denominator, and to ensure that the bound holds even in the presence of rounding errors, the conservative choice is to round down (so the quantity as a whole is bounded above). Similarly, \texttt{inf\_div} and \texttt{inf\_ln} round up. 
+    
+    This does not entirely complete the proof, because we still need to account for failure cases within the code. Going up the chain of failure, there are three cases in which the code raises an exception: %\zach{we can point out that if any of these fail, then the code raises an exception.}
+    \begin{enumerate}
+        \item \texttt{neg\_inf\_sub} fails. By the implementation of \texttt{neg\_inf\_sub}, given in the pseudocode definitions doc, the code will raise an exception and terminate here if subtraction overflow occurs. 
+        \item \texttt{inf\_div} fails. This step is only reached if \texttt{neg\_inf\_sub} succeeds, which means subtraction overflow did not occur (otherwise the Rust compiler would have thrown an error). As defined in the pseudocode definitions doc, \texttt{inf\_div} throws an exception if division overflows from a 32-bit integer. 
+        \item \texttt{inf\_ln} fails. This step is only reached if \texttt{inf\_div} succeeds, which means \texttt{neg\_inf\_sub} also had to succeed. Hence, neither subtraction nor division overflow occurred. Given in the pseudocode definitions doc, \texttt{inf\_ln} throws an exception if the natural log function overflows a 32-bit integer. 
+    \end{enumerate}
+    
+    %\vicki{need to do any weird rounding edge cases here? do we have to say there are no other cases in which this code raises an exception?}
+\end{enumerate}
+\end{proof}
+
+\end{document}
