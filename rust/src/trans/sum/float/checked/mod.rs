@@ -4,7 +4,7 @@ use crate::{
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     samplers::Shuffle,
-    traits::{InfAdd, InfCast, InfMul, InfSub},
+    traits::{InfAdd, InfCast, InfMul, InfSub, TotalOrd, AlertingAbs},
     trans::CanSumOverflow,
 };
 
@@ -36,7 +36,7 @@ where
     }
 
     let (lower, upper) = bounds.clone();
-    let ideal_sensitivity = upper.inf_sub(&lower)?;
+    let ideal_sensitivity = upper.inf_sub(&lower)?.total_max(lower.alerting_abs()?.total_max(upper)?)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(

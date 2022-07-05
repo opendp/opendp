@@ -27,7 +27,7 @@ where
     S::Item: 'static + Float,
 {
     let (lower, upper) = bounds.clone();
-    let ideal_sensitivity = lower.alerting_abs()?.total_max(upper)?;
+    let ideal_sensitivity = upper.inf_sub(&lower)?.total_max(lower.alerting_abs()?.total_max(upper)?)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
