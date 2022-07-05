@@ -1,6 +1,9 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
+mod array2;
+pub use array2::*;
+
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::hash::Hash;
