@@ -5,19 +5,9 @@ Development Environment
 
 Follow the steps below to get an OpenDP development environment set up, including the ability to run tests in both Rust and Python.
 
-Install Rust
-------------
+* Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
+* Install `Python version 3.6 or higher <https://www.python.org>`_.
 
-Download Rust from the `Rust website`_.
-
-.. _Rust website: https://www.rust-lang.org
-
-Install Python
---------------
-
-Download Python from the `Python website`_.
-
-.. _Python website: https://www.python.org
 
 Clone the OpenDP Repo
 ---------------------
@@ -40,9 +30,11 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
     git clone https://github.com/opendp/opendp.git
 
 
-Building OpenDP
-===============
+Build OpenDP
+============
 
+Next, you'll need to build the Rust binaries. 
+This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo:
 Change to the ``rust`` directory before attempting a build, run the tests, and then return to the ``opendp`` directory.
 
 .. code-block:: bash
@@ -52,10 +44,44 @@ Change to the ``rust`` directory before attempting a build, run the tests, and t
     cargo test --features untrusted,bindings-python
     cd ..
 
-Features are optional. The ``untrusted`` feature includes non-secure floating-point and contrib features like ``make_base_laplace``,
-and the ``bindings-python`` feature updates the python bindings when you build.
+This will compile a debug version of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. (The specific name of the library file will vary depending on your platform.)
+Features are optional. Setting a feature changes how the crate compiles:
 
-Refer to the :ref:`developer-faq` if you run into compilation problems.
+
+.. raw:: html
+
+   <details style="margin:-1em 0 2em 2em">
+   <summary><a>Feature List</a></summary>
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - ``untrusted``
+     - Enables untrusted features ``contrib`` and ``floating-point``.
+   * - ``contrib``
+     - Enable to include constructors that have not passed the vetting process.
+   * - ``floating-point``
+     - Enable to include measurements with floating-point vulnerabilities.
+   * - ``bindings-python``
+     - Enables the ``ffi`` feature and regenerates sources in the python package.
+   * - ``ffi``
+     - Enable to include C foreign function interfaces.
+   * - ``use-system-libs``
+     - Enable to use the system installation of MPFR.
+   * - ``use-mpfr``
+     - Already enabled. Use MPFR for exact floating-point arithmetic.
+   * - ``use-openssl``
+     - Already enabled. Use OpenSSL for secure noise generation.
+
+.. raw:: html
+
+   </details>
+
+If you run into compilation problems, please contact us!
+We also have a :ref:`developer-faq` with some common issues. 
 
 .. note::
 
@@ -64,34 +90,60 @@ Refer to the :ref:`developer-faq` if you run into compilation problems.
     Be advised this flag disables GMP's exact float handling, as well as OpenSSL's secure noise generation.
 
 
-Install Python Dependencies
----------------------------
+Python Setup
+------------
 
-Change to the ``python`` directory, create a Python virtual environment, activate it, install dependencies, and then install the Python OpenDP library itself.
+Finally, you can install a local Python package that uses your new shared library. 
+This is possible by using ``pip install`` with the ``-e`` option in the ``python`` subdirectory.
+
+We recommend setting up a virtual environment first, but this is optional:
+
+.. raw:: html
+
+   <details style="margin:-1em 0 2em 2em">
+   <summary><a>Virtual Environment</a></summary>
+
+.. code-block:: bash
+
+    # recommended. conda is just as valid
+    python3 -m venv opendp
+    source opendp/bin/activate
+
+.. raw:: html
+
+   </details>
+
+Change to the ``python`` directory, install dependencies, and then install the Python OpenDP library itself.
 
 .. code-block:: bash
 
     cd python
 
-    # recommended. conda is just as valid
-    python3 -m venv venv
-    source venv/bin/activate
-
     pip install flake8 pytest
     pip install -e .
 
 The `-e` flag is significant! It stands for "editable", meaning you only have to run this command once.
+At this point, you should be able use OpenDP as a locally installed package. 
+
 
 Testing Python
 --------------
-
+You can test that things are working by running OpenDP's python test suite, using ``pytest``:
 Run the tests from the ``python`` directory. 
 
 .. code-block:: bash
 
     pytest -v
 
-If pytest is not found, don't forget to activate your virtual environment.
+If everything has gone well, you'll see a bunch of output, then a line similar to this:
+
+.. prompt:: bash
+
+    ================== 57 passed in 1.02s ==================
+
+If pytest is not found, don't forget to activate your virtual environment!
+
+This is just a quick overview of building OpenDP. If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
 Documentation
 =============
