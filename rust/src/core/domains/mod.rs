@@ -224,6 +224,39 @@ impl<D: Domain> Domain for VectorDomain<D> {
     }
 }
 
+/// A Domain that contains vectors of (homogeneous) values.
+#[derive(Clone, PartialEq)]
+pub struct Array2Domain<D: Domain> {
+    pub element_domain: D,
+}
+impl<D: Domain> Debug for Array2Domain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Array2Domain({:?})", self.element_domain)
+    }
+}
+impl<D: Domain + Default> Default for Array2Domain<D> {
+    fn default() -> Self { Self::new(D::default()) }
+}
+impl<D: Domain> Array2Domain<D> {
+    pub fn new(element_domain: D) -> Self {
+        Array2Domain { element_domain }
+    }
+}
+impl<T: CheckNull> Array2Domain<AllDomain<T>> {
+    pub fn new_all() -> Self {
+        Self::new(AllDomain::<T>::new())
+    }
+}
+impl<D: Domain> Domain for Array2Domain<D> {
+    type Carrier = ndarray::Array2<D::Carrier>;
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        for e in val {
+            if !self.element_domain.member(e)? {return Ok(false)}
+        }
+        Ok(true)
+    }
+}
+
 /// A Domain that specifies the length of the enclosed domain
 #[derive(Clone, PartialEq)]
 pub struct SizedDomain<D: Domain> {
