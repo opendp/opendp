@@ -37,7 +37,7 @@ pub mod tests {
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             MaxDivergence::default(),
-            PrivacyMap::new(|_d_in| f64::INFINITY),
+            PrivacyMap::new(|d_in| *d_in as f64 + 1.),
         )
     }
 
