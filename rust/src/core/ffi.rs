@@ -210,12 +210,12 @@ pub extern "C" fn opendp_core__transformation_check(
 
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_map(
-    transformation: *const AnyMeasurement,
+    measurement: *const AnyMeasurement,
     distance_in: *const AnyObject
 ) -> FfiResult<*mut AnyObject> {
-    let transformation = try_as_ref!(transformation);
+    let measurement = try_as_ref!(measurement);
     let distance_in = try_as_ref!(distance_in);
-    let distance_out = transformation.map(&distance_in);
+    let distance_out = measurement.map(&distance_in);
     distance_out.into()
 }
 
@@ -377,7 +377,7 @@ mod tests {
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             MaxDivergence::default(),
-            PrivacyMap::new(|_d_in| f64::INFINITY),
+            PrivacyMap::new(|d_in| *d_in as f64 + 1.),
         )
     }
 

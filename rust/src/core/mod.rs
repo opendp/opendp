@@ -103,7 +103,7 @@ pub trait SensitivityMetric: Metric {}
 /// A map evaluating the privacy of a [`Measurement`].
 ///
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
-/// and returns the smallest admissible output distance between neighboring output distributions.
+/// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
 pub struct PrivacyMap<MI: Metric, MO: Measure>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
 
 impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
@@ -144,7 +144,7 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
 /// A map evaluating the stability of a [`Transformation`].
 ///
 /// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
-/// and returns the smallest admissible output distance between neighboring output datasets.
+/// and returns the smallest upper bound on distances between output datasets on neighboring input datasets.
 pub struct StabilityMap<MI: Metric, MO: Metric>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
 
 impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
@@ -284,8 +284,8 @@ mod tests {
         let function = Function::new(|arg: &i32| arg.clone());
         let input_metric = L1Distance::<i32>::default();
         let output_metric = L1Distance::<i32>::default();
-        let stability_relation = StabilityMap::new_from_constant(1);
-        let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation);
+        let stability_map = StabilityMap::new_from_constant(1);
+        let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map);
         let arg = 99;
         let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);

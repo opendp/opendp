@@ -50,7 +50,7 @@ mod tests {
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             MaxDivergence::default(),
-            PrivacyMap::new(|_d_in| f64::INFINITY),
+            PrivacyMap::new(|d_in| *d_in as f64 + 1.),
         )
     }
 
@@ -68,6 +68,11 @@ mod tests {
         let res = core::opendp_core__measurement_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
+
+        let d_in = AnyObject::new_raw(999u32);
+        let d_out = core::opendp_core__measurement_map(&chain, d_in);
+        let d_out: f64 = Fallible::from(d_out)?.downcast()?;
+        assert_eq!(d_out, 1000.);
         Ok(())
     }
 
@@ -80,6 +85,11 @@ mod tests {
         let res = core::opendp_core__transformation_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
+
+        let d_in = AnyObject::new_raw(999u32);
+        let d_out = core::opendp_core__transformation_map(&chain, d_in);
+        let d_out: u32 = Fallible::from(d_out)?.downcast()?;
+        assert_eq!(d_out, 999);
         Ok(())
     }
 

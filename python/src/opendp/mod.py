@@ -486,8 +486,8 @@ def binary_search(
 
     >>> # build a histogram that emits float counts
     >>> dp_mean = make_fix_delta(
-    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >>
-    ...     make_base_gaussian(1.), 1e-8
+    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >> make_base_gaussian(1.), 
+    ...     1e-8
     ... )
     ...
     >>> binary_search(

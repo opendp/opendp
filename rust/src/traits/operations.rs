@@ -27,19 +27,19 @@ pub trait TotalOrd: PartialOrd + Sized {
     }
 
     fn total_lt(&self, other: &Self) -> Fallible<bool> {
-        Ok(matches!(self.total_cmp(other)?, Ordering::Less))
+        Ok(self.total_cmp(other)?.is_lt())
     }
 
     fn total_le(&self, other: &Self) -> Fallible<bool> {
-        Ok(!matches!(self.total_cmp(other)?, Ordering::Greater))
+        Ok(self.total_cmp(other)?.is_le())
     }
 
     fn total_gt(&self, other: &Self) -> Fallible<bool> {
-        Ok(matches!(self.total_cmp(other)?, Ordering::Greater))
+        Ok(self.total_cmp(other)?.is_gt())
     }
 
     fn total_ge(&self, other: &Self) -> Fallible<bool> {
-        Ok(!matches!(self.total_cmp(other)?, Ordering::Less))
+        Ok(self.total_cmp(other)?.is_ge())
     }
 }
 

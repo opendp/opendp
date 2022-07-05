@@ -206,7 +206,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             } else { fallible!(FFI, "unrecognized generic {:?}", name) }
         }
         // This list is explicit because it allows us to avoid including u32 in the @primitives
-        _ => { dispatch!(plain_to_raw, [(&obj.type_, [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (obj)) }
+        _ => { dispatch!(plain_to_raw, [(&obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (obj)) }
     }.into()
 }
 
@@ -258,7 +258,7 @@ impl std::fmt::Debug for AnyObject {
 impl PartialEq for AnyObject {
     fn eq(&self, other: &Self) -> bool {
         fn monomorphize<T: 'static + PartialEq>(this: &AnyObject, other: &AnyObject) -> Fallible<bool> {
-            Ok(this.downcast_ref::<T>()? == other.downcast_ref::<T>()?)
+            Ok(this.downcast_ref::<T>()?.eq(other.downcast_ref::<T>()?))
         }
 
         let type_arg = &self.type_;

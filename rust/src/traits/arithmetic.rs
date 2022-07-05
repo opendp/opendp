@@ -128,7 +128,7 @@ pub trait InfExpM1: Sized {
     fn neg_inf_exp_m1(self) -> Fallible<Self>;
 }
 
- /// Exponentiates and subtracts one with specified rounding.
+ /// Takes the logarithm and adds one with specified rounding.
  pub trait InfLn1P: Sized {
     /// Alerting ln_1p with rounding towards infinity.
     /// Returns `Ok` if the result does not overflow, else `Err`

@@ -122,8 +122,8 @@
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = AbsoluteDistance::default();
 //!     let output_metric = AbsoluteDistance::default();
-//!     let stability_relation = StabilityMap::new_from_constant(1);
-//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_relation)
+//!     let stability_map = StabilityMap::new_from_constant(1);
+//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map)
 //! }
 //! make_i32_identity();
 //! ```

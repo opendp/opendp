@@ -155,6 +155,22 @@ Putting this to practice, the following example checks the stability relation on
     >>> # clamp is a 1-stable transformation, so this should pass for any symmetric_distance >= 3
     >>> assert clamp.check(d_in=in_symmetric_distance, d_out=4)
 
+.. _maps:
+
+Maps
+----
+A map is a function that takes some ``d_in`` and returns the smallest ``d_out`` that is (``d_in``, ``d_out``)-close.
+
+Maps are a useful shorthand to find privacy properties directly:
+
+.. doctest::
+
+    >>> # reusing the prior clamp transformation
+    >>> clamp.map(d_in=3)
+    3
+
+The relation check predicate function simply compares the output of the map with ``d_out`` as follows: ``d_out >= map(d_in)``.
+For a more thorough understanding of maps, please read the :ref:`relations <relations>` section.
 
 .. _distances:
 

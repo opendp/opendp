@@ -38,6 +38,7 @@ More information on distances is available :ref:`here <distances>`.
 
 Each invocation of the measurement's function (via ``meas.invoke(data)`` or ``meas(data)``) is a differentially private release.
 The privacy expenditure of each release is any ``d_out`` that makes the relation pass.
+The tightest privacy expenditure ``d_out`` can be found directly via ``meas.map(d_in)``.
 
 A measurement structure contains the following internal fields:
 
@@ -46,7 +47,7 @@ A measurement structure contains the following internal fields:
 :function: A :ref:`function <functions>` that computes a differentially-private release on private data.
 :input_metric: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_measure: A :ref:`measure <measures>` used to measure distance between two distributions in the output domain.
-:privacy_relation: A :ref:`relation <relations>` that encapsulates the privacy characteristics of the function.
+:privacy_map: A :ref:`map <maps>` that encapsulates the privacy characteristics of the function.
 
 The framework quantifies output distance bounds on measurements with a measure, instead of a metric,
 because measurements emit samples from a probability distribution,
@@ -82,7 +83,7 @@ A transformation structure contains the following internal fields:
 :function: A :ref:`function <functions>` that transforms data.
 :input_metric: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_metric: A :ref:`metric <metrics>` used to measure distance between two members of the output domain.
-:stability_relation: A :ref:`relation <relations>` that encapsulates the stability characteristics of the function.
+:stability_map: A :ref:`map <maps>` that encapsulates the stability characteristics of the function.
 
 .. _constructors:
 

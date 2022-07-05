@@ -11,7 +11,9 @@ pub trait FixDeltaMeasure: Measure {
     type Atom;
     type FixedMeasure: Measure;
 
+    // This fn is used for FFI support
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure>;
+    
     fn fix_delta(
         &self,
         curve: &Self::Distance,
