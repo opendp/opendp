@@ -1852,7 +1852,7 @@ def make_sized_bounded_sum_of_squared_deviations(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_domain_atom_or_infer(S, get_first(bounds))
+    T = get_atom_or_infer(S, get_first(bounds))
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
@@ -1896,7 +1896,7 @@ def make_sized_bounded_variance(
     
     # Standardize type arguments.
     S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_domain_atom_or_infer(S, get_first(bounds))
+    T = get_atom_or_infer(S, get_first(bounds))
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
