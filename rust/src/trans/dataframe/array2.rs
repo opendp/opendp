@@ -1,4 +1,4 @@
-use ndarray::{Array2, ScalarOperand};
+use ndarray::{Array2, ScalarOperand, ArrayD};
 
 use crate::{
     core::{AllDomain, Array2Domain, Function, StabilityMap, SymmetricDistance, Transformation},
@@ -43,8 +43,20 @@ pub fn clamp_ball<TA: Float + ScalarOperand>(mut arr: Array2<TA>, bound: TA) -> 
         .into_iter()
         .for_each(|mut row| row /= TA::one().max(row.dot(&row).sqrt() / bound));
 
-    // returns the mutated array
     arr
+}
+
+pub fn histogramdd(arr: Array2<usize>, category_lengths: Vec<usize>) -> Fallible<ArrayD<usize>> {
+    if arr.ncols() != category_lengths.len() {
+        return fallible!(FailedFunction, "category_lengths must have the same number of elements as arr has axes");
+    }
+
+    let counts = ArrayD::zeros(category_lengths);
+
+    // write arr counts into `counts`
+    
+
+    Ok(counts)
 }
 
 pub fn make_select_array<K: Hashable, TOA: Primitive>(
