@@ -1,8 +1,9 @@
-use ndarray::Array2;
+use ndarray::{Array2, ScalarOperand};
 
 use crate::{
+    core::{AllDomain, Array2Domain, Function, StabilityMap, SymmetricDistance, Transformation},
     error::Fallible,
-    traits::{Hashable, Primitive}, core::{SymmetricDistance, Transformation, Array2Domain, AllDomain, Function, StabilityMap},
+    traits::{Float, Hashable, Primitive},
 };
 
 use super::{DataFrame, DataFrameDomain};
@@ -28,20 +29,43 @@ fn dataframe_to_array<K: Hashable, TOA: Primitive>(
         .map_err(|e| err!(FailedFunction, "{:?}", e))
 }
 
+// https://docs.rs/ndarray/latest/ndarray/struct.ArrayBase.html#impl-DivAssign%3CA%3E
+// TA must be qualified as a ScalarOperand for it to be able to divide row!
+pub fn clamp_ball<TA: Float + ScalarOperand>(mut arr: Array2<TA>, bound: TA) -> Array2<TA> {
+    // using a for loop
+    // for mut row in arr.rows_mut().into_iter() {
+    //     let norm = row.dot(&row).sqrt();
+    //     row /= TA::one().max(norm / bound);
+    // }
 
-pub fn make_select_array<K: Hashable, TOA: Primitive>(col_names: Vec<K>) -> Fallible<Transformation<DataFrameDomain<K>, Array2Domain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>> {
+    // using an iterator
+    arr.rows_mut()
+        .into_iter()
+        .for_each(|mut row| row /= TA::one().max(row.dot(&row).sqrt() / bound));
+
+    // returns the mutated array
+    arr
+}
+
+pub fn make_select_array<K: Hashable, TOA: Primitive>(
+    col_names: Vec<K>,
+) -> Fallible<
+    Transformation<
+        DataFrameDomain<K>,
+        Array2Domain<AllDomain<TOA>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+> {
     Ok(Transformation::new(
         DataFrameDomain::new_all(),
         Array2Domain::new_all(),
-        Function::new_fallible(move |arg: &DataFrame<K>| {
-            dataframe_to_array(&col_names, arg)
-        }),
+        Function::new_fallible(move |arg: &DataFrame<K>| dataframe_to_array(&col_names, arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
-        StabilityMap::new_from_constant(1)
+        StabilityMap::new_from_constant(1),
     ))
 }
-
 
 #[cfg(test)]
 mod test {
@@ -51,7 +75,6 @@ mod test {
 
     #[test]
     fn test_make_select_array() -> Fallible<()> {
-
         let trans = make_select_array(vec![1, 2, 3])?;
 
         let mut df = DataFrame::new();

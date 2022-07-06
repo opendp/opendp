@@ -1,7 +1,7 @@
 use crate::core::{InherentNull, IntDistance};
 use num::{One, Zero};
 use std::hash::Hash;
-use std::ops::{AddAssign, SubAssign};
+use std::ops::{AddAssign, SubAssign, DivAssign};
 
 mod bounded;
 pub use bounded::*;
@@ -58,6 +58,7 @@ pub trait Number:
     + PartialEq
     + AddAssign
     + SubAssign
+    + DivAssign
     + FiniteBounds
     + ExactIntCast<usize>
     + InfCast<IntDistance>
@@ -80,6 +81,7 @@ impl<T> Number for T where
         + PartialEq
         + AddAssign
         + SubAssign
+        + DivAssign
         + FiniteBounds
         + ExactIntCast<usize>
         + InfCast<IntDistance>
