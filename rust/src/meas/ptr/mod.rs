@@ -80,9 +80,8 @@ mod tests {
             &vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
         println!("stability eval: {:?}", ret);
 
-        let epsilon = measurement.map(&max_influence)?.epsilon(&delta)?;
-        println!("{:?}", epsilon);
-        // assert!();
+        let epsilon_p = measurement.map(&max_influence)?.epsilon(&delta)?;
+        assert_eq!(epsilon_p, epsilon);
         Ok(())
     }
 }

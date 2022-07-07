@@ -62,7 +62,7 @@ pub fn make_base_laplace<D>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Met
                     return Ok(D::Atom::infinity())
                 }
                 // d_in / scale
-                d_in.clone().inf_div(&scale)
+                d_in.inf_div(&scale)
             })
     ))
 }

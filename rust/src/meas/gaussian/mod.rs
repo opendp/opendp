@@ -124,7 +124,7 @@ pub fn make_base_analytic_gaussian<D>(
             Ok(SMDCurve::new(
                 move |del: &D::Atom| {
                     let del = f64::inf_cast(del.clone())?;
-                    if del <= 0. {
+                    if !del.is_sign_positive() {
                         return fallible!(InvalidDistance, "delta must be positive")
                     }
                     D::Atom::inf_cast(get_analytic_gaussian_epsilon(d_in, scale, del))
