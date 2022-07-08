@@ -291,3 +291,11 @@ def test_indexing():
 
     assert (find >> indexer)(STR_DATA) == ['A', 'NA', 'B', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']
     assert (binner >> indexer)(INT_DATA) == ['A', 'B', 'C', 'C', 'NA', 'NA', 'NA', 'NA', 'NA']
+
+
+def test_lipschitz_mul_float():
+    from opendp.trans import make_lipschitz_float_mul, make_sized_bounded_float_ordered_sum
+    trans = make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> make_lipschitz_float_mul(1 / 10, (-3., 4.))
+
+    print(trans([3.] * 10))
+    print(trans.map(2))

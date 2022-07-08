@@ -667,6 +667,54 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
+    "make_lipschitz_float_mul": {
+        "description": "Multiply an aggregate by a constant.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "constant",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "The constant to multiply aggregates by."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds of the input data."
+            },
+            {
+                "name": "D",
+                "default": "AllDomain<T>",
+                "generics": ["T"],
+                "description": "Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>",
+                "is_type": true
+            },
+            {
+                "name": "M",
+                "default": "AbsoluteDistance<T>",
+                "generics": ["T"],
+                "description": "Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>",
+                "is_type": true
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "D", "constant"
+                    ]
+                }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
     "make_sized_bounded_mean": {
         "description": "Make a Transformation that computes the mean of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
         "features": ["contrib"],

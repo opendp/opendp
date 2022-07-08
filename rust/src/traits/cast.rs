@@ -18,7 +18,7 @@ use crate::traits::FloatBits;
 /// Casting fails for any value not between Self::MIN_CONSECUTIVE and Self::MAX_CONSECUTIVE.
 pub trait ExactIntCast<TI>: Sized + ExactIntBounds {
     fn exact_int_cast(v: TI) -> Fallible<Self>;
-}
+} 
 
 pub trait ExactIntBounds {
     const MAX_CONSECUTIVE: Self;
@@ -89,6 +89,7 @@ macro_rules! cartesian {
     ([$($a:tt)*], $lower:tt, $diag:tt, $upper:tt) =>
         (cartesian!{@diag[], [$($a)*], [], [$($a)*], $lower, $diag, $upper});
 }
+pub(crate) use cartesian;
 
 
 // TRAIT ExactIntCast
