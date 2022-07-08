@@ -5,7 +5,7 @@ use num::One;
 
 use crate::core::{DatasetMetric, SensitivityMetric};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::dist::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance};
+use crate::dist::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance};
 use crate::dom::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};

@@ -1,5 +1,8 @@
 
 
+from opendp.typing import InsertDeleteDistance
+
+
 def test_sized_bounded_float_sum():
     """known-n bounded float sum (assuming n is public)"""
     from opendp.trans import make_split_dataframe, make_select_column, \
@@ -25,7 +28,7 @@ def test_sized_bounded_float_sum():
         # Clamp values
         make_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_bounded_resize(size=size, bounds=bounds, constant=0.) >>
+        make_bounded_resize(size=size, bounds=bounds, constant=0., MO=InsertDeleteDistance) >>
         # Aggregate with sum
         make_sized_bounded_sum(size=size, bounds=bounds)
     )
@@ -72,7 +75,7 @@ def test_sized_bounded_int_sum():
         # Clamp values
         make_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_bounded_resize(size=size, bounds=bounds, constant=0) >>
+        make_bounded_resize(size=size, bounds=bounds, constant=0, MO=InsertDeleteDistance) >>
         # Aggregate with sum
         make_sized_bounded_sum(size=size, bounds=bounds)
     )

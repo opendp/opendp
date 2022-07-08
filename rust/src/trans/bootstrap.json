@@ -805,6 +805,12 @@
                 "description": "Tuple of lower and upper bounds for data in the input domain"
             },
             {
+                "name": "MI",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance."
+            },
+            {
                 "name": "T",
                 "is_type": true,
                 "description": "atomic type of data",
@@ -820,6 +826,408 @@
     },
     "make_sized_bounded_sum": {
         "description": "Make a Transformation that computes the sum of bounded data with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "default": "InsertDeleteDistance",
+                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance."
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_float_checked_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats with unknown dataset size. \nThis computes the sum on up to `size_limit` rows randomly selected from the input.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size_limit",
+                "c_type": "unsigned int",
+                "description": "Limit on number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_float_checked_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_float_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size_limit",
+                "c_type": "unsigned int",
+                "description": "Upper bound on the number of records in input data. Used to bound sensitivity. Can be overestimated."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for data in the input domain"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_float_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_domain_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_checked_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints. \nThe effective range is reduced, as (bounds * size) must not overflow.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_int_monotonic_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints, where all values share the same sign.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_monotonic_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nAdds the saturating sum of the positives to the saturating sum of the negatives.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_int_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_int_split_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints. \nAdds the saturating sum of the positives to the saturating sum of the negatives.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_split_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nAdds the saturating sum of the positives to the saturating sum of the negatives.",
         "features": ["contrib"],
         "args": [
             {

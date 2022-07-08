@@ -7,6 +7,7 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+use crate::trans::{Sequential, Pairwise};
 use crate::{err, fallible};
 use crate::dist::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence, InsertDeleteDistance, HammingDistance};
 use crate::error::*;
@@ -227,6 +228,10 @@ lazy_static! {
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
+
+            // sum algorithms
+            type_vec![Sequential, <f32, f64>],
+            type_vec![Pairwise, <f32, f64>],
 
             // domains
             type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],

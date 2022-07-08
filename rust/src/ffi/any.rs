@@ -351,8 +351,8 @@ pub trait IntoAnyStabilityRelationExt {
 }
 
 impl<MI: Metric, MO: Metric> IntoAnyStabilityRelationExt for StabilityRelation<MI, MO>
-    where MI::Distance: 'static + Clone + PartialOrd,
-          MO::Distance: 'static + Clone + PartialOrd {
+    where MI::Distance: 'static,
+          MO::Distance: 'static {
     fn into_any(self) -> AnyStabilityRelation {
         AnyStabilityRelation::new_all(
             make_any_relation(&self.relation),
@@ -422,8 +422,8 @@ pub trait IntoAnyTransformationExt {
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric> IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
     where DI::Carrier: 'static,
           DO::Carrier: 'static,
-          MI::Distance: 'static + Clone + PartialOrd,
-          MO::Distance: 'static + Clone + PartialOrd {
+          MI::Distance: 'static,
+          MO::Distance: 'static {
     fn into_any(self) -> AnyTransformation {
         AnyTransformation::new(
             AnyDomain::new(self.input_domain),
@@ -506,7 +506,7 @@ mod tests {
         let t2 = trans::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = trans::make_cast_default::<String, f64>()?.into_any();
         let t4 = trans::make_clamp((0.0, 10.0))?.into_any();
-        let t5 = trans::make_bounded_sum((0.0, 10.0))?.into_any();
+        let t5 = trans::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
         let m1 = meas::make_base_gaussian::<AllDomain<_>>(0.0)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
