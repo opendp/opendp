@@ -1,35 +1,47 @@
 use std::convert::TryFrom;
-use std::iter::Sum;
-use std::ops::Sub;
 use std::os::raw::{c_char, c_uint};
 
 use num::Float;
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::dist::IntDistance;
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric};
+use crate::dist::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
+use crate::dom::AllDomain;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{AlertingMul, CheckNull, DistanceConstant, ExactIntCast, InfCast, InfDiv, InfSub};
-use crate::trans::make_sized_bounded_mean;
+use crate::traits::{ExactIntCast, InfMul};
+use crate::trans::{
+    make_sized_bounded_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSizedBoundedSum,
+};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_sized_bounded_mean(
-    size: c_uint, bounds: *const AnyObject,
+    size: c_uint,
+    bounds: *const AnyObject,
+    MI: *const c_char,
     T: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where T: DistanceConstant<IntDistance> + Sub<Output=T> + Float + ExactIntCast<usize> + AlertingMul + CheckNull + InfSub + InfDiv,
-              for<'a> T: Sum<&'a T>,
-              IntDistance: InfCast<T> {
+    fn monomorphize<MI, T>(
+        size: usize,
+        bounds: *const AnyObject,
+    ) -> FfiResult<*mut AnyTransformation>
+    where
+        MI: 'static + Metric,
+        T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
+        AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
+        AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
+    {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
-        make_sized_bounded_mean::<T>(size, bounds).into_any()
+        make_sized_bounded_mean::<MI, T>(size, bounds).into_any()
     }
     let size = size as usize;
+    let MI = try_!(Type::try_from(MI));
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @floats)], (size, bounds))
+    dispatch!(monomorphize, [
+        (MI, [SymmetricDistance, InsertDeleteDistance]),
+        (T, @floats)
+    ], (size, bounds))
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -46,6 +58,7 @@ mod tests {
         let transformation = Result::from(opendp_trans__make_sized_bounded_mean(
             3 as c_uint,
             util::into_raw(AnyObject::new((0., 10.))),
+            "InsertDeleteDistance".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
