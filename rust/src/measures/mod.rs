@@ -4,9 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::error::Fallible;
-
-use super::Measure;
+use crate::{error::Fallible, core::Measure};
 
 /// Measures
 #[derive(Clone)]

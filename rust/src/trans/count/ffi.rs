@@ -7,7 +7,7 @@ use num::traits::FloatConst;
 
 use crate::core::SensitivityMetric;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::core::{IntDistance, L1Distance, L2Distance};
+use crate::metrics::{IntDistance, L1Distance, L2Distance};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::any::Downcast;

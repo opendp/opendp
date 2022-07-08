@@ -1,7 +1,7 @@
 use crate::{
     core::{Function, Transformation, StabilityMap},
-    core::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
-    core::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
+    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd},
 };

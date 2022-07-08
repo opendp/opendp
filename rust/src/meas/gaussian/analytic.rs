@@ -158,7 +158,7 @@ fn phi(t: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{meas::make_base_analytic_gaussian, error::Fallible, core::AllDomain};
+    use crate::{meas::make_base_analytic_gaussian, error::Fallible, domains::AllDomain};
 
     use super::*;
 

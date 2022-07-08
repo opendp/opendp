@@ -20,15 +20,6 @@
 // Ordering of generic arguments
 // DI, DO, MI, MO, TI, TO, QI, QO
 
-mod domains;
-pub use domains::*;
-
-mod metrics;
-pub use metrics::*;
-
-mod measures;
-pub use measures::*;
-
 #[cfg(feature="ffi")]
 mod ffi;
 #[cfg(feature="ffi")]
@@ -36,6 +27,8 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
+use crate::domains::PairDomain;
+use crate::metrics::IntDistance;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
@@ -279,8 +272,8 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 
 #[cfg(test)]
 mod tests {
-    use crate::core::L1Distance;
-    use crate::core::AllDomain;
+    use crate::metrics::L1Distance;
+    use crate::domains::AllDomain;
     use crate::error::ExplainUnwrap;
 
     use super::*;

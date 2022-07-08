@@ -4,8 +4,9 @@ mod ffi;
 use num::{Float, One, Zero};
 
 use crate::core::{Domain, Function, Measurement, PrivacyMap, SensitivityMetric};
-use crate::core::{AbsoluteDistance, L2Distance, SmoothedMaxDivergence, SMDCurve};
-use crate::core::{AllDomain, VectorDomain};
+use crate::metrics::{AbsoluteDistance, L2Distance};
+use crate::measures::{SmoothedMaxDivergence, SMDCurve};
+use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::samplers::SampleGaussian;
 

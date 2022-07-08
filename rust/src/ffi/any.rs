@@ -413,8 +413,9 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{MaxDivergence, SmoothedMaxDivergence, ChangeOneDistance, SymmetricDistance};
-    use crate::core::{AllDomain, BoundedDomain};
+    use crate::metrics::{ChangeOneDistance, SymmetricDistance};
+    use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
+    use crate::domains::{AllDomain, BoundedDomain};
     use crate::error::*;
     use crate::meas;
     use crate::trans;

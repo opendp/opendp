@@ -2,8 +2,8 @@
 mod ffi;
 
 use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
-use crate::core::{SymmetricDistance, InsertDeleteDistance, IntDistance};
-use crate::core::{VectorDomain, SizedDomain};
+use crate::metrics::{SymmetricDistance, InsertDeleteDistance, IntDistance};
+use crate::domains::{VectorDomain, SizedDomain};
 use crate::error::Fallible;
 use crate::samplers::Shuffle;
 use crate::traits::CheckNull;
@@ -79,7 +79,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::core::AllDomain;
+    use crate::domains::AllDomain;
 
     #[test]
     fn test() -> Fallible<()> {

@@ -5,8 +5,9 @@ use std::collections::HashSet;
 use std::hash::Hash;
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::core::{MaxDivergence, SymmetricDistance, IntDistance};
-use crate::core::AllDomain;
+use crate::measures::MaxDivergence;
+use crate::metrics::{SymmetricDistance, IntDistance};
+use crate::domains::AllDomain;
 use crate::error::Fallible;
 use crate::samplers::{SampleBernoulli, SampleUniformInt};
 use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfLn, InfSub, InfDiv};

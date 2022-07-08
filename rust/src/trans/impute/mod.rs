@@ -6,12 +6,11 @@ use std::ops::{Add, Mul, Sub};
 use num::Float;
 
 use crate::core::{Domain, Transformation, Function, StabilityMap};
-use crate::core::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain};
+use crate::domains::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain, InherentNull};
 use crate::error::Fallible;
-use crate::core::InherentNull;
 use crate::samplers::SampleUniform;
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
-use crate::core::SymmetricDistance;
+use crate::metrics::SymmetricDistance;
 use crate::traits::CheckNull;
 
 /// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).

@@ -4,7 +4,7 @@ pub mod ffi;
 use std::ops::Shr;
 
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
-use crate::core::PairDomain;
+use crate::domains::PairDomain;
 use crate::error::Fallible;
 use std::fmt::Debug;
 
@@ -104,8 +104,9 @@ pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<D
 #[cfg(test)]
 mod tests {
     use crate::core::*;
-    use crate::core::{L1Distance, MaxDivergence};
-    use crate::core::AllDomain;
+    use crate::metrics::L1Distance;
+    use crate::measures::MaxDivergence;
+    use crate::domains::AllDomain;
     use crate::error::ExplainUnwrap;
 
     use super::*;

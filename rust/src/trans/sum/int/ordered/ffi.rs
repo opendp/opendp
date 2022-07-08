@@ -5,7 +5,7 @@ use num::Zero;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
-use crate::core::IntDistance;
+use crate::metrics::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;

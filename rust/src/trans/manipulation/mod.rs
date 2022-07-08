@@ -6,8 +6,8 @@ use num::One;
 use crate::core::{Domain, Function, Metric, StabilityMap, Transformation, DatasetMetric};
 use crate::error::*;
 use crate::traits::{DistanceConstant, CheckNull};
-use crate::core::{VectorDomain, AllDomain};
-use crate::core::SymmetricDistance;
+use crate::domains::{VectorDomain, AllDomain};
+use crate::metrics::SymmetricDistance;
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -87,8 +87,8 @@ pub fn make_is_null<DIA>() -> Fallible<Transformation<VectorDomain<DIA>, VectorD
 mod tests {
 
     use super::*;
-    use crate::core::{ChangeOneDistance};
-    use crate::core::{AllDomain, InherentNullDomain};
+    use crate::metrics::ChangeOneDistance;
+    use crate::domains::{AllDomain, InherentNullDomain};
 
     #[test]
     fn test_identity() {

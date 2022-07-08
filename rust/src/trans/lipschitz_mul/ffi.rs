@@ -3,8 +3,8 @@ use std::{convert::TryFrom, ffi::c_void, os::raw::c_char};
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
-    dist::{AbsoluteDistance, L1Distance, L2Distance},
-    dom::{AllDomain, VectorDomain},
+    metrics::{AbsoluteDistance, L1Distance, L2Distance},
+    domains::{AllDomain, VectorDomain},
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,

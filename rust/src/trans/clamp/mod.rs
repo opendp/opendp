@@ -4,8 +4,8 @@ mod ffi;
 use std::collections::Bound;
 
 use crate::core::Transformation;
-use crate::core::SymmetricDistance;
-use crate::core::{AllDomain, BoundedDomain, VectorDomain};
+use crate::metrics::SymmetricDistance;
+use crate::domains::{AllDomain, BoundedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
