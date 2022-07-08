@@ -55,8 +55,8 @@ where
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
-            //       <= d_in * max(|L|, U) + 2 * error
-            //       =  d_in * max(|L|, U) + relaxation
+            //       <= d_in * ideal_sens + 2 * error
+            //       =  d_in * ideal_sens + relaxation
             S::Item::inf_cast(*d_in)?
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
@@ -76,7 +76,7 @@ pub fn make_sized_bounded_float_checked_sum<S>(
     >,
 >
 where
-    S: UncheckedSum + CanFloatSumOverflow,
+    S: UncheckedSum,
     S::Item: 'static + Float,
 {
     if S::float_sum_can_overflow(size, bounds)? {
@@ -178,10 +178,11 @@ impl<T: Float> CanFloatSumOverflow for Pairwise<T> {
         //     if the sum reaches the coarsest band of floats.
         // Therefore we want mag < ulp(T::MAX) / N
 
-        // mag_limit = ulp(T::MAX) / N = 2^(max_unbiased_exponent - num_mantissa_bits)
+        // mag_limit = ulp(T::MAX) / N = 2^(max_unbiased_exponent - num_mantissa_bits) / N
         // max_unbiased_exponent is always the same as the exponent bias
         let max_ulp = _2.powf(T::exact_int_cast(T::EXPONENT_BIAS - T::MANTISSA_BITS)?);
-        if mag < max_ulp.neg_inf_div(&size_)? {
+        let mag_limit = max_ulp.neg_inf_div(&size_)?;
+        if mag < mag_limit {
             // we can't overflow, because the largest possible addition will underflow
             return Ok(false);
         }

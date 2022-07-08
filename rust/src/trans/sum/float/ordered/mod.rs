@@ -41,8 +41,8 @@ where
         StabilityRelation::new_from_forward(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
-            //       <= d_in * max(|L|, U) + 2 * error
-            //       =  d_in * max(|L|, U) + relaxation
+            //       <= d_in * ideal_sens + 2 * error
+            //       =  d_in * ideal_sens + relaxation
             S::Item::inf_cast(*d_in)?
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
