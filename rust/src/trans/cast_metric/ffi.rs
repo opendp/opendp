@@ -2,10 +2,10 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::dist::{
+use crate::metrics::{
     ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
 };
-use crate::dom::{AllDomain, SizedDomain, VectorDomain, BoundedDomain};
+use crate::domains::{AllDomain, SizedDomain, VectorDomain, BoundedDomain};
 use crate::err;
 use crate::ffi::any::{AnyTransformation, AnyObject, Downcast};
 use crate::ffi::util::Type;

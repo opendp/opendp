@@ -2,8 +2,8 @@ use std::os::raw::c_uint;
 
 use crate::comb::{AmplifiableMeasure, IsSizedDomain, make_population_amplification};
 use crate::core::FfiResult;
-use crate::dist::{MaxDivergence, FixedSmoothedMaxDivergence};
-use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
+use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;

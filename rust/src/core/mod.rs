@@ -27,11 +27,12 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
-use crate::dom::PairDomain;
+use crate::domains::PairDomain;
+use crate::metrics::IntDistance;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
-use crate::dist::IntDistance;
 use std::fmt::Debug;
+
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -271,8 +272,8 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 
 #[cfg(test)]
 mod tests {
-    use crate::dist::L1Distance;
-    use crate::dom::AllDomain;
+    use crate::metrics::L1Distance;
+    use crate::domains::AllDomain;
     use crate::error::ExplainUnwrap;
 
     use super::*;

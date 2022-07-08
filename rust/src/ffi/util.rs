@@ -9,10 +9,11 @@ use std::str::Utf8Error;
 
 use crate::trans::{Sequential, Pairwise};
 use crate::{err, fallible};
-use crate::dist::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, MaxDivergence, SmoothedMaxDivergence, InsertDeleteDistance, HammingDistance};
+use crate::metrics::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, InsertDeleteDistance, HammingDistance};
+use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
 use crate::error::*;
 use crate::ffi::any::AnyObject;
-use crate::dom::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
+use crate::domains::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
@@ -357,7 +358,7 @@ impl<S: ToString> ToCharP for S {
 mod tests {
     use std::convert::TryInto;
 
-    use crate::dist::L1Distance;
+    use crate::metrics::L1Distance;
 
     use super::*;
 

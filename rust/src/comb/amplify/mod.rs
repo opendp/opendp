@@ -2,8 +2,8 @@
 mod ffi;
 
 use crate::core::{Domain, Measurement, Metric, PrivacyMap, Measure};
-use crate::dist::{MaxDivergence, FixedSmoothedMaxDivergence};
-use crate::dom::SizedDomain;
+use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
+use crate::domains::SizedDomain;
 use crate::error::Fallible;
 use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P, InfDiv};
 
@@ -56,7 +56,7 @@ pub fn make_population_amplification<DIA, DO, MI, MO>(
 
 #[cfg(test)]
 mod test {
-    use crate::dist::SymmetricDistance;
+    use crate::metrics::SymmetricDistance;
     use crate::error::Fallible;
     use crate::trans::make_sized_bounded_mean;
     use crate::meas::make_base_laplace;

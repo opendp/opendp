@@ -6,8 +6,8 @@ use std::hash::Hash;
 use std::iter::FromIterator;
 
 use crate::core::Transformation;
-use crate::dist::SymmetricDistance;
-use crate::dom::{AllDomain, VectorDomain, OptionNullDomain};
+use crate::metrics::SymmetricDistance;
+use crate::domains::{AllDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::traits::CheckNull;
 use crate::trans::make_row_by_row;

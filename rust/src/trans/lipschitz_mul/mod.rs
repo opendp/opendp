@@ -2,8 +2,8 @@ use num::One;
 
 use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation},
-    dist::{AbsoluteDistance, LpDistance},
-    dom::{AllDomain, VectorDomain},
+    metrics::{AbsoluteDistance, LpDistance},
+    domains::{AllDomain, VectorDomain},
     error::Fallible,
     traits::{
         AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfMul, InfPow, InfSub,

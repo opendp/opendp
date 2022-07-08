@@ -8,8 +8,8 @@ mod float;
 pub use float::*;
 
 use crate::core::{Metric, Transformation};
-use crate::dist::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
-use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
+use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_ordered_random, make_unordered};

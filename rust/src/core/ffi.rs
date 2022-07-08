@@ -296,8 +296,9 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMe
 #[cfg(test)]
 mod tests {
     use crate::core::{Function, Measurement, PrivacyMap, Transformation};
-    use crate::dist::{MaxDivergence, SymmetricDistance};
-    use crate::dom::AllDomain;
+    use crate::metrics::SymmetricDistance;
+    use crate::measures::MaxDivergence;
+    use crate::domains::AllDomain;
     use crate::ffi::any::{Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
     use crate::ffi::util::ToCharP;
     use crate::traits::CheckNull;

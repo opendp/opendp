@@ -2,8 +2,8 @@ use num::Zero;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    dist::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
-    dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
+    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd},
 };

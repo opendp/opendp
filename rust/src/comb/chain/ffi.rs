@@ -31,8 +31,9 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
 mod tests {
     use crate::core::{Function, Measurement, PrivacyMap, Transformation};
     use crate::core;
-    use crate::dist::{MaxDivergence, SymmetricDistance};
-    use crate::dom::AllDomain;
+    use crate::metrics::SymmetricDistance;
+    use crate::measures::MaxDivergence;
+    use crate::domains::AllDomain;
     use crate::error::*;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};

@@ -6,8 +6,9 @@ use num::{Integer, ToPrimitive};
 use rug::{Float, float::Round, ops::AddAssignRound, ops::DivAssignRound};
 
 use crate::core::{Measurement, Function, PrivacyMap};
-use crate::dist::{L1Distance, MaxDivergence};
-use crate::dom::{AllDomain, MapDomain};
+use crate::metrics::L1Distance;
+use crate::measures::MaxDivergence;
+use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, CheckNull, InfCast, CastInternalReal};
