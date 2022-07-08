@@ -8,7 +8,7 @@ use crate::metrics::{AbsoluteDistance, L2Distance};
 use crate::measures::{SmoothedMaxDivergence, SMDCurve};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::samplers::SampleGaussian;
+use crate::traits::samplers::SampleGaussian;
 
 use crate::traits::{InfCast, CheckNull, InfMul, InfAdd, InfLn, InfSqrt, InfDiv, InfSub, InfExp};
 

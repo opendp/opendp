@@ -3,8 +3,7 @@ use crate::{
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    samplers::Shuffle,
-    traits::{InfAdd, InfCast, InfMul, InfSub, TotalOrd, AlertingAbs, ExactIntCast},
+    traits::{InfAdd, InfCast, InfMul, InfSub, TotalOrd, AlertingAbs, ExactIntCast, samplers::Shuffle},
 };
 
 use num::{Zero, One};
