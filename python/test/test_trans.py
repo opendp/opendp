@@ -299,4 +299,3 @@ def test_lipschitz_mul_float():
 
     print(trans([3.] * 10))
     print(trans.map(2))
-test_lipschitz_mul_float()

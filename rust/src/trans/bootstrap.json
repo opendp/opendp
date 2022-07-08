@@ -691,7 +691,7 @@
                 "name": "D",
                 "default": "AllDomain<T>",
                 "generics": ["T"],
-                "description": "Domain of the identity function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>",
+                "description": "Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>",
                 "is_type": true
             },
             {

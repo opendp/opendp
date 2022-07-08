@@ -1157,7 +1157,7 @@ def make_lipschitz_mul_float(
     :param constant: The constant to multiply aggregates by.
     :param bounds: Tuple of inclusive lower and upper bounds of the input data.
     :type bounds: Tuple[Any, Any]
-    :param D: Domain of the identity function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>
+    :param D: Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>
     :type D: :ref:`RuntimeTypeDescriptor`
     :param M: Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>
     :type M: :ref:`RuntimeTypeDescriptor`
