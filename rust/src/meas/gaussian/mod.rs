@@ -138,7 +138,8 @@ where
     fn new_forward_map(scale: Q) -> PrivacyMap<MI, Self> {
         PrivacyMap::new_fallible(move |d_in: &Q| {
             let _2 = Q::exact_int_cast(2)?;
-            d_in.inf_div(&scale)?.inf_pow(&_2)?.inf_div(&_2)
+            // (d_in / scale)^2 / 2
+            (d_in.inf_div(&scale)?).inf_pow(&_2)?.inf_div(&_2)
         })
     }
 }
@@ -220,6 +221,16 @@ mod tests {
         let _ret = measurement.invoke(&arg)?;
 
         assert!(measurement.map(&0.1)?.epsilon(&0.00001)? <= 0.5);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_gaussian_mechanism_zcdp() -> Fallible<()> {
+        let measurement = make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64)?;
+        let arg = 0.0;
+        let _ret = measurement.invoke(&arg)?;
+
+        assert!(measurement.check(&0.1, &0.0050000001)?);
         Ok(())
     }
 }
