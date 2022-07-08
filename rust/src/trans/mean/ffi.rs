@@ -9,7 +9,7 @@ use crate::dom::AllDomain;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::ExactIntCast;
+use crate::traits::{ExactIntCast, InfMul};
 use crate::trans::{
     make_sized_bounded_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSizedBoundedSum,
 };
@@ -27,7 +27,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_mean(
     ) -> FfiResult<*mut AnyTransformation>
     where
         MI: 'static + Metric,
-        T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float,
+        T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
         AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
     {

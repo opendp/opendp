@@ -7,7 +7,7 @@ use crate::core::Transformation;
 use crate::dist::{AbsoluteDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{AlertingSub, ExactIntCast};
+use crate::traits::{AlertingSub, ExactIntCast, InfDiv, InfMul, InfPow, InfSub};
 
 use super::{
     make_lipschitz_float_mul, make_sized_bounded_sum_of_squared_deviations, Float,
@@ -37,12 +37,19 @@ where
     }
 
     let constant = S::Item::exact_int_cast(size.alerting_sub(&ddof)?)?.recip();
+    let _2 = S::Item::exact_int_cast(2)?;
+    let _4 = S::Item::exact_int_cast(4)?;
+    let size_ = S::Item::exact_int_cast(size)?;
+
     // Using Popoviciu's inequality on variances:
     //     variance <= (U - L)^2 / 4
     // Therefore ssd <= variance * size <= (U - L)^2 / 4 * size
-    let _4 = S::Item::exact_int_cast(4)?;
-    let size_ = S::Item::exact_int_cast(size)?;
-    let upper_var_bound = (bounds.1 - bounds.0).powi(2) / (_4) * size_;
+    let upper_var_bound = bounds
+        .1
+        .inf_sub(&bounds.0)?
+        .inf_pow(&_2)?
+        .inf_div(&_4)?
+        .inf_mul(&size_)?;
 
     make_sized_bounded_sum_of_squared_deviations::<Pairwise<_>>(size, bounds)?
         >> make_lipschitz_float_mul(constant, (S::Item::zero(), upper_var_bound))?

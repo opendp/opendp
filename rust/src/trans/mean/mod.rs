@@ -7,11 +7,11 @@ use crate::core::{Metric, Transformation};
 use crate::dist::AbsoluteDistance;
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::ExactIntCast;
+use crate::traits::{ExactIntCast, InfMul};
 
 use super::{
-    make_lipschitz_float_mul, make_sized_bounded_sum, LipschitzMulFloatDomain, LipschitzMulFloatMetric,
-    MakeSizedBoundedSum,
+    make_lipschitz_float_mul, make_sized_bounded_sum, LipschitzMulFloatDomain,
+    LipschitzMulFloatMetric, MakeSizedBoundedSum,
 };
 
 pub fn make_sized_bounded_mean<MI, T>(
@@ -27,7 +27,7 @@ pub fn make_sized_bounded_mean<MI, T>(
 >
 where
     MI: 'static + Metric,
-    T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float,
+    T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
     AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
     AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
 {
@@ -35,8 +35,10 @@ where
         return fallible!(MakeTransformation, "dataset size must be positive");
     }
     let size_ = T::exact_int_cast(size)?;
-    let sum_bounds = (size_ * bounds.0, size_ * bounds.1);
-    make_sized_bounded_sum::<MI, T>(size, bounds)? >> make_lipschitz_float_mul(size_.recip(), sum_bounds)?
+    // don't loosen the bounds by the relaxation term because any value greater than nU is pure error
+    let sum_bounds = (size_.neg_inf_mul(&bounds.0)?, size_.inf_mul(&bounds.1)?);
+    make_sized_bounded_sum::<MI, T>(size, bounds)?
+        >> make_lipschitz_float_mul(size_.recip(), sum_bounds)?
 }
 
 #[cfg(test)]
