@@ -10,7 +10,7 @@ use crate::error::Fallible;
 use crate::traits::ExactIntCast;
 
 use super::{
-    make_lipschitz_mul, make_sized_bounded_sum, LipschitzMulDomain, LipschitzMulMetric,
+    make_lipschitz_float_mul, make_sized_bounded_sum, LipschitzMulFloatDomain, LipschitzMulFloatMetric,
     MakeSizedBoundedSum,
 };
 
@@ -28,14 +28,15 @@ pub fn make_sized_bounded_mean<MI, T>(
 where
     MI: 'static + Metric,
     T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float,
-    AllDomain<T>: LipschitzMulDomain<Atom = T>,
-    AbsoluteDistance<T>: LipschitzMulMetric<Distance = T>,
+    AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
+    AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
 {
     if size == 0 {
         return fallible!(MakeTransformation, "dataset size must be positive");
     }
     let size_ = T::exact_int_cast(size)?;
-    make_sized_bounded_sum::<MI, T>(size, bounds)? >> make_lipschitz_mul(size_.recip())?
+    let sum_bounds = (size_ * bounds.0, size_ * bounds.1);
+    make_sized_bounded_sum::<MI, T>(size, bounds)? >> make_lipschitz_float_mul(size_.recip(), sum_bounds)?
 }
 
 #[cfg(test)]
