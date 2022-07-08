@@ -4,6 +4,11 @@
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
 #[cfg(feature="contrib")]
+pub mod covariance;
+#[cfg(feature="contrib")]
+pub use crate::trans::covariance::*;
+
+#[cfg(feature="contrib")]
 pub mod dataframe;
 #[cfg(feature="contrib")]
 pub use crate::trans::dataframe::*;
@@ -17,6 +22,11 @@ pub use crate::trans::manipulation::*;
 pub mod sum;
 #[cfg(feature="contrib")]
 pub use crate::trans::sum::*;
+
+#[cfg(feature="contrib")]
+pub mod sum_of_squared_deviations;
+#[cfg(feature="contrib")]
+pub use crate::trans::sum_of_squared_deviations::*;
 
 #[cfg(feature="contrib")]
 pub mod count;
