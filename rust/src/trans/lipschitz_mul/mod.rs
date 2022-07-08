@@ -16,7 +16,7 @@ use super::Float;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub fn make_lipschitz_mul_float<D, M>(
+pub fn make_lipschitz_float_mul<D, M>(
     constant: D::Atom,
     bounds: (D::Atom, D::Atom),
 ) -> Fallible<Transformation<D, D, M, M>>
@@ -116,7 +116,7 @@ pub mod test {
     #[test]
     fn test_lipschitz_mul() -> Fallible<()> {
         let extension =
-            make_lipschitz_mul_float::<AllDomain<f64>, AbsoluteDistance<f64>>(2., (0., 10.))?;
+            make_lipschitz_float_mul::<AllDomain<f64>, AbsoluteDistance<f64>>(2., (0., 10.))?;
         assert_eq!(extension.invoke(&1.3)?, 2.6);
         println!("{:?}", extension.invoke(&1.3));
         Ok(())

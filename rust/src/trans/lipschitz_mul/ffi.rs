@@ -10,11 +10,11 @@ use crate::{
         util::Type,
     },
     traits::SaturatingMul,
-    trans::{make_lipschitz_mul_float, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Float},
+    trans::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Float},
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_lipschitz_mul_float(
+pub extern "C" fn opendp_trans__make_lipschitz_float_mul(
     constant: *const c_void,
     bounds: *const AnyObject,
     D: *const c_char,
@@ -38,7 +38,7 @@ pub extern "C" fn opendp_trans__make_lipschitz_mul_float(
             D::Atom: Float + SaturatingMul,
             M: 'static + LipschitzMulFloatMetric<Distance = D::Atom>,
         {
-            make_lipschitz_mul_float::<D, M>(constant, bounds).into_any()
+            make_lipschitz_float_mul::<D, M>(constant, bounds).into_any()
         }
 
         let constant = try_as_ref!(constant as *const T).clone();

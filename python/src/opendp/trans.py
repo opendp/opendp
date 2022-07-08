@@ -36,7 +36,7 @@ __all__ = [
     "make_find",
     "make_find_bin",
     "make_index",
-    "make_lipschitz_mul_float",
+    "make_lipschitz_float_mul",
     "make_sized_bounded_mean",
     "make_resize",
     "make_bounded_resize",
@@ -1146,7 +1146,7 @@ def make_index(
     return c_to_py(unwrap(function(categories, null, TOA), Transformation))
 
 
-def make_lipschitz_mul_float(
+def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
     D: RuntimeTypeDescriptor = "AllDomain<T>",
@@ -1161,7 +1161,7 @@ def make_lipschitz_mul_float(
     :type D: :ref:`RuntimeTypeDescriptor`
     :param M: Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>
     :type M: :ref:`RuntimeTypeDescriptor`
-    :return: A lipschitz_mul_float step.
+    :return: A lipschitz_float_mul step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1183,7 +1183,7 @@ def make_lipschitz_mul_float(
     M = py_to_c(M, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_lipschitz_mul_float
+    function = lib.opendp_trans__make_lipschitz_float_mul
     function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     

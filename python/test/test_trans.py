@@ -294,8 +294,8 @@ def test_indexing():
 
 
 def test_lipschitz_mul_float():
-    from opendp.trans import make_lipschitz_mul_float, make_sized_bounded_float_ordered_sum
-    trans = make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> make_lipschitz_mul_float(1 / 10, (-3., 4.))
+    from opendp.trans import make_lipschitz_float_mul, make_sized_bounded_float_ordered_sum
+    trans = make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> make_lipschitz_float_mul(1 / 10, (-3., 4.))
 
     print(trans([3.] * 10))
     print(trans.map(2))

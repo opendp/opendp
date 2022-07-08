@@ -667,7 +667,7 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_lipschitz_mul_float": {
+    "make_lipschitz_float_mul": {
         "description": "Multiply an aggregate by a constant.",
         "features": ["contrib"],
         "args": [
