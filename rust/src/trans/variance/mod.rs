@@ -1,7 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use num::{Float as _, One, Zero};
+use num::{Float as _, Zero};
 
 use crate::core::Transformation;
 use crate::dist::{AbsoluteDistance, SymmetricDistance};
@@ -10,8 +10,8 @@ use crate::error::Fallible;
 use crate::traits::{AlertingSub, ExactIntCast};
 
 use super::{
-    make_lipschitz_mul_float,
-    make_sized_bounded_sum_of_squared_deviations, Float, UncheckedSum, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise,
+    make_lipschitz_float_mul, make_sized_bounded_sum_of_squared_deviations, Float,
+    LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, UncheckedSum,
 };
 
 pub fn make_sized_bounded_variance<S>(
@@ -33,16 +33,19 @@ where
     AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
 {
     if ddof >= size {
-        return fallible!(MakeTransformation, "size - ddof must be greater than zero")
+        return fallible!(MakeTransformation, "size - ddof must be greater than zero");
     }
-    
-    let dof = size.alerting_sub(&ddof)?;
-    let constant = S::Item::exact_int_cast(dof)?.recip();
-    let _2 = S::Item::one() + S::Item::one();
+
+    let constant = S::Item::exact_int_cast(size.alerting_sub(&ddof)?)?.recip();
+    // Using Popoviciu's inequality on variances:
+    //     variance <= (U - L)^2 / 4
+    // Therefore ssd <= variance * size <= (U - L)^2 / 4 * size
+    let _4 = S::Item::exact_int_cast(4)?;
     let size_ = S::Item::exact_int_cast(size)?;
-    let upper_var_bound = (bounds.1 - bounds.0).powi(2) / (_2 * size_);
+    let upper_var_bound = (bounds.1 - bounds.0).powi(2) / (_4) * size_;
+
     make_sized_bounded_sum_of_squared_deviations::<Pairwise<_>>(size, bounds)?
-        >> make_lipschitz_mul_float(constant, (S::Item::zero(), upper_var_bound))?
+        >> make_lipschitz_float_mul(constant, (S::Item::zero(), upper_var_bound))?
 }
 
 #[cfg(test)]
@@ -55,13 +58,15 @@ mod tests {
     fn test_make_sized_bounded_variance() {
         let arg = vec![1., 2., 3., 4., 5.];
 
-        let transformation_sample = make_sized_bounded_variance::<Pairwise<_>>(5, (0., 10.), 1).unwrap_test();
+        let transformation_sample =
+            make_sized_bounded_variance::<Pairwise<_>>(5, (0., 10.), 1).unwrap_test();
         let ret = transformation_sample.invoke(&arg).unwrap_test();
         let expected = 2.5;
         assert_eq!(ret, expected);
         assert!(transformation_sample.check(&1, &(100. / 5.)).unwrap_test());
 
-        let transformation_pop = make_sized_bounded_variance::<Pairwise<_>>(5, (0., 10.), 0).unwrap_test();
+        let transformation_pop =
+            make_sized_bounded_variance::<Pairwise<_>>(5, (0., 10.), 0).unwrap_test();
         let ret = transformation_pop.invoke(&arg).unwrap_test();
         let expected = 2.0;
         assert_eq!(ret, expected);
