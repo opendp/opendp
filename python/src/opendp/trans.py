@@ -36,6 +36,7 @@ __all__ = [
     "make_find",
     "make_find_bin",
     "make_index",
+    "make_lipschitz_mul_float",
     "make_sized_bounded_mean",
     "make_resize",
     "make_bounded_resize",
@@ -1143,6 +1144,50 @@ def make_index(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(categories, null, TOA), Transformation))
+
+
+def make_lipschitz_mul_float(
+    constant,
+    bounds: Tuple[Any, Any],
+    D: RuntimeTypeDescriptor = "AllDomain<T>",
+    M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
+) -> Transformation:
+    """Multiply an aggregate by a constant.
+    
+    :param constant: The constant to multiply aggregates by.
+    :param bounds: Tuple of inclusive lower and upper bounds of the input data.
+    :type bounds: Tuple[Any, Any]
+    :param D: Domain of the identity function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>
+    :type D: :ref:`RuntimeTypeDescriptor`
+    :param M: Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>
+    :type M: :ref:`RuntimeTypeDescriptor`
+    :return: A lipschitz_mul_float step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    D = RuntimeType.parse(type_name=D, generics=["T"])
+    M = RuntimeType.parse(type_name=M, generics=["T"])
+    T = get_atom_or_infer(D, constant)
+    D = D.substitute(T=T)
+    M = M.substitute(T=T)
+    
+    # Convert arguments to c types.
+    constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=T)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    D = py_to_c(D, c_type=ctypes.c_char_p)
+    M = py_to_c(M, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_lipschitz_mul_float
+    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(constant, bounds, D, M), Transformation))
 
 
 def make_sized_bounded_mean(

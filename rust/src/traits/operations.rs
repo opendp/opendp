@@ -5,6 +5,8 @@ use num::{One, Zero};
 
 use crate::error::Fallible;
 
+use super::ExactIntCast;
+
 pub trait CheckNull { fn is_null(&self) -> bool; }
 
 /// TotalOrd is well-defined on types that are Ord on their non-null values.
@@ -44,7 +46,7 @@ pub trait TotalOrd: PartialOrd + Sized {
 }
 
 
-pub trait FloatBits: Sized {
+pub trait FloatBits: Sized + ExactIntCast<Self::Bits> {
     type Bits: Copy + One + Zero + Eq
     + Shr<Output=Self::Bits> + Shl<Output=Self::Bits>
     + BitAnd<Output=Self::Bits> + Sub<Output=Self::Bits>;

@@ -185,6 +185,7 @@ macro_rules! impl_alerting_int {
             }
         })
         +$(impl SaturatingMul for $t {
+            #[inline]
             fn saturating_mul(&self, v: &Self) -> Self {
                 <$t>::saturating_mul(*self, *v)
             }
