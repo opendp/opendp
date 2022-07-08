@@ -5,7 +5,7 @@ use crate::{
     error::Fallible,
     samplers::Shuffle,
     traits::{InfAdd, InfCast, InfMul, InfSub, TotalOrd, AlertingAbs},
-    trans::CanSumOverflow,
+    trans::CanFloatSumOverflow,
 };
 
 use super::{Float, Pairwise, Sequential, SumRelaxation};
@@ -28,7 +28,7 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
 {
-    if S::Item::sum_can_overflow(size_limit, bounds) {
+    if S::float_sum_can_overflow(size_limit, bounds)? {
         return fallible!(
             MakeTransformation,
             "potential for overflow when computing function"
@@ -75,10 +75,10 @@ pub fn make_sized_bounded_float_checked_sum<S>(
     >,
 >
 where
-    S: UncheckedSum,
+    S: UncheckedSum + CanFloatSumOverflow,
     S::Item: 'static + Float,
 {
-    if S::Item::sum_can_overflow(size, bounds) {
+    if S::float_sum_can_overflow(size, bounds)? {
         return fallible!(
             MakeTransformation,
             "potential for overflow when computing function"
@@ -108,7 +108,7 @@ where
     ))
 }
 
-pub trait UncheckedSum: SumRelaxation {
+pub trait UncheckedSum: SumRelaxation + CanFloatSumOverflow {
     fn unchecked_sum(arg: &[Self::Item]) -> Self::Item;
 }
 impl<T: Float> UncheckedSum for Sequential<T> {

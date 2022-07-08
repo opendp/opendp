@@ -10,7 +10,7 @@ use crate::ffi::util::Type;
 use crate::traits::InfCast;
 use crate::trans::{
     make_bounded_float_checked_sum, make_sized_bounded_float_checked_sum, Float, Pairwise,
-    Sequential, UncheckedSum,
+    Sequential, UncheckedSum, CanFloatSumOverflow,
 };
 
 #[no_mangle]
@@ -26,6 +26,8 @@ pub extern "C" fn opendp_trans__make_bounded_float_checked_sum(
     ) -> FfiResult<*mut AnyTransformation>
     where
         T: 'static + Float,
+        Sequential<T>: CanFloatSumOverflow<Item=T>, 
+        Pairwise<T>: CanFloatSumOverflow<Item=T>
     {
         fn monomorphize2<S>(
             size_limit: usize,

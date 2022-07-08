@@ -6,7 +6,7 @@ use crate::{
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     traits::{CheckNull, DistanceConstant, InfCast, InfDiv, InfSub},
-    trans::CanSumOverflow,
+    trans::CanIntSumOverflow,
 };
 
 use super::AddIsExact;
@@ -26,11 +26,11 @@ pub fn make_sized_bounded_int_checked_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + InfSub + CheckNull + InfDiv + AddIsExact + CanSumOverflow,
+    T: DistanceConstant<IntDistance> + InfSub + CheckNull + InfDiv + AddIsExact + CanIntSumOverflow,
     for<'a> T: Sum<&'a T>,
     IntDistance: InfCast<T>,
 {
-    if T::sum_can_overflow(size, bounds.clone()) {
+    if T::int_sum_can_overflow(size, bounds.clone())? {
         return fallible!(
             MakeTransformation,
             "potential for overflow when computing function"

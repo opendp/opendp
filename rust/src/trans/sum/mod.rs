@@ -11,7 +11,7 @@ use crate::core::{Metric, Transformation};
 use crate::dist::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{CheckNull, ExactIntCast, InfMul, TotalOrd};
+use crate::traits::{CheckNull, TotalOrd};
 use crate::trans::{make_ordered_random, make_unordered};
 
 pub fn make_bounded_sum<MI, T>(bounds: (T, T)) -> Fallible<BoundedSumTrans<MI, T>>
@@ -81,7 +81,7 @@ macro_rules! impl_make_bounded_sum_float {
         $(impl MakeBoundedSum<SymmetricDistance> for $ty {
             fn make_bounded_sum(bounds: (Self, Self)) -> Fallible<BoundedSumTrans<SymmetricDistance, Self>> {
 
-                if !Self::sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds) {
+                if !Pairwise::<Self>::float_sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
                     // 1. if the sum can't overflow, then use a more computationally efficient sum without saturation arithmetic
                     make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)
 
@@ -96,7 +96,7 @@ macro_rules! impl_make_bounded_sum_float {
         $(impl MakeBoundedSum<InsertDeleteDistance> for $ty {
             fn make_bounded_sum(bounds: (Self, Self)) -> Fallible<BoundedSumTrans<InsertDeleteDistance, Self>> {
 
-                if !Self::sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds) {
+                if !Pairwise::<Self>::float_sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
                     // 1. if the sum can't overflow,
                     //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
                     let domain = VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?);
@@ -130,7 +130,7 @@ macro_rules! impl_make_sized_bounded_sum_int {
         $(impl MakeSizedBoundedSum<SymmetricDistance> for $ty {
             fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<SymmetricDistance, Self>> {
 
-                if !Self::sum_can_overflow(size, bounds) {
+                if !Self::int_sum_can_overflow(size, bounds)? {
                     // 1. if the sum can't overflow, don't need to worry about saturation arithmetic
                     make_sized_bounded_int_checked_sum(size, bounds)
 
@@ -148,7 +148,7 @@ macro_rules! impl_make_sized_bounded_sum_int {
         $(impl MakeSizedBoundedSum<InsertDeleteDistance> for $ty {
             fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<InsertDeleteDistance, Self>> {
 
-                if !Self::sum_can_overflow(size, bounds) {
+                if !Self::int_sum_can_overflow(size, bounds)? {
                     // 1. if the sum can't overflow,
                     //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
                     let domain = SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?), size);
@@ -170,7 +170,7 @@ macro_rules! impl_make_sized_bounded_sum_float {
         $(impl MakeSizedBoundedSum<SymmetricDistance> for $ty {
             fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<SymmetricDistance, Self>> {
 
-                if !Self::sum_can_overflow(size, bounds) {
+                if !Pairwise::<Self>::float_sum_can_overflow(size, bounds)? {
                     // 1. try the checked sum first, as floats are unlikely to overflow
                     make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)
 
@@ -185,7 +185,7 @@ macro_rules! impl_make_sized_bounded_sum_float {
         $(impl MakeSizedBoundedSum<InsertDeleteDistance> for $ty {
             fn make_sized_bounded_sum(size: usize, bounds: (Self, Self)) -> Fallible<SizedBoundedSumTrans<InsertDeleteDistance, Self>> {
 
-                if !Self::sum_can_overflow(size, bounds) {
+                if !Pairwise::<Self>::float_sum_can_overflow(size, bounds)? {
                     // 1. if the sum can't overflow,
                     //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
                     let domain = SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds.clone())?), size);
@@ -201,17 +201,6 @@ macro_rules! impl_make_sized_bounded_sum_float {
 }
 impl_make_sized_bounded_sum_float! { f32 f64 }
 
-pub trait CanSumOverflow: Sized {
-    fn sum_can_overflow(size: usize, bounds: (Self, Self)) -> bool;
-}
-
-impl<T: InfMul + ExactIntCast<usize>> CanSumOverflow for T {
-    fn sum_can_overflow(size: usize, (lower, upper): (Self, Self)) -> bool {
-        T::exact_int_cast(size)
-            .and_then(|size| lower.inf_mul(&size).and(upper.inf_mul(&size)))
-            .is_err()
-    }
-}
 
 #[cfg(test)]
 mod tests {

@@ -38,6 +38,8 @@ pub trait FloatBits: Sized {
     const MANTISSA_BITS: Self::Bits;
     // Greatest number of bits set in exponent when bounded above by 1
     const EXPONENT_PROB: Self::Bits;
+    // Bias correction of the exponent
+    const EXPONENT_BIAS: Self::Bits;
 
     fn sign(self) -> bool {
         (self.to_bits() & (Self::Bits::one() << (Self::EXPONENT_BITS + Self::MANTISSA_BITS))) == Self::Bits::zero()
@@ -134,6 +136,7 @@ impl FloatBits for f64 {
     //     subtract one to exclude all numbers >= 1f64
     //     subtract one for zero indexing
     const EXPONENT_PROB: u64 = 1022;
+    const EXPONENT_BIAS: u64 = 1023;
     fn to_bits(self) -> Self::Bits { self.to_bits() }
 }
 
@@ -143,5 +146,6 @@ impl FloatBits for f32 {
     const MANTISSA_BITS: u32 = 23;
     // 2^(EXPONENT_BITS - 1) - 2
     const EXPONENT_PROB: u32 = 126;
+    const EXPONENT_BIAS: u32 = 127;
     fn to_bits(self) -> Self::Bits { self.to_bits() }
 }
