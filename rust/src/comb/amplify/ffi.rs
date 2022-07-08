@@ -1,21 +1,19 @@
 use std::os::raw::c_uint;
 
-use num::Float;
-
 use crate::comb::{AmplifiableMeasure, IsSizedDomain, make_population_amplification};
 use crate::core::FfiResult;
-use crate::dist::{MaxDivergence, SmoothedMaxDivergence};
+use crate::dist::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{CheckNull, ExactIntCast, TotalOrd};
+use crate::traits::{CheckNull, ExactIntCast, TotalOrd, InfMul, InfExpM1, InfLn1P, InfDiv};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
         &self, budget: &AnyObject, population_size: usize, sample_size: usize,
     ) -> Fallible<AnyObject> {
-        fn monomorphize1<QO: 'static + Float + ExactIntCast<usize>>(
+        fn monomorphize1<QO: 'static + ExactIntCast<usize> + InfMul + InfExpM1 + InfLn1P + InfDiv + Clone>(
             measure: &AnyMeasure, budget: &AnyObject, population_size: usize, sample_size: usize,
         ) -> Fallible<AnyObject> {
             fn monomorphize2<M: 'static + AmplifiableMeasure>(
@@ -27,7 +25,7 @@ impl AmplifiableMeasure for AnyMeasure {
             }
             let measure_type = Type::of_id(&measure.measure.value.type_id())?;
             dispatch!(monomorphize2, [
-                (measure_type, [MaxDivergence<QO>, SmoothedMaxDivergence<QO>])
+                (measure_type, [MaxDivergence<QO>, FixedSmoothedMaxDivergence<QO>])
             ], (measure, budget, population_size, sample_size))
         }
 

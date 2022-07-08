@@ -37,7 +37,7 @@ This means the user will have to explicitly opt-in to access your constructor if
 #. Your proof should show the following:
 
     #. That the function, when evaluated on any element in the input domain, emits a value in the output domain.
-    #. That the relation always returns false if the function is not (``d_in``, ``d_out``)-close for all ``d_in`` and ``d_out``.
+    #. That the map always returns a ``d_out`` for any specified ``d_in`` that is (``d_in``, ``d_out``)-close.
     #. That your choices of metrics/measures are compatible with your domains.
 
 #. Your proof should include pseudocode.

@@ -6,14 +6,14 @@ use crate::ffi::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutEx
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
     let transformation0 = try_as_ref!(transformation0);
     let measurement1 = try_as_ref!(measurement1);
-    make_chain_mt(measurement1, transformation0, None).into()
+    make_chain_mt(measurement1, transformation0).into()
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_tt(transformation1: *const AnyTransformation, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyTransformation> {
     let transformation0 = try_as_ref!(transformation0);
     let transformation1 = try_as_ref!(transformation1);
-    make_chain_tt(transformation1, transformation0, None).into()
+    make_chain_tt(transformation1, transformation0).into()
 }
 
 #[no_mangle]
@@ -29,7 +29,7 @@ pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMe
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{Function, Measurement, PrivacyRelation, Transformation};
+    use crate::core::{Function, Measurement, PrivacyMap, Transformation};
     use crate::core;
     use crate::dist::{MaxDivergence, SymmetricDistance};
     use crate::dom::AllDomain;
@@ -50,7 +50,7 @@ mod tests {
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             MaxDivergence::default(),
-            PrivacyRelation::new(|_d_in, _d_out| true),
+            PrivacyMap::new(|d_in| *d_in as f64 + 1.),
         )
     }
 
@@ -68,6 +68,11 @@ mod tests {
         let res = core::opendp_core__measurement_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
+
+        let d_in = AnyObject::new_raw(999u32);
+        let d_out = core::opendp_core__measurement_map(&chain, d_in);
+        let d_out: f64 = Fallible::from(d_out)?.downcast()?;
+        assert_eq!(d_out, 1000.);
         Ok(())
     }
 
@@ -80,6 +85,11 @@ mod tests {
         let res = core::opendp_core__transformation_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
+
+        let d_in = AnyObject::new_raw(999u32);
+        let d_out = core::opendp_core__transformation_map(&chain, d_in);
+        let d_out: u32 = Fallible::from(d_out)?.downcast()?;
+        assert_eq!(d_out, 999);
         Ok(())
     }
 

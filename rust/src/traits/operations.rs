@@ -25,6 +25,22 @@ pub trait TotalOrd: PartialOrd + Sized {
             self
         })
     }
+
+    fn total_lt(&self, other: &Self) -> Fallible<bool> {
+        Ok(self.total_cmp(other)?.is_lt())
+    }
+
+    fn total_le(&self, other: &Self) -> Fallible<bool> {
+        Ok(self.total_cmp(other)?.is_le())
+    }
+
+    fn total_gt(&self, other: &Self) -> Fallible<bool> {
+        Ok(self.total_cmp(other)?.is_gt())
+    }
+
+    fn total_ge(&self, other: &Self) -> Fallible<bool> {
+        Ok(self.total_cmp(other)?.is_ge())
+    }
 }
 
 

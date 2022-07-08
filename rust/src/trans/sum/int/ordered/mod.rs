@@ -1,11 +1,11 @@
 use num::Zero;
 
 use crate::{
-    core::{Function, StabilityRelation, Transformation},
+    core::{Function, StabilityMap, Transformation},
     dist::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
     dom::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd},
+    traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd},
 };
 
 use super::AddIsExact;
@@ -25,7 +25,6 @@ pub fn make_bounded_int_ordered_sum<T>(
 >
 where
     T: DistanceConstant<IntDistance> + CheckNull + Zero + AlertingAbs + SaturatingAdd + AddIsExact,
-    IntDistance: InfCast<T>,
 {
     let (lower, upper) = bounds.clone();
     Ok(Transformation::new(
@@ -34,7 +33,7 @@ where
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
+        StabilityMap::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
     ))
 }
 
@@ -51,7 +50,6 @@ pub fn make_sized_bounded_int_ordered_sum<T>(
 >
 where
     T: DistanceConstant<IntDistance> + InfSub + CheckNull + Zero + SaturatingAdd + AddIsExact,
-    IntDistance: InfCast<T>,
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;
@@ -61,7 +59,7 @@ where
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_forward(
+        StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
             //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2).and_then(|d_in| d_in.inf_mul(&range)),

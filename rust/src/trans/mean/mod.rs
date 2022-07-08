@@ -1,7 +1,7 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use crate::core::{Transformation, Function, StabilityRelation};
+use crate::core::{Transformation, Function, StabilityMap};
 use std::iter::Sum;
 use crate::traits::{DistanceConstant, ExactIntCast, InfCast, CheckNull, InfDiv, InfSub};
 use crate::error::Fallible;
@@ -33,7 +33,7 @@ pub fn make_sized_bounded_mean<T>(
         Function::new(move |arg: &Vec<T>| arg.iter().sum::<T>() / _size),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
-        StabilityRelation::new_from_forward(
+        StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
             //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2)

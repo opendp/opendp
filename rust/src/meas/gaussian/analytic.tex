@@ -1,0 +1,80 @@
+\documentclass{article}
+\usepackage[top=1in, right=1in, left=1in, bottom=1.5in]{geometry}
+
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{xr}
+\usepackage[outputdir=./out]{minted}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{warning}{Warning}
+
+\title{OpenDP: \texttt{make\_base\_analytic\_gaussian}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+Referencing Theorem 8 from \cite{Balle2018ImprovingTG}:
+\begin{theorem}
+    Let $f: \mathbb{X} \rightarrow \mathbb{R}^d$ be a function with global $L_2$ sensitivity $\Delta$. 
+    For any $\epsilon \geq 0$ and $\delta \in [0, 1]$, 
+    the Gaussian output perturbation mechanism $M(x) = f(x) + Z$ with $Z \sim \ \mathcal{N}(0, \sigma^2I)$ is $(\epsilon, \delta)-DP$ if and only if
+    \begin{equation}
+        \Phi \left( \frac{\Delta}{2\sigma} - \frac{\epsilon\sigma}{\Delta} \right) - e^\epsilon \Phi \left(-\frac{\Delta}{2\sigma} - \frac{\epsilon\sigma}{\Delta} \right) \leq \delta
+    \end{equation}
+    \label{dp-definition}
+\end{theorem}
+
+In the context of OpenDP, we want to find the smallest $\epsilon$ for which \ref{dp-definition} holds for some fixed $\Delta$, $\sigma$ and $\delta$.
+Naively running a binary search for the smallest $\epsilon$ is subject to numerical instability from catastrophic cancellation, so we use a numerical algorithm to find $\epsilon$.
+This differs from the algorithm in the paper in that the substitutions are chosen such that we solve for $\epsilon$ instead of $\sigma$.
+\ref{dp-definition} is the most unstable when the argument to the first phi term approaches zero, because $\Delta/2\sigma - \epsilon \sigma / \Delta$ will have catastrophic cancellation. 
+The second term should never encounter catastrophic cancellation, as the signs are always in agreement. 
+
+Similar to page 19, we instead substitute $\epsilon = \alpha (\Delta / \sigma)^2 / 2$:
+
+\begin{equation}
+    B(\alpha) = \Phi\left(\frac{\Delta (1 - \alpha)}{2 \sigma}\right) - e^\epsilon \Phi\left(\frac{-\Delta (1 + \alpha)}{2 \sigma}\right)
+\end{equation}
+
+We now need to find the smallest $\alpha$ such that $B(\alpha) \leq \delta$. 
+First, split $B(\alpha)$ into stable functions $B^-(u)$ for when $\alpha > 1$ and $B^+(v)$ for when $\alpha < 1$.
+Let $u = (\alpha - 1)^2 / 4$ to get $B^-(u)$, and $v = (1 - \alpha)^2 / 4$ to get $B^+(v)$. 
+These substitutions remove catastrophic cancellation in the left $\Phi$ term.
+
+\begin{equation}
+    B^-(u) = \Phi\left(-\frac{\Delta\sqrt{u}}{\sigma}\right) - e^{\frac{1 + 2 \sqrt{u}}{2} (\frac{\Delta}{\sigma})^2} \Phi\left(-\frac{\Delta (1 + \sqrt{u})}{\sigma}\right)
+\end{equation}
+
+\begin{equation}
+    B^+(v) = \Phi\left(+\frac{\Delta\sqrt{v}}{\sigma}\right) - e^{\frac{1 + 2 \sqrt{v}}{2} (\frac{\Delta}{\sigma})^2} \Phi\left(-\frac{\Delta (1 + \sqrt{v})}{\sigma}\right)
+\end{equation}
+
+When substituting for epsilon, we can always choose the sign to be positive. 
+We now run Algorithm 1 from \cite{Balle2018ImprovingTG} with the adjusted $B$'s to find u or v, and then reverse the substitution for $\alpha$.
+
+If $\delta > \delta_0$ (therefore $\alpha > 0$) then: 
+\begin{equation}
+    \alpha = 1 - 2 \sqrt{v}
+\end{equation}
+
+otherwise (when $\alpha < 1$) then: 
+\begin{equation}
+    \alpha = 1 + 2 \sqrt{u}
+\end{equation}
+
+Finally solve for $\epsilon$:
+\begin{equation}
+    \epsilon = \frac{\alpha}{2} \left(\frac{\Delta}{\sigma}\right)^2
+\end{equation}
+
+
+\bibliographystyle{plain}
+\bibliography{analytic.bib}
+
+\end{document}

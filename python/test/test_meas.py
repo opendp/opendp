@@ -2,15 +2,27 @@ from opendp.mod import enable_features
 
 enable_features('floating-point', 'contrib')
 
+def test_base_gaussian_curve():
+    from opendp.meas import make_base_gaussian
+    curve = make_base_gaussian(4.).map(1.)
+    print(curve.epsilon(1e-3))
 
-def test_base_gaussian():
+
+def test_base_gaussian_search():
     from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
+    from opendp.comb import make_fix_delta
     from opendp.mod import binary_search_param
+
+    fixed_meas = make_fix_delta(make_base_analytic_gaussian(1.), 1e-5)
+    ideal_dist = fixed_meas.map(1.)
+    print("ideal dist", ideal_dist)
+    print("check with ideal dist:", fixed_meas.check(1., ideal_dist))
+
     print("Analytic", binary_search_param(
-        make_base_analytic_gaussian,
+        lambda s: make_fix_delta(make_base_analytic_gaussian(s), 1e-5),
         d_in=1., d_out=(1., 1e-5)))
     print("Standard", binary_search_param(
-        make_base_gaussian,
+        lambda s: make_fix_delta(make_base_gaussian(s), 1e-5),
         d_in=1., d_out=(1., 1e-5)))
 
 
@@ -18,7 +30,8 @@ def test_base_laplace():
     from opendp.meas import make_base_laplace
     meas = make_base_laplace(scale=10.5)
     print("base laplace:", meas(100.))
-    assert meas.check(1., 1.3)
+    print("epsilon", meas.map(1.))
+    assert meas.check(1., .096)
 
 
 def test_base_vector_laplace():
@@ -28,26 +41,39 @@ def test_base_vector_laplace():
     assert meas.check(1., 1.3)
 
 
-def test_base_analytic_gaussian():
-    from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
+def test_base_gaussian_max_divergence():
+    from opendp.meas import make_base_gaussian
+
     meas = make_base_gaussian(scale=10.5)
     print("base gaussian:", meas(100.))
-    assert meas.check(1., (1.3, .000001))
 
-    meas = make_base_analytic_gaussian(scale=10.5)
+    epsilon = meas.map(d_in=1.).epsilon(delta=.000001)
+    print("epsilon:", epsilon)
+    assert epsilon > .5
+
+
+def test_base_analytic_gaussian():
+    from opendp.meas import make_base_analytic_gaussian
+    meas = make_base_analytic_gaussian(scale=1.5)
     print("base analytic gaussian:", meas(100.))
-    assert meas.check(1., (1.3, .000001))
+
+    # analytic gaussian allows epsilon > 1
+    epsilon = meas.map(1.).epsilon(delta=.000001)
+    print("epsilon:", epsilon)
+    assert epsilon > 3.
 
 
 def test_base_vector_gaussian():
     from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
-    meas = make_base_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>")
+    from opendp.comb import make_fix_delta
+    delta = .000001
+    meas = make_fix_delta(make_base_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>"), delta)
     print("base gaussian:", meas([80., 90., 100.]))
-    assert meas.check(1., (1.3, .000001))
+    assert meas.check(1., (0.6, delta))
 
-    meas = make_base_analytic_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>")
+    meas = make_fix_delta(make_base_analytic_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>"), delta)
     print("base analytic gaussian:", meas([80., 90., 100.]))
-    assert meas.check(1., (1.3, .000001))
+    assert meas.check(1., (0.5, delta))
 
 
 def test_base_geometric():
@@ -79,13 +105,16 @@ def test_base_vector_geometric():
 def test_make_count_by_ptr():
     from opendp.trans import make_count_by
     from opendp.meas import make_base_ptr
+    from opendp.comb import make_fix_delta
     from opendp.typing import L1Distance
 
     meas = make_count_by(MO=L1Distance[float], TK=str, TV=float) \
-           >> make_base_ptr(scale=2., threshold=16., TK=str)
-    print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
-    assert meas.check(1, (1.0, 1e-6))
+           >> make_base_ptr(scale=2., threshold=28., TK=str)
+    fixed_meas = make_fix_delta(meas, 1e-6)
+    print("stability histogram:", fixed_meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
 
+    print(meas.map(1).epsilon(1e-6))
+    assert fixed_meas.check(1, (1.0, 1e-6))
 
 def test_randomized_response():
     from opendp.meas import make_randomized_response

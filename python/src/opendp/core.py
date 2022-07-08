@@ -7,7 +7,9 @@ from opendp.typing import *
 __all__ = [
     "measurement_invoke",
     "transformation_invoke",
+    "transformation_map",
     "transformation_check",
+    "measurement_map",
     "measurement_check",
     "transformation_input_carrier_type",
     "measurement_input_carrier_type",
@@ -80,6 +82,35 @@ def transformation_invoke(
     return c_to_py(unwrap(function(transformation, arg), AnyObjectPtr))
 
 
+def transformation_map(
+    transformation: Transformation,
+    d_in: Any
+) -> Any:
+    """Use the `transformation` to map a given `d_in` to `d_out`.
+    
+    :param transformation: Transformation to check the map distances with.
+    :type transformation: Transformation
+    :param d_in: Distance in terms of the input metric.
+    :type d_in: Any
+    :return: Distance in terms of the output metric.
+    :rtype: Any
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    transformation = py_to_c(transformation, c_type=Transformation)
+    d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=transformation_input_distance_type(transformation))
+    
+    # Call library function.
+    function = lib.opendp_core__transformation_map
+    function.argtypes = [Transformation, AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation, d_in), AnyObjectPtr))
+
+
 def transformation_check(
     transformation: Transformation,
     d_in: Any,
@@ -111,6 +142,35 @@ def transformation_check(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(transformation, d_in, d_out), BoolPtr))
+
+
+def measurement_map(
+    measurement: Measurement,
+    d_in: Any
+) -> Any:
+    """Use the `measurement` to map a given `d_in` to `d_out`.
+    
+    :param measurement: Measurement to check the map distances with.
+    :type measurement: Measurement
+    :param d_in: Distance in terms of the input metric.
+    :type d_in: Any
+    :return: Distance in terms of the output measure.
+    :rtype: Any
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement)
+    d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=measurement_input_distance_type(measurement))
+    
+    # Call library function.
+    function = lib.opendp_core__measurement_map
+    function.argtypes = [Measurement, AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement, d_in), AnyObjectPtr))
 
 
 def measurement_check(

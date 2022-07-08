@@ -3,7 +3,7 @@ pub mod ffi;
 
 use std::ops::Shr;
 
-use crate::core::{Domain, Function, HintMt, HintTt, Measure, Measurement, Metric, PrivacyRelation, StabilityRelation, Transformation};
+use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
 use crate::dom::PairDomain;
 use crate::error::Fallible;
 use std::fmt::Debug;
@@ -23,8 +23,7 @@ fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2
 
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     measurement1: &Measurement<DX, DO, MX, MO>,
-    transformation0: &Transformation<DI, DX, MI, MX>,
-    hint: Option<&HintMt<MI, MO, MX>>,
+    transformation0: &Transformation<DI, DX, MI, MX>
 ) -> Fallible<Measurement<DI, DO, MI, MO>>
     where DI: 'static + Domain,
           DX: 'static + Domain,
@@ -45,14 +44,13 @@ pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
         Function::make_chain(&measurement1.function, &transformation0.function),
         transformation0.input_metric.clone(),
         measurement1.output_measure.clone(),
-        PrivacyRelation::make_chain(&measurement1.privacy_relation,&transformation0.stability_relation, hint)
+        PrivacyMap::make_chain(&measurement1.privacy_map, &transformation0.stability_map)
     ))
 }
 
 pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
     transformation1: &Transformation<DX, DO, MX, MO>,
     transformation0: &Transformation<DI, DX, MI, MX>,
-    hint: Option<&HintTt<MI, MO, MX>>,
 ) -> Fallible<Transformation<DI, DO, MI, MO>>
     where DI: 'static + Domain,
           DX: 'static + Domain,
@@ -73,7 +71,7 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
         Function::make_chain(&transformation1.function, &transformation0.function),
         transformation0.input_metric.clone(),
         transformation1.output_metric.clone(),
-        StabilityRelation::make_chain(&transformation1.stability_relation,&transformation0.stability_relation, hint)
+        StabilityMap::make_chain(&transformation1.stability_map, &transformation0.stability_map)
     ))
 }
 
@@ -97,8 +95,7 @@ pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<D
         Function::make_basic_composition(&measurement0.function, &measurement1.function),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
-        // TODO: PrivacyRelation for make_composition
-        PrivacyRelation::new(|_i, _o| false),
+        PrivacyMap::new_fallible(|_d_in| fallible!(NotImplemented)),
     ))
 }
 
@@ -120,19 +117,24 @@ mod tests {
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = L1Distance::<i32>::default();
         let output_metric0 = L1Distance::<i32>::default();
-        let stability_relation0 = StabilityRelation::new_from_constant(1);
-        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
+        let stability_map0 = StabilityMap::new_from_constant(1);
+        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_map0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
-        let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
-        let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let chain = make_chain_mt(&measurement1, &transformation0, None).unwrap_test();
+        let privacy_map1 = PrivacyMap::new(|d_in: &i32| *d_in as f64 + 1.);
+        let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_map1);
+        let chain = make_chain_mt(&measurement1, &transformation0).unwrap_test();
+
         let arg = 99_u8;
         let ret = chain.invoke(&arg).unwrap_test();
         assert_eq!(ret, 101.0);
+
+        let d_in = 99_i32;
+        let d_out = chain.map(&d_in).unwrap_test();
+        assert_eq!(d_out, 100.);
     }
 
     #[test]
@@ -142,19 +144,24 @@ mod tests {
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = L1Distance::<i32>::default();
         let output_metric0 = L1Distance::<i32>::default();
-        let stability_relation0 = StabilityRelation::new_from_constant(1);
-        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_relation0);
+        let stability_map0 = StabilityMap::new_from_constant(1);
+        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_map0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_metric1 = L1Distance::<i32>::default();
-        let stability_relation1 = StabilityRelation::new_from_constant(1);
-        let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_relation1);
-        let chain = make_chain_tt(&transformation1, &transformation0, None).unwrap_test();
+        let stability_map1 = StabilityMap::new_from_constant(1);
+        let transformation1 = Transformation::new(input_domain1, output_domain1, function1, input_metric1, output_metric1, stability_map1);
+        let chain = make_chain_tt(&transformation1, &transformation0).unwrap_test();
+
         let arg = 99_u8;
         let ret = chain.invoke(&arg).unwrap_test();
         assert_eq!(ret, 101.0);
+
+        let d_in = 99_i32;
+        let d_out = chain.map(&d_in).unwrap_test();
+        assert_eq!(d_out, 99);
     }
 
     #[test]
@@ -164,14 +171,14 @@ mod tests {
         let function0 = Function::new(|arg: &i32| (arg + 1) as f32);
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
-        let privacy_relation0 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
+        let privacy_relation0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement0 = Measurement::new(input_domain0, output_domain0, function0, input_metric0, output_measure0, privacy_relation0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
-        let privacy_relation1 = PrivacyRelation::new(|_d_in: &i32, _d_out: &f64| true);
+        let privacy_relation1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
         let composition = make_basic_composition(&measurement0, &measurement1).unwrap_test();
         let arg = 99;
@@ -191,7 +198,7 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Transformation
     type Output = Fallible<Measurement<DI, DO, MI, MO>>;
 
     fn shr(self, rhs: Measurement<DX, DO, MX, MO>) -> Self::Output {
-        make_chain_mt(&rhs, &self, None)
+        make_chain_mt(&rhs, &self)
     }
 }
 
@@ -205,7 +212,7 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Fallible<Trans
     type Output = Fallible<Measurement<DI, DO, MI, MO>>;
 
     fn shr(self, rhs: Measurement<DX, DO, MX, MO>) -> Self::Output {
-        make_chain_mt(&rhs, &self?, None)
+        make_chain_mt(&rhs, &self?)
     }
 }
 
@@ -219,7 +226,7 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Transformat
     type Output = Fallible<Transformation<DI, DO, MI, MO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MX, MO>) -> Self::Output {
-        make_chain_tt(&rhs, &self, None)
+        make_chain_tt(&rhs, &self)
     }
 }
 
@@ -233,7 +240,7 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Fallible<Tr
     type Output = Fallible<Transformation<DI, DO, MI, MO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MX, MO>) -> Self::Output {
-        make_chain_tt(&rhs, &self?, None)
+        make_chain_tt(&rhs, &self?)
     }
 }
 

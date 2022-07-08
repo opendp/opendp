@@ -8,7 +8,7 @@ use crate::dist::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfCast, InfDiv, InfSub, AlertingAbs};
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfDiv, InfSub, AlertingAbs};
 use crate::trans::make_sized_bounded_int_checked_sum;
 use crate::trans::sum::int::AddIsExact;
 
@@ -29,7 +29,6 @@ pub extern "C" fn opendp_trans__make_sized_bounded_int_checked_sum(
             + InfDiv
             + AddIsExact,
         for<'a> T: Sum<&'a T>,
-        IntDistance: InfCast<T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_int_checked_sum::<T>(size, bounds).into_any()
