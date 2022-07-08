@@ -122,7 +122,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_make_bounded_covariance_hamming() -> Fallible<()> {
+    fn test_make_sized_bounded_covariance() -> Fallible<()> {
         let arg = vec![(1., 3.), (2., 4.), (3., 5.), (4., 6.), (5., 7.)];
 
         let transformation_sample =

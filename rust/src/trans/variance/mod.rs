@@ -52,7 +52,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_bounded_variance_hamming() {
+    fn test_make_sized_bounded_variance() {
         let arg = vec![1., 2., 3., 4., 5.];
 
         let transformation_sample = make_sized_bounded_variance::<Pairwise<_>>(5, (0., 10.), 1).unwrap_test();

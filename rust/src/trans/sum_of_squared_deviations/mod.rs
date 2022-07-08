@@ -29,15 +29,14 @@ where
     if size == 0 {
         return fallible!(MakeTransformation, "size must be greater than zero")
     }
-    let _size = S::Item::exact_int_cast(size)?;
+    let size_ = S::Item::exact_int_cast(size)?;
     let (lower, upper) = bounds.clone();
     let _1 = S::Item::one();
-    let _2 = S::Item::exact_int_cast(2)?;
 
     // DERIVE RELAXATION TERM
     // Let x_bar_approx = x_bar + 2e, the approximate mean on finite data types
     // Let e = (n^2/2^k) / n, the mean error
-    let mean_error = S::error(size, lower, upper)?.inf_div(&_size)?;
+    let mean_error = S::error(size, lower, upper)?.inf_div(&size_)?;
 
     // Let L' = L - e, U' = U + e
     let (lower, upper) = (lower.neg_inf_sub(&mean_error)?, upper.inf_add(&mean_error)?);
@@ -48,24 +47,24 @@ where
     // Let sens = range^2 * (n - 1) / n
     let sensitivity = range
         .inf_mul(&range)?
-        .inf_mul(&_size.inf_sub(&_1)?)?
-        .inf_div(&_size)?;
+        .inf_mul(&size_.inf_sub(&_1)?)?
+        .inf_div(&size_)?;
 
     // each deviation is bounded between 0 and range^2
     let relaxation = S::relaxation(size, S::Item::zero(), range.inf_mul(&range)?)?;
 
     // OVERFLOW CHECKS
     // Bound the magnitude of the sum when computing the mean
-    lower.inf_mul(&_size)?;
-    upper.inf_mul(&_size)?;
+    lower.inf_mul(&size_)?;
+    upper.inf_mul(&size_)?;
     // The squared difference from the mean is bounded above by range^2
-    range.inf_mul(&range)?.inf_mul(&_size)?;
+    range.inf_mul(&range)?.inf_mul(&size_)?;
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
         AllDomain::new(),
         Function::new(move |arg: &Vec<S::Item>| {
-            let mean = S::unchecked_sum(arg) / _size;
+            let mean = S::unchecked_sum(arg) / size_;
             S::unchecked_sum(
                 &arg.iter()
                     .map(|v| (*v - mean).powi(2))

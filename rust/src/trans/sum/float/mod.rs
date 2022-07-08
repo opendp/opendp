@@ -78,8 +78,8 @@ pub trait SumRelaxation {
     type Item: Float;
     fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item>;
     fn relaxation(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
-        let _2 = Self::Item::exact_int_cast(2)?;
-        _2.inf_mul(&Self::error(size, lower, upper)?)
+        let error = Self::error(size, lower, upper)?;
+        error.inf_add(&error)
     }
 }
 
