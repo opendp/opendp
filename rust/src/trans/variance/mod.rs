@@ -44,8 +44,7 @@ where
     // Using Popoviciu's inequality on variances:
     //     variance <= (U - L)^2 / 4
     // Therefore ssd <= variance * size <= (U - L)^2 / 4 * size
-    let upper_var_bound = bounds
-        .1
+    let upper_var_bound = (bounds.1)
         .inf_sub(&bounds.0)?
         .inf_pow(&_2)?
         .inf_div(&_4)?
