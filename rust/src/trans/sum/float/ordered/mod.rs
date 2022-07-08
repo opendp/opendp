@@ -78,7 +78,7 @@ where
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
-            //       <= d_in  / 2* (U - L) + 2 * error
+            //       <= d_in / 2 * (U - L) + 2 * error
             //       =  d_in / 2 * (U - L) + relaxation
             S::Item::inf_cast(d_in / 2)?
                 .inf_mul(&ideal_sensitivity)?
