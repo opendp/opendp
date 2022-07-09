@@ -31,15 +31,15 @@ def test_fix_delta():
     print(fixed_base_gaussian.map(1.))
 
 
-def test_make_sequential_composition_static_distances():
-    from opendp.comb import make_sequential_composition_static_distances
-    composed = make_sequential_composition_static_distances([
+def test_make_basic_composition():
+    from opendp.comb import make_basic_composition
+    composed = make_basic_composition([
         make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
         make_count(TIA=int, TO=int) >> make_base_geometric(scale=200.), 
         make_cast_default(int, bool) >> make_cast_default(bool, int) >> make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
         make_cast_default(int, float) >> make_clamp((0., 10.)) >> make_bounded_sum((0., 10.)) >> make_base_laplace(scale=2.), 
 
-        make_sequential_composition_static_distances([
+        make_basic_composition([
             make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
             make_count(TIA=int, TO=float) >> make_base_laplace(scale=2.),
             make_cast_default(int, str) >> make_count_by_categories(categories=["0", "12", "22"]) >> make_base_geometric(scale=2., D=VectorDomain[AllDomain[int]]),
@@ -52,8 +52,8 @@ def test_make_sequential_composition_static_distances():
 
 
 @pytest.mark.skip(reason="long-running process to detect potential memory leaks")
-def test_make_sequential_composition_static_distances_leak():
-    from opendp.comb import make_sequential_composition_static_distances
+def test_make_basic_composition_leak():
+    from opendp.comb import make_basic_composition
 
     # choose a vector-valued mechanism that should run quickly for large inputs
     # we want to add as little noise as possible, so that execution time is small
@@ -61,7 +61,7 @@ def test_make_sequential_composition_static_distances_leak():
 
     # memory usage remains the same when this line is commented,
     # supporting that AnyObject's free recursively frees children
-    meas = make_sequential_composition_static_distances([meas])
+    meas = make_basic_composition([meas])
 
     # watch for leaked AnyObjects with 1 million i32 values
     # memory would jump by ~40mb every iteration
@@ -70,5 +70,5 @@ def test_make_sequential_composition_static_distances_leak():
         meas([0] * 10_000_000)
 
 if __name__ == "__main__":
-    test_make_sequential_composition_static_distances()
+    test_make_basic_composition()
 

@@ -6,10 +6,10 @@ use crate::{
     },
 };
 
-use super::make_sequential_composition_static_distances;
+use super::make_basic_composition;
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_sequential_composition_static_distances(
+pub extern "C" fn opendp_comb__make_basic_composition(
     measurements: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let meas_ptrs = try_!(try_as_ref!(measurements).downcast_ref::<Vec<AnyMeasurementPtr>>());
@@ -17,7 +17,7 @@ pub extern "C" fn opendp_comb__make_sequential_composition_static_distances(
     let measurements: Vec<&AnyMeasurement> =
         try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
 
-    make_sequential_composition_static_distances(measurements)
+    make_basic_composition(measurements)
         .map(IntoAnyMeasurementOutExt::into_any_out)
         .into()
 }
@@ -33,12 +33,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_sequential_composition_static_distances_ffi() -> Fallible<()> {
+    fn test_make_basic_composition_ffi() -> Fallible<()> {
         let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any()) as AnyMeasurementPtr;
         let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any()) as AnyMeasurementPtr;
         let measurements = vec![measurement0, measurement1];
         let basic_composition =
-            Result::from(opendp_comb__make_sequential_composition_static_distances(
+            Result::from(opendp_comb__make_basic_composition(
                 AnyObject::new_raw(measurements),
             ))?;
         let arg = AnyObject::new_raw(999);

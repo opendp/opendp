@@ -89,12 +89,12 @@ See the section on :ref:`transformation-constructors` for more information on ho
 Composition
 -----------
 
-OpenDP has a sequential composition combinator for composing a list of measurements into a new measurement.
+OpenDP has a basic composition combinator for composing a list of measurements into a new measurement.
 
 .. doctest::
 
-    >>> from opendp.comb import make_sequential_composition_static_distances
-    >>> noisy_sum_pair = make_sequential_composition_static_distances([noisy_sum, noisy_sum])
+    >>> from opendp.comb import make_basic_composition
+    >>> noisy_sum_pair = make_basic_composition([noisy_sum, noisy_sum])
 
 
 Amplification

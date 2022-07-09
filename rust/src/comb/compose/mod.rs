@@ -11,17 +11,17 @@ use crate::{
     traits::InfAdd,
 };
 
-pub trait SequentialCompositionStaticDistancesMeasure: Measure {
+pub trait BasicCompositionMeasure: Measure {
     fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
-impl<Q: InfAdd + Zero + Clone> SequentialCompositionStaticDistancesMeasure for MaxDivergence<Q> {
+impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
     fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> SequentialCompositionStaticDistancesMeasure
+impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure
     for FixedSmoothedMaxDivergence<Q>
 {
     fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
@@ -32,7 +32,7 @@ impl<Q: InfAdd + Zero + Clone> SequentialCompositionStaticDistancesMeasure
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> SequentialCompositionStaticDistancesMeasure
+impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure
     for ZeroConcentratedDivergence<Q>
 {
     fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
@@ -40,14 +40,14 @@ impl<Q: InfAdd + Zero + Clone> SequentialCompositionStaticDistancesMeasure
     }
 }
 
-pub fn make_sequential_composition_static_distances<DI, DO, MI, MO>(
+pub fn make_basic_composition<DI, DO, MI, MO>(
     measurements: Vec<&Measurement<DI, DO, MI, MO>>,
 ) -> Fallible<Measurement<DI, VectorDomain<DO>, MI, MO>>
 where
     DI: 'static + Domain,
     DO: 'static + Domain,
     MI: 'static + Metric,
-    MO: 'static + SequentialCompositionStaticDistancesMeasure,
+    MO: 'static + BasicCompositionMeasure,
 {
     if measurements.is_empty() {
         return fallible!(MakeMeasurement, "Must have at least one measurement");
@@ -112,37 +112,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_sequential_composition_static_distances() {
+    fn test_make_basic_composition() {
         let input_domain0 = AllDomain::<i32>::new();
         let output_domain0 = AllDomain::<f64>::new();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f64);
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
-        let privacy_relation0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
+        let privacy_map0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement0 = Measurement::new(
             input_domain0,
             output_domain0,
             function0,
             input_metric0,
             output_measure0,
-            privacy_relation0,
+            privacy_map0,
         );
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
-        let privacy_relation1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
+        let privacy_map1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement1 = Measurement::new(
             input_domain1,
             output_domain1,
             function1,
             input_metric1,
             output_measure1,
-            privacy_relation1,
+            privacy_map1,
         );
         let composition =
-            make_sequential_composition_static_distances(vec![&measurement0, &measurement1])
+            make_basic_composition(vec![&measurement0, &measurement1])
                 .unwrap_test();
         let arg = 99;
         let ret = composition.invoke(&arg).unwrap_test();
@@ -150,10 +150,10 @@ mod tests {
     }
 
     #[test]
-    fn test_make_sequential_composition_static_distances_2() -> Fallible<()> {
+    fn test_make_basic_composition_2() -> Fallible<()> {
         let laplace = make_base_laplace::<AllDomain<_>>(1.0f64)?;
         let measurements = vec![&laplace; 2];
-        let composition = make_sequential_composition_static_distances(measurements)?;
+        let composition = make_basic_composition(measurements)?;
         let arg = 99.;
         let ret = composition.function.eval(&arg)?;
 

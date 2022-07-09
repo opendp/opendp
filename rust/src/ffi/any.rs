@@ -11,7 +11,7 @@ use std::fmt::{Debug, Formatter};
 
 use num::Zero;
 
-use crate::comb::SequentialCompositionStaticDistancesMeasure;
+use crate::comb::BasicCompositionMeasure;
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
 use crate::measures::{MaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence};
 use crate::err;
@@ -72,8 +72,8 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for A
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.value.downcast_ref().ok_or_else(|| {
-            let other_type = Type::of_id(&self.value.type_id()).
-                map(|t| format!(" AnyBox contains {:?}.", t))
+            let other_type = Type::of_id(&self.value.type_id())
+                .map(|t| format!(" AnyBox contains {:?}.", t))
                 .unwrap_or(String::new());
             err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
         })
@@ -127,10 +127,8 @@ pub struct AnyObject {
 
 impl AnyObject {
     pub fn new<T: 'static>(value: T) -> Self {
-        let type_ = Type::of::<T>();
-
         AnyObject {
-            type_,
+            type_: Type::of::<T>(),
             value: AnyBox::new(value),
         }
     }
@@ -211,13 +209,13 @@ impl AnyMeasure {
     }
 }
 
-impl SequentialCompositionStaticDistancesMeasure for AnyMeasure {
+impl BasicCompositionMeasure for AnyMeasure {
     fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
         fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
             self_: &AnyMeasure, d_i: &Vec<AnyObject>
         ) -> Fallible<AnyObject> {
 
-            fn monomorphize2<M: 'static + SequentialCompositionStaticDistancesMeasure>(
+            fn monomorphize2<M: 'static + BasicCompositionMeasure>(
                 self_: &AnyMeasure, d_i: &Vec<AnyObject>
             ) -> Fallible<AnyObject>
                 where M::Distance: Clone {

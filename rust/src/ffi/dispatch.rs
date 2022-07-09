@@ -90,9 +90,6 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize]), $rt_dispatch_types, $type_args, $args)
     };
-    ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [ChangeOneDistance, InsertDeleteDistance, SymmetricDistance, HammingDistance]), $rt_dispatch_types, $type_args, $args)
-    };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
@@ -104,10 +101,10 @@ macro_rules! disp_expand {
 #[cfg(debug_assertions)]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [bool, i32, f64, String, usize]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32, f64, usize, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [bool, i32, f64, String, usize, AnyObject]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32, f64, usize, bool, String, AnyObject]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [u32, i32, f64]), $rt_dispatch_types, $type_args, $args)
@@ -120,9 +117,6 @@ macro_rules! disp_expand {
     };
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
-    };
-    ($function:ident, ($rt_type:expr, @dist_dataset),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [ChangeOneDistance, InsertDeleteDistance, SymmetricDistance, HammingDistance]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {

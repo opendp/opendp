@@ -39,7 +39,7 @@
             "description": "Transformation representing the chained computation."
         }
     },
-    "make_sequential_composition_static_distances": {
+    "make_basic_composition": {
         "description": "Construct the DP composition [`measurement0`, `measurement1`, ...]. Returns a Measurement.",
         "args": [
             {

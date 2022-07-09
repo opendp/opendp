@@ -8,7 +8,7 @@ from opendp.core import *
 __all__ = [
     "make_chain_mt",
     "make_chain_tt",
-    "make_sequential_composition_static_distances",
+    "make_basic_composition",
     "make_population_amplification",
     "make_fix_delta"
 ]
@@ -76,7 +76,7 @@ def make_chain_tt(
     return c_to_py(unwrap(function(transformation1, transformation0), Transformation))
 
 
-def make_sequential_composition_static_distances(
+def make_basic_composition(
     measurements: Any
 ) -> Measurement:
     """Construct the DP composition [`measurement0`, `measurement1`, ...]. Returns a Measurement.
@@ -94,7 +94,7 @@ def make_sequential_composition_static_distances(
     measurements = py_to_c(measurements, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=["AnyMeasurementPtr"]))
     
     # Call library function.
-    function = lib.opendp_comb__make_sequential_composition_static_distances
+    function = lib.opendp_comb__make_basic_composition
     function.argtypes = [AnyObjectPtr]
     function.restype = FfiResult
     
