@@ -57,74 +57,78 @@ pub trait SampleBernoulli<T>: Sized {
 }
 
 impl<T> SampleBernoulli<T> for bool
-    where
-        T: Copy + One + Zero + PartialOrd + FloatBits, 
-        T::Bits: PartialOrd + ExactIntCast<usize> {
-
+where
+    T: Copy + One + Zero + PartialOrd + FloatBits,
+    T::Bits: PartialOrd + ExactIntCast<usize>,
+{
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
-
         // ensure that prob is a valid probability
         if !(T::zero()..=T::one()).contains(&prob) {
-            return fallible!(FailedFunction, "probability is not within [0, 1]")
+            return fallible!(FailedFunction, "probability is not within [0, 1]");
         }
 
         // if prob == 1., then exponent is T::EXPONENT_PROB and mantissa is zero
-        if prob.is_one() { return Ok(true) }
+        if prob.is_one() {
+            return Ok(true);
+        }
 
         // Consider the binary expansion of prob into an infinite sequence b_i
         //    prob = sum_{i=0}^\inf b_i / 2^(i + 1)
+        // This algorithm samples i ~ Geometric(p=0.5), then returns b_i.
 
-        // The strategy for this algorithm is to sample i ~ Geometric(p=0.5),
-        //    and then return b_i
+        // Step 1. sample first_heads_index = i ~ Geometric(p=0.5)
+        let first_heads_index = {
 
-        // Since prob has finite precision, there is some j for which b_i = 0 when i > j.
-        // Thus, it is equivalent to sample the i from the truncated geometric, and return false if i > j.
-        // j is the index of the last element of the binary expansion that could possibly be 1.
-        //    j = max_coin_flips
-        //      = max_{prob} [num_leading_zeros + mantissa_digits]
-        //      = max_{prob} [num_leading_zeros + T::MANTISSA_BITS + T::Bits::one()]
-        //      = max_{prob} [T::EXPONENT_PROB - prob.exponent()  + T::MANTISSA_BITS + T::Bits::one()]
-        //      = T::EXPONENT_PROB - min_{prob} [prob.exponent()] + T::MANTISSA_BITS + T::Bits::one()
-        //      = T::EXPONENT_PROB - 0                            + T::MANTISSA_BITS + T::Bits::one()
-        //      = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one()
-        let max_coin_flips = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one();
+            // Since prob has finite precision, there is some j for which b_i = 0 for all i > j.
+            // Thus, it is equivalent to sample i from the truncated geometric, and return false if i > j.
+            // j is the index of the last element of the binary expansion that could possibly be 1.
+            //    j = max_coin_flips
+            //      = max_{prob} [leading_zeros + mantissa_digits]
+            //      = max_{prob} [leading_zeros + T::MANTISSA_BITS + T::Bits::one()]
+            //      = max_{prob} [T::EXPONENT_PROB - prob.exponent()  + T::MANTISSA_BITS + T::Bits::one()]
+            //      = T::EXPONENT_PROB - min_{prob} [prob.exponent()] + T::MANTISSA_BITS + T::Bits::one()
+            //      = T::EXPONENT_PROB - 0                            + T::MANTISSA_BITS + T::Bits::one()
+            //      = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one()
+            let max_coin_flips = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one();
 
-        // repeatedly flip fair coin (up to j times) to identify 0-based index i of first heads
-        // returns None if i > j.
-        
-        // find index of the first true bit in a randomly sampled byte buffer
-        let maybe_fhi = sample_geometric_buffer(T::EXPONENT_BERNOULLI_LEN, constant_time)?
-            // cast to the bits type
-            .map(T::Bits::exact_int_cast).transpose()?
-            // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
-            .and_then(|v| (v <= max_coin_flips).then_some(v));
+            // repeatedly flip a fair coin (up to j times) to identify 0-based index i of first heads
+            let maybe_i = sample_geometric_buffer(T::EXPONENT_BERNOULLI_LEN, constant_time)?
+                .map(T::Bits::exact_int_cast)
+                .transpose()?
+                // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
+                .and_then(|v| (v <= max_coin_flips).then(|| v));
 
-        let first_heads_index = match maybe_fhi {
-            Some(fhi) => fhi, // pass Some variant through
-            // return early, sampled index i is beyond the greatest possible nonzero b_i
-            None => return Ok(false)
+            match maybe_i {
+                // pass Some variant through; assign to first_heads_index
+                Some(i) => i,
+                // otherwise return early because i > j
+                // i is beyond the greatest possible nonzero b_i
+                None => return Ok(false),
+            }
         };
+
+        // Step 2. index into the binary expansion of prob at first_heads_index to get b_i
 
         // number of leading zeros in binary representation of prob
         //    exponent is bounded in [0, EXPONENT_PROB] by check for valid probability and one check
-        let num_leading_zeros = T::EXPONENT_PROB - prob.exponent();
+        let leading_zeros = T::EXPONENT_PROB - prob.exponent();
 
-        // if prob is >=.5, then num_leading_zeros = 0, and b_0 = 1, because the implicit bit is set.
-        // if prob is .25,  then num_leading_zeros = 1, b_0 = 0, b_1 = 1, b_i = 0 for all i > 1
-        // if prob is .125, then num_leading_zeros = 2, b_0 = 0, b_1 = 0, b_2 = 1, b_i = 0 for all i > 2
-
-        // if prob is 0.3203125, then num_leading_zeros = 1, and only b_1, b_3, b_6 are set:
+        // if prob is >=.5, then leading_zeros = 0, and b_0 = 1, because the implicit bit is set.
+        // if prob is .25,  then leading_zeros = 1, b_0 = 0, b_1 = 1, b_i = 0 for all i > 1
+        // if prob is .125, then leading_zeros = 2, b_0 = 0, b_1 = 0, b_2 = 1, b_i = 0 for all i > 2
+        // if prob is 0.3203125, then leading_zeros = 1, and only b_1, b_3, b_6 are set:
         //    b_1 + b_3 + b_6 = 2^-2 + 2^-4 + 2^-7 = 0.3203125
 
         Ok(match first_heads_index {
             // index into the leading zeros of the binary representation
-            i if i < num_leading_zeros => false,
+            i if i < leading_zeros => false,
             // mantissa bit index -1 is implicitly set in ieee-754 when the exponent is nonzero
-            i if i == num_leading_zeros => !prob.exponent().is_zero(),
+            i if i == leading_zeros => !prob.exponent().is_zero(),
             // all other digits out-of-bounds are not float-approximated/are-implicitly-zero
-            i if i > num_leading_zeros + T::MANTISSA_BITS => false,
+            i if i > leading_zeros + T::MANTISSA_BITS => false,
             // retrieve the bit from the mantissa at `i` slots shifted from the left
-            i => !(prob.to_bits() & T::Bits::one() << (T::MANTISSA_BITS + num_leading_zeros - i)).is_zero()
+            i => !(prob.to_bits() & T::Bits::one() << (T::MANTISSA_BITS + leading_zeros - i))
+                .is_zero(),
         })
     }
 }

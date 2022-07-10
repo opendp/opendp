@@ -59,7 +59,7 @@ impl SampleUniform for f64 {
                 // cast to the bits type. This cast lossless and infallible
                 .map(|v| v as u64)
                 // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
-                .and_then(|v| (v != Self::EXPONENT_BIAS).then_some(v));
+                .and_then(|v| (v != Self::EXPONENT_BIAS).then(|| v));
 
             if let Some(e) = exponent {
                 break e
@@ -108,7 +108,7 @@ impl SampleUniform for f32 {
                 // cast to the bits type. This cast lossless and infallible
                 .map(|v| v as u32)
                 // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
-                .and_then(|v| (v != Self::EXPONENT_BIAS).then_some(v));
+                .and_then(|v| (v != Self::EXPONENT_BIAS).then(|| v));
                 
 
             if let Some(e) = exponent {
