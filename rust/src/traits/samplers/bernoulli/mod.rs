@@ -93,9 +93,11 @@ where
 
             // repeatedly flip a fair coin (up to j times) to identify 0-based index i of first heads
             let maybe_i = sample_geometric_buffer(T::EXPONENT_BERNOULLI_LEN, constant_time)?
+                // i is in terms of T::Bits, not usize
                 .map(T::Bits::exact_int_cast)
+                // transpose then try: Option<Fallible<_>> -> Fallible<Option<_>> -> Option<_>
                 .transpose()?
-                // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
+                // discard any coin flips beyond max_coin_flips
                 .and_then(|v| (v <= max_coin_flips).then(|| v));
 
             match maybe_i {
