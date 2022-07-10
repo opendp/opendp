@@ -2,7 +2,10 @@ use std::ops::Neg;
 
 use num::{One, Zero};
 
-use crate::{error::Fallible, traits::{FloatBits, ExactIntCast}};
+use crate::{
+    error::Fallible,
+    traits::{ExactIntCast, FloatBits, InfDiv},
+};
 
 use super::{fill_bytes, sample_geometric_buffer};
 
@@ -60,6 +63,7 @@ impl<T> SampleBernoulli<T> for bool
 where
     T: Copy + One + Zero + PartialOrd + FloatBits,
     T::Bits: PartialOrd + ExactIntCast<usize>,
+    usize: ExactIntCast<T::Bits>,
 {
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
         // ensure that prob is a valid probability
@@ -78,7 +82,6 @@ where
 
         // Step 1. sample first_heads_index = i ~ Geometric(p=0.5)
         let first_heads_index = {
-
             // Since prob has finite precision, there is some j for which b_i = 0 for all i > j.
             // Thus, it is equivalent to sample i from the truncated geometric, and return false if i > j.
             // j is the index of the last element of the binary expansion that could possibly be 1.
@@ -89,20 +92,22 @@ where
             //      = T::EXPONENT_PROB - min_{prob} [prob.exponent()] + T::MANTISSA_BITS + T::Bits::one()
             //      = T::EXPONENT_PROB - 0                            + T::MANTISSA_BITS + T::Bits::one()
             //      = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one()
-            let max_coin_flips = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one();
+            let max_coin_flips = 1
+                + usize::exact_int_cast(T::EXPONENT_PROB)?
+                + usize::exact_int_cast(T::MANTISSA_BITS)?;
+
+            // We need to sample at least j bits. The smallest sample size is a byte. Round up to the nearest byte:
+            //    buffer_len = j.div_ceil(8)
+            // When T = f64, we sample 135 bytes.
+            //        = f32, we sample 19 bytes.
+            // If the first heads is found after j flips, but before buffer_len * 8 flips,
+            //    then it will always index into the trailing zeros of the binary expansion.
+            let buffer_len = max_coin_flips.inf_div(&8)?;
 
             // repeatedly flip a fair coin (up to j times) to identify 0-based index i of first heads
-            let maybe_i = sample_geometric_buffer(T::EXPONENT_BERNOULLI_LEN, constant_time)?
-                // i is in terms of T::Bits, not usize
-                .map(T::Bits::exact_int_cast)
-                // transpose then try: Option<Fallible<_>> -> Fallible<Option<_>> -> Option<_>
-                .transpose()?
-                // discard any coin flips beyond max_coin_flips
-                .and_then(|v| (v <= max_coin_flips).then(|| v));
-
-            match maybe_i {
-                // pass Some variant through; assign to first_heads_index
-                Some(i) => i,
+            match sample_geometric_buffer(buffer_len, constant_time)? {
+                // i is in terms of T::Bits, not usize; assign to first_heads_index
+                Some(i) => T::Bits::exact_int_cast(i)?,
                 // otherwise return early because i > j
                 // i is beyond the greatest possible nonzero b_i
                 None => return Ok(false),
@@ -140,16 +145,22 @@ pub trait SampleRademacher: Sized {
     fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self>;
 }
 
-impl<T: Neg<Output=T> + One> SampleRademacher for T {
+impl<T: Neg<Output = T> + One> SampleRademacher for T {
     fn sample_standard_rademacher() -> Fallible<Self> {
-        Ok(if bool::sample_standard_bernoulli()? {T::one()} else {T::one().neg()})
+        Ok(if bool::sample_standard_bernoulli()? {
+            T::one()
+        } else {
+            T::one().neg()
+        })
     }
     fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self> {
-        Ok(if bool::sample_bernoulli(prob, constant_time)? {T::one()} else {T::one().neg()})
+        Ok(if bool::sample_bernoulli(prob, constant_time)? {
+            T::one()
+        } else {
+            T::one().neg()
+        })
     }
 }
-
-
 
 #[cfg(test)]
 mod test {

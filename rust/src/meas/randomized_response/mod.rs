@@ -6,7 +6,7 @@ use std::hash::Hash;
 
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::measures::MaxDivergence;
-use crate::metrics::{IntDistance, ChangeOneDistance};
+use crate::metrics::{IntDistance, DiscreteDistance};
 use crate::domains::AllDomain;
 use crate::error::Fallible;
 use crate::traits::samplers::{SampleBernoulli, SampleUniformInt};
@@ -28,7 +28,7 @@ use num::Float;
 
 pub fn make_randomized_response_bool<Q>(
     prob: Q, constant_time: bool
-) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, ChangeOneDistance, MaxDivergence<Q>>>
+) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, DiscreteDistance, MaxDivergence<Q>>>
     where bool: SampleBernoulli<Q>,
           Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn {
 
@@ -37,23 +37,30 @@ pub fn make_randomized_response_bool<Q>(
         return fallible!(MakeTransformation, "probability must be within [0.5, 1)")
     }
 
+    // ln(p / (1 - prob))
+    let epsilon = prob.inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
+
     Ok(Measurement::new(
         AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(move |arg: &bool| {
             Ok(if bool::sample_bernoulli(prob, constant_time)? { *arg } else { !arg })
         }),
-        ChangeOneDistance::default(),
+        DiscreteDistance::default(),
         MaxDivergence::default(),
-        PrivacyMap::new_from_constant(
-            // ln(p / (1 - prob))
-            prob.inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?),
+        PrivacyMap::new(move |d_in| {
+            if *d_in == 0 {
+                Q::zero()
+            } else {
+                epsilon.clone()
+            }
+        })
     ))
 }
 
 pub fn make_randomized_response<T, Q>(
     categories: HashSet<T>, prob: Q, constant_time: bool
-) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, ChangeOneDistance, MaxDivergence<Q>>>
+) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, DiscreteDistance, MaxDivergence<Q>>>
     where T: 'static + Clone + Eq + Hash + CheckNull,
           bool: SampleBernoulli<Q>,
           Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv {
@@ -67,6 +74,9 @@ pub fn make_randomized_response<T, Q>(
     if !(num_categories.recip()..Q::one()).contains(&prob) {
         return fallible!(MakeTransformation, "probability must be within [1/num_categories, 1)")
     }
+
+    let epsilon = prob.inf_mul(&num_categories.inf_sub(&Q::one())?)?
+        .inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
     Ok(Measurement::new(
         AllDomain::new(),
@@ -88,15 +98,19 @@ pub fn make_randomized_response<T, Q>(
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),
-        ChangeOneDistance::default(),
+        DiscreteDistance::default(),
         MaxDivergence::default(),
-        PrivacyMap::new_from_constant(
+        PrivacyMap::new(move |d_in| {
             // d_out >= d_in * (p / p').ln()
             // where off-diagonal probability p' = (1 - p) / (t - 1)
             // d_out >= d_in * (p / (1 - p) * (t - 1)).ln()
             // where t = num_categories
-            prob.inf_mul(&num_categories.inf_sub(&Q::one())?)?
-                .inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?),
+            if *d_in == 0 {
+                Q::zero()
+            } else {
+                epsilon.clone()
+            }
+        }),
     ))
 }
 
