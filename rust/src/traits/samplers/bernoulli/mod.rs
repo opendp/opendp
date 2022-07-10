@@ -69,15 +69,15 @@ impl<T: Copy + One + Zero + PartialOrd + SampleBernoulliExponent> SampleBernoull
         // if prob == 1., then exponent is T::EXPONENT_PROB and mantissa is zero
         if prob.is_one() { return Ok(true) }
 
-        // Consider the binary expansion of prob into an infinite sequence a_i
-        //    prob = sum_{i=1}^\inf a_i / 2^i.
+        // Consider the binary expansion of prob into an infinite sequence b_i
+        //    prob = sum_{i=0}^\inf b_i / 2^(i + 1)
 
         // The strategy for this algorithm is to sample i ~ Geometric(p=0.5),
-        //    and then return a_i
+        //    and then return b_i
 
-        // Since prob has finite precision, there is some j for which all i > j, a_i = 0.
-        // Thus, it is valid to sample the truncated geometric, and return false if truncated.
-        // j is the last a_j that could possibly be 1.
+        // Since prob has finite precision, there is some j for which b_i = 0 when i > j.
+        // Thus, it is valid to sample the i from the truncated geometric, and return false if i > j.
+        // j is the last b_j that could possibly be 1.
         //    j = max_{prob} [num_leading_zeros + mantissa_digits]
         //      = max_{prob} [num_leading_zeros + T::MANTISSA_BITS + T::Bits::one()]
         //      = max_{prob} [T::EXPONENT_PROB - prob.exponent()  + T::MANTISSA_BITS + T::Bits::one()]
@@ -86,10 +86,11 @@ impl<T: Copy + One + Zero + PartialOrd + SampleBernoulliExponent> SampleBernoull
         //      = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one()
 
 
-        // repeatedly flip fair coin (up to 1023 times) and identify 0-based index of first heads
+        // repeatedly flip fair coin (up to j times) to identify 0-based index i of first heads
+        // returns None if i > j.
         let first_heads_index = match T::sample_bernoulli_exponent(constant_time)? {
-            Some(fhi) => fhi,
-            // sample index i is beyond the greatest possible nonzero a_i
+            Some(fhi) => fhi, // pass Some variant through
+            // return early, sampled index i is beyond the greatest possible nonzero b_i
             None => return Ok(false)
         };
 
@@ -97,19 +98,22 @@ impl<T: Copy + One + Zero + PartialOrd + SampleBernoulliExponent> SampleBernoull
         //    exponent is bounded in [0, EXPONENT_PROB] by check for valid probability and one check
         let num_leading_zeros = T::EXPONENT_PROB - prob.exponent();
 
-        // if prob is >=.5, then num_leading_zeros = 0, and a_1 = 1, because the implicit bit is set.
-        // if prob is .25,  then num_leading_zeros = 1, a_1 = 0, a_2 = 1, a_i = 0 for all i > 2
-        // if prob is .125, then num_leading_zeros = 2, a_1 = 0, a_2 = 0, a_3 = 1, a_i = 0 for all i > 3
+        // if prob is >=.5, then num_leading_zeros = 0, and b_0 = 1, because the implicit bit is set.
+        // if prob is .25,  then num_leading_zeros = 1, b_0 = 0, b_1 = 1, b_i = 0 for all i > 1
+        // if prob is .125, then num_leading_zeros = 2, b_0 = 0, b_1 = 0, b_2 = 1, b_i = 0 for all i > 2
+
+        // if prob is 0.3203125, then num_leading_zeros = 1, and only b_1, b_3, b_6 are set:
+        //    b_1 + b_3 + b_6 = 2^-2 + 2^-4 + 2^-7 = 0.3203125
 
         Ok(match first_heads_index {
             // index into the leading zeros of the binary representation
             i if i < num_leading_zeros => false,
-            // bit index -1 is implicitly set in ieee-754 when the exponent is nonzero
+            // mantissa bit index -1 is implicitly set in ieee-754 when the exponent is nonzero
             i if i == num_leading_zeros => !prob.exponent().is_zero(),
             // all other digits out-of-bounds are not float-approximated/are-implicitly-zero
-            i if i > num_leading_zeros + T::MANTISSA_BITS + T::Bits::one() => false,
+            i if i > num_leading_zeros + T::MANTISSA_BITS => false,
             // retrieve the bit from the mantissa at `i` slots shifted from the left
-            i => prob.to_bits() & (T::Bits::one() << (T::MANTISSA_BITS + num_leading_zeros - i)) != T::Bits::zero()
+            i => !(prob.to_bits() & T::Bits::one() << (T::MANTISSA_BITS + num_leading_zeros - i)).is_zero()
         })
     }
 }
