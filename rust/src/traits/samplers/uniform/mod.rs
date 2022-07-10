@@ -1,6 +1,4 @@
-use std::cmp;
-
-use crate::{error::Fallible, traits::FloatBits};
+use crate::{error::Fallible, traits::{FloatBits, ExactIntCast}};
 
 use super::fill_bytes;
 use ieee754::Ieee754;
@@ -43,20 +41,28 @@ pub trait SampleUniform: Sized {
 
 impl SampleUniform for f64 {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
+        // The unbiased exponent of Uniform([0, 1)) is in [-1023, -1].
+        //
+        // # Lower bound of -1023:
+        // Zero and subnormal numbers have a biased exponent of 0 -> an unbiased exponent of -1023
+        // 
+        // # Upper bound of -1:
+        // A saturated mantissa is ~2, so the unbiased exponent must be <= -1, because Uniform([0, 1)) is < 1.
+        //   sign     exp    mantissa
+        //   (-1)^0 * 2^-1 * 1.9999... ~ 1
 
-        // A saturated mantissa with implicit bit is ~2
-        let exponent: i16 = -(1 + f64::sample_exponent(constant_time)? as i16);
-
-        let mantissa: u64 = {
-            let mut mantissa_buffer = [0u8; 8];
-            // mantissa bit index zero is implicit
-            fill_bytes(&mut mantissa_buffer[1..])?;
-            // limit the buffer to 52 bits
-            mantissa_buffer[1] %= 16;
-
-            // convert mantissa to integer
-            u64::from_be_bytes(mantissa_buffer)
+        // Use rejection sampling to draw ~ TruncatedGeometric(p=0.5, bounds=[0, 1022])
+        // Reject samples > 1022 to redistribute the probability amongst all exponent bands
+        let truncated_geometric_sample = loop {
+            if let Some(e) = Self::sample_uniform_exponent(constant_time)? {
+                break e
+            }
         };
+
+        // Transform [0, 1022] -> [-1023, -1]
+        let exponent = -i16::exact_int_cast(truncated_geometric_sample)? - 1;
+
+        let mantissa: u64 = Self::sample_uniform_mantissa()?;
 
         // Generate uniform random number from [0,1)
         Ok(Self::recompose(false, exponent, mantissa))
@@ -65,30 +71,94 @@ impl SampleUniform for f64 {
 
 impl SampleUniform for f32 {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
-        f64::sample_standard_uniform(constant_time).map(|v| v as f32)
+        // The unbiased exponent of Uniform([0, 1)) is in [-127, -1].
+        //
+        // # Lower bound of -127:
+        // Zero and subnormal numbers have a biased exponent of 0 -> an unbiased exponent of -127
+        // 
+        // # Upper bound of -1:
+        // A saturated mantissa is ~2, so the unbiased exponent must be <= -1, because Uniform([0, 1)) is < 1.
+        //   sign     exp    mantissa
+        //   (-1)^0 * 2^-1 * 1.9999... ~ 1
+
+        // Use rejection sampling to draw ~ TruncatedGeometric(p=0.5, bounds=[0, 126])
+        // Reject samples > 126 to redistribute the probability amongst all exponent bands
+        let truncated_geometric_sample = loop {
+            if let Some(e) = Self::sample_uniform_exponent(constant_time)? {
+                break e
+            }
+        };
+
+        // Transform [0, 126] -> [-127, -1]
+        let exponent = -i16::exact_int_cast(truncated_geometric_sample)? - 1;
+
+        let mantissa: u32 = Self::sample_uniform_mantissa()?;
+
+        // Generate uniform random number from [0,1)
+        Ok(Self::recompose(false, exponent, mantissa))
     }
 }
 
-
-pub trait SampleExponent: FloatBits {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits>;
+pub trait SampleUniformExponent: FloatBits {
+    fn sample_uniform_exponent(constant_time: bool) -> Fallible<Option<Self::Bits>>;
 }
-impl SampleExponent for f64 {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
-        // return index of the first true bit in a randomly sampled 128 byte buffer
-        // return 1022 if no events occurred because 1023 is specially reserved for inf, -inf, NaN
-        //     (incurs a slight violation of DP)
-        let sample = sample_geometric_buffer::<128>(constant_time)?.unwrap_or(1022);
-        Ok(cmp::min(sample, 1022) as Self::Bits)
+
+// This issue is blocking factoring these into one blanket impl:
+// https://github.com/rust-lang/rust/issues/60551
+// Otherwise the 128 and 16 could be supplied by an associated const on FloatBits.
+impl SampleUniformExponent for f64 {
+    fn sample_uniform_exponent(constant_time: bool) -> Fallible<Option<Self::Bits>> {
+        // find index of the first true bit in a randomly sampled byte buffer
+        Ok(sample_geometric_buffer::<128>(constant_time)?
+            // cast to the bits type. This cast lossless and infallible
+            .map(|v| v as Self::Bits)
+            // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
+            .and_then(|v| (v != Self::EXPONENT_BIAS).then_some(v)))
     }
 }
-impl SampleExponent for f32 {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
-        // return index of the first true bit in a randomly sampled 16 byte buffer
-        // return 126 if no events occurred because 127 is specially reserved for inf, -inf, NaN
-        //     (incurs a slight violation of DP)
-        let sample = sample_geometric_buffer::<16>(constant_time)?.unwrap_or(126);
-        Ok(cmp::min(sample, 126) as Self::Bits)
+
+impl SampleUniformExponent for f32 {
+    fn sample_uniform_exponent(constant_time: bool) -> Fallible<Option<Self::Bits>> {
+        // find index of the first true bit in a randomly sampled byte buffer
+        Ok(sample_geometric_buffer::<16>(constant_time)?
+            // cast to the bits type. This cast lossless and infallible
+            .map(|v| v as Self::Bits)
+            // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
+            .and_then(|v| (v != Self::EXPONENT_BIAS).then_some(v)))
+    }
+}
+
+pub trait SampleUniformMantissa: FloatBits {
+    fn sample_uniform_mantissa() -> Fallible<Self::Bits>;
+}
+
+impl SampleUniformMantissa for f64 {
+    fn sample_uniform_mantissa() -> Fallible<Self::Bits> {
+        // Of a 64 bit buffer, we want the first 12 bits to be zero, 
+        //    and the last 52 bits to be uniformly random
+        let mut mantissa_buffer = [0u8; 8];
+        // Fill the last 56 bits with randomness.
+        fill_bytes(&mut mantissa_buffer[1..])?;
+        // Clear the leftmost four bits of the second byte
+        mantissa_buffer[1] &= 0b00001111;
+
+        // convert mantissa to integer
+        Ok(u64::from_be_bytes(mantissa_buffer))
+    }
+}
+
+impl SampleUniformMantissa for f32 {
+    fn sample_uniform_mantissa() -> Fallible<Self::Bits> {
+        // Of a 32 bit buffer, we want the first 9 bits to be zero, 
+        //    and the last 23 bits to be uniformly random
+        let mut mantissa_buffer = [0u8; 4];
+        // Fill the last 24 bits with randomness.
+        fill_bytes(&mut mantissa_buffer[1..])?;
+        // Clear the leftmost bit of the second byte
+        mantissa_buffer[1] &= 0b01111111;
+
+        // convert mantissa to integer
+        Ok(u32::from_be_bytes(mantissa_buffer))
     }
 }
 
@@ -100,7 +170,7 @@ impl SampleExponent for f32 {
 /// - None (if all bits are 0)
 ///
 /// This is a lower-level version of the sample_geometric trait
-fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Option<usize>> {
+pub fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Option<usize>> {
     Ok(if constant_time {
         let mut buffer = [0_u8; B];
         fill_bytes(&mut buffer)?;
@@ -114,8 +184,8 @@ fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Opti
 
     } else {
         // retrieve up to B bytes, each containing 8 trials
+        let mut buffer = vec![0_u8; 1];
         for i in 0..B {
-            let mut buffer = vec![0_u8; 1];
             fill_bytes(&mut buffer)?;
 
             if buffer[0] > 0 {
@@ -175,4 +245,5 @@ mod test_uniform_int {
         println!("{:?}", counts);
         Ok(())
     }
+
 }

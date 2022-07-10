@@ -7,7 +7,7 @@ use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{CheckNull, ExactIntCast, TotalOrd, InfMul, InfExpM1, InfLn1P, InfDiv};
+use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P, InfDiv, TotalOrd, CheckNull};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(

@@ -2,9 +2,9 @@ use std::ops::Neg;
 
 use num::{One, Zero};
 
-use crate::error::Fallible;
+use crate::{error::Fallible, traits::FloatBits};
 
-use super::{fill_bytes, SampleExponent};
+use super::{fill_bytes, sample_geometric_buffer};
 
 pub trait SampleStandardBernoulli: Sized {
     fn sample_standard_bernoulli() -> Fallible<Self>;
@@ -56,7 +56,7 @@ pub trait SampleBernoulli<T>: Sized {
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self>;
 }
 
-impl<T: Copy + One + Zero + PartialOrd + SampleExponent> SampleBernoulli<T> for bool
+impl<T: Copy + One + Zero + PartialOrd + SampleBernoulliExponent> SampleBernoulli<T> for bool
     where T::Bits: PartialOrd {
 
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
@@ -66,28 +66,83 @@ impl<T: Copy + One + Zero + PartialOrd + SampleExponent> SampleBernoulli<T> for 
             return fallible!(FailedFunction, "probability is not within [0, 1]")
         }
 
-        // repeatedly flip fair coin (up to 1023 times) and identify index (0-based) of first heads
-        let first_heads_index = T::sample_exponent(constant_time)?;
-
-        // if prob == 1., return after retrieving censored_specific_geom, to protect constant time
         // if prob == 1., then exponent is T::EXPONENT_PROB and mantissa is zero
-        if prob == T::one() { return Ok(true) }
+        if prob.is_one() { return Ok(true) }
+
+        // Consider the binary expansion of prob into an infinite sequence a_i
+        //    prob = sum_{i=1}^\inf a_i / 2^i.
+
+        // The strategy for this algorithm is to sample i ~ Geometric(p=0.5),
+        //    and then return a_i
+
+        // Since prob has finite precision, there is some j for which all i > j, a_i = 0.
+        // Thus, it is valid to sample the truncated geometric, and return false if truncated.
+        // j is the last a_j that could possibly be 1.
+        //    j = max_{prob} [num_leading_zeros + mantissa_digits]
+        //      = max_{prob} [num_leading_zeros + T::MANTISSA_BITS + T::Bits::one()]
+        //      = max_{prob} [T::EXPONENT_PROB - prob.exponent()  + T::MANTISSA_BITS + T::Bits::one()]
+        //      = T::EXPONENT_PROB - min_{prob} [prob.exponent()] + T::MANTISSA_BITS + T::Bits::one()
+        //      = T::EXPONENT_PROB - 0                            + T::MANTISSA_BITS + T::Bits::one()
+        //      = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one()
+
+
+        // repeatedly flip fair coin (up to 1023 times) and identify 0-based index of first heads
+        let first_heads_index = match T::sample_bernoulli_exponent(constant_time)? {
+            Some(fhi) => fhi,
+            // sample index i is beyond the greatest possible nonzero a_i
+            None => return Ok(false)
+        };
 
         // number of leading zeros in binary representation of prob
-        //    cast is non-saturating because exponent only uses first 11 bits
         //    exponent is bounded in [0, EXPONENT_PROB] by check for valid probability and one check
         let num_leading_zeros = T::EXPONENT_PROB - prob.exponent();
+
+        // if prob is >=.5, then num_leading_zeros = 0, and a_1 = 1, because the implicit bit is set.
+        // if prob is .25,  then num_leading_zeros = 1, a_1 = 0, a_2 = 1, a_i = 0 for all i > 2
+        // if prob is .125, then num_leading_zeros = 2, a_1 = 0, a_2 = 0, a_3 = 1, a_i = 0 for all i > 3
 
         Ok(match first_heads_index {
             // index into the leading zeros of the binary representation
             i if i < num_leading_zeros => false,
-            // bit index 0 is implicitly set in ieee-754 when the exponent is nonzero
-            i if i == num_leading_zeros => prob.exponent() != T::Bits::zero(),
+            // bit index -1 is implicitly set in ieee-754 when the exponent is nonzero
+            i if i == num_leading_zeros => !prob.exponent().is_zero(),
             // all other digits out-of-bounds are not float-approximated/are-implicitly-zero
-            i if i > num_leading_zeros + T::MANTISSA_BITS => false,
+            i if i > num_leading_zeros + T::MANTISSA_BITS + T::Bits::one() => false,
             // retrieve the bit from the mantissa at `i` slots shifted from the left
             i => prob.to_bits() & (T::Bits::one() << (T::MANTISSA_BITS + num_leading_zeros - i)) != T::Bits::zero()
         })
+    }
+}
+
+
+pub trait SampleBernoulliExponent: FloatBits {
+    fn sample_bernoulli_exponent(constant_time: bool) -> Fallible<Option<Self::Bits>>;
+}
+
+// This issue is blocking factoring these into one blanket impl:
+// https://github.com/rust-lang/rust/issues/60551
+// Otherwise the 128 and 16 could be supplied by an associated const on FloatBits.
+impl SampleBernoulliExponent for f64 {
+    fn sample_bernoulli_exponent(constant_time: bool) -> Fallible<Option<Self::Bits>> {
+        let max_coin_flips = Self::EXPONENT_PROB + Self::MANTISSA_BITS + 1;
+        // find index of the first true bit in a randomly sampled byte buffer
+        Ok(sample_geometric_buffer::<135>(constant_time)?
+            // cast to the bits type. This cast lossless and infallible
+            .map(|v| v as Self::Bits)
+            // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
+            .and_then(|v| (v <= max_coin_flips).then_some(v)))
+    }
+}
+
+impl SampleBernoulliExponent for f32 {
+    fn sample_bernoulli_exponent(constant_time: bool) -> Fallible<Option<Self::Bits>> {
+        let max_coin_flips = Self::EXPONENT_PROB + Self::MANTISSA_BITS + 1;
+        // find index of the first true bit in a randomly sampled byte buffer
+        Ok(sample_geometric_buffer::<19>(constant_time)?
+            // cast to the bits type. This cast lossless and infallible
+            .map(|v| v as Self::Bits)
+            // reject success on last coin flip because last flip is reserved for inf, -inf, NaN
+            .and_then(|v| (v <= max_coin_flips).then_some(v)))
     }
 }
 
