@@ -59,6 +59,9 @@ pub trait FloatBits: Sized + ExactIntCast<Self::Bits> {
     // Bias correction of the exponent
     const EXPONENT_BIAS: Self::Bits;
 
+    const EXPONENT_UNIFORM_LEN: usize;
+    const EXPONENT_BERNOULLI_LEN: usize;
+
     fn sign(self) -> bool {
         (self.to_bits() & (Self::Bits::one() << (Self::EXPONENT_BITS + Self::MANTISSA_BITS))) == Self::Bits::zero()
     }
@@ -155,6 +158,9 @@ impl FloatBits for f64 {
     //     subtract one for zero indexing
     const EXPONENT_PROB: u64 = 1022;
     const EXPONENT_BIAS: u64 = 1023;
+
+    const EXPONENT_UNIFORM_LEN: usize = 128;
+    const EXPONENT_BERNOULLI_LEN: usize = 135;
     fn to_bits(self) -> Self::Bits { self.to_bits() }
 }
 
@@ -165,5 +171,8 @@ impl FloatBits for f32 {
     // 2^(EXPONENT_BITS - 1) - 2
     const EXPONENT_PROB: u32 = 126;
     const EXPONENT_BIAS: u32 = 127;
+
+    const EXPONENT_UNIFORM_LEN: usize = 16;
+    const EXPONENT_BERNOULLI_LEN: usize = 19;
     fn to_bits(self) -> Self::Bits { self.to_bits() }
 }

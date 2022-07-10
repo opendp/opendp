@@ -4,7 +4,7 @@ use num::{Bounded, Zero, One, clamp};
 
 use crate::{error::Fallible, traits::{TotalOrd, AlertingSub, InfExp, InfAdd, InfSub, InfDiv}};
 
-use super::{SampleBernoulli, SampleUniform, SampleStandardBernoulli};
+use super::{SampleBernoulli, SampleUniform, SampleStandardBernoulli, fill_bytes};
 
 
 pub trait SampleGeometric: Sized {
@@ -151,6 +151,40 @@ impl<T: Clone + SampleGeometric + Sub<Output=T> + Bounded + Zero + One + TotalOr
             noised
         })
     }
+}
+
+
+/// Internal function. Returns a sample from the Geometric(p=0.5) distribution.
+///
+/// The algorithm generates B * 8 bits at random and returns
+/// - Some(index of the first set bit)
+/// - None (if all bits are 0)
+///
+/// This is a lower-level version of the SampleGeometric
+pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) -> Fallible<Option<usize>> {
+    Ok(if constant_time {
+        let mut buffer = vec![0_u8; buffer_len];
+        fill_bytes(&mut buffer)?;
+        buffer.iter().enumerate()
+            // ignore samples that contain no events
+            .filter(|(_, &sample)| sample > 0)
+            // compute the index of the smallest event in the batch
+            .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
+            // retrieve the smallest index
+            .min()
+
+    } else {
+        // retrieve up to B bytes, each containing 8 trials
+        let mut buffer = vec![0_u8; 1];
+        for i in 0..buffer_len {
+            fill_bytes(&mut buffer)?;
+
+            if buffer[0] > 0 {
+                return Ok(Some(i * 8 + buffer[0].leading_zeros() as usize))
+            }
+        }
+        None
+    })
 }
 
 
