@@ -37,8 +37,10 @@ pub fn make_randomized_response_bool<Q>(
         return fallible!(MakeTransformation, "probability must be within [0.5, 1)")
     }
 
-    // ln(p / (1 - prob))
-    let epsilon = prob.inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
+    // d_out = min(d_in, 1) * ln(p / p')
+    //             where p' = 1 - p   
+    //       = min(d_in, 1) * ln(p / (1 - p))
+    let privacy_constant = prob.inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
     Ok(Measurement::new(
         AllDomain::new(),
@@ -52,7 +54,7 @@ pub fn make_randomized_response_bool<Q>(
             if *d_in == 0 {
                 Q::zero()
             } else {
-                epsilon.clone()
+                privacy_constant.clone()
             }
         })
     ))
@@ -75,7 +77,12 @@ pub fn make_randomized_response<T, Q>(
         return fallible!(MakeTransformation, "probability must be within [1/num_categories, 1)")
     }
 
-    let epsilon = prob.inf_mul(&num_categories.inf_sub(&Q::one())?)?
+    // d_out = min(d_in, 1) * (p / p').ln() 
+    //              where p' = the probability of categories off the diagonal
+    //                       = (1 - p) / (t - 1)
+    //              where t = num_categories                   
+    //       = min(d_in, 1) * (p / (1 - p) * (t - 1)).ln()
+    let privacy_constant = prob.inf_mul(&num_categories.inf_sub(&Q::one())?)?
         .inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
     Ok(Measurement::new(
@@ -101,14 +108,10 @@ pub fn make_randomized_response<T, Q>(
         DiscreteDistance::default(),
         MaxDivergence::default(),
         PrivacyMap::new(move |d_in| {
-            // d_out >= d_in * (p / p').ln()
-            // where off-diagonal probability p' = (1 - p) / (t - 1)
-            // d_out >= d_in * (p / (1 - p) * (t - 1)).ln()
-            // where t = num_categories
             if *d_in == 0 {
                 Q::zero()
             } else {
-                epsilon.clone()
+                privacy_constant.clone()
             }
         }),
     ))
