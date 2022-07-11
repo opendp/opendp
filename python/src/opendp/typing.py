@@ -55,6 +55,21 @@ RuntimeTypeDescriptor = Union[
 ]
 
 
+def set_default_int_type(T: RuntimeTypeDescriptor):
+    equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
+    assert T in equivalence_class, f"T must be an integer type in {equivalence_class}"
+
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int])
+    ELEMENTARY_TYPES[int] = T
+
+def set_default_float_Type(T: RuntimeTypeDescriptor):
+    equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[float]]
+    assert T in equivalence_class, f"T must be a float type in {equivalence_class}"
+
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[float])
+    ELEMENTARY_TYPES[float] = T
+
+
 class RuntimeType(object):
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
@@ -166,6 +181,10 @@ class RuntimeType(object):
             if 0 < start < end < len(type_name):
                 return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end], generics=generics))
             if start == end < 0:
+                if type_name == "int":
+                    return ELEMENTARY_TYPES[int]
+                if type_name == "float":
+                    return ELEMENTARY_TYPES[float]
                 return type_name
 
         if isinstance(type_name, Hashable) and type_name in ELEMENTARY_TYPES:

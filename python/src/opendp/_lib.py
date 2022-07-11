@@ -15,7 +15,7 @@ ATOM_EQUIVALENCE_CLASSES = {
 lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))
 if not os.path.exists(lib_dir):
     # fall back to default location of binaries in a developer install
-    build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
+    build_dir = 'release'
     lib_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'rust', 'target', build_dir)
 
 if os.path.exists(lib_dir):
