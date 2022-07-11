@@ -50,7 +50,7 @@ pub fn make_count_distinct<TIA, TO>(
 pub trait CountByCategoriesConstant<QO> {
     fn get_stability_constant() -> QO;
 }
-impl<Q: One, const P: usize> CountByCategoriesConstant<Q> for LpDistance<Q, P> {
+impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
     fn get_stability_constant() -> Q { Q::one() }
 }
 
@@ -96,7 +96,7 @@ pub fn make_count_by_categories<MO, TI, TO>(
 pub trait CountByConstant<QO> {
     fn get_stability_constant() -> Fallible<QO>;
 }
-impl<Q: One + Float + ExactIntCast<usize>, const P: usize> CountByConstant<Q> for LpDistance<Q, P> {
+impl<const P: usize, Q: One + Float + ExactIntCast<usize>> CountByConstant<Q> for LpDistance<P, Q> {
     fn get_stability_constant() -> Fallible<Q> {
         if P == 0 {return fallible!(MakeTransformation, "P must be positive")}
         let p = Q::exact_int_cast(P)?;
