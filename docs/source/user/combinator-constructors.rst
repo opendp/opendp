@@ -89,19 +89,13 @@ See the section on :ref:`transformation-constructors` for more information on ho
 Composition
 -----------
 
-OpenDP has a simple composition combinator for building a tuple of measurements out of two measurements.
-You can nest this composition combinator arbitrarily.
+OpenDP has a basic composition combinator for composing a list of measurements into a new measurement.
 
 .. doctest::
 
     >>> from opendp.comb import make_basic_composition
-    >>> noisy_sum_pair = make_basic_composition(noisy_sum, noisy_sum)
+    >>> noisy_sum_pair = make_basic_composition([noisy_sum, noisy_sum])
 
-
-Progress on more general composition constructors can be found in the following PR's:
-
-:#242: `sequential compositor w/ static distances <https://github.com/opendp/opendp/pull/242>`_
-:#264: `f-DP <https://github.com/opendp/opendp/pull/264>`_
 
 Amplification
 -------------

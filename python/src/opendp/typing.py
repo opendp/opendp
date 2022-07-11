@@ -3,7 +3,7 @@ import typing
 from collections.abc import Hashable
 from typing import Union, Any, Type, List
 
-from opendp.mod import UnknownTypeException
+from opendp.mod import UnknownTypeException, Measurement, Transformation
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
@@ -11,7 +11,14 @@ if sys.version_info >= (3, 7):
 else:
     from typing import GenericMeta as _GenericAlias
 
-ELEMENTARY_TYPES = {int: 'i32', float: 'f64', str: 'String', bool: 'bool'}
+ELEMENTARY_TYPES = {
+    int: 'i32',
+    float: 'f64',
+    str: 'String',
+    bool: 'bool',
+    Measurement: 'AnyMeasurementPtr',
+    Transformation: 'AnyTransformationPtr'
+}
 try:
     import numpy as np
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
@@ -61,6 +68,8 @@ class RuntimeType(object):
     def __eq__(self, other):
         if isinstance(other, str):
             other = RuntimeType.parse(other)
+        if isinstance(other, str):
+            return False
         return self.origin == other.origin and self.args == other.args
 
     def __str__(self):
@@ -219,6 +228,12 @@ class RuntimeType(object):
                 cls.infer(next(iter(public_example.values())))
             ])
 
+        if isinstance(public_example, Measurement):
+            return "AnyMeasurementPtr"
+
+        if isinstance(public_example, Transformation):
+            return "AnyTransformationPtr"
+
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
 
@@ -349,6 +364,30 @@ class PrivacyMeasure(RuntimeType):
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
 ZeroConcentratedDivergence = PrivacyMeasure('ZeroConcentratedDivergence')
+
+class Carrier(RuntimeType):
+    def __getitem__(self, subdomains):
+        if not isinstance(subdomains, tuple):
+            subdomains = (subdomains,)
+        return Carrier(self.origin, [self.parse(type_name=subdomain) for subdomain in subdomains])
+
+
+Vec = Carrier('Vec')
+HashMap = Carrier('HashMap')
+i8 = RuntimeType('i8')
+i16 = RuntimeType('i16')
+i32 = RuntimeType('i32')
+i64 = RuntimeType('i64')
+i128 = RuntimeType('i128')
+isize = RuntimeType('isize')
+u8 = RuntimeType('u8')
+u16 = RuntimeType('u16')
+u32 = RuntimeType('u32')
+u64 = RuntimeType('u64')
+u128 = RuntimeType('u128')
+usize = RuntimeType('usize')
+f32 = RuntimeType('f32')
+f64 = RuntimeType('f64')
 
 
 class Domain(RuntimeType):

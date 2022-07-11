@@ -113,7 +113,8 @@ def test_split_lines__cast__impute():
     )
 
     assert query("1\n2\n3") == [1, 2, 3]
-    assert query.check(1, 1)
+    query.check(1, 1)
+    print(query.map(1))
 
 
 def test_inherent_cast__impute():

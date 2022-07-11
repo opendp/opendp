@@ -14,7 +14,7 @@ use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, Downcast};
 use crate::ffi::util;
-use crate::ffi::util::{c_bool, Type, TypeContents};
+use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 
 #[no_mangle]
 pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
@@ -85,10 +85,11 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
-            if element.descriptor == "String" {
-                raw_to_vec_string(raw)
-            } else {
-                dispatch!(raw_to_vec, [(element, @primitives)], (raw))
+            match element.descriptor.as_str() {
+                "String" => raw_to_vec_string(raw),
+                "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
+                "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
+                _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }
         TypeContents::TUPLE(ref element_ids) => {
@@ -186,7 +187,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             if element.descriptor == "String" {
                 vec_string_to_raw(obj)
             } else {
-                dispatch!(vec_to_raw, [(element, @primitives)], (obj))
+                dispatch!(vec_to_raw, [(element, @primitives_plus)], (obj))
             }
         }
         TypeContents::TUPLE(element_ids) => {
@@ -208,6 +209,24 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         // This list is explicit because it allows us to avoid including u32 in the @primitives
         _ => { dispatch!(plain_to_raw, [(&obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (obj)) }
     }.into()
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
+    raw: *const FfiSlice,
+) -> FfiResult<*mut FfiSlice> {
+    // dereference the pointer
+    let raw = try_as_ref!(raw);
+
+    // read contents as a slice of AnyObjects, and then construct a vector of pointers to each of the elements
+    let vec_any_ptrs = unsafe { slice::from_raw_parts(raw.ptr as *const AnyObject, raw.len) }
+        .iter()
+        .map(|v| v as *const AnyObject)
+        .collect::<Vec<_>>();
+
+    // build a new ffislice out of the pointers
+    Ok(FfiSlice::new(vec_any_ptrs.leak() as *mut _ as *mut c_void, raw.len)).into()
 }
 
 #[no_mangle]
@@ -258,7 +277,7 @@ impl std::fmt::Debug for AnyObject {
 impl PartialEq for AnyObject {
     fn eq(&self, other: &Self) -> bool {
         fn monomorphize<T: 'static + PartialEq>(this: &AnyObject, other: &AnyObject) -> Fallible<bool> {
-            Ok(this.downcast_ref::<T>()?.eq(other.downcast_ref::<T>()?))
+            Ok(this.downcast_ref::<T>()? == other.downcast_ref::<T>()?)
         }
 
         let type_arg = &self.type_;

@@ -4,7 +4,6 @@ pub mod ffi;
 use std::ops::Shr;
 
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
-use crate::domains::PairDomain;
 use crate::error::Fallible;
 use std::fmt::Debug;
 
@@ -75,30 +74,6 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
     ))
 }
 
-pub fn make_basic_composition<DI, DO0, DO1, MI, MO>(measurement0: &Measurement<DI, DO0, MI, MO>, measurement1: &Measurement<DI, DO1, MI, MO>) -> Fallible<Measurement<DI, PairDomain<DO0, DO1>, MI, MO>>
-    where DI: 'static + Domain,
-          DO0: 'static + Domain,
-          DO1: 'static + Domain,
-          MI: 'static + Metric,
-          MO: 'static + Measure {
-    if measurement0.input_domain != measurement1.input_domain {
-        return fallible!(DomainMismatch, "Input domain mismatch");
-    } else if measurement0.input_metric != measurement1.input_metric {
-        return fallible!(MetricMismatch, "Input metric mismatch");
-    } else if measurement0.output_measure != measurement1.output_measure {
-        return fallible!(MeasureMismatch, "Output measure mismatch");
-    }
-
-    Ok(Measurement::new(
-        measurement0.input_domain.clone(),
-        PairDomain::new(measurement0.output_domain.clone(), measurement1.output_domain.clone()),
-        Function::make_basic_composition(&measurement0.function, &measurement1.function),
-        measurement0.input_metric.clone(),
-        measurement0.output_measure.clone(),
-        PrivacyMap::new_fallible(|_d_in| fallible!(NotImplemented)),
-    ))
-}
-
 
 // UNIT TESTS
 #[cfg(test)]
@@ -163,28 +138,6 @@ mod tests {
         let d_in = 99_i32;
         let d_out = chain.map(&d_in).unwrap_test();
         assert_eq!(d_out, 99);
-    }
-
-    #[test]
-    fn test_make_basic_composition() {
-        let input_domain0 = AllDomain::<i32>::new();
-        let output_domain0 = AllDomain::<f32>::new();
-        let function0 = Function::new(|arg: &i32| (arg + 1) as f32);
-        let input_metric0 = L1Distance::<i32>::default();
-        let output_measure0 = MaxDivergence::default();
-        let privacy_relation0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
-        let measurement0 = Measurement::new(input_domain0, output_domain0, function0, input_metric0, output_measure0, privacy_relation0);
-        let input_domain1 = AllDomain::<i32>::new();
-        let output_domain1 = AllDomain::<f64>::new();
-        let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
-        let input_metric1 = L1Distance::<i32>::default();
-        let output_measure1 = MaxDivergence::default();
-        let privacy_relation1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
-        let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_relation1);
-        let composition = make_basic_composition(&measurement0, &measurement1).unwrap_test();
-        let arg = 99;
-        let ret = composition.invoke(&arg).unwrap_test();
-        assert_eq!(ret, (100_f32, 98_f64));
     }
 }
 

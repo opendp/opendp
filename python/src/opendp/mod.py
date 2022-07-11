@@ -120,8 +120,12 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
     def __del__(self):
-        from opendp.core import _measurement_free
-        _measurement_free(self)
+        try:
+            from opendp.core import _measurement_free
+            _measurement_free(self)
+        except ImportError:
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)):
@@ -254,6 +258,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             from opendp.core import _transformation_free
             _transformation_free(self)
         except ImportError:
+            # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
 

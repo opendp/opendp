@@ -27,7 +27,6 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
-use crate::domains::PairDomain;
 use crate::metrics::IntDistance;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
@@ -50,7 +49,7 @@ pub struct Function<DI: Domain, DO: Domain> {
 }
 impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
     fn clone(&self) -> Self {
-        Function {function: self.function.clone()}
+        Function { function: self.function.clone() }
     }
 }
 
@@ -73,14 +72,6 @@ impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
         Self::new_fallible(move |arg| function1(&function0(arg)?))
-    }
-}
-
-impl<DI: 'static + Domain, DO0: 'static + Domain, DO1: 'static + Domain> Function<DI, PairDomain<DO0, DO1>> {
-    pub fn make_basic_composition(function0: &Function<DI, DO0>, function1: &Function<DI, DO1>) -> Self {
-        let function0 = function0.function.clone();
-        let function1 = function1.function.clone();
-        Self::new_fallible(move |arg| Ok((function0(arg)?, function1(arg)?)))
     }
 }
 
@@ -265,7 +256,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
         where MO::Distance: TotalOrd {
-        Ok(d_out >= &self.map(d_in)?)
+        d_out.total_ge(&self.map(d_in)?)
     }
 }
 

@@ -15,6 +15,8 @@ use crate::error::*;
 use crate::ffi::any::AnyObject;
 use crate::domains::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
+use super::any::{AnyMeasurement, AnyTransformation};
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
     PLAIN(&'static str),
@@ -94,7 +96,7 @@ impl ToString for Type {
     fn to_string(&self) -> String {
         let get_id_str = |type_id: &TypeId| Type::of_id(type_id)
             .as_ref().map(ToString::to_string)
-            .unwrap_or_else(|_| "?".to_string());
+            .unwrap_or_else(|_| format!("{:?} {:?}", type_id, TypeId::of::<f64>()));
 
         match &self.contents {
             TypeContents::PLAIN(v) => v.to_string(),
@@ -214,6 +216,9 @@ macro_rules! type_vec {
     ($($names:ty),*) => { vec![$(t!($names)),*] };
 }
 
+pub type AnyMeasurementPtr = *const AnyMeasurement;
+pub type AnyTransformationPtr = *const AnyTransformation;
+
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
     /// (i.e., the ones that appear in FFI function generic args).
@@ -229,6 +234,8 @@ lazy_static! {
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],
@@ -276,7 +283,7 @@ impl TryFrom<&str> for Type {
     type Error = Error;
     fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: `{}`", value))
+        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: {}", value))
     }
 }
 

@@ -1,6 +1,7 @@
-use crate::comb::{make_basic_composition, make_chain_mt, make_chain_tt};
+use crate::comb::{make_chain_mt, make_chain_tt};
 use crate::core::FfiResult;
-use crate::ffi::any::{AnyMeasurement, AnyTransformation, IntoAnyMeasurementOutExt};
+
+use crate::ffi::any::{AnyMeasurement, AnyTransformation};
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_chain_mt(measurement1: *const AnyMeasurement, transformation0: *const AnyTransformation) -> FfiResult<*mut AnyMeasurement> {
@@ -16,52 +17,18 @@ pub extern "C" fn opendp_comb__make_chain_tt(transformation1: *const AnyTransfor
     make_chain_tt(transformation1, transformation0).into()
 }
 
-#[no_mangle]
-pub extern "C" fn opendp_comb__make_basic_composition(measurement0: *const AnyMeasurement, measurement1: *const AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
-    let measurement0 = try_as_ref!(measurement0);
-    let measurement1 = try_as_ref!(measurement1);
-    // This one has a different pattern than most constructors. The result of make_basic_composition()
-    // will be Measurement<AnyDomain, PairDomain, AnyMetric, AnyMeasure>. We need to get back to
-    // AnyMeasurement, but using IntoAnyMeasurementExt::into_any() would double-wrap the input.
-    // That's what IntoAnyMeasurementOutExt::into_any_out() is for.
-    make_basic_composition(measurement0, measurement1).map(IntoAnyMeasurementOutExt::into_any_out).into()
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::core::{Function, Measurement, PrivacyMap, Transformation};
+    use crate::comb::tests::{make_test_transformation, make_test_measurement};
     use crate::core;
-    use crate::metrics::SymmetricDistance;
-    use crate::measures::MaxDivergence;
-    use crate::domains::AllDomain;
-    use crate::error::*;
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
     use crate::ffi::util;
-    use crate::traits::CheckNull;
-    use crate::trans;
 
     use super::*;
 
-    // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
-        Measurement::new(
-            AllDomain::new(),
-            AllDomain::new(),
-            Function::new(|arg: &T| arg.clone()),
-            SymmetricDistance::default(),
-            MaxDivergence::default(),
-            PrivacyMap::new(|d_in| *d_in as f64 + 1.),
-        )
-    }
-
-    // TODO: Find all the places we've duplicated this code and replace with common function.
-    pub fn make_test_transformation<T: Clone + CheckNull>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
-        trans::make_identity(AllDomain::<T>::new(), SymmetricDistance::default()).unwrap_test()
-    }
-
     #[test]
-    fn test_make_chain_mt() -> Fallible<()> {
+    fn test_make_chain_mt_ffi() -> Fallible<()> {
         let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
         let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
         let chain = Result::from(opendp_comb__make_chain_mt(measurement1, transformation0))?;
@@ -91,19 +58,6 @@ mod tests {
         let d_out = core::opendp_core__transformation_map(&chain, d_in);
         let d_out: u32 = Fallible::from(d_out)?.downcast()?;
         assert_eq!(d_out, 999);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_basic_composition() -> Fallible<()> {
-        let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
-        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
-        let basic_composition = Result::from(opendp_comb__make_basic_composition(measurement0, measurement1))?;
-        let arg = AnyObject::new_raw(999);
-        let res = core::opendp_core__measurement_invoke(&basic_composition, arg);
-        let res: (AnyObject, AnyObject) = Fallible::from(res)?.downcast()?;
-        let res: (i32, i32) = (res.0.downcast()?, res.1.downcast()?);
-        assert_eq!(res, (999, 999));
         Ok(())
     }
 }

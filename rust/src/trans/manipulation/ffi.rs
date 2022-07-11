@@ -43,7 +43,7 @@ pub extern "C" fn opendp_trans__make_identity(
                     M::default()).into_any()
             }
             dispatch!(monomorphize, [
-                (M, @dist_dataset),
+                (M, [ChangeOneDistance, InsertDeleteDistance, SymmetricDistance, HammingDistance]),
                 (T, @primitives)
             ], ())
         }
