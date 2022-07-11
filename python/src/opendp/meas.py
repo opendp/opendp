@@ -52,7 +52,8 @@ def make_base_laplace(
 
 def make_base_gaussian(
     scale,
-    D: RuntimeTypeDescriptor = "AllDomain<T>"
+    D: RuntimeTypeDescriptor = "AllDomain<T>",
+    MO: RuntimeTypeDescriptor = "SmoothedMaxDivergence<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
@@ -62,6 +63,8 @@ def make_base_gaussian(
     :param scale: noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
+    :param MO: Output measure. Valid values are SmoothedMaxDivergence<T> or ZeroConcentratedDivergence<T>
+    :type MO: :ref:`RuntimeTypeDescriptor`
     :return: A base_gaussian step.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
@@ -72,19 +75,22 @@ def make_base_gaussian(
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D, generics=["T"])
+    MO = RuntimeType.parse(type_name=MO, generics=["T"])
     T = get_atom_or_infer(D, scale)
     D = D.substitute(T=T)
+    MO = MO.substitute(T=T)
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
     D = py_to_c(D, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D), Measurement))
+    return c_to_py(unwrap(function(scale, D, MO), Measurement))
 
 
 def make_base_analytic_gaussian(

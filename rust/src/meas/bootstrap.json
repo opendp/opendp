@@ -46,6 +46,13 @@
                 "generics": ["T"],
                 "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
                 "is_type": true
+            },
+            {
+                "name": "MO",
+                "default": "SmoothedMaxDivergence<T>",
+                "generics": ["T"],
+                "description": "Output measure. Valid values are SmoothedMaxDivergence<T> or ZeroConcentratedDivergence<T>",
+                "is_type": true
             }
         ],
         "derived_types": [
