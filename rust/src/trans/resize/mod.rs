@@ -19,7 +19,7 @@ impl IsMetricOrdered for InsertDeleteDistance {
     const ORDERED: bool = true;
 }
 
-pub fn make_resize_constant<DA, MI, MO>(
+pub fn make_resize<DA, MI, MO>(
     size: usize,
     atom_domain: DA,
     constant: DA::Carrier,
@@ -83,7 +83,7 @@ mod test {
 
     #[test]
     fn test() -> Fallible<()> {
-        let trans = make_resize_constant::<_, SymmetricDistance, SymmetricDistance>(
+        let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
             3,
             AllDomain::new(),
             "x",

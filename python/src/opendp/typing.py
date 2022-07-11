@@ -205,10 +205,16 @@ class RuntimeType(object):
             return RuntimeType('Tuple', list(map(cls.infer, public_example)))
 
         if isinstance(public_example, list):
-            return RuntimeType('Vec', [
-                cls.infer(public_example[0]) if public_example else UnknownType(
-                    "cannot infer atomic type of empty list")
-            ])
+            if public_example:
+                inner_type = cls.infer(public_example[0])
+                for inner in public_example[1:]:
+                    other_type = cls.infer(inner)
+                    if other_type != inner_type:
+                        raise TypeError(f"vectors must be homogeneously typed, found {inner_type} and {other_type}")
+            else:
+                inner_type = UnknownType("cannot infer atomic type of empty list")
+
+            return RuntimeType('Vec', [inner_type])
 
         if np is not None and isinstance(public_example, np.ndarray):
             if public_example.ndim == 0:
@@ -374,20 +380,20 @@ class Carrier(RuntimeType):
 
 Vec = Carrier('Vec')
 HashMap = Carrier('HashMap')
-i8 = RuntimeType('i8')
-i16 = RuntimeType('i16')
-i32 = RuntimeType('i32')
-i64 = RuntimeType('i64')
-i128 = RuntimeType('i128')
-isize = RuntimeType('isize')
-u8 = RuntimeType('u8')
-u16 = RuntimeType('u16')
-u32 = RuntimeType('u32')
-u64 = RuntimeType('u64')
-u128 = RuntimeType('u128')
-usize = RuntimeType('usize')
-f32 = RuntimeType('f32')
-f64 = RuntimeType('f64')
+i8 = 'i8'
+i16 = 'i16'
+i32 = 'i32'
+i64 = 'i64'
+i128 = 'i128'
+isize = 'isize'
+u8 = 'u8'
+u16 = 'u16'
+u32 = 'u32'
+u64 = 'u64'
+u128 = 'u128'
+usize = 'usize'
+f32 = 'f32'
+f64 = 'f64'
 
 
 class Domain(RuntimeType):

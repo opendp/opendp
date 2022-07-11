@@ -2,7 +2,7 @@
 
 use std::{marker::PhantomData};
 
-use crate::core::{DatasetMetric, Metric, SensitivityMetric};
+use crate::{core::{DatasetMetric, Metric, SensitivityMetric}, domains::type_name};
 use std::fmt::{Debug, Formatter};
 
 // default type for distances between datasets
@@ -108,7 +108,7 @@ impl<Q, const P: usize> PartialEq for LpDistance<Q, P> {
 }
 impl<Q, const P: usize> Debug for LpDistance<Q, P> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "L{}Distance()", P)
+        write!(f, "L{}Distance({})", P, type_name!(Q))
     }
 }
 impl<Q, const P: usize> Metric for LpDistance<Q, P> {
@@ -133,7 +133,7 @@ impl<Q> PartialEq for AbsoluteDistance<Q> {
 }
 impl<Q> Debug for AbsoluteDistance<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "AbsoluteDistance()")
+        write!(f, "AbsoluteDistance({})", type_name!(Q))
     }
 }
 impl<Q> Metric for AbsoluteDistance<Q> {
