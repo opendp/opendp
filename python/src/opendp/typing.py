@@ -56,13 +56,29 @@ RuntimeTypeDescriptor = Union[
 
 
 def set_default_int_type(T: RuntimeTypeDescriptor):
+    """Set the default integer type throughout the library.
+    This function is particularly when building computation chains with constructors.
+    When you build a computation chain, any unspecified integer types default to this int type.
+
+    The default int type is i32.
+    :params T: must be one of [u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize]
+    """
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
-    assert T in equivalence_class, f"T must be an integer type in {equivalence_class}"
+    assert T in equivalence_class, f"T must be one of {equivalence_class}"
 
     ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int])
     ELEMENTARY_TYPES[int] = T
 
+
 def set_default_float_type(T: RuntimeTypeDescriptor):
+    """Set the default float type throughout the library.
+    This function is particularly when building computation chains with constructors.
+    When you build a computation chain, any unspecified float types default to this float type.
+
+    The default float type is f64.
+    :params T: must be one of [f32, f64]
+    """
+
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[float]]
     assert T in equivalence_class, f"T must be a float type in {equivalence_class}"
 
