@@ -82,6 +82,7 @@ def test_default_type():
     assert RuntimeType.parse(int) == i32
     set_default_int_type(u64)
     assert RuntimeType.parse(int) == u64
+    set_default_int_type(i32)
 
 # for a more thorough manual test of the set_default_int_type and set_default_float_type functions:
 # 1. recompile with --release mode

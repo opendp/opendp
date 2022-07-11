@@ -62,7 +62,7 @@ def set_default_int_type(T: RuntimeTypeDescriptor):
     ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int])
     ELEMENTARY_TYPES[int] = T
 
-def set_default_float_Type(T: RuntimeTypeDescriptor):
+def set_default_float_type(T: RuntimeTypeDescriptor):
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[float]]
     assert T in equivalence_class, f"T must be a float type in {equivalence_class}"
 

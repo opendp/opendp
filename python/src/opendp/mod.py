@@ -384,7 +384,7 @@ def binary_search_chain(
     ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_geometric(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
-    >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1.)
+    >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
     ...
     >>> # If you want the discovered clamping bound, use `binary_search_param` instead.
     """

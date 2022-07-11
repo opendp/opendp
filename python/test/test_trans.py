@@ -229,6 +229,7 @@ def test_count():
     assert ret == 3
     assert transformation.check(1, 1)
 
+test_count()
 
 def test_count_distinct():
     from opendp.trans import make_count_distinct
