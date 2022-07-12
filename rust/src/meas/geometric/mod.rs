@@ -51,8 +51,8 @@ impl<T, P> GeometricDomain<P> for VectorDomain<AllDomain<T>>
 pub fn make_base_geometric<D, QO>(
     scale: QO, bounds: Option<(D::Atom, D::Atom)>
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
-    where D: 'static + GeometricDomain<QO>,
-          D::Atom: 'static + TotalOrd + Clone + InfCast<QO>,
+    where D: GeometricDomain<QO>,
+          D::Atom: TotalOrd + Clone,
           QO: 'static + Float + InfCast<D::Atom> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")

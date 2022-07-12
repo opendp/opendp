@@ -186,11 +186,11 @@ mod test {
     #[test]
     fn test_cat_extremes() -> Fallible<()> {
         let ran_res = make_randomized_response(
-            HashSet::from_iter(vec![2, 3, 5, 7].into_iter()),
-            0.25,
+            HashSet::from_iter(vec![2, 3, 5, 7, 8].into_iter()),
+            1. / 5.,
             false,
         )?;
-        assert!(ran_res.check(&1, &0.)?);
+        assert!(ran_res.check(&1, &1e-10)?);
         assert!(make_randomized_response(
             HashSet::from_iter(vec![2, 3, 5, 7].into_iter()),
             1.,
