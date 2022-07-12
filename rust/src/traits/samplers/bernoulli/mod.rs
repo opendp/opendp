@@ -71,7 +71,7 @@ where
             return fallible!(FailedFunction, "probability is not within [0, 1]");
         }
 
-        // if prob == 1., then exponent is T::EXPONENT_PROB and mantissa is zero
+        // if prob == 1., then exponent is T::EXPONENT_BIAS and mantissa is zero
         if prob.is_one() {
             return Ok(true);
         }
@@ -86,15 +86,15 @@ where
             // Thus, it is equivalent to sample i from the truncated geometric, and return false if i > j.
             // j is the index of the last element of the binary expansion that could possibly be 1.
             //    j = max_coin_flips
-            //      = max_{prob} [leading_zeros + mantissa_digits]
-            //      = max_{prob} [leading_zeros + T::MANTISSA_BITS + T::Bits::one()]
-            //      = max_{prob} [T::EXPONENT_PROB - prob.exponent()  + T::MANTISSA_BITS + T::Bits::one()]
-            //      = T::EXPONENT_PROB - min_{prob} [prob.exponent()] + T::MANTISSA_BITS + T::Bits::one()
-            //      = T::EXPONENT_PROB - 0                            + T::MANTISSA_BITS + T::Bits::one()
-            //      = T::EXPONENT_PROB + T::MANTISSA_BITS + T::Bits::one()
-            let max_coin_flips = 1
-                + usize::exact_int_cast(T::EXPONENT_PROB)?
-                + usize::exact_int_cast(T::MANTISSA_BITS)?;
+            //      = max_{prob} [leading_zeros(prob) + mantissa_digits]
+            //      = max_{prob} [max_prob_exponent - exponent(prob) + mantissa_digits]
+            //      = max_{prob} [max_raw_prob_exponent - raw_exponent(prob) + mantissa_digits]
+            //      = max_raw_exponent + mantissa_digits
+            //               where max_raw_prob_exponent = T::EXPONENT_BIAS - 1 because prob < 1.
+            //      = (T::EXPONENT_BIAS - 1) + (T::MANTISSA_BITS + 1)
+            //      = T::EXPONENT_BIAS + T::MANTISSA_BITS
+            let max_coin_flips =
+                usize::exact_int_cast(T::EXPONENT_BIAS)? + usize::exact_int_cast(T::MANTISSA_BITS)?;
 
             // We need to sample at least j bits. The smallest sample size is a byte. Round up to the nearest byte:
             //    buffer_len = j.div_ceil(8)
@@ -117,8 +117,8 @@ where
         // Step 2. index into the binary expansion of prob at first_heads_index to get b_i
 
         // number of leading zeros in binary representation of prob
-        //    exponent is bounded in [0, EXPONENT_PROB] by check for valid probability and one check
-        let leading_zeros = T::EXPONENT_PROB - prob.exponent();
+        //    exponent is bounded in [0, EXPONENT_BIAS - 1] by check for valid probability and one check
+        let leading_zeros = T::EXPONENT_BIAS - T::Bits::one() - prob.exponent();
 
         // if prob is >=.5, then leading_zeros = 0, and b_0 = 1, because the implicit bit is set.
         // if prob is .25,  then leading_zeros = 1, b_0 = 0, b_1 = 1, b_i = 0 for all i > 1
@@ -134,7 +134,7 @@ where
             // all other digits out-of-bounds are not float-approximated/are-implicitly-zero
             i if i > leading_zeros + T::MANTISSA_BITS => false,
             // retrieve the bit from the mantissa at `i` slots shifted from the left
-            i => !(prob.to_bits() & T::Bits::one() << (T::MANTISSA_BITS + leading_zeros - i))
+            i => !(prob.to_bits() & T::Bits::one() << (leading_zeros + T::MANTISSA_BITS - i))
                 .is_zero(),
         })
     }
@@ -169,11 +169,19 @@ mod test {
 
     #[test]
     fn test_bernoulli() {
-        [0.2, 0.5, 0.7, 0.9].iter().for_each(|p|
-            assert!(test_proportion_parameters(
-                || if bool::sample_bernoulli(*p, false).unwrap() {1.} else {0.},
-                *p, 0.00001, *p / 100.),
-                    "empirical evaluation of the bernoulli({:?}) distribution failed", p)
-        )
+        [0.2, 0.5, 0.7, 0.9].iter().for_each(|p| {
+            let sampler = || {
+                if bool::sample_bernoulli(*p, false).unwrap() {
+                    1.
+                } else {
+                    0.
+                }
+            };
+            assert!(
+                test_proportion_parameters(sampler, *p, 0.00001, *p / 100.),
+                "empirical evaluation of the bernoulli({:?}) distribution failed",
+                p
+            )
+        })
     }
 }

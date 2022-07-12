@@ -54,12 +54,8 @@ pub trait FloatBits: Sized + ExactIntCast<Self::Bits> {
     const EXPONENT_BITS: Self::Bits;
     // Number of bits in mantissa, equal to Self::MANTISSA_DIGITS - 1
     const MANTISSA_BITS: Self::Bits;
-    // Greatest number of bits set in exponent when bounded above by 1
-    const EXPONENT_PROB: Self::Bits;
     // Bias correction of the exponent
     const EXPONENT_BIAS: Self::Bits;
-
-    const EXPONENT_UNIFORM_LEN: usize;
 
     fn sign(self) -> bool {
         (self.to_bits() & (Self::Bits::one() << (Self::EXPONENT_BITS + Self::MANTISSA_BITS))) == Self::Bits::zero()
@@ -152,13 +148,8 @@ impl FloatBits for f64 {
     type Bits = u64;
     const EXPONENT_BITS: u64 = 11;
     const MANTISSA_BITS: u64 = 52;
-    // 2^(EXPONENT_BITS - 1) - 2
-    //     subtract one to exclude all numbers >= 1f64
-    //     subtract one for zero indexing
-    const EXPONENT_PROB: u64 = 1022;
     const EXPONENT_BIAS: u64 = 1023;
 
-    const EXPONENT_UNIFORM_LEN: usize = 128;
     fn to_bits(self) -> Self::Bits { self.to_bits() }
 }
 
@@ -166,10 +157,7 @@ impl FloatBits for f32 {
     type Bits = u32;
     const EXPONENT_BITS: u32 = 8;
     const MANTISSA_BITS: u32 = 23;
-    // 2^(EXPONENT_BITS - 1) - 2
-    const EXPONENT_PROB: u32 = 126;
     const EXPONENT_BIAS: u32 = 127;
 
-    const EXPONENT_UNIFORM_LEN: usize = 16;
     fn to_bits(self) -> Self::Bits { self.to_bits() }
 }

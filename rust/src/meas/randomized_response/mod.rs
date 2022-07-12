@@ -1,16 +1,16 @@
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
 
 use std::collections::HashSet;
 use std::hash::Hash;
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::measures::MaxDivergence;
-use crate::metrics::{IntDistance, DiscreteDistance};
 use crate::domains::AllDomain;
 use crate::error::Fallible;
+use crate::measures::MaxDivergence;
+use crate::metrics::{DiscreteDistance, IntDistance};
 use crate::traits::samplers::{SampleBernoulli, SampleUniformInt};
-use crate::traits::{ExactIntCast, CheckNull, DistanceConstant, InfLn, InfSub, InfDiv};
+use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfDiv, InfLn, InfSub};
 use num::Float;
 
 // There are two constructors:
@@ -25,20 +25,27 @@ use num::Float;
 // In the case of privatizing a balanced coin flip,
 //     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
 
-
 pub fn make_randomized_response_bool<Q>(
-    prob: Q, constant_time: bool
+    prob: Q,
+    constant_time: bool,
 ) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, DiscreteDistance, MaxDivergence<Q>>>
-    where bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<IntDistance> + DistanceConstant<IntDistance> + InfDiv + InfSub + InfLn {
-
+where
+    bool: SampleBernoulli<Q>,
+    Q: 'static
+        + Float
+        + ExactIntCast<IntDistance>
+        + DistanceConstant<IntDistance>
+        + InfDiv
+        + InfSub
+        + InfLn,
+{
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(Q::exact_int_cast(2)?.recip()..Q::one()).contains(&prob) {
-        return fallible!(MakeTransformation, "probability must be within [0.5, 1)")
+        return fallible!(MakeTransformation, "probability must be within [0.5, 1)");
     }
 
     // d_out = min(d_in, 1) * ln(p / p')
-    //             where p' = 1 - p   
+    //             where p' = 1 - p
     //       = min(d_in, 1) * ln(p / (1 - p))
     let privacy_constant = prob.inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
@@ -56,34 +63,51 @@ pub fn make_randomized_response_bool<Q>(
             } else {
                 privacy_constant.clone()
             }
-        })
+        }),
     ))
 }
 
 pub fn make_randomized_response<T, Q>(
-    categories: HashSet<T>, prob: Q, constant_time: bool
+    categories: HashSet<T>,
+    prob: Q,
+    constant_time: bool,
 ) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, DiscreteDistance, MaxDivergence<Q>>>
-    where T: 'static + Clone + Eq + Hash + CheckNull,
-          bool: SampleBernoulli<Q>,
-          Q: 'static + Float + ExactIntCast<usize> + DistanceConstant<IntDistance> + InfSub + InfLn + InfDiv {
-
+where
+    T: 'static + Clone + Eq + Hash + CheckNull,
+    bool: SampleBernoulli<Q>,
+    Q: 'static
+        + Float
+        + ExactIntCast<usize>
+        + DistanceConstant<IntDistance>
+        + InfSub
+        + InfLn
+        + InfDiv,
+{
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
-        return fallible!(MakeTransformation, "length of categories must be at least two")
+        return fallible!(
+            MakeTransformation,
+            "length of categories must be at least two"
+        );
     }
     let num_categories = Q::exact_int_cast(categories.len())?;
 
     if !(num_categories.recip()..Q::one()).contains(&prob) {
-        return fallible!(MakeTransformation, "probability must be within [1/num_categories, 1)")
+        return fallible!(
+            MakeTransformation,
+            "probability must be within [1/num_categories, 1)"
+        );
     }
 
-    // d_out = min(d_in, 1) * (p / p').ln() 
+    // d_out = min(d_in, 1) * (p / p').ln()
     //              where p' = the probability of categories off the diagonal
     //                       = (1 - p) / (t - 1)
-    //              where t = num_categories                   
+    //              where t  = num_categories
     //       = min(d_in, 1) * (p / (1 - p) * (t - 1)).ln()
-    let privacy_constant = prob.inf_mul(&num_categories.inf_sub(&Q::one())?)?
-        .inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
+    let privacy_constant = prob
+        .inf_div(&Q::one().neg_inf_sub(&prob)?)?
+        .inf_mul(&num_categories.inf_sub(&Q::one())?)?
+        .inf_ln()?;
 
     Ok(Measurement::new(
         AllDomain::new(),
@@ -95,9 +119,14 @@ pub fn make_randomized_response<T, Q>(
             // randomly sample a lie from among the categories with equal probability
             // if truth in categories, sample among n - 1 categories
             let mut sample = usize::sample_uniform_int_0_u(
-                categories.len() - if index.is_some() { 1 } else { 0 })?;
+                categories.len() - if index.is_some() { 1 } else { 0 },
+            )?;
             // shift the sample by one if index is greater or equal to the index of truth
-            if let Some(i) = index { if sample >= i { sample += 1 } }
+            if let Some(i) = index {
+                if sample >= i {
+                    sample += 1
+                }
+            }
             let lie = &categories[sample];
 
             // return the truth if we chose to be honest and the truth is in the category set
@@ -144,7 +173,9 @@ mod test {
     fn test_cat() -> Fallible<()> {
         let ran_res = make_randomized_response(
             HashSet::from_iter(vec![2, 3, 5, 6].into_iter()),
-            0.75, false)?;
+            0.75,
+            false,
+        )?;
         let res = ran_res.invoke(&3)?;
         println!("{:?}", res);
         // (.75 * 3 / .25) = 9
@@ -156,11 +187,16 @@ mod test {
     fn test_cat_extremes() -> Fallible<()> {
         let ran_res = make_randomized_response(
             HashSet::from_iter(vec![2, 3, 5, 7].into_iter()),
-            0.25, false)?;
+            0.25,
+            false,
+        )?;
         assert!(ran_res.check(&1, &0.)?);
         assert!(make_randomized_response(
             HashSet::from_iter(vec![2, 3, 5, 7].into_iter()),
-            1., false).is_err());
+            1.,
+            false
+        )
+        .is_err());
         Ok(())
     }
 }
