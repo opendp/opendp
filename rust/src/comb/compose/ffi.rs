@@ -1,12 +1,14 @@
+use num::Zero;
+
 use crate::{
     core::FfiResult,
     ffi::{
-        any::{AnyMeasurement, AnyObject, IntoAnyMeasurementOutExt, Downcast},
+        any::{AnyMeasurement, AnyObject, IntoAnyMeasurementOutExt, Downcast, AnyMeasure},
         util::AnyMeasurementPtr,
-    },
+    }, error::Fallible, traits::InfAdd, measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
-use super::make_basic_composition;
+use super::{make_basic_composition, BasicCompositionMeasure};
 
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_basic_composition(
@@ -20,6 +22,30 @@ pub extern "C" fn opendp_comb__make_basic_composition(
     make_basic_composition(measurements)
         .map(IntoAnyMeasurementOutExt::into_any_out)
         .into()
+}
+
+
+impl BasicCompositionMeasure for AnyMeasure {
+    fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
+            self_: &AnyMeasure, d_i: &Vec<AnyObject>
+        ) -> Fallible<AnyObject> {
+
+            fn monomorphize2<M: 'static + BasicCompositionMeasure>(
+                self_: &AnyMeasure, d_i: &Vec<AnyObject>
+            ) -> Fallible<AnyObject>
+                where M::Distance: Clone {
+                self_.downcast_ref::<M>()?.compose(&d_i.iter()
+                    .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
+                    .collect::<Fallible<Vec<M::Distance>>>()?).map(AnyObject::new)
+            }
+            dispatch!(monomorphize2, [
+                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
+            ], (self_, d_i))
+        }
+
+        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, d_i))
+    }
 }
 
 #[cfg(test)]

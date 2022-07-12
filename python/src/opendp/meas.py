@@ -132,7 +132,7 @@ def make_base_analytic_gaussian(
 def make_base_geometric(
     scale,
     bounds: Any = None,
-    D: RuntimeTypeDescriptor = "AllDomain<i32>",
+    D: RuntimeTypeDescriptor = "AllDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the geometric(`scale`) distribution to the input.

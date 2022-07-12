@@ -9,14 +9,9 @@ use std::any;
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
-use num::Zero;
-
-use crate::comb::BasicCompositionMeasure;
 use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
-use crate::measures::{MaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence};
 use crate::err;
 use crate::error::*;
-use crate::traits::InfAdd;
 
 use super::glue::Glue;
 use super::util::Type;
@@ -206,29 +201,6 @@ impl AnyMeasure {
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>()
         }
-    }
-}
-
-impl BasicCompositionMeasure for AnyMeasure {
-    fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
-            self_: &AnyMeasure, d_i: &Vec<AnyObject>
-        ) -> Fallible<AnyObject> {
-
-            fn monomorphize2<M: 'static + BasicCompositionMeasure>(
-                self_: &AnyMeasure, d_i: &Vec<AnyObject>
-            ) -> Fallible<AnyObject>
-                where M::Distance: Clone {
-                self_.downcast_ref::<M>()?.compose(&d_i.iter()
-                    .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
-                    .collect::<Fallible<Vec<M::Distance>>>()?).map(AnyObject::new)
-            }
-            dispatch!(monomorphize2, [
-                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
-            ], (self_, d_i))
-        }
-
-        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, d_i))
     }
 }
 

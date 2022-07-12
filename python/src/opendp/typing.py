@@ -55,6 +55,37 @@ RuntimeTypeDescriptor = Union[
 ]
 
 
+def set_default_int_type(T: RuntimeTypeDescriptor):
+    """Set the default integer type throughout the library.
+    This function is particularly useful when building computation chains with constructors.
+    When you build a computation chain, any unspecified integer types default to this int type.
+
+    The default int type is i32.
+    :params T: must be one of [u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize]
+    """
+    equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
+    assert T in equivalence_class, f"T must be one of {equivalence_class}"
+
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int])
+    ELEMENTARY_TYPES[int] = T
+
+
+def set_default_float_type(T: RuntimeTypeDescriptor):
+    """Set the default float type throughout the library.
+    This function is particularly useful when building computation chains with constructors.
+    When you build a computation chain, any unspecified float types default to this float type.
+
+    The default float type is f64.
+    :params T: must be one of [f32, f64]
+    """
+
+    equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[float]]
+    assert T in equivalence_class, f"T must be a float type in {equivalence_class}"
+
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[float])
+    ELEMENTARY_TYPES[float] = T
+
+
 class RuntimeType(object):
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
@@ -166,6 +197,10 @@ class RuntimeType(object):
             if 0 < start < end < len(type_name):
                 return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end], generics=generics))
             if start == end < 0:
+                if type_name == "int":
+                    return ELEMENTARY_TYPES[int]
+                if type_name == "float":
+                    return ELEMENTARY_TYPES[float]
                 return type_name
 
         if isinstance(type_name, Hashable) and type_name in ELEMENTARY_TYPES:
@@ -205,10 +240,16 @@ class RuntimeType(object):
             return RuntimeType('Tuple', list(map(cls.infer, public_example)))
 
         if isinstance(public_example, list):
-            return RuntimeType('Vec', [
-                cls.infer(public_example[0]) if public_example else UnknownType(
-                    "cannot infer atomic type of empty list")
-            ])
+            if public_example:
+                inner_type = cls.infer(public_example[0])
+                for inner in public_example[1:]:
+                    other_type = cls.infer(inner)
+                    if other_type != inner_type:
+                        raise TypeError(f"vectors must be homogeneously typed, found {inner_type} and {other_type}")
+            else:
+                inner_type = UnknownType("cannot infer atomic type of empty list")
+
+            return RuntimeType('Vec', [inner_type])
 
         if np is not None and isinstance(public_example, np.ndarray):
             if public_example.ndim == 0:
@@ -374,20 +415,20 @@ class Carrier(RuntimeType):
 
 Vec = Carrier('Vec')
 HashMap = Carrier('HashMap')
-i8 = RuntimeType('i8')
-i16 = RuntimeType('i16')
-i32 = RuntimeType('i32')
-i64 = RuntimeType('i64')
-i128 = RuntimeType('i128')
-isize = RuntimeType('isize')
-u8 = RuntimeType('u8')
-u16 = RuntimeType('u16')
-u32 = RuntimeType('u32')
-u64 = RuntimeType('u64')
-u128 = RuntimeType('u128')
-usize = RuntimeType('usize')
-f32 = RuntimeType('f32')
-f64 = RuntimeType('f64')
+i8 = 'i8'
+i16 = 'i16'
+i32 = 'i32'
+i64 = 'i64'
+i128 = 'i128'
+isize = 'isize'
+u8 = 'u8'
+u16 = 'u16'
+u32 = 'u32'
+u64 = 'u64'
+u128 = 'u128'
+usize = 'usize'
+f32 = 'f32'
+f64 = 'f64'
 
 
 class Domain(RuntimeType):

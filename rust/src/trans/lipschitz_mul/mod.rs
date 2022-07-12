@@ -105,8 +105,8 @@ where
 /// Implemented for any metric that supports multiplication lipschitz extensions
 pub trait LipschitzMulFloatMetric: Metric {}
 
-impl<T, const P: usize> LipschitzMulFloatMetric for LpDistance<T, P> {}
-impl<T> LipschitzMulFloatMetric for AbsoluteDistance<T> {}
+impl<const P: usize, Q> LipschitzMulFloatMetric for LpDistance<P, Q> {}
+impl<Q> LipschitzMulFloatMetric for AbsoluteDistance<Q> {}
 
 #[cfg(test)]
 pub mod test {

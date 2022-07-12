@@ -34,15 +34,21 @@ def test_fix_delta():
 def test_make_basic_composition():
     from opendp.comb import make_basic_composition
     composed = make_basic_composition([
-        make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
-        make_count(TIA=int, TO=int) >> make_base_geometric(scale=200.), 
+        make_count(TIA=int, TO=int) >> make_basic_composition([
+            make_base_geometric(scale=2.), 
+            make_base_geometric(scale=200.)
+        ]), 
         make_cast_default(int, bool) >> make_cast_default(bool, int) >> make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
         make_cast_default(int, float) >> make_clamp((0., 10.)) >> make_bounded_sum((0., 10.)) >> make_base_laplace(scale=2.), 
 
         make_basic_composition([
             make_count(TIA=int, TO=int) >> make_base_geometric(scale=2.), 
             make_count(TIA=int, TO=float) >> make_base_laplace(scale=2.),
-            make_cast_default(int, str) >> make_count_by_categories(categories=["0", "12", "22"]) >> make_base_geometric(scale=2., D=VectorDomain[AllDomain[int]]),
+            (
+                make_cast_default(int, str) >> 
+                make_count_by_categories(categories=["0", "12", "22"]) >> 
+                make_base_geometric(scale=2., D=VectorDomain[AllDomain[int]])
+            )
         ])
     ])
 

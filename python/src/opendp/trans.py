@@ -601,7 +601,7 @@ def make_unclamp(
 
 def make_count(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "i32"
+    TO: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
@@ -635,7 +635,7 @@ def make_count(
 
 def make_count_distinct(
     TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "i32"
+    TO: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
@@ -670,7 +670,7 @@ def make_count_distinct(
 def make_count_by(
     MO: SensitivityMetric,
     TK: RuntimeTypeDescriptor,
-    TV: RuntimeTypeDescriptor = "i32"
+    TV: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown.
@@ -709,9 +709,9 @@ def make_count_by(
 
 def make_count_by_categories(
     categories: Any,
-    MO: SensitivityMetric = "L1Distance<i32>",
+    MO: SensitivityMetric = "L1Distance<int>",
     TIA: RuntimeTypeDescriptor = None,
-    TOA: RuntimeTypeDescriptor = "i32"
+    TOA: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
@@ -1238,9 +1238,9 @@ def make_sized_bounded_mean(
 def make_resize(
     size: int,
     constant: Any,
-    TA: RuntimeTypeDescriptor = None,
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    MO: RuntimeTypeDescriptor = "InsertDeleteDistance"
+    MO: RuntimeTypeDescriptor = "InsertDeleteDistance",
+    TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     
@@ -1248,12 +1248,12 @@ def make_resize(
     :type size: int
     :param constant: Value to impute with.
     :type constant: Any
-    :param TA: Atomic type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
     :param MI: Input metric.
     :type MI: :ref:`RuntimeTypeDescriptor`
     :param MO: Output metric.
     :type MO: :ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic type.
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1263,32 +1263,32 @@ def make_resize(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=constant)
     MI = RuntimeType.parse(type_name=MI)
     MO = RuntimeType.parse(type_name=MO)
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=constant)
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=TA)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_resize
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, constant, TA, MI, MO), Transformation))
+    return c_to_py(unwrap(function(size, constant, MI, MO, TA), Transformation))
 
 
 def make_bounded_resize(
     size: int,
     bounds: Tuple[Any, Any],
     constant,
-    TA: RuntimeTypeDescriptor = None,
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    MO: RuntimeTypeDescriptor = "SymmetricDistance"
+    MO: RuntimeTypeDescriptor = "SymmetricDistance",
+    TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
     
@@ -1297,12 +1297,12 @@ def make_bounded_resize(
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
     :param constant: Value to impute with.
-    :param TA: Atomic type. If not passed, TA is inferred from the lower bound.
-    :type TA: :ref:`RuntimeTypeDescriptor`
     :param MI: Input metric.
     :type MI: :ref:`RuntimeTypeDescriptor`
     :param MO: Output metric.
     :type MO: :ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic type. If not passed, TA is inferred from the lower bound.
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1312,24 +1312,24 @@ def make_bounded_resize(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     MI = RuntimeType.parse(type_name=MI)
     MO = RuntimeType.parse(type_name=MO)
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     
     # Convert arguments to c types.
     size = py_to_c(size, c_type=ctypes.c_uint)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
     constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=TA)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_bounded_resize
     function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, constant, TA, MI, MO), Transformation))
+    return c_to_py(unwrap(function(size, bounds, constant, MI, MO, TA), Transformation))
 
 
 def make_bounded_sum(

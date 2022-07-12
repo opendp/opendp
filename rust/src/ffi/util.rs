@@ -7,7 +7,6 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::trans::{Sequential, Pairwise};
 use crate::{err, fallible};
 use crate::metrics::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, InsertDeleteDistance, HammingDistance};
 use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
@@ -16,6 +15,16 @@ use crate::ffi::any::AnyObject;
 use crate::domains::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
 
 use super::any::{AnyMeasurement, AnyTransformation};
+
+// If untrusted is not enabled, then these structs don't exist. 
+#[cfg(feature="untrusted")]
+use crate::trans::{Sequential, Pairwise};
+#[cfg(not(feature="untrusted"))]
+use std::marker::PhantomData;
+#[cfg(not(feature="untrusted"))]
+pub struct Sequential<T>(PhantomData<T>);
+#[cfg(not(feature="untrusted"))]
+pub struct Pairwise<T>(PhantomData<T>);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {

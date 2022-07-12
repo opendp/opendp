@@ -3,7 +3,7 @@ import sys
 from typing import List, Tuple, Any
 
 from opendp.mod import *
-from opendp.typing import RuntimeType, L1Distance, SensitivityMetric, L2Distance, DatasetMetric
+from opendp.typing import *
 
 
 try:
@@ -76,3 +76,18 @@ def test_set_feature():
 
     disable_features("A")
     assert "A" not in GLOBAL_FEATURES
+
+
+def test_default_type():
+    assert RuntimeType.parse(int) == i32
+    set_default_int_type(u64)
+    assert RuntimeType.parse(int) == u64
+    set_default_int_type(i32)
+
+# for a more thorough manual test of the set_default_int_type and set_default_float_type functions:
+# 1. recompile with --release mode
+# 2. set OPENDP_TEST_RELEASE
+# 3. uncomment these commands
+#    set_default_int_type(i64)
+#    set_default_float_type(f32)
+# 4. run pytest, and sanity check the failures
