@@ -118,7 +118,7 @@ where
 
         // number of leading zeros in binary representation of prob
         //    exponent is bounded in [0, EXPONENT_BIAS - 1] by check for valid probability and one check
-        let leading_zeros = T::EXPONENT_BIAS - T::Bits::one() - prob.exponent();
+        let leading_zeros = T::EXPONENT_BIAS - T::Bits::one() - prob.raw_exponent();
 
         // if prob is >=.5, then leading_zeros = 0, and b_0 = 1, because the implicit bit is set.
         // if prob is .25,  then leading_zeros = 1, b_0 = 0, b_1 = 1, b_i = 0 for all i > 1
@@ -130,7 +130,7 @@ where
             // index into the leading zeros of the binary representation
             i if i < leading_zeros => false,
             // mantissa bit index -1 is implicitly set in ieee-754 when the exponent is nonzero
-            i if i == leading_zeros => !prob.exponent().is_zero(),
+            i if i == leading_zeros => !prob.raw_exponent().is_zero(),
             // all other digits out-of-bounds are not float-approximated/are-implicitly-zero
             i if i > leading_zeros + T::MANTISSA_BITS => false,
             // retrieve the bit from the mantissa at `i` slots shifted from the left

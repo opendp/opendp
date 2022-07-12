@@ -1,9 +1,9 @@
-use std::mem::size_of;
+use std::{mem::size_of, ops::Sub};
 
 use crate::{error::Fallible, traits::{FloatBits, ExactIntCast, InfDiv}};
 
 use super::{fill_bytes, sample_geometric_buffer};
-use ieee754::Ieee754;
+use num::One;
 
 pub trait SampleUniform: Sized {
 
@@ -43,10 +43,9 @@ pub trait SampleUniform: Sized {
 
 impl<T, B> SampleUniform for T
     where 
-        T: SampleMantissa<Bits=B> + Ieee754<Bits=B, Exponent=i16, Significand=B>,
-        usize: ExactIntCast<B> + InfDiv,
-        i16: ExactIntCast<B>,
-        B: ExactIntCast<usize> {
+        T: SampleMantissa<Bits=B>,
+        B: ExactIntCast<usize> + Sub<Output=B> + One,
+        usize: ExactIntCast<B> {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
         // The unbiased exponent of Uniform([0, 1)) is in 
         //   f64: [-1023, -1]; f32: [-127, -1]
@@ -78,13 +77,11 @@ impl<T, B> SampleUniform for T
             }
         };
 
-        // Transform [0, 1022] -> [-1023, -1]
-        let exponent = -i16::exact_int_cast(truncated_geometric_sample)? - 1;
-
+        let raw_exponent = T::EXPONENT_BIAS - B::one() - truncated_geometric_sample;
         let mantissa = T::sample_mantissa()?;
 
         // Generate uniform random number from [0,1)
-        Ok(Self::recompose(false, exponent, mantissa))
+        Ok(Self::from_raw_components(false, raw_exponent, mantissa))
     }
 }
 

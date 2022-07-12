@@ -207,7 +207,7 @@ where
     }
 
     let exponent_bias = T::exact_int_cast(T::EXPONENT_BIAS)?;
-    let exponent = T::exact_int_cast(x.exponent())?;
+    let exponent = T::exact_int_cast(x.raw_exponent())?;
     // this subtraction is on small whole integers, so is exact
     let exponent_unbiased = exponent - exponent_bias;
 
