@@ -57,7 +57,7 @@ RuntimeTypeDescriptor = Union[
 
 def set_default_int_type(T: RuntimeTypeDescriptor):
     """Set the default integer type throughout the library.
-    This function is particularly when building computation chains with constructors.
+    This function is particularly useful when building computation chains with constructors.
     When you build a computation chain, any unspecified integer types default to this int type.
 
     The default int type is i32.
@@ -72,7 +72,7 @@ def set_default_int_type(T: RuntimeTypeDescriptor):
 
 def set_default_float_type(T: RuntimeTypeDescriptor):
     """Set the default float type throughout the library.
-    This function is particularly when building computation chains with constructors.
+    This function is particularly useful when building computation chains with constructors.
     When you build a computation chain, any unspecified float types default to this float type.
 
     The default float type is f64.

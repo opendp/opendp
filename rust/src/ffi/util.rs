@@ -7,8 +7,6 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-#[cfg(feature="untrusted")]
-use crate::trans::{Sequential, Pairwise};
 use crate::{err, fallible};
 use crate::metrics::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, InsertDeleteDistance, HammingDistance};
 use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
@@ -18,6 +16,9 @@ use crate::domains::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain,
 
 use super::any::{AnyMeasurement, AnyTransformation};
 
+// If untrusted is not enabled, then these structs don't exist. 
+#[cfg(feature="untrusted")]
+use crate::trans::{Sequential, Pairwise};
 #[cfg(not(feature="untrusted"))]
 use std::marker::PhantomData;
 #[cfg(not(feature="untrusted"))]

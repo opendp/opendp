@@ -2,7 +2,7 @@ import pytest
 from opendp.mod import enable_features
 from opendp.meas import *
 from opendp.trans import *
-from opendp.typing import AllDomain, L1Distance, VectorDomain, set_default_int_type
+from opendp.typing import AllDomain, L1Distance, VectorDomain
 
 enable_features("floating-point", "contrib")
 
