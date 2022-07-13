@@ -235,7 +235,7 @@ pub mod test {
         let base_geometric = make_base_geometric::<AllDomain<i8>, f64>(scale, None)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_geometric.invoke(&0).unwrap_test().abs() >= accuracy)
+            .filter(|_| base_geometric.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
             .count() as f64 / n as f64;
 
         println!("Geometric significance levels/alpha");

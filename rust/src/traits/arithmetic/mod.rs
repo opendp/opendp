@@ -372,10 +372,16 @@ macro_rules! impl_int_inf {
         $(impl_int_inf!{$ty, InfMul, inf_mul, neg_inf_mul, alerting_mul})+
         $(impl InfDiv for $ty {
             fn inf_div(&self, other: &Self) -> Fallible<Self> {
-                self.alerting_add(&1)?.alerting_div(other)
+                if other == &0 {
+                    return fallible!(FailedFunction, "attempt to divide by zero");
+                }
+                Ok(num::Integer::div_ceil(self, other))
             }
             fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-                self.alerting_div(other)
+                if other == &0 {
+                    return fallible!(FailedFunction, "attempt to divide by zero");
+                }
+                Ok(num::Integer::div_floor(self, other))
             }
         })+
     }

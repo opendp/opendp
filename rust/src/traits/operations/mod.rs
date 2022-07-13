@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{BitAnd, Shl, Shr, Sub};
+use std::ops::{BitAnd, Shl, Shr, Sub, BitOr};
 
 use num::{One, Zero};
 
@@ -46,29 +46,37 @@ pub trait TotalOrd: PartialOrd + Sized {
 }
 
 
-pub trait FloatBits: Sized + ExactIntCast<Self::Bits> {
+pub trait FloatBits: Copy + Sized + ExactIntCast<Self::Bits> {
     type Bits: Copy + One + Zero + Eq
     + Shr<Output=Self::Bits> + Shl<Output=Self::Bits>
-    + BitAnd<Output=Self::Bits> + Sub<Output=Self::Bits>;
+    + BitAnd<Output=Self::Bits> + BitOr<Output=Self::Bits> + Sub<Output=Self::Bits> + From<bool>;
     // Number of bits in exponent
     const EXPONENT_BITS: Self::Bits;
     // Number of bits in mantissa, equal to Self::MANTISSA_DIGITS - 1
     const MANTISSA_BITS: Self::Bits;
-    // Greatest number of bits set in exponent when bounded above by 1
-    const EXPONENT_PROB: Self::Bits;
     // Bias correction of the exponent
     const EXPONENT_BIAS: Self::Bits;
 
     fn sign(self) -> bool {
-        (self.to_bits() & (Self::Bits::one() << (Self::EXPONENT_BITS + Self::MANTISSA_BITS))) == Self::Bits::zero()
+        !(self.to_bits() & (Self::Bits::one() << (Self::EXPONENT_BITS + Self::MANTISSA_BITS))).is_zero()
     }
-    fn exponent(self) -> Self::Bits {
+    fn raw_exponent(self) -> Self::Bits {
         (self.to_bits() >> Self::MANTISSA_BITS) & ((Self::Bits::one() << Self::EXPONENT_BITS) - Self::Bits::one())
     }
     fn mantissa(self) -> Self::Bits {
         self.to_bits() & ((Self::Bits::one() << Self::MANTISSA_BITS) - Self::Bits::one())
     }
+    fn from_raw_components(sign: bool, raw_exponent: Self::Bits, mantissa: Self::Bits) -> Self {
+        let sign = Self::Bits::from(sign) << (Self::EXPONENT_BITS + Self::MANTISSA_BITS);
+        let raw_exponent = raw_exponent << Self::MANTISSA_BITS;
+
+        Self::from_bits(sign | raw_exponent | mantissa)
+    }
+    fn to_raw_components(self) -> (bool, Self::Bits, Self::Bits) {
+        (self.sign(), self.raw_exponent(), self.mantissa())
+    }
     fn to_bits(self) -> Self::Bits;
+    fn from_bits(bits: Self::Bits) -> Self;
 }
 
 
@@ -150,20 +158,36 @@ impl FloatBits for f64 {
     type Bits = u64;
     const EXPONENT_BITS: u64 = 11;
     const MANTISSA_BITS: u64 = 52;
-    // 2^(EXPONENT_BITS - 1) - 2
-    //     subtract one to exclude all numbers >= 1f64
-    //     subtract one for zero indexing
-    const EXPONENT_PROB: u64 = 1022;
     const EXPONENT_BIAS: u64 = 1023;
+
     fn to_bits(self) -> Self::Bits { self.to_bits() }
+    fn from_bits(bits: Self::Bits) -> Self { Self::from_bits(bits) }
 }
 
 impl FloatBits for f32 {
     type Bits = u32;
     const EXPONENT_BITS: u32 = 8;
     const MANTISSA_BITS: u32 = 23;
-    // 2^(EXPONENT_BITS - 1) - 2
-    const EXPONENT_PROB: u32 = 126;
     const EXPONENT_BIAS: u32 = 127;
+
     fn to_bits(self) -> Self::Bits { self.to_bits() }
+    fn from_bits(bits: Self::Bits) -> Self { Self::from_bits(bits) }
+}
+
+#[cfg(test)]
+mod test_floatbits {
+    use super::*;
+    use crate::traits::samplers::SampleUniform;
+
+    #[test]
+    fn roundtrip_sign_exponent_mantissa() -> Fallible<()> {
+        for _ in 0..1000 {
+            let unif = f64::sample_standard_uniform(false)?;
+            println!("{:?}", unif);
+            let (sign, raw_exponent, mantissa) = unif.to_raw_components();
+            let reconst = f64::from_raw_components(sign, raw_exponent, mantissa);
+            assert_eq!(unif, reconst);
+        }
+        Ok(())
+    }
 }

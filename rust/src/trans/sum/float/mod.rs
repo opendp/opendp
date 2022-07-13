@@ -13,7 +13,7 @@ use crate::{
     error::Fallible,
     traits::{
         AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfCast, InfDiv, InfLog2, InfMul,
-        InfPow, InfSub, SaturatingAdd, TotalOrd, SaturatingMul,
+        InfPow, InfSub, SaturatingAdd, TotalOrd, SaturatingMul, InfExp,
     },
 };
 
@@ -32,6 +32,7 @@ pub trait Float:
     + InfDiv
     + InfPow
     + InfLog2
+    + InfExp
     + std::iter::Sum<Self>
     + FloatBits
     + ExactIntCast<Self::Bits>
@@ -57,6 +58,7 @@ impl<T> Float for T where
         + InfDiv
         + InfPow
         + InfLog2
+        + InfExp
         + std::iter::Sum<T>
         + ExactIntCast<T::Bits>
         + FloatBits

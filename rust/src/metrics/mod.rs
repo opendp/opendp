@@ -140,3 +140,23 @@ impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
 impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
+
+
+#[derive(Clone)]
+pub struct DiscreteDistance;
+
+impl Default for DiscreteDistance {
+    fn default() -> Self { DiscreteDistance }
+}
+
+impl PartialEq for DiscreteDistance {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+impl Debug for DiscreteDistance {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "DiscreteDistance()")
+    }
+}
+impl Metric for DiscreteDistance {
+    type Distance = IntDistance;
+}

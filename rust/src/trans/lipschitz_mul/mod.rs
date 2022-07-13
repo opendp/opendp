@@ -48,7 +48,7 @@ where
     let output_mag = input_mag.inf_mul(&constant.alerting_abs()?)?;
 
     // retrieve the unbiased exponent from the largest output magnitude float w
-    let max_exponent = D::Atom::exact_int_cast(output_mag.exponent())?;
+    let max_exponent = D::Atom::exact_int_cast(output_mag.raw_exponent())?;
     let max_unbiased_exponent = max_exponent.neg_inf_sub(&exponent_bias)?;
 
     // greatest possible error is the ulp of the greatest possible output

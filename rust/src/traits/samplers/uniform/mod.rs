@@ -1,9 +1,9 @@
-use std::cmp;
+use std::{mem::size_of, ops::Sub};
 
-use crate::{error::Fallible, traits::FloatBits};
+use crate::{error::Fallible, traits::{FloatBits, ExactIntCast, InfDiv}};
 
-use super::fill_bytes;
-use ieee754::Ieee754;
+use super::{fill_bytes, sample_geometric_buffer};
+use num::One;
 
 pub trait SampleUniform: Sized {
 
@@ -41,90 +41,74 @@ pub trait SampleUniform: Sized {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self>;
 }
 
-impl SampleUniform for f64 {
+impl<T, B> SampleUniform for T
+    where 
+        T: SampleMantissa<Bits=B>,
+        B: ExactIntCast<usize> + Sub<Output=B> + One,
+        usize: ExactIntCast<B> {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
+        // The unbiased exponent of Uniform([0, 1)) is in 
+        //   f64: [-1023, -1]; f32: [-127, -1]
+        //
+        // # Lower bound:
+        // Zero and subnormal numbers have a biased exponent of 0 -> an unbiased exponent of -1023 or -127
+        // 
+        // # Upper bound of -1:
+        // A saturated mantissa is ~2, so the unbiased exponent must be <= -1, because Uniform([0, 1)) is < 1.
+        //   sign     exp    mantissa
+        //   (-1)^0 * 2^-1 * 1.9999... ~ 1
 
-        // A saturated mantissa with implicit bit is ~2
-        let exponent: i16 = -(1 + f64::sample_exponent(constant_time)? as i16);
+        let max_coin_flips = usize::exact_int_cast(T::EXPONENT_BIAS)? - 1;
+        
+        // round up to the next number of bytes. 128 for f64, 16 for f32
+        let buffer_len = max_coin_flips.inf_div(&8)?;
 
-        let mantissa: u64 = {
-            let mut mantissa_buffer = [0u8; 8];
-            // mantissa bit index zero is implicit
-            fill_bytes(&mut mantissa_buffer[1..])?;
-            // limit the buffer to 52 bits
-            mantissa_buffer[1] %= 16;
+        // Use rejection sampling to draw ~ TruncatedGeometric(p=0.5, bounds=[0, buffer_len * 8])
+        // Reject samples > max_coin_flips to redistribute the probability amongst all exponent bands
+        let truncated_geometric_sample = loop {
+            // find index of the first true bit in a randomly sampled byte buffer
+            let sample = sample_geometric_buffer(buffer_len, constant_time)?
+                // reject success on extra trailing bits of last byte in the buffer
+                .and_then(|v| (v < max_coin_flips).then(|| v));
 
-            // convert mantissa to integer
-            u64::from_be_bytes(mantissa_buffer)
+            if let Some(e) = sample {
+                // cast to the bits type. This cast is lossless and infallible
+                break B::exact_int_cast(e)?
+            }
         };
 
+        let raw_exponent = T::EXPONENT_BIAS - B::one() - truncated_geometric_sample;
+        let mantissa = T::sample_mantissa()?;
+
         // Generate uniform random number from [0,1)
-        Ok(Self::recompose(false, exponent, mantissa))
+        Ok(Self::from_raw_components(false, raw_exponent, mantissa))
     }
 }
 
-impl SampleUniform for f32 {
-    fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
-        f64::sample_standard_uniform(constant_time).map(|v| v as f32)
-    }
+trait SampleMantissa: FloatBits {
+    fn sample_mantissa() -> Fallible<Self::Bits>;
 }
 
-
-pub trait SampleExponent: FloatBits {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits>;
-}
-impl SampleExponent for f64 {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
-        // return index of the first true bit in a randomly sampled 128 byte buffer
-        // return 1022 if no events occurred because 1023 is specially reserved for inf, -inf, NaN
-        //     (incurs a slight violation of DP)
-        let sample = sample_geometric_buffer::<128>(constant_time)?.unwrap_or(1022);
-        Ok(cmp::min(sample, 1022) as Self::Bits)
-    }
-}
-impl SampleExponent for f32 {
-    fn sample_exponent(constant_time: bool) -> Fallible<Self::Bits> {
-        // return index of the first true bit in a randomly sampled 16 byte buffer
-        // return 126 if no events occurred because 127 is specially reserved for inf, -inf, NaN
-        //     (incurs a slight violation of DP)
-        let sample = sample_geometric_buffer::<16>(constant_time)?.unwrap_or(126);
-        Ok(cmp::min(sample, 126) as Self::Bits)
-    }
-}
-
-
-/// Return sample from a Geometric distribution with parameter p=0.5.
-///
-/// The algorithm generates B * 8 bits at random and returns
-/// - Some(index of the first set bit)
-/// - None (if all bits are 0)
-///
-/// This is a lower-level version of the sample_geometric trait
-fn sample_geometric_buffer<const B: usize>(constant_time: bool) -> Fallible<Option<usize>> {
-    Ok(if constant_time {
-        let mut buffer = [0_u8; B];
-        fill_bytes(&mut buffer)?;
-        buffer.iter().enumerate()
-            // ignore samples that contain no events
-            .filter(|(_, &sample)| sample > 0)
-            // compute the index of the smallest event in the batch
-            .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
-            // retrieve the smallest index
-            .min()
-
-    } else {
-        // retrieve up to B bytes, each containing 8 trials
-        for i in 0..B {
-            let mut buffer = vec![0_u8; 1];
-            fill_bytes(&mut buffer)?;
-
-            if buffer[0] > 0 {
-                return Ok(Some(i * 8 + buffer[0].leading_zeros() as usize))
-            }
+macro_rules! impl_sample_mantissa {
+    ($ty:ty, $mask:literal) => (impl SampleMantissa for $ty {
+        fn sample_mantissa() -> Fallible<Self::Bits> {
+            // Of a 64 or 32 bit buffer, we want the first 12 or 9 bits to be zero, 
+            //    and the last 52 or 23 bits to be uniformly random
+            let mut mantissa_buffer = [0u8; size_of::<Self>()];
+            // Fill the last 56 or 24 bits with randomness.
+            fill_bytes(&mut mantissa_buffer[1..])?;
+            // Clear the leftmost 4 or 1 bits of the second byte
+            mantissa_buffer[1] &= $mask;
+    
+            // convert buffer to integer bits
+            Ok(Self::Bits::from_be_bytes(mantissa_buffer))
         }
-        None
     })
 }
+
+impl_sample_mantissa!(f64, 0b00001111);
+impl_sample_mantissa!(f32, 0b01111111);
+
 
 pub trait SampleUniformInt: Sized {
     /// sample uniformly from [Self::MIN, Self::MAX]
@@ -138,7 +122,7 @@ macro_rules! impl_sample_uniform_unsigned_int {
         impl SampleUniformInt for $ty {
             fn sample_uniform_int() -> Fallible<Self> {
                 let mut buffer = [0; core::mem::size_of::<Self>()];
-                fill_bytes(&mut buffer).unwrap();
+                fill_bytes(&mut buffer)?;
                 Ok(Self::from_be_bytes(buffer))
             }
             fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
@@ -175,4 +159,5 @@ mod test_uniform_int {
         println!("{:?}", counts);
         Ok(())
     }
+
 }
