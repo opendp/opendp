@@ -63,8 +63,8 @@ impl<T, B> SampleUniform for T
         // round up to the next number of bytes. 128 for f64, 16 for f32
         let buffer_len = max_coin_flips.inf_div(&8)?;
 
-        // Use rejection sampling to draw ~ TruncatedGeometric(p=0.5, bounds=[0, 1022])
-        // Reject samples > 1022 to redistribute the probability amongst all exponent bands
+        // Use rejection sampling to draw ~ TruncatedGeometric(p=0.5, bounds=[0, buffer_len * 8])
+        // Reject samples > max_coin_flips to redistribute the probability amongst all exponent bands
         let truncated_geometric_sample = loop {
             // find index of the first true bit in a randomly sampled byte buffer
             let sample = sample_geometric_buffer(buffer_len, constant_time)?

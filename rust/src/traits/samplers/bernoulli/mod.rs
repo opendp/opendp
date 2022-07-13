@@ -117,7 +117,9 @@ where
         // Step 2. index into the binary expansion of prob at first_heads_index to get b_i
 
         // number of leading zeros in binary representation of prob
-        //    exponent is bounded in [0, EXPONENT_BIAS - 1] by check for valid probability and one check
+        //    exponent is bounded in [0, EXPONENT_BIAS - 1] by:
+        //      1. check for valid probability
+        //      2. and by returning when prob == 1
         let leading_zeros = T::EXPONENT_BIAS - T::Bits::one() - prob.raw_exponent();
 
         // if prob is >=.5, then leading_zeros = 0, and b_0 = 1, because the implicit bit is set.
