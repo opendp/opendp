@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::{c_char, c_void, c_double};
 
 use num::Float;
 
@@ -44,19 +44,16 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_analytic_gaussian(
-    scale: *const c_void,
+    scale: c_double,
     D: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement> where
-        D: 'static + GaussianDomain,
-        D::Atom: 'static + Clone + SampleGaussian + Float + InfCast<f64> + CheckNull,
-        f64: InfCast<D::Atom> {
-        let scale = *try_as_ref!(scale as *const D::Atom);
+    fn monomorphize<D>(scale: f64) -> FfiResult<*mut AnyMeasurement> where
+        D: 'static + GaussianDomain<Atom=f64> {
         make_base_analytic_gaussian::<D>(scale).into_any()
     }
     let D = try_!(Type::try_from(D));
     dispatch!(monomorphize, [
-        (D, [AllDomain<f64>, AllDomain<f32>, VectorDomain<AllDomain<f64>>, VectorDomain<AllDomain<f32>>])
+        (D, [AllDomain<f64>, VectorDomain<AllDomain<f64>>])
     ], (scale))
 }
 
@@ -74,7 +71,7 @@ mod tests {
     #[test]
     fn test_make_base_gaussian() -> Fallible<()> {
         let measurement = Result::from(opendp_meas__make_base_analytic_gaussian(
-            util::into_raw(0.0) as *const c_void, "AllDomain<f64>".to_char_p()))?;
+            0.0 as c_double, "AllDomain<f64>".to_char_p()))?;
         let arg = AnyObject::new_raw(1.0);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);
         let res: f64 = Fallible::from(res)?.downcast()?;
