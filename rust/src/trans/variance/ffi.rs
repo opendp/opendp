@@ -7,7 +7,8 @@ use crate::domains::AllDomain;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::trans::{make_sized_bounded_variance, Float, UncheckedSum, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Sequential, Pairwise};
+use crate::trans::{make_sized_bounded_variance, UncheckedSum, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Sequential, Pairwise};
+use crate::traits::Float;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_sized_bounded_variance(

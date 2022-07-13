@@ -1,8 +1,8 @@
-use std::ops::{AddAssign, SubAssign, Sub};
+use std::ops::{SubAssign, Sub, AddAssign};
 
-use num::{Bounded, Zero, One, clamp};
+use num::{Zero, One, clamp};
 
-use crate::{error::Fallible, traits::{TotalOrd, AlertingSub, ExactIntCast}, trans::Float};
+use crate::{error::Fallible, traits::{TotalOrd, AlertingSub, ExactIntCast, FiniteBounds, Float}};
 
 use super::{SampleBernoulli, SampleStandardBernoulli, fill_bytes};
 
@@ -38,7 +38,7 @@ pub trait SampleGeometric<P>: Sized {
 
 impl<T, P> SampleGeometric<P> for T
     where 
-        T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + Bounded,
+        T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + FiniteBounds,
         P: Float,
         bool: SampleBernoulli<P> {
 
@@ -47,7 +47,7 @@ impl<T, P> SampleGeometric<P> for T
         // ensure that prob is a valid probability
         if !(P::zero()..=P::one()).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
-        let bound = if positive { Self::max_value() } else { Self::min_value() };
+        let bound = if positive { Self::MAX_FINITE } else { Self::MIN_FINITE };
         let mut success: bool = false;
 
         // loop must increment at least once
@@ -106,7 +106,7 @@ pub trait SampleTwoSidedGeometric<P>: SampleGeometric<P> {
 
 impl<T, P> SampleTwoSidedGeometric<P> for T
     where 
-        T: Clone + SampleGeometric<P> + Sub<Output=T> + Bounded + Zero + One + TotalOrd + AlertingSub,
+        T: Clone + SampleGeometric<P> + Sub<Output=T> + FiniteBounds + Zero + One + TotalOrd + AlertingSub,
         P: Float,
         P::Bits: PartialOrd + ExactIntCast<usize>,
         usize: ExactIntCast<P::Bits> {

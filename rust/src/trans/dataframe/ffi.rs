@@ -1,6 +1,4 @@
 use std::convert::TryFrom;
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::os::raw::c_char;
 
 use crate::err;
@@ -10,7 +8,7 @@ use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::ffi::util::Type;
 use crate::ffi::util;
-use crate::traits::CheckNull;
+use crate::traits::{Hashable, Primitive};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_split_lines() -> FfiResult<*mut AnyTransformation> {
@@ -30,7 +28,7 @@ pub extern "C" fn opendp_trans__make_create_dataframe(
     col_names: *const AnyObject, K: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<K>(col_names: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where K: 'static + Eq + Hash + Clone + CheckNull {
+        where K: Hashable {
         let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
         make_create_dataframe::<K>(col_names).into_any()
     }
@@ -44,7 +42,7 @@ pub extern "C" fn opendp_trans__make_split_dataframe(
     K: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<K>(separator: Option<&str>, col_names: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where K: 'static + Eq + Hash + Debug + Clone + CheckNull {
+        where K: Hashable {
         let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
         make_split_dataframe::<K>(separator, col_names).into_any()
     }
@@ -59,8 +57,8 @@ pub extern "C" fn opendp_trans__make_select_column(
     key: *const AnyObject, K: *const c_char, TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<K, TOA>(key: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
-        K: 'static + Hash + Eq + Debug + Clone + CheckNull,
-        TOA: 'static + Debug + Clone + PartialEq + CheckNull {
+        K: Hashable,
+        TOA: Primitive {
         let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
         make_select_column::<K, TOA>(key).into_any()
     }

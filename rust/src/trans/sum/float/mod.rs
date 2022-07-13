@@ -6,69 +6,10 @@ pub use checked::*;
 mod ordered;
 pub use ordered::*;
 
-use num::{One, Zero};
-
 use crate::{
-    metrics::IntDistance,
     error::Fallible,
-    traits::{
-        AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfCast, InfDiv, InfLog2, InfMul,
-        InfPow, InfSub, SaturatingAdd, TotalOrd, SaturatingMul, InfExp,
-    },
+    traits::{Float, InfAdd},
 };
-
-pub trait Float:
-    CheckNull
-    + num::Bounded
-    + num::Float
-    + Clone
-    + TotalOrd
-    + ExactIntCast<usize>
-    + InfCast<usize>
-    + InfCast<IntDistance>
-    + InfAdd
-    + InfMul
-    + InfSub
-    + InfDiv
-    + InfPow
-    + InfLog2
-    + InfExp
-    + std::iter::Sum<Self>
-    + FloatBits
-    + ExactIntCast<Self::Bits>
-    + Zero
-    + One
-    + AlertingAbs
-    + SaturatingAdd
-    + SaturatingMul
-{
-}
-impl<T> Float for T where
-    T: CheckNull
-        + num::Bounded
-        + num::Float
-        + Clone
-        + TotalOrd
-        + ExactIntCast<usize>
-        + InfCast<usize>
-        + InfCast<IntDistance>
-        + InfMul
-        + InfSub
-        + InfAdd
-        + InfDiv
-        + InfPow
-        + InfLog2
-        + InfExp
-        + std::iter::Sum<T>
-        + ExactIntCast<T::Bits>
-        + FloatBits
-        + Zero
-        + One
-        + AlertingAbs
-        + SaturatingAdd
-        + SaturatingMul
-{
-}
 
 // Marker type to represent sequential, or recursive summation
 pub struct Sequential<T>(PhantomData<T>);

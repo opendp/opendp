@@ -4,17 +4,13 @@ mod ffi;
 /// Algorithms that depend on the propose-test-release framework.
 
 use std::collections::HashMap;
-use std::hash::Hash;
-
-use num::Float;
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::metrics::{IntDistance, L1Distance};
+use crate::metrics::L1Distance;
 use crate::measures::{SmoothedMaxDivergence, SMDCurve};
 use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
-use crate::traits::samplers::SampleLaplace;
-use crate::traits::{CheckNull, InfCast};
+use crate::traits::{Float, Hashable};
 
 // propose-test-release count grouped by unknown categories,
 // IMPORTANT: Assumes that dataset distance is bounded above by d_in.
@@ -22,9 +18,9 @@ use crate::traits::{CheckNull, InfCast};
 pub fn make_base_ptr<TK, TV>(
     scale: TV, threshold: TV,
 ) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
-    where TK: Eq + Hash + Clone + CheckNull,
-          TV: 'static + Float + CheckNull + InfCast<IntDistance> + SampleLaplace + std::fmt::Debug {
-    let _2 = TV::inf_cast(2)?;
+    where TK: Hashable,
+          TV: Float {
+    let _2 = TV::exact_int_cast(2)?;
     Ok(Measurement::new(
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         MapDomain::new(AllDomain::new(), AllDomain::new()),

@@ -5,7 +5,8 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::trans::{make_sized_bounded_sum_of_squared_deviations, UncheckedSum, Sequential, Pairwise, Float};
+use crate::traits::Float;
+use crate::trans::{make_sized_bounded_sum_of_squared_deviations, UncheckedSum, Sequential, Pairwise};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_sized_bounded_sum_of_squared_deviations(
