@@ -15,7 +15,7 @@ Platforms
 
 OpenDP is built for the following platforms:
 
-* Python 3.6-3.9
+* Python 3.6-3.10
 * Linux, x86 64-bit, versions compatible with `manylinux <https://github.com/pypa/manylinux>`_ (others may work)
 * macOS, x86 64-bit, version 10.13 or later
 * Windows, x86 64-bit, version 7 or later
@@ -73,7 +73,7 @@ Building OpenDP from Source
 Under special circumstances, it may be necessary to install OpenDP directly from the source files.
 This is only required if you want to build OpenDP from scratch, or if you're interested in :doc:`contributing to OpenDP <../developer/index>`.
 
-There is a thorough guide in the :doc:`Development Environment <../developer/development-environment>` documentation.
+There is a thorough guide to building from source in the :doc:`Development Environment <../developer/development-environment>` documentation.
 
 
 .. _hello-opendp:
