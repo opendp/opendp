@@ -15,7 +15,7 @@ Platforms
 
 OpenDP is built for the following platforms:
 
-* Python 3.6-3.9
+* Python 3.6-3.10
 * Linux, x86 64-bit, versions compatible with `manylinux <https://github.com/pypa/manylinux>`_ (others may work)
 * macOS, x86 64-bit, version 10.13 or later
 * Windows, x86 64-bit, version 7 or later
@@ -73,59 +73,8 @@ Building OpenDP from Source
 Under special circumstances, it may be necessary to install OpenDP directly from the source files.
 This is only required if you want to build OpenDP from scratch, or if you're interested in :doc:`contributing to OpenDP <../developer/index>`.
 
-For this to work, you'll need some prerequisites:
+There is a thorough guide to building from source in the :doc:`Development Environment <../developer/development-environment>` documentation.
 
-* The `Rust toolchain <https://www.rust-lang.org/tools/install>`_, edition 2018.
-* Python, version 3.6 or higher.
-* Python package `pytest <https://docs.pytest.org/en/stable/>`_ (optional but recommended).
-
-Assuming your base environment is ready, start by cloning the `opendp git repo <https://github.com/opendp/opendp>`_:
-
-.. prompt:: bash
-
-    git clone git@github.com:opendp/opendp.git
-    cd opendp
-
-If you get the error ``git@github.com: Permission denied (publickey)``,
-then either `set up an SSH key <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account>`_
-or clone with https: ``git clone https://github.com/opendp/opendp.git``.
-
-Next, you'll need to build the Rust binaries. This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo:
-
-.. prompt:: bash
-
-    cd rust
-    cargo build
-
-.. note::
-
-    If you're using Windows, you may encounter problems when ``cargo`` tries to compile some dependencies. There are detailed instructions and scripts for dealing with this in the `windows subdirectory <https://github.com/opendp/opendp/tree/main/windows>`_ of the repository.
-
-This will compile a debug version of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. (The specific name of the library file will vary depending on your platform.)
-
-Finally, you can create a local Python package that incorporates your new shared library. This is possible by using ``pip install`` with the ``-e`` option in the ``python`` subdirectory:
-
-.. prompt:: bash
-
-    cd ../python
-    pip install -e .
-
-At this point, you should be able use OpenDP as a locally installed package. You can test that things are working by running the OpenDP test suite, using ``pytest``:
-
-.. prompt:: bash
-
-    pip install opendp
-
-    # Still in python subdirectory
-    pytest
-
-If everything has gone well, you'll see a bunch of output, then a line similar to this:
-
-.. prompt:: bash
-
-    ================== 57 passed in 1.02s ==================
-
-This is just a quick overview of building OpenDP. If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
 .. _hello-opendp:
 
