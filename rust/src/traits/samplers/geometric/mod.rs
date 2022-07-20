@@ -1,11 +1,15 @@
-use std::ops::{SubAssign, Sub, AddAssign};
+use std::{ops::{SubAssign, Sub, AddAssign}, convert::TryFrom};
 
 use num::{Zero, One, clamp};
 
-use crate::{error::Fallible, traits::{TotalOrd, AlertingSub, ExactIntCast, FiniteBounds, Float}};
+use crate::{error::Fallible, traits::{TotalOrd, AlertingSub, ExactIntCast, Float, OptionFiniteBounds}};
+
+use self::{linear::sample_geometric_linear_time, logarithmic::sample_geometric_log_time};
 
 use super::{SampleBernoulli, SampleStandardBernoulli, fill_bytes};
 
+mod logarithmic;
+mod linear;
 
 pub trait SampleGeometric<P>: Sized {
 
@@ -38,39 +42,23 @@ pub trait SampleGeometric<P>: Sized {
 
 impl<T, P> SampleGeometric<P> for T
     where 
-        T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + FiniteBounds,
-        P: Float,
+        T: 'static + Clone + Zero + One + PartialEq + AddAssign + SubAssign + OptionFiniteBounds + TryFrom<rug::Integer>,
+        P: 'static + Float,
+        rug::Integer: From<T> + TryFrom<T>,
+        rug::Rational: TryFrom<P>,
         bool: SampleBernoulli<P> {
 
-    fn sample_geometric(mut shift: Self, positive: bool, prob: P, mut trials: Option<Self>) -> Fallible<Self> {
+    fn sample_geometric(shift: Self, positive: bool, prob: P, trials: Option<Self>) -> Fallible<Self> {
 
         // ensure that prob is a valid probability
         if !(P::zero()..=P::one()).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
 
-        let bound = if positive { Self::MAX_FINITE } else { Self::MIN_FINITE };
-        let mut success: bool = false;
-
-        // loop must increment at least once
-        loop {
-            // make steps on `shift` until there is a successful trial or have reached the boundary
-            if !success && shift != bound {
-                if positive { shift += T::one() } else { shift -= T::one() }
-            }
-
-            // stopping criteria
-            if let Some(trials) = trials.as_mut() {
-                // in the constant-time regime, decrement trials until zero
-                if trials.is_zero() { break }
-                *trials -= T::one();
-            } else if success {
-                // otherwise break on first success
-                break
-            }
-
-            // run a trial-- do we stop?
-            success |= bool::sample_bernoulli(prob, trials.is_some())?;
+        // TODO: replace "false" with condition to switch to log time
+        if trials.is_some() || false {
+            sample_geometric_linear_time(shift, positive, prob, trials)
+        } else {
+            sample_geometric_log_time(shift, positive, prob)
         }
-        Ok(shift)
     }
 }
 
@@ -106,7 +94,7 @@ pub trait SampleTwoSidedGeometric<P>: SampleGeometric<P> {
 
 impl<T, P> SampleTwoSidedGeometric<P> for T
     where 
-        T: Clone + SampleGeometric<P> + Sub<Output=T> + FiniteBounds + Zero + One + TotalOrd + AlertingSub,
+        T: Clone + SampleGeometric<P> + Sub<Output=T> + Zero + One + TotalOrd + AlertingSub,
         P: Float,
         P::Bits: PartialOrd + ExactIntCast<usize>,
         usize: ExactIntCast<P::Bits> {
@@ -133,6 +121,9 @@ impl<T, P> SampleTwoSidedGeometric<P> for T
 
         // make alpha conservatively larger
         let inf_alpha: P = (-scale.recip()).inf_exp()?;
+        if inf_alpha.is_one() {
+            return fallible!(FailedFunction, "scale is too large")
+        }
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
@@ -199,6 +190,16 @@ pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) ->
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    #[test]
+    fn test_sample_2sgeo() -> Fallible<()> {
+        let dgeo = i8::sample_two_sided_geometric(0, 1e15, None)?;
+        println!("final: {:?}", dgeo);
+
+        let dgeo = i8::sample_two_sided_geometric(0, 1e8, None)?;
+        println!("{:?}", dgeo);
+        Ok(())
+    }
     #[test]
     #[cfg(feature="test-plot")]
     fn plot_geometric() -> Fallible<()> {

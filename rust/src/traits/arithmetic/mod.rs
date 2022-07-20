@@ -239,6 +239,12 @@ macro_rules! impl_alerting_int {
     };
 }
 impl_alerting_int!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl AlertingSub for rug::Integer {
+    fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
+        use rug::Complete;
+        Ok((self - v).complete())
+    }
+}
 macro_rules! impl_alerting_float {
     ($($t:ty),+) => {
         $(impl SaturatingAdd for $t {
