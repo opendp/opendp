@@ -59,6 +59,11 @@ mod mean;
 pub use crate::transformations::mean::*;
 
 #[cfg(feature="contrib")]
+pub mod partition;
+#[cfg(feature="contrib")]
+pub use crate::transformations::partition::*;
+
+#[cfg(feature="contrib")]
 mod variance;
 #[cfg(feature="contrib")]
 pub use crate::transformations::variance::*;

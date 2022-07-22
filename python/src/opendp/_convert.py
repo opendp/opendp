@@ -244,7 +244,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
             return ctypes.c_char_p(val.encode())
         array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
         return _wrap_in_slice(array, len(val))
-
+    
     if isinstance(inner_type_name, RuntimeType):
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
         array = (AnyObjectPtr * len(val))(*c_repr)

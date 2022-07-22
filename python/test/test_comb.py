@@ -65,8 +65,8 @@ def test_make_basic_composition_leak():
     # supporting that AnyObject's free recursively frees children
     meas = make_basic_composition([meas])
 
-    # watch for leaked AnyObjects with 1 million i32 values
-    # memory would jump by ~40mb every iteration
+    # watch for leaked AnyObjects with 10 million i32 values
+    # memory would jump significantly every iteration
     for i in range(1000):
         print('iteration', i)
         meas([0] * 10_000_000)
@@ -97,7 +97,6 @@ def test_make_pureDP_to_fixed_approxDP():
 
     print(meas.map(1.))
 
-
 def test_make_pureDP_to_zCDP():
     meas = make_basic_composition([
         make_pureDP_to_zCDP(make_base_laplace(10.)),
@@ -106,5 +105,34 @@ def test_make_pureDP_to_zCDP():
 
     print(meas.map(1.))
 
+def test_make_map_partitions_trans():
+    from opendp.combinators import make_partition_map_meas
+
+    meas = make_split_dataframe(
+        separator=",", 
+        col_names=["strat id", "values"]
+    ) >> make_partition_by(
+        ident_name="strat id",
+        partition_keys=list(map(str, range(4))),
+        keep_columns=["values"],
+    ) >> make_partition_map_meas([
+        make_select_column("values", TOA=str) >> 
+        make_cast_default(TIA=str, TOA=int) >> 
+        make_clamp((0, 1)) >> 
+        make_bounded_sum((0, 1)) >>
+        make_base_geometric(1.)
+    ] * 5)
+
+    # build some synthetic data:
+    from random import randint, choice
+    data_length = 500
+    strat_ids = [randint(0, 5) for _ in range(data_length)]
+    values = [choice([0, 1]) for _ in range(data_length)]
+    data = "\n".join(f"{k},{v}" for k, v in zip(strat_ids, values))
+    # print(data)
+    
+    # release noisy sums!
+    print(meas(data))
+
 if __name__ == "__main__":
-    test_make_pureDP_to_fixed_approxDP()
+    test_make_map_partitions_trans()
