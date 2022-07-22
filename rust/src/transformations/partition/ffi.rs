@@ -13,22 +13,22 @@ use crate::{
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_partition_by(
-    ident_name: *const AnyObject,
+    identifier_column: *const AnyObject,
     partition_keys: *const AnyObject,
     keep_columns: *const AnyObject,
     TK: *const c_char,
     TV: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<TK: Hashable, TV: Hashable>(
-        ident_name: *const AnyObject,
+        identifier_column: *const AnyObject,
         partition_keys: *const AnyObject,
         keep_columns: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation> {
-        let ident_name = try_!(try_as_ref!(ident_name).downcast_ref::<TK>()).clone();
+        let identifier_column = try_!(try_as_ref!(identifier_column).downcast_ref::<TK>()).clone();
         let partition_keys = try_!(try_as_ref!(partition_keys).downcast_ref::<Vec<TV>>()).clone();
         let keep_columns = try_!(try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()).clone();
         let trans = try_!(make_partition_by::<TK, TV>(
-            ident_name,
+            identifier_column,
             partition_keys,
             keep_columns
         ));
@@ -62,5 +62,5 @@ pub extern "C" fn opendp_trans__make_partition_by(
     dispatch!(monomorphize, [
         (TK, @hashable),
         (TV, @hashable)
-    ], (ident_name, partition_keys, keep_columns))
+    ], (identifier_column, partition_keys, keep_columns))
 }
