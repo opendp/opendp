@@ -170,8 +170,8 @@ pub struct MapDomain<DK: Domain, DV: Domain> where DK::Carrier: Eq + Hash {
     pub value_domain: DV
 }
 impl<DK: Domain, DV: Domain> MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
-    pub fn new(key_domain: DK, element_domain: DV) -> Self {
-        MapDomain { key_domain, value_domain: element_domain }
+    pub fn new(key_domain: DK, value_domain: DV) -> Self {
+        MapDomain { key_domain, value_domain }
     }
 }
 impl<K: CheckNull, V: CheckNull> MapDomain<AllDomain<K>, AllDomain<V>> where K: Eq + Hash {
@@ -312,5 +312,32 @@ impl<D: Domain> Domain for OptionNullDomain<D> {
         value.as_ref()
             .map(|v| self.element_domain.member(v))
             .unwrap_or(Ok(true))
+    }
+}
+
+
+/// A Domain that represents partitioned data
+#[derive(Clone, PartialEq)]
+pub struct ProductDomain<D: Domain> {
+    pub inner_domains: Vec<D>
+}
+impl<D: Domain> ProductDomain<D> {
+    pub fn new(inner_domains: Vec<D>) -> Self {
+        ProductDomain { inner_domains }
+    }
+}
+impl<D: Domain> Debug for ProductDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ProductDomain({:?})", self.inner_domains)
+    }
+}
+
+impl<D: Domain> Domain for ProductDomain<D> {
+    type Carrier = Vec<D::Carrier>;
+    fn member(&self, val: &Vec<D::Carrier>) -> Fallible<bool> {
+        if self.inner_domains.len() != val.len() {
+            return Ok(false)
+        }
+        val.iter().zip(self.inner_domains.iter()).try_fold(true, |acc, (v, d)| d.member(v).map(|v| acc && v))
     }
 }

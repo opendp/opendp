@@ -14,6 +14,11 @@ pub mod compose;
 pub use crate::comb::compose::*;
 
 #[cfg(feature="contrib")]
+pub mod partition_map;
+#[cfg(feature="contrib")]
+pub use crate::comb::partition_map::*;
+
+#[cfg(feature="contrib")]
 pub mod fix_delta;
 #[cfg(feature="contrib")]
 pub use crate::comb::fix_delta::*;

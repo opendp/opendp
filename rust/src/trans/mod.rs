@@ -14,6 +14,11 @@ pub mod dataframe;
 pub use crate::trans::dataframe::*;
 
 #[cfg(feature="contrib")]
+pub mod partition;
+#[cfg(feature="contrib")]
+pub use crate::trans::partition::*;
+
+#[cfg(feature="contrib")]
 pub mod manipulation;
 #[cfg(feature="contrib")]
 pub use crate::trans::manipulation::*;

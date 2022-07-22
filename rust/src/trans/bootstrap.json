@@ -754,6 +754,54 @@
             "c_type": "FfiResult<AnyTransformation *>"
         }
     },
+    "make_partition_by": {
+        "description": "Make a Transformation that partitions a dataframe by a given column.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "ident_name",
+                "c_type": "AnyObject *",
+                "rust_type": "TK",
+                "description": "Name of column to split dataframe by."
+            },
+            {
+                "name": "partition_keys",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TV"]
+                },
+                "description": "Unique values in the `ident_name` column."
+            },
+            {
+                "name": "keep_columns",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TK"]
+                },
+                "description": "Columns to keep in the partioned dataframes."
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "Type of column names.",
+                "default": "String"
+            },
+            {
+                "name": "TV",
+                "is_type": true,
+                "description": "Type of values in the identifier column.",
+                "example": {
+                    "function": "get_first",
+                    "params": ["partition_keys"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
     "make_resize": {
         "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.",
         "features": ["contrib"],

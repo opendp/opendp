@@ -14,6 +14,7 @@ pub trait IsVec: Debug {
     fn as_any(&self) -> &dyn Any;
     fn box_clone(&self) -> Box<dyn IsVec>;
     fn eq(&self, other: &dyn Any) -> bool;
+    fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Box<dyn IsVec>>;
 }
 
 impl<T> IsVec for Vec<T> where
@@ -22,6 +23,11 @@ impl<T> IsVec for Vec<T> where
     fn as_any(&self) -> &dyn Any { self }
     fn box_clone(&self) -> Box<dyn IsVec> { Box::new(self.clone()) }
     fn eq(&self, other: &dyn Any) -> bool { other.downcast_ref::<Self>().map_or(false, |o| o == self) }
+    fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Box<dyn IsVec>> {
+        let mut parts = (0..num_partitions).map(|_| Vec::<T>::new()).collect::<Vec<Vec<T>>>();
+        self.iter().cloned().zip(indices).for_each(|(v, i)| parts[*i].push(v));
+        parts.into_iter().map(|v| Box::new(v) as Box<dyn IsVec>).collect()
+    }
 }
 
 impl<T> From<Vec<T>> for Column
@@ -50,6 +56,9 @@ impl Column {
         self.0.into_any().downcast::<T>()
             .map_err(|_e| err!(FailedCast))
             .map(|v| *v)
+    }
+    pub fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Self> {
+        self.0.partition(indices, num_partitions).into_iter().map(Self).collect()
     }
 }
 

@@ -105,5 +105,41 @@
             "c_type": "FfiResult<AnyMeasurement *>",
             "description": "New measurement with the same function, but a fixed output measure and privacy map."
         }
+    },
+    "make_partition_map_trans": {
+        "description": "Construct the parallel composition of [`transformation0`, `transformation1`, ...]. Returns a Transformation.",
+        "args": [
+            {
+                "name": "transformations",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["\"AnyTransformationPtr\""]
+                },
+                "c_type": "const AnyObject *",
+                "description": "A list of transformations to compose."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A transformation that applies a transformation to each partition."
+        }
+    },
+    "make_partition_map_meas": {
+        "description": "Construct the parallel composition of [`measurement0`, `measurement1`, ...]. Returns a Measurement.",
+        "args": [
+            {
+                "name": "measurements",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["\"AnyMeasurementPtr\""]
+                },
+                "c_type": "const AnyObject *",
+                "description": "A list of measurements to compose."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "A measurement that applies a measurement to each partition."
+        }
     }
 }
