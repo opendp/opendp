@@ -1,19 +1,19 @@
-use std::{
-    iter::Sum,
-    ops::{AddAssign, Div, Mul, Sub},
-};
+use std::ops::Sub;
 
-use num::{Float, Zero};
+use num::Zero;
 
 use crate::{
     core::{Transformation, Function},
     metrics::AgnosticMetric,
     domains::{AllDomain, VectorDomain},
     error::Fallible,
-    traits::{CheckNull, RoundCast},
+    traits::{RoundCast, Float, Number},
 };
 
 use super::postprocess::make_postprocess;
+
+#[cfg(feature="ffi")]
+mod ffi;
 
 /// Constructs a [`Transformation`] that maps a float vector of counts into a cumulative distribution
 pub fn make_cdf<T>() -> Fallible<
@@ -25,7 +25,7 @@ pub fn make_cdf<T>() -> Fallible<
     >,
 >
 where
-    T: CheckNull + Zero + AddAssign + Clone + Float,
+    T: Float,
 {
     make_postprocess(
         VectorDomain::new_all(),
@@ -63,18 +63,8 @@ pub fn make_quantiles_from_counts<T, F>(
     >,
 >
 where
-    T: 'static
-        + CheckNull
-        + for<'a> Sum<&'a T>
-        + RoundCast<F>
-        + PartialOrd
-        + Clone
-        + Zero
-        + AddAssign
-        + Sub<Output = T>
-        + Div<Output = T>
-        + Mul<Output = T>,
-    F: 'static + Float + RoundCast<T>,
+    T: Number + RoundCast<F>,
+    F: Float + RoundCast<T>,
 {
     if bin_edges.len().is_zero() {
         return fallible!(MakeTransformation, "bin_edges.len() must be positive");

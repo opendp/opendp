@@ -2,7 +2,7 @@ use crate::domains::InherentNull;
 use crate::metrics::IntDistance;
 use num::{One, Zero};
 use std::hash::Hash;
-use std::ops::{AddAssign, SubAssign, MulAssign};
+use std::ops::{AddAssign, SubAssign, MulAssign, DivAssign};
 
 mod bounded;
 pub use bounded::*;
@@ -43,6 +43,7 @@ pub trait Number:
     Primitive
     + Copy
     + AlertingAbs
+    + num::traits::NumOps
     + SaturatingAdd
     + SaturatingMul
     + InfAdd
@@ -56,18 +57,22 @@ pub trait Number:
     + AddAssign
     + SubAssign
     + MulAssign
+    + DivAssign
     + FiniteBounds
     + ExactIntCast<usize>
     + ExactIntCast<i32>
     + InfCast<IntDistance>
     + InfCast<usize>
     + std::iter::Sum<Self>
+    + for<'a> std::iter::Sum<&'a Self>
+    + DistanceConstant<Self>
 {
 }
 impl<T> Number for T where
     T: Primitive
         + Copy
         + AlertingAbs
+        + num::traits::NumOps
         + SaturatingAdd
         + SaturatingMul
         + InfAdd
@@ -81,12 +86,15 @@ impl<T> Number for T where
         + AddAssign
         + SubAssign
         + MulAssign
+        + DivAssign
         + FiniteBounds
         + ExactIntCast<usize>
         + ExactIntCast<i32>
         + InfCast<IntDistance>
         + InfCast<usize>
         + std::iter::Sum<Self>
+        + for<'a> std::iter::Sum<&'a Self>
+        + DistanceConstant<Self>
 {
 }
 
