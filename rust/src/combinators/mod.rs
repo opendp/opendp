@@ -26,6 +26,11 @@ mod user_defined;
 pub(crate) use crate::combinators::user_defined::*;
 
 #[cfg(feature="contrib")]
+pub mod partition_map;
+#[cfg(feature="contrib")]
+pub use crate::combinators::partition_map::*;
+
+#[cfg(feature="contrib")]
 mod fix_delta;
 #[cfg(feature="contrib")]
 pub use crate::combinators::fix_delta::*;

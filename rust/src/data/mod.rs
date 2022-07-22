@@ -16,6 +16,7 @@ pub trait IsVec: Debug {
     fn box_clone(&self) -> Box<dyn IsVec>;
     fn eq(&self, other: &dyn Any) -> bool;
     fn subset(&self, indicator: &Vec<bool>) -> Box<dyn IsVec>;
+    fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Box<dyn IsVec>>;
 }
 
 impl<T> IsVec for Vec<T> where
@@ -30,6 +31,11 @@ impl<T> IsVec for Vec<T> where
             .filter_map(|(v, b)| b.then_some(v))
             .cloned()
             .collect::<Vec<_>>()) as Box<dyn IsVec>
+    }
+    fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Box<dyn IsVec>> {
+        let mut parts = (0..num_partitions).map(|_| Vec::<T>::new()).collect::<Vec<Vec<T>>>();
+        self.iter().cloned().zip(indices).for_each(|(v, i)| parts[*i].push(v));
+        parts.into_iter().map(|v| Box::new(v) as Box<dyn IsVec>).collect()
     }
 }
 
@@ -60,8 +66,13 @@ impl Column {
             .map_err(|_e| err!(FailedCast))
             .map(|v| *v)
     }
+
     pub fn subset(&self, indicator: &Vec<bool>) -> Self {
         Self(self.0.subset(indicator))
+    }
+
+    pub fn partition(&self, indices: &Vec<usize>, num_partitions: usize) -> Vec<Self> {
+        self.0.partition(indices, num_partitions).into_iter().map(Self).collect()
     }
 }
 
