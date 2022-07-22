@@ -160,3 +160,31 @@ impl Debug for DiscreteDistance {
 impl Metric for DiscreteDistance {
     type Distance = IntDistance;
 }
+
+// // defined as d(x, x') = sum_i d_{inner}(x_i, x'_i), where x_i is the ith partition
+// #[derive(Clone, Default, PartialEq)]
+// pub struct ProductMetric<M: Metric>(M);
+ 
+// impl<M: Metric + Debug> Debug for ProductMetric<M> {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+//         write!(f, "ProductMetric({:?})", self.0)
+//     }
+// }
+// impl<M: Metric> Metric for ProductMetric<M> {
+//     type Distance = M::Distance;
+// }
+
+
+
+/// Metrics
+#[derive(Clone, Default, PartialEq)]
+pub struct AgnosticMetric;
+
+impl Debug for AgnosticMetric {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "AgnosticMetric()")
+    }
+}
+impl Metric for AgnosticMetric {
+    type Distance = ();
+}

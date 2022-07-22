@@ -19,6 +19,9 @@ pub mod partition;
 pub use crate::trans::partition::*;
 
 #[cfg(feature="contrib")]
+pub(crate) mod postprocess;
+
+#[cfg(feature="contrib")]
 pub mod manipulation;
 #[cfg(feature="contrib")]
 pub use crate::trans::manipulation::*;

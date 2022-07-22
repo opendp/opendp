@@ -86,6 +86,13 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
                 return False
             raise
 
+    def __rshift__(self, other: "Transformation"):
+        if isinstance(other, Transformation):
+            from opendp.comb import make_chain_tm
+            return make_chain_tm(other, self)
+
+        raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
+
     @property
     def input_distance_type(self):
         """Retrieve the distance type of the input metric.

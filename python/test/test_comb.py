@@ -145,6 +145,11 @@ def test_make_map_partitions_nested():
     print(meas(data))
 
 
+def test_tm_chainer():
+    chain = make_base_geometric(1., D=VectorDomain[AllDomain[int]]) >> make_cast_default(TIA=int, TOA=float)
+    print(chain([1, 2, 3]))
+
+
 if __name__ == "__main__":
     test_make_map_partitions_nested()
 
