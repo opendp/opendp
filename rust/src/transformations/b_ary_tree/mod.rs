@@ -13,50 +13,52 @@ mod consistency_postprocessor;
 pub use consistency_postprocessor::*;
 
 
-pub fn make_b_ary_tree<M, T>(
-    num_bins: usize,
-    b: usize,
-) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<AllDomain<T>>, M, M>>
+pub fn make_b_ary_tree<M, TA>(
+    leaf_count: usize,
+    branching_factor: usize,
+) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<AllDomain<TA>>, M, M>>
 where
-    T: Integer,
+    TA: Integer,
     M: BAryTreeMetric,
     M::Distance: Number,
 {
-    if num_bins == 0 {
-        return fallible!(MakeTransformation, "num_leaves must be at least 1");
+    if leaf_count == 0 {
+        return fallible!(MakeTransformation, "leaf_count must be at least 1");
     }
-    if b < 2 {
-        return fallible!(MakeTransformation, "branching factor must be at least two");
+    if branching_factor < 2 {
+        return fallible!(MakeTransformation, "branching_factor must be at least two");
     }
 
-    let num_layers = num_layers_from_num_leaves(num_bins, b);
-    let num_leaves = b.pow(num_layers as u32 - 1);
+    let num_layers = num_layers_from_num_leaves(leaf_count, branching_factor);
+    // specifically, the number of leaves in a full tree
+    let num_leaves = branching_factor.pow(num_layers as u32 - 1);
+    // leaf_count is the number of leaves in the final layer of a complete tree
 
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new(move |arg: &Vec<T>| {
+        Function::new(move |arg: &Vec<TA>| {
             // if arg.len() != num_bins, then user has a bug that will affect utility, but cannot alert
             //    if less data is passed than num_bins, then pad with extra zeros
             //    if more data is passed then num_bins, then ignore
-            let pad_length = num_leaves - num_bins.min(arg.len());
+            let pad_length = num_leaves - leaf_count.min(arg.len());
 
             let mut layers = vec![arg
                 .iter()
-                .take(num_bins)
+                .take(leaf_count)
                 .cloned()
-                .chain((0..pad_length).map(|_| T::zero()))
-                .collect::<Vec<T>>()];
+                .chain((0..pad_length).map(|_| TA::zero()))
+                .collect::<Vec<TA>>()];
 
             (0..num_layers - 1).for_each(|i| {
                 layers.push(
                     layers[i]
-                        .chunks(b)
-                        .map(|chunk| chunk.iter().sum::<T>())
+                        .chunks(branching_factor)
+                        .map(|chunk| chunk.iter().sum::<TA>())
                         .collect(),
                 );
             });
-            let tree_length = num_nodes_from_num_layers(num_layers, b) - pad_length;
+            let tree_length = num_nodes_from_num_layers(num_layers, branching_factor) - pad_length;
             layers
                 .into_iter()
                 .rev()

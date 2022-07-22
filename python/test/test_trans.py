@@ -1,4 +1,4 @@
-from opendp.transformations import make_subset_by
+from opendp.transformations import make_subset_by, make_quantiles_from_counts
 from opendp.typing import *
 from opendp.mod import enable_features
 
@@ -326,6 +326,7 @@ def test_df_is_equal():
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
     assert query.check(1, 1)
 
+
 def test_df_subset():
     from opendp.transformations import make_split_dataframe, make_df_is_equal, make_select_column
 
@@ -337,3 +338,30 @@ def test_df_subset():
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == ["2"]
     assert query.check(1, 1)
+
+def test_lipschitz_b_ary_tree():
+    from opendp.tranformations import make_count_by_categories, make_b_ary_tree, make_b_ary_tree_consistent, make_cdf
+    from opendp.measurements import make_base_geometric
+    leaf_count = 7
+    branching_factor = 2
+    tree_builder = make_b_ary_tree(leaf_count, branching_factor, M=L1Distance[int])
+    assert tree_builder([1] * leaf_count) == [7, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]
+    #                                  level: 1  2     3           4
+    # top of tree is at level 1
+
+    # the categories are bin names!
+    meas_base = (
+        make_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
+        tree_builder >> 
+        make_base_geometric(1., D=VectorDomain[AllDomain[int]]) >> 
+        make_b_ary_tree_consistent(branching_factor)
+    )
+
+    meas_cdf = meas_base >> make_cdf()
+    meas_quantiles = meas_base >> make_quantiles_from_counts(
+        bin_edges=[0., 10., 13., 17., 26., 70., 84., 100.],
+        alphas=[0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
+
+    data = ["A"] * 34 + ["B"] * 23 + ["C"] * 12 + ["D"] * 84 + ["E"] * 34 + ["F"] * 85 + ["G"] * 75
+    print(meas_cdf(data))
+    print(meas_quantiles(data))

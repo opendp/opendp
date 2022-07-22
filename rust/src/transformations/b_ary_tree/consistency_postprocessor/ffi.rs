@@ -13,25 +13,25 @@ use crate::{
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_b_ary_tree_consistent(
-    b: c_uint,
-    TI: *const c_char,
-    TO: *const c_char,
+    branching_factor: c_uint,
+    TIA: *const c_char,
+    TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TI, TO>(
-        b: usize
+    fn monomorphize<TIA, TOA>(
+        branching_factor: usize
     ) -> FfiResult<*mut AnyTransformation>
     where
-        TI: 'static + CheckNull + Clone,
-        TO: Float + RoundCast<TI>,
+        TIA: 'static + CheckNull + Clone,
+        TOA: Float + RoundCast<TIA>,
     {
-        make_b_ary_tree_consistent::<TI, TO>(b).into_any()
+        make_b_ary_tree_consistent::<TIA, TOA>(branching_factor).into_any()
     }
 
-    let b = b as usize;
-    let TI = try_!(Type::try_from(TI));
-    let TO = try_!(Type::try_from(TO));
+    let branching_factor = branching_factor as usize;
+    let TIA = try_!(Type::try_from(TIA));
+    let TOA = try_!(Type::try_from(TOA));
     dispatch!(monomorphize, [
-        (TI, @integers),
-        (TO, @floats)
-    ], (b))
+        (TIA, @integers),
+        (TOA, @floats)
+    ], (branching_factor))
 }

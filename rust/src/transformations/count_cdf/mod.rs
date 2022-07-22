@@ -16,55 +16,55 @@ use super::postprocess::make_postprocess;
 mod ffi;
 
 /// Constructs a [`Transformation`] that maps a float vector of counts into a cumulative distribution
-pub fn make_cdf<T>() -> Fallible<
+pub fn make_cdf<TA>() -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<T>>,
-        VectorDomain<AllDomain<T>>,
+        VectorDomain<AllDomain<TA>>,
+        VectorDomain<AllDomain<TA>>,
         AgnosticMetric,
         AgnosticMetric,
     >,
 >
 where
-    T: Float,
+    TA: Float,
 {
     make_postprocess(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new_fallible(|arg: &Vec<T>| {
+        Function::new_fallible(|arg: &Vec<TA>| {
             let cumsum = arg
                 .iter()
-                .scan(T::zero(), |acc, v| {
+                .scan(TA::zero(), |acc, v| {
                     *acc += v.clone();
                     Some(*acc)
                 })
-                .collect::<Vec<T>>();
+                .collect::<Vec<TA>>();
             let sum = cumsum[cumsum.len() - 1].clone();
             Ok(cumsum.into_iter().map(|v| v / sum).collect())
         }),
     )
 }
 
-pub enum Interpolate {
+pub enum Interpolation {
     Nearest,
     Linear,
 }
 
 /// Constructs a [`Transformation`] that retrieves nearest bin edge to quantile
-pub fn make_quantiles_from_counts<T, F>(
-    bin_edges: Vec<T>,
+pub fn make_quantiles_from_counts<TA, F>(
+    bin_edges: Vec<TA>,
     alphas: Vec<F>,
-    interpolate: Interpolate,
+    interpolation: Interpolation,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<T>>,
-        VectorDomain<AllDomain<T>>,
+        VectorDomain<AllDomain<TA>>,
+        VectorDomain<AllDomain<TA>>,
         AgnosticMetric,
         AgnosticMetric,
     >,
 >
 where
-    T: Number + RoundCast<F>,
-    F: Float + RoundCast<T>,
+    TA: Number + RoundCast<F>,
+    F: Float + RoundCast<TA>,
 {
     if bin_edges.len().is_zero() {
         return fallible!(MakeTransformation, "bin_edges.len() must be positive");
@@ -83,7 +83,7 @@ where
             );
         }
     }
-    if let Some(upper) = alphas.first() {
+    if let Some(upper) = alphas.last() {
         if upper > &F::one() {
             return fallible!(
                 MakeTransformation,
@@ -94,7 +94,7 @@ where
     make_postprocess(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<T>| {
+        Function::new_fallible(move |arg: &Vec<TA>| {
             // one fewer args than bin edges, or one greater args than bin edges are allowed
             if abs_diff(bin_edges.len(), arg.len()) != 1 {
                 return fallible!(
@@ -114,11 +114,11 @@ where
             // compute the cumulative sum of the input counts
             let cumsum = arg
                 .iter()
-                .scan(T::zero(), |acc, v| {
+                .scan(TA::zero(), |acc, v| {
                     *acc += v.clone();
                     Some(acc.clone())
                 })
-                .collect::<Vec<T>>();
+                .collect::<Vec<TA>>();
 
             // reuse the last element of the cumsum
             let sum = F::round_cast(cumsum[cumsum.len() - 1].clone())?;
@@ -127,8 +127,8 @@ where
             let alpha_edges = alphas
                 .iter()
                 .cloned()
-                .map(|a| T::round_cast(a * sum))
-                .collect::<Fallible<Vec<T>>>()?;
+                .map(|a| TA::round_cast(a * sum))
+                .collect::<Fallible<Vec<TA>>>()?;
 
             // each index is the number of bins whose combined mass is less than the alpha_edge mass
             let mut indices = vec![0; alphas.len()];
@@ -146,7 +146,7 @@ where
                     // Want to find the cumulative values to the left and right of edge
                     // When no elements less than edge, consider cumulative value to be zero
                     let left = if idx == 0 {
-                        T::zero()
+                        TA::zero()
                     } else {
                         cumsum[idx - 1].clone()
                     };
@@ -154,12 +154,12 @@ where
 
                     // println!("x's {:?}, {:?}", edge, (left.clone(), right.clone()));
                     // println!("y's {:?}", (&bin_edges[idx], &bin_edges[idx + 1]));
-                    match interpolate {
-                        Interpolate::Nearest => {
+                    match interpolation {
+                        Interpolation::Nearest => {
                             // if edge nearer to right than to left, then increment index
                             bin_edges[idx + (edge.clone() - left > right - edge) as usize].clone()
                         }
-                        Interpolate::Linear => {
+                        Interpolation::Linear => {
                             // find the interpolant between the bin edges.
                             // denominator is never zero because bin edges is strictly increasing
                             let slope = (bin_edges[idx + 1].clone() - bin_edges[idx].clone())
@@ -275,12 +275,12 @@ mod test_cdf {
         let edges = vec![0, 25, 50, 75, 100];
         let alphas = vec![0., 0.1, 0.24, 0.51, 0.74, 0.75, 0.76, 0.99, 1.];
         let quantile_trans =
-            make_quantiles_from_counts(edges.clone(), alphas.clone(), Interpolate::Nearest)?;
+            make_quantiles_from_counts(edges.clone(), alphas.clone(), Interpolation::Nearest)?;
         let quantiles = quantile_trans.invoke(&vec![100, 100, 100, 100])?;
         println!("{:?}", quantiles);
         assert_eq!(quantiles, vec![0, 0, 25, 50, 75, 75, 75, 100, 100]);
 
-        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolate::Linear)?;
+        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolation::Linear)?;
         let quantiles = quantile_trans.invoke(&vec![100, 100, 100, 100])?;
         println!("{:?}", quantiles);
         // assert_eq!(quantiles, vec![0, 0, 0, 50, 75, 75, 75, 100, 100]);
@@ -291,7 +291,7 @@ mod test_cdf {
     fn test_quantile_with_edge_buckets() -> Fallible<()> {
         let edges = vec![0, 25, 50, 75, 100];
         let alphas = vec![0., 0.1, 0.24, 0.51, 0.74, 0.75, 0.76, 0.99, 1.];
-        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolate::Nearest)?;
+        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolation::Nearest)?;
         let quantiles = quantile_trans.invoke(&vec![210, 100, 100, 100, 100, 234])?;
         println!("{:?}", quantiles);
         assert_eq!(quantiles, vec![0, 0, 25, 50, 75, 75, 75, 100, 100]);
@@ -303,11 +303,11 @@ mod test_cdf {
         let edges = vec![0., 10., 20., 30.];
         let alphas = vec![0.2, 0.4, 0.7];
         let quantile_trans =
-            make_quantiles_from_counts(edges.clone(), alphas.clone(), Interpolate::Nearest)?;
+            make_quantiles_from_counts(edges.clone(), alphas.clone(), Interpolation::Nearest)?;
         let quantiles = quantile_trans.invoke(&vec![2.23, 3.4, 5.])?;
         assert_eq!(quantiles, vec![10., 20., 20.]);
 
-        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolate::Linear)?;
+        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolation::Linear)?;
         let quantiles = quantile_trans.invoke(&vec![2.23, 3.4, 5.])?;
         assert_eq!(
             quantiles,
@@ -321,7 +321,7 @@ mod test_cdf {
     fn test_quantile_int() -> Fallible<()> {
         let edges = vec![0, 10, 50, 100];
         let alphas = vec![0.2, 0.4, 0.7];
-        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolate::Nearest)?;
+        let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolation::Nearest)?;
         let quantiles = quantile_trans.invoke(&vec![2, 3, 5])?;
         assert_eq!(quantiles, vec![10, 50, 50]);
         Ok(())

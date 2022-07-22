@@ -6,7 +6,7 @@ from opendp.typing import *
 
 __all__ = [
     "make_b_ary_tree",
-    "make_b_ary_consistent",
+    "make_b_ary_tree_consistent",
     "make_cast",
     "make_cast_default",
     "make_df_cast_default",
@@ -66,21 +66,21 @@ __all__ = [
 
 
 def make_b_ary_tree(
-    number_bins: int,
-    b: int,
-    T: RuntimeTypeDescriptor,
-    M: RuntimeTypeDescriptor
+    leaf_count: int,
+    branching_factor: int,
+    M: RuntimeTypeDescriptor,
+    TA: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Expand a vector of counts into a b-ary tree of counts, where each branch is the sum of its `b` immediate children.
     
-    :param number_bins: The number of leaf nodes in the b-ary tree.
-    :type number_bins: int
-    :param b: Branching factor.
-    :type b: int
-    :param T: Type of the input data.
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :param M: Metric. Must be L1Distance<T> or L2Distance<T>
+    :param leaf_count: The number of leaf nodes in the b-ary tree.
+    :type leaf_count: int
+    :param branching_factor: The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
+    :type branching_factor: int
+    :param M: Metric. Must be L1Distance<Q> or L2Distance<Q>
     :type M: :ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic type of the input data.
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A b_ary_tree step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -90,37 +90,37 @@ def make_b_ary_tree(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse(type_name=T)
     M = RuntimeType.parse(type_name=M)
+    TA = RuntimeType.parse(type_name=TA)
     
     # Convert arguments to c types.
-    number_bins = py_to_c(number_bins, c_type=ctypes.c_uint)
-    b = py_to_c(b, c_type=ctypes.c_uint)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    leaf_count = py_to_c(leaf_count, c_type=ctypes.c_uint)
+    branching_factor = py_to_c(branching_factor, c_type=ctypes.c_uint)
     M = py_to_c(M, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_b_ary_tree
     function.argtypes = [ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(number_bins, b, T, M), Transformation))
+    return c_to_py(unwrap(function(leaf_count, branching_factor, M, TA), Transformation))
 
 
-def make_b_ary_consistent(
-    b: int,
-    TI: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor
+def make_b_ary_tree_consistent(
+    branching_factor: int,
+    TIA: RuntimeTypeDescriptor = "int",
+    TOA: RuntimeTypeDescriptor = "float"
 ) -> Transformation:
     """Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.
     
-    :param b: Branching factor.
-    :type b: int
-    :param TI: Type of the input data.
-    :type TI: :ref:`RuntimeTypeDescriptor`
-    :param TO: Type of the output data.
-    :type TO: :ref:`RuntimeTypeDescriptor`
-    :return: A b_ary_consistent step.
+    :param branching_factor: The number of children on each branch of the resulting tree. Should be the same as the `branching_factor` used for `make_b_ary_tree`
+    :type branching_factor: int
+    :param TIA: Atomic type of the input data. Should be an integer type.
+    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic type of the output data. Should be a float type.
+    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :return: A b_ary_tree_consistent step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -129,20 +129,20 @@ def make_b_ary_consistent(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TI = RuntimeType.parse(type_name=TI)
-    TO = RuntimeType.parse(type_name=TO)
+    TIA = RuntimeType.parse(type_name=TIA)
+    TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
-    b = py_to_c(b, c_type=ctypes.c_uint)
-    TI = py_to_c(TI, c_type=ctypes.c_char_p)
-    TO = py_to_c(TO, c_type=ctypes.c_char_p)
+    branching_factor = py_to_c(branching_factor, c_type=ctypes.c_uint)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_b_ary_consistent
+    function = lib.opendp_trans__make_b_ary_tree_consistent
     function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(b, TI, TO), Transformation))
+    return c_to_py(unwrap(function(branching_factor, TIA, TOA), Transformation))
 
 
 def make_cast(
@@ -877,12 +877,12 @@ def make_count_distinct(
 
 
 def make_cdf(
-    T: RuntimeTypeDescriptor
+    TA: RuntimeTypeDescriptor = "float"
 ) -> Transformation:
     """Postprocess a noisy array of summary counts into a cdf.
     
-    :param T: Type of the data.
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :param TA: Type of the data.
+    :type TA: :ref:`RuntimeTypeDescriptor`
     :return: A cdf step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -892,34 +892,37 @@ def make_cdf(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse(type_name=T)
+    TA = RuntimeType.parse(type_name=TA)
     
     # Convert arguments to c types.
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_cdf
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(T), Transformation))
+    return c_to_py(unwrap(function(TA), Transformation))
 
 
 def make_quantiles_from_counts(
     bin_edges: Any,
     alphas: Any,
-    T: RuntimeTypeDescriptor = None,
-    F: RuntimeTypeDescriptor = None
+    interpolation: str = "linear",
+    TA: RuntimeTypeDescriptor = None,
+    F: RuntimeTypeDescriptor = "float"
 ) -> Transformation:
-    """Postprocess a noisy array of summary counts into a quantile.
+    """Postprocess a noisy array of summary counts into quantiles.
     
     :param bin_edges: The edges that the input data was binned into before counting.
     :type bin_edges: Any
     :param alphas: Return all specified `alpha`-quantiles.
     :type alphas: Any
-    :param T: Type of the input data.
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :param F: Type of the output data.
+    :param interpolation: Must be one of `linear` or `nearest`
+    :type interpolation: str
+    :param TA: Atomic type of the data.
+    :type TA: :ref:`RuntimeTypeDescriptor`
+    :param F: Float type of the alpha argument. One of f32 or f64
     :type F: :ref:`RuntimeTypeDescriptor`
     :return: A quantiles_from_counts step.
     :rtype: Transformation
@@ -930,21 +933,22 @@ def make_quantiles_from_counts(
     assert_features("contrib")
     
     # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=next(iter(bin_edges), None))
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=next(iter(bin_edges), None))
     F = RuntimeType.parse_or_infer(type_name=F, public_example=next(iter(alphas), None))
     
     # Convert arguments to c types.
-    bin_edges = py_to_c(bin_edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[T]))
+    bin_edges = py_to_c(bin_edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TA]))
     alphas = py_to_c(alphas, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[F]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    interpolation = py_to_c(interpolation, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     F = py_to_c(F, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_quantiles_from_counts
-    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(bin_edges, alphas, T, F), Transformation))
+    return c_to_py(unwrap(function(bin_edges, alphas, interpolation, TA, F), Transformation))
 
 
 def make_count_by(

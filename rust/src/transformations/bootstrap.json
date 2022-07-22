@@ -4,45 +4,48 @@
         "features": ["contrib"],
         "args": [
             {
-                "name": "number_bins",
+                "name": "leaf_count",
                 "c_type": "unsigned int",
                 "description": "The number of leaf nodes in the b-ary tree."
             },
             {
-                "name": "b",
+                "name": "branching_factor",
                 "c_type": "unsigned int",
-                "description": "Branching factor."
-            },
-            {
-                "name": "T",
-                "description": "Type of the input data.",
-                "is_type": true
+                "description": "The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees."
             },
             {
                 "name": "M",
-                "description": "Metric. Must be L1Distance<T> or L2Distance<T>",
+                "description": "Metric. Must be L1Distance<Q> or L2Distance<Q>",
+                "is_type": true
+            },
+            {
+                "name": "TA",
+                "description": "Atomic type of the input data.",
+                "default": "int",
                 "is_type": true
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_b_ary_consistent": {
+    "make_b_ary_tree_consistent": {
         "description": "Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.",
         "features": ["contrib"],
         "args": [
             {
-                "name": "b",
+                "name": "branching_factor",
                 "c_type": "unsigned int",
-                "description": "Branching factor."
+                "description": "The number of children on each branch of the resulting tree. Should be the same as the `branching_factor` used for `make_b_ary_tree`"
             },
             {
-                "name": "TI",
-                "description": "Type of the input data.",
+                "name": "TIA",
+                "description": "Atomic type of the input data. Should be an integer type.",
+                "default": "int",
                 "is_type": true
             },
             {
-                "name": "TO",
-                "description": "Type of the output data.",
+                "name": "TOA",
+                "description": "Atomic type of the output data. Should be a float type.",
+                "default": "float",
                 "is_type": true
             }
         ],
@@ -494,15 +497,16 @@
         "features": ["contrib"],
         "args": [
             {
-                "name": "T",
+                "name": "TA",
                 "description": "Type of the data.",
+                "default": "float",
                 "is_type": true
             }
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "make_quantiles_from_counts": {
-        "description": "Postprocess a noisy array of summary counts into a quantile.",
+        "description": "Postprocess a noisy array of summary counts into quantiles.",
         "features": ["contrib"],
         "args": [
             {
@@ -510,7 +514,7 @@
                 "c_type": "AnyObject *",
                 "rust_type": {
                     "origin": "Vec",
-                    "args": ["T"]
+                    "args": ["TA"]
                 },
                 "description": "The edges that the input data was binned into before counting."
             },
@@ -524,13 +528,20 @@
                 "description": "Return all specified `alpha`-quantiles."
             },
             {
-                "name": "T",
-                "description": "Type of the input data.",
+                "name": "interpolation",
+                "c_type": "char *",
+                "default": "linear",
+                "description": "Must be one of `linear` or `nearest`"
+            },
+            {
+                "name": "TA",
+                "description": "Atomic type of the data.",
                 "is_type": true
             },
             {
                 "name": "F",
-                "description": "Type of the output data.",
+                "description": "Float type of the alpha argument. One of f32 or f64",
+                "default": "float",
                 "is_type": true
             }
         ],
