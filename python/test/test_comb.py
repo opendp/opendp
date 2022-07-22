@@ -86,8 +86,7 @@ def test_cast_zcdp_approxdp():
     smd_gaussian = make_zCDP_to_approxDP(base_gaussian)
 
     print(smd_gaussian.map(1.).epsilon(1e-6))
-
-
+    
 if __name__ == "__main__":
     test_cast_zcdp_approxdp()
 

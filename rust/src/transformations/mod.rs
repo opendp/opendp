@@ -14,6 +14,11 @@ pub mod dataframe;
 pub use crate::transformations::dataframe::*;
 
 #[cfg(feature="contrib")]
+pub(crate) mod postprocess;
+#[cfg(feature="contrib")]
+pub(crate) use postprocess::*;
+
+#[cfg(feature="contrib")]
 pub mod manipulation;
 #[cfg(feature="contrib")]
 pub use crate::transformations::manipulation::*;

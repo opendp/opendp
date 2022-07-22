@@ -39,6 +39,26 @@
             "description": "Transformation representing the chained computation."
         }
     },
+    "make_chain_tm": {
+        "description": "Construct the functional composition (`transformation` ○ `measurement`). Returns a Measurement. Used for postprocessing.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "transformation",
+                "c_type": "const AnyTransformation *",
+                "description": "outer postprocessor"
+            },
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *",
+                "description": "inner privatizer"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "Measurement representing the chained computation."
+        }
+    },
     "make_basic_composition": {
         "description": "Construct the DP composition [`measurement0`, `measurement1`, ...]. Returns a Measurement.",
         "args": [
