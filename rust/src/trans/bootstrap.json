@@ -759,7 +759,7 @@
         "features": ["contrib"],
         "args": [
             {
-                "name": "ident_name",
+                "name": "identifier_column",
                 "c_type": "AnyObject *",
                 "rust_type": "TK",
                 "description": "Name of column to split dataframe by."
@@ -771,7 +771,7 @@
                     "origin": "Vec",
                     "args": ["TV"]
                 },
-                "description": "Unique values in the `ident_name` column."
+                "description": "Unique values in the `identifier_column` column."
             },
             {
                 "name": "keep_columns",
@@ -780,7 +780,7 @@
                     "origin": "Vec",
                     "args": ["TK"]
                 },
-                "description": "Columns to keep in the partioned dataframes."
+                "description": "Columns to keep in the partitioned dataframes."
             },
             {
                 "name": "TK",

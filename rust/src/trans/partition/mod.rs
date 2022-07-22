@@ -8,7 +8,7 @@ use super::{DataFrameDomain, DataFrame};
 mod ffi;
 
 pub fn make_partition_by<TK: Hashable, TV: Hashable>(
-    ident_name: TK,
+    identifier_column: TK,
     partition_keys: Vec<TV>,
     keep_columns: Vec<TK>
 ) -> Fallible<Transformation<DataFrameDomain<TK>, ProductDomain<DataFrameDomain<TK>>, SymmetricDistance, SymmetricDistance>> {
@@ -19,7 +19,7 @@ pub fn make_partition_by<TK: Hashable, TV: Hashable>(
         ProductDomain::new((0..num_partitions).map(|_| DataFrameDomain::new_all()).collect()),
         Function::new_fallible(move |data: &DataFrame<TK>| {
             // the partition to move each row into
-            let partition_ids: Vec<usize> = data.get(&ident_name)
+            let partition_ids: Vec<usize> = data.get(&identifier_column)
                 .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
                 .as_form::<Vec<TV>>()?
                 .iter()

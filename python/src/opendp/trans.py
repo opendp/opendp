@@ -1237,7 +1237,7 @@ def make_sized_bounded_mean(
 
 
 def make_partition_by(
-    ident_name: Any,
+    identifier_column: Any,
     partition_keys: Any,
     keep_columns: Any,
     TK: RuntimeTypeDescriptor = "String",
@@ -1245,11 +1245,11 @@ def make_partition_by(
 ) -> Transformation:
     """Make a Transformation that partitions a dataframe by a given column.
     
-    :param ident_name: Name of column to split dataframe by.
-    :type ident_name: Any
-    :param partition_keys: Unique values in the `ident_name` column.
+    :param identifier_column: Name of column to split dataframe by.
+    :type identifier_column: Any
+    :param partition_keys: Unique values in the `identifier_column` column.
     :type partition_keys: Any
-    :param keep_columns: Columns to keep in the partioned dataframes.
+    :param keep_columns: Columns to keep in the partitioned dataframes.
     :type keep_columns: Any
     :param TK: Type of column names.
     :type TK: :ref:`RuntimeTypeDescriptor`
@@ -1264,11 +1264,11 @@ def make_partition_by(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=ident_name)
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=identifier_column)
     TV = RuntimeType.parse_or_infer(type_name=TV, public_example=get_first(partition_keys))
     
     # Convert arguments to c types.
-    ident_name = py_to_c(ident_name, c_type=AnyObjectPtr, type_name=TK)
+    identifier_column = py_to_c(identifier_column, c_type=AnyObjectPtr, type_name=TK)
     partition_keys = py_to_c(partition_keys, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TV]))
     keep_columns = py_to_c(keep_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TK]))
     TK = py_to_c(TK, c_type=ctypes.c_char_p)
@@ -1279,7 +1279,7 @@ def make_partition_by(
     function.argtypes = [AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(ident_name, partition_keys, keep_columns, TK, TV), Transformation))
+    return c_to_py(unwrap(function(identifier_column, partition_keys, keep_columns, TK, TV), Transformation))
 
 
 def make_resize(

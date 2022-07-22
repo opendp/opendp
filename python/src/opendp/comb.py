@@ -10,7 +10,9 @@ __all__ = [
     "make_chain_tt",
     "make_basic_composition",
     "make_population_amplification",
-    "make_fix_delta"
+    "make_fix_delta",
+    "make_partition_map_trans",
+    "make_partition_map_meas"
 ]
 
 
@@ -157,3 +159,53 @@ def make_fix_delta(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement, delta), Measurement))
+
+
+def make_partition_map_trans(
+    transformations: Any
+) -> Transformation:
+    """Construct the parallel composition of [`transformation0`, `transformation1`, ...]. Returns a Transformation.
+    
+    :param transformations: A list of transformations to compose.
+    :type transformations: Any
+    :return: A transformation that applies a transformation to each partition.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    transformations = py_to_c(transformations, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=["AnyTransformationPtr"]))
+    
+    # Call library function.
+    function = lib.opendp_comb__make_partition_map_trans
+    function.argtypes = [AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformations), Transformation))
+
+
+def make_partition_map_meas(
+    measurements: Any
+) -> Measurement:
+    """Construct the parallel composition of [`measurement0`, `measurement1`, ...]. Returns a Measurement.
+    
+    :param measurements: A list of measurements to compose.
+    :type measurements: Any
+    :return: A measurement that applies a measurement to each partition.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurements = py_to_c(measurements, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=["AnyMeasurementPtr"]))
+    
+    # Call library function.
+    function = lib.opendp_comb__make_partition_map_meas
+    function.argtypes = [AnyObjectPtr]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurements), Measurement))

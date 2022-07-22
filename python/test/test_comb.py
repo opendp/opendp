@@ -76,20 +76,21 @@ def test_make_basic_composition_leak():
         meas([0] * 10_000_000)
 
 
-def test_make_map_partitions_trans():
-    from opendp.comb import make_partition_map_meas
+def test_make_map_partitions():
+    from opendp.comb import make_partition_map_trans, make_partition_map_meas
 
     meas = make_split_dataframe(
         separator=",", 
         col_names=["strat id", "values"]
     ) >> make_partition_by(
-        ident_name="strat id",
+        identifier_column="strat id",
         partition_keys=list(map(str, range(4))),
         keep_columns=["values"],
-    ) >> make_partition_map_meas([
+    ) >> make_partition_map_trans([
         make_select_column("values", TOA=str) >> 
         make_cast_default(TIA=str, TOA=int) >> 
-        make_clamp((0, 1)) >> 
+        make_clamp((0, 1))
+    ] * 5) >> make_partition_map_meas([
         make_bounded_sum((0, 1)) >>
         make_base_geometric(1.)
     ] * 5)
@@ -105,6 +106,45 @@ def test_make_map_partitions_trans():
     # release noisy sums!
     print(meas(data))
 
+
+# 2-way partitioning!
+def test_make_map_partitions_nested():
+    from opendp.comb import make_partition_map_meas
+
+    meas = make_split_dataframe(
+        separator=",", 
+        col_names=["strat id 1", "strat id 2", "values"]
+    ) >> make_partition_by(
+        identifier_column="strat id 1",
+        partition_keys=list(map(str, range(4))),
+        keep_columns=["strat id 2", "values"],
+    ) >> make_partition_map_meas([
+        make_partition_by(
+            identifier_column="strat id 2",
+            partition_keys=list(map(str, range(4))),
+            keep_columns=["values"],
+        ) >> make_partition_map_meas([
+            make_select_column("values", TOA=str) >> 
+            make_cast_default(TIA=str, TOA=int) >> 
+            make_clamp((0, 1)) >>
+            make_bounded_sum((0, 1)) >>
+            make_base_geometric(1.)
+        ] * 5)
+    ] * 5)
+
+    # build some synthetic data:
+    from random import randint, choice
+    data_length = 500
+    strat_ids_1 = [randint(0, 5) for _ in range(data_length)]
+    strat_ids_2 = [randint(0, 5) for _ in range(data_length)]
+    values = [choice([0, 1]) for _ in range(data_length)]
+    data = "\n".join(f"{k1},{k2},{v}" for k1, k2, v in zip(strat_ids_1, strat_ids_2, values))
+    # print(data)
+    
+    # release noisy sums!
+    print(meas(data))
+
+
 if __name__ == "__main__":
-    test_make_map_partitions_trans()
+    test_make_map_partitions_nested()
 
