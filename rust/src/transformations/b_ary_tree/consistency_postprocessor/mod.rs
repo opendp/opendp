@@ -1,4 +1,4 @@
-use crate::{error::Fallible, core::{Transformation, Function}, domains::{VectorDomain, AllDomain}, metrics::AgnosticMetric, traits::{Float, CheckNull, RoundCast}, trans::postprocess::make_postprocess};
+use crate::{error::Fallible, core::{Transformation, Function}, domains::{VectorDomain, AllDomain}, metrics::AgnosticMetric, traits::{Float, CheckNull, RoundCast}, transformations::make_postprocess};
 
 use super::{num_layers_from_num_nodes, num_nodes_from_num_layers};
 

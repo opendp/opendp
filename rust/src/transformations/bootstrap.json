@@ -51,6 +51,18 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
+    "choose_branching_factor": {
+        "description": "Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size_guess",
+                "c_type": "unsigned int",
+                "description": "A guess at the size of your dataset."
+            }
+        ],
+        "ret": {"c_type": "unsigned int"}
+    },
     "make_cast": {
         "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. \nFailure to parse results in None, else Some<TOA>.",
         "features": ["contrib"],
@@ -586,6 +598,12 @@
                     "args": ["TIA"]
                 },
                 "description": "The set of categories to compute counts for."
+            },
+            {
+                "name": "null_category",
+                "c_type": "bool",
+                "default": true,
+                "description": "Include a count of the number of elements that were not in the category set at the end of the vector."
             },
             {
                 "name": "MO",

@@ -340,7 +340,7 @@ def test_df_subset():
     assert query.check(1, 1)
 
 def test_lipschitz_b_ary_tree():
-    from opendp.tranformations import make_count_by_categories, make_b_ary_tree, make_b_ary_tree_consistent, make_cdf
+    from opendp.transformations import make_count_by_categories, make_b_ary_tree, make_b_ary_tree_consistent, make_cdf, choose_branching_factor
     from opendp.measurements import make_base_geometric
     leaf_count = 7
     branching_factor = 2
@@ -348,6 +348,9 @@ def test_lipschitz_b_ary_tree():
     assert tree_builder([1] * leaf_count) == [7, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]
     #                                  level: 1  2     3           4
     # top of tree is at level 1
+
+    suggested_factor = choose_branching_factor(size_guess=10_000)
+    print("suggested_factor", suggested_factor)
 
     # the categories are bin names!
     meas_base = (
@@ -365,3 +368,5 @@ def test_lipschitz_b_ary_tree():
     data = ["A"] * 34 + ["B"] * 23 + ["C"] * 12 + ["D"] * 84 + ["E"] * 34 + ["F"] * 85 + ["G"] * 75
     print(meas_cdf(data))
     print(meas_quantiles(data))
+
+    assert meas_cdf.map(1) == 4.

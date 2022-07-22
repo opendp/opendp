@@ -11,7 +11,7 @@ pub use crate::transformations::covariance::*;
 #[cfg(feature="contrib")]
 pub mod b_ary_tree;
 #[cfg(feature="contrib")]
-pub use crate::trans::b_ary_tree::*;
+pub use crate::transformations::b_ary_tree::*;
 
 #[cfg(feature="contrib")]
 pub mod dataframe;
@@ -46,7 +46,7 @@ pub use crate::transformations::count::*;
 #[cfg(feature="contrib")]
 pub mod count_cdf;
 #[cfg(feature="contrib")]
-pub use crate::trans::count_cdf::*;
+pub use crate::transformations::count_cdf::*;
 
 #[cfg(feature="contrib")]
 pub mod mean;

@@ -102,10 +102,31 @@ fn num_nodes_from_num_layers(num_layers: usize, b: usize) -> usize {
 pub trait BAryTreeMetric: Metric {}
 impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
 
+/// Choose the optimal branching factor.
+/// Proposition 1: http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf
+/// From "Optimal Branching Factor", try different values of b, up to flat.
+///
+/// # Arguments
+/// * `size_guess` - ballpark estimate of dataset size
+pub fn choose_branching_factor(size_guess: usize) -> usize {
+    // Formula (3) estimates variance
+    fn v_star_avg(n: f64, b: f64) -> f64 {
+        let h = n.log(b);
+        return (b - 1.) * h.powi(3) - 2. * (b + 1.) * h.powi(2) / 3.;
+    }
+
+    // find the b with minimum average variance
+    (2..size_guess + 1)
+        .map(|b| (b, v_star_avg(size_guess as f64, b as f64)))
+        .min_by(|(_, a_s), (_, b_s)| a_s.total_cmp(b_s))
+        .map(|p| p.0)
+        .unwrap_or(size_guess)
+}
+
 
 #[cfg(test)]
 pub mod test_b_trees {
-    use crate::{metrics::L1Distance, meas::make_base_geometric};
+    use crate::{metrics::L1Distance, measurements::make_base_geometric};
 
     use super::*;
 

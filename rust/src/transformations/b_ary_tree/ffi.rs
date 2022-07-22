@@ -8,8 +8,10 @@ use crate::{
     ffi::{any::AnyTransformation, util::Type},
     metrics::{L1Distance, L2Distance},
     traits::{Integer, Number},
-    trans::{make_b_ary_tree, BAryTreeMetric},
+    transformations::{make_b_ary_tree, BAryTreeMetric},
 };
+
+use super::choose_branching_factor;
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_b_ary_tree(
@@ -50,4 +52,13 @@ pub extern "C" fn opendp_trans__make_b_ary_tree(
     dispatch!(monomorphize, [
         (Q, @integers)
     ], (leaf_count, branching_factor, M, TA))
+}
+
+
+#[no_mangle]
+pub extern "C" fn opendp_trans__choose_branching_factor(
+    size_guess: c_uint,
+) -> c_uint {
+    let size_guess = size_guess as usize;
+    choose_branching_factor(size_guess) as c_uint
 }

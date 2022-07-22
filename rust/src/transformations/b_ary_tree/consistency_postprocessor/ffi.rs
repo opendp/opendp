@@ -8,7 +8,7 @@ use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
     ffi::{any::AnyTransformation, util::Type},
     traits::{CheckNull, Float, RoundCast},
-    trans::make_b_ary_tree_consistent
+    transformations::make_b_ary_tree_consistent
 };
 
 #[no_mangle]

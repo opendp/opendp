@@ -7,6 +7,7 @@ from opendp.typing import *
 __all__ = [
     "make_b_ary_tree",
     "make_b_ary_tree_consistent",
+    "choose_branching_factor",
     "make_cast",
     "make_cast_default",
     "make_df_cast_default",
@@ -100,7 +101,7 @@ def make_b_ary_tree(
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_b_ary_tree
+    function = lib.opendp_transformations__make_b_ary_tree
     function.argtypes = [ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
@@ -138,11 +139,36 @@ def make_b_ary_tree_consistent(
     TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_b_ary_tree_consistent
+    function = lib.opendp_transformations__make_b_ary_tree_consistent
     function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(branching_factor, TIA, TOA), Transformation))
+
+
+def choose_branching_factor(
+    size_guess: int
+) -> int:
+    """Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.
+    
+    :param size_guess: A guess at the size of your dataset.
+    :type size_guess: int
+    :rtype: int
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    size_guess = py_to_c(size_guess, c_type=ctypes.c_uint)
+    
+    # Call library function.
+    function = lib.opendp_transformations__choose_branching_factor
+    function.argtypes = [ctypes.c_uint]
+    function.restype = ctypes.c_uint
+    
+    return c_to_py(function(size_guess))
 
 
 def make_cast(
@@ -898,7 +924,7 @@ def make_cdf(
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_cdf
+    function = lib.opendp_transformations__make_cdf
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
@@ -944,7 +970,7 @@ def make_quantiles_from_counts(
     F = py_to_c(F, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_quantiles_from_counts
+    function = lib.opendp_transformations__make_quantiles_from_counts
     function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
@@ -993,6 +1019,7 @@ def make_count_by(
 
 def make_count_by_categories(
     categories: Any,
+    null_category: bool = True,
     MO: SensitivityMetric = "L1Distance<int>",
     TIA: RuntimeTypeDescriptor = None,
     TOA: RuntimeTypeDescriptor = "int"
@@ -1002,6 +1029,8 @@ def make_count_by_categories(
     
     :param categories: The set of categories to compute counts for.
     :type categories: Any
+    :param null_category: Include a count of the number of elements that were not in the category set at the end of the vector.
+    :type null_category: bool
     :param MO: output sensitivity metric
     :type MO: SensitivityMetric
     :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
@@ -1023,16 +1052,17 @@ def make_count_by_categories(
     
     # Convert arguments to c types.
     categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    null_category = py_to_c(null_category, c_type=ctypes.c_bool)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
     TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_count_by_categories
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(categories, MO, TIA, TOA), Transformation))
+    return c_to_py(unwrap(function(categories, null_category, MO, TIA, TOA), Transformation))
 
 
 def make_split_lines(

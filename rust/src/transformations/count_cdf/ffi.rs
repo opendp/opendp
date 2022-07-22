@@ -7,7 +7,7 @@ use crate::{
         util::{to_str, Type},
     },
     traits::{Float, Number, RoundCast},
-    trans::{make_cdf, make_quantiles_from_counts, Interpolation},
+    transformations::{make_cdf, make_quantiles_from_counts, Interpolation},
 };
 
 #[no_mangle]
