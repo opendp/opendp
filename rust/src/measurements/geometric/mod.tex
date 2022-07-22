@@ -1,0 +1,283 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{enumerate} 
+\usepackage{physics}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+ \usepackage{hyperref}
+\hypersetup{colorlinks,
+    linkcolor=blue,
+    citecolor=blue,      
+    urlcolor=blue,
+}
+\usepackage{graphicx}
+ \usepackage{tcolorbox}
+
+
+\oddsidemargin0.1cm 
+\evensidemargin0.8cm
+\textheight22.7cm 
+\textwidth15cm \topmargin-0.5cm
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\newcommand{\vicki}[1]{{ {\color{olive}{(vicki)~#1}}}}
+\newcommand{\hanwen}[1]{{ {\color{purple}{(hanwen)~#1}}}}
+\newcommand{\zach}[1]{{ {\color{red}{(zach)~#1}}}}
+
+\newcommand{\MultiSet}{\mathrm{MultiSet}}
+\newcommand{\len}{\mathrm{len}}
+\newcommand{\din}{\texttt{d\_in}}
+\newcommand{\dout}{\texttt{d\_out}}
+\newcommand{\T}{\texttt{T} }
+\newcommand{\F}{\texttt{F} }
+\newcommand{\Relation}{\texttt{Relation}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\True}{\texttt{True}}
+\newcommand{\False}{\texttt{False}}
+\newcommand{\clamp}{\texttt{clamp}}
+\newcommand{\function}{\texttt{function}}
+\newcommand{\float}{\texttt{float }}
+\newcommand{\questionc}[1]{\textcolor{red}{\textbf{Question:} #1}}
+
+
+\title{Privacy Proofs for OpenDP: Geometric Measurement (Linear Time Version)}
+\author{Vicki Xu, Hanwen Zhang, Zachary Ratliff}
+\date{Summer 2021}
+\begin{document}
+
+
+\maketitle
+\tableofcontents
+
+\section{Algorithm Implementation}
+\subsection{Code in Rust}
+The current OpenDP library contains the \texttt{make\_base\_geometric} function implementing geometric measurement for linear elements. This is defined in lines 48-82 of the file \texttt{geometric/mod.rs} in the Git repository (\url{https://github.com/opendp/opendp/blob/main/rust/src/meas/geometric/mod.rs#L48-L82}).
+
+\vicki{is this right?} 
+In \texttt{make\_base\_geometric}, which accepts a parameter \texttt{scale} of type \texttt{QO} and a parameter \texttt{bounds} of type \texttt{Option<(D::Atom, D::Atom)>}, the function takes in a data point \texttt{arg} of type \texttt{T}, \texttt{scale} that is now \texttt{InfCast} to type \texttt{f64}, and \texttt{bounds}. This function will call \texttt{sample\_two\_sided\_geometric}, which provides a sampling from the two-sided geometric distribution centered at \texttt{arg} with scale parameter \texttt{scale} and saturated at the bounds denoted by \texttt{bounds}. The function returns a tuple of \texttt{arg} and the sampled element given the parameters. 
+
+\subsection{Pseudo Code in Python}\label{sec:pseudocode}
+
+We present a simplified Python-like pseudocode of the Rust implementation below. The necessary definitions for the non-sampler pseudocode can be found at \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}. \vicki{fix link} For samplers (such as \texttt{sample\_bernoulli}), the definitions will be found at \vicki{insert link here}
+
+\subsubsection*{Preconditions}
+To ensure the correctness of the output, we require the following preconditions:
+
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Domain \texttt{AllDomain} must be of elements of type \texttt{T}
+        \item Variable \texttt{scale} must be of type \texttt{QO}
+        \item Variable \texttt{bounds} must be of type \texttt{Option(D::Atom, D::Atom)}
+        \item Type \texttt{D} must have trait \texttt{GeometricDomain}
+        \item Type \texttt{D::Atom} must have traits \texttt{TotalOrd} and \texttt{InfCast<QO>}
+        \item Type \texttt{QO} must have traits \texttt{float} and \texttt{DistanceConstant<D::Atom>} 
+        \item Type \texttt{f64} must have trait \texttt{InfCast<QO>}
+        \item Type \texttt{T} must have traits \texttt{SampleTwoSidedGeometric} and \texttt{CheckNull}
+    \end{itemize}
+\end{itemize}
+
+\vicki{not sure about the domain/T stuff; it's mentioned in the implementation of the domain so I figured should also have it here} 
+
+\subsubsection*{Postconditions}
+
+\begin{itemize}
+    \item A \texttt{Measurement} is returned (i.e., if a \texttt{Measurement} cannot be returned successfully, then an error should be returned).
+\end{itemize}
+
+
+\begin{lstlisting}[language=Python,  escapechar=|]
+def make_base_geometric(scale, bounds={"lower": T_MIN, "upper": T_MAX}):
+    input_domain = AllDomain(T)
+    output_domain = AllDomain(T)
+    input_metric = L1Distance(T)
+    similarity_metric = MaxDivergence(QO)
+    
+    # check scale sign
+    if (scale < 0): |\label{line:scale}|
+        raise Exception("scale must not be negative")
+        
+    # check bounds - can discuss if python dict is best representation of this
+    if (bounds["lower"] > bounds["upper"]): |\label{line:bounds}|
+        raise Exception("lower may not be greater than upper")
+
+    def privacy_map(d_in: u_32) -> float: |\label{line:map}|
+        if (d_in < 0): |\label{line:positivedin}|
+            raise Exception("sensitivity must be non-negative")
+        if (scale == 0):
+            return QO_MAX
+        return d_in * inf_div(scale);
+
+    # these are two separate functions in original, but can discuss if we want to combine the two
+    def noise_function(arg : T, scale : QO, bounds : Optional[{T, T}]) -> Function<f64, Optional[{T, T}]>: |\label{line:noise_fn}|
+        return function(inf_cast(scale), bounds)
+        
+    def function(arg : T, scale : f64, bounds: Optional[{T, T}]) -> <D, QO>: |\label{line:fn}|
+        sample_two_sided_geometric(arg, scale, bounds)
+    
+    return Measurement(input_domain, output_domain, function, input_metric, similarity_metric, privacy_map)
+
+\end{lstlisting}
+\hanwen{Changed the input metric to L1Distance for vector
+    (was AbsoluteDistance, but I guess AbsoluteDistance could 
+    be viewed as a special case of L1Distance with dimension 1)}
+\hanwen{re. noise function, I guess it's defined separately to account for different input domain (AllDomain and VectorDomain), but everything else looks pretty much the same to me. I would vote for using just one function and call
+sample\_two\_sided\_geometric once inside, plus some brief explanation of the domain?}
+
+\vicki{may be floating point issues with \texttt{is\_sign\_negative}}
+
+\vicki{marked bounds with [SELF::MIN, SELF::MAX] because it's an optional type in the original Rust code, and if not specified, then in SampleTwoSidedGeometric SELF::MIN and SELF::MAX are substituted}
+
+\vicki{the current code does \texttt{d\_out.neg\_inf\_mul(scale)}, but since we're working with maps now, I changed that to \texttt{inf\_div}. worth asking if that's ok though} 
+
+
+
+\subsection{Proof (TODO)}
+
+\begin{theorem}
+For every setting of the input parameters \texttt{constant} to \texttt{make\_base\_geometric} such that the given preconditions hold, the transformation returned by \texttt{make\_base\_geometric} satisfies the following statements:
+
+\begin{enumerate}
+    \item \textup{(Domain-metric compatibility.)} The domain \texttt{input\_domain} matches one of the possible domains listed in the definition of \texttt{input\_metric}. 
+    \item \textup{(Privacy guarantee.)} Let \texttt{d\_in} have the associated type for \texttt{input\_metric}, and let $D$ have associated type for \texttt{similarity\_metric}. For every pair of elements $v, w$ in \texttt{input\_domain} and every \texttt{d\_in}, if $v, w$ are \texttt{d\_in}-close under \texttt{input\_metric}, then \texttt{function}(v), \texttt{function}(w) are \texttt{map(d\_in)}-close with respect to $D$.
+\end{enumerate}
+\end{theorem}
+\begin{proof}
+\begin{enumerate}
+    \item \textbf{(Domain-metric compatibility.)} For \texttt{make\_base\_geometric} for linear elements, this corresponds to showing \texttt{AllDomain(T)} is compatible with \texttt{AbsoluteDivergence}. This follows directly from the definition of \texttt{AbsoluteDivergence}, as stated in the \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}.
+    \item \textbf{(Privacy guarantee.)} 
+    % This proof assumes the correctness of \texttt{sample\_two\_sided\_geometric}, asserted by the following lemma. 
+    % \begin{tcolorbox}
+    % \begin{lemma}
+    % \texttt{sample\_two\_sided\_geometric(shift, scale, bounds)} is a function that samples with no privacy violation from a two-sided geometric distribution centered at \texttt{shift}, with scale parameter \texttt{scale}, and saturated at the bounds denoted by \texttt{bounds}.
+    % In other words, this function properly 
+    % simulates a random variable $Z \sim $ 
+    % \texttt{shift} $+ 
+    % \text{ Geo}$(\texttt{scale}), with
+    % probability mass function
+    % $f_Z(z)\propto \exp{-|z-\texttt{shift}|/\texttt{scale}}$,
+    % and clamps the result at the specified 
+    % \texttt{bounds}, if given.
+    % \end{lemma} \vicki{not sure if this is right}
+    % \hanwen{added a few according to the formal def, but still needs review/suggestion}
+    % \end{tcolorbox}
+    The following proof is built up on Theorem 2.1 in the proof
+    of \texttt{sample\_two\_sided\_geometric(shift, scale, bounds)}, which is the following: \hanwen{link to be put here}
+    
+    \begin{tcolorbox}
+    \begin{theorem}
+     For every setting of input parameters \texttt{shift, scale, bounds} such that the preconditions hold, \texttt{sample\_two\_sided\_geometric} returns a draw from the censored two-sided geometric distribution with scale parameter \texttt{scale}, centered at \texttt{shift}, and saturated at the bounds denoted by \texttt{bounds}. 
+    \end{theorem}
+
+    \end{tcolorbox}
+    % \textbf{TODO}
+    Let $v,w$ be two datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}, which is defined to be
+    \texttt{L1Distance} here (over linear input). According to its definition 
+    in the proof definition document, \texttt{d\_in}$=d_{L1}(v,w)=\sum ^n_{i=1}|v_i-w_i|$,
+    where $n$ is the dimension of $v,w$.
+    Here it's implicitly assumed that $|v|=|w|$.
+    
+    Let $s=$\texttt{ scale}, $[a,b]=$\texttt{ bounds},
+    $Y=\function(v)$, and $Z=\function(w)$.
+    Our goal is to show that \texttt{MaxDivergence}  $D_{\infty}(Y||Z)$, also defined in the proof definition document, adheres to the privacy guarantee.
+    
+    Because the \function is defined such that 
+    \texttt{sample\_two\_sided\_geometric}, it properly
+    simulates a random variable $Z \sim $ 
+    \texttt{shift} $+ 
+    \text{ Geo}$(\texttt{scale}), with
+    probability mass function
+    $f_Z(z)\propto \exp{-|z-\texttt{shift}|/\texttt{scale}}$, along each axis of the input vector, or in the linear domain, in the trivial case with 1-dimensional input.
+    So it follows that 
+     \[
+    D_{\infty}(Y||Z) = \max_{S \subseteq Supp(Y)}\left[\ln (\frac{\Pr[Y \in S]}{\Pr[Z \in S]})\right] 
+    \]
+    
+    \[
+    = \max_{y\in Supp(Y)}\left[\ln (\frac{\Pr[
+    \function(v) = y]}
+    {\Pr[\function(w) = y]})\right]
+    \]
+    
+    \[
+    = \max_{y\in Supp(Y)}\sum^n_{i=1}\left[\ln (\frac{\exp{-|y_i-v_i|/s}}
+    {\exp{-|y_i-w_i|/s}})\right]
+    \]
+    
+    \[
+    = \max_{y\in Supp(Y)}\sum^n_{i=1}\left[\ln (\exp{-(|y_i-v_i|-|y_i-w_i|)/s})\right]
+    \]
+    
+    \[\leq \max_{y\in Supp(Y)}\sum^n_{i=1}\Big|
+    |y_i-v_i|-|y_i-w_i|\Big|/s\]
+    
+    % \[\leq \max_{y,y'\in Supp(Y)}\sum^n_{i=1}\Big|
+    % |y_i-v_i|-|y_i-w_i|\Big|/s\]
+    
+    \[
+    \leq \sum^n_{i=1}|v_i-w_i|/s
+    =\frac{1}{s}\sum^n_{i=1}|v_i-w_i|
+    =\texttt{d\_in}/\texttt{scale}
+    \]
+    
+ Because \function() output is discrete, we are able to switch from set to point-wise comparison as in the first and second lines. The summation in the third line comes from the vector input, where dimension $n$ represents the size of the input. 
+ The exponential function inside the summation is given by the fact of the probability mass function of the geometric distribution 
+ brought up earlier. 
+After basic algebraic manipulation, we apply the triangle inequality and obtain the last line. The result can be written 
+as \texttt{d\_in}/\texttt{scale}, as desired.
+This completes the proof of privacy guarantee.
+ 
+ \textbf{Failure cases.} We still need to account for failure cases within the \texttt{privacy\_map} code. There are two places in which the code raises an exception:
+ 
+ \begin{enumerate}
+     \item \texttt{d\_in} is negative. The code does a check if \texttt{d\_in < 0} in line \ref{line:positivedin} and raises an error and terminates here if the statement is true. 
+     \item \texttt{inf\_div} fails. This step is only reached if \texttt{d\_in} is nonnegative. As defined in the pseudocode definitions doc, \texttt{inf\_div} throws an exception if division overflows from a 32-bit integer. 
+ \end{enumerate}
+ 
+ If none of these cases fail, \texttt{privacy\_map} returns \texttt{d\_in * inf\_div(scale)}.
+\end{enumerate}
+\end{proof}
+% \hanwen{In the original proof def doc, for L1Dist and other related ones, the sum goes from $i=0$ instead of 
+% $i=1$, but I don't think it makes sense to have $0$-dim 
+% vectors? The dim would start with 1, at least...}
+
+% \hanwen{question for reviewer: not sure if it's correct to go from the first line to the second like this, i.e., go from set to point}
+
+\noindent\textbf{Remark.}
+The term \textit{linear} refers to the linear time in which the sampler returns a draw, and this does not affect
+the proof of privacy guarantee in this document as
+long as the features of geometric distribution holds.
+\hanwen{might need different wording etc}
+\end{document}
