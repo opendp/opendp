@@ -83,7 +83,7 @@
 
 \section{Algorithm Implementation}
 \subsection{Code in Rust}
-The current OpenDP library contains the \texttt{make\_base\_geometric} function implementing geometric measurement for linear elements. This is defined in lines 48-82 of the file \texttt{geometric/mod.rs} in the Git repository (\url{https://github.com/opendp/opendp/blob/main/rust/src/meas/geometric/mod.rs#L48-L82}).
+The current OpenDP library contains the \texttt{make\_base\_geometric} function implementing geometric measurement. This is defined in lines 48-82 of the file \texttt{geometric/mod.rs} in the Git repository (\url{https://github.com/opendp/opendp/blob/main/rust/src/meas/geometric/mod.rs#L48-L82}).
 
 \vicki{is this right?} 
 In \texttt{make\_base\_geometric}, which accepts a parameter \texttt{scale} of type \texttt{QO} and a parameter \texttt{bounds} of type \texttt{Option<(D::Atom, D::Atom)>}, the function takes in a data point \texttt{arg} of type \texttt{T}, \texttt{scale} that is now \texttt{InfCast} to type \texttt{f64}, and \texttt{bounds}. This function will call \texttt{sample\_two\_sided\_geometric}, which provides a sampling from the two-sided geometric distribution centered at \texttt{arg} with scale parameter \texttt{scale} and saturated at the bounds denoted by \texttt{bounds}. The function returns the sampled element given the parameters. 
@@ -176,7 +176,7 @@ For every setting of the input parameters \texttt{constant} to \texttt{make\_bas
 \end{theorem}
 \begin{proof}
 \begin{enumerate}
-    \item \textbf{(Domain-metric compatibility.)} For \texttt{make\_base\_geometric} for linear elements, this corresponds to showing \texttt{AllDomain(T)} is compatible with \texttt{AbsoluteDivergence}. This follows directly from the definition of \texttt{AbsoluteDivergence}, as stated in the \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}.
+    \item \textbf{(Domain-metric compatibility.)} For \texttt{make\_base\_geometric}, this corresponds to showing \texttt{AllDomain(T)} is compatible with \texttt{AbsoluteDivergence}. This follows directly from the definition of \texttt{AbsoluteDivergence}, as stated in the \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}.
     \item \textbf{(Privacy guarantee.)} 
     % This proof assumes the correctness of \texttt{sample\_two\_sided\_geometric}, asserted by the following lemma. 
     % \begin{tcolorbox}
