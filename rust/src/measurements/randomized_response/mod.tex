@@ -51,7 +51,7 @@
 
 \lstset{style=mystyle}
 
-\newcommand{\vicki}[1]{{ {\color{blue}{(vicki)~#1}}}}
+\newcommand{\vicki}[1]{{ {\color{olive}{(vicki)~#1}}}}
 \newcommand{\hanwen}[1]{{ {\color{purple}{(hanwen)~#1}}}}
 \newcommand{\zach}[1]{{ {\color{red}{(zach)~#1}}}}
 
@@ -106,7 +106,7 @@ The current OpenDP library contains the \texttt{make\_randomized\_response\_bool
 In \texttt{make\_randomized\_response\_bool}, which accepts a parameter \texttt{prob} of type \texttt{Q} and a parameter \texttt{constant\_time} of type \texttt{bool}, the function takes in a boolean data point \texttt{arg} and returns the truthful value \texttt{arg} with probability \texttt{prob} and the untruthful value $\texttt{!arg}$ with probability $1 - \texttt{prob}$ (in constant time, if the flag is turned on). 
 
 \subsection{Pseudo Code in Python}
-We present a simplified Python-like pseudocode of the Rust implementation below. The necessary definitions for the pseudocode can be found at \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}. % need to fix
+We present a simplified Python-like pseudocode of the Rust implementation below. The necessary definitions for the non-sampler pseudocode can be found at \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{``List of definitions used in the pseudocode"}. \vicki{fix link} For samplers (such as \texttt{sample\_bernoulli}), the definitions will be found at \vicki{insert link here}
 
 \emph{The use of \texttt{code}-style parameters in the preconditions section below (for example, \texttt{input\_domain}) means that this information should be passed along to the \texttt{Measurements} constructor.}
 
@@ -135,24 +135,25 @@ def make_randomized_response_bool(prob : Q, constant_time : bool):
     input_domain = AllDomain(bool)
     output_domain = AllDomain(bool)
     input_metric = DiscreteMetric()
-    similarity_metric = MaxDivergence()
+    similarity_metric = DiscreteDivergence()
     
     if (prob < 0.5 or prob >= 1): |\label{line:range}|
         raise Exception("probability must be in [0.5, 1)")
 
     c = inf_ln(inf_div(prob, neg_inf_sub(1, prob)))
-    def privacy_map(d_in: u_32) -> u_32: |\label{line:map}|
-        return d_in * c;
+    def privacy_map(d_in: uint) -> float: |\label{line:map}|
+        if (d_in == 0):
+            return 0
+        else: 
+            return c
 
     def function(arg : bool) -> bool: |\label{line:fn}|
-        if (sample_bernoulli(prob, constant_time)): |\label{line:coinflip}|
-            return arg
-        else:
-            return !arg
+        return !(arg ^ sample_bernoulli(prob, constant_time))
     
     return Measurement(input_domain, output_domain, function, input_metric, similarity_metric, privacy_map)
 
 \end{lstlisting}
+\vicki{changed the input and return types to more generic types but maybe I should go with the ultimate generic like $Q$?}
 %\hanwen{Just a small detail: in the proof \texttt{privacy\_map} is always referred to as \texttt{map}, should we change the name so that it's the same everywhere?}
 
 \begin{tcolorbox}
@@ -170,7 +171,7 @@ The necessary definitions for the proof can be found at \href{https://github.com
     %\item \textup{(Domain-metric compatibility.)} The domain \texttt{input\_domain} matches one of the possible domains listed in the definition of \texttt{input\_metric}, and the domain \texttt{output\_domain} matches one of the possible domains listed in the definition of \texttt{output\_metric}.
     \item  \textup{(Domain-metric compatibility.)} The domain \texttt{input\_domain} matches one of the possible domains listed in the definition of \texttt{input\_metric}. 
     
-    \item \textup{(Privacy guarantee.)} Let \texttt{d\_in} be the associated metric on \texttt{input\_domain} and has the associated type for \texttt{input\_metric}, and let $D$ be the similarity measure on probability distributions with the associated type for \texttt{similarity\_metric}. For every pair of elements $v, w$ in \texttt{input\_domain} and every \texttt{d\_in}, if $v, w$ are \texttt{d\_in}-close under \texttt{input\_metric}, then \texttt{function}(v), \texttt{function}(w) are \texttt{privacy\_map(d\_in)}-close with respect to $D$.
+    \item \textup{(Privacy guarantee.)} Let \texttt{d\_in} have the associated type for \texttt{input\_metric}, and let $D$ have associated type for \texttt{similarity\_metric}. For every pair of elements $v, w$ in \texttt{input\_domain} and every \texttt{d\_in}, if $v, w$ are \texttt{d\_in}-close under \texttt{input\_metric}, then \texttt{function}(v), \texttt{function}(w) are \texttt{privacy\_map(d\_in)}-close with respect to $D$.
 \end{enumerate}
 \end{theorem}
 
@@ -206,42 +207,52 @@ The necessary definitions for the proof can be found at \href{https://github.com
 \begin{note}[Proof relies on correctness of Bernoulli sampler]
 The following proof makes use of the following lemma that asserts the correctness of the Bernoulli sampler function.
     \begin{lemma}
-    \texttt{sample\_bernoulli(prob, constant\_time)}, the Bernoulli sampler function used in \texttt{make\_randomized\_response\_bool}, returns \texttt{true} with probability (\texttt{prob}) and returns  \texttt{false} with probability (1 - \texttt{prob}).
+    If system entropy is not sufficient, \texttt{sample\_bernoulli} raises an error. Otherwise, \texttt{sample\_bernoulli(prob, constant\_time)}, the Bernoulli sampler function used in \texttt{make\_randomized\_response\_bool}, returns \texttt{true} with probability (\texttt{prob}) and returns  \texttt{false} with probability (1 - \texttt{prob}).  \vicki{wording on this?} 
     \end{lemma}
 \end{note}
 \end{tcolorbox}
-    \vicki{to do: need to relax the epsilon-delta defns.} 
+    \texttt{sample\_bernoulli} can only fail in one situation, which is when the OpenSSL pseudorandom byte generator used in its implementation fails due to lack of system entropy. This is usually related to the computer's physical environment and not the dataset. \vicki{how modular should this be - should we mention fill bytes or just defer to the sample bernoulli proof?}
     
-    Let $v$ and $w$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}. Here, the metric is \texttt{DiscreteMetric} which enforces that $\din = 1$ if $v \ne w$ and $\din = 0$ if $v = w$. The case where $v = w$ is trivial so we only consider $v \ne w$ and assume without loss of generality that $v = \texttt{true}$ and $w = \texttt{false}$. For shorthand, we let $p$ represent \texttt{prob}, the probability that \texttt{sample\_bernoulli} returns \texttt{true}. Observe that $p = [0.5, 1.0)$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
+    The rest of this proof is implicitly conditioned on the assumption that \texttt{sample\_bernoulli} does not release a failure. 
+    
+    Let $v$ and $w$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}. Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if $v \ne w$ and $\din = 0$ if $v = w$. If $v = w$, then the output distributions on $v$ and $w$ are identical, and therefore the max-divergence is 0.
+    
+    Consider $v \ne w$ and assume without loss of generality that $v = \texttt{true}$ and $w = \texttt{false}$. For shorthand, we let $p$ represent \texttt{prob}, the probability that \texttt{sample\_bernoulli} returns \texttt{true}. Observe that $p = [0.5, 1.0)$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
     
     We now consider the max-divergence $D_{\infty}(Y||Z)$ over the random variables $Y = \function(v)$ and $Z = \function(w)$.
     
     \[
-    D_{\infty}(Y||Z) = \max_{S \subseteq Supp(Y)}[\ln (\frac{\Pr[Y \in S]}{\Pr[Z \in S]})] 
+    D_{\infty}(Y||Z) = \max_{S \subseteq Supp(Y)}\left[\ln (\frac{\Pr[Y \in S]}{\Pr[Z \in S]})\right] 
     \]
     
     \[
-    = \max(\ln (\frac{\Pr[Y = \texttt{true}]}{\Pr[Z = \texttt{true}]}), \ln(\frac{\Pr[Y = \texttt{false}]}{\Pr[Z = \texttt{false}]}))
+    = \max\left(\ln (\frac{\Pr[Y = \texttt{true}]}{\Pr[Z = \texttt{true}]}), \ln(\frac{\Pr[Y = \texttt{false}]}{\Pr[Z = \texttt{false}]})\right)
     \]
     
     \[
-    = \max(\ln (\frac{p}{1 - p}), \ln(\frac{1 - p}{p}))
+    = \max\left(\ln (\frac{p}{1 - p}), \ln(\frac{1 - p}{p})\right)
     \]
     
     \[
     = \ln (\frac{p}{1 - p})
     \]
     
-    Note that $\ln (\frac{p}{1 - p})$ is $\le \texttt{privacy\_map}(\din)$ when $\din = 1$. Therefore we've shown that for every pair of elements $v,w \in \{\texttt{false}, \texttt{true}\}$ and every $d_{DM}(v,w) \le \din$ with $\din \le 1$, if $v,w$ are $\din$-close then $\function(v),\function(w) \in \{\texttt{false},\texttt{true}\}$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the Max-Divergence). $\square$
+    When $\din > 0$, when no exception is raised in computing $\texttt{c} = \texttt{privacy\_map}(\din)$, then $\ln\left(\frac{p}{1 - p}\right) \leq \texttt{c}$. For the proof, refer to \textbf{Failure cases} below. \vicki{is this a little weird/roundabout? maybe we should move the failure cases up here.} 
     
+    Therefore we've shown that for every pair of elements $v,w \in \{\texttt{false}, \texttt{true}\}$ and every $d_{DM}(v,w) \le \din$ with $\din \le 1$, if $v,w$ are $\din$-close then $\function(v),\function(w) \in \{\texttt{false},\texttt{true}\}$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the Max-Divergence).
+    
+    \begin{tcolorbox}
     \textbf{Implementation note:} $c = \texttt{inf\_ln(inf\_div(prob, neg\_inf\_sub(1, prob))))}$ rounds upward in the presence of floating point rounding errors. This is because \texttt{neg\_inf\_sub(1, prob))))} appears in the denominator, and to ensure that the bound holds even in the presence of rounding errors, the conservative choice is to round down (so the quantity as a whole is bounded above). Similarly, \texttt{inf\_div} and \texttt{inf\_ln} round up. 
+    \end{tcolorbox}
     
-    This does not entirely complete the proof, because we still need to account for failure cases within the code. Going up the chain of failure, there are three cases in which the code raises an exception: %\zach{we can point out that if any of these fail, then the code raises an exception.}
+    \textbf{Failure cases.} We still need to account for failure cases within the \texttt{privacy\_map} code. Going up the chain of failure, there are three cases in which the code raises an exception: %\zach{we can point out that if any of these fail, then the code raises an exception.}
     \begin{enumerate}
         \item \texttt{neg\_inf\_sub} fails. By the implementation of \texttt{neg\_inf\_sub}, given in the pseudocode definitions doc, the code will raise an exception and terminate here if subtraction overflow occurs. 
         \item \texttt{inf\_div} fails. This step is only reached if \texttt{neg\_inf\_sub} succeeds, which means subtraction overflow did not occur (otherwise the Rust compiler would have thrown an error). As defined in the pseudocode definitions doc, \texttt{inf\_div} throws an exception if division overflows from a 32-bit integer. 
-        \item \texttt{inf\_ln} fails. This step is only reached if \texttt{inf\_div} succeeds, which means \texttt{neg\_inf\_sub} also had to succeed. Hence, neither subtraction nor division overflow occurred. Given in the pseudocode definitions doc, \texttt{inf\_ln} throws an exception if the natural log function overflows a 32-bit integer. 
+        \item \texttt{inf\_ln} fails. This step is only reached if \texttt{inf\_div} succeeds, which means \texttt{neg\_inf\_sub} also had to succeed. Hence, neither subtraction nor division overflow occurred. As defined in the pseudocode definitions doc, \texttt{inf\_ln} throws an exception if the natural log function overflows a 32-bit integer. 
     \end{enumerate}
+    
+    If none of these cases fail, \texttt{privacy\_map} returns \texttt{c}. 
     
     %\vicki{need to do any weird rounding edge cases here? do we have to say there are no other cases in which this code raises an exception?}
 \end{enumerate}
