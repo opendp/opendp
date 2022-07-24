@@ -5,7 +5,7 @@ use crate::{
     domains::ProductDomain,
     ffi::{
         any::{AnyDomain, AnyObject, AnyTransformation, Downcast},
-        util::Type,
+        util::{Type, c_bool, to_bool},
     },
     traits::Hashable,
     transformations::{make_partition_by, DataFrame},
@@ -16,6 +16,7 @@ pub extern "C" fn opendp_trans__make_partition_by(
     identifier_column: *const AnyObject,
     partition_keys: *const AnyObject,
     keep_columns: *const AnyObject,
+    null_partition: c_bool,
     TK: *const c_char,
     TV: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
@@ -23,6 +24,7 @@ pub extern "C" fn opendp_trans__make_partition_by(
         identifier_column: *const AnyObject,
         partition_keys: *const AnyObject,
         keep_columns: *const AnyObject,
+        null_partition: bool
     ) -> FfiResult<*mut AnyTransformation> {
         let identifier_column = try_!(try_as_ref!(identifier_column).downcast_ref::<TK>()).clone();
         let partition_keys = try_!(try_as_ref!(partition_keys).downcast_ref::<Vec<TV>>()).clone();
@@ -30,7 +32,8 @@ pub extern "C" fn opendp_trans__make_partition_by(
         let trans = try_!(make_partition_by::<TK, TV>(
             identifier_column,
             partition_keys,
-            keep_columns
+            keep_columns,
+            null_partition
         ));
 
         // rewrite the partitioner to emit ProductDomain<AnyDomain>, and box output partitions in the function
@@ -57,10 +60,12 @@ pub extern "C" fn opendp_trans__make_partition_by(
         ))
         .into_any()
     }
+
+    let null_partition = to_bool(null_partition);
     let TK = try_!(Type::try_from(TK));
     let TV = try_!(Type::try_from(TV));
     dispatch!(monomorphize, [
         (TK, @hashable),
         (TV, @hashable)
-    ], (identifier_column, partition_keys, keep_columns))
+    ], (identifier_column, partition_keys, keep_columns, null_partition))
 }

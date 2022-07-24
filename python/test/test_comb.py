@@ -119,10 +119,10 @@ def test_make_map_partitions_trans():
         make_select_column("values", TOA=str) >> 
         make_cast_default(TIA=str, TOA=int) >> 
         make_clamp((0, 1))
-    ] * 5) >> make_partition_map_meas([
+    ] * 4) >> make_partition_map_meas([
         make_bounded_sum((0, 1)) >>
         make_base_geometric(1.)
-    ] * 5)
+    ] * 4)
 
     # build some synthetic data:
     from random import randint, choice
@@ -146,6 +146,7 @@ def test_make_map_partitions_nested():
     ) >> make_partition_by(
         identifier_column="strat id 1",
         partition_keys=list(map(str, range(4))),
+        null_partition=True,
         keep_columns=["strat id 2", "values"],
     ) >> make_partition_map_meas([
         make_partition_by(
@@ -158,7 +159,7 @@ def test_make_map_partitions_nested():
             make_clamp((0, 1)) >>
             make_bounded_sum((0, 1)) >>
             make_base_geometric(1.)
-        ] * 5)
+        ] * 4)
     ] * 5)
 
     # build some synthetic data:
