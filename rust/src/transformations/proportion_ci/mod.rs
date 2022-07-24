@@ -226,7 +226,7 @@ pub fn make_lipschitz_sized_proportion_ci_variance<TA: Float>(
                 .zip(strat_sizes.iter().zip(sample_sizes.iter()))
                 .map(|(p, (&N, &n))| (N - n) / N * p * (_1 - p) / (n - _1))
                 .zip(weights.iter())
-                .map(|(mean, &w)| mean * w)
+                .map(|(var, &w)| var * w.powi(2))
                 .sum::<TA>()
                 + mean_scale.powi(2)
         }),
@@ -248,8 +248,7 @@ fn check_parameters(strat_sizes: &Vec<usize>, sample_sizes: &Vec<usize>) -> Fall
         return fallible!(MakeTransformation, "must have at least one partition");
     }
 
-    if strat_sizes
-        .iter()
+    if (strat_sizes.iter())
         .zip(sample_sizes.iter())
         .any(|(a, b)| a < b)
     {
