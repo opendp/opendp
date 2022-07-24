@@ -209,6 +209,14 @@ pub fn make_lipschitz_sized_proportion_ci_variance<TA: Float>(
     let strat_size = strat_sizes.iter().copied().sum();
     let weights: Vec<TA> = strat_sizes.iter().map(|&v| v / strat_size).collect();
 
+    // let function constant c_i = (N_i - n_i) / (N_i * (n_i - 1)) * w^2
+    //     where N_i is strat size i and n_i is sample_size i
+    let function_constants = (strat_sizes.iter())
+        .zip(sample_sizes.iter())
+        .zip(weights.iter())
+        .map(|((&N, &n), &w)| (N - n) / (N * (n - _1)) * w.powi(2))
+        .collect::<Vec<TA>>();
+
     let stability_constant = (strat_sizes.iter())
         .zip(sample_sizes.iter())
         .zip(weights.iter())
@@ -223,10 +231,8 @@ pub fn make_lipschitz_sized_proportion_ci_variance<TA: Float>(
             (sample_sums.iter())
                 .zip(sample_sizes.iter())
                 .map(|(&s, &n)| (s / n).min(_1).max(_0))
-                .zip(strat_sizes.iter().zip(sample_sizes.iter()))
-                .map(|(p, (&N, &n))| (N - n) / N * p * (_1 - p) / (n - _1))
-                .zip(weights.iter())
-                .map(|(var, &w)| var * w.powi(2))
+                .zip(function_constants.iter())
+                .map(|(p, &c)| p * (_1 - p) * c)
                 .sum::<TA>()
                 + mean_scale.powi(2)
         }),
