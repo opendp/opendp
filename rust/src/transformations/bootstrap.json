@@ -1,0 +1,1779 @@
+{
+    "make_b_ary_tree": {
+        "description": "Expand a vector of counts into a b-ary tree of counts, where each branch is the sum of its `b` immediate children.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "leaf_count",
+                "c_type": "unsigned int",
+                "description": "The number of leaf nodes in the b-ary tree."
+            },
+            {
+                "name": "branching_factor",
+                "c_type": "unsigned int",
+                "description": "The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees."
+            },
+            {
+                "name": "M",
+                "description": "Metric. Must be L1Distance<Q> or L2Distance<Q>",
+                "is_type": true
+            },
+            {
+                "name": "TA",
+                "description": "Atomic type of the input data.",
+                "default": "int",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_consistent_b_ary_tree": {
+        "description": "Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "branching_factor",
+                "c_type": "unsigned int",
+                "description": "The number of children on each branch of the resulting tree. Should be the same as the `branching_factor` used for `make_b_ary_tree`"
+            },
+            {
+                "name": "TIA",
+                "description": "Atomic type of the input data. Should be an integer type.",
+                "default": "int",
+                "is_type": true
+            },
+            {
+                "name": "TOA",
+                "description": "Atomic type of the output data. Should be a float type.",
+                "default": "float",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "choose_branching_factor": {
+        "description": "Returns an approximation to the ideal branching factor, b, for a dataset of a given size, that minimizes error in cdf and quantile estimates based on b-ary trees.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size_guess",
+                "c_type": "unsigned int",
+                "description": "A guess at the size of your dataset."
+            }
+        ],
+        "ret": {
+            "c_type": "unsigned int",
+            "description": "An approximation to the ideal branching factor, b."
+        }
+    },
+    "make_cast": {
+        "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. \nFailure to parse results in None, else Some<TOA>.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "atomic input data type to cast from"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "atomic data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_cast_default": {
+        "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. If cast fails, fill with default.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "atomic input data type to cast from"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "atomic data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_df_cast_default": {
+        "description": "Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. If cast fails, fill with default.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "column_name",
+                "c_type": "AnyObject *",
+                "rust_type": "TK",
+                "description": "column name to be transformed"
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "type of the column name"
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "atomic input data type to cast from"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "atomic data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_df_is_equal": {
+        "description": "Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "column_name",
+                "c_type": "AnyObject *",
+                "rust_type": "TK",
+                "description": "column name to be transformed"
+            },
+            {
+                "name": "value",
+                "c_type": "AnyObject *",
+                "rust_type": "TIA",
+                "description": "value to check for equality"
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "type of the column name"
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "atomic input data type to cast from"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_subset_by": {
+        "description": "Make a Transformation that subsets a dataframe by a boolean column.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "indicator_column",
+                "c_type": "AnyObject *",
+                "rust_type": "TK",
+                "description": "name of the boolean column that indicates inclusion in the subset"
+            },
+            {
+                "name": "keep_columns",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TK"]
+                },
+                "description": "list of column names to apply subset to"
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "type of the column name"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_is_equal": {
+        "description": "Make a Transformation that checks if each element is equal to `value`.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "value",
+                "c_type": "AnyObject *",
+                "rust_type": "TIA",
+                "description": "value to check against"
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "atomic input data type"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_is_null": {
+        "description": "Make a Transformation that checks if each element in a vector is null.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "DIA",
+                "is_type": true,
+                "description": "atomic input domain"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_cast_inherent": {
+        "description": "Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. \nIf cast fails, fill with `TO`'s null value.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "input data type to cast from"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_ordered_random": {
+        "description": "Make a Transformation that converts the unordered dataset metric `SymmetricDistance` to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation. \nOperates exclusively on VectorDomain<AllDomain<`TA`>>.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_ordered_random": {
+        "description": "Make a Transformation that converts the unordered dataset metric `MI` to the respective ordered dataset metric by assigning a random permutatation. \nOperates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>. \nIf `MI` is \"SymmetricDistance\", then output metric is \"InsertDeleteDistance\", and respectively \"ChangeOneDistance\" maps to \"HammingDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "input dataset metric"
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_bounded_ordered_random": {
+        "description": "Make a Transformation that converts the unordered dataset metric `MI` to the respective ordered dataset metric by assigning a random permutatation. \nOperates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>. \nIf `MI` is \"SymmetricDistance\", then output metric is \"InsertDeleteDistance\", and respectively \"ChangeOneDistance\" maps to \"HammingDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "input dataset metric"
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_unordered": {
+        "description": "Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance` to the respective unordered dataset metric SymmetricDistance with a no-op. \nOperates exclusively on VectorDomain<AllDomain<`TA`>>. \nIf `MI` is \"InsertDeleteDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"ChangeOneDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_unordered": {
+        "description": "Make a Transformation that converts the ordered dataset metric `MI` to the respective unordered dataset metric with a no-op. \nOperates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>. \nIf `MI` is \"InsertDeleteDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"ChangeOneDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "InsertDeleteDistance",
+                "description": "input dataset metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_bounded_unordered": {
+        "description": "Make a Transformation that converts the ordered dataset metric `MI` to the respective unordered dataset metric with a no-op. \nOperates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>. \nIf `MI` is \"InsertDeleteDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"ChangeOneDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "InsertDeleteDistance",
+                "description": "input dataset metric"
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_metric_bounded": {
+        "description": "Make a Transformation that converts the unbounded dataset metric `MI` to the respective bounded dataset metric with a no-op. \nIf \"SymmetricDistance\", then output metric is \"ChangeOneDistance\", and respectively \"InsertDeleteDistance\" maps to \"HammingDistance\".",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "input dataset metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_metric_unbounded": {
+        "description": "Make a Transformation that converts the bounded dataset metric `MI` to the respective unbounded dataset metric with a no-op. \nIf \"ChangeOneDistance\", then output metric is \"SymmetricDistance\", and respectively \"HammingDistance\" maps to \"InsertDeleteDistance\".",
+        "features": ["contrib"],
+        "args": [
+                        {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "MI",
+                "hint": "DatasetMetric",
+                "is_type": true,
+                "default": "ChangeOneDistance",
+                "description": "input dataset metric."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic type of data"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_clamp": {
+        "description": "Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`. \nIf datum is less than lower, let datum be lower. \nIf datum is greater than upper, let datum be upper.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_unclamp": {
+        "description": "Make a Transformation that unclamps a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_count": {
+        "description": "Make a Transformation that computes a count of the number of records in data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "Atomic Input Type. Input data is expected to be of the form Vec<TIA>."
+            },
+            {
+                "name": "TO",
+                "default": "int",
+                "is_type": true,
+                "description": "Output Type. Must be numeric."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_count_distinct": {
+        "description": "Make a Transformation that computes a count of the number of unique, distinct records in data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "Atomic Input Type. Input data is expected to be of the form Vec<TIA>."
+            },
+            {
+                "name": "TO",
+                "default": "int",
+                "is_type": true,
+                "description": "Output Type. Must be numeric."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_cdf": {
+        "description": "Postprocess a noisy array of summary counts into a cdf.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "TA",
+                "description": "Type of the data.",
+                "default": "float",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_quantiles_from_counts": {
+        "description": "Postprocess a noisy array of summary counts into quantiles.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bin_edges",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TA"]
+                },
+                "description": "The edges that the input data was binned into before counting."
+            },
+            {
+                "name": "alphas",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["F"]
+                },
+                "description": "Return all specified `alpha`-quantiles."
+            },
+            {
+                "name": "interpolation",
+                "c_type": "char *",
+                "default": "linear",
+                "description": "Must be one of `linear` or `nearest`"
+            },
+            {
+                "name": "TA",
+                "description": "Atomic type of the data.",
+                "is_type": true
+            },
+            {
+                "name": "F",
+                "description": "Float type of the alpha argument. One of f32 or f64",
+                "default": "float",
+                "is_type": true
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_count_by": {
+        "description": "Make a Transformation that computes the count of each unique value in data. \nThis assumes that the category set is unknown.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "MO",
+                "hint": "SensitivityMetric",
+                "is_type": true,
+                "description": "Output Metric."
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>."
+            },
+            {
+                "name": "TV",
+                "is_type": true,
+                "description": "Type of Value. Express counts in terms of this integral type.",
+                "default": "int"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK)."
+        }
+    },
+    "make_count_by_categories": {
+        "description": "Make a Transformation that computes the number of times each category appears in the data. \nThis assumes that the category set is known.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TIA"]
+                },
+                "description": "The set of categories to compute counts for."
+            },
+            {
+                "name": "null_category",
+                "c_type": "bool",
+                "default": true,
+                "description": "Include a count of the number of elements that were not in the category set at the end of the vector."
+            },
+            {
+                "name": "MO",
+                "default": "L1Distance<int>",
+                "hint": "SensitivityMetric",
+                "is_type": true,
+                "description": "output sensitivity metric"
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "categorical/hashable input type. Input data must be Vec<TIA>."
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "express counts in terms of this numeric type",
+                "default": "int"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_split_lines": {
+        "description": "Make a Transformation that takes a string and splits it into a Vec<String> of its lines.",
+        "features": ["contrib"],
+        "args": [],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_split_records": {
+        "description": "Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "separator",
+                "c_type": "const char *",
+                "description": "The token(s) that separate entries in each record."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_create_dataframe": {
+        "description": "Make a Transformation that constructs a dataframe from a Vec<Vec<String>>.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "col_names",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["K"]
+                },
+                "c_type": "AnyObject *",
+                "description": "Column names for each record entry."
+            },
+            {
+                "name": "K",
+                "is_type": true,
+                "description": "categorical/hashable data type of column names"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_split_dataframe": {
+        "description": "Make a Transformation that splits each record in a String into a Vec<Vec<String>>,\nand loads the resulting table into a dataframe keyed by `col_names`.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "separator",
+                "c_type": "const char *",
+                "description": "The token(s) that separate entries in each record."
+            },
+            {
+                "name": "col_names",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["K"]
+                },
+                "c_type": "AnyObject *",
+                "description": "Column names for each record entry."
+            },
+            {
+                "name": "K",
+                "is_type": true,
+                "description": "categorical/hashable data type of column names"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_select_column": {
+        "description": "Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "key",
+                "c_type": "AnyObject *",
+                "rust_type": "K",
+                "description": "categorical/hashable data type of the key/column name"
+            },
+            {
+                "name": "K",
+                "is_type": true,
+                "description": "data type of the key"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "atomic data type to downcast to"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_identity": {
+        "description": "Make a Transformation that simply passes the data through.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "D",
+                "description": "Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>",
+                "is_type": true
+            },
+            {
+                "name": "M",
+                "description": "metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain",
+                "is_type": true
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A transformation where the input and output domain are D and the input and output metric are M"
+        }
+    },
+    "make_impute_constant": {
+        "description": "Make a Transformation that replaces null/None data with `constant`.\nBy default, the input type is Vec<Option<TA>>, as emitted by make_cast. \nSet `DA` to InherentNullDomain<AllDomain<TA>> for imputing on types that have an inherent representation of nullity, like floats.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "constant",
+                "c_type": "AnyObject *",
+                "rust_type": "TA",
+                "description": "Value to replace nulls with."
+            },
+            {
+                "name": "DA",
+                "is_type": true,
+                "default": "OptionNullDomain<AllDomain<TA>>",
+                "generics": ["TA"],
+                "description": "domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>"
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "TA",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "DA", "constant"
+                    ]
+                }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_drop_null": {
+        "description": "Make a Transformation that drops null values.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "DA",
+                "is_type": true,
+                "description": "atomic domain of input data that contains nulls. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_impute_uniform_float": {
+        "description": "Make a Transformation that replaces null/None data in Vec<`TA`> with uniformly distributed floats within `bounds`.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "type of data being imputed",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_find": {
+        "description": "Find the index of a data value in a set of categories.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TIA"]
+                },
+                "description": "The set of categories to find indexes from."
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "categorical/hashable input type. Input data must be Vec<TIA>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_find_bin": {
+        "description": "Find the bin index from a monotonically increasing vector of edges.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "edges",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TIA"]
+                },
+                "description": "The set of edges to split bins by."
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "numerical input type. Input data must be Vec<TIA>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_index": {
+        "description": "Index into a vector of categories.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "categories",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TOA"]
+                },
+                "description": "The set of categories to index into."
+            },
+            {
+                "name": "null",
+                "c_type": "AnyObject *",
+                "rust_type": "TOA",
+                "description": "Category to return if the index is out-of-range of the category set."
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "atomic output type. Output data will be Vec<TIA>."
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_lipschitz_float_mul": {
+        "description": "Multiply an aggregate by a constant.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "constant",
+                "c_type": "void *",
+                "rust_type": "T",
+                "description": "The constant to multiply aggregates by."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds of the input data."
+            },
+            {
+                "name": "D",
+                "default": "AllDomain<T>",
+                "generics": ["T"],
+                "description": "Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>",
+                "is_type": true
+            },
+            {
+                "name": "M",
+                "default": "AbsoluteDistance<T>",
+                "generics": ["T"],
+                "description": "Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>",
+                "is_type": true
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "D", "constant"
+                    ]
+                }
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_sized_bounded_mean": {
+        "description": "Make a Transformation that computes the mean of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of inclusive lower and upper bounds of the input data."
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "description": "Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`",
+                "default": "SymmetricDistance"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic data type",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_lipschitz_sized_proportion_ci_mean": {
+        "description": "Make a lipschitz transformation from a vector of predicate sums on known-length stratified datasets to a proportion.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "strat_sizes",
+                "c_type":"AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["usize"]
+                },
+                "description": "A vector of sizes of stratified populations."
+            },
+            {
+                "name": "sample_sizes",
+                "c_type":"AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["usize"]
+                },
+                "description": "A vector of sizes of sampled datasets in each stratification."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic data type. One of `f32` or `f64`",
+                "default": "float"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A transformation that emits a sample mean estimate."
+        }
+    },
+    "make_lipschitz_sized_proportion_ci_variance": {
+        "description": "Make a lipschitz transformation from a vector of predicate sums on known-length stratified datasets to a proportion variance.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "strat_sizes",
+                "c_type":"AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["usize"]
+                },
+                "description": "A vector of sizes of stratified populations."
+            },
+            {
+                "name": "sample_sizes",
+                "c_type":"AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["usize"]
+                },
+                "description": "A vector of sizes of sampled datasets in each stratification."
+            },
+            {
+                "name": "mean_scale",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "default": "float",
+                "description": "Gaussian noise scale used to privatize the mean estimate."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic data type. One of `f32` or `f64`",
+                "default": "float"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A transformation that emits a sample variance estimate."
+        }
+    },
+    "make_postprocess_sized_proportion_ci": {
+        "description": "Make a postprocessing transformation from a vector of noisy predicate sums on known-length stratified datasets to a proportion mean and variance.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "strat_sizes",
+                "c_type":"AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["usize"]
+                },
+                "description": "A vector of sizes of stratified populations."
+            },
+            {
+                "name": "sample_sizes",
+                "c_type":"AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["usize"]
+                },
+                "description": "A vector of sizes of sampled datasets in each stratification."
+            },
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "default": "float",
+                "description": "Gaussian noise scale used to privatize the mean estimate."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic data type. One of `f32` or `f64`",
+                "default": "float"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A postprocessor that emits sample mean and variance estimates."
+        }
+    },
+    "make_postprocess_proportion_ci": {
+        "description": "Make a postprocessing transformation from vectors of noisy predicate sums and counts on stratified datasets to a proportion mean and variance.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "strat_sizes",
+                "c_type":"AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["usize"]
+                },
+                "description": "A vector of sizes of stratified populations."
+            },
+            {
+                "name": "sum_scale",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "default": "float",
+                "description": "Gaussian noise scale used to privatize the mean estimate."
+            },
+            {
+                "name": "size_scale",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "default": "float",
+                "description": "Gaussian noise scale used to privatize the count estimate."
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic data type. One of `f32` or `f64`",
+                "default": "float"
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A postprocessor that emits sample mean and variance estimates."
+        }
+    },
+    "make_resize": {
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in output data."
+            },
+            {
+                "name": "constant",
+                "c_type": "AnyObject *",
+                "rust_type": "TA",
+                "description": "Value to impute with."
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
+            },
+            {
+                "name": "MO",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic type."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A vector of the same type `TA`, but with the provided `size`."
+        }
+    },
+    "make_bounded_resize": {
+        "description": "Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in output data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["TA", "TA"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for data in the input domain"
+            },
+            {
+                "name": "constant",
+                "c_type": "void *",
+                "rust_type": "TA",
+                "description": "Value to impute with."
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
+            },
+            {
+                "name": "MO",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
+            },
+            {
+                "name": "TA",
+                "is_type": true,
+                "description": "Atomic type. If not passed, TA is inferred from the lower bound.",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>",
+            "description": "A vector of the same type `TA`, but with the provided `size`."
+        }
+    },
+    "make_bounded_sum": {
+        "description": "Make a Transformation that computes the sum of bounded data. \nUse `make_clamp` to bound data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for data in the input domain"
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`."
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_sum": {
+        "description": "Make a Transformation that computes the sum of bounded data with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "MI",
+                "is_type": true,
+                "default": "SymmetricDistance",
+                "description": "Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`."
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_float_checked_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats with unknown dataset size. \nThis computes the sum on up to `size_limit` rows randomly selected from the input.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size_limit",
+                "c_type": "unsigned int",
+                "description": "Limit on number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_float_checked_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_float_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size_limit",
+                "c_type": "unsigned int",
+                "description": "Upper bound on the number of records in input data. Used to bound sensitivity. Can be overestimated."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for data in the input domain"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_float_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded floats with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_checked_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints. \nThe effective range is reduced, as (bounds * size) must not overflow.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_int_monotonic_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints, where all values share the same sign.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_monotonic_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nAdds the saturating sum of the positives to the saturating sum of the negatives.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_int_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_ordered_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nYou may need to use `make_ordered_random` to impose an ordering on the data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_bounded_int_split_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints. \nAdds the saturating sum of the positives to the saturating sum of the negatives.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_int_split_sum": {
+        "description": "Make a Transformation that computes the sum of bounded ints with known dataset size. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. \nAdds the saturating sum of the positives to the saturating sum of the negatives.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "T",
+                "is_type": true,
+                "description": "atomic type of data",
+                "example": {
+                    "function": "get_first",
+                    "params": ["bounds"]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_sum_of_squared_deviations": {
+        "description": "Make a Transformation that computes the sum of squared deviations of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    },
+    "make_sized_bounded_variance": {
+        "description": "Make a Transformation that computes the variance of bounded data. \nThis uses a restricted-sensitivity proof that takes advantage of known dataset size. \nUse `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "size",
+                "c_type": "unsigned int",
+                "description": "Number of records in input data."
+            },
+            {
+                "name": "bounds",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Tuple",
+                    "args": ["T", "T"]
+                },
+                "hint": "Tuple[Any, Any]",
+                "description": "Tuple of lower and upper bounds for input data"
+            },
+            {
+                "name": "ddof",
+                "c_type": "unsigned int",
+                "default": 1,
+                "description": "Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate."
+            },
+            {
+                "name": "S",
+                "is_type": true,
+                "description": "summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.",
+                "default": "Pairwise<T>",
+                "generics": ["T"]
+            }
+        ],
+        "derived_types": [
+            {
+                "name": "T",
+                "rust_type": {
+                    "function": "get_atom_or_infer",
+                    "params": [
+                        "S", {
+                            "function": "get_first",
+                            "params": ["bounds"]
+                        }
+                    ]
+                }
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyTransformation *>"
+        }
+    }
+}
