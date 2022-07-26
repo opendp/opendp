@@ -274,30 +274,35 @@ macro_rules! impl_alerting_int {
     };
 }
 impl_alerting_int!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+#[cfg(feature="use-mpfr")]
 impl SaturatingAdd for rug::Integer {
     fn saturating_add(&self, v: &Self) -> Self {
         use rug::Complete;
         (self + v).complete()
     }
 }
+#[cfg(feature="use-mpfr")]
 impl SaturatingSub for rug::Integer {
     fn saturating_sub(&self, v: &Self) -> Self {
         use rug::Complete;
         (self - v).complete()
     }
 }
+#[cfg(feature="use-mpfr")]
 impl WrappingAdd for rug::Integer {
     fn wrapping_add(&self, v: &Self) -> Self {
         use rug::Complete;
         (self + v).complete()
     }
 }
+#[cfg(feature="use-mpfr")]
 impl WrappingSub for rug::Integer {
     fn wrapping_sub(&self, v: &Self) -> Self {
         use rug::Complete;
         (self - v).complete()
     }
 }
+#[cfg(feature="use-mpfr")]
 impl AlertingSub for rug::Integer {
     fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
         use rug::Complete;

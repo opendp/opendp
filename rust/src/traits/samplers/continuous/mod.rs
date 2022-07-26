@@ -49,7 +49,7 @@ pub trait SampleGaussian: Sized {
 /// If v is -0., return 0., otherwise return v.
 /// This removes the duplicate -0. member of the output space,
 /// which could hold an unintended bit of information
-fn censor_neg_zero<T: Zero>(v: T) -> T {
+pub(crate) fn censor_neg_zero<T: Zero>(v: T) -> T {
     if v.is_zero() { T::zero() } else { v }
 }
 

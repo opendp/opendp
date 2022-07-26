@@ -354,6 +354,7 @@ impl RoundCast<String> for bool { fn round_cast(v: String) -> Fallible<Self> { O
 
 impl RoundCast<bool> for String { fn round_cast(v: bool) -> Fallible<Self> { Ok(v.to_string()) } }
 
+#[cfg(feature="use-mpfr")]
 macro_rules! impl_bignum_casts {
     ($($ty:ty)+) => ($(
         impl SaturatingCast<rug::Integer> for $ty {
@@ -368,12 +369,15 @@ macro_rules! impl_bignum_casts {
         }
     )+)
 }
+#[cfg(feature="use-mpfr")]
 impl_bignum_casts! { u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize }
+#[cfg(feature="use-mpfr")]
 impl SaturatingCast<rug::Integer> for rug::Integer {
     fn saturating_cast(v: rug::Integer) -> Self {
         v
     }
 }
+#[cfg(feature="use-mpfr")]
 impl WrappingCast<rug::Integer> for rug::Integer {
     fn wrapping_cast(v: rug::Integer) -> Self {
         v

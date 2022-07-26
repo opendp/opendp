@@ -13,12 +13,15 @@ use crate::{
     },
 };
 
-use self::{linear::sample_geometric_linear_time, logarithmic::sample_geometric_log_time};
-
 use super::{fill_bytes, SampleBernoulli, SampleStandardBernoulli};
 
 mod linear;
+use self::linear::sample_geometric_linear_time;
+
+#[cfg(feature="use-mpfr")]
 mod logarithmic;
+#[cfg(feature="use-mpfr")]
+use self::logarithmic::sample_geometric_log_time;
 
 pub trait SampleGeometric<P>: Sized {
     /// Sample from the censored geometric distribution with parameter `prob`.
@@ -53,6 +56,7 @@ pub trait SampleGeometric<P>: Sized {
     ) -> Fallible<Self>;
 }
 
+#[cfg(feature="use-mpfr")]
 impl<T, P> SampleGeometric<P> for T
 where
     T: 'static
@@ -90,6 +94,28 @@ where
         } else {
             sample_geometric_log_time(shift, positive, prob, tail)
         }
+    }
+}
+
+#[cfg(not(feature="use-mpfr"))]
+impl<T, P> SampleGeometric<P> for T
+where
+    T: Clone + Zero + One + PartialEq + SubAssign + AlertingSub + SaturatingAdd + SaturatingSub + WrappingAdd + WrappingSub,
+    P: Float,
+    bool: SampleBernoulli<P>,
+{
+    fn sample_geometric(
+        shift: Self,
+        positive: bool,
+        prob: P,
+        tail: Tail<Self>,
+    ) -> Fallible<Self> {
+        // ensure that prob is a valid probability
+        if !(P::zero()..=P::one()).contains(&prob) {
+            return fallible!(FailedFunction, "probability is not within [0, 1]");
+        }
+
+        sample_geometric_linear_time(shift, positive, prob, tail)
     }
 }
 
