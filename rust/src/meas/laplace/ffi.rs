@@ -16,7 +16,7 @@ pub extern "C" fn opendp_meas__make_base_laplace(
     fn monomorphize<D>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement>
         where D: 'static + LaplaceDomain {
         let scale = *try_as_ref!(scale as *const D::Atom);
-        make_base_laplace::<D>(scale).into_any()
+        make_base_laplace::<D>(scale, None).into_any()
     }
     let D = try_!(Type::try_from(D));
     dispatch!(monomorphize, [

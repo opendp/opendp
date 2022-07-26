@@ -16,7 +16,7 @@ pub use cast::*;
 mod operations;
 pub use operations::*;
 
-use self::samplers::{SampleGaussian, SampleLaplace, SampleUniform};
+use self::samplers::{SampleGaussian, SampleUniform};
 
 pub mod samplers;
 
@@ -106,7 +106,6 @@ pub trait Float:
     + InfSqrt
     + SampleUniform
     + SampleGaussian
-    + SampleLaplace
     + CastInternalReal
     + FloatBits
     + ExactIntCast<Self::Bits>
@@ -125,7 +124,6 @@ impl<T> Float for T where
         + InfSqrt
         + SampleUniform
         + SampleGaussian
-        + SampleLaplace
         + CastInternalReal
         + FloatBits
         + ExactIntCast<Self::Bits>

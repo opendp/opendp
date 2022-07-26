@@ -270,7 +270,7 @@ mod tests {
         let measurement2 = (
             make_clamp(val_bounds)? >>
             make_bounded_sum(val_bounds)? >>
-            make_base_laplace(1.0 / d_out_query)?
+            make_base_laplace(1.0 / d_out_query, None)?
         )?.into_poly();
         let query2 = (measurement2, d_out_query);
         let _result2: f64 = queryable.eval_poly(&query2)?;

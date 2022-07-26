@@ -1,6 +1,8 @@
 mod bernoulli;
-mod discrete_laplace;
 pub use bernoulli::*;
+
+mod discrete_laplace;
+pub use discrete_laplace::*;
 
 mod continuous;
 pub use continuous::*;

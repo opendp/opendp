@@ -161,7 +161,7 @@ where
     T: Clone + SampleGeometric<P> + Sub<Output = T> + Zero + One + TotalOrd + AlertingSub,
     P: Float,
     P::Bits: PartialOrd + ExactIntCast<usize>,
-    usize: ExactIntCast<P::Bits>,
+    usize: ExactIntCast<P::Bits>
 {
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.

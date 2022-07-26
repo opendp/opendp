@@ -11,8 +11,8 @@ use crate::traits::Float;
 
 use super::{SampleTwoSidedGeometric, Tail};
 
-trait SampleDiscreteLaplace: Sized {
-    fn sample_discrete_laplace(shift: Self, scale: Self, gran_pow: u32) -> Fallible<Self>;
+pub trait SampleDiscreteLaplace: Sized {
+    fn sample_discrete_laplace(shift: Self, scale: Self, gran_pow: usize) -> Fallible<Self>;
 }
 
 #[cfg(feature = "use-mpfr")]
@@ -20,9 +20,9 @@ impl<T> SampleDiscreteLaplace for T
 where
     Rational: TryFrom<T>,
     Integer: SampleTwoSidedGeometric<T>,
-    T: 'static + From<u32> + Float + MulAssign + CastInternalRational,
+    T: 'static + Float + MulAssign + CastInternalRational,
 {
-    fn sample_discrete_laplace(shift: Self, mut scale: Self, gran_pow: u32) -> Fallible<Self> {
+    fn sample_discrete_laplace(shift: Self, mut scale: Self, gran_pow: usize) -> Fallible<Self> {
         let (mut sx, sy): (Integer, Integer) = shift.into_rational()?.into_numer_denom();
 
         //     shift + l           where l ~ Lap(scale)
@@ -37,7 +37,7 @@ where
         sx /= sy;
 
         // increase scale by gran
-        scale *= T::exp2(gran_pow.into());
+        scale *= T::exp2(T::exact_int_cast(gran_pow)?);
 
         // noise the shift numerator
         sx = Integer::sample_two_sided_geometric(sx, scale, Tail::Modular)?;
@@ -70,41 +70,12 @@ impl_cast_internal_rational!(f32, to_f32);
 #[cfg(feature = "use-mpfr")]
 impl_cast_internal_rational!(f64, to_f64);
 
-#[cfg(feature = "use-mpfr")]
+#[cfg(not(feature = "use-mpfr"))]
 impl<T> SampleDiscreteLaplace for T
 where
-    Rational: TryFrom<T>,
-    Integer: SampleTwoSidedGeometric<T>,
-    T: 'static + From<u32> + Float + MulAssign + CastInternalRational,
-{
-    fn sample_discrete_laplace(shift: Self, mut scale: Self, gran_pow: u32) -> Fallible<Self> {
-        let (mut sx, sy): (Integer, Integer) = shift.into_rational()?.into_numer_denom();
-
-        //     shift + l           where l ~ Lap(scale)
-        //          shift = sx/sy = sx'/(gx/gy) -> sx' = sx * g /_r sy
-        //
-        //  ~= (sx' / g + i) * g  where i ~ 2SGeo(scale / g)
-
-        // rewrite the rationals
-        // change shift denominator to gran by multiplying shift top by 2^gran_pow / sy
-        sx <<= gran_pow;
-        sx += (&sy - 1u8).complete() / 2; // divide by sy with rounding towards nearest
-        sx /= sy;
-
-        // increase scale by gran
-        scale *= T::exp2(gran_pow.into());
-
-        // noise the shift numerator
-        sx = Integer::sample_two_sided_geometric(sx, scale, Tail::Modular)?;
-
-        let rational = Rational::from((sx, Integer::one() << (gran_pow + 1)));
-        Ok(Self::from_rational(rational))
-    }
-}
-
-#[cfg(not(feature = "use-mpfr"))]
-impl<T: num::Float + rand::distributions::uniform::SampleUniform + crate::traits::samplers::SampleRademacher> SampleDiscreteLaplace
-    for T
+    T: num::Float
+        + rand::distributions::uniform::SampleUniform
+        + crate::traits::samplers::SampleRademacher,
 {
     fn sample_discrete_laplace(shift: Self, scale: Self, _gran_pow: u32) -> Fallible<Self> {
         use rand::Rng;
