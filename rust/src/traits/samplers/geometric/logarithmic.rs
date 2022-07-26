@@ -1,19 +1,23 @@
 use std::convert::TryFrom;
-use std::convert::TryInto;
 
-use crate::traits::samplers::{SampleStandardBernoulli, SampleUniformInt};
+use crate::{
+    traits::{WrappingCast, SaturatingCast},
+    traits::samplers::{SampleStandardBernoulli, SampleUniformInt}
+};
+
 // stands for Big Integer, an integer with unlimited precision, from gmp
 use rug::{Complete, Integer, Rational};
 
-use num::One;
-use num::Zero;
+use num::{One, Zero};
 
 use crate::error::Fallible;
 
-pub fn sample_geometric_log_time<T, P>(shift: T, direction: bool, prob: P) -> Fallible<T>
+use super::Tail;
+
+pub fn sample_geometric_log_time<T, P>(shift: T, direction: bool, prob: P, tail: Tail<T>) -> Fallible<T>
 where
     Integer: From<T>,
-    T: TryFrom<Integer>,
+    T: TryFrom<Integer> + WrappingCast<Integer> + SaturatingCast<Integer>,
     Rational: TryFrom<P>,
 {
     let mut shift = Integer::from(shift);
@@ -26,9 +30,10 @@ where
     } else {
         shift -= geo;
     }
-    // TODO: Fix me
-    shift.try_into().map_err(|_| err!(FailedFunction, "failed to cast"))
-    // Ok(shift.saturating_as())
+    Ok(match tail {
+        Tail::Censored(_) => T::saturating_cast(shift),
+        Tail::Modular => T::wrapping_cast(shift),
+    })
 }
 
 fn sample_standard_geometric_log_time(px: Integer, py: Integer) -> Fallible<Integer> {
@@ -238,7 +243,7 @@ mod test_geometric {
 
     #[test]
     fn test_sample_geometric_log_time() -> Fallible<()> {
-        let v1 = sample_geometric_log_time(0, true, 2f64.powi(-127))?;
+        let v1 = sample_geometric_log_time(0, true, 2f64.powi(-127), Tail::Censored(None))?;
         println!("v1 {:?}", v1);
 
         // let v2 = sample_geometric_log_time(0, true, 0.981237419571993247197413429)?;

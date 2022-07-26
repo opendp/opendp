@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 
+use az::{SaturatingAs, WrappingAs};
 use num::{NumCast, One, Zero};
 #[cfg(feature = "use-mpfr")]
 use rug::Float;
@@ -52,6 +53,12 @@ pub trait CastInternalReal: rand::distributions::uniform::SampleUniform + Sample
     fn into_internal(self) -> Self;
 }
 
+pub trait SaturatingCast<TI>: Sized {
+    fn saturating_cast(v: TI) -> Self;
+}
+pub trait WrappingCast<TI>: Sized {
+    fn wrapping_cast(v: TI) -> Self;
+}
 
 macro_rules! cartesian {
     // base case
@@ -346,6 +353,32 @@ impl RoundCast<String> for String { fn round_cast(v: String) -> Fallible<Self> {
 impl RoundCast<String> for bool { fn round_cast(v: String) -> Fallible<Self> { Ok(!v.is_empty()) } }
 
 impl RoundCast<bool> for String { fn round_cast(v: bool) -> Fallible<Self> { Ok(v.to_string()) } }
+
+macro_rules! impl_bignum_casts {
+    ($($ty:ty)+) => ($(
+        impl SaturatingCast<rug::Integer> for $ty {
+            fn saturating_cast(v: rug::Integer) -> Self {
+                v.saturating_as()
+            }
+        }
+        impl WrappingCast<rug::Integer> for $ty {
+            fn wrapping_cast(v: rug::Integer) -> Self {
+                v.wrapping_as()
+            }
+        }
+    )+)
+}
+impl_bignum_casts! { u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize }
+impl SaturatingCast<rug::Integer> for rug::Integer {
+    fn saturating_cast(v: rug::Integer) -> Self {
+        v
+    }
+}
+impl WrappingCast<rug::Integer> for rug::Integer {
+    fn wrapping_cast(v: rug::Integer) -> Self {
+        v
+    }
+}
 
 #[cfg(feature = "use-mpfr")]
 impl CastInternalReal for f64 {

@@ -47,10 +47,27 @@ pub trait SaturatingAdd: Sized {
     fn saturating_add(&self, v: &Self) -> Self;
 }
 
+/// Addition that saturates at the numeric bounds instead of overflowing.
+pub trait SaturatingSub: Sized {
+    /// Returns `self - v`, saturating at the relevant high or low boundary of the type.
+    fn saturating_sub(&self, v: &Self) -> Self;
+}
+
 /// Multiplication that saturates at the numeric bounds instead of overflowing.
 pub trait SaturatingMul: Sized {
     /// Returns `self * v`, saturating at the relevant high or low boundary of the type.
     fn saturating_mul(&self, v: &Self) -> Self;
+}
+
+/// Addition that saturates at the numeric bounds instead of overflowing.
+pub trait WrappingAdd: Sized {
+    /// Returns `self - v`, wrapping around at the relevant high or low boundary of the type.
+    fn wrapping_add(&self, v: &Self) -> Self;
+}
+
+pub trait WrappingSub: Sized {
+    /// Returns `self - v`, wrapping around at the relevant high or low boundary of the type.
+    fn wrapping_sub(&self, v: &Self) -> Self;
 }
 
 /// Exponentiates with specified rounding that returns an error if overflowing.
@@ -182,11 +199,29 @@ macro_rules! impl_alerting_int {
             fn saturating_add(&self, v: &Self) -> Self {
                 <$t>::saturating_add(*self, *v)
             }
-        })
-        +$(impl SaturatingMul for $t {
+        })+
+        $(impl SaturatingSub for $t {
+            #[inline]
+            fn saturating_sub(&self, v: &Self) -> Self {
+                <$t>::saturating_sub(*self, *v)
+            }
+        })+
+        $(impl SaturatingMul for $t {
             #[inline]
             fn saturating_mul(&self, v: &Self) -> Self {
                 <$t>::saturating_mul(*self, *v)
+            }
+        })+
+        $(impl WrappingAdd for $t {
+            #[inline]
+            fn wrapping_add(&self, v: &Self) -> Self {
+                <$t>::wrapping_add(*self, *v)
+            }
+        })+
+        $(impl WrappingSub for $t {
+            #[inline]
+            fn wrapping_sub(&self, v: &Self) -> Self {
+                <$t>::wrapping_sub(*self, *v)
             }
         })+
         $(impl AlertingMul for $t {
@@ -239,6 +274,30 @@ macro_rules! impl_alerting_int {
     };
 }
 impl_alerting_int!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl SaturatingAdd for rug::Integer {
+    fn saturating_add(&self, v: &Self) -> Self {
+        use rug::Complete;
+        (self + v).complete()
+    }
+}
+impl SaturatingSub for rug::Integer {
+    fn saturating_sub(&self, v: &Self) -> Self {
+        use rug::Complete;
+        (self - v).complete()
+    }
+}
+impl WrappingAdd for rug::Integer {
+    fn wrapping_add(&self, v: &Self) -> Self {
+        use rug::Complete;
+        (self + v).complete()
+    }
+}
+impl WrappingSub for rug::Integer {
+    fn wrapping_sub(&self, v: &Self) -> Self {
+        use rug::Complete;
+        (self - v).complete()
+    }
+}
 impl AlertingSub for rug::Integer {
     fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
         use rug::Complete;

@@ -9,7 +9,7 @@ use rug::{Complete, Integer as BInt};
 use crate::error::Fallible;
 use crate::traits::Float;
 
-use super::SampleTwoSidedGeometric;
+use super::{SampleTwoSidedGeometric, Tail};
 
 trait SampleDiscreteLaplace: Sized {
     fn sample_discrete_laplace(shift: Self, scale: Self, gran_pow: u32) -> Fallible<Self>;
@@ -39,7 +39,7 @@ where
         scale *= T::exp2(gran_pow.into());
 
         // noise the shift numerator
-        sx = rug::Integer::sample_two_sided_geometric(sx, scale, None)?;
+        sx = rug::Integer::sample_two_sided_geometric(sx, scale, Tail::Modular)?;
 
         let rational = Rational::from((sx, BInt::one() << (gran_pow + 1)));
         Ok(Self::from_rational(rational))
