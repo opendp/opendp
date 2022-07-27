@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_make_basic_composition_2() -> Fallible<()> {
-        let laplace = make_base_laplace::<AllDomain<_>>(1.0f64, None)?;
+        let laplace = make_base_laplace::<AllDomain<_>>(1.0f64)?;
         let measurements = vec![&laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;

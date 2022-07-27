@@ -6,13 +6,13 @@ use std::ops::MulAssign;
 #[cfg(feature = "use-mpfr")]
 use rug::{Complete, Integer, Rational};
 
-use crate::error::Fallible;
+use crate::{error::Fallible, traits::ExactIntCast};
 use crate::traits::Float;
 
 use super::{SampleTwoSidedGeometric, Tail};
 
 pub trait SampleDiscreteLaplace: Sized {
-    fn sample_discrete_laplace(shift: Self, scale: Self, gran_pow: usize) -> Fallible<Self>;
+    fn sample_discrete_laplace(shift: Self, scale: Self, gran_pow: i32) -> Fallible<Self>;
 }
 
 #[cfg(feature = "use-mpfr")]
@@ -20,29 +20,40 @@ impl<T> SampleDiscreteLaplace for T
 where
     Rational: TryFrom<T>,
     Integer: SampleTwoSidedGeometric<T>,
-    T: 'static + Float + MulAssign + CastInternalRational,
+    T: 'static + Float + MulAssign + CastInternalRational + ExactIntCast<i32>,
 {
-    fn sample_discrete_laplace(shift: Self, mut scale: Self, gran_pow: usize) -> Fallible<Self> {
-        let (mut sx, sy): (Integer, Integer) = shift.into_rational()?.into_numer_denom();
+    fn sample_discrete_laplace(shift: Self, mut scale: Self, gran_pow: i32) -> Fallible<Self> {
+        let (mut sx, mut sy): (Integer, Integer) = shift.into_rational()?.into_numer_denom();
 
         //     shift + l           where l ~ Lap(scale)
         //          shift = sx/sy = sx'/(gx/gy) -> sx' = sx * g /_r sy
         //
         //  ~= (sx' / g + i) * g  where i ~ 2SGeo(scale / g)
 
-        // rewrite the rationals
-        // change shift denominator to gran by multiplying shift top by 2^gran_pow / sy
-        sx <<= gran_pow;
+        // 1. Exactly multiply shift by 2^-gran_pow
+        if gran_pow > 0 {
+            sy <<= gran_pow;
+        } else {
+            sx <<= -gran_pow;
+        }
+        // 2. Rewrite the shift numer (sx) to implicitly have a denom of 2^-gran_pow.
         sx += (&sy - 1u8).complete() / 2; // divide by sy with rounding towards nearest
         sx /= sy;
 
-        // increase scale by gran
-        scale *= T::exp2(T::exact_int_cast(gran_pow)?);
-
+        // adjust scale by gran
+        scale *= T::exp2(T::exact_int_cast(-gran_pow)?);
+        
         // noise the shift numerator
         sx = Integer::sample_two_sided_geometric(sx, scale, Tail::Modular)?;
 
-        let rational = Rational::from((sx, Integer::one() << (gran_pow + 1)));
+        let mut rx = Integer::one();
+        if gran_pow > 0 {
+            sx <<= gran_pow;
+        } else {
+            rx <<= -gran_pow;
+        }
+
+        let rational = Rational::from((sx, rx));
         Ok(Self::from_rational(rational))
     }
 }

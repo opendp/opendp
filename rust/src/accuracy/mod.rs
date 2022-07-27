@@ -195,7 +195,7 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
-        let base_laplace = make_base_laplace::<AllDomain<f64>>(scale, None)?;
+        let base_laplace = make_base_laplace::<AllDomain<f64>>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)

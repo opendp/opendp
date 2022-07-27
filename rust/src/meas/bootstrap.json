@@ -10,12 +10,6 @@
                 "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
-                "name": "granularity",
-                "c_type": "unsigned int",
-                "default": 32,
-                "description": "Gap between adjacent noisy values, expressed as 2^-granularity."
-            },
-            {
                 "name": "D",
                 "default": "AllDomain<T>",
                 "generics": ["T"],

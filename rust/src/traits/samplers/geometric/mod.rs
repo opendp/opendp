@@ -196,9 +196,6 @@ where
 
         // make alpha conservatively larger
         let inf_alpha: P = (-scale.recip()).inf_exp()?;
-        if inf_alpha.is_one() {
-            return fallible!(FailedFunction, "scale is too large");
-        }
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
@@ -216,6 +213,9 @@ where
         let direction = bool::sample_standard_bernoulli()?;
         // make prob conservatively smaller, because a smaller probability means greater noise
         let success_prob = P::one().neg_inf_sub(&inf_alpha)?;
+        if success_prob.is_zero() {
+            return fallible!(FailedFunction, "scale is too large");
+        }
 
         // sample from the geometric
         let geometric = T::sample_geometric(

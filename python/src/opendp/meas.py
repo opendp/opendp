@@ -17,15 +17,12 @@ __all__ = [
 
 def make_base_laplace(
     scale,
-    granularity: int = 32,
     D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     Adjust D to noise vector-valued data.
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param granularity: Gap between adjacent noisy values, expressed as 2^-granularity.
-    :type granularity: int
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
     :return: A base_laplace step.
@@ -43,15 +40,14 @@ def make_base_laplace(
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
-    granularity = py_to_c(granularity, c_type=ctypes.c_uint)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_laplace
-    function.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, granularity, D), Measurement))
+    return c_to_py(unwrap(function(scale, D), Measurement))
 
 
 def make_base_gaussian(

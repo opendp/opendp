@@ -33,6 +33,7 @@ macro_rules! err {
     (@backtrace) => (if cfg!(debug_assertions) { 
         backtrace::Backtrace::new()
     } else {
+        println!("new unresolved");
         backtrace::Backtrace::new_unresolved() 
     });
 }

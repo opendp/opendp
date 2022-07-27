@@ -33,7 +33,7 @@ def test_base_laplace():
     print("base laplace:", meas(100.))
     print("epsilon", meas.map(1.))
     assert meas.check(1., .096)
-
+test_base_laplace()
 def test_base_vector_laplace():
     from opendp.meas import make_base_laplace
     meas = make_base_laplace(scale=10.5, D="VectorDomain<AllDomain<f64>>")
