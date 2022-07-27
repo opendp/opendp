@@ -77,7 +77,7 @@ where
         + rand::distributions::uniform::SampleUniform
         + crate::traits::samplers::SampleRademacher,
 {
-    fn sample_discrete_laplace(shift: Self, scale: Self, _gran_pow: u32) -> Fallible<Self> {
+    fn sample_discrete_laplace(shift: Self, scale: Self, _gran_pow: usize) -> Fallible<Self> {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let mut u: T = T::zero();
