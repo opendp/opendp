@@ -29,11 +29,10 @@ def test_base_gaussian_search():
 
 def test_base_laplace():
     from opendp.meas import make_base_laplace
-    meas = make_base_laplace(scale=10.5)
+    meas = make_base_laplace(10.5)
     print("base laplace:", meas(100.))
     print("epsilon", meas.map(1.))
     assert meas.check(1., .096)
-
 
 def test_base_vector_laplace():
     from opendp.meas import make_base_laplace

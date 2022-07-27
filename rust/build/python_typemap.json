@@ -8,6 +8,7 @@
     "int32_t": "ctypes.c_int32",
     "int64_t": "ctypes.c_int64",
     "unsigned int": "ctypes.c_uint",
+    "unsigned int *": "UIntPtr",
     "uint8_t": "ctypes.c_uint8",
     "uint16_t": "ctypes.c_uint16",
     "uint32_t": "ctypes.c_uint32",

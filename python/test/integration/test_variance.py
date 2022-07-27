@@ -39,3 +39,4 @@ def test_sized_bounded_variance():
     data = "\n".join(["1"] * size)
 
     print(noisy_known_n_variance_from_dataframe(data))
+test_sized_bounded_variance()

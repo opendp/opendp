@@ -419,7 +419,7 @@ def binary_search_param(
     >>> # The first argument is any function that returns your complete computation chain
     >>> #     when passed a single numeric parameter.
     >>> scale = binary_search_param(make_base_laplace, d_in=0.1, d_out=1.)
-    >>> assert scale == 0.1
+    >>> assert scale == 0.10000000023283065
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
     >>> assert make_base_laplace(scale).check(0.1, 1.)
 

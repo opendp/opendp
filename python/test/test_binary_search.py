@@ -17,7 +17,7 @@ def test_binary_search_overflow():
         d_in=d_in,
         d_out=d_out
     )
-
+test_binary_search_overflow()
 def test_stuck():
     epsilon = 1.3
     sens = 500_000.0 * 500_000.0
