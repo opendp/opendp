@@ -99,11 +99,11 @@ The \texttt{sample\_bernoulli} function relies on a cryptographic pseudorandom n
 \end{warning}
 \end{tcolorbox}
 
-\begin{tcolorbox}
-\begin{warning}[Code is not constant-time]
- \texttt{sample\_bernoulli} takes in a boolean \texttt{constant\_time} parameter to protect against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
-\end{warning}
-\end{tcolorbox}
+%\begin{tcolorbox}
+%\begin{warning}[Code is not constant-time]
+% \texttt{sample\_bernoulli} takes in a boolean \texttt{constant\_time} parameter to protect against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+%\end{warning}
+%\end{tcolorbox}
 
 \section{Algorithm Implementation}
 \subsection{Code in Rust}
@@ -113,7 +113,9 @@ The current OpenDP library contains the \texttt{sample\_bernoulli} function, whi
 \texttt{sample\_bernoulli} accepts a parameter \texttt{prob} of generic type \texttt{T} and another parameter \texttt{constant\_time} of type \texttt{bool}. As aforementioned, \texttt{prob} is the parameter for the draw from the distribution. \texttt{constant\_time} is an option for \texttt{sample\_bernoulli} to accomplish this draw in near-constant time, which mitigates timing attacks. This proof will not consider non-constant time.
 
 \vicki{high-level walkthrough - should this be a separate section?} 
-\texttt{sample\_bernoulli} makes use of \texttt{sample\_geometric\_buffer} and \texttt{fill\_bytes}. As defined in line \ref{line:fillbytes} of the Python pseudocode below, \texttt{fill\_bytes} takes in an empty array \texttt{buf} and fills it with random bytes generated with a cryptographically-secure pseudorandom number generator in the OpenSSL library. As defined in line \ref{line:geombuffer} of the pseudocode, \texttt{sample\_geometric\_buffer} declares an byte buffer \texttt{buf} with \texttt{B} elements that is then filled using the \texttt{fill\_bytes} function. Then out of the nonzero elements of \texttt{buf}, \texttt{sample\_geometric\_buffer} treats \texttt{buf} as a string of bits and returns the zero-indexed position of the first $1$ (as in line \ref{line:indexcmp}) or \texttt{None} if no $1$'s are found in this string of bits. 
+\texttt{sample\_bernoulli} makes use of \texttt{sample\_geometric\_buffer} and \texttt{fill\_bytes}. As defined in line \ref{line:fillbytes} of the Python pseudocode below, \texttt{fill\_bytes} takes in an empty array \texttt{buf} and fills it with random bytes generated with a cryptographically-secure pseudorandom number generator in the OpenSSL library. 
+
+As defined in line \ref{line:geombuffer} of the pseudocode, \texttt{sample\_geometric\_buffer} declares an byte buffer \texttt{buf} with \texttt{buffer\_len} elements that is then filled using the \texttt{fill\_bytes} function. Then out of the nonzero elements of \texttt{buf}, \texttt{sample\_geometric\_buffer} treats \texttt{buf} as a string of bits and returns the zero-indexed position of the first $1$ (as in line \ref{line:indexcmp}) or \texttt{None} if no $1$'s are found in this string of bits. 
 
 At a high level, \texttt{sample\_bernoulli} considers the binary expansion of \texttt{prob} into an infinite sequence $\texttt{a\_i}$, like so: $\texttt{prob} = \sum_{i = 0}^{\infty} \frac{a_i}{2^{i + 1}}$. The algorithm samples $I \sim Geom(0.5)$ using \texttt{sample\_geometric\_buffer}, then returns $a_I$. 
 
@@ -163,8 +165,8 @@ The pseudorandomness of the OpenSSL generator is assumed and will not be proved 
 \subsection{Pseudocode \& proof of \texttt{sample\_geometric\_buffer}}
 \begin{lstlisting}[language=Python, escapechar=|]
 # returns a sample from the Geom(0.5) distribution
-def sample_geometric_buffer(B : uint, constant_time : bool) -> Optional[uint]: |\label{line:geombuffer}|
-    buf = bytearray(B)
+def sample_geometric_buffer(buffer_len : usize, constant_time : bool) -> Optional[uint]: |\label{line:geombuffer}|
+    buf = bytearray(buffer_len)
     buf = fill_bytes(buf)
     
     if (constant_time): 
@@ -185,12 +187,12 @@ def sample_geometric_buffer(B : uint, constant_time : bool) -> Optional[uint]: |
 
 \begin{tcolorbox}
 \begin{theorem}[\texttt{sample\_geometric\_buffer}]
-The function \texttt{sample\_geometric\_buffer(B, constant\_time)} returns a random variable $X \sim CondGeom(0.5)$, a draw from a conditional Geometric distribution conditioned on the event that $Geom(0.5) < 8 \cdot B$. Otherwise \texttt{sample\_geometric\_buffer} returns \texttt{None}. 
+The function \texttt{sample\_geometric\_buffer(buffer\_len, constant\_time)} returns a random variable $X \sim CondGeom(0.5)$, a draw from a conditional Geometric distribution conditioned on the event that $Geom(0.5) < 8 \cdot \texttt{buffer\_len}$. Otherwise \texttt{sample\_geometric\_buffer} returns \texttt{None}. 
 \end{theorem}
 \end{tcolorbox}
 
 \begin{proof}
-The function \texttt{sample\_geometric\_buffer} uses \texttt{fill\_bytes}  as a subroutine to generate a buffer of $B$ bytes where for each bit $b$ in the buffer it follows that $\Pr[b = 1] = \frac{1}{2}$ and $\Pr[b = 0] = \frac{1}{2}$ by Lemma 2.2. Conditioned on the event $E$, that there exists some bit in the buffer equal to $1$, the position of the \emph{first} such bit is a zero-indexed draw from the Geometric distribution $Geom(p)$ with $p = 0.5$ by definition of a Geometric random variable. If the event $E$ does not occur, the function returns \texttt{None}. 
+The function \texttt{sample\_geometric\_buffer} uses \texttt{fill\_bytes}  as a subroutine to generate a buffer of $\texttt{buffer\_len}$ bytes where for each bit $b$ in the buffer it follows that $\Pr[b = 1] = \frac{1}{2}$ and $\Pr[b = 0] = \frac{1}{2}$ by Lemma 2.2. Conditioned on the event $E$, that there exists some bit in the buffer equal to $1$, the position of the \emph{first} such bit is a zero-indexed draw from the Geometric distribution $Geom(p)$ with $p = 0.5$ by definition of a Geometric random variable. If the event $E$ does not occur, the function returns \texttt{None}. 
 \end{proof}
 
 \subsection{Pseudocode \& proof of \texttt{sample\_bernoulli}}
@@ -201,15 +203,11 @@ def sample_bernoulli(prob : T, constant_time : bool) -> bool:
     if (prob < 0 or prob > 1): |\label{line:rangecheck}|
         raise Exception("probability is not within [0, 1]")
         
-            
-    if prob is 0: |\label{line:0check}|
-        return False
-        
     if prob is 1: |\label{line:1check}|
         return True
         
     # prepare for sampling first heads index by coin flipping
-    max_coin_flips = exact_int_cast(T::EXPONENT_BIAS) + exact_int_cast(T::MANTISSA_BITS) |\label{line:maxcoinflips}|
+    max_coin_flips = exact_int_cast(T::EXPONENT_BIAS, usize) + exact_int_cast(T::MANTISSA_BITS) |\label{line:maxcoinflips}|
     
     # find number of bits to sample, rounding up to nearest byte (smallest sample size)
     buffer_len = inf_div(max_coin_flips, 8) |\label{line:bufferlen}|
@@ -236,7 +234,7 @@ def sample_bernoulli(prob : T, constant_time : bool) -> bool:
             return False
         # case 4: indexing into mantissa
         case _: |\label{line:case4}|
-            return (bin(prob) & (1 << MANTISSA_BITS + leading_zeroes - first_heads_index))
+            return bool(bin(prob) & (1 << (MANTISSA_BITS + leading_zeroes - first_heads_index)))
 
 \end{lstlisting}
 
@@ -251,39 +249,42 @@ def sample_bernoulli(prob : T, constant_time : bool) -> bool:
 \]
 and is represented \emph{exactly} as a normal floating-point number. The \href{https://en.wikipedia.org/wiki/IEEE_754}{IEEE-754 standard} represents a normal floating-point number using an exponent $E$, and a mantissa $m$, using a base-2 analog of scientific notation. 
 
-\begin{definition}[Normal Floating-Point Number]
+\begin{definition}[Floating-Point Number]
 A normal $(k,\ell)$-bit floating-point number $z$ is represented as
 \[
-z = (-1)^s \cdot (1.M) \cdot (2^E) 
+z = (-1)^s \cdot (B.M) \cdot (2^E) 
 \]
 where
 \begin{itemize}
     \item $s$ is used to represent the \emph{sign} of $z$
+    \item $B$ is the implicit bit; $1$ for normal floating-point numbers and $0$ for subnormal floating point numbers
     \item $M \in \{0,1\}^k$ is a $k$-bit string representing the part of the mantissa to the right of the radix point, i.e.,
     \[
     1.M = \sum_{i = 1}^k M_i2^{-i}
     \]
-    \item $E \in \mathbb{Z}$ represents the \emph{exponent} of $z$. When $\ell$ bits are allocated to representing $E$, then $E \in [-(2^{\ell - 1} - 2), 2^{\ell - 1}]$. Note that the range of $E$ is $2^\ell - 2$ rather than $2^\ell$ as the remaining to numbers are used to represent special floating point values.
+    \item $E \in \mathbb{Z}$ represents the \emph{exponent} of $z$. When $\ell$ bits are allocated to representing $E$, then $E \in [-(2^{\ell - 1} - 2), 2^{\ell - 1}]$. Note that the range of $E$ is $2^\ell - 2$ rather than $2^\ell$ as the remaining to numbers are used to represent special floating point values. When $E = 0$, then the floating point number is considered \emph{subnormal}. 
 \end{itemize} 
 \end{definition}
 
 We now use the technique for \href{https://web.archive.org/web/20160418185834/https://amakelov.wordpress.com/2013/10/10/arbitrarily-biasing-a-coin-in-2-expected-tosses/}{arbitrarily biasing a coin in 2 expected tosses} as a building block. Recall that we can represent the probability $\texttt{prob}$ as $\texttt{prob} = \sum_{i = 0}^\infty \frac{a_i}{2^{i + 1}}$ for $a_i \in \{0, 1\}$, where $a_i$ is the zero-indexed $i$-th significant bit in the binary expansion of $\texttt{prob}$. Then let $I \sim Geom(0.5)$ and observe that the random variable $a_I$ is an exact Bernoulli sample with probability $\texttt{prob}$ since $P(a_I = 1) = \sum_{i = 0}^\infty P(a_i = 1|I = i)P(I = i) = \sum_{i = 1}^\infty a_i \cdot \frac{1}{2^{i + 1}} = \texttt{prob}$. It is therefore sufficient to show that for any $(k,\ell)$-bit float $\texttt{prob} = \sum_{i = 0}^\infty \frac{a_i}{2^{i + 1}}$, \texttt{sample\_bernoulli} returns the value $a_I$ with $I \sim Geom(0.5)$.
 
-First, we observe that by lines \ref{line:0check} and \ref{line:1check}, if $\texttt{prob} = 0$ then \texttt{sample\_bernoulli} returns \texttt{false}, and if $\texttt{prob} = 1$ then \texttt{sample\_bernoulli} returns \texttt{true} which is correct by definition of a Bernoulli random variable. Otherwise, the variable \texttt{max\_coin\_flips} is computed to be the value $\texttt{T::EXPONENT\_BIAS} + \texttt{T::MANTISSA\_BITS}$ which equals $2^{\ell - 1} - 1 + k$ for any $(k,\ell)$-bit float. Since \texttt{prob} has finite precision, there is some $j$ for which $a_i = 0$ for all $i > j$. For all \emph{normal} $(k,\ell)$-bit floating-point numbers, $j \le 2^{\ell - 1} - 1 + k$ by definition. \texttt{sample\_bernoulli} calls \texttt{sample\_geometric\_buffer} with a buffer of length $\lceil \frac{\texttt{max\_coin\_flips}}{8}\rceil$ bytes (as shown in lines \ref{line:maxcoinflips} and \ref{line:bufferlen}) which returns  $\texttt{None}$ if and only if $I > {8\cdot \lceil \frac{2^{\ell - 1} -1 + k}{8}\rceil}$, where $I \sim Geom(0.5)$. Since $I > j$, this index appears in the \texttt{trailing\_zeroes} part of the binary expansion of \texttt{prob} and should always return \texttt{false}, i.e., $a_I = 0$ for all $I > j$. We can therefore restrict our attention to when \texttt{sample\_geometric\_buffer} returns an index $I \le \texttt{max\_coin\_flips}$ and show that \texttt{sample\_bernoulli} always returns $a_I$.
+First, we observe that by line \ref{line:1check}, if $\texttt{prob} = 1.0$ then \texttt{sample\_bernoulli} returns \texttt{true} which is correct by definition of a Bernoulli random variable. Otherwise, the variable \texttt{max\_coin\_flips} is computed to be the value $\texttt{T::EXPONENT\_BIAS} + \texttt{T::MANTISSA\_BITS}$ which equals $2^{\ell - 1} - 1 + k$ for any $(k,\ell)$-bit float. Since \texttt{prob} has finite precision, there is some $j$ for which $a_i = 0$ for all $i > j$. For all $(k,\ell)$-bit floating-point numbers, $j \le 2^{\ell - 1} - 1 + k$ by definition. Then \texttt{sample\_bernoulli} calls \texttt{sample\_geometric\_buffer} with a buffer of length $\lceil \frac{\texttt{max\_coin\_flips}}{8}\rceil$ bytes (as shown in lines \ref{line:maxcoinflips} and \ref{line:bufferlen}) which returns  $\texttt{None}$ if and only if $I > {8\cdot \lceil \frac{2^{\ell - 1} -1 + k}{8}\rceil}$, where $I \sim Geom(0.5)$. In this case, since $I > j$ this index appears in the \texttt{trailing\_zeroes} part of the binary expansion of \texttt{prob} and should always return \texttt{false}, i.e., $a_I = 0$ for all $I > j$. We can therefore restrict our attention to when \texttt{sample\_geometric\_buffer} returns an index $I \le \texttt{max\_coin\_flips}$ and show that \texttt{sample\_bernoulli} always returns $a_I$. 
 
-Next \texttt{sample\_bernoulli} directly computes the number of leading zeroes in the binary expansion of \texttt{prob} to be $\texttt{leading\_zeroes} = \texttt{T::EXPONENT\_BIAS} - 1 - \texttt{raw\_exponent(prob)}$, where \texttt{raw\_exponent(prob)} is the value stored in the $\ell$ bits of the exponent. This value is correct by the specification of a $(k,\ell)$-bit float.  \texttt{sample\_bernoulli} then matches on the value \texttt{first\_heads\_index} corresponding to $I \sim Geom(0.5)$ returned by the function \texttt{sample\_geometric\_buffer}: \\
+Assuming that \texttt{sample\_geometric\_buffer} returns some $I < j$,  \texttt{sample\_bernoulli} computes the number of leading zeroes in the binary expansion of \texttt{prob} to be $\texttt{leading\_zeroes} = \texttt{T::EXPONENT\_BIAS} - 1 - \texttt{raw\_exponent(prob)}$, where \texttt{raw\_exponent(prob)} is the value stored in the $\ell$ bits of the exponent. This value is correct by the specification of a $(k,\ell)$-bit float.  \texttt{sample\_bernoulli} then matches on the value \texttt{first\_heads\_index} corresponding to $I \sim Geom(0.5)$ returned by the function \texttt{sample\_geometric\_buffer}: \\
 
 \noindent\textbf{Case 1} ($\texttt{first\_heads\_index} < \texttt{leading\_zeroes}$). \\
-\noindent For any $I < \texttt{leading\_zeroes}$, it follows that $a_I = 0$ and therefore we should return \texttt{false}. In this case, \texttt{sample\_bernoulli} returns \texttt{false}.\\
+\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{leading\_zeroes} part of the  \texttt{prob} variable's binary expansion. Therefore, for any $I < \texttt{leading\_zeroes}$, it follows that $a_I = 0$ and we should return \texttt{false}. In this case, \texttt{sample\_bernoulli} returns \texttt{false}.\\
 
 \noindent\textbf{Case 2} ($\texttt{first\_heads\_index} == \texttt{leading\_zeroes}$). \\
-\noindent When $\texttt{first\_heads\_index} == \texttt{leading\_zeroes}$, it follows that $a_I$ indexes into the implicit bit by the specification of a $(k,\ell)$-bit float. For all $(k,\ell)$-bit normal floats, the implicit bit equals $1$ and therefore we should return \texttt{true}. In this case, \texttt{sample\_bernoulli} returns \texttt{true}.\\
+\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{implicit\_bit} part of the  \texttt{prob} variable's binary expansion. When \texttt{prob} is a normal floating point value, i.e., $E \ne 0$ then the implicit bit $a_I = 1$. Otherwise, when \texttt{prob} is a subnormal floating point value, i.e., $E = 0$, the implicit bit $a_I = 0$. Since \texttt{raw\_exponent(prob)} corresponds to the exponent $E$ for any $(k,\ell)$-bit floating point number \texttt{prob}, \texttt{sample\_bernoulli} returns \texttt{true} when $\texttt{raw\_exponent(prob)} \ne 0$ and \texttt{false} otherwise. \\
 
-\noindent\textbf{Case 3} ($ \texttt{leading\_zeroes} < \texttt{first\_heads\_index}  <  \texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS}$). \\
-\noindent When $ \texttt{leading\_zeroes} < \texttt{first\_heads\_index}  <  \texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS}$, $a_I$ corresponds to one of the bits in the mantissa. 
-\texttt{sample\_bernoulli}  left-shifts \texttt{1} by  $(\texttt{MANTISSA\_BITS + leading\_zeroes - first\_heads\_index})$ digits, the position in the binary representation of \texttt{prob} corresponding to $a_I$. Since the operation between the left-shifted \texttt{1} and the binary representation of \texttt{prob} at that position is a bitwise AND, if the bit in question is 1 (matching the left-shifted \texttt{1}), \texttt{sample\_bernoulli} will return 1. Otherwise, \texttt{sample\_bernoulli} will return 0. \\
 
-\noindent\textbf{Case 4} ($\texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS} < I$). This case need not be checked explicitly since it corresponds to the case when $I > j$ and therefore $a_I$ indexes into the trailing zeroes. This case is handled by returning \texttt{false} when \texttt{sample\_geometric\_buffer} returns \texttt{None}. \\
+\noindent\textbf{Case 3} ($\texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS} < I$). This corresponds to the case where  \texttt{sample\_geometric\_buffer} returns a value $I$ where $I > j$, but $I < \texttt{max\_coin\_flips}$ and therefore $a_I$ indexes into the trailing zeroes. In this case, \texttt{sample\_bernoulli} returns \texttt{false} since $a_I = 0$ for all bits in the \texttt{trailing\_zeroes} part of \texttt{prob}'s binary expansion. \\
+
+\noindent\textbf{Case 4} ($ \texttt{leading\_zeroes} < \texttt{first\_heads\_index}  <  \texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS}$). \\
+\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{mantissa} part of the  \texttt{prob} variable's binary expansion. In this case, 
+\texttt{sample\_bernoulli}  left-shifts the value \texttt{1} by  $(\texttt{MANTISSA\_BITS + leading\_zeroes - first\_heads\_index})$ digits, the index into the mantissa corresponding to the digit $a_I$ in the binary representation of \texttt{prob}. Since the operation between the left-shifted \texttt{1} and the binary representation of \texttt{prob} at that position is a bitwise AND, if the bit in question is 1 (matching the left-shifted \texttt{1}), \texttt{sample\_bernoulli} will return \texttt{true}. Otherwise, \texttt{sample\_bernoulli} will return \texttt{false}. \\
+
 
 \noindent Therefore, for any value of \texttt{prob}, the function \texttt{sample\_bernoulli} either raises an exception or returns the value \texttt{true} with probability exactly $\texttt{prob}$.  
 \end{proof}
