@@ -2,8 +2,9 @@ use std::{mem::size_of, ops::Sub};
 
 use crate::{error::Fallible, traits::{FloatBits, ExactIntCast, InfDiv}};
 
-use super::{fill_bytes, sample_geometric_buffer};
+use super::{fill_bytes, sample_geometric_buffer, GeneratorOpenDP};
 use num::One;
+use rug::rand::ThreadRandState;
 
 pub trait SampleUniform: Sized {
 
@@ -110,21 +111,26 @@ impl_sample_mantissa!(f64, 0b00001111);
 impl_sample_mantissa!(f32, 0b01111111);
 
 
-pub trait SampleUniformInt: Sized {
+pub trait SampleStandardUniformInt: Sized {
     /// sample uniformly from [Self::MIN, Self::MAX]
     fn sample_uniform_int() -> Fallible<Self>;
+}
+pub trait SampleUniformInt: Sized {
     /// sample uniformly from [0, upper)
     fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self>;
 }
 
 macro_rules! impl_sample_uniform_unsigned_int {
     ($($ty:ty),+) => ($(
-        impl SampleUniformInt for $ty {
+        impl SampleStandardUniformInt for $ty {
             fn sample_uniform_int() -> Fallible<Self> {
                 let mut buffer = [0; core::mem::size_of::<Self>()];
                 fill_bytes(&mut buffer)?;
                 Ok(Self::from_be_bytes(buffer))
             }
+        }
+
+        impl SampleUniformInt for $ty {
             fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
                 // v % upper is unbiased for any v < MAX - MAX % upper, because
                 // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
@@ -140,6 +146,18 @@ macro_rules! impl_sample_uniform_unsigned_int {
     )+)
 }
 impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
+
+impl SampleUniformInt for rug::Integer {
+    fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
+        let mut rng = GeneratorOpenDP::new();
+        let ret = {
+            let mut state = ThreadRandState::new_custom(&mut rng);
+            upper.random_below(&mut state)
+        };
+        rng.error.map(|_| ret)
+    }
+}
+
 
 #[cfg(test)]
 mod test_uniform_int {

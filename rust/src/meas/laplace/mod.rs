@@ -11,7 +11,7 @@ use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::samplers::SampleDiscreteLaplace;
-use crate::traits::{Float, FloatBits, InfAdd, InfDiv, InfLn, InfLog2, InfPow, RoundCast, InfMul};
+use crate::traits::{Float, InfAdd, InfDiv, InfLn, InfLog2, InfPow, RoundCast, InfMul, InfSub};
 
 pub trait LaplaceDomain: Domain {
     type Metric: SensitivityMetric<Distance = Self::Atom>;
@@ -67,6 +67,8 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
+    let _2 = D::Atom::one() + D::Atom::one();
+
     // Want to find the largest `scale 2^-k` such that coin flip probability `p` is still nonzero
     // Utility is maximized when k is made smaller.
     // Want to compute the smallest feasible k in a way that makes k conservatively larger.
@@ -75,12 +77,12 @@ where
     // We know p = 1 - α, where α = exp(-1/(scale 2^-k)).
     // First choose the largest α such that p != 0
     let max_alpha = {
-        // the complement of the smallest acceptable probability
-        //    is the previous adjacent neighbor before 1
-        // (otherwise success probability is zero)
-        let _1_bit = <D::Atom as FloatBits>::Bits::one();
-        D::Atom::from_bits(D::Atom::one().to_bits() - _1_bit)
+        let min_p = _2.powi(-44);
+        println!("min_p {:?}", min_p);    
+        D::Atom::one().inf_sub(&min_p)?
     };
+
+    println!("max alpha {:?}", max_alpha);
 
     // Since α = exp(-1/(scale 2^-k)), solve for k = gran_pow:
     //        => k = log2(-scale ln(α))
@@ -90,8 +92,8 @@ where
         .neg()
         .inf_mul(&scale)?
         .inf_log2()?
-        // ceil for convenience
         .ceil();
+    println!("gran pow {:?}", gran_pow);
 
     // We will round values to the nearest multiple of 2^-k
     let relaxation = {
@@ -136,6 +138,15 @@ mod tests {
     fn test_make_base_laplace() -> Fallible<()> {
         let measurement = make_base_laplace::<AllDomain<_>>(1.0)?;
         let _ret = measurement.invoke(&0.0)?;
+        println!("1e0 map: {:?}", measurement.map(&1.)?);
+        assert!(measurement.check(&1., &1.0001)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_base_laplace_shifted() -> Fallible<()> {
+        let measurement = make_base_laplace::<AllDomain<_>>(1.0)?;
+        println!("1e0 ret: {:?}", measurement.invoke(&10.0)?);
         println!("1e0 map: {:?}", measurement.map(&1.)?);
         assert!(measurement.check(&1., &1.0001)?);
         Ok(())

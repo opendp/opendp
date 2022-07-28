@@ -16,7 +16,10 @@ use crate::{
 use super::{fill_bytes, SampleBernoulli, SampleStandardBernoulli};
 
 mod linear;
+pub mod cks;
+
 use self::linear::sample_geometric_linear_time;
+
 
 #[cfg(feature="use-mpfr")]
 mod logarithmic;
