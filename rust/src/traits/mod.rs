@@ -110,6 +110,7 @@ pub trait Float:
     + CastInternalReal
     + FloatBits
     + ExactIntCast<Self::Bits>
+    + RoundCast<f64>
 {
 }
 impl<T> Float for T where
@@ -129,5 +130,6 @@ impl<T> Float for T where
         + CastInternalReal
         + FloatBits
         + ExactIntCast<Self::Bits>
+        + RoundCast<f64>
 {
 }

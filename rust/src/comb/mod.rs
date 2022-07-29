@@ -14,6 +14,12 @@ pub mod compose;
 pub use crate::comb::compose::*;
 
 #[cfg(feature="contrib")]
+pub mod measure_cast;
+#[cfg(feature="contrib")]
+pub use crate::comb::measure_cast::*;
+
+
+#[cfg(feature="contrib")]
 pub mod fix_delta;
 #[cfg(feature="contrib")]
 pub use crate::comb::fix_delta::*;

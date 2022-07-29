@@ -10,7 +10,8 @@ __all__ = [
     "make_chain_tt",
     "make_basic_composition",
     "make_population_amplification",
-    "make_fix_delta"
+    "make_fix_delta",
+    "make_cast_zcdp_approxdp"
 ]
 
 
@@ -157,3 +158,28 @@ def make_fix_delta(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(measurement, delta), Measurement))
+
+
+def make_cast_zcdp_approxdp(
+    measurement: Measurement
+) -> Measurement:
+    """Constructs a new output measure where output measure is casted from ZeroConcentratedDivergence to SmoothedMaxDivergence.
+    
+    :param measurement: Measurement with ZeroConcentratedDivergence output measure.
+    :type measurement: Measurement
+    :return: Measurement with SmoothedMaxDivergence output measure.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement)
+    
+    # Call library function.
+    function = lib.opendp_comb__make_cast_zcdp_approxdp
+    function.argtypes = [Measurement]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement), Measurement))

@@ -105,5 +105,19 @@
             "c_type": "FfiResult<AnyMeasurement *>",
             "description": "New measurement with the same function, but a fixed output measure and privacy map."
         }
+    },
+    "make_cast_zcdp_approxdp": {
+        "description": "Constructs a new output measure where output measure is casted from ZeroConcentratedDivergence to SmoothedMaxDivergence.",
+        "args": [
+            {
+                "name": "measurement",
+                "c_type": "const AnyMeasurement *",
+                "description": "Measurement with ZeroConcentratedDivergence output measure."
+            }
+        ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>",
+            "description": "Measurement with SmoothedMaxDivergence output measure."
+        }
     }
 }
