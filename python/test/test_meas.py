@@ -108,6 +108,22 @@ def test_base_geometric():
     assert not meas.check(1, 0.49999)
 
 
+def test_base_discrete_laplace():
+    from opendp.meas import make_base_discrete_laplace
+    meas = make_base_discrete_laplace(scale=2.)
+    print("base_discrete_laplace:", meas(100))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
+
+def test_base_discrete_laplace_linear():
+    from opendp.meas import make_base_discrete_laplace_linear
+    meas = make_base_discrete_laplace_linear(scale=2., bounds=(1, 10))
+    print("base_discrete_laplace:", meas(100))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
+
 def test_base_vector_geometric():
     from opendp.meas import make_base_geometric
     meas = make_base_geometric(scale=2., D="VectorDomain<AllDomain<i32>>")

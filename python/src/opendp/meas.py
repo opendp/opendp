@@ -9,6 +9,8 @@ __all__ = [
     "make_base_gaussian",
     "make_base_analytic_gaussian",
     "make_base_geometric",
+    "make_base_discrete_laplace_linear",
+    "make_base_discrete_laplace",
     "make_randomized_response_bool",
     "make_randomized_response",
     "make_base_ptr"
@@ -135,8 +137,7 @@ def make_base_geometric(
     D: RuntimeTypeDescriptor = "AllDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the geometric(`scale`) distribution to the input.
-    Adjust D to noise vector-valued data.
+    """Deprecated. Use `make_base_discrete_laplace` instead (more efficient). `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
     
     :param scale: noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviation.
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
@@ -171,6 +172,90 @@ def make_base_geometric(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(scale, bounds, D, QO), Measurement))
+
+
+def make_base_discrete_laplace_linear(
+    scale,
+    bounds: Any = None,
+    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    QO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
+    This algorithm can be executed in constant time if bounds are passed.
+    Adjust D to noise vector-valued data.
+    
+    :param scale: noise scale parameter for the geometric distribution. `scale` == sqrt(2) * standard_deviation.
+    :param bounds: Set bounds on the count to make the algorithm run in constant-time.
+    :type bounds: Any
+    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+    :type D: :ref:`RuntimeTypeDescriptor`
+    :param QO: Data type of the sensitivity, scale, and budget.
+    :type QO: :ref:`RuntimeTypeDescriptor`
+    :return: A base_discrete_laplace_linear step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    D = RuntimeType.parse(type_name=D)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+    T = get_atom(D)
+    OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
+    
+    # Convert arguments to c types.
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
+    D = py_to_c(D, c_type=ctypes.c_char_p)
+    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_base_discrete_laplace_linear
+    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(scale, bounds, D, QO), Measurement))
+
+
+def make_base_discrete_laplace(
+    scale,
+    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    QO: RuntimeTypeDescriptor = None
+) -> Measurement:
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
+    Adjust D to noise vector-valued data.
+    
+    :param scale: noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+    :type D: :ref:`RuntimeTypeDescriptor`
+    :param QO: Data type of the sensitivity, scale, and budget.
+    :type QO: :ref:`RuntimeTypeDescriptor`
+    :return: A base_discrete_laplace step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    D = RuntimeType.parse(type_name=D)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+    T = get_atom(D)
+    
+    # Convert arguments to c types.
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    D = py_to_c(D, c_type=ctypes.c_char_p)
+    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_base_discrete_laplace
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(scale, D, QO), Measurement))
 
 
 def make_randomized_response_bool(

@@ -106,6 +106,18 @@ macro_rules! impl_check_null_for_float {
     }
 }
 impl_check_null_for_float!(f64, f32);
+#[cfg(feature="ffi")]
+impl CheckNull for rug::Rational {
+    fn is_null(&self) -> bool {
+        self.denom().is_zero()
+    }
+}
+#[cfg(feature="ffi")]
+impl CheckNull for rug::Integer {
+    fn is_null(&self) -> bool {
+        false
+    }
+}
 
 // TRAIT TotalOrd
 macro_rules! impl_total_ord_for_ord {
