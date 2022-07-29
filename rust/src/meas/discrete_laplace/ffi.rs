@@ -1,8 +1,6 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use az::SaturatingCast;
-
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
@@ -26,7 +24,7 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace(
         D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
         QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
         rug::Rational: TryFrom<QO>,
-        rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+        rug::Integer: From<D::Atom> + az::SaturatingCast<D::Atom>,
     {
         let scale = try_as_ref!(scale as *const QO).clone();
         make_base_discrete_laplace::<D, QO>(scale).into_any()
