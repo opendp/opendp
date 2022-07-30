@@ -13,7 +13,7 @@ use crate::{
     traits::{samplers::sample_discrete_gaussian, CheckNull},
 };
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
 
 use super::MappableDomain;
@@ -48,15 +48,19 @@ where
     Ok(Measurement::new(
         D::default(),
         D::default(),
-        D::new_map_function(move |arg: &D::Atom| {
-            // exact conversion to bignum int
-            let arg = Integer::from(arg.clone());
-            // exact sampling of noise
-            let noise = sample_discrete_gaussian(scale_rational.clone())?;
-            // exact addition, and then postprocess by casting to D::Atom
-            //     clamp to the data type's bounds if out of range
-            Ok((arg + noise).saturating_as())
-        }),
+        if scale.is_zero() {
+            D::new_map_function(move |arg: &D::Atom| Ok(arg.clone()))
+        } else {
+            D::new_map_function(move |arg: &D::Atom| {
+                // exact conversion to bignum int
+                let arg = Integer::from(arg.clone());
+                // exact sampling of noise
+                let noise = sample_discrete_gaussian(scale_rational.clone())?;
+                // exact addition, and then postprocess by casting to D::Atom
+                //     clamp to the data type's bounds if out of range
+                Ok((arg + noise).saturating_as())
+            })
+        },
         D::InputMetric::default(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &Q| {
@@ -72,8 +76,6 @@ where
         }),
     ))
 }
-
-
 
 pub fn make_base_discrete_gaussian_rug<D>(
     scale: Rational,

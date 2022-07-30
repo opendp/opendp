@@ -7,7 +7,7 @@ use crate::{
     core::{Measurement, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
-    traits::{InfCast, samplers::sample_discrete_laplace},
+    traits::{samplers::sample_discrete_laplace, InfCast},
 };
 
 use super::DiscreteLaplaceDomain;
@@ -34,11 +34,15 @@ where
     Ok(Measurement::new(
         D::default(),
         D::default(),
-        D::new_map_function(move |arg: &D::Atom| {
-            let arg = Integer::from(arg.clone());
-            let noise = sample_discrete_laplace(scale_rational.clone())?;
-            Ok((arg + noise).saturating_as())
-        }),
+        if scale.is_zero() {
+            D::new_map_function(move |arg: &D::Atom| Ok(arg.clone()))
+        } else {
+            D::new_map_function(move |arg: &D::Atom| {
+                let arg = Integer::from(arg.clone());
+                let noise = sample_discrete_laplace(scale_rational.clone())?;
+                Ok((arg + noise).saturating_as())
+            })
+        },
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
