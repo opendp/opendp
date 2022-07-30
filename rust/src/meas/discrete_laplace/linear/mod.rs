@@ -29,12 +29,12 @@ where
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
 
-    let func = move |v: &D::Atom| D::Atom::sample_discrete_laplace_linear(*v, scale, bounds);
-
     Ok(Measurement::new(
         D::default(),
         D::default(),
-        D::new_map_function(func),
+        D::new_map_function(move |v: &D::Atom| {
+            D::Atom::sample_discrete_laplace_linear(*v, scale, bounds)
+        }),
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
