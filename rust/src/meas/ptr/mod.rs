@@ -10,6 +10,7 @@ use crate::metrics::L1Distance;
 use crate::measures::{SmoothedMaxDivergence, SMDCurve};
 use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
+use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
 use crate::traits::{Float, Hashable};
 
 // propose-test-release count grouped by unknown categories,
@@ -19,15 +20,16 @@ pub fn make_base_ptr<TK, TV>(
     scale: TV, threshold: TV,
 ) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
     where TK: Hashable,
-          TV: Float {
+          TV: Float + SampleDiscreteLaplaceZ2k {
     let _2 = TV::exact_int_cast(2)?;
+    let gran = -40;
     Ok(Measurement::new(
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
             data.clone().into_iter()
                 // noise output count
-                .map(|(k, v)| TV::sample_laplace(v, scale, false).map(|v| (k, v)))
+                .map(|(k, v)| TV::sample_discrete_laplace_Z2k(v, scale, gran).map(|v| (k, v)))
                 // remove counts that fall below threshold
                 .filter(|res| res.as_ref().map(|(_k, c)| c >= &threshold).unwrap_or(true))
                 // fail the whole computation if any cast or noise addition failed

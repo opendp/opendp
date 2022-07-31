@@ -112,9 +112,10 @@ pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
     if scale.is_zero() {
         return Ok(0.into())
     }
+    let inv_scale = scale.recip();
     loop {
         let sign = Integer::sample_standard_rademacher()?;
-        let magnitude = sample_geometric_exp_fast(scale.clone().recip())?;
+        let magnitude = sample_geometric_exp_fast(inv_scale.clone())?;
         if !(sign.is_one() && magnitude.is_zero()) {
             return Ok(sign * magnitude);
         }
@@ -123,6 +124,9 @@ pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
 
 
 pub fn sample_discrete_gaussian(scale: Rational) -> Fallible<Integer> {
+    if scale.is_zero() {
+        return Ok(0.into())
+    }
     let t = scale.clone().floor() + 1i8;
     let sigma2 = scale.square();
     loop {

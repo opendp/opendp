@@ -5,25 +5,26 @@ enable_features('floating-point', 'contrib')
 
 def test_base_gaussian_curve():
     from opendp.meas import make_base_gaussian
-    curve = make_base_gaussian(4.).map(1.)
+    from opendp.comb import make_zCDP_to_approxDP
+    curve = make_zCDP_to_approxDP(make_base_gaussian(4.)).map(1.)
     print(curve.epsilon(1e-3))
 
 
 def test_base_gaussian_search():
-    from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
-    from opendp.comb import make_fix_delta
+    from opendp.meas import make_base_gaussian
+    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_param
 
-    fixed_meas = make_fix_delta(make_base_analytic_gaussian(1.), 1e-5)
+    def make_smd_gauss(scale, delta):
+        return make_fix_delta(make_zCDP_to_approxDP(make_base_gaussian(scale)), delta)
+
+    fixed_meas = make_smd_gauss(1., 1e-5)
     ideal_dist = fixed_meas.map(1.)
     print("ideal dist", ideal_dist)
     print("check with ideal dist:", fixed_meas.check(1., ideal_dist))
 
-    print("Analytic", binary_search_param(
-        lambda s: make_fix_delta(make_base_analytic_gaussian(s), 1e-5),
-        d_in=1., d_out=(1., 1e-5)))
     print("Standard", binary_search_param(
-        lambda s: make_fix_delta(make_base_gaussian(s), 1e-5),
+        lambda s: make_smd_gauss(s, 1e-5),
         d_in=1., d_out=(1., 1e-5)))
 
 
@@ -43,14 +44,15 @@ def test_base_vector_laplace():
 
 
 def test_base_gaussian_smoothed_max_divergence():
+    from opendp.comb import make_zCDP_to_approxDP
     from opendp.meas import make_base_gaussian
 
-    meas = make_base_gaussian(scale=10.5)
+    meas = make_zCDP_to_approxDP(make_base_gaussian(scale=10.5))
     print("base gaussian:", meas(100.))
 
     epsilon = meas.map(d_in=1.).epsilon(delta=.000001)
     print("epsilon:", epsilon)
-    assert epsilon > .5
+    assert epsilon > .4
 
 
 def test_base_gaussian_zcdp():
@@ -63,36 +65,16 @@ def test_base_gaussian_zcdp():
     print("rho:", rho)
 
 
-def test_base_analytic_gaussian():
-    from opendp.meas import make_base_analytic_gaussian
-    meas = make_base_analytic_gaussian(scale=1.5)
-    print("base analytic gaussian:", meas(100.))
-
-    # analytic gaussian allows epsilon > 1
-    epsilon = meas.map(1.).epsilon(delta=.000001)
-    print("epsilon:", epsilon)
-    assert epsilon > 3.
-
-
-def test_base_analytic_gaussian_edge():
-    from opendp.meas import make_base_analytic_gaussian
-    from opendp.comb import make_fix_delta
-
-    print(make_fix_delta(make_base_analytic_gaussian(1.), delta=1e-6).map(0.))
-    print(make_fix_delta(make_base_analytic_gaussian(0.), delta=1e-6).map(1.))
-
 
 def test_base_vector_gaussian():
-    from opendp.meas import make_base_gaussian, make_base_analytic_gaussian
-    from opendp.comb import make_fix_delta
+    from opendp.meas import make_base_gaussian
+    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
     delta = .000001
-    meas = make_fix_delta(make_base_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>"), delta)
+    meas = make_fix_delta(
+        make_zCDP_to_approxDP(
+            make_base_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>")), delta)
     print("base gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (0.6, delta))
-
-    meas = make_fix_delta(make_base_analytic_gaussian(scale=10.5, D="VectorDomain<AllDomain<f64>>"), delta)
-    print("base analytic gaussian:", meas([80., 90., 100.]))
-    assert meas.check(1., (0.5, delta))
 
 
 def test_base_geometric():

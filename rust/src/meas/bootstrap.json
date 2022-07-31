@@ -49,9 +49,9 @@
             },
             {
                 "name": "MO",
-                "default": "SmoothedMaxDivergence<T>",
+                "default": "ZeroConcentratedDivergence<T>",
                 "generics": ["T"],
-                "description": "Output measure. Valid values are SmoothedMaxDivergence<T> or ZeroConcentratedDivergence<T>",
+                "description": "Output measure. The only valid measure is ZeroConcentratedDivergence<T>.",
                 "is_type": true
             }
         ],

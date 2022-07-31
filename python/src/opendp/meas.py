@@ -57,7 +57,7 @@ def make_base_laplace(
 def make_base_gaussian(
     scale,
     D: RuntimeTypeDescriptor = "AllDomain<T>",
-    MO: RuntimeTypeDescriptor = "SmoothedMaxDivergence<T>"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
@@ -67,7 +67,7 @@ def make_base_gaussian(
     :param scale: noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
-    :param MO: Output measure. Valid values are SmoothedMaxDivergence<T> or ZeroConcentratedDivergence<T>
+    :param MO: Output measure. The only valid measure is ZeroConcentratedDivergence<T>.
     :type MO: :ref:`RuntimeTypeDescriptor`
     :return: A base_gaussian step.
     :rtype: Measurement

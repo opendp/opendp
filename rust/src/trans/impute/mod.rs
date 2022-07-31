@@ -4,6 +4,7 @@ mod ffi;
 use crate::core::{Domain, Transformation, Function, StabilityMap};
 use crate::domains::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain, InherentNull};
 use crate::error::Fallible;
+use crate::traits::samplers::SampleUniform;
 use crate::trans::{make_row_by_row, make_row_by_row_fallible};
 use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckNull, Float};
@@ -13,7 +14,7 @@ use crate::traits::{CheckNull, Float};
 pub fn make_impute_uniform_float<TA>(
     bounds: (TA, TA)
 ) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<TA>>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>>
-    where TA: Float {
+    where TA: Float + SampleUniform {
     let (lower, upper) = bounds;
     if lower.is_nan() { return fallible!(MakeTransformation, "lower may not be nan"); }
     if upper.is_nan() { return fallible!(MakeTransformation, "upper may not be nan"); }
