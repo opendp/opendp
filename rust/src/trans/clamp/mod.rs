@@ -25,7 +25,7 @@ pub fn make_unclamp<T: 'static + Clone + TotalOrd + CheckNull>(
     make_row_by_row(
         BoundedDomain::new(bounds)?,
         AllDomain::new(),
-        |arg| arg.clone())
+        T::clone)
 }
 
 

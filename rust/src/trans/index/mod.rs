@@ -37,7 +37,7 @@ pub fn make_find_bin<TIA>(
     }
     make_row_by_row(
         AllDomain::new(), AllDomain::new(),
-        move |v| edges.iter().enumerate()
+        move |v: &TIA| edges.iter().enumerate()
             .find(|(_, edge)| v < edge).map(|(i, _)| i)
             .unwrap_or(edges.len()))
 }

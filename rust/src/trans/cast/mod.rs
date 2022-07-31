@@ -15,7 +15,7 @@ pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<T
     make_row_by_row(
         AllDomain::new(),
         OptionNullDomain::new(AllDomain::new()),
-        |v| TOA::round_cast(v.clone()).ok()
+        |v: &TIA| TOA::round_cast(v.clone()).ok()
             .and_then(|v| if v.is_null() {None} else {Some(v)}))
 }
 
@@ -26,7 +26,7 @@ pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<All
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
-        |v| TOA::round_cast(v.clone()).unwrap_or_default())
+        |v: &TIA| TOA::round_cast(v.clone()).unwrap_or_default())
 }
 
 /// A [`Transformation`] that casts elements to a type that has an inherent representation of nullity.
@@ -37,7 +37,7 @@ pub fn make_cast_inherent<TIA, TOA>(
     make_row_by_row(
         AllDomain::new(),
         InherentNullDomain::new(AllDomain::new()),
-        |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL))
+        |v: &TIA| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL))
 }
 
 #[cfg(test)]
