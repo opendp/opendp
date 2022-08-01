@@ -1,16 +1,16 @@
 use std::convert::TryFrom;
 
 use az::{SaturatingAs, SaturatingCast};
-use num::traits::Pow;
+use num::{traits::Pow, Float as _, Zero};
 use rug::{Integer, Rational};
 
 use crate::{
-    core::{Measurement, PrivacyMap, SensitivityMetric},
+    core::{Measure, Measurement, PrivacyMap, SensitivityMetric},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::sample_discrete_gaussian, CheckNull},
+    traits::{samplers::sample_discrete_gaussian, CheckNull, Float},
 };
 
 #[cfg(feature = "ffi")]
@@ -21,27 +21,62 @@ use super::MappableDomain;
 pub trait DiscreteGaussianDomain<Q>: MappableDomain + Default {
     type InputMetric: SensitivityMetric<Distance = Q> + Default;
 }
-impl<T: CheckNull, Q> DiscreteGaussianDomain<Q> for AllDomain<T> {
+impl<T: Clone + CheckNull, Q:> DiscreteGaussianDomain<Q> for AllDomain<T> {
     type InputMetric = AbsoluteDistance<Q>;
 }
-impl<T: CheckNull, Q> DiscreteGaussianDomain<Q> for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckNull, Q> DiscreteGaussianDomain<Q> for VectorDomain<AllDomain<T>> {
     type InputMetric = L2Distance<Q>;
 }
 
-pub fn make_base_discrete_gaussian<D, Q>(
-    scale: Q,
-) -> Fallible<Measurement<D, D, D::InputMetric, ZeroConcentratedDivergence<Q>>>
+pub trait DiscreteGaussianMeasure<DI>: Measure + Default
 where
-    D: DiscreteGaussianDomain<Q>,
-    D::Atom: crate::traits::Integer,
-    Q: crate::traits::Float,
+    DI: DiscreteGaussianDomain<Self::Atom>,
+{
+    type Atom: Float;
+    fn new_forward_map(scale: Self::Atom) -> Fallible<PrivacyMap<DI::InputMetric, Self>>;
+}
+
+impl<DI, Q> DiscreteGaussianMeasure<DI> for ZeroConcentratedDivergence<Q>
+where
+    DI: DiscreteGaussianDomain<Q>,
+    Q: Float,
     Rational: TryFrom<Q>,
+{
+    type Atom = Q;
+
+    fn new_forward_map(scale: Self::Atom) -> Fallible<PrivacyMap<DI::InputMetric, Self>> {
+        let _2 = Q::exact_int_cast(2)?;
+
+        Ok(PrivacyMap::new_fallible(move |d_in: &Q| {
+            if d_in.is_sign_negative() {
+                return fallible!(InvalidDistance, "sensitivity must be non-negative");
+            }
+            if d_in.is_zero() {
+                return Ok(Q::zero());
+            }
+            if scale.is_zero() {
+                return Ok(Q::infinity());
+            }
+
+            // (d_in / scale)^2 / 2
+            (d_in.inf_div(&scale)?).inf_pow(&_2)?.inf_div(&_2)
+        }))
+    }
+}
+
+pub fn make_base_discrete_gaussian<D, MO>(
+    scale: MO::Atom,
+) -> Fallible<Measurement<D, D, D::InputMetric, MO>>
+where
+    D: DiscreteGaussianDomain<MO::Atom>,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+
+    MO: DiscreteGaussianMeasure<D>,
+    Rational: TryFrom<MO::Atom>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
-    let _2 = Q::exact_int_cast(2)?;
     let scale_rational =
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
@@ -62,18 +97,8 @@ where
             })
         },
         D::InputMetric::default(),
-        ZeroConcentratedDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &Q| {
-            if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "sensitivity must be non-negative");
-            }
-            if scale.is_zero() {
-                return Ok(Q::infinity());
-            }
-
-            // (d_in / scale)^2 / 2
-            (d_in.inf_div(&scale)?).inf_pow(&_2)?.inf_div(&_2)
-        }),
+        MO::default(),
+        MO::new_forward_map(scale)?,
     ))
 }
 
@@ -97,4 +122,50 @@ where
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new(move |d_in: &Rational| (d_in.clone() / &scale).pow(2) / 2),
     ))
+}
+
+#[cfg(test)]
+mod test {
+    use num::{One, Zero};
+
+    use super::*;
+    use crate::{domains::AllDomain, error::ExplainUnwrap};
+
+    // there is a distributional test in the accuracy module
+
+    #[test]
+    fn test_make_base_discrete_gaussian() -> Fallible<()> {
+        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1e30f64)?;
+        println!("{:?}", meas.invoke(&0)?);
+        assert!(meas.check(&1., &1e30f64.recip().powi(2))?);
+
+        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(0.)?;
+        assert_eq!(meas.invoke(&0)?, 0);
+        assert_eq!(meas.map(&0.)?, 0.);
+        assert_eq!(meas.map(&1.)?, f64::INFINITY);
+
+        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(f64::MAX)?;
+        println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_base_discrete_gaussian_rug() -> Fallible<()> {
+        let _1e30 = Rational::try_from(1e30f64).unwrap_test();
+        let meas = make_base_discrete_gaussian_rug::<AllDomain<_>>(_1e30.clone())?;
+        println!("{:?}", meas.invoke(&Integer::zero())?);
+        assert!(meas.check(&Rational::one(), &_1e30)?);
+
+        assert!(make_base_discrete_gaussian_rug::<AllDomain<_>>(Rational::zero()).is_err());
+
+        let f64_max = Rational::try_from(f64::MAX).unwrap_test();
+        let meas = make_base_discrete_gaussian_rug::<AllDomain<_>>(f64_max)?;
+        println!(
+            "sample with scale=f64::MAX: {:?}",
+            meas.invoke(&Integer::zero())?
+        );
+
+        Ok(())
+    }
 }

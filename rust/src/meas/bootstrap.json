@@ -237,13 +237,41 @@
                 "is_type": true
             }
         ],
+        "ret": {
+            "c_type": "FfiResult<AnyMeasurement *>"
+        }
+    },
+    "make_base_discrete_gaussian": {
+        "description": "Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "scale",
+                "c_type": "void *",
+                "rust_type": "Q",
+                "description": "noise scale parameter for the distribution. `scale` == standard_deviation."
+            },
+            {
+                "name": "D",
+                "default": "AllDomain<int>",
+                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>",
+                "is_type": true
+            },
+            {
+                "name": "MO",
+                "default": "ZeroConcentratedDivergence<Q>",
+                "generics": ["Q"],
+                "description": "Output measure. The only valid measure is ZeroConcentratedDivergence<Q>, but Q can be f32 or f64",
+                "is_type": true
+            }
+        ],
         "derived_types": [
             {
-                "name": "T",
+                "name": "Q",
                 "rust_type": {
-                    "function": "get_atom",
+                    "function": "get_atom_or_infer",
                     "params": [
-                        "D"
+                        "MO", "scale"
                     ]
                 }
             }

@@ -11,6 +11,7 @@ __all__ = [
     "make_base_geometric",
     "make_base_discrete_laplace_linear",
     "make_base_discrete_laplace",
+    "make_base_discrete_gaussian",
     "make_randomized_response_bool",
     "make_randomized_response",
     "make_base_ptr"
@@ -243,7 +244,6 @@ def make_base_discrete_laplace(
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    T = get_atom(D)
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
@@ -256,6 +256,46 @@ def make_base_discrete_laplace(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(scale, D, QO), Measurement))
+
+
+def make_base_discrete_gaussian(
+    scale,
+    D: RuntimeTypeDescriptor = "AllDomain<int>",
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<Q>"
+) -> Measurement:
+    """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
+    Adjust D to noise vector-valued data.
+    
+    :param scale: noise scale parameter for the distribution. `scale` == standard_deviation.
+    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+    :type D: :ref:`RuntimeTypeDescriptor`
+    :param MO: Output measure. The only valid value is ZeroConcentratedDivergence<Q>
+    :type MO: :ref:`RuntimeTypeDescriptor`
+    :return: A base_discrete_gaussian step.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    D = RuntimeType.parse(type_name=D)
+    MO = RuntimeType.parse(type_name=MO, generics=["Q"])
+    Q = get_atom_or_infer(MO, scale)
+    MO = MO.substitute(Q=Q)
+    
+    # Convert arguments to c types.
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=Q)
+    D = py_to_c(D, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_meas__make_base_discrete_gaussian
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(scale, D, MO), Measurement))
 
 
 def make_randomized_response_bool(
