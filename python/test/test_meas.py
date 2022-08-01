@@ -130,12 +130,7 @@ def test_base_vector_discrete_laplace():
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
-
-    meas = make_base_discrete_laplace(scale=2., bounds=(10, 100), D="VectorDomain<AllDomain<i32>>")
-    print("constant time vector base_dl:", meas([100, 10, 12]))
-    assert meas.check(1, 0.5)
-    assert not meas.check(1, 0.49999)
-
+    
 
 def test_make_count_by_ptr():
     from opendp.trans import make_count_by
