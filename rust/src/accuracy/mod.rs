@@ -63,10 +63,10 @@ pub mod test {
     use std::ops::{Mul, Sub};
 
     use super::*;
-    use crate::meas::{make_base_laplace, make_base_gaussian, make_base_discrete_laplace};
+    use crate::meas::{make_base_laplace, make_base_gaussian, make_base_discrete_laplace, make_base_discrete_gaussian};
     use crate::error::ExplainUnwrap;
     use crate::domains::AllDomain;
-    use crate::measures::SmoothedMaxDivergence;
+    use crate::measures::{SmoothedMaxDivergence, ZeroConcentratedDivergence};
 
     fn print_statement<T: Copy + Debug + One + From<i8> + Sub<Output=T> + Mul<Output=T>>(dist: &str, scale: T, accuracy: T, alpha: T) {
         let _100 = T::from(100);
@@ -239,6 +239,25 @@ pub mod test {
             .count() as f64 / n as f64;
 
         println!("Discrete laplace significance levels/alpha");
+        println!("Theoretical: {:?}", theoretical_alpha);
+        println!("Empirical:   {:?}", empirical_alpha);
+        assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
+        let accuracy = 25;
+        let theoretical_alpha = 0.05;
+        let scale = accuracy_to_gaussian_scale(accuracy as f64, theoretical_alpha)?;
+        println!("scale: {}", scale);
+        let base_dg = make_base_discrete_gaussian::<AllDomain<i8>, ZeroConcentratedDivergence<f64>>(scale)?;
+        let n = 50_000;
+        let empirical_alpha = (0..n)
+            .filter(|_| base_dg.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
+            .count() as f64 / n as f64;
+
+        println!("Discrete gaussian significance levels/alpha");
         println!("Theoretical: {:?}", theoretical_alpha);
         println!("Empirical:   {:?}", empirical_alpha);
         assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);
