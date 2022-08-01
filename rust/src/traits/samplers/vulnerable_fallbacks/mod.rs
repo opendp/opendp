@@ -1,4 +1,6 @@
-
+use crate::error::Fallible;
+use crate::traits::samplers::{SampleRademacher, SampleStandardBernoulli, SampleUniform};
+use statrs::function::erf;
 
 pub trait SampleDiscreteLaplaceZ2k: Sized {
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
@@ -6,19 +8,20 @@ pub trait SampleDiscreteLaplaceZ2k: Sized {
 
 impl<T> SampleDiscreteLaplaceZ2k for T
 where
-    T: num::Float
-        + rand::distributions::uniform::SampleUniform
-        + crate::traits::samplers::SampleRademacher,
+    T: num::Float + SampleUniform + SampleRademacher,
 {
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, _k: i32) -> Fallible<Self> {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        let mut u: T = T::zero();
-        while u.abs().is_zero() {
-            u = rng.gen_range(T::from(-1.).unwrap(), T::from(1.).unwrap())
-        }
-        let value = shift + u.signum() * u.abs().ln() * scale;
-        Ok(super::censor_neg_zero(value))
+        let u = loop {
+            let u = T::sample_standard_uniform(false)?;
+            if !u.is_zero() {
+                break if bool::sample_standard_bernoulli()? {
+                    u
+                } else {
+                    -u
+                };
+            }
+        };
+        Ok(shift + u.signum() * u.abs().ln() * scale)
     }
 }
 
@@ -28,20 +31,19 @@ pub trait SampleDiscreteGaussianZ2k: Sized {
 
 impl SampleDiscreteGaussianZ2k for f64 {
     fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, _k: i32) -> Fallible<Self> {
-        use crate::traits::samplers::uniform::SampleUniform;
         let uniform_sample = f64::sample_standard_uniform(false)?;
-        use statrs::function::erf;
-        let value = shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample);
-        Ok(censor_neg_zero(value))
+        Ok(shift + scale * std::f64::consts::SQRT_2 * erf::erfc_inv(2.0 * uniform_sample))
     }
 }
 
 impl SampleDiscreteGaussianZ2k for f32 {
     fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, _k: i32) -> Fallible<Self> {
-        use crate::traits::samplers::uniform::SampleUniform;
-        let uniform_sample = f64::sample_standard_uniform(constant_time)?;
-        use statrs::function::erf;
-        let value = shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32);
-        Ok(censor_neg_zero(value))
+        let uniform_sample = f64::sample_standard_uniform(false)?;
+        Ok(shift + scale * std::f32::consts::SQRT_2 * (erf::erfc_inv(2.0 * uniform_sample) as f32))
     }
 }
+
+pub trait CastInternalRational {}
+
+impl CastInternalRational for f32 {}
+impl CastInternalRational for f64 {}
