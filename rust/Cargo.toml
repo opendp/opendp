@@ -48,9 +48,15 @@ serde_json = { version = "1.0.64", features = ["preserve_order"] }
 serde = { version = "1.0.126", features = ["derive"] }
 indexmap = { version = "1.6.2", features = ["serde"] }
 
+[dev-dependencies]
+criterion = "0.3"
 
 [lib]
 crate-type = ["rlib", "cdylib"]
 
 [package.metadata.docs.rs]
 features = ["untrusted", "ffi"]
+
+[[bench]]
+name = "discrete_laplace"
+harness = false
