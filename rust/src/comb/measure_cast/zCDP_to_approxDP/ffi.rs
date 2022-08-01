@@ -1,7 +1,7 @@
-use crate::{ffi::{any::{AnyMeasurement, Downcast, AnyObject, AnyMeasure}, util}, core::{FfiResult, Measurement, PrivacyMap}, comb::make_cast_zcdp_approxdp, measures::ZeroConcentratedDivergence, traits::Float};
+use crate::{ffi::{any::{AnyMeasurement, Downcast, AnyObject, AnyMeasure}, util}, core::{FfiResult, Measurement, PrivacyMap}, comb::make_zCDP_to_approxDP, measures::ZeroConcentratedDivergence, traits::Float};
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_cast_zcdp_approxdp(
+pub extern "C" fn opendp_comb__make_zCDP_to_approxDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {
     // run combinator on measurement
@@ -25,7 +25,7 @@ pub extern "C" fn opendp_comb__make_cast_zcdp_approxdp(
             privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast::<Q>())
         };
 
-        let measurement = try_!(make_cast_zcdp_approxdp(measurement));
+        let measurement = try_!(make_zCDP_to_approxDP(measurement));
 
         let Measurement {
             input_domain,

@@ -12,7 +12,7 @@ mod ffi;
 
 mod cks20;
 
-pub fn make_cast_zcdp_approxdp<DI, DO, MI, QO>(
+pub fn make_zCDP_to_approxDP<DI, DO, MI, QO>(
     meas: Measurement<DI, DO, MI, ZeroConcentratedDivergence<QO>>,
 ) -> Fallible<Measurement<DI, DO, MI, SmoothedMaxDivergence<QO>>>
 where

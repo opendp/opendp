@@ -1,3 +1,3 @@
 
-mod zcd_to_smd;
-pub use zcd_to_smd::*;
+mod zCDP_to_approxDP;
+pub use zCDP_to_approxDP::*;
