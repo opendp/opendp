@@ -153,6 +153,15 @@ mod test {
         println!("{:?}", 1.5.into_rational()? << -2);
         Ok(())
     }
+
+    #[test]
+    fn test_extreme_rational() -> Fallible<()> {
+        // rationals with greater magnitude than MAX saturate to infinity
+        let rat = Rational::from_f64(f64::MAX).unwrap();
+        println!("{:?}", (rat * 2u8).to_f64());
+
+        Ok(())
+    }
 }
 
 
