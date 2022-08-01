@@ -67,7 +67,7 @@ mod tests {
         let measurement = Result::from(opendp_meas__make_base_discrete_gaussian(
             util::into_raw(0.0) as *const c_void,
             "AllDomain<i32>".to_char_p(),
-            "f64".to_char_p(),
+            "ZeroConcentratedDivergence<f64>".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);

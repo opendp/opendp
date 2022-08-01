@@ -269,7 +269,7 @@ def make_base_discrete_gaussian(
     :param scale: noise scale parameter for the distribution. `scale` == standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
-    :param MO: Output measure. The only valid value is ZeroConcentratedDivergence<Q>
+    :param MO: Output measure. The only valid measure is ZeroConcentratedDivergence<Q>, but Q can be f32 or f64
     :type MO: :ref:`RuntimeTypeDescriptor`
     :return: A base_discrete_gaussian step.
     :rtype: Measurement
