@@ -2,47 +2,54 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
 use az::SaturatingCast;
-use rug::{Rational, Integer};
+use rug::{Integer, Rational};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
-use crate::meas::{make_base_discrete_gaussian, DiscreteGaussianDomain};
+use crate::meas::{make_base_discrete_gaussian, DiscreteGaussianDomain, DiscreteGaussianMeasure};
+use crate::measures::ZeroConcentratedDivergence;
+use crate::traits::{Float, CheckNull};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_discrete_gaussian(
     scale: *const c_void,
     D: *const c_char,
-    Q: *const c_char,
+    MO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<T>(scale: *const c_void, D: Type, Q: Type) -> FfiResult<*mut AnyMeasurement>
+    fn monomorphize<T, Q>(scale: *const c_void, D: Type, MO: Type) -> FfiResult<*mut AnyMeasurement>
     where
-        T: crate::traits::Integer,
-        rug::Integer: From<T> + az::SaturatingCast<T>,
+        T: 'static + Clone + CheckNull,
+        Integer: From<T> + SaturatingCast<T>,
+
+        Q: Float,
+        Rational: TryFrom<Q>,
     {
-        fn monomorphize2<D, Q>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement>
+        fn monomorphize2<D, MO>(scale: MO::Atom) -> FfiResult<*mut AnyMeasurement>
         where
-            D: 'static + DiscreteGaussianDomain<Q>,
-            D::Atom: crate::traits::Integer,
-            Q: crate::traits::Float,
-            Rational: TryFrom<Q>,
+            D: 'static + DiscreteGaussianDomain<MO::Atom>,
             Integer: From<D::Atom> + SaturatingCast<D::Atom>,
+
+            MO: 'static + DiscreteGaussianMeasure<D>,
+            Rational: TryFrom<MO::Atom>,
         {
-            let scale = try_as_ref!(scale as *const Q).clone();
-            make_base_discrete_gaussian::<D, Q>(scale).into_any()
+            make_base_discrete_gaussian::<D, MO>(scale).into_any()
         }
+        let scale = try_as_ref!(scale as *const Q).clone();
         dispatch!(monomorphize2, [
             (D, [VectorDomain<AllDomain<T>>, AllDomain<T>]),
-            (Q, @floats)
+            (MO, [ZeroConcentratedDivergence<Q>])
         ], (scale))
     }
     let D = try_!(Type::try_from(D));
-    let Q = try_!(Type::try_from(Q));
+    let MO = try_!(Type::try_from(MO));
     let T = try_!(D.get_atom());
+    let Q = try_!(MO.get_atom());
     dispatch!(monomorphize, [
-        (T, @integers)
-    ], (scale, D, Q))
+        (T, @integers),
+        (Q, @floats)
+    ], (scale, D, MO))
 }
 
 #[cfg(test)]
