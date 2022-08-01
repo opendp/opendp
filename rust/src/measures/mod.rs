@@ -7,8 +7,14 @@ use std::{
 use crate::{error::Fallible, core::Measure, domains::type_name};
 
 /// Measures
-#[derive(Clone)]
 pub struct MaxDivergence<Q>(PhantomData<Q>);
+
+impl<Q> Clone for MaxDivergence<Q> {
+    fn clone(&self) -> Self {
+        MaxDivergence::default()
+    }
+}
+
 impl<Q> Default for MaxDivergence<Q> {
     fn default() -> Self {
         MaxDivergence(PhantomData)
@@ -31,8 +37,13 @@ impl<Q: Clone> Measure for MaxDivergence<Q> {
     type Distance = Q;
 }
 
-#[derive(Clone)]
 pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
+
+impl<Q> Clone for SmoothedMaxDivergence<Q> {
+    fn clone(&self) -> Self {
+        SmoothedMaxDivergence::default()
+    }
+}
 
 impl<Q> Default for SmoothedMaxDivergence<Q> {
     fn default() -> Self {
@@ -51,7 +62,7 @@ impl<Q> Debug for SmoothedMaxDivergence<Q> {
     }
 }
 
-impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
+impl<Q> Measure for SmoothedMaxDivergence<Q> {
     type Distance = SMDCurve<Q>;
 }
 
@@ -75,8 +86,13 @@ impl<Q> SMDCurve<Q> {
     }
 }
 
-#[derive(Clone)]
 pub struct FixedSmoothedMaxDivergence<Q>(PhantomData<Q>);
+
+impl<Q> Clone for FixedSmoothedMaxDivergence<Q> {
+    fn clone(&self) -> Self {
+        FixedSmoothedMaxDivergence::default()
+    }
+}
 
 impl<Q> Default for FixedSmoothedMaxDivergence<Q> {
     fn default() -> Self {
@@ -101,11 +117,15 @@ impl<Q: Clone> Measure for FixedSmoothedMaxDivergence<Q> {
 }
 
 
-#[derive(Clone)]
 pub struct ZeroConcentratedDivergence<Q>(PhantomData<Q>);
 impl<Q> Default for ZeroConcentratedDivergence<Q> {
     fn default() -> Self {
         ZeroConcentratedDivergence(PhantomData)
+    }
+}
+impl<Q> Clone for ZeroConcentratedDivergence<Q> {
+    fn clone(&self) -> Self {
+        ZeroConcentratedDivergence::default()
     }
 }
 

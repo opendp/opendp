@@ -77,13 +77,13 @@ def test_make_basic_composition_leak():
     
 
 def test_cast_zcdp_approxdp():
-    from opendp.comb import make_cast_zcdp_approxdp
+    from opendp.comb import make_measure_smd
 
     base_gaussian = make_base_gaussian(10., MO=ZeroConcentratedDivergence[float])
 
     print(base_gaussian.map(1.))
 
-    smd_gaussian = make_cast_zcdp_approxdp(base_gaussian)
+    smd_gaussian = make_measure_smd(base_gaussian)
 
     print(smd_gaussian.map(1.).epsilon(1e-6))
     print(make_base_gaussian(10.).map(1.).epsilon(1e-6))

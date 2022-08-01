@@ -1,55 +1,71 @@
-use crate::{ffi::{any::{AnyMeasurement, Downcast, AnyObject, AnyMeasure}, util}, core::{FfiResult, Measurement, PrivacyMap}, comb::make_cast_zcdp_approxdp, measures::ZeroConcentratedDivergence, traits::Float};
+use crate::{
+    comb::make_measure_smd,
+    core::{FfiResult, PrivacyMap},
+    ffi::any::{AnyMeasure, AnyMeasurement, AnyMetric},
+};
+
+use super::CastableMeasure;
+
+impl CastableMeasure<AnyMetric, AnyMeasure> for AnyMeasure {
+    fn cast_from(
+        privacy_map: PrivacyMap<AnyMetric, AnyMeasure>,
+    ) -> PrivacyMap<AnyMetric, AnyMeasure> {
+        unimplemented!()
+    }
+}
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_cast_zcdp_approxdp(
+pub extern "C" fn opendp_comb__make_measure_smd(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {
     // run combinator on measurement
 
-    fn monomorphize<Q: Float>(measurement: &AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
-        let AnyMeasurement {
-            input_domain,
-            output_domain,
-            function,
-            input_metric,
-            output_measure,
-            privacy_map
-        } = measurement.clone();
+    make_measure_smd(try_as_ref!(measurement)).into()
 
-        let measurement = Measurement {
-            input_domain,
-            output_domain,
-            function,
-            input_metric,
-            output_measure: try_!(output_measure.downcast::<ZeroConcentratedDivergence<Q>>()),
-            privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast::<Q>())
-        };
+    // fn monomorphize<Q: Float>(measurement: &AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
+    //     let AnyMeasurement {
+    //         input_domain,
+    //         output_domain,
+    //         function,
+    //         input_metric,
+    //         output_measure,
+    //         privacy_map
+    //     } = measurement.clone();
 
-        let measurement = try_!(make_cast_zcdp_approxdp(measurement));
+    //     let measurement = Measurement {
+    //         input_domain,
+    //         output_domain,
+    //         function,
+    //         input_metric,
+    //         output_measure: try_!(output_measure.downcast::<ZeroConcentratedDivergence<Q>>()),
+    //         privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast::<Q>())
+    //     };
 
-        let Measurement {
-            input_domain,
-            output_domain,
-            function,
-            input_metric,
-            output_measure,
-            privacy_map
-        } = measurement;
+    //     let measurement = try_!(make_measure_smd(measurement));
 
-        FfiResult::Ok(util::into_raw(AnyMeasurement {
-            input_domain,
-            output_domain,
-            function,
-            input_metric,
-            output_measure: AnyMeasure::new(output_measure),
-            privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in).map(AnyObject::new))
-        }))
-    }
+    //     let Measurement {
+    //         input_domain,
+    //         output_domain,
+    //         function,
+    //         input_metric,
+    //         output_measure,
+    //         privacy_map
+    //     } = measurement;
 
-    let measurement = try_as_ref!(measurement);
-    let Q = measurement.output_measure.distance_type.clone();
+    //     FfiResult::Ok(util::into_raw(AnyMeasurement {
+    //         input_domain,
+    //         output_domain,
+    //         function,
+    //         input_metric,
+    //         output_measure: AnyMeasure::new(output_measure),
+    //         privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in).map(AnyObject::new))
+    //     }))
+    // }
 
-    dispatch!(monomorphize, [
-        (Q, @floats)
-    ], (measurement))
+    // let measurement = try_as_ref!(measurement);
+    // let Q = measurement.output_measure.distance_type.clone();
+
+    // dispatch!(monomorphize, [
+    //     (Q, @floats)
+    // ], (measurement))
 }

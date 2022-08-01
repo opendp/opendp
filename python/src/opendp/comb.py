@@ -11,7 +11,7 @@ __all__ = [
     "make_basic_composition",
     "make_population_amplification",
     "make_fix_delta",
-    "make_cast_zcdp_approxdp"
+    "make_measure_smd"
 ]
 
 
@@ -160,7 +160,7 @@ def make_fix_delta(
     return c_to_py(unwrap(function(measurement, delta), Measurement))
 
 
-def make_cast_zcdp_approxdp(
+def make_measure_smd(
     measurement: Measurement
 ) -> Measurement:
     """Constructs a new output measure where output measure is casted from ZeroConcentratedDivergence to SmoothedMaxDivergence.
@@ -178,7 +178,7 @@ def make_cast_zcdp_approxdp(
     measurement = py_to_c(measurement, c_type=Measurement)
     
     # Call library function.
-    function = lib.opendp_comb__make_cast_zcdp_approxdp
+    function = lib.opendp_comb__make_measure_smd
     function.argtypes = [Measurement]
     function.restype = FfiResult
     

@@ -106,7 +106,7 @@
             "description": "New measurement with the same function, but a fixed output measure and privacy map."
         }
     },
-    "make_cast_zcdp_approxdp": {
+    "make_measure_smd": {
         "description": "Constructs a new output measure where output measure is casted from ZeroConcentratedDivergence to SmoothedMaxDivergence.",
         "args": [
             {
