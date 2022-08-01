@@ -158,8 +158,8 @@ def test_base_vector_discrete_gaussian():
     from opendp.meas import make_base_discrete_gaussian
     meas = make_base_discrete_gaussian(scale=2., D="VectorDomain<AllDomain<i32>>")
     print("vector base_dl:", meas([100, 10, 12]))
-    assert meas.check(1, 0.125)
-    assert not meas.check(1, 0.124)
+    assert meas.check(1., 0.125)
+    assert not meas.check(1., 0.124)
 
 def test_make_count_by_ptr():
     from opendp.trans import make_count_by
