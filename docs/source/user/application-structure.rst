@@ -56,7 +56,7 @@ The noise distribution may be either laplace or gaussian.
 
 :laplacian: | Applies to any L1 noise addition mechanism.
   | :func:`make_base_laplace() <opendp.meas.make_base_laplace>`
-  | :func:`make_base_geometric() <opendp.meas.make_base_geometric>`
+  | :func:`base_discrete_laplace() <opendp.meas.base_discrete_laplace>`
   | :func:`make_base_ptr() <opendp.meas.make_base_ptr>`
 :gaussian: | Applies to any L2 noise addition mechanism.
   | :func:`make_base_gaussian() <opendp.meas.make_base_gaussian>`
@@ -146,7 +146,7 @@ Our transformation will
     which allowed us to infer dataset size.
     If your dataset size is not public knowledge, you could either:
 
-    * release a DP count first (:func:`count <opendp.trans.make_count>` >> :func:`base_geometric <opendp.meas.make_base_geometric>`), and then supply that count to resize
+    * release a DP count first (:func:`count <opendp.trans.make_count>` >> :func:`base_discrete_laplace <opendp.meas.make_base_discrete_laplace>`), and then supply that count to resize
     * release a DP count and DP sum separately, and then postprocess
 
 The next step is to make this computation differentially private.

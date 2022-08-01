@@ -236,6 +236,6 @@ Some examples being:
 * `TA` for the atomic type. `float` could be the TA for a float :py:func:`clamp transformation <opendp.trans.make_clamp>`.
 * `TIA` for Atomic Input Type. `str` could be the TIA for a :py:func:`count transformation <opendp.trans.make_count>`.
 * `MO` for Output Metric. `AbsoluteDistance[int]` could be the MO for a :py:func:`histogram transformation <opendp.trans.make_count_by_categories>`.
-* `QO` for Output distance. `float` could be the QO for a :py:func:`geometric measurement <opendp.meas.make_base_geometric>`.
+* `QO` for Output distance. `float` could be the QO for a :py:func:`geometric measurement <opendp.meas.make_base_discrete_laplace>`.
 
 The API docs should also include explanations in most contexts.

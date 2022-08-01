@@ -9,7 +9,7 @@ Python Docs
 There are a few useful examples embedded in the user guide and API docs:
 
 * Don't miss the :ref:`conclusion of the user-guide <putting-together>`!
-* base_geometric in :ref:`constructors` (user guide)
+* base_discrete_laplace in :ref:`constructors` (user guide)
 * DP-sum in :ref:`chaining` (user guide)
 * count in :class:`opendp.mod.Transformation` (API docs)
 * DP-mean in :class:`opendp.mod.Measurement` (API docs)

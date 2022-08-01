@@ -73,3 +73,24 @@ where
         }),
     ))
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::domains::AllDomain;
+
+    #[test]
+    fn test_make_base_discrete_laplace() -> Fallible<()> {
+        let meas = make_base_discrete_laplace_cks20::<AllDomain<_>, _>(1e30f64)?;
+        println!("{:?}", meas.invoke(&0)?);
+
+        let meas = make_base_discrete_laplace_cks20::<AllDomain<_>, _>(0.)?;
+        println!("{:?}", meas.invoke(&0)?);
+
+        let meas = make_base_discrete_laplace_cks20::<AllDomain<_>, _>(f64::MAX)?;
+        println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
+
+        Ok(())
+    }
+}

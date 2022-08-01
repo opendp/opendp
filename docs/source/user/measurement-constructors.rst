@@ -23,11 +23,11 @@ You can choose whether to construct scalar or vector-valued versions by setting 
      - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.meas.make_base_geometric`
+   * - :func:`opendp.meas.make_base_discrete_laplace`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_geometric`
+   * - :func:`opendp.meas.make_base_discrete_laplace`
      - ``VectorDomain<AllDomain<T>>``
      - ``L1Distance<T>``
      - ``MaxDivergence<T>``

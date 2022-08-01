@@ -16,22 +16,22 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> enable_features("contrib")
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> from opendp.meas import make_base_geometric
-    >>> base_geometric: Measurement = make_base_geometric(scale=2.)
+    >>> from opendp.meas import make_base_discrete_laplace
+    >>> base_dl: Measurement = make_base_discrete_laplace(scale=2.)
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> base_geometric.invoke(100)  # -> 101   # doctest: +SKIP
-    >>> base_geometric(100)  # -> 99           # doctest: +SKIP
+    >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
+    >>> base_dl(100)  # -> 99           # doctest: +SKIP
     ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
-    >>> assert base_geometric.check(1, 0.5)
+    >>> assert base_dl.check(1, 0.5)
     ...
     >>> # chain with a transformation from the trans module
     >>> from opendp.trans import make_count
     >>> chained = (
     ...     make_count(TIA=int) >>
-    ...     base_geometric
+    ...     base_dl
     ... )
     ...
     >>> # the resulting measurement has the same features
@@ -378,10 +378,10 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> from opendp.trans import make_sized_bounded_sum
-    >>> from opendp.meas import make_base_geometric
+    >>> from opendp.meas import make_base_discrete_laplace
     ...
     >>> def make_sum(b):
-    ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_geometric(100.)
+    ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_discrete_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
     >>> meas = binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))

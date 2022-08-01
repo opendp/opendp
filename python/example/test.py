@@ -28,7 +28,7 @@ def main():
         make_cast_default(TIA=str, TOA=int) >>
         make_clamp(bounds=(0, 10)) >>
         make_bounded_sum(bounds=(0, 10)) >>
-        make_base_geometric(scale=1.0)
+        make_base_discrete_laplace(scale=1.0)
     )
 
     # Count, col 2
@@ -36,7 +36,7 @@ def main():
         make_select_column(key="C", TOA=str) >>
         make_cast_default(TIA=str, TOA=float) >>
         make_count(TIA=float) >>
-        make_base_geometric(scale=1.0)
+        make_base_discrete_laplace(scale=1.0)
     )
 
     arg = "ant, 1, 1.1\nbat, 2, 2.2\ncat, 3, 3.3"

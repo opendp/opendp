@@ -63,7 +63,7 @@ pub mod test {
     use std::ops::{Mul, Sub};
 
     use super::*;
-    use crate::meas::{make_base_laplace, make_base_gaussian, make_base_geometric};
+    use crate::meas::{make_base_laplace, make_base_gaussian, make_base_discrete_laplace};
     use crate::error::ExplainUnwrap;
     use crate::domains::AllDomain;
     use crate::measures::SmoothedMaxDivergence;
@@ -227,18 +227,18 @@ pub mod test {
     }
 
     #[test]
-    pub fn test_empirical_geometric_accuracy() -> Fallible<()> {
+    pub fn test_empirical_discrete_laplace_accuracy() -> Fallible<()> {
         let accuracy = 25;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_laplacian_scale(accuracy as f64, theoretical_alpha)?;
         println!("scale: {}", scale);
-        let base_geometric = make_base_geometric::<AllDomain<i8>, f64>(scale, None)?;
+        let base_dl = make_base_discrete_laplace::<AllDomain<i8>, f64>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_geometric.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
+            .filter(|_| base_dl.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
             .count() as f64 / n as f64;
 
-        println!("Geometric significance levels/alpha");
+        println!("Discrete laplace significance levels/alpha");
         println!("Theoretical: {:?}", theoretical_alpha);
         println!("Empirical:   {:?}", empirical_alpha);
         assert!((empirical_alpha - theoretical_alpha).abs() < 1e-2);

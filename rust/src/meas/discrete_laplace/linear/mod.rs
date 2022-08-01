@@ -51,6 +51,10 @@ where
     ))
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "Use `make_base_discrete_laplace` instead. For a constant-time algorithm, pass bounds into `make_base_discrete_laplace_linear`."
+)]
 pub fn make_base_geometric<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,

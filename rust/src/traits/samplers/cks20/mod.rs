@@ -86,6 +86,9 @@ fn sample_geometric_exp_fast(v: Rational) -> Fallible<Integer> {
 }
 
 pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
+    if scale.is_zero() {
+        return Ok(0.into())
+    }
     loop {
         let sign = Integer::sample_standard_rademacher()?;
         let magnitude = sample_geometric_exp_fast(scale.clone().recip())?;
