@@ -69,7 +69,7 @@ In this example the chaining was successful because:
 Chaining fails if we were to adjust the domains such that they won't match.
 In the below example, the adjustment is subtle, but the bounds were adjusted to floats.
 ``make_bounded_sum`` is equally capable of summing floats,
-but the chaining fails because the sum emits floats and the geometric mechanism expects integers.
+but the chaining fails because the sum emits floats and the discrete laplace mechanism expects integers.
 
 .. doctest::
 

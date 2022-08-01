@@ -374,7 +374,7 @@ def binary_search_chain(
     >>> assert chain.check(1, 1.)
 
 
-    Build a (2 neighboring, 1. epsilon)-close sized bounded sum with geometric(100.) noise.
+    Build a (2 neighboring, 1. epsilon)-close sized bounded sum with discrete_laplace(100.) noise.
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> from opendp.trans import make_sized_bounded_sum

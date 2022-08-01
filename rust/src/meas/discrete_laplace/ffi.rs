@@ -66,21 +66,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_base_simple_geometric() -> Fallible<()> {
-        let measurement = Result::from(opendp_meas__make_base_discrete_laplace(
-            util::into_raw(0.0) as *const c_void,
-            "AllDomain<i32>".to_char_p(),
-            "f64".to_char_p(),
-        ))?;
-        let arg = AnyObject::new_raw(99);
-        let res = core::opendp_core__measurement_invoke(&measurement, arg);
-        let res: i32 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 99);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_base_simple_constant_time_geometric() -> Fallible<()> {
+    fn test_make_base_discrete_laplace_ffi() -> Fallible<()> {
         let measurement = Result::from(opendp_meas__make_base_discrete_laplace(
             util::into_raw(0.0) as *const c_void,
             "AllDomain<i32>".to_char_p(),

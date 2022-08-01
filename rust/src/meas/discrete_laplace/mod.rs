@@ -120,3 +120,19 @@ where
 {
     make_base_discrete_laplace_linear(scale, None)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::domains::AllDomain;
+
+    // there is a distributional test in the accuracy module
+
+    #[test]
+    fn test_make_base_discrete_laplace() -> Fallible<()> {
+        let meas = make_base_discrete_laplace::<AllDomain<_>, _>(1f64)?;
+        println!("{:?}", meas.invoke(&0)?);
+        assert!(meas.check(&1, &1.)?);
+        Ok(())
+    }
+}

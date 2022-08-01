@@ -50,6 +50,10 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace_linear(
     ], (scale, bounds))
 }
 
+#[deprecated(
+    since = "0.5.0",
+    note = "Use `opendp_meas__make_base_discrete_laplace` instead. For a constant-time algorithm, pass bounds into `opendp_meas__make_base_discrete_laplace_linear`."
+)]
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_geometric(
     scale: *const c_void,
@@ -71,7 +75,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_base_simple_geometric() -> Fallible<()> {
+    fn test_make_base_discrete_laplace_linear_ffi() -> Fallible<()> {
         let measurement = Result::from(opendp_meas__make_base_discrete_laplace_linear(
             util::into_raw(0.0) as *const c_void,
             std::ptr::null(),
@@ -86,7 +90,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_base_simple_constant_time_geometric() -> Fallible<()> {
+    fn test_constant_time_make_base_discrete_laplace_linear_ffi() -> Fallible<()> {
         let measurement = Result::from(opendp_meas__make_base_discrete_laplace_linear(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(AnyObject::new((0, 100))),
