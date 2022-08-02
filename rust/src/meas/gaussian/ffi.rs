@@ -10,7 +10,7 @@ use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{GaussianDomain, make_base_gaussian, GaussianMeasure};
-use crate::traits::Float;
+use crate::traits::{Float, ExactIntCast, FloatBits};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_gaussian(
@@ -20,12 +20,14 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize1<T>(scale: *const c_void, D: Type, MO: Type) -> FfiResult<*mut AnyMeasurement> where 
         T: Float + CastInternalRational,
+        i32: ExactIntCast<T::Bits>,
         rug::Rational: TryFrom<T> {
             let scale = *try_as_ref!(scale as *const T);
             fn monomorphize2<D, MO>(scale: D::Atom) -> FfiResult<*mut AnyMeasurement> where
                 D: 'static + GaussianDomain,
-                MO: 'static + GaussianMeasure<D::Metric, Atom = D::Atom> {
-                make_base_gaussian::<D, MO>(scale).into_any()
+                MO: 'static + GaussianMeasure<D::Metric, Atom = D::Atom>,
+                i32: ExactIntCast<<D::Atom as FloatBits>::Bits> {
+                make_base_gaussian::<D, MO>(scale, None).into_any()
             }
 
             dispatch!(monomorphize2, [

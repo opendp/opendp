@@ -6,8 +6,10 @@ use crate::{
     error::Fallible,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::SampleDiscreteGaussianZ2k, CheckNull, Float},
+    traits::{samplers::SampleDiscreteGaussianZ2k, CheckNull, Float, FloatBits, ExactIntCast},
 };
+
+use super::get_discretization_consts;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -57,7 +59,7 @@ where
 
 pub trait GaussianMeasure<MI: GaussianMetric>: Measure + Default {
     type Atom;
-    fn new_forward_map(scale: Self::Atom, k: i32) -> PrivacyMap<MI, Self>;
+    fn new_forward_map(scale: Self::Atom, relaxation: Self::Atom) -> PrivacyMap<MI, Self>;
 }
 
 pub trait GaussianMetric: Metric {}
@@ -71,7 +73,8 @@ where
 {
     type Atom = Q;
 
-    fn new_forward_map(scale: Q, k: i32) -> PrivacyMap<MI, Self> {
+    fn new_forward_map(scale: Q, relaxation: Q) -> PrivacyMap<MI, Self> {
+        let _2 = Q::one() + Q::one();
         PrivacyMap::new_fallible(move |d_in: &Q| {
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative")
@@ -79,12 +82,9 @@ where
             if scale.is_zero() {
                 return Ok(Q::infinity())
             }
-            
-            let _2 = Q::exact_int_cast(2)?;
-            let k = Q::exact_int_cast(k)?;
 
             // d_in is loosened by the size of the granularization
-            let d_in = d_in.inf_add(&_2.inf_pow(&k)?)?;
+            let d_in = d_in.inf_add(&relaxation)?;
 
             // (d_in / scale)^2 / 2
             (d_in.inf_div(&scale)?).inf_pow(&_2)?.inf_div(&_2)
@@ -92,22 +92,24 @@ where
     }
 }
 
-pub fn make_base_gaussian<D, MO>(scale: D::Atom) -> Fallible<Measurement<D, D, D::Metric, MO>>
+pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::Metric, MO>>
 where
     D: GaussianDomain,
     MO: GaussianMeasure<D::Metric, Atom = D::Atom>,
+    i32: ExactIntCast<<D::Atom as FloatBits>::Bits>
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
-    let k = -40;
+    
+    let (k , relaxation) = get_discretization_consts(k)?;
     Ok(Measurement::new(
         D::new(),
         D::new(),
         D::noise_function(scale.clone(), k),
         D::Metric::default(),
         MO::default(),
-        MO::new_forward_map(scale, k),
+        MO::new_forward_map(scale, relaxation),
     ))
 }
 
@@ -118,7 +120,7 @@ mod tests {
     #[test]
     fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
         let measurement =
-            make_base_gaussian::<VectorDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64)?;
+            make_base_gaussian::<VectorDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
         let arg = vec![0.0, 1.0];
         let _ret = measurement.invoke(&arg)?;
 
@@ -129,7 +131,7 @@ mod tests {
     #[test]
     fn test_make_gaussian_mechanism_zcdp() -> Fallible<()> {
         let measurement =
-            make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64)?;
+            make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
         let arg = 0.0;
         let _ret = measurement.invoke(&arg)?;
 
