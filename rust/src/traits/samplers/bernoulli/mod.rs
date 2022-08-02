@@ -1,5 +1,3 @@
-use std::ops::Neg;
-
 use num::{One, Zero};
 
 use crate::{
@@ -9,7 +7,7 @@ use crate::{
 
 use super::{fill_bytes, sample_geometric_buffer};
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 use super::SampleUniformIntBelow;
 
 pub trait SampleStandardBernoulli: Sized {
@@ -26,20 +24,17 @@ impl SampleStandardBernoulli for bool {
 pub trait SampleBernoulli<T>: Sized {
     /// Sample a single bit with arbitrary probability of success
     ///
-    /// Uses only an unbiased source of coin flips.
-    /// The strategy for doing this with 2 flips in expectation is described [here](https://web.archive.org/web/20160418185834/https://amakelov.wordpress.com/2013/10/10/arbitrarily-biasing-a-coin-in-2-expected-tosses/).
-    ///
     /// # Arguments
     /// * `prob`- The desired probability of success (bit = 1).
     /// * `constant_time` - Whether or not to enforce the algorithm to run in constant time
     ///
     /// # Return
-    /// A bit that is 1 with probability "prob"
+    /// A true boolean with probability "prob"
     ///
     /// # Examples
     ///
     /// ```
-    /// // returns a bit with Pr(bit = 1) = 0.7
+    /// // returns a true with Pr(bit = 1) = 0.7
     /// use opendp::traits::samplers::SampleBernoulli;
     /// let n = bool::sample_bernoulli(0.7, false);
     /// # use opendp::error::ExplainUnwrap;
@@ -64,10 +59,12 @@ pub trait SampleBernoulli<T>: Sized {
 
 impl<T> SampleBernoulli<T> for bool
 where
-    T: Copy + One + Zero + PartialOrd + FloatBits,
+    T: One + Zero + PartialOrd + FloatBits,
     T::Bits: PartialOrd + ExactIntCast<usize>,
     usize: ExactIntCast<T::Bits>,
 {
+    /// Uses only an unbiased source of coin flips.
+    /// The strategy for doing this with 2 flips in expectation is described [here](https://web.archive.org/web/20160418185834/https://amakelov.wordpress.com/2013/10/10/arbitrarily-biasing-a-coin-in-2-expected-tosses/).
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
         // ensure that prob is a valid probability
         if !(T::zero()..=T::one()).contains(&prob) {
@@ -145,33 +142,17 @@ where
     }
 }
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 impl SampleBernoulli<rug::Rational> for bool {
-    fn sample_bernoulli(prob: rug::Rational, _constant_time: bool) -> Fallible<bool> {
+    fn sample_bernoulli(prob: rug::Rational, constant_time: bool) -> Fallible<bool> {
+        if constant_time {
+            return fallible!(
+                FailedFunction,
+                "constant-time uniform sampling of rationals is not implemented"
+            );
+        }
         let (numer, denom) = prob.into_numer_denom();
         rug::Integer::sample_uniform_int_below(denom).map(|s| s < numer)
-    }
-}
-
-pub trait SampleRademacher: Sized {
-    fn sample_standard_rademacher() -> Fallible<Self>;
-    fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self>;
-}
-
-impl<T: Neg<Output = T> + One> SampleRademacher for T {
-    fn sample_standard_rademacher() -> Fallible<Self> {
-        Ok(if bool::sample_standard_bernoulli()? {
-            T::one()
-        } else {
-            T::one().neg()
-        })
-    }
-    fn sample_rademacher(prob: f64, constant_time: bool) -> Fallible<Self> {
-        Ok(if bool::sample_bernoulli(prob, constant_time)? {
-            T::one()
-        } else {
-            T::one().neg()
-        })
     }
 }
 

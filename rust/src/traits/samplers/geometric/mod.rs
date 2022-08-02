@@ -1,19 +1,20 @@
-use std::ops::{SubAssign, Sub, AddAssign};
+use std::ops::{AddAssign, SubAssign};
 
-use num::{Zero, One, clamp};
+use num::{One, Zero};
 
-use crate::{error::Fallible, traits::{TotalOrd, AlertingSub, ExactIntCast, FiniteBounds, Float}};
+use crate::{
+    error::Fallible,
+    traits::{AlertingSub, FiniteBounds, Float, TotalOrd},
+};
 
-use super::{SampleBernoulli, SampleStandardBernoulli, fill_bytes};
-
+use super::{fill_bytes, SampleBernoulli, SampleStandardBernoulli};
 
 pub trait SampleGeometric<P>: Sized {
-
     /// Sample from the censored geometric distribution with parameter `prob`.
     /// If `trials` is None, there are no timing protections, and the support is:
     ///     [Self::MIN, Self::MAX]
     /// If `trials` is Some, execution runs in constant time, and the support is
-    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {0, 1, 2, ..., `trials`}}
     ///
     /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
     ///
@@ -33,56 +34,75 @@ pub trait SampleGeometric<P>: Sized {
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();
     /// ```
-    fn sample_geometric(shift: Self, positive: bool, prob: P, trials: Option<Self>) -> Fallible<Self>;
+    fn sample_geometric(
+        shift: Self,
+        positive: bool,
+        prob: P,
+        trials: Option<Self>,
+    ) -> Fallible<Self>;
 }
 
 impl<T, P> SampleGeometric<P> for T
-    where 
-        T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + FiniteBounds,
-        P: Float,
-        bool: SampleBernoulli<P> {
-
-    fn sample_geometric(mut shift: Self, positive: bool, prob: P, mut trials: Option<Self>) -> Fallible<Self> {
-
+where
+    T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + FiniteBounds,
+    P: Float,
+    bool: SampleBernoulli<P>,
+{
+    fn sample_geometric(
+        mut shift: Self,
+        positive: bool,
+        prob: P,
+        mut trials: Option<Self>,
+    ) -> Fallible<Self> {
         // ensure that prob is a valid probability
-        if !(P::zero()..=P::one()).contains(&prob) {return fallible!(FailedFunction, "probability is not within [0, 1]")}
+        if !(P::zero()..=P::one()).contains(&prob) {
+            return fallible!(FailedFunction, "probability is not within [0, 1]");
+        }
 
-        let bound = if positive { Self::MAX_FINITE } else { Self::MIN_FINITE };
+        let bound = if positive {
+            Self::MAX_FINITE
+        } else {
+            Self::MIN_FINITE
+        };
         let mut success: bool = false;
 
-        // loop must increment at least once
         loop {
+            // run a trial-- is this our last step?
+            success |= bool::sample_bernoulli(prob, trials.is_some())?;
+
             // make steps on `shift` until there is a successful trial or have reached the boundary
             if !success && shift != bound {
-                if positive { shift += T::one() } else { shift -= T::one() }
+                if positive {
+                    shift += T::one()
+                } else {
+                    shift -= T::one()
+                }
             }
 
             // stopping criteria
             if let Some(trials) = trials.as_mut() {
                 // in the constant-time regime, decrement trials until zero
-                if trials.is_zero() { break }
+                if trials.is_zero() {
+                    break;
+                }
                 *trials -= T::one();
             } else if success {
                 // otherwise break on first success
-                break
+                break;
             }
-
-            // run a trial-- do we stop?
-            success |= bool::sample_bernoulli(prob, trials.is_some())?;
         }
         Ok(shift)
     }
 }
 
 pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
-
-    /// Sample from the censored two-sided geometric distribution with parameter `prob`.
+    /// Sample from the censored two-sided geometric distribution with parameter `scale`.
     /// If `bounds` is None, there are no timing protections, and the support is:
     ///     [Self::MIN, Self::MAX]
     /// If `bounds` is Some, execution runs in constant time, and the support is
     ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
     ///
-    /// Tail probabilities of the uncensored two-sided geometric accumulate at the extrema of the support.
+    /// Tail probabilities accumulate at the extrema of the support.
     ///
     /// # Arguments
     /// * `shift` - Parameter to shift the output by
@@ -100,16 +120,18 @@ pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
     /// # geom.unwrap_test();
     /// ```
     fn sample_discrete_laplace_linear(
-        shift: Self, scale: P, bounds: Option<(Self, Self)>
+        shift: Self,
+        scale: P,
+        bounds: Option<(Self, Self)>,
     ) -> Fallible<Self>;
 }
 
 impl<T, P> SampleDiscreteLaplaceLinear<P> for T
-    where 
-        T: Clone + SampleGeometric<P> + Sub<Output=T> + FiniteBounds + Zero + One + TotalOrd + AlertingSub,
-        P: Float,
-        P::Bits: PartialOrd + ExactIntCast<usize>,
-        usize: ExactIntCast<P::Bits> {
+where
+    T: Copy + SampleGeometric<P> + One + TotalOrd + AlertingSub,
+    P: Float,
+    bool: SampleBernoulli<P>,
+{
     /// When no bounds are given, there are no protections against timing attacks.
     ///     The bounds are effectively T::MIN and T::MAX and up to T::MAX - T::MIN trials are taken.
     ///     The output of this mechanism is as if samples were taken from the
@@ -123,62 +145,70 @@ impl<T, P> SampleDiscreteLaplaceLinear<P> for T
     ///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
     ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
     ///             the analyst can deduce that the input was greater than or equal to upper
-    fn sample_discrete_laplace_linear(mut shift: T, scale: P, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
-        if scale.is_zero() {return Ok(shift)}
+    fn sample_discrete_laplace_linear(
+        mut shift: T,
+        scale: P,
+        bounds: Option<(Self, Self)>,
+    ) -> Fallible<Self> {
+        if scale.is_zero() {
+            return Ok(shift);
+        }
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
-            if lower == upper {return Ok(lower)}
+            if lower == upper {
+                return Ok(lower);
+            }
             Some(upper.alerting_sub(&lower)?.alerting_sub(&T::one())?)
-        } else {None};
+        } else {
+            None
+        };
 
-        // make alpha conservatively larger
-        let inf_alpha: P = (-scale.recip()).inf_exp()?;
+        // make prob conservatively smaller, because a smaller probability means greater noise
+        let prob = P::one().neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
 
         // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
         // Thanks for the input @ctcovington (Christian Covington)
-        if let Some((lower, upper)) = &bounds {
-            shift = clamp(shift, lower.clone(), upper.clone());
+        if let Some((lower, upper)) = bounds {
+            shift = shift.total_clamp(lower, upper)?;
         }
 
-        // add 0 noise with probability (1-alpha) / (1+alpha), otherwise use geometric sample
-        // rounding should always make threshold smaller
-        let threshold = P::one().neg_inf_sub(&inf_alpha)?.neg_inf_div(
-            &P::one().inf_add(&inf_alpha)?)?;
-        let noiseless = bool::sample_bernoulli(threshold, bounds.is_some())?;
+        let noised = loop {
+            let direction = bool::sample_standard_bernoulli()?;
+            let sample = T::sample_geometric(shift, direction, prob, trials)?;
+            // reject sampling no noise in the negative direction, to avoid double-drawing zero
+            if direction || sample != shift {
+                break sample;
+            }
+        };
 
-        let direction = bool::sample_standard_bernoulli()?;
-        // make prob conservatively smaller, because a smaller probability means greater noise
-        let geometric = T::sample_geometric(
-            shift.clone(), direction, P::one().neg_inf_sub(&inf_alpha)?, trials)?;
-
-        let noised = if noiseless { shift } else { geometric };
-
-        Ok(if let Some((lower, upper)) = bounds {
-            clamp(noised, lower, upper)
+        if let Some((lower, upper)) = bounds {
+            noised.total_clamp(lower, upper)
         } else {
-            noised
-        })
+            Ok(noised)
+        }
     }
 }
-
 
 /// Internal function. Returns a sample from the Geometric(p=0.5) distribution.
 ///
 /// The algorithm generates B * 8 bits at random and returns
 /// - Some(index of the first set bit)
 /// - None (if all bits are 0)
-pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) -> Fallible<Option<usize>> {
+pub(super) fn sample_geometric_buffer(
+    buffer_len: usize,
+    constant_time: bool,
+) -> Fallible<Option<usize>> {
     Ok(if constant_time {
         let mut buffer = vec![0_u8; buffer_len];
         fill_bytes(&mut buffer)?;
-        buffer.iter().enumerate()
+        (buffer.iter())
+            .enumerate()
             // ignore samples that contain no events
             .filter(|(_, &sample)| sample > 0)
             // compute the index of the smallest event in the batch
             .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
             // retrieve the smallest index
             .min()
-
     } else {
         // retrieve up to B bytes, each containing 8 trials
         let mut buffer = vec![0_u8; 1];
@@ -186,13 +216,12 @@ pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) ->
             fill_bytes(&mut buffer)?;
 
             if buffer[0] > 0 {
-                return Ok(Some(i * 8 + buffer[0].leading_zeros() as usize))
+                return Ok(Some(i * 8 + buffer[0].leading_zeros() as usize));
             }
         }
         None
     })
 }
-
 
 
 #[cfg(all(test, feature="test-plot"))]
@@ -202,7 +231,6 @@ mod test_plotting {
     use super::*;
     #[test]
     fn plot_geometric() -> Fallible<()> {
-
         let shift = 0;
         let scale = 5.;
 
@@ -229,7 +257,9 @@ mod test_plotting {
                         .build()?)
                     .build()?,
             )
-            .build()?.show().unwrap_test();
+            .build()?
+            .show()
+            .unwrap_test();
         Ok(())
     }
 }

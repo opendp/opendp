@@ -48,7 +48,7 @@ use crate::error::Fallible;
 
 use num::{Zero, One};
 
-use super::{SampleUniformIntBelow, SampleRademacher};
+use super::{SampleUniformIntBelow, SampleStandardBernoulli};
 
 
 // sample from a Bernoulli(exp(-x)) distribution
@@ -114,10 +114,15 @@ pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
     }
     let inv_scale = scale.recip();
     loop {
-        let sign = Integer::sample_standard_rademacher()?;
+
+        let sign = bool::sample_standard_bernoulli()?;
         let magnitude = sample_geometric_exp_fast(inv_scale.clone())?;
-        if !(sign.is_one() && magnitude.is_zero()) {
-            return Ok(sign * magnitude);
+        if sign || !magnitude.is_zero() {
+            return Ok(if sign {
+                -magnitude
+            } else {
+                magnitude
+            })
         }
     }
 }
