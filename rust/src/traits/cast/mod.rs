@@ -40,7 +40,8 @@ pub trait CastInternalReal: FloatBits + Sized {
     const MANTISSA_DIGITS: u32;
     fn inf_from_internal(v: Float) -> Self;
     fn neg_inf_from_internal(v: Float) -> Self;
-    fn into_internal(self) -> Float;
+    fn inf_into_internal(self) -> Float;
+    fn neg_inf_into_internal(self) -> Float;
 }
 
 #[cfg(not(feature = "use-mpfr"))]
@@ -48,7 +49,8 @@ pub trait CastInternalReal {
     const MANTISSA_DIGITS: u32;
     fn inf_from_internal(v: Self) -> Self;
     fn neg_inf_from_internal(v: Self) -> Self;
-    fn into_internal(self) -> Self;
+    fn inf_into_internal(self) -> Self;
+    fn neg_inf_into_internal(self) -> Self;
 }
 
 
@@ -355,8 +357,11 @@ impl CastInternalReal for f64 {
     fn neg_inf_from_internal(v: Float) -> Self {
         v.to_f64_round(rug::float::Round::Down)
     }
-    fn into_internal(self) -> Float {
-        rug::Float::with_val(Self::MANTISSA_DIGITS, self) 
+    fn inf_into_internal(self) -> Float {
+        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Up).0
+    }
+    fn neg_inf_into_internal(self) -> Float {
+        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Down).0 
     }
 }
 
@@ -369,7 +374,12 @@ impl CastInternalReal for f32 {
     fn neg_inf_from_internal(v: Float) -> Self {
         v.to_f32_round(rug::float::Round::Down)
     }
-    fn into_internal(self) -> Float { rug::Float::with_val(Self::MANTISSA_DIGITS, self) }
+    fn inf_into_internal(self) -> Float { 
+        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Up).0
+    }
+    fn neg_inf_into_internal(self) -> Float { 
+        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Down).0
+    }
 }
 
 #[cfg(not(feature = "use-mpfr"))]
@@ -377,7 +387,8 @@ impl CastInternalReal for f64 {
     const MANTISSA_DIGITS: u32 = Self::MANTISSA_DIGITS;
     fn inf_from_internal(v: f64) -> Self { v }
     fn neg_inf_from_internal(v: f64) -> Self { v }
-    fn into_internal(self) -> Self { self }
+    fn inf_into_internal(self) -> Self { self }
+    fn neg_inf_into_internal(self) -> Self { self }
 }
 
 #[cfg(not(feature = "use-mpfr"))]
@@ -385,5 +396,6 @@ impl CastInternalReal for f32 {
     const MANTISSA_DIGITS: u32 = Self::MANTISSA_DIGITS;
     fn inf_from_internal(v: f32) -> Self { v }
     fn neg_inf_from_internal(v: f32) -> Self { v }
-    fn into_internal(self) -> Self { self }
+    fn inf_into_internal(self) -> Self { self }
+    fn neg_inf_into_internal(self) -> Self { self }
 }
