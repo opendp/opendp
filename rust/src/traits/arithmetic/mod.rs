@@ -311,7 +311,7 @@ macro_rules! impl_float_inf_uni {
                 use rug::float::Round::Up;
                 let mut this = self.into_internal();
                 this.$op(Up);
-                let this = Self::from_internal(this);
+                let this = Self::inf_from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
@@ -321,7 +321,7 @@ macro_rules! impl_float_inf_uni {
                 use rug::float::Round::Down;
                 let mut this = self.into_internal();
                 this.$op(Down);
-                let this = Self::from_internal(this);
+                let this = Self::neg_inf_from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
@@ -397,7 +397,7 @@ macro_rules! impl_float_inf_bi {
                 use rug::float::Round::Up;
                 let mut this = self.into_internal();
                 this.$op(other, Up);
-                let this = Self::from_internal(this);
+                let this = Self::inf_from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
@@ -407,7 +407,7 @@ macro_rules! impl_float_inf_bi {
                 use rug::float::Round::Down;
                 let mut this = self.into_internal();
                 this.$op(other, Down);
-                let this = Self::from_internal(this);
+                let this = Self::neg_inf_from_internal(this);
                 this.is_finite().then(|| this).ok_or_else(|| err!(
                     FailedFunction,
                     concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
