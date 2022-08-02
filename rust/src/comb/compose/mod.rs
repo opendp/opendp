@@ -160,8 +160,8 @@ mod tests {
         assert_eq!(ret.len(), 2);
         println!("return: {:?}", ret);
         
-        assert!(composition.check(&1., &2.0001)?);
-        assert!(!composition.check(&1., &2.)?);
+        assert!(composition.check(&1., &2.)?);
+        assert!(!composition.check(&1., &1.9999)?);
         Ok(())
     }
 }

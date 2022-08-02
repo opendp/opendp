@@ -10,6 +10,12 @@
                 "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
+                "name": "k",
+                "c_type": "int32_t",
+                "default": -1075,
+                "description": "The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map."
+            },
+            {
                 "name": "D",
                 "default": "AllDomain<T>",
                 "generics": ["T"],
@@ -39,6 +45,12 @@
                 "c_type": "void *",
                 "rust_type": "T",
                 "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
+            },
+            {
+                "name": "k",
+                "c_type": "int32_t",
+                "default": -1075,
+                "description": "The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map."
             },
             {
                 "name": "D",

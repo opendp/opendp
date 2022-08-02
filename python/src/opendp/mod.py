@@ -419,7 +419,7 @@ def binary_search_param(
     >>> # The first argument is any function that returns your complete computation chain
     >>> #     when passed a single numeric parameter.
     >>> scale = binary_search_param(make_base_laplace, d_in=0.1, d_out=1.)
-    >>> assert 0.1 < scale < 0.100001
+    >>> assert scale == 0.1
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
     >>> assert make_base_laplace(scale).check(0.1, 1.)
 
@@ -498,7 +498,7 @@ def binary_search(
     >>> binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
     ...     bounds = (0., 1.))
-    0.5235561270107699
+    0.5235561270059697
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 

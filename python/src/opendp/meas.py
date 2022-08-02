@@ -21,12 +21,15 @@ __all__ = [
 
 def make_base_laplace(
     scale,
+    k: int = -1075,
     D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     Adjust D to noise vector-valued data.
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+    :param k: The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map.
+    :type k: int
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
     :return: A base_laplace step.
@@ -44,18 +47,20 @@ def make_base_laplace(
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    k = py_to_c(k, c_type=ctypes.c_int32)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_laplace
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_int32, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D), Measurement))
+    return c_to_py(unwrap(function(scale, k, D), Measurement))
 
 
 def make_base_gaussian(
     scale,
+    k: int = -1075,
     D: RuntimeTypeDescriptor = "AllDomain<T>",
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
@@ -65,6 +70,8 @@ def make_base_gaussian(
     Use make_base_analytic_gaussian for a tighter analysis that supports epsilon > 1.
     
     :param scale: noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :param k: The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map.
+    :type k: int
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
     :param MO: Output measure. The only valid measure is ZeroConcentratedDivergence<T>.
@@ -86,15 +93,16 @@ def make_base_gaussian(
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    k = py_to_c(k, c_type=ctypes.c_int32)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_int32, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D, MO), Measurement))
+    return c_to_py(unwrap(function(scale, k, D, MO), Measurement))
 
 
 def make_base_analytic_gaussian(
