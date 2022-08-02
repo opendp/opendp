@@ -1,0 +1,44 @@
+# for syntax highlighting in intellij
+# 1. install the GNU Makefile plugin
+# 2. right click on this file and associate the filetype with a Makefile
+
+ifndef OPENDP_TEST_RELEASE
+	RUST_BUILD_TARGET=debug
+else ifeq (OPENDP_TEST_RELEASE, false)
+	RUST_BUILD_TARGET=debug
+else
+	RUST_BUILD_TARGET=release
+	RUST_BUILD_FLAG=--release
+endif
+
+# ifdef OPENDP_USE_SYSTEM_LIBS
+# 	ifneq ($(OPENDP_USE_SYSTEM_LIBS), false)
+# 		RUST_FEATURE_FLAG=--features use-system-libs
+# 	endif
+# endif
+
+RUSTDIR = ../../rust
+LIBDIR = $(RUSTDIR)/target/$(RUST_BUILD_TARGET)
+STATLIB_OPENDP = $(LIBDIR)/libopendp.a
+
+# this is read by R when compiling opendp.so
+# It tells R where to find the libopendp.a file
+PKG_LIBS = -L\$(LIBDIR) -l"opendp"
+
+
+all: cargo_build
+
+cargo_build:
+	echo "cargo build from:"
+	pwd
+	cargo build ${RUST_BUILD_FLAG} --manifest-path=${RUSTDIR}/Cargo.toml ${RUST_FEATURE_FLAG} --features ffi,untrusted
+
+	# When cargo build is run, rust/build/main.rs is executed
+	# That build script parses the rust crate and generates opendp.h.
+	# Copy that header file over to `R/src/` so that it can be included when building `opendp.so`
+	cp ${RUSTDIR}/opendp.h .
+
+clean:
+	rm wrapper.o
+	rm opendp.so
+	rm opendp.h

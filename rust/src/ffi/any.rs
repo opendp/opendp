@@ -333,6 +333,7 @@ impl<MI: Metric, MO: Metric> IntoAnyStabilityMapExt for StabilityMap<MI, MO>
 
 /// A Measurement with all generic types filled by Any types. This is the type of Measurements
 /// passed back and forth over FFI.
+/// cbindgen:ignore
 pub type AnyMeasurement = Measurement<AnyDomain, AnyDomain, AnyMetric, AnyMeasure>;
 
 /// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
@@ -380,6 +381,7 @@ impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, D
 
 /// A Transformation with all generic types filled by Any types. This is the type of Transformation
 /// passed back and forth over FFI.
+/// cbindgen:ignore
 pub type AnyTransformation = Transformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
 
 /// A trait for turning a Transformation into an AnyTransformation. We can't used From because it'd conflict
