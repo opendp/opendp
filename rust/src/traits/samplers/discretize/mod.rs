@@ -167,9 +167,12 @@ mod test {
 
 
 
-#[cfg(test)]
+#[cfg(all(test, feature="test-plot"))]
 mod test_utils {
-    #[cfg(feature="test-plot")]
+    use crate::traits::samplers::Fallible;
+    use crate::error::ExplainUnwrap;
+    use super::*;
+
     fn plot_continuous(title: String, data: Vec<f64>) -> Fallible<()> {
         use vega_lite_4::*;
 
@@ -195,14 +198,13 @@ mod test_utils {
     }
 
     #[test]
-    #[cfg(feature="test-plot")]
     fn plot_laplace() -> Fallible<()> {
         let shift = 0.;
         let scale = 5.;
 
         let title = format!("Laplace(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| f64::sample_laplace(shift, scale, false))
+            .map(|_| f64::sample_discrete_laplace_Z2k(shift, scale, -1075))
             .collect::<Fallible<Vec<f64>>>()?;
 
         plot_continuous(title, data).unwrap_test();
@@ -211,14 +213,13 @@ mod test_utils {
 
 
     #[test]
-    #[cfg(feature="test-plot")]
     fn plot_gaussian() -> Fallible<()> {
         let shift = 0.;
         let scale = 5.;
 
         let title = format!("Gaussian(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| f64::sample_gaussian(shift, scale, false))
+            .map(|_| f64::sample_discrete_gaussian_Z2k(shift, scale, -1075))
             .collect::<Fallible<Vec<f64>>>()?;
 
         plot_continuous(title, data).unwrap_test();
