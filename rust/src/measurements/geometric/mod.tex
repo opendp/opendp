@@ -72,9 +72,9 @@
 \newcommand{\questionc}[1]{\textcolor{red}{\textbf{Question:} #1}}
 
 
-\title{Privacy Proofs for OpenDP: Geometric Measurement (Linear Time Version)}
+\title{Privacy Proofs for OpenDP: Geometric Measurement}
 \author{Vicki Xu, Hanwen Zhang, Zachary Ratliff}
-\date{Summer 2021}
+\date{Summer 2022}
 \begin{document}
 
 
@@ -83,10 +83,9 @@
 
 \section{Algorithm Implementation}
 \subsection{Code in Rust}
-The current OpenDP library contains the \texttt{make\_base\_geometric} function implementing geometric measurement. This is defined in lines 48-82 of the file \texttt{geometric/mod.rs} in the Git repository (\url{https://github.com/opendp/opendp/blob/main/rust/src/meas/geometric/mod.rs#L48-L82}).
+The current OpenDP library contains the \texttt{make\_base\_geometric} function implementing geometric measurement. This is defined in the adjacent \texttt{mod.rs} file. 
 
-\vicki{is this right?} 
-In \texttt{make\_base\_geometric}, which accepts a parameter \texttt{scale} of type \texttt{QO} and a parameter \texttt{bounds} of type \texttt{Option<(D::Atom, D::Atom)>}, the function takes in a data point \texttt{arg} of type \texttt{T}, \texttt{scale} that is now \texttt{InfCast} to type \texttt{f64}, and \texttt{bounds}. This function will call \texttt{sample\_two\_sided\_geometric}, which provides a sampling from the two-sided geometric distribution centered at \texttt{arg} with scale parameter \texttt{scale} and saturated at the bounds denoted by \texttt{bounds}. The function returns the sampled element given the parameters. 
+In \texttt{make\_base\_geometric}, which accepts a parameter \texttt{scale} of type \texttt{QO} and a parameter \texttt{bounds} of type \texttt{Option<(D::Atom, D::Atom)>}, the function takes in a data point \texttt{arg} of type \texttt{D::Atom}, \texttt{scale}, and \texttt{bounds}. This function will call \texttt{sample\_two\_sided\_geometric}, which provides a sampling from the two-sided geometric distribution centered at \texttt{arg} with scale parameter \texttt{scale} and saturated at the bounds denoted by \texttt{bounds}. If \texttt{bounds} is not provided, then the two-sided geometric sample saturates at the bounds of the data type, \texttt{MAX} and \texttt{MIN}. The function returns the sampled element given the parameters. 
 
 \subsection{Pseudo Code in Python}\label{sec:pseudocode}
 
@@ -98,18 +97,13 @@ To ensure the correctness of the output, we require the following preconditions:
 \begin{itemize}
     \item \textbf{User-specified types:}
     \begin{itemize}
-        \item Domain \texttt{AllDomain} must be of elements of type \texttt{T}
         \item Variable \texttt{scale} must be of type \texttt{QO}
         \item Variable \texttt{bounds} must be of type \texttt{Option(D::Atom, D::Atom)}
         \item Type \texttt{D} must have trait \texttt{GeometricDomain}
-        \item Type \texttt{D::Atom} must have traits \texttt{TotalOrd} and \texttt{InfCast<QO>}
-        \item Type \texttt{QO} must have traits \texttt{float} and \texttt{DistanceConstant<D::Atom>} 
-        \item Type \texttt{f64} must have trait \texttt{InfCast<QO>}
-        \item Type \texttt{T} must have traits \texttt{SampleTwoSidedGeometric} and \texttt{CheckNull}
+        \item Type \texttt{D::Atom} must have trait \texttt{Integer}
+        \item Type \texttt{QO} must have traits \texttt{Float} and \texttt{InfCast<D::Atom>}
     \end{itemize}
 \end{itemize}
-
-\vicki{not sure about the domain/T stuff; it's mentioned in the implementation of the domain so I figured should also have it here} 
 
 \subsubsection*{Postconditions}
 
@@ -119,11 +113,41 @@ To ensure the correctness of the output, we require the following preconditions:
 
 
 \begin{lstlisting}[language=Python,  escapechar=|]
-def make_base_geometric(scale, bounds={"lower": T_MIN, "upper": T_MAX}):
-    input_domain = AllDomain(T)
-    output_domain = AllDomain(T)
-    input_metric = L1Distance(T)
-    similarity_metric = MaxDivergence(QO)
+# implement noise function for scalar input 
+def noise_function<AllDomain<T>>(scale : QO, bounds? : {T, T}):
+    def function(arg : D::Atom, scale : QO, bounds?: {D::Atom, D::Atom}) -> <D, QO>: |\label{line:fn}|
+        return sample_two_sided_geometric(arg, scale, bounds)
+        
+    return function
+
+# implement noise function for vector input  
+def noise_function<VectorDomain<AllDomain<T>>(scale : QO, bounds? : {T, T}):
+    def function(arg : Vector<D::Atom>, scale : QO, bounds?: {D::Atom, D::Atom}) -> <D, QO>: |\label{line:fn}|
+        noised = new Vector<AllDomain<T>>
+        for (item in arg):
+           noised.add(sample_two_sided_geometric(item, scale, bounds))
+          
+        return noised
+           
+    return function
+
+# parameterize by domain D
+def make_base_geometric<D>(scale: QO, bounds={"lower": D::Atom::MIN, "upper": D::Atom::MAX}):
+    input_domain = D
+    output_domain = D
+    # ---------------------------------
+    # To reduce redundancy, we don't copy and paste the whole function.
+    # The idea is to have different input metrics for two input settings.
+    
+    # check for scalar or vector input
+    if isinstance(D, AllDomain<T>):
+        input_metric = AbsoluteDistance<D::Atom> 
+    elif isinstance(D, VectorDomain<AllDomain<T>>):
+        input_metric = L1Distance<D::Atom>
+    # ---------------------------------
+    
+    similarity_metric = MaxDivergence<QO>
+    function = input_domain.noise_function(scale, bounds)
     
     # check scale sign
     if (scale < 0): |\label{line:scale}|
@@ -133,34 +157,18 @@ def make_base_geometric(scale, bounds={"lower": T_MIN, "upper": T_MAX}):
     if (bounds["lower"] > bounds["upper"]): |\label{line:bounds}|
         raise Exception("lower may not be greater than upper")
 
-    def privacy_map(d_in: u_32) -> float: |\label{line:map}|
+    def privacy_map(d_in: D::Atom) -> QO: |\label{line:map}|
         if (d_in < 0): |\label{line:positivedin}|
             raise Exception("sensitivity must be non-negative")
         if (scale == 0):
-            return QO_MAX
-        return d_in * inf_div(scale);
-
-    # these are two separate functions in original, but can discuss if we want to combine the two
-    def noise_function(arg : T, scale : QO, bounds : Optional[{T, T}]) -> Function<f64, Optional[{T, T}]>: |\label{line:noise_fn}|
-        return function(inf_cast(scale), bounds)
-        
-    def function(arg : T, scale : f64, bounds: Optional[{T, T}]) -> <D, QO>: |\label{line:fn}|
-        sample_two_sided_geometric(arg, scale, bounds)
+            return QO::MAX
+        return inf_div(d_in, scale)
     
     return Measurement(input_domain, output_domain, function, input_metric, similarity_metric, privacy_map)
 
 \end{lstlisting}
-\hanwen{Changed the input metric to L1Distance for vector
-    (was AbsoluteDistance, but I guess AbsoluteDistance could 
-    be viewed as a special case of L1Distance with dimension 1)}
-\hanwen{re. noise function, I guess it's defined separately to account for different input domain (AllDomain and VectorDomain), but everything else looks pretty much the same to me. I would vote for using just one function and call
-sample\_two\_sided\_geometric once inside, plus some brief explanation of the domain?}
-
-\vicki{may be floating point issues with \texttt{is\_sign\_negative}}
 
 \vicki{marked bounds with [SELF::MIN, SELF::MAX] because it's an optional type in the original Rust code, and if not specified, then in SampleTwoSidedGeometric SELF::MIN and SELF::MAX are substituted}
-
-\vicki{the current code does \texttt{d\_out.neg\_inf\_mul(scale)}, but since we're working with maps now, I changed that to \texttt{inf\_div}. worth asking if that's ok though} 
 
 
 
@@ -203,24 +211,25 @@ For every setting of the input parameters \texttt{constant} to \texttt{make\_bas
 
     \end{tcolorbox}
     % \textbf{TODO}
+    Before we begin our proof, we note that the measurement is parameterized by a domain \texttt{D} of type \texttt{AllDomain<T>} or \texttt{VectorDomain<AllDomain<T>>}.
+    
     Let $v,w$ be two datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}, which is defined to be
-    \texttt{L1Distance} here (over linear input). According to its definition 
+    \texttt{L1Distance} with the vector case (\texttt{D = VectorDomain<AllDomain<T>>}) or \texttt{AbsoluteDistance} with the scalar case (\texttt{D = AllDomain<T>}). We only prove the case for when \texttt{D = VectorDomain<AllDomain<T>>} since the scalar case trivially follows.  
+    
+    According to its definition 
     in the proof definition document, \texttt{d\_in}$=d_{L1}(v,w)=\sum ^n_{i=1}|v_i-w_i|$,
     where $n$ is the dimension of $v,w$.
-    Here it's implicitly assumed that $|v|=|w|$.
+    Here it is implicitly assumed that $|v|=|w|$.
     
     Let $s=$\texttt{ scale}, $[a,b]=$\texttt{ bounds},
     $Y=\function(v)$, and $Z=\function(w)$.
     Our goal is to show that \texttt{MaxDivergence}  $D_{\infty}(Y||Z)$, also defined in the proof definition document, adheres to the privacy guarantee.
     
-    Because the \function is defined such that 
-    \texttt{sample\_two\_sided\_geometric}, it properly
-    simulates a random variable $Z \sim $ 
+    Observe that by the definition of \texttt{noise\_function} implemented for \texttt{VectorDomain<AllDomain<T>>}, and by Theorem 1.2, it follows that \texttt{function}() returns a random variable $Z \sim $ 
     \texttt{shift} $+ 
     \text{ Geo}$(\texttt{scale}), with
     probability mass function
-    $f_Z(z)\propto \exp{-|z-\texttt{shift}|/\texttt{scale}}$, along each axis of the input vector, or in the linear domain, in the trivial case with 1-dimensional input.
-    So it follows that 
+    $f_Z(z)\propto \exp{-|z-\texttt{shift}|/\texttt{scale}}$ along each axis of the input vector. So it follows that 
      \[
     D_{\infty}(Y||Z) = \max_{S \subseteq Supp(Y)}\left[\ln (\frac{\Pr[Y \in S]}{\Pr[Z \in S]})\right] 
     \]
@@ -237,36 +246,38 @@ For every setting of the input parameters \texttt{constant} to \texttt{make\_bas
     \]
     
     \[
-    = \max_{y\in Supp(Y)}\sum^n_{i=1}\left[\ln (\exp{-(|y_i-v_i|-|y_i-w_i|)/s})\right]
+    = \max_{y\in Supp(Y)}\sum^n_{i=1}\left[\ln (\exp{(|y_i-w_i|-|y_i-v_i|)/s})\right]
     \]
     
-    \[\leq \max_{y\in Supp(Y)}\sum^n_{i=1}\Big|
-    |y_i-v_i|-|y_i-w_i|\Big|/s\]
+    \[= \max_{y\in Supp(Y)}\frac{1}{s} \sum^n_{i=1}
+    |y_i-w_i|-|y_i-v_i|\]
     
     % \[\leq \max_{y,y'\in Supp(Y)}\sum^n_{i=1}\Big|
     % |y_i-v_i|-|y_i-w_i|\Big|/s\]
     
     \[
-    \leq \sum^n_{i=1}|v_i-w_i|/s
-    =\frac{1}{s}\sum^n_{i=1}|v_i-w_i|
-    =\texttt{d\_in}/\texttt{scale}
+    \leq \frac{1}{s} \sum^n_{i=1}|w_i-v_i| \hspace{5px} \textrm{  by the Triangle inequality}
     \]
     
- Because \function() output is discrete, we are able to switch from set to point-wise comparison as in the first and second lines. The summation in the third line comes from the vector input, where dimension $n$ represents the size of the input. 
- The exponential function inside the summation is given by the fact of the probability mass function of the geometric distribution 
- brought up earlier. 
-After basic algebraic manipulation, we apply the triangle inequality and obtain the last line. The result can be written 
-as \texttt{d\_in}/\texttt{scale}, as desired.
-This completes the proof of privacy guarantee.
+    \[
+    =\frac{1}{s}\sum^n_{i=1}|w_i-v_i|
+    =\texttt{d\_in}/\texttt{scale} \hspace{5px} 
+    \]
+    
+%Because \function() has a discrete output domain we are able to switch from set to point-wise comparison as shown in the first and second lines. 
+
+%The summation in the third line comes from the vector input, where dimension $n$ represents the size of the input. The exponential function inside the summation is given by the fact of the probability mass function of the geometric distribution. 
+%After basic algebraic manipulation, we apply the triangle inequality and obtain the last line. The result can be written 
+%as \texttt{d\_in}/\texttt{scale}, as desired.\\
+%This completes the proof of privacy guarantee.
  
- \textbf{Failure cases.} We still need to account for failure cases within the \texttt{privacy\_map} code. There are two places in which the code raises an exception:
+ \textbf{Failure cases.} We still need to account for failure cases within the \texttt{privacy\_map} code. There is one place the code raises an exception:
  
  \begin{enumerate}
-     \item \texttt{d\_in} is negative. The code does a check if \texttt{d\_in < 0} in line \ref{line:positivedin} and raises an error and terminates here if the statement is true. 
      \item \texttt{inf\_div} fails. This step is only reached if \texttt{d\_in} is nonnegative. As defined in the pseudocode definitions doc, \texttt{inf\_div} throws an exception if division overflows from a 32-bit integer. 
  \end{enumerate}
  
- If none of these cases fail, \texttt{privacy\_map} returns \texttt{d\_in * inf\_div(scale)}.
+Otherwise, \texttt{privacy\_map} returns \texttt{inf\_div(d\_in, scale)}.
 \end{enumerate}
 \end{proof}
 % \hanwen{In the original proof def doc, for L1Dist and other related ones, the sum goes from $i=0$ instead of 
@@ -275,9 +286,12 @@ This completes the proof of privacy guarantee.
 
 % \hanwen{question for reviewer: not sure if it's correct to go from the first line to the second like this, i.e., go from set to point}
 
-\noindent\textbf{Remark.}
-The term \textit{linear} refers to the linear time in which the sampler returns a draw, and this does not affect
-the proof of privacy guarantee in this document as
-long as the features of geometric distribution holds.
-\hanwen{might need different wording etc}
+% \noindent\textbf{Remark.}
+% The term \textit{linear} refers to the linear time in which the sampler returns a draw, and this does not affect
+% the proof of privacy guarantee in this document as
+% long as the features of geometric distribution holds.
+% \hanwen{might need different wording etc}
+
+% the section above is removed because we don't need to mention linear in our measurement proof. (we need it in the sampler proof!)
 \end{document}
+
