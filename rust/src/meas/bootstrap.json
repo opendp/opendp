@@ -401,6 +401,12 @@
                 "description": "Exclude counts that are less than this minimum value."
             },
             {
+                "name": "k",
+                "c_type": "int32_t",
+                "default": -1075,
+                "description": "The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map."
+            },
+            {
                 "name": "TK",
                 "description": "Type of Key. Must be hashable/categorical.",
                 "is_type": true

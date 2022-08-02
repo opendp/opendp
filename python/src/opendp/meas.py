@@ -432,12 +432,15 @@ def make_base_ptr(
     scale,
     threshold,
     TK: RuntimeTypeDescriptor,
+    k: int = -1075,
     TV: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param threshold: Exclude counts that are less than this minimum value.
+    :param k: The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map.
+    :type k: int
     :param TK: Type of Key. Must be hashable/categorical.
     :type TK: :ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Must be float.
@@ -457,12 +460,13 @@ def make_base_ptr(
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
     threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
+    k = py_to_c(k, c_type=ctypes.c_int32)
     TK = py_to_c(TK, c_type=ctypes.c_char_p)
     TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_ptr
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int32, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, threshold, TK, TV), Measurement))
+    return c_to_py(unwrap(function(scale, threshold, k, TK, TV), Measurement))
