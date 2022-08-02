@@ -1,5 +1,5 @@
 use crate::error::Fallible;
-use crate::traits::samplers::{SampleRademacher, SampleStandardBernoulli, SampleUniform};
+use crate::traits::samplers::{SampleStandardBernoulli, SampleUniform};
 use statrs::function::erf;
 
 pub trait SampleDiscreteLaplaceZ2k: Sized {
@@ -8,7 +8,7 @@ pub trait SampleDiscreteLaplaceZ2k: Sized {
 
 impl<T> SampleDiscreteLaplaceZ2k for T
 where
-    T: num::Float + SampleUniform + SampleRademacher,
+    T: num::Float + SampleUniform,
 {
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, _k: i32) -> Fallible<Self> {
         let u = loop {
