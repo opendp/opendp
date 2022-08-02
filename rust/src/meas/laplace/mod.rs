@@ -3,48 +3,28 @@ mod ffi;
 
 use num::{Zero, Float as _};
 
-use crate::core::{Measurement, Function, PrivacyMap, Domain, SensitivityMetric};
+use crate::core::{Measurement, PrivacyMap, SensitivityMetric};
 use crate::measures::MaxDivergence;
 use crate::metrics::{L1Distance, AbsoluteDistance};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
-use crate::traits::{InfDiv, Float, InfAdd, ExactIntCast, FloatBits};
+use crate::traits::{InfDiv, Float, InfAdd, ExactIntCast, FloatBits, CheckNull};
 
-pub trait LaplaceDomain: Domain {
-    type Metric: SensitivityMetric<Distance=Self::Atom> + Default;
-    type Atom: Float;
-    fn new() -> Self;
-    fn noise_function(scale: Self::Atom, k: i32) -> Function<Self, Self>;
+use super::MappableDomain;
+pub trait LaplaceDomain: MappableDomain + Default {
+    type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
+}
+impl<T: Clone + CheckNull> LaplaceDomain for AllDomain<T> {
+    type InputMetric = AbsoluteDistance<T>;
+}
+impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
+    type InputMetric = L1Distance<T>;
 }
 
-impl<T> LaplaceDomain for AllDomain<T>
-    where T: Float + SampleDiscreteLaplaceZ2k {
-    type Metric = AbsoluteDistance<T>;
-    type Atom = Self::Carrier;
-
-    fn new() -> Self { AllDomain::new() }
-    fn noise_function(scale: Self::Carrier, k: i32) -> Function<Self, Self> {
-        Function::new_fallible(move |arg: &Self::Carrier| Self::Carrier::sample_discrete_laplace_Z2k(*arg, scale, k))
-    }
-}
-
-impl<T> LaplaceDomain for VectorDomain<AllDomain<T>>
-    where T: Float + SampleDiscreteLaplaceZ2k {
-    type Metric = L1Distance<T>;
-    type Atom = T;
-
-    fn new() -> Self { VectorDomain::new_all() }
-    fn noise_function(scale: T, k: i32) -> Function<Self, Self> {
-        Function::new_fallible(move |arg: &Self::Carrier| arg.iter()
-            .map(|v| T::sample_discrete_laplace_Z2k(*v, scale, k))
-            .collect())
-    }
-}
-
-pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::Metric, MaxDivergence<D::Atom>>>
+pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
-          D::Atom: Float,
+          D::Atom: Float + SampleDiscreteLaplaceZ2k,
           i32: ExactIntCast<<D::Atom as FloatBits>::Bits> {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative")
@@ -53,10 +33,10 @@ pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurem
     let (k, relaxation) = get_discretization_consts(k)?;
 
     Ok(Measurement::new(
-        D::new(),
-        D::new(),
-        D::noise_function(scale.clone(), k),
-        D::Metric::default(),
+        D::default(),
+        D::default(),
+        D::new_map_function(move |arg: &D::Atom| D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)),
+        D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(
             move |d_in: &D::Atom| {
@@ -76,6 +56,7 @@ pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurem
     ))
 }
 
+// proof should show that the return is always a valid (k, relaxation pairing)
 pub(crate) fn get_discretization_consts<T>(k: Option<i32>) -> Fallible<(i32, T)>
     where T: Float, i32: ExactIntCast<T::Bits> {
     // the discretization may only be as fine as the subnormal ulp

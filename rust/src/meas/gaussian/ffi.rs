@@ -7,7 +7,7 @@ use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::meas::{make_base_gaussian, GaussianDomain, GaussianMeasure};
 use crate::measures::ZeroConcentratedDivergence;
-use crate::traits::samplers::CastInternalRational;
+use crate::traits::samplers::{CastInternalRational, SampleDiscreteGaussianZ2k};
 use crate::traits::{ExactIntCast, Float, FloatBits};
 use crate::{err, try_, try_as_ref};
 
@@ -25,7 +25,7 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
         MO: Type,
     ) -> FfiResult<*mut AnyMeasurement>
     where
-        T: Float + CastInternalRational,
+        T: Float + CastInternalRational + SampleDiscreteGaussianZ2k,
         i32: ExactIntCast<T::Bits>,
         rug::Rational: TryFrom<T>,
     {
@@ -33,16 +33,17 @@ pub extern "C" fn opendp_meas__make_base_gaussian(
         fn monomorphize2<D, MO>(scale: D::Atom, k: i32) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + GaussianDomain,
-            MO: 'static + GaussianMeasure<D::Metric, Atom = D::Atom>,
+            D::Atom: Float + SampleDiscreteGaussianZ2k,
+            MO: 'static + GaussianMeasure<D>,
             i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
         {
             make_base_gaussian::<D, MO>(scale, Some(k)).into_any()
         }
 
         dispatch!(monomorphize2, [
-                (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
-                (MO, [ZeroConcentratedDivergence<T>])
-            ], (scale, k))
+            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (MO, [ZeroConcentratedDivergence<T>])
+        ], (scale, k))
     }
     let k = k as i32;
     let D = try_!(Type::try_from(D));
