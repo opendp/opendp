@@ -232,7 +232,7 @@ To show the correctness of \texttt{sample\_bernoulli} we observe first that the 
 and is represented \emph{exactly} as a normal floating-point number. The \href{https://en.wikipedia.org/wiki/IEEE_754}{IEEE-754 standard} represents a normal floating-point number using an exponent $E$, and a mantissa $m$, using a base-2 analog of scientific notation. 
 
 \begin{definition}[Floating-Point Number]
-A normal $(k,\ell)$-bit floating-point number $z$ is represented as
+A $(k,\ell)$-bit floating-point number $z$ is represented as
 \[
 z = (-1)^s \cdot (B.M) \cdot (2^E) 
 \]
@@ -244,7 +244,7 @@ where
     \[
     1.M = \sum_{i = 1}^k M_i2^{-i}
     \]
-    \item $E \in \mathbb{Z}$ represents the \emph{exponent} of $z$. When $\ell$ bits are allocated to representing $E$, then $E \in [-(2^{\ell - 1} - 2), 2^{\ell - 1}]$. Note that the range of $E$ is $2^\ell - 2$ rather than $2^\ell$ as the remaining to numbers are used to represent special floating point values. When $E = 0$, then the floating point number is considered \emph{subnormal}. 
+    \item $E \in \mathbb{Z}$ represents the \emph{exponent} of $z$. When $\ell$ bits are allocated to representing $E$, then $E \in [-(2^{\ell - 1} - 2), 2^{\ell - 1}] \cap \mathbb{Z}$. Note that the range of $E$ is $2^\ell - 2$ rather than $2^\ell$ as the remaining to numbers are used to represent special floating point values. When $E = -(2^{\ell -1} - 2)$, then the floating point number is considered \emph{subnormal}. 
 \end{itemize} 
 \end{definition}
 
@@ -258,7 +258,7 @@ Assuming that \texttt{sample\_geometric\_buffer} returns some $I < j$,  \texttt{
 \noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{leading\_zeroes} part of the  \texttt{prob} variable's binary expansion. Therefore, for any $I < \texttt{leading\_zeroes}$, it follows that $a_I = 0$ and we should return \texttt{false}. In this case, \texttt{sample\_bernoulli} returns \texttt{false}.\\
 
 \noindent\textbf{Case 2} ($\texttt{first\_heads\_index} == \texttt{leading\_zeroes}$). \\
-\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{implicit\_bit} part of the  \texttt{prob} variable's binary expansion. When \texttt{prob} is a normal floating point value, i.e., $E \ne 0$ then the implicit bit $a_I = 1$. Otherwise, when \texttt{prob} is a subnormal floating point value, i.e., $E = 0$, the implicit bit $a_I = 0$. Since \texttt{raw\_exponent(prob)} corresponds to the exponent $E$ for any $(k,\ell)$-bit floating point number \texttt{prob}, \texttt{sample\_bernoulli} returns \texttt{true} when $\texttt{raw\_exponent(prob)} \ne 0$ and \texttt{false} otherwise. \\
+\noindent This corresponds to \texttt{sample\_geometric\_buffer} returning a value $I$ such that $a_I$ indexes into the \texttt{implicit\_bit} part of the  \texttt{prob} variable's binary expansion. When \texttt{prob} is a normal floating point value, i.e., $E \ne -(2^{\ell -1} - 2)$ then the implicit bit $a_I = 1$. Otherwise, when \texttt{prob} is a subnormal floating point value, i.e., $E = -(2^{\ell - 1} - 2)$, the implicit bit $a_I = 0$. Since \texttt{raw\_exponent(prob)} corresponds to the exponent $E$ for any $(k,\ell)$-bit floating point number \texttt{prob}, \texttt{sample\_bernoulli} returns \texttt{true} when $\texttt{raw\_exponent(prob)} \ne 0$ and \texttt{false} otherwise. \\
 
 
 \noindent\textbf{Case 3} ($\texttt{leading\_zeroes}  + \texttt{T::MANTISSA\_BITS} < I$). This corresponds to the case where  \texttt{sample\_geometric\_buffer} returns a value $I$ where $I > j$, but $I < \texttt{max\_coin\_flips}$ and therefore $a_I$ indexes into the trailing zeroes. In this case, \texttt{sample\_bernoulli} returns \texttt{false} since $a_I = 0$ for all bits in the \texttt{trailing\_zeroes} part of \texttt{prob}'s binary expansion. \\
