@@ -76,6 +76,22 @@ where
     }
 }
 
+
+impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for Array2Domain<DIA>
+where
+    DIA::Carrier: Clone,
+{
+    fn apply_rows(
+        value: &Self::Carrier,
+        row_function: &impl Fn(&Self::Row) -> Fallible<DOA::Carrier>,
+    ) -> Fallible<Vec<DOA::Carrier>> {
+        (value.rows())
+            .into_iter()
+            .map(|row| row_function(&row.to_vec()))
+            .collect()
+    }
+}
+
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
 pub(crate) fn make_row_by_row<DI, DO, M>(
     input_row_domain: DI::RowDomain,
@@ -210,7 +226,7 @@ mod tests {
 }
 
 
-fn make_bin_grid_array2(
+pub fn make_bin_grid_array2(
     lower_edges: Vec<f64>,
     upper_edges: Vec<f64>,
     bin_count: usize,
