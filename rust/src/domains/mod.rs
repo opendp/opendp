@@ -306,6 +306,40 @@ impl<D: Domain> Domain for Array2Domain<D> {
     }
 }
 
+
+/// A Domain that contains vectors of (homogeneous) values.
+#[derive(Clone, PartialEq)]
+pub struct ArrayDDomain<D: Domain> {
+    pub element_domain: D,
+}
+impl<D: Domain> Debug for ArrayDDomain<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ArrayDDomain({:?})", self.element_domain)
+    }
+}
+impl<D: Domain + Default> Default for ArrayDDomain<D> {
+    fn default() -> Self { Self::new(D::default()) }
+}
+impl<D: Domain> ArrayDDomain<D> {
+    pub fn new(element_domain: D) -> Self {
+        ArrayDDomain { element_domain }
+    }
+}
+impl<T: CheckNull> ArrayDDomain<AllDomain<T>> {
+    pub fn new_all() -> Self {
+        Self::new(AllDomain::<T>::new())
+    }
+}
+impl<D: Domain> Domain for ArrayDDomain<D> {
+    type Carrier = ndarray::ArrayD<D::Carrier>;
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        for e in val {
+            if !self.element_domain.member(e)? {return Ok(false)}
+        }
+        Ok(true)
+    }
+}
+
 /// A Domain that specifies the length of the enclosed domain.
 /// 
 /// # Proof Definition
