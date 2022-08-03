@@ -65,12 +65,13 @@ pub(crate) fn get_discretization_consts<T>(k: Option<i32>) -> Fallible<(i32, T)>
 
     let _2 = T::exact_int_cast(2)?;
 
-    // input has granularity 2^{k_min}
+    // input has granularity 2^{k_min} (subnormal float precision)
     let input_gran = _2.inf_pow(&T::exact_int_cast(k_min)?)?;
     // discretization rounds to the nearest 2^k
     let output_gran = _2.inf_pow(&T::exact_int_cast(k)?)?;  
 
-    // the worst-case increase in sensitivity due to discretization
+    // the worst-case increase in sensitivity due to discretization is
+    //     the range, minus the smallest step in the range
     let relaxation = output_gran.inf_sub(&input_gran)?;
 
     Ok((k, relaxation))
