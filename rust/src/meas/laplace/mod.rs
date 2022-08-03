@@ -62,15 +62,16 @@ pub(crate) fn get_discretization_consts<T>(k: Option<i32>) -> Fallible<(i32, T)>
     // the discretization may only be as fine as the subnormal ulp
     let k_min = -i32::exact_int_cast(T::EXPONENT_BIAS)? - i32::exact_int_cast(T::MANTISSA_BITS)?;
     let k = k.unwrap_or(k_min).max(k_min);
-    
-    let relaxation = if k == k_min {
-        // the discretization doesn't round, because the discretization is as fine as the subnormal ulp
-        T::zero()
-    } else {
-        let _2 = T::exact_int_cast(2)?;
-        // discretization rounds to the nearest 2^k
-        _2.inf_pow(&T::exact_int_cast(k)?)?
-    };
+
+    let _2 = T::exact_int_cast(2)?;
+
+    // input has granularity 2^{k_min}
+    let input_gran = _2.inf_pow(&T::exact_int_cast(k_min)?)?;
+    // discretization rounds to the nearest 2^k
+    let output_gran = _2.inf_pow(&T::exact_int_cast(k)?)?;  
+
+    // the worst-case increase in sensitivity due to discretization
+    let relaxation = output_gran.inf_sub(&input_gran)?;
 
     Ok((k, relaxation))
 }
