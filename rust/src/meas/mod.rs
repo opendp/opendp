@@ -33,3 +33,8 @@ pub use crate::meas::randomized_response::*;
 pub mod alp;
 #[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
 pub use crate::meas::alp::*;
+
+#[cfg(feature="contrib")]
+pub mod synthetic_data;
+#[cfg(feature="contrib")]
+pub use crate::meas::synthetic_data::*;

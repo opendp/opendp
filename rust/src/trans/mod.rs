@@ -86,3 +86,8 @@ pub mod resize;
 #[cfg(feature="contrib")]
 pub use crate::trans::resize::*;
 
+#[cfg(feature="contrib")]
+pub mod array;
+#[cfg(feature="contrib")]
+pub use crate::trans::array::*;
+
