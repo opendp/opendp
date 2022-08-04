@@ -2,10 +2,11 @@ use ndarray::{Array1, Array2, ArrayD, Dimension};
 use super::{DataFrame, DataFrameDomain};
 
 use crate::{
-    core::{Function, StabilityMap, Transformation},
+    core::{Function, StabilityMap, Transformation, Measurement},
     metrics::{SymmetricDistance, AgnosticMetric},
     domains::{AllDomain, VectorDomain, Array2Domain, ArrayDDomain},
     error::Fallible,
+    measures::MaxDivergence,
     traits::{Hashable, Primitive},
     trans::{make_row_by_row_fallible, make_row_by_row, postprocess::make_postprocess},
 };
@@ -123,7 +124,7 @@ pub fn make_reshape(category_lengths: Vec<usize>) -> Fallible<Transformation<
     )
 }
 
-pub fn make_synthetic_data<T: Primitive>(categories: Vec<Vec<T>>) -> Fallible<Transformation<
+pub fn make_repeat_categories<T: Primitive>(categories: Vec<Vec<T>>) -> Fallible<Transformation<
     ArrayDDomain<AllDomain<usize>>, 
     Array2Domain<AllDomain<T>>, 
     AgnosticMetric, 
@@ -159,86 +160,58 @@ pub fn make_synthetic_data<T: Primitive>(categories: Vec<Vec<T>>) -> Fallible<Tr
     )
 }
 
-use crate::trans::make_count_by_categories;
-use crate::meas::make_base_geometric;
+use crate::transformations::make_count_by_categories;
+use crate::measurements::make_base_geometric;
 use crate::metrics::L1Distance;
 use ndarray::Array;
 
-fn cluster_preprocess<K: Hashable, TOA: Primitive>(
-    bin_count: usize,
-    dataframe: &DataFrame<K>,
-    lower_edges: &Vec<f64>,
-    upper_edges: &Vec<f64>,
-    scale: f64,
-    bounds: (usize, usize) 
-) -> Fallible<Array2<TOA>> {
-
-    let col_names: Vec<K> = dataframe.keys().cloned().collect::<Vec<K>>();
-
-    // build midpoint categories
-    let it = upper_edges.iter().zip(lower_edges.iter());
-    let categories: Vec<Vec<f64>> = it.map(|(lower, upper)| {
-        let offset = (upper - lower) / ((bin_count as f64)*2.);
-        let vector = (Array::linspace(*lower, *upper, bin_count + 1) + offset).to_vec();
-        let slice: Vec<f64> = vector[0..bin_count].to_vec();
-        slice
-    }).collect();
-
-    let _chained = (
-        make_select_array(col_names)? >>
-        make_bin_grid_array2(lower_edges.clone(), upper_edges.clone(), bin_count)? >>
-        make_ravel_multi_index(vec![bin_count, bin_count])? >>
-        make_count_by_categories::<L1Distance<usize>, usize, usize>((0..bin_count*bin_count - 1).collect())? >>
-        make_base_geometric::<VectorDomain<AllDomain<usize>>, f64>(scale, Some(bounds))? >>
-        make_reshape(vec![bin_count, bin_count])? >>
-        make_synthetic_data(categories)?
-    )?;
-
-    return fallible!(FailedFunction, "not returning right value");
-}
-
-pub fn make_cluster_preprocess<K: Hashable, TOA: Primitive>(
+pub fn make_synthetic_discretization<K: Hashable, TOA: Primitive>(
     bin_count: usize,
     lower_edges: Vec<f64>,
     upper_edges: Vec<f64>,
     scale: f64,
-    bounds: (usize, usize)
 ) -> Fallible<
-    Transformation<
-        DataFrameDomain<K>,
-        Array2Domain<AllDomain<TOA>>,
+    Measurement<
+        Array2Domain<AllDomain<f64>>,
+        Array2Domain<AllDomain<f64>>,
         SymmetricDistance,
-        SymmetricDistance,
+        MaxDivergence<f64>,
     >,
 > {
-    Ok(Transformation::new(
-        DataFrameDomain::new_all(),
-        Array2Domain::new_all(),
-        Function::new_fallible(move |arg: &DataFrame<K>| 
-            cluster_preprocess(
-                bin_count,
-                arg,
-                &lower_edges,
-                &upper_edges,
-                scale,
-                bounds
-                )),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
-        StabilityMap::new_from_constant(1),
-    ))
+    // build midpoint categories
+    let it = upper_edges.iter().zip(lower_edges.iter());
+    let categories: Vec<Vec<f64>> = it.map(|(lower, upper)| {
+        let offset = (upper - lower) / ((bin_count as f64) * 2.);
+        Array::linspace(lower + offset, upper - offset, bin_count).to_vec()
+    }).collect();
+
+    let chained = (
+        make_bin_grid_array2(lower_edges.clone(), upper_edges.clone(), bin_count)? >>
+        make_ravel_multi_index(vec![bin_count, bin_count])? >>
+        make_count_by_categories::<L1Distance<usize>, usize, usize>((0..bin_count*bin_count - 1).collect())? >>
+        make_base_geometric::<VectorDomain<AllDomain<usize>>, f64>(scale, None)? >>
+        make_reshape(vec![bin_count; lower_edges.len()])? >>
+        make_repeat_categories(categories)?
+    )?;
+    return Ok(chained);
 }
 
 #[cfg(test)]
 mod test {
     use ndarray::{arr2, Ix2};
     use crate::metrics::L1Distance;
-    use crate::trans::make_count_by_categories;
-    use crate::meas::make_base_geometric;
+    use crate::transformations::make_count_by_categories;
+    use crate::measurements::make_base_geometric;
 
 
     use crate::data::Column;
     use super::*;
+
+    #[test]
+    fn test_make_synthetic_discretization() -> Fallible<()> {
+        let trans = make_synthetic_discretization(3,vec![0., 0., 0.], vec![3., 3., 3.], 1.);
+        Ok(())
+    }
 
     #[test]
     fn test_make_select_array() -> Fallible<()> {
@@ -317,8 +290,8 @@ mod test {
     }
 
     #[test]
-    fn test_make_synthetic_data() -> Fallible<()> {
-        let synth_trans = make_synthetic_data(vec![vec![-0.5f64, 0.5], vec![-0.5, 0.5]])?;
+    fn test_make_repeat_categories() -> Fallible<()> {
+        let synth_trans = make_repeat_categories(vec![vec![-0.5f64, 0.5], vec![-0.5, 0.5]])?;
         let reshape_trans = make_reshape(vec![2, 2])?;
         let vec = vec![1, 1, 0, 2];
 
@@ -368,7 +341,7 @@ mod test {
             // // trans/array
             make_reshape(vec![bin_count, bin_count])? >>
             // // trans/array
-            make_synthetic_data(vec![vec![0.5, 1.5, 2.5], vec![0.5, 1.5, 2.5]])?
+            make_repeat_categories(vec![vec![0.5, 1.5, 2.5], vec![0.5, 1.5, 2.5]])?
         )?;
 
         println!("{:?}", chained2.invoke(&df)?);
