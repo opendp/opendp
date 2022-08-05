@@ -25,6 +25,7 @@ pub extern "C" fn opendp_trans__make_lipschitz_sized_proportion_ci_mean(
     let strat_sizes = try_!(try_as_ref!(strat_sizes).downcast_ref::<Vec<usize>>()).clone();
     let sample_sizes = try_!(try_as_ref!(sample_sizes).downcast_ref::<Vec<usize>>()).clone();
     let TA = try_!(Type::try_from(TA));
+
     dispatch!(monomorphize, [
         (TA, @floats)
     ], (strat_sizes, sample_sizes))
