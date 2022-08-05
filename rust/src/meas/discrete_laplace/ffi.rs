@@ -18,40 +18,56 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace(
 ) -> FfiResult<*mut AnyMeasurement> {
 
     #[cfg(feature="use-mpfr")]
-    fn monomorphize<D, QO>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement>
+    fn monomorphize<T, QO>(scale: *const c_void, D: Type, QO: Type) -> FfiResult<*mut AnyMeasurement>
     where
-        D: 'static + DiscreteLaplaceDomain,
-        D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
-        QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
+        T: Integer + SampleDiscreteLaplaceLinear<QO>,
+        QO: Float + InfCast<T> + InfCast<T>,
         rug::Rational: TryFrom<QO>,
-        rug::Integer: From<D::Atom> + az::SaturatingCast<D::Atom>,
+        rug::Integer: From<T> + az::SaturatingCast<T>,
     {
+        fn monomorphize2<D, QO>(scale: QO) -> FfiResult<*mut AnyMeasurement>
+        where
+            D: 'static + DiscreteLaplaceDomain,
+            D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+            QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
+            rug::Rational: TryFrom<QO>,
+            rug::Integer: From<D::Atom> + az::SaturatingCast<D::Atom>,
+        {
+            make_base_discrete_laplace::<D, QO>(scale).into_any()
+        }
         let scale = try_as_ref!(scale as *const QO).clone();
-        make_base_discrete_laplace::<D, QO>(scale).into_any()
+        dispatch!(monomorphize2, [
+            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (QO, [QO])
+        ], (scale))
     }
     #[cfg(not(feature="use-mpfr"))]
-    fn monomorphize<D, QO>(scale: *const c_void) -> FfiResult<*mut AnyMeasurement>
+    fn monomorphize<T, QO>(scale: *const c_void, D: Type, QO: Type) -> FfiResult<*mut AnyMeasurement>
     where
-        D: 'static + DiscreteLaplaceDomain,
-        D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
-        QO: Float + InfCast<D::Atom>,
+        T: Integer + SampleDiscreteLaplaceLinear<QO>,
+        QO: Float + InfCast<T>,
     {
+        fn monomorphize2<D, QO>(scale: QO) -> FfiResult<*mut AnyMeasurement>
+        where
+            D: 'static + DiscreteLaplaceDomain,
+            D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+            QO: Float + InfCast<D::Atom>,
+        {
+            make_base_discrete_laplace::<D, QO>(scale).into_any()
+        }
         let scale = try_as_ref!(scale as *const QO).clone();
-        make_base_discrete_laplace::<D, QO>(scale).into_any()
+        dispatch!(monomorphize2, [
+            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (QO, [QO])
+        ], (scale))
     }
     let D = try_!(Type::try_from(D));
+    let T = try_!(D.get_atom());
     let QO = try_!(Type::try_from(QO));
     dispatch!(monomorphize, [
-        (D, [
-            AllDomain<u8>, AllDomain<u16>, AllDomain<u32>, AllDomain<u64>, AllDomain<u128>,
-            AllDomain<i8>, AllDomain<i16>, AllDomain<i32>, AllDomain<i64>, AllDomain<i128>,
-            VectorDomain<AllDomain<u8>>, VectorDomain<AllDomain<u16>>, VectorDomain<AllDomain<u32>>,
-            VectorDomain<AllDomain<u64>>, VectorDomain<AllDomain<u128>>, VectorDomain<AllDomain<i8>>,
-            VectorDomain<AllDomain<i16>>, VectorDomain<AllDomain<i32>>, VectorDomain<AllDomain<i64>>,
-            VectorDomain<AllDomain<i128>>
-        ]),
+        (T, @integers),
         (QO, @floats)
-    ], (scale))
+    ], (scale, D, QO))
 }
 
 

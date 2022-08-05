@@ -167,8 +167,6 @@ impl<T, P> SampleDiscreteLaplaceLinear<P> for T
 /// The algorithm generates B * 8 bits at random and returns
 /// - Some(index of the first set bit)
 /// - None (if all bits are 0)
-///
-/// This is a lower-level version of the SampleGeometric
 pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) -> Fallible<Option<usize>> {
     Ok(if constant_time {
         let mut buffer = vec![0_u8; buffer_len];

@@ -30,10 +30,10 @@ use super::{SampleUniformIntBelow, SampleRademacher};
 
 // sample from a Bernoulli(exp(-x)) distribution
 // assumes x is a rational number in [0,1]
-fn sample_bernoulli_exp1(v: Rational) -> Fallible<bool> {
+fn sample_bernoulli_exp1(x: Rational) -> Fallible<bool> {
     let mut k = Integer::one();
     loop {
-        if bool::sample_bernoulli(v.clone() / &k, false)? {
+        if bool::sample_bernoulli(x.clone() / &k, false)? {
             k += 1;
         } else {
             return Ok(k.is_odd());
@@ -43,25 +43,25 @@ fn sample_bernoulli_exp1(v: Rational) -> Fallible<bool> {
 
 // sample from a Bernoulli(exp(-x)) distribution
 // assumes x is a rational number >=0
-fn sample_bernoulli_exp(mut v: Rational) -> Fallible<bool> {
+fn sample_bernoulli_exp(mut x: Rational) -> Fallible<bool> {
     // Sample floor(x) independent Bernoulli(exp(-1))
     // If all are 1, return Bernoulli(exp(-(x-floor(x))))
-    while v > 1 {
+    while x > 1 {
         if sample_bernoulli_exp1(1.into())? {
-            v -= 1;
+            x -= 1;
         } else {
             return Ok(false);
         }
     }
-    sample_bernoulli_exp1(v)
+    sample_bernoulli_exp1(x)
 }
 
 // sample from a geometric(1-exp(-x)) distribution
 // assumes x is a rational number >= 0
-fn sample_geometric_exp_slow(v: Rational) -> Fallible<Integer> {
+fn sample_geometric_exp_slow(x: Rational) -> Fallible<Integer> {
     let mut k = 0.into();
     loop {
-        if sample_bernoulli_exp(v.clone())? {
+        if sample_bernoulli_exp(x.clone())? {
             k += 1;
         } else {
             return Ok(k);
@@ -71,12 +71,12 @@ fn sample_geometric_exp_slow(v: Rational) -> Fallible<Integer> {
 
 // sample from a geometric(1-exp(-x)) distribution
 // assumes x >= 0 rational
-fn sample_geometric_exp_fast(v: Rational) -> Fallible<Integer> {
-    if v.is_zero() {
+fn sample_geometric_exp_fast(x: Rational) -> Fallible<Integer> {
+    if x.is_zero() {
         return Ok(0.into());
     }
 
-    let (numer, denom) = v.into_numer_denom();
+    let (numer, denom) = x.into_numer_denom();
     let mut u = Integer::sample_uniform_int_below(denom.clone())?;
     while !sample_bernoulli_exp(Rational::from((u.clone(), denom.clone())))? {
         u = Integer::sample_uniform_int_below(denom.clone())?;

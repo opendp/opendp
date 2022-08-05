@@ -115,6 +115,21 @@ def test_base_discrete_laplace():
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
+def test_base_discrete_laplace_cks20():
+    from opendp.meas import make_base_discrete_laplace_cks20
+    meas = make_base_discrete_laplace_cks20(scale=2.)
+    print("base_discrete_laplace:", meas(100))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
+
+def test_base_vector_discrete_laplace_cks20():
+    from opendp.meas import make_base_discrete_laplace_cks20
+    meas = make_base_discrete_laplace_cks20(scale=2., D="VectorDomain<AllDomain<i32>>")
+    print("vector base_dl:", meas([100, 10, 12]))
+    assert meas.check(1, 0.5)
+    assert not meas.check(1, 0.49999)
+
 
 def test_base_discrete_laplace_linear():
     from opendp.meas import make_base_discrete_laplace_linear

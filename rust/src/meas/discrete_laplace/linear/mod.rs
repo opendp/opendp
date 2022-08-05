@@ -29,18 +29,21 @@ where
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
 
-    let func = move |v: &D::Atom| D::Atom::sample_discrete_laplace_linear(*v, scale, bounds);
-
     Ok(Measurement::new(
         D::default(),
         D::default(),
-        D::new_map_function(func),
+        D::new_map_function(move |v: &D::Atom| {
+            D::Atom::sample_discrete_laplace_linear(*v, scale, bounds)
+        }),
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
             let d_in = QO::inf_cast(d_in.clone())?;
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
+            }
+            if d_in.is_zero() {
+                return Ok(QO::zero());
             }
             if scale.is_zero() {
                 return Ok(QO::infinity());
@@ -74,7 +77,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_geometric_mechanism_bounded() {
+    fn test_make_discrete_laplace_mechanism_bounded() {
         let measurement =
             make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, Some((200, 210)))
                 .unwrap_test();
@@ -86,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_vector_geometric_mechanism_bounded() {
+    fn test_make_vector_discrete_laplace_mechanism_bounded() {
         let measurement =
             make_base_discrete_laplace_linear::<VectorDomain<_>, f64>(10.0, Some((200, 210)))
                 .unwrap_test();
@@ -98,7 +101,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_geometric_mechanism() {
+    fn test_make_discrete_laplace_mechanism() {
         let measurement =
             make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = 205;
@@ -109,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_vector_geometric_mechanism() {
+    fn test_make_vector_discrete_laplace_mechanism() {
         let measurement =
             make_base_discrete_laplace_linear::<VectorDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = vec![1, 2, 3, 4];

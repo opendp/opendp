@@ -12,6 +12,8 @@ use crate::{
 
 use super::DiscreteLaplaceDomain;
 
+#[cfg(feature = "ffi")]
+mod ffi;
 
 pub fn make_base_discrete_laplace_cks20<D, QO>(
     scale: QO,
@@ -75,7 +77,7 @@ where
         })),
         D::InputMetric::default(),
         MaxDivergence::default(),
-        PrivacyMap::new(move |arg: &Integer| (arg / &scale).complete()),
+        PrivacyMap::new(move |d_in: &Integer| (d_in / &scale).complete()),
     ))
 }
 

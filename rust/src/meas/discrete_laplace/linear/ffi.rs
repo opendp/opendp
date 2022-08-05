@@ -1,15 +1,18 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::domains::{AllDomain, VectorDomain};
-use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
-use crate::ffi::util;
-use crate::ffi::util::Type;
-use crate::meas::{make_base_discrete_laplace_linear, DiscreteLaplaceDomain};
-use crate::traits::samplers::SampleDiscreteLaplaceLinear;
-use crate::traits::{Float, InfCast, Integer};
-use crate::{err, try_, try_as_ref};
+use crate::core::FfiResult;
+use crate::ffi::any::{AnyMeasurement, AnyObject};
+use crate::{
+    core::IntoAnyMeasurementFfiResultExt,
+    ffi::{any::Downcast, util},
+};
+use crate::{
+    domains::{AllDomain, VectorDomain},
+    ffi::util::Type,
+    meas::{make_base_discrete_laplace_linear, DiscreteLaplaceDomain},
+    traits::{samplers::SampleDiscreteLaplaceLinear, Float, InfCast, Integer},
+};
 
 #[no_mangle]
 pub extern "C" fn opendp_meas__make_base_discrete_laplace_linear(
@@ -18,36 +21,46 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace_linear(
     D: *const c_char,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<D, QO>(
+    #[cfg(feature = "use-mpfr")]
+    fn monomorphize<T, QO>(
         scale: *const c_void,
         bounds: *const AnyObject,
+        D: Type,
+        QO: Type,
     ) -> FfiResult<*mut AnyMeasurement>
     where
-        D: 'static + DiscreteLaplaceDomain,
-        D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
-        QO: Float + InfCast<D::Atom>,
+        T: Integer + SampleDiscreteLaplaceLinear<QO>,
+        QO: Float + InfCast<T>,
     {
+        fn monomorphize2<D, QO>(
+            scale: QO,
+            bounds: Option<(D::Atom, D::Atom)>,
+        ) -> FfiResult<*mut AnyMeasurement>
+        where
+            D: 'static + DiscreteLaplaceDomain,
+            D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+            QO: Float + InfCast<D::Atom>,
+        {
+            make_base_discrete_laplace_linear::<D, QO>(scale, bounds).into_any()
+        }
         let scale = try_as_ref!(scale as *const QO).clone();
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
-            Some(try_!(bounds.downcast_ref::<(D::Atom, D::Atom)>()).clone())
+            Some(try_!(bounds.downcast_ref::<(T, T)>()).clone())
         } else {
             None
         };
-        make_base_discrete_laplace_linear::<D, QO>(scale, bounds).into_any()
+        dispatch!(monomorphize2, [
+            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (QO, [QO])
+        ], (scale, bounds))
     }
     let D = try_!(Type::try_from(D));
+    let T = try_!(D.get_atom());
     let QO = try_!(Type::try_from(QO));
     dispatch!(monomorphize, [
-        (D, [
-            AllDomain<u8>, AllDomain<u16>, AllDomain<u32>, AllDomain<u64>, AllDomain<u128>,
-            AllDomain<i8>, AllDomain<i16>, AllDomain<i32>, AllDomain<i64>, AllDomain<i128>,
-            VectorDomain<AllDomain<u8>>, VectorDomain<AllDomain<u16>>, VectorDomain<AllDomain<u32>>,
-            VectorDomain<AllDomain<u64>>, VectorDomain<AllDomain<u128>>, VectorDomain<AllDomain<i8>>,
-            VectorDomain<AllDomain<i16>>, VectorDomain<AllDomain<i32>>, VectorDomain<AllDomain<i64>>,
-            VectorDomain<AllDomain<i128>>
-        ]),
+        (T, @integers),
         (QO, @floats)
-    ], (scale, bounds))
+    ], (scale, bounds, D, QO))
 }
 
 #[deprecated(
@@ -58,11 +71,11 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace_linear(
 pub extern "C" fn opendp_meas__make_base_geometric(
     scale: *const c_void,
     bounds: *const AnyObject,
-    D: *const c_char, QO: *const c_char,
+    D: *const c_char,
+    QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     opendp_meas__make_base_discrete_laplace_linear(scale, bounds, D, QO)
 }
-
 
 #[cfg(test)]
 mod tests {
