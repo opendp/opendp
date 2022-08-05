@@ -1,11 +1,12 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{FfiResult, Measurement, Transformation},
+    core::{FfiResult, Measurement, Transformation, PrivacyMap},
     ffi::{
-        any::{AnyObject, AnyTransformation, Downcast, AnyMeasurement, IntoAnyFunctionExt, AnyDomain, AnyMetric, AnyMeasure},
+        any::{AnyObject, AnyTransformation, Downcast, AnyMeasurement, IntoAnyFunctionExt, AnyDomain, AnyMetric, AnyMeasure, IntoAnyStabilityMapExt},
         util::{AnyTransformationPtr, AnyMeasurementPtr},
     }, error::Fallible, domains::ProductDomain,
+    metrics::ProductMetric
 };
 
 #[bootstrap(features("contrib"))]
@@ -15,7 +16,7 @@ use crate::{
 /// * `transformations` - A list of transformations to apply, one to each element.
 fn make_partition_map_trans(
     transformations: Vec<&AnyTransformation>,
-) -> Fallible<Transformation<ProductDomain<AnyDomain>, ProductDomain<AnyDomain>, AnyMetric, AnyMetric>> {
+) -> Fallible<Transformation<ProductDomain<AnyDomain>, ProductDomain<AnyDomain>, ProductMetric<AnyMetric>, ProductMetric<AnyMetric>>> {
     super::make_partition_map_trans(transformations)
 }
 
@@ -31,14 +32,13 @@ pub extern "C" fn opendp_comb__make_partition_map_trans(
 
     let trans = try_!(make_partition_map_trans(transformations));
 
-    // don't wrap the input metric, output metric and stability map!
     Ok(Transformation::new(
         AnyDomain::new(trans.input_domain),
         AnyDomain::new(trans.output_domain),
         trans.function.into_any(),
-        trans.input_metric,
-        trans.output_metric,
-        trans.stability_map
+        AnyMetric::new(trans.input_metric),
+        AnyMetric::new(trans.output_metric),
+        trans.stability_map.into_any()
     )).into()
 }
 
@@ -49,7 +49,7 @@ pub extern "C" fn opendp_comb__make_partition_map_trans(
 /// * `measurements` - A list of measuerements to apply, one to each element.
 fn make_partition_map_meas(
     measurements: Vec<&AnyMeasurement>,
-) -> Fallible<Measurement<ProductDomain<AnyDomain>, ProductDomain<AnyDomain>, AnyMetric, AnyMeasure>> {
+) -> Fallible<Measurement<ProductDomain<AnyDomain>, ProductDomain<AnyDomain>, ProductMetric<AnyMetric>, AnyMeasure>> {
     super::make_partition_map_meas(measurements)
 }
 
@@ -64,14 +64,15 @@ pub extern "C" fn opendp_comb__make_partition_map_meas(
         try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
 
     let meas = try_!(make_partition_map_meas(measurements));
+    let privacy_map = meas.privacy_map;
 
     // don't wrap the input metric, output measure and privacy map!
     Ok(Measurement::new(
         AnyDomain::new(meas.input_domain),
         AnyDomain::new(meas.output_domain),
         meas.function.into_any(),
-        meas.input_metric,
+        AnyMetric::new(meas.input_metric),
         meas.output_measure,
-        meas.privacy_map
+        PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in))
     )).into()
 }

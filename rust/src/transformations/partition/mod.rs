@@ -6,7 +6,7 @@ use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::ProductDomain,
     error::Fallible,
-    metrics::SymmetricDistance,
+    metrics::{SymmetricDistance, ProductMetric},
     traits::Hashable,
 };
 
@@ -41,7 +41,7 @@ pub fn make_partition_by<TK: Hashable, TV: Hashable>(
         DataFrameDomain<TK>,
         ProductDomain<DataFrameDomain<TK>>,
         SymmetricDistance,
-        SymmetricDistance,
+        ProductMetric<SymmetricDistance>,
     >,
 > {
     let partition_indexes: HashMap<TV, usize> = partition_keys
@@ -103,7 +103,7 @@ pub fn make_partition_by<TK: Hashable, TV: Hashable>(
             Ok(partitioned_data)
         }),
         SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        ProductMetric::new(SymmetricDistance::default()),
         StabilityMap::new_from_constant(1),
     ))
 }

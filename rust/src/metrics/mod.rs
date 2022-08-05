@@ -361,3 +361,32 @@ impl Debug for AgnosticMetric {
 impl Metric for AgnosticMetric {
     type Distance = ();
 }
+
+#[derive(Clone)]
+pub struct ProductMetric<M: Metric>{
+    pub inner_metric: M
+}
+
+impl<M: Metric> Default for ProductMetric<M> {
+    fn default() -> Self { ProductMetric::new(M::default()) }
+}
+
+impl<M: Metric> ProductMetric<M> {
+    pub fn new(inner_metric: M) -> Self {
+        ProductMetric { inner_metric }
+    }
+}
+
+impl<M: Metric> PartialEq for ProductMetric<M> {
+    fn eq(&self, other: &Self) -> bool { 
+        self.inner_metric == other.inner_metric
+    }
+}
+impl<M: Metric> Debug for ProductMetric<M> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ProductMetric({:?})", self.inner_metric)
+    }
+}
+impl<M: Metric> Metric for ProductMetric<M> {
+    type Distance = M::Distance;
+}
