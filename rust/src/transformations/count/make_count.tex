@@ -1,0 +1,223 @@
+\input{../../mod.sty}
+
+\newcommand{\permalink}[2]{This proof is based on the code in \url{#1} from \changeformat{#2}.}
+
+\def\changeformat#1{\xchangeformat#1\relax}
+\def\xchangeformat#1/#2/#3\relax{%
+#1 %
+\ifcase#2 \or
+January\or February\or March\or April\or May\or June\or July\or
+August\or September\or October\or November\or December\fi
+\ #3}
+
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+\title{Privacy Proofs for OpenDP: MakeCount}
+\author{S\'ilvia Casacuberta, Grace Tian, Connor Wagaman -- wagaman@college.harvard.edu}
+\date{Version as of \today~(UTC)}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\subsection{Versions of definitions documents}
+\label{sec:versioned-docs}
+
+When looking for definitions for terms that appear in this document, the following versions of the definitions documents should be used.
+
+\begin{itemize}
+    \item \textbf{Pseudocode definitions document:} This proof file uses the version of the pseudocode definitions document available as of September 23, 2021, which can be found at \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{this link} (archived \href{https://web.archive.org/web/20210906201546/https://raw.githubusercontent.com/opendp/whitepapers/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{here}).
+    
+    \item \textbf{Proof definitions document:} This file uses the version of the proof definitions document available as of September 23, 2021, which can be found at \href{https://github.com/opendp/whitepapers/blob/proof-defns/proof-defns/proof_defns.pdf}{this link} (archived \href{https://web.archive.org/web/20210906201056/https://raw.githubusercontent.com/opendp/whitepapers/proof-defns/proof-defns/proof_defns.pdf}{here}). 
+\end{itemize}
+
+\section{MakeCount}
+
+\subsection{Implementation of MakeCount in Rust}
+\label{sub:rust-implementation}
+
+
+
+\permalink{https://github.com/opendp/opendp/blob/c3b5c3bd9fc50c556362b628f08c5fddea069b4d/rust/opendp/src/trans/count.rs\#L14-L27}{12/07/2021} (It is from \href{https://github.com/opendp/opendp/pull/173}{this pull request}.)
+The Rust code can also be seen below. 
+
+\subsection{Implementation of MakeCount in Python-style pseudocode, with preconditions}
+\label{sec:python-pseudocode}
+
+We now use Python-style pseudocode to present a representation of the Rust function.
+
+\emph{The use of \texttt{code}-style parameters in the preconditions section below (for example, \texttt{input\_domain}) means that this information should be passed along to the \texttt{Transformation} constructor.}
+
+Here, we use preconditions to check for traits, and to specify the domains and metrics.
+
+\textbf{Preconditions}
+\begin{itemize}
+    \item \textbf{User-specified types:} The \texttt{make\_count} function takes two inputs: a generic input type \texttt{TIA} for the \texttt{Transformation} (meaning that the input vector to \texttt{Transformation} is of type \texttt{Vec(TIA)}), and a generic output type \texttt{TO} for the \texttt{Transformation}.
+    
+    \begin{itemize}
+        \item \texttt{TO} has traits \texttt{One}, \texttt{ExactIntCast(usize)}, and \texttt{DistanceConstant(IntDistance)}.
+        
+        Examples: \texttt{u32} and \texttt{i64} have these traits because they have (1) a multiplicative identity element, (2) every value of type \texttt{usize} that falls within the minimum and maximum consecutive integers of type \texttt{u32} has an exact representation of type \texttt{u32} (the same applies for \texttt{i64}), and (3) multiplication and division apply to types \texttt{u32} and \texttt{i64}, values of type \texttt{u32} and \texttt{i64} have a partial ordering, and every value of type \texttt{usize} can be \texttt{inf\_cast}ed to a value of type \texttt{u32} (meaning that the \texttt{inf\_cast} will either result in an error or will result in a value of type \texttt{u32} that is at least as large as the input value of type \texttt{usize}; this also applies for \texttt{i64}).
+        
+        Currently, the \texttt{ExactIntCast} and \texttt{DistanceConstant} traits are implemented for casting between all numeric types, with the exception of \texttt{InfCast} not being implemented for going to or from \texttt{usize} and \texttt{isize} (and thus \texttt{DistanceConstant} not being implemented). Therefore, \texttt{usize} and \texttt{isize} do not have these traits. 
+        
+        \item \texttt{IntDistance} has trait \texttt{InfCast(TO)}. (Note that this bullet point is not needed in this proof, but it is needed in the code so a hint can be constructed; otherwise a binary search would be needed to construct the hint.)
+        
+        Examples: Recall that \texttt{IntDistance} is an alias for the type \texttt{u32}. \texttt{IntDistance} has trait \texttt{InfCast(u32)}, because any unsigned 32-bit integer can be converted to an unsigned 32-bit integer (type \texttt{IntDistance}) that is at least as big. On the other hand, \texttt{IntDistance} has trait \texttt{InfCast(u64)}, because every value of type \texttt{u64} can either be \texttt{infcast}ed to a value of type \texttt{u32} that is at least as large, or an error can be returned.
+        
+        On the other hand, \texttt{IntDistance} does not have trait \texttt{InfCast(usize)} because \texttt{InfCast} is not implemented for going to or from \texttt{usize}.
+        
+    \end{itemize}
+    
+    % \question{Salil had recommended that examples of types that do and don't work be provided. Should these examples and anti-examples be provided? Should I just say, ``\texttt{u32} has these traits'', or should I provide the description for why it has these traits (as I did above)?}
+\end{itemize}
+
+\textbf{Postconditions:} a valid \texttt{Transformation} must be returned (i.e. if a \texttt{Transformation} cannot be returned successfully, a runtime error should be returned)
+
+\begin{lstlisting}[language = Python, escapechar=|]
+def MakeCount(TIA, TO):
+
+    input_domain = VectorDomain(AllDomain(TIA))
+    output_domain = AllDomain(TO) |\label{line:output-domain}|
+    input_metric = SymmetricDistance()
+    output_metric = AbsoluteDistance(TO)
+    
+    # give the Transformation the following properties
+    max_value = get_max_consecutive_int(TO) 
+    def function(data: Vec[TIA]) -> TO:|\label{line:TO-output}|
+        try:|\label{code:try-catch}|
+            return exact_int_cast(len(data), TO)
+        except FailedCast:
+            return max_value |\label{line:except-return}|
+    def stability_relation(din:IntDistance, dout:TO) -> bool: |\label{line:din-dout-type}|
+        return 1 * inf_cast(din,TO) <= dout |\label{line:stability-relation}|
+
+    # now, return the Transformation
+    return Transformation(input_domain,output_domain,function,input_metric,output_metric,stability_relation)
+
+\end{lstlisting}
+
+\section{Proofs for the pseudocode}
+
+\begin{theorem}
+\label{thrm:domain-and-stability}
+    For every setting of the input parameters \texttt{TIA}, \texttt{TO} for \texttt{MakeCount} such that the given preconditions hold, \texttt{MakeCount} raises an exception (at compile time or run time) or returns a valid \texttt{Transformation} with the following properties:
+    \begin{enumerate}
+        \item \textup{(Appropriate output domain).} For every vector \texttt{v} in the \texttt{input\_domain}, \texttt{function(v)} is in the \texttt{output\_domain}.
+        
+        \item \textup{(Domain-metric compatibility).} The domain \texttt{input\_domain} matches one of the possible domains listed in the definition of \texttt{input\_metric}, and likewise \texttt{output\_domain} matches one of the possible domains listed in the definition of \texttt{output\_metric}.
+        
+        \item \textup{(Stability guarantee).} For every input \texttt{u}, \texttt{v} drawn from the \texttt{input\_domain} and for every pair $(\din, \dout)$, where $\din$ is of type \texttt{u32} and $\dout$ is of type \texttt{TO} (see line \ref{line:din-dout-type} of the pseudocode), if \texttt{u}, \texttt{v} are $\din$-close under the \texttt{input\_metric} and $\texttt{stability\_relation(din, dout) = True}$, then \texttt{function(u)}, \texttt{function(v)} are $\dout$-close under the \texttt{output\_metric}.
+    \end{enumerate}
+\end{theorem}
+
+\begin{proof} \textbf{(Part 1 -- appropriate output domain).}
+In line \ref{line:output-domain} of the pseudocode, we have \texttt{output\_domain = AllDomain(TO)}, so every value of type \texttt{TO} is in the \texttt{output\_domain}, and in line \ref{line:TO-output} of the Python-style pseudocode, we see that the \texttt{function} is always guaranteed to return a value of type \texttt{TO}. Because Rust employs ``type checking'',
+% copied from clamp:
+if the Rust code compiles correctly, then the type correctness follows from the definition of the type signature enforced by Rust. Otherwise, the code raises an exception for incorrect input type.
+% end "copied from clamp"
+Therefore, since our output domain is any value of type \texttt{TO}, we see that $\function$ has the appropriate output domain \texttt{output\_domain}.
+
+\end{proof}
+
+\begin{proof} \textbf{(Part 2 -- domain-metric compatibility).}
+
+The \texttt{input\_domain} is \texttt{VectorDomain(AllDomain(TIA))}. Because our \texttt{input\_metric} of \texttt{SymmetricDistance} is compatible with any domain of the form \\\texttt{VectorDomain(inner\_domain)}, and because \texttt{VectorDomain(AllDomain(TIA))} is of this form, we see that it is compatible with our \texttt{input\_metric} of \texttt{SymmetricDistance}.
+
+The \texttt{output\_domain} is \texttt{AllDomain(TO)}. Because our \texttt{output\_metric} of \texttt{AbsoluteDistance(TO)} is compatible with any domain of the form \texttt{AllDomain(T)} where \texttt{T} has the trait \texttt{Sub(Output=T)}, and because \texttt{AllDomain(TO)} is of this form and \texttt{TO} has the necessary trait, we see that it is compatible with our \texttt{output\_metric} of \texttt{AbsoluteDistance(TO)}.
+\end{proof}
+
+Before proceeding with proving the third part of theorem \ref{thrm:domain-and-stability}, we provide a lemma.
+
+% \begin{definition}[Symmetric distance]
+% \label{defn:symm-dist}
+% Let $u,v$ be vectors of elements drawn from domain $\mathcal{X}$. Define $h_v(\ell)$ as the multiplicity of element $\ell$ in vector $v$. For example, if $v$ contains five instances of the number ``21'', then $h_v(21) = 5$.
+
+% A definition of the symmetric distance between $u$ and $v$, then, is $$d_{\text{Sym}}(u,v) = \sum_{z\in \mathcal{X}} |h_u(z) - h_v(z)|.$$
+% \end{definition}
+
+\begin{lemma}
+\label{lemma:len-sum-equiv}
+For vector $v$ with each element $\ell\in v$ drawn from domain $\mathcal{X}$, $\texttt{len(v)} = \sum_{z\in\mathcal{X}} h_v(z)$.
+\end{lemma}
+
+\begin{proof}
+
+Every element $\ell \in v$ is drawn from domain $\mathcal{X}$, so summing over all $z\in \mathcal{X}$ will sum over every element $\ell\in x$. Recall that definition \ref{defn:symm-dist} states that $h_v(z)$ will return the number of occurrences of value $z$ in vector $v$. Therefore,  $\sum_{z\in\mathcal{X}} h_v(z)$ is the sum of the number of occurrences of each unique value; this is equivalent to the total number of items in the vector. By the definition of \texttt{len}
+ available in the pseudocode definitions document linked in section \ref{sec:versioned-docs}, then, $\sum_{z\in\mathcal{X}} h_v(z)$ is equivalent to \texttt{len(v)}.
+
+\end{proof}
+
+% \question{I am unsure whether the proof of lemma \ref{lemma:len-sum-equiv} is good. It seems clear to me that $\texttt{len(v)} = \sum_{z\in\mathcal{X}} h_v(z)$, so I had trouble knowing what needs to be written and what doesn't need to be written.}
+
+\begin{proof} \textbf{(Part 3 -- stability relation).} Here, we consider two inputs: a vector $\texttt{u}$ of elements of type \texttt{TIA}; and a vector $\texttt{v}$ of elements of type \texttt{TIA}. (This \texttt{input\_domain} is specified in the pseudocode in section \ref{sec:python-pseudocode}.) We prove that if $\texttt{stability\_relation}(\din, \dout) = \True$, then \texttt{function(u)}, \texttt{function(v)} are $\dout$-close.
+
+Assume it is the case that $\texttt{stability\_relation}(\din, \dout) = \True$. From  the stability relation provided on line \ref{line:stability-relation}, this means that $\texttt{inf\_cast}(\din, \texttt{TO}) \leq \dout$. From the pseudocode definitions file linked in section \ref{sec:versioned-docs}, we know that \texttt{inf\_cast} will cast $\din$ to a value at least as large as $\din$, so this assumption that $\texttt{stability\_relation}$ is $\True$ also means that $\din \leq \dout$. Also assume that \texttt{u}, \texttt{v} are $\din$-close under the symmetric distance metric (in accordance with the \texttt{input\_metric} specified in the preconditions in section \ref{sec:python-pseudocode}).
+
+We now refer to the definition of symmetric distance provided in the proof definitions document (a link to this document is available in section \ref{sec:versioned-docs}).
+
+Combining the assumptions that $\texttt{inf\_cast}(\din, \texttt{TO}) \leq \dout$, and that \texttt{u}, \texttt{v} are $\din$-close under the symmetric distance metric, means that
+\begin{equation}
+    d_\text{Sym}(\texttt{u}, \texttt{v})
+    \leq \din \leq \dout.
+\end{equation}
+
+Let $\mathcal{X}$ be the domain of all elements of type \texttt{TIA}. Therefore, we see that the symmetric distance  between \texttt{u} and \texttt{v} is 
+\begin{equation}
+\label{eq:expand-dymm-dist}
+    d_\text{Sym}(\texttt{u}, \texttt{v}) = \sum_{z\in \mathcal{X}} |h_{\texttt{u}}(z) - h_{\texttt{v}}(z)| \leq \din \leq \dout.
+\end{equation}
+
+We now prove that $\texttt{len(u)}$ and $\texttt{len(v)}$ are $\dout$-close. By lemma \ref{lemma:len-sum-equiv}, we know that $\texttt{len(v)} = \sum_{z\in\mathcal{X}} h_v(z)$. Substituting, we have
+\begin{equation}
+\label{eq:len-sum}
+    |\texttt{len(u)} - \texttt{len(v)}|
+    =
+    |\sum_{z\in \mathcal{X}} h_{\texttt{u}}(z) - \sum_{z\in \mathcal{X}} h_{\texttt{v}}(z)|
+    =
+    |\sum_{z\in \mathcal{X}}\left(h_{\texttt{u}}(z) - h_{\texttt{v}}(z)\right)|.
+\end{equation}
+
+By the triangle inequality,
+\begin{equation}
+\label{ineq:sum-ineq}
+    |\sum_{z\in \mathcal{X}}\left(h_{\texttt{u}}(z) - h_{\texttt{v}}(z)\right)|
+    \leq 
+    \sum_{z\in \mathcal{X}}|h_{\texttt{u}}(z) - h_{\texttt{v}}(z)|.
+\end{equation}
+
+Therefore, combining equation \ref{eq:len-sum} and inequality \ref{ineq:sum-ineq}, we have that
+\begin{equation}
+\label{ineq:relate-eqs}
+    |\texttt{len(u)} - \texttt{len(v)}|
+    \leq 
+    \sum_{z\in \mathcal{X}}|h_{\texttt{u}}(z) - h_{\texttt{v}}(z)|.
+\end{equation}
+
+Combining inequalities \ref{ineq:relate-eqs} and \ref{eq:expand-dymm-dist}, we have
+\begin{equation}
+\label{ineq:dout-close}
+    |\texttt{len(u)} - \texttt{len(v)}|
+    \leq
+    \dout,
+\end{equation}
+
+so \texttt{len(u)} and \texttt{len(v)} must be $\dout$-close. This, however, does not complete the proof that the stability relation holds because $\texttt{function(u)}$ does not return \texttt{len(u)}, but either \texttt{exact\_cast(len(u),TO)} or -- in the event \texttt{exact\_cast} fails -- \texttt{get\_max\_consecutive\_int(TO)}.
+
+We now consider the two cases that could occur:
+
+\begin{enumerate}
+    \item (Without loss of generality, \texttt{exact\_cast(len(u),TO)} fails -- which causes the try-catch statement in line \ref{code:try-catch} to catch and return \texttt{max\_value} -- and \texttt{exact\_cast(len(v),TO)} succeeds). Because \texttt{TO} has trait \texttt{ExactIntCast(usize)}, if the \texttt{exact\_cast} fails for \texttt{len(u)}, we then know that \texttt{len(u)} is greater than \texttt{get\_max\_consecutive\_int(TO)}. Likewise, if the \texttt{exact\_cast} succeeds for \texttt{len(v)}, we then know that \texttt{len(v)} is no larger than \texttt{get\_max\_consecutive\_int(TO)}. Therefore, because the return value  \texttt{get\_max\_consecutive\_int(TO)} for \texttt{u} is smaller than the true length value \texttt{len(u)}, the absolute difference between the output for \texttt{u} and the output for \texttt{v} will be \emph{smaller} than the absolute distance between \texttt{len(u)} and \texttt{len(v)}. Since we showed that the \texttt{len(u)} and \texttt{len(v)} are $\dout$-close in inequality \ref{ineq:dout-close}, therefore the outputs will still be $\dout$-close.
+    
+    Note that if \texttt{exact\_cast} fails and causes the try-catch statement in line \ref{code:try-catch} to catch and return \texttt{max\_value} for both \texttt{len(u)} and \texttt{len(v)}, then the output for both \texttt{u} and \texttt{v} is \texttt{get\_max\_consecutive\_int(TO)}, resulting in an absolute distance of 0 between the outputs -- the smallest possible absolute distance -- so the outputs for \texttt{u} and \texttt{v} must be $\dout$-close.
+    
+    \item (Both \texttt{exact\_cast(len(u),TO)} and \texttt{exact\_cast(len(v),TO)} succeed). Because \texttt{TO} implements \texttt{ExactIntCast(usize)}, we know \texttt{exact\_cast}s from \texttt{len(u)} to \texttt{TO} will be exact. Therefore, the returned values will be \texttt{len(u)} and \texttt{len(v)}, except the values will now be of type \texttt{TO}. Since we showed that the \texttt{len(u)} and \texttt{len(v)} are $\dout$-close in inequality \ref{ineq:dout-close}, therefore the \texttt{exact\_cast}ed lengths will also be $\dout$-close.
+\end{enumerate}
+
+Because the outputs will always be $\dout$-close for inputs that follow the conditions specified in part 2 of theorem \ref{thrm:domain-and-stability}, we see that the stability guarantee is proven.
+
+\end{proof}
+
+\end{document}
