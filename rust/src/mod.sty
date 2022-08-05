@@ -1,0 +1,90 @@
+\documentclass{article}
+\usepackage[top=1in, right=1in, left=1in, bottom=1.5in]{geometry}
+
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{xr}
+
+\usepackage{enumerate} 
+\usepackage{physics}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+
+% hyperref
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  linkbordercolor={0 0 1}
+}
+
+% minted (pseudocode)
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+
+% common commands
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{warning}{Warning}
+\providecommand{\cardinality}[1]{\lvert#1\rvert} 
+\providecommand{\abs}[1]{\lvert#1\rvert}
+
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+\newtheorem{observation}{Observation}
+\newtheorem{note}{Note}
+\newtheorem{hope}{Hope}
+\newtheorem{warning}{Warning}
+
+\newcommand{\vicki}[1]{{ {\color{olive}{(vicki)~#1}}}}
+\newcommand{\hanwen}[1]{{ {\color{purple}{(hanwen)~#1}}}}
+\newcommand{\zach}[1]{{ {\color{red}{(zach)~#1}}}}
+
+\newcommand{\MultiSet}{\mathrm{MultiSet}}
+\newcommand{\len}{\mathrm{len}}
+\newcommand{\din}{\texttt{d\_in}}
+\newcommand{\dout}{\texttt{d\_out}}
+\newcommand{\T}{\texttt{T} }
+\newcommand{\F}{\texttt{F} }
+\newcommand{\Relation}{\texttt{Relation}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\True}{\texttt{True}}
+\newcommand{\False}{\texttt{False}}
+\newcommand{\clamp}{\texttt{clamp}}
+\newcommand{\function}{\texttt{function}}
+\newcommand{\float}{\texttt{float }}
+\newcommand{\questionc}[1]{\textcolor{red}{\textbf{Question:} #1}}
