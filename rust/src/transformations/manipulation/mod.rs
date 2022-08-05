@@ -5,9 +5,8 @@ use ndarray::Array2;
 use num::One;
 use opendp_derive::bootstrap;
 
-
 use crate::metrics::{SymmetricDistance, IntDistance};
-use crate::domains::{AllDomain, VectorDomain, Array2Domain};
+use crate::domains::{AllDomain, VectorDomain, Array2Domain, RowAtom};
 use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
 use crate::error::*;
 use crate::traits::{CheckNull, DistanceConstant};
@@ -15,21 +14,20 @@ use std::convert::TryFrom;
 
 pub trait DatasetDomain: Domain {
     type RowDomain: Domain;
-    type Row;
     fn new(row_domain: Self::RowDomain) -> Self;
 }
 
 impl<D: Domain> DatasetDomain for VectorDomain<D> {
     type RowDomain = D;
-    type Row = D::Carrier;
     fn new(row_domain: Self::RowDomain) -> Self {
         VectorDomain::new(row_domain)
     }
 }
 
-impl<D: Domain> DatasetDomain for Array2Domain<D> {
+impl<D> DatasetDomain for Array2Domain<D>
+    where D: Domain<Carrier=Vec<D::Atom>> + RowAtom,
+          D::Atom: Clone {
     type RowDomain = D;
-    type Row = Vec<D::Carrier>;
     fn new(row_domain: Self::RowDomain) -> Self {
         Array2Domain::new(row_domain)
     }
@@ -38,27 +36,31 @@ impl<D: Domain> DatasetDomain for Array2Domain<D> {
 pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
     fn apply_rows(
         value: &Self::Carrier,
-        row_function: &impl Fn(&Self::Row) -> Fallible<DO::Row>,
+        row_function: &impl Fn(&<Self::RowDomain as Domain>::Carrier) -> Fallible<<DO::RowDomain as Domain>::Carrier>,
     ) -> Fallible<DO::Carrier>;
 }
 
 impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for VectorDomain<DIA> {
     fn apply_rows(
         value: &Self::Carrier,
-        row_function: &impl Fn(&Self::Row) -> Fallible<DOA::Carrier>,
+        row_function: &impl Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>,
     ) -> Fallible<Vec<DOA::Carrier>> {
         value.iter().map(row_function).collect()
     }
 }
 
-impl<DIA: Domain, DOA: Domain> RowByRowDomain<Array2Domain<DOA>> for Array2Domain<DIA>
+
+impl<DIR, DOR> RowByRowDomain<Array2Domain<DOR>> for Array2Domain<DIR>
 where
-    DIA::Carrier: Clone,
+    DIR: Domain<Carrier=Vec<DIR::Atom>> + RowAtom,
+    DOR: Domain<Carrier=Vec<DOR::Atom>> + RowAtom,
+    DIR::Atom: Clone,
+    DOR::Atom: Clone,
 {
     fn apply_rows(
         value: &Self::Carrier,
-        row_function: &impl Fn(&Self::Row) -> Fallible<Vec<DOA::Carrier>>,
-    ) -> Fallible<Array2<DOA::Carrier>> {
+        row_function: &impl Fn(&DIR::Carrier) -> Fallible<DOR::Carrier>,
+    ) -> Fallible<Array2<DOR::Atom>> {
         let shape =
             <[usize; 2]>::try_from(value.shape()).unwrap_assert("input is always of shape 2");
 
@@ -76,13 +78,15 @@ where
 }
 
 
-impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for Array2Domain<DIA>
+impl<DIR, DOA> RowByRowDomain<VectorDomain<DOA>> for Array2Domain<DIR>
 where
-    DIA::Carrier: Clone,
+    DIR: Domain<Carrier=Vec<DIR::Atom>> + RowAtom,
+    DOA: Domain,
+    DIR::Atom: Clone,
 {
     fn apply_rows(
         value: &Self::Carrier,
-        row_function: &impl Fn(&Self::Row) -> Fallible<DOA::Carrier>,
+        row_function: &impl Fn(&DIR::Carrier) -> Fallible<DOA::Carrier>,
     ) -> Fallible<Vec<DOA::Carrier>> {
         (value.rows())
             .into_iter()
@@ -95,14 +99,14 @@ where
 pub(crate) fn make_row_by_row<DI, DO, M>(
     input_row_domain: DI::RowDomain,
     output_row_domain: DO::RowDomain,
-    row_function: impl 'static + Fn(&DI::Row) -> DO::Row,
+    row_function: impl 'static + Fn(&<DI::RowDomain as Domain>::Carrier) -> <DO::RowDomain as Domain>::Carrier,
 ) -> Fallible<Transformation<DI, DO, M, M>>
 where
     DI: RowByRowDomain<DO>,
     DO: DatasetDomain,
     M: Metric<Distance=IntDistance>
 {
-    let row_function = move |arg: &DI::Row| Ok(row_function(arg));
+    let row_function = move |arg: &<DI::RowDomain as Domain>::Carrier| Ok(row_function(arg));
     Ok(Transformation::new(
         DI::new(input_row_domain),
         DO::new(output_row_domain),
@@ -117,7 +121,7 @@ where
 pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     input_row_domain: DI::RowDomain,
     output_row_domain: DO::RowDomain,
-    row_function: impl 'static + Fn(&DI::Row) -> Fallible<DO::Row>,
+    row_function: impl 'static + Fn(&<DI::RowDomain as Domain>::Carrier) -> Fallible<<DO::RowDomain as Domain>::Carrier>,
 ) -> Fallible<Transformation<DI, DO, M, M>>
 where
     DI: RowByRowDomain<DO>,
@@ -233,32 +237,4 @@ mod tests {
         assert!(is_equal.check(&1, &1)?);
         Ok(())
     }
-}
-
-
-pub fn make_bin_grid_array2(
-    lower_edges: Vec<f64>,
-    upper_edges: Vec<f64>,
-    bin_count: usize,
-) -> Fallible<
-    Transformation<
-        Array2Domain<AllDomain<f64>>,
-        Array2Domain<AllDomain<usize>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
-> {
-    use crate::traits::RoundCast;
-    
-    let bin_count = bin_count as f64;
-    make_row_by_row_fallible(
-        AllDomain::new(),
-        AllDomain::new(),
-        move |row: &Vec<f64>| {
-            row.iter()
-                .zip(lower_edges.iter().zip(upper_edges.iter()))
-                .map(|(v, (u, l))| usize::round_cast(((v - l) / (u - l) * bin_count).floor()))
-                .collect()
-        },
-    )
 }

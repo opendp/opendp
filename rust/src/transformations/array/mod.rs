@@ -1,20 +1,19 @@
-use ndarray::{Array1, Array2, ArrayD, Dimension};
 use super::{DataFrame, DataFrameDomain};
+use ndarray::{Array1, Array2, ArrayD, Dimension};
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    metrics::{SymmetricDistance, AgnosticMetric},
-    domains::{AllDomain, VectorDomain, Array2Domain, ArrayDDomain},
+    domains::{AllDomain, Array2Domain, ArrayDDomain, RowDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{Hashable, Primitive},
-    trans::{make_row_by_row_fallible, make_row_by_row, postprocess::make_postprocess},
+    metrics::{AgnosticMetric, SymmetricDistance},
+    traits::{Float, Hashable, Primitive, RoundCast},
+    transformations::{make_row_by_row, make_row_by_row_fallible, make_postprocess},
 };
 
 fn dataframe_to_array<K: Hashable, TOA: Primitive>(
     col_names: &Vec<K>,
     dataframe: &DataFrame<K>,
 ) -> Fallible<Array2<TOA>> {
-
     // collect dataframe into vector of vectors
     let vecs = col_names
         .iter()
@@ -31,7 +30,7 @@ fn dataframe_to_array<K: Hashable, TOA: Primitive>(
 
     // convert vector of vectors into array and transpose
     let arr = Array2::from_shape_vec((col_names.len(), nrows), flat)
-        .unwrap()
+        .map_err(|_| err!(FailedFunction, "all columns must have same number of rows"))?
         .reversed_axes();
 
     return Ok(arr);
@@ -42,14 +41,14 @@ pub fn make_select_array<K: Hashable, TOA: Primitive>(
 ) -> Fallible<
     Transformation<
         DataFrameDomain<K>,
-        Array2Domain<AllDomain<TOA>>,
+        Array2Domain<SizedDomain<RowDomain<TOA>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 > {
     Ok(Transformation::new(
         DataFrameDomain::new_all(),
-        Array2Domain::new_all(),
+        Array2Domain::new(SizedDomain::new(RowDomain::new(), col_names.len())),
         Function::new_fallible(move |arg: &DataFrame<K>| dataframe_to_array(&col_names, arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
@@ -57,92 +56,114 @@ pub fn make_select_array<K: Hashable, TOA: Primitive>(
     ))
 }
 
-pub fn make_bin_grid_array2(
-    lower_edges: Vec<f64>,
-    upper_edges: Vec<f64>,
+pub fn make_bin_grid_array2<T: Float>(
+    lower_edges: Vec<T>,
+    upper_edges: Vec<T>,
     bin_count: usize,
-) -> Fallible<Transformation<
-        Array2Domain<AllDomain<f64>>,
-        Array2Domain<AllDomain<usize>>,
+) -> Fallible<
+    Transformation<
+        Array2Domain<SizedDomain<RowDomain<T>>>,
+        Array2Domain<SizedDomain<RowDomain<usize>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
-> {
-    use crate::traits::RoundCast;
-
-    let bin_count = bin_count as f64;
+>
+where
+    usize: RoundCast<T>,
+{
+    let bin_count = T::exact_int_cast(bin_count)?;
     make_row_by_row_fallible(
-        AllDomain::new(),
-        AllDomain::new(),
-        move |row: &Vec<f64>| {
+        SizedDomain::new(RowDomain::new(), lower_edges.len()),
+        SizedDomain::new(RowDomain::new(), lower_edges.len()),
+        move |row: &Vec<T>| {
             row.iter()
                 .zip(lower_edges.iter().zip(upper_edges.iter()))
-                .map(|(v, (l, u))| usize::round_cast(((v - l) / (u - l) * bin_count).floor()))
+                .map(|(&v, (&l, &u))| usize::round_cast(((v - l) / (u - l) * bin_count).floor()))
                 .collect()
         },
     )
 }
 
-pub fn make_ravel_multi_index(category_lengths: Vec<usize>) -> Fallible<Transformation<
-    Array2Domain<AllDomain<usize>>, 
-    VectorDomain<AllDomain<usize>>, 
-    SymmetricDistance, 
-    SymmetricDistance
->> {
+pub fn make_ravel_multi_index(
+    category_lengths: Vec<usize>,
+) -> Fallible<
+    Transformation<
+        Array2Domain<SizedDomain<RowDomain<usize>>>,
+        VectorDomain<AllDomain<usize>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+> {
     let mut max_index = 1;
-    let mut offsets = category_lengths.iter().map(|len| {
-        let old_max_index = max_index;
-        max_index *= len;
-        old_max_index
-    }).collect::<Vec<usize>>();
+    let mut offsets = category_lengths
+        .iter()
+        .map(|len| {
+            let old_max_index = max_index;
+            max_index *= len;
+            old_max_index
+        })
+        .collect::<Vec<usize>>();
 
     offsets.reverse();
     let rev_offsets = Array1::from_vec(offsets);
 
     make_row_by_row(
+        SizedDomain::new(RowDomain::new(), category_lengths.len()),
         AllDomain::new(),
-        AllDomain::new(),
-        move |row: &Vec<usize>| (&rev_offsets).dot(&Array1::from_vec(row.clone())))
-}
-
-pub fn reshape(counts: Vec<usize>, category_lengths: Vec<usize>) -> Fallible<ArrayD<usize>> {
-    let reshaped = ArrayD::from_shape_vec(category_lengths, counts);
-    return reshaped.map_err(|e| err!(FailedFunction, "{:?}", e));
-}
-
-pub fn make_reshape(category_lengths: Vec<usize>) -> Fallible<Transformation<
-    VectorDomain<AllDomain<usize>>, 
-    ArrayDDomain<AllDomain<usize>>, 
-    AgnosticMetric, 
-    AgnosticMetric
->> {
-    make_postprocess(
-        VectorDomain::new_all(),
-        ArrayDDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<usize>| reshape(arg.clone(), category_lengths.clone()))
+        move |row: &Vec<usize>| Array1::from_vec(row.clone()).dot(&rev_offsets),
     )
 }
 
-pub fn make_repeat_categories<T: Primitive>(categories: Vec<Vec<T>>) -> Fallible<Transformation<
-    ArrayDDomain<AllDomain<usize>>, 
-    Array2Domain<AllDomain<T>>, 
-    AgnosticMetric, 
-    AgnosticMetric
->> {
+// pub fn reshape(counts: Vec<usize>, category_lengths: Vec<usize>) -> Fallible<ArrayD<usize>> {
+//     let reshaped = ArrayD::from_shape_vec(category_lengths, counts);
+//     return reshaped.map_err(|e| err!(FailedFunction, "{:?}", e));
+// }
 
-    let cat_shape = (categories.iter())
-        .map(Vec::len)
-        .collect::<Vec<_>>();
-    
+pub fn make_reshape(
+    category_lengths: Vec<usize>,
+) -> Fallible<
+    Transformation<
+        VectorDomain<AllDomain<usize>>,
+        ArrayDDomain<AllDomain<usize>>,
+        AgnosticMetric,
+        AgnosticMetric,
+    >,
+> {
+    make_postprocess(
+        VectorDomain::new_all(),
+        ArrayDDomain::new_all(),
+        Function::new_fallible(move |arg: &Vec<usize>| {
+            ArrayD::from_shape_vec(category_lengths.clone(), arg.clone())
+                .map_err(|e| err!(FailedFunction, "{:?}", e))
+        }),
+    )
+}
+
+pub fn make_repeat_categories<T: Primitive>(
+    categories: Vec<Vec<T>>,
+) -> Fallible<
+    Transformation<
+        ArrayDDomain<AllDomain<usize>>,
+        Array2Domain<SizedDomain<RowDomain<T>>>,
+        AgnosticMetric,
+        AgnosticMetric,
+    >,
+> {
+    let cat_shape = (categories.iter()).map(Vec::len).collect::<Vec<_>>();
+
     make_postprocess(
         ArrayDDomain::new_all(),
-        Array2Domain::new_all(),
+        Array2Domain::new(SizedDomain::new(RowDomain::new(), categories.len())),
         Function::new_fallible(move |counts: &ArrayD<usize>| {
             if counts.shape() != cat_shape {
-                return fallible!(FailedFunction, "counts must be the same shape as categories!")
+                return fallible!(
+                    FailedFunction,
+                    "counts must be the same shape as categories!"
+                );
             }
 
-            let data = counts.indexed_iter()
+            let data = counts
+                .indexed_iter()
                 .flat_map(|(index, &value)| {
                     let row = (categories.iter())
                         .zip(index.as_array_view())
@@ -155,14 +176,14 @@ pub fn make_repeat_categories<T: Primitive>(categories: Vec<Vec<T>>) -> Fallible
 
             Array2::from_shape_vec((counts.sum(), counts.ndim()), data)
                 .map_err(|_| err!(FailedFunction, "irregular shape"))
-        })
+        }),
     )
 }
 
 #[cfg(test)]
 mod test {
-    use ndarray::{arr2, Ix2};
     use crate::data::Column;
+    use ndarray::{arr2, Ix2};
 
     use super::*;
 
@@ -179,31 +200,19 @@ mod test {
 
         println!("{:?}", arr);
 
-        let expected = arr2(&
-            [[1., 4., 7.],
-            [2., 5., 8.],
-            [3., 6., 9.]]);
+        let expected = arr2(&[[1., 4., 7.], [2., 5., 8.], [3., 6., 9.]]);
         assert_eq!(arr, expected);
         Ok(())
     }
 
     #[test]
     fn test_make_bin_grid_array2() -> Fallible<()> {
-        let trans = make_bin_grid_array2(
-            vec![-1., -1.], 
-            vec![1., 1.], 
-            2)?;
-        let array_2 = arr2(&
-            [[0.1, 0.1],
-            [-0.5, -0.5], 
-            [0.5, -0.5]]);
+        let trans = make_bin_grid_array2(vec![-1., -1.], vec![1., 1.], 2)?;
+        let array_2 = arr2(&[[0.1, 0.1], [-0.5, -0.5], [0.5, -0.5]]);
         let arr: Array2<usize> = trans.invoke(&array_2).unwrap();
 
         println!("{:?}", arr);
-        let expected = arr2(&
-            [[1, 1],
-            [0, 0],
-            [1, 0]]);
+        let expected = arr2(&[[1, 1], [0, 0], [1, 0]]);
 
         assert_eq!(arr, expected);
         Ok(())
@@ -212,11 +221,7 @@ mod test {
     #[test]
     fn test_make_ravel_multi_index() -> Fallible<()> {
         let trans = make_ravel_multi_index(vec![3, 3])?;
-        let arr = arr2(&
-            [[0, 0],
-            [1, 1], 
-            [2, 2], 
-            [1, 2]]);
+        let arr = arr2(&[[0, 0], [1, 1], [2, 2], [1, 2]]);
         let raveled = trans.invoke(&arr).unwrap();
 
         println!("{:?}", raveled);
@@ -233,10 +238,7 @@ mod test {
         let reshaped = trans.invoke(&vec).unwrap();
 
         println!("{:?}", reshaped);
-        let expected = arr2(&
-            [[1, 1, 0],
-            [1, 0, 0],
-            [0, 1, 2]]);
+        let expected = arr2(&[[1, 1, 0], [1, 0, 0], [0, 1, 2]]);
 
         assert_eq!(reshaped.into_dimensionality::<Ix2>().unwrap(), expected);
         Ok(())
@@ -252,11 +254,7 @@ mod test {
         let synthetic = synth_trans.invoke(&reshaped).unwrap();
 
         println!("{:?}", synthetic);
-        let expected = arr2(&
-            [[-0.5, -0.5],
-            [-0.5, 0.5],
-            [0.5, 0.5],
-            [0.5, 0.5]]);
+        let expected = arr2(&[[-0.5, -0.5], [-0.5, 0.5], [0.5, 0.5], [0.5, 0.5]]);
 
         assert_eq!(synthetic, expected);
         Ok(())

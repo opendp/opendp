@@ -273,22 +273,28 @@ impl<D: Domain> Domain for VectorDomain<D> {
     }
 }
 
+
+// a trait to represent the atomic type of a row
+pub trait RowAtom {
+    type Atom;
+}
 /// A Domain that contains vectors of (homogeneous) values.
 #[derive(Clone, PartialEq)]
 pub struct Array2Domain<D: Domain> {
-    pub element_domain: D,
+    pub row_domain: D,
 }
+
 impl<D: Domain> Debug for Array2Domain<D> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Array2Domain({:?})", self.element_domain)
+        write!(f, "Array2Domain({:?})", self.row_domain)
     }
 }
 impl<D: Domain + Default> Default for Array2Domain<D> {
     fn default() -> Self { Self::new(D::default()) }
 }
 impl<D: Domain> Array2Domain<D> {
-    pub fn new(element_domain: D) -> Self {
-        Array2Domain { element_domain }
+    pub fn new(row_domain: D) -> Self {
+        Array2Domain { row_domain }
     }
 }
 impl<T: CheckNull> Array2Domain<AllDomain<T>> {
@@ -296,16 +302,66 @@ impl<T: CheckNull> Array2Domain<AllDomain<T>> {
         Self::new(AllDomain::<T>::new())
     }
 }
-impl<D: Domain> Domain for Array2Domain<D> {
-    type Carrier = ndarray::Array2<D::Carrier>;
+impl<D> Domain for Array2Domain<D> 
+    where D: Domain<Carrier=Vec<D::Atom>> + RowAtom,
+          D::Atom: Clone {
+    type Carrier = ndarray::Array2<D::Atom>;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        for e in val {
-            if !self.element_domain.member(e)? {return Ok(false)}
+        for row in val.rows().into_iter() {
+            if !self.row_domain.member(&row.to_vec())? {return Ok(false)}
         }
         Ok(true)
     }
 }
 
+impl<D> CollectionDomain for Array2Domain<D>
+    where D: Domain<Carrier=Vec<D::Atom>> + RowAtom,
+          D::Atom: Clone {
+    fn size(v: &Self::Carrier) -> usize {
+        v.len()
+    }
+}
+
+// the equivalent of AllDomain, but for rows
+pub struct RowDomain<T>(PhantomData::<T>);
+impl<T> Clone for RowDomain<T> {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+impl<T> PartialEq for RowDomain<T> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+impl<T> Domain for RowDomain<T> {
+    // because we have the RowAtom trait, this can be a vec, not a scalar
+    type Carrier = Vec<T>;
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+        Ok(true)
+    }
+}
+
+impl<T> Debug for RowDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "RowDomain({})", type_name!(T))
+    }
+}
+impl<T> Default for RowDomain<T> {
+    fn default() -> Self { Self::new() }
+}
+impl<T> RowDomain<T> {
+    pub fn new() -> Self {
+        RowDomain(PhantomData)
+    }
+}
+impl<T> RowAtom for RowDomain<T> {
+    type Atom = T;
+}
+
+impl<T> CollectionDomain for RowDomain<T> {
+    fn size(v: &Self::Carrier) -> usize {
+        v.len()
+    }
+}
 
 /// A Domain that contains vectors of (homogeneous) values.
 #[derive(Clone, PartialEq)]
@@ -390,6 +446,9 @@ impl<D: Domain> Domain for SizedDomain<D> where D::Carrier: CollectionSize {
         }
         self.inner_domain.member(val)
     }
+}
+impl<D: Domain + RowAtom> RowAtom for SizedDomain<D> {
+    type Atom = D::Atom;
 }
 
 /// # Proof Definition
