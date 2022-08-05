@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation, Measurement, Measure, PrivacyMap},
     domains::ProductDomain,
     error::{Fallible, ExplainUnwrap},
-    traits::TotalOrd,
+    traits::TotalOrd, metrics::ProductMetric,
 };
 
 #[cfg(feature = "ffi")]
@@ -14,7 +14,7 @@ mod ffi;
 /// * `transformations` - A list of transformations to apply, one to each element.
 pub fn make_partition_map_trans<DI, DO, MI, MO>(
     transformations: Vec<&Transformation<DI, DO, MI, MO>>,
-) -> Fallible<Transformation<ProductDomain<DI>, ProductDomain<DO>, MI, MO>>
+) -> Fallible<Transformation<ProductDomain<DI>, ProductDomain<DO>, ProductMetric<MI>, ProductMetric<MO>>>
 where
     MO::Distance: TotalOrd,
     DI: 'static + Domain,
@@ -64,8 +64,8 @@ where
                 .collect()
         }),
 
-        input_metric,
-        output_metric,
+        ProductMetric::new(input_metric),
+        ProductMetric::new(output_metric),
         StabilityMap::new_fallible(move |d_in: &MI::Distance| {
             maps.iter()
                 .map(|map| map.eval(d_in))
@@ -81,7 +81,7 @@ where
 /// * `measuerements` - A list of measuerements to apply, one to each element.
 pub fn make_partition_map_meas<DI, DO, MI, MO>(
     measurements: Vec<&Measurement<DI, DO, MI, MO>>,
-) -> Fallible<Measurement<ProductDomain<DI>, ProductDomain<DO>, MI, MO>>
+) -> Fallible<Measurement<ProductDomain<DI>, ProductDomain<DO>, ProductMetric<MI>, MO>>
 where
     MO::Distance: TotalOrd,
     DI: 'static + Domain,
@@ -130,7 +130,7 @@ where
                 .map(|(func, part)| func.eval(part))
                 .collect()
         }),
-        input_metric,
+        ProductMetric::new(input_metric),
         output_measure,
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             maps.iter()
