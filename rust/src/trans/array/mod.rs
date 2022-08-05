@@ -10,6 +10,9 @@ use crate::{
     trans::{make_row_by_row_fallible, make_row_by_row, postprocess::make_postprocess},
 };
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 fn dataframe_to_array<K: Hashable, TOA: Primitive>(
     col_names: &Vec<K>,
     dataframe: &DataFrame<K>,
