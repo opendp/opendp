@@ -182,7 +182,8 @@ impl Domain for AnyDomain {
 
 impl Debug for AnyDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "*{:?}", self.domain)
+        // write!(f, "*{:?}", self.domain)
+        self.domain.fmt(f)
     }
 }
 
@@ -260,8 +261,8 @@ impl Metric for AnyMetric {
 
 impl Debug for AnyMetric {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "*{:?}", self.metric)
-        // self.metric.fmt("*{:?}, f)
+        // write!(f, "*{:?}", self.metric)
+        self.metric.fmt(f)
     }
 }
 
