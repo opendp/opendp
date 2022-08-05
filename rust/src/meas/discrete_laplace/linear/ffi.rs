@@ -21,7 +21,6 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace_linear(
     D: *const c_char,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    #[cfg(feature = "use-mpfr")]
     fn monomorphize<T, QO>(
         scale: *const c_void,
         bounds: *const AnyObject,
