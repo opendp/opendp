@@ -1,13 +1,18 @@
 use opendp_derive::bootstrap;
+use num::Zero;
 
 use crate::{
     core::{FfiResult, Measurement, Transformation, PrivacyMap},
     ffi::{
-        any::{AnyObject, AnyTransformation, Downcast, AnyMeasurement, IntoAnyFunctionExt, AnyDomain, AnyMetric, AnyMeasure, IntoAnyStabilityMapExt},
+        any::{AnyObject, AnyTransformation, Downcast, AnyMeasurement, IntoAnyFunctionExt, AnyDomain, AnyMetric, IntoAnyStabilityMapExt, AnyMeasure},
         util::{AnyTransformationPtr, AnyMeasurementPtr},
-    }, error::Fallible, domains::ProductDomain,
-    metrics::ProductMetric
+    },
+    error::Fallible, 
+    traits::{TotalOrd, ExactIntCast, InfMul}, 
+    measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence, SmoothedMaxDivergence}, domains::ProductDomain, metrics::ProductMetric,
 };
+
+use super::ParallelCompositionMeasure;
 
 #[bootstrap(features("contrib"))]
 /// Construct the parallel execution of [`transformation0`, `transformation1`, ...]. Returns a Transformation.
@@ -53,6 +58,30 @@ fn make_partition_map_meas(
     super::make_partition_map_meas(measurements)
 }
 
+impl ParallelCompositionMeasure for AnyMeasure {
+    fn compose(&self, d_i: Vec<AnyObject>, partition_limit: usize) -> crate::error::Fallible<Self::Distance> {
+        fn monomorphize1<Q: 'static + Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul>(
+            self_: &AnyMeasure, d_i: Vec<AnyObject>, partition_limit: usize
+        ) -> Fallible<AnyObject> {
+
+            fn monomorphize2<M: 'static + ParallelCompositionMeasure>(
+                self_: &AnyMeasure, d_i: Vec<AnyObject>, partition_limit: usize
+            ) -> Fallible<AnyObject>
+                where M::Distance: Clone {
+                let d_i = d_i.into_iter()
+                    .map(|d_i| d_i.downcast::<M::Distance>())
+                    .collect::<Fallible<Vec<M::Distance>>>()?;
+                self_.downcast_ref::<M>()?.compose(d_i, partition_limit).map(AnyObject::new)
+            }
+            dispatch!(monomorphize2, [
+                (self_.type_, [MaxDivergence<Q>, SmoothedMaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
+            ], (self_, d_i, partition_limit))
+        }
+
+        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, d_i, partition_limit))
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn opendp_comb__make_partition_map_meas(
     measurements: *const AnyObject,
@@ -73,6 +102,6 @@ pub extern "C" fn opendp_comb__make_partition_map_meas(
         meas.function.into_any(),
         AnyMetric::new(meas.input_metric),
         meas.output_measure,
-        PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in))
+        PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in.downcast_ref()?))
     )).into()
 }

@@ -1,15 +1,15 @@
 use std::{convert::TryFrom, os::raw::c_char};
 
 use crate::{
-    core::{FfiResult, Function, IntoAnyTransformationFfiResultExt, Transformation, StabilityMap},
+    core::{FfiResult, Function, IntoAnyTransformationFfiResultExt, StabilityMap, Transformation},
     domains::ProductDomain,
     ffi::{
-        any::{AnyDomain, AnyObject, AnyTransformation, Downcast, AnyMetric},
-        util::{Type, c_bool, to_bool},
+        any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
+        util::{c_bool, to_bool, Type},
     },
+    metrics::{IntDistance, ProductMetric},
     traits::Hashable,
-    transformations::{make_partition_by, DataFrame}, 
-    metrics::{ProductMetric, IntDistance},
+    transformations::{make_partition_by, DataFrame},
 };
 
 #[no_mangle]
@@ -25,7 +25,7 @@ pub extern "C" fn opendp_trans__make_partition_by(
         identifier_column: *const AnyObject,
         partition_keys: *const AnyObject,
         keep_columns: *const AnyObject,
-        null_partition: bool
+        null_partition: bool,
     ) -> FfiResult<*mut AnyTransformation> {
         let identifier_column = try_!(try_as_ref!(identifier_column).downcast_ref::<TK>()).clone();
         let partition_keys = try_!(try_as_ref!(partition_keys).downcast_ref::<Vec<TV>>()).clone();
@@ -57,7 +57,10 @@ pub extern "C" fn opendp_trans__make_partition_by(
             }),
             trans.input_metric,
             ProductMetric::new(AnyMetric::new(trans.output_metric.inner_metric)),
-            StabilityMap::new_fallible(move |d_in: &IntDistance| stability_map.eval(d_in).map(AnyObject::new))
+            StabilityMap::new_fallible(move |d_in: &IntDistance| {
+                let (k, r) = stability_map.eval(d_in)?;
+                Ok((k.into_iter().map(AnyObject::new).collect(), r))
+            }),
         ))
         .into_any()
     }

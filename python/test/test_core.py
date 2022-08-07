@@ -7,7 +7,7 @@ enable_features('floating-point', 'contrib')
 def test_type_getters():
     from opendp.transformations import make_sized_bounded_mean
     transformation = make_sized_bounded_mean(size=9, bounds=(0., 10.), T=float)
-    assert transformation.input_distance_type == "u32"
+    assert transformation.input_distance_type == "usize"
     assert transformation.output_distance_type == "f64"
     assert transformation.input_carrier_type == "Vec<f64>"
 

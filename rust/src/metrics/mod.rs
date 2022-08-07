@@ -18,7 +18,7 @@ use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
 /// It is used as the associated [`Metric`]::Distance type for e.g. [`SymmetricDistance`], [`InsertDeleteDistance`], etc.
-pub type IntDistance = u32;
+pub type IntDistance = usize;
 
 
 /// The smallest number of additions or removals to make two datasets equivalent.
@@ -388,5 +388,5 @@ impl<M: Metric> Debug for ProductMetric<M> {
     }
 }
 impl<M: Metric> Metric for ProductMetric<M> {
-    type Distance = M::Distance;
+    type Distance = (Vec<M::Distance>, usize);
 }

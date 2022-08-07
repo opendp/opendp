@@ -1,8 +1,10 @@
+use num::Zero;
+
 use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation, Measurement, Measure, PrivacyMap},
     domains::ProductDomain,
-    error::{Fallible, ExplainUnwrap},
-    traits::TotalOrd, metrics::ProductMetric,
+    error::Fallible,
+    traits::{TotalOrd, InfMul, ExactIntCast}, metrics::ProductMetric, measures::{MaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence, SmoothedMaxDivergence, SMDCurve},
 };
 
 #[cfg(feature = "ffi")]
@@ -16,7 +18,6 @@ pub fn make_partition_map_trans<DI, DO, MI, MO>(
     transformations: Vec<&Transformation<DI, DO, MI, MO>>,
 ) -> Fallible<Transformation<ProductDomain<DI>, ProductDomain<DO>, ProductMetric<MI>, ProductMetric<MO>>>
 where
-    MO::Distance: TotalOrd,
     DI: 'static + Domain,
     DO: 'static + Domain,
     MI: 'static + Metric,
@@ -66,28 +67,82 @@ where
 
         ProductMetric::new(input_metric),
         ProductMetric::new(output_metric),
-        StabilityMap::new_fallible(move |d_in: &MI::Distance| {
-            maps.iter()
-                .map(|map| map.eval(d_in))
-                .reduce(|l, r| l?.total_max(r?))
-                .unwrap_assert("there is at least one transformation")
+        StabilityMap::new_fallible(move |(k, r): &(Vec<MI::Distance>, usize)| {
+            if k.len() != maps.len() {
+                return fallible!(RelationDebug, "must pass as many k_i as there are partitions");
+            }
+            let k = maps.iter()
+                .zip(k.into_iter())
+                .map(|(map, k_i)| map.eval(k_i))
+                .collect::<Fallible<Vec<_>>>()?;
+            Ok((k, *r))
         }),
     ))
+}
+
+pub trait ParallelCompositionMeasure: Measure {
+    fn compose(&self, d_i: Vec<Self::Distance>, partition_limit: usize) -> Fallible<Self::Distance>;
+}
+
+fn compose_scalars<Q>(mut d_mids: Vec<Q>, partition_limit: usize) -> Fallible<Q>
+    where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
+    let seed = d_mids.pop().unwrap_or_else(Q::zero);
+
+    let d_max = (d_mids.into_iter())
+        .try_fold(seed, |max, d_i| max.total_max(d_i))?;
+
+    Q::exact_int_cast(partition_limit)?.inf_mul(&d_max)
+}
+
+impl<Q> ParallelCompositionMeasure for MaxDivergence<Q>
+        where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
+    fn compose(&self, d_mids: Vec<Q>, partition_limit: usize) -> Fallible<Self::Distance> {
+        compose_scalars(d_mids, partition_limit)
+    }
+}
+
+impl<Q> ParallelCompositionMeasure for FixedSmoothedMaxDivergence<Q>
+        where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
+    fn compose(&self, d_mids: Vec<Self::Distance>, partition_limit: usize) -> Fallible<Self::Distance> {
+        let (epsilons, deltas) = d_mids.into_iter().unzip();
+        Ok((
+            compose_scalars(epsilons, partition_limit)?, 
+            compose_scalars(deltas, partition_limit)?
+        ))
+    }
+}
+
+impl<Q> ParallelCompositionMeasure for SmoothedMaxDivergence<Q>
+        where Q: 'static + Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
+    fn compose(&self, d_mids: Vec<Self::Distance>, partition_limit: usize) -> Fallible<Self::Distance> {
+        Ok(SMDCurve::new(move |delta| {
+            let epsilons = d_mids.iter()
+                .map(|curve_i| curve_i.epsilon(delta))
+                .collect::<Fallible<Vec<_>>>()?;
+            compose_scalars(epsilons, partition_limit)
+        }))
+    }
+}
+
+impl<Q> ParallelCompositionMeasure for ZeroConcentratedDivergence<Q>
+        where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
+    fn compose(&self, d_mids: Vec<Q>, partition_limit: usize) -> Fallible<Self::Distance> {
+        compose_scalars(d_mids, partition_limit)
+    }
 }
 
 /// Construct the parallel composition of [`measurement0`, `measurement1`, ...]. Returns a Measurement.
 /// 
 /// # Arguments
-/// * `measuerements` - A list of measuerements to apply, one to each element.
+/// * `measurements` - A list of measuerements to apply, one to each element.
 pub fn make_partition_map_meas<DI, DO, MI, MO>(
     measurements: Vec<&Measurement<DI, DO, MI, MO>>,
 ) -> Fallible<Measurement<ProductDomain<DI>, ProductDomain<DO>, ProductMetric<MI>, MO>>
 where
-    MO::Distance: TotalOrd,
     DI: 'static + Domain,
     DO: 'static + Domain,
     MI: 'static + Metric,
-    MO: 'static + Measure,
+    MO: 'static + ParallelCompositionMeasure,
 {
     if measurements.is_empty() {
         return fallible!(MakeMeasurement, "must pass at least one measurement");
@@ -131,12 +186,13 @@ where
                 .collect()
         }),
         ProductMetric::new(input_metric),
-        output_measure,
-        PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            maps.iter()
-                .map(|map| map.eval(d_in))
-                .reduce(|l, r| l?.total_max(r?))
-                .unwrap_assert("there is at least one measurement")
+        output_measure.clone(),
+        PrivacyMap::new_fallible(move |(k, r): &(Vec<MI::Distance>, usize)| {
+            let d_i = (maps.iter().zip(k))
+                .map(|(map, k_i)| map.eval(k_i))
+                .collect::<Fallible<Vec<_>>>()?;
+            
+            output_measure.compose(d_i, *r)
         }),
     ))
 }
