@@ -59,7 +59,7 @@ fn find_nearest_multiple_of_2k(x: Rational, k: i32) -> Integer {
     // exactly compute shift/2^k and break into fractional parts
     let (sx, sy) = (x >> k).into_numer_denom();
 
-    // min_i |i * 2^k - sx/sy|, the index of nearest multiple of 2^k
+    // argmin_i |i * 2^k - sx/sy|, the index of nearest multiple of 2^k
     sx.div_rem_round(sy).0
 }
 

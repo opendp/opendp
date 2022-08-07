@@ -56,7 +56,7 @@ pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurem
     ))
 }
 
-// proof should show that the return is always a valid (k, relaxation pairing)
+// proof should show that the return is always a valid (k, relaxation) pairing
 pub(crate) fn get_discretization_consts<T>(k: Option<i32>) -> Fallible<(i32, T)>
     where T: Float, i32: ExactIntCast<T::Bits> {
     // the discretization may only be as fine as the subnormal ulp
@@ -66,7 +66,7 @@ pub(crate) fn get_discretization_consts<T>(k: Option<i32>) -> Fallible<(i32, T)>
     let _2 = T::exact_int_cast(2)?;
 
     // input has granularity 2^{k_min} (subnormal float precision)
-    let input_gran = _2.inf_pow(&T::exact_int_cast(k_min)?)?;
+    let input_gran = _2.neg_inf_pow(&T::exact_int_cast(k_min)?)?;
     // discretization rounds to the nearest 2^k
     let output_gran = _2.inf_pow(&T::exact_int_cast(k)?)?;  
 
