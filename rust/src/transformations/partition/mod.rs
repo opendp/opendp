@@ -6,7 +6,7 @@ use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::ProductDomain,
     error::Fallible,
-    metrics::{SymmetricDistance, ProductMetric},
+    metrics::{SymmetricDistance, ProductMetric, IntDistance},
     traits::Hashable,
 };
 
@@ -104,6 +104,6 @@ pub fn make_partition_by<TK: Hashable, TV: Hashable>(
         }),
         SymmetricDistance::default(),
         ProductMetric::new(SymmetricDistance::default()),
-        StabilityMap::new_from_constant(1),
+        StabilityMap::new(move |d_in: &IntDistance| (vec![*d_in; output_partitions], *d_in.min(&output_partitions))),
     ))
 }

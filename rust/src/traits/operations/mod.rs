@@ -278,11 +278,19 @@ fn min_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) 
 
 impl<T1: TotalOrd, T2: TotalOrd> TotalOrd for (T1, T2) {
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
-        let cmp = self.0.total_cmp(&other.0)?;
-        if Ordering::Equal == cmp {
-            self.1.total_cmp(&other.1)
-        } else {
-            Ok(cmp)
+        let cmp0 = self.0.total_cmp(&other.0)?;
+        let cmp1 = self.1.total_cmp(&other.1)?;
+        use Ordering::*;
+        match (cmp0, cmp1) {
+            (Less, Less) => Ok(Less),
+            (Less, Equal) => Ok(Less),
+            (Less, Greater) => fallible!(FailedFunction, "arguments are not totally ordered"),
+            (Equal, Less) => Ok(Less),
+            (Equal, Equal) => Ok(Equal),
+            (Equal, Greater) => Ok(Greater),
+            (Greater, Less) => fallible!(FailedFunction, "arguments are not totally ordered"),
+            (Greater, Equal) => Ok(Greater),
+            (Greater, Greater) => Ok(Greater)
         }
     }
 }

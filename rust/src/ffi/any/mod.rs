@@ -16,6 +16,8 @@ use crate::error::*;
 use super::glue::Glue;
 use super::util::Type;
 
+mod object;
+
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
     fn downcast<T: 'static>(self) -> Fallible<T>;
