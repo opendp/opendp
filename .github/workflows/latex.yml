@@ -33,12 +33,14 @@ jobs:
       
   latex-build:
     needs: [pre-latex-build]
-    if: ${{ needs.pre-latex-build.outputs.tex }} != " "
+    if: ${{ needs.pre-latex-build.outputs.tex }} != "false"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - run: echo ${{ needs.pre-latex-build.outputs.tex }}
+      
       - name: Compile LaTeX documents
         uses: xu-cheng/latex-action@v2
         with:
