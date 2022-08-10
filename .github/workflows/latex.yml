@@ -33,7 +33,7 @@ jobs:
       
   latex-build:
     needs: [pre-latex-build]
-    if: ${{ needs.pre-latex-build.outputs.tex }} != null
+    if: ${{ needs.pre-latex-build.outputs.tex }} != " "
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
