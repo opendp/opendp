@@ -4,7 +4,7 @@ on:
   pull_request:
 
 jobs:
-  latex-build:
+  pre-latex-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,6 +21,17 @@ jobs:
           tex="${tex//$'\n'/'%0A'}"
           tex="${tex//$'\r'/'%0D'}"
           echo "::set-output name=tex::$tex"
+    outputs:
+     tex: ${{ steps.diffs.outputs.tex }}
+
+      
+  latex-build:
+    needs: [pre-latex-build, "${{ needs.pre-latex-build.outputs.tex }}"]
+    if: needs.pre-latex-build.outputs.tex != ""
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Compile LaTeX documents
         uses: xu-cheng/latex-action@v2
