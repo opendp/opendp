@@ -22,25 +22,18 @@ jobs:
           tex="${tex//$'\r'/'%0D'}"
           echo "::set-output name=tex::$tex"
 
-
-          echo "tex!"
-          echo $tex
-          echo "end tex!"
-          
     outputs:
      tex: ${{ steps.diffs.outputs.tex }}
 
       
   latex-build:
     needs: [pre-latex-build]
-    if: ${{ needs.pre-latex-build.outputs.tex }} != "false"
+    if: ${{ needs.pre-latex-build.outputs.tex != "" }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - run: echo ${{ needs.pre-latex-build.outputs.tex }}
-      
       - name: Compile LaTeX documents
         uses: xu-cheng/latex-action@v2
         with:
