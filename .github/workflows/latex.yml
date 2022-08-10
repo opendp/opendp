@@ -21,7 +21,6 @@ jobs:
           tex="${tex//$'\n'/'%0A'}"
           tex="${tex//$'\r'/'%0D'}"
           echo "::set-output name=tex::$tex"
-          echo $tex
           
     outputs:
      tex: ${{ steps.diffs.outputs.tex }}
