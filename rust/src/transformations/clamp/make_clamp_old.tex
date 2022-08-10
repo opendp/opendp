@@ -1,0 +1,74 @@
+\documentclass{article}
+\input{../../mod.sty}
+
+\title{Old proof for the stability guarantee of \texttt{fn make\_clamp}}
+\author{S\'ilvia Casacuberta}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Salil suggested introducing the definition of row transform and adding a general lemma for its stability guarantee, as shown in Section 3.3 in \href{https://www.overleaf.com/project/60d214e390b337703d200982}{``List of definitions used in the proofs"}. However, we keep the longer old proof (case-by-case) for completeness, and in case any issues arise when revising the definition and theorems relating to row transforms
+
+\begin{proof}
+\smallskip
+\textbf{(Stability guarantee).} Throughout the stability guarantee proof, we can assume that $\function(v)$ and $\function(w)$ are in the correct output domain, by the \textit{appropriate output domain property} shown above. 
+
+Since by assumption $\Map(\din) \leq \dout$, by the \texttt{make\_clamp} stability map, we have that $\din \leq \dout$. 
+Moreover, $v, w$ are assumed to be $\din$-close. By the definition of the symmetric difference metric, this is equivalent to stating that $d_{Sym}(v, w) = |\MultiSet(v) \Delta \MultiSet(w)| \leq \din$.
+
+Let $\mathcal{X}$ be the domain of all elements of type \texttt{T}. By applying the histogram notation,\footnote{Note that there is a bijection between multisets and histograms, which is why the proof can be carried out with either notion. For further details, please consult \url{https://www.overleaf.com/project/60d214e390b337703d200982}.}  it follows that
+\[
+d_{Sym}(v, w) = \lVert h_{v} - h_{w}\rVert_1 = \sum_{z \in \mathcal{X}} |h_v(z) - h_w(z)| \leq \din \leq \dout.
+\]
+
+We now consider $\MultiSet(\function(v))$ and $\MultiSet(\function(w))$.
+For each element $z \in \MultiSet(v) \cup \MultiSet(w)$, where $z$ has type \texttt{T}, if $z \in \MultiSet(v) \Delta \MultiSet(w)$, we will assume wlog that $z \in \MultiSet(v) \setminus \MultiSet(w)$. We consider the following cases:
+
+\begin{enumerate}
+    \item $z >$ \texttt{U} or $z <$ \texttt{L}: then, in the former case, $\clamp(z) =$ \texttt{U}. First consider the case when $z \in \MultiSet(v) \cup \MultiSet(w)$ with the same multiplicity in both multisets. Then, $|h_{\function(v)}(z) - h_{\function(w)}(z)| = 0$ because we have both $h_{\function(v)}(z) = 0$ and $h_{\function(w)}(z) = 0$. Thus the sum
+    \[
+    \sum_{z \in \mathcal{X}} |h_{\function(v)}(z) - h_{\function(w)}(z)|
+    \]
+    remains invariant, because the quantity $|h_{v}(z) - h_{w}(z)|$ is added to $|h_{\function(v)}(\texttt{U}) - h_{\function(w)}(\texttt{U})|$, given that $\clamp(z) = \texttt{U}$. 
+    
+    Suppose $z$ has multiplicity $k_v \geq 0$ in $\MultiSet(v)$ and multiplicity $k_w \geq 0$ in $\MultiSet(w)$, where $k_v \neq k_w$. After considering $z$, the value $h_{\function(v)}(\texttt{U})$ becomes $h_{\function(v)}(\texttt{U}) + k_v$, and $h_{\function(w)}(\texttt{U})$ becomes $h_{\function(w)}(\texttt{U}) + k_w$. Hence the quantity $|h_{\function(v)}(\texttt{U}) - h_{\function(w)}(\texttt{U})|$ increases by at most $|h_v(z) - h_w(z)|$, since, by the triangle inequality,
+    \begin{align*}
+         & |(h_{\function(v)}(\texttt{U}) + k_v) - (h_{\function(w)}(\texttt{U}) + k_w)| \leq
+    \\[0.2cm]
+         & \leq |h_{\function(v)}(\texttt{U}) - h_{\function(w)}(\texttt{U})| + |k_v - k_w| =
+    \\[0.2cm]
+        & = |h_{\function(v)}(\texttt{U}) - h_{\function(w)}(\texttt{U})| + |h_v(z) - h_w(z)|.
+    \end{align*}
+    The same argument applies whenever $z < \texttt{L}$.\footnote{The first subcase discussed here, i.e., when $k_v = k_w$, is also proven by the triangle inequality expression above, but it seemed clean to separate the case where the total sum remains invariant.}
+    
+    \item $z \in \texttt{(L, U)}$: then, $\clamp(z) = z$. Since $h_v(z) = h_{\function(v)}(z)$ and $h_v(w) = h_{\function(w)}(z)$, it follows that $|h_v(z) - h_w(z)| = |h_{\function(v)}(z) - h_{\function(w)}(z)|$. Hence the histogram count, i.e., the quantity
+     \[
+        \sum_{z \in \mathcal{X}} |h_{\function(v)}(z) - h_{\function(w)}(z)|,
+    \]
+    remains invariant.
+    
+    \item $z = \texttt{U}$ or $z = \texttt{L}$: in the former case, $\clamp(z) = \texttt{U}$. If $z \in \MultiSet(v) \cup \MultiSet(w)$ with the same multiplicity in both multisets, then the histogram count remains invariant under the addition of element $z$. Otherwise, if $z \in \MultiSet(v) \setminus \MultiSet(w)$, or if $z$ is in their union but with different multiplicity, then element $z$ can increase the quantity $|h_{\function(v)}(\texttt{U}) - h_{\function(w)}(\texttt{U})|$ by at most $|h_v(z)-h_w(z)|$, following the same reasoning with the triangle inequality as in case~2.
+    
+    The same argument applies whenever $z = \texttt{L}$.
+\end{enumerate}
+
+By aggregating the three cases above, we conclude that
+\[
+\sum_{z \in \mathcal{X}} |h_{\function(v)}(z) - h_{\function(w)}(z)| \leq \sum_{z \in \mathcal{X}} |h_v(z) - h_w(z)|.
+\]
+By the initial assumptions, we recall that $\din \leq \dout$, and that $v, w$ are $\din$-close. Then,
+\[
+\sum_{z \in \mathcal{X}} |h_{\function(v)}(z) - h_{\function(w)}(z)| \leq \sum_{z \in \mathcal{X}} |h_v(z) - h_w(z)| \leq \din \leq \dout.
+\]
+Therefore, 
+\[
+|\MultiSet(\function(v)) \Delta \MultiSet(\function(w))| \leq \dout,
+\]
+as we wanted to show.
+\end{proof}
+
+\end{document}
