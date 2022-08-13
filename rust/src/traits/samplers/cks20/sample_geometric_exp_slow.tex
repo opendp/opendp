@@ -1,0 +1,51 @@
+\documentclass{article}
+\input{../../../mod.sty}
+
+\title{\texttt{fn sample\_geometric\_exp\_slow}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+From \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
+
+\section{Pseudocode}
+\subsubsection*{Precondition}
+$\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
+
+\subsubsection*{Implementation}        
+\begin{lstlisting}[language=Python]
+def sample_geometric_exp_slow(x) -> int:
+    k = 0
+    while True:
+        if sample_bernoulli_exp(x):
+            k += 1
+        else:
+            return k
+\end{lstlisting}
+
+\subsubsection*{Postcondition}
+\texttt{sample\_geometric\_exp\_slow} returns an integer sample from $Geometric(1 - exp(-x))$, or an error propagated from \texttt{sample\_bernoulli\_exp}.
+
+\section{Proof}
+Let $r$ be the return value of \texttt{sample\_geometric\_exp\_slow(x)}, assuming the preconditions are met, and the function does not return an error.
+
+\begin{theorem}
+$r$ is a realization of $R \sim Geometric(1 - exp(-x))$ \cite{CKS20}.
+\end{theorem}
+
+\begin{proof}
+
+Let $B_i \sim Bernoulli(exp(x))$ be the sequence of booleans returned from \texttt{sample\_bernoulli\_exp}.
+
+\begin{align*}
+    P[R = k] &= P[B_1 = B_2 = ... = B_k = \bot \land B_{k + 1} = \top] \\
+    &= P[B_{k + 1} = \top] \prod_{i=1}^{k} P[B_i = \bot] && \text{All $B_i$ are independent.} \\
+    &= exp(-x) (1 - exp(-x))^{k}
+\end{align*}
+\end{proof}
+
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+\end{document}
