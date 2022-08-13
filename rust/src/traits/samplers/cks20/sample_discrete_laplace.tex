@@ -1,0 +1,86 @@
+\documentclass{article}
+\input{../../../mod.sty}
+
+\title{\texttt{fn sample\_discrete\_laplace}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+From \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
+
+\section{Pseudocode}
+\subsubsection*{Precondition}
+$\texttt{scale} \in \mathbb{Q} \land \texttt{scale} > 0$
+
+\subsubsection*{Implementation}        
+\begin{lstlisting}[language=Python]
+def sample_discrete_laplace(scale) -> int:
+    if (scale == 0):
+        return 0
+        
+    inv_scale = recip(scale)
+    
+    while True:
+        sign = sample_standard_bernoulli()
+        magnitude = sample_geometric_exp_fast(inv_scale)
+        
+        if sign or magnitude != 0:
+            if sign:
+                return -magnitude
+            else:
+                return magnitude
+\end{lstlisting}
+
+\subsubsection*{Postcondition}
+\texttt{sample\_discrete\_laplace} returns an integer sample from $\mathcal{L}_\mathbb{Z}(0, scale)$, or an error propagated from \texttt{sample\_geometric\_exp\_fast} or \texttt{sample\_standard\_bernoulli}.
+
+\section{Proof}
+
+First, define the target distribution.
+
+\begin{definition}
+    (Discrete Laplace). Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$. The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$. It is a probability distribution supported on the integers and defined by \cite{BV17}
+\begin{equation*}
+    \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s)
+\end{equation*}
+\end{definition}
+
+% We must show that the return value of \texttt{sample\_discrete\_laplace}, denoted $y$, conditioned on not returning an error, is a sample from $\mathcal{L}_\mathbb{Z}(0, scale)$.
+
+\begin{lemma}
+\label{P_B_Y_ne_T_0}
+Let $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$ for some $s > 0$. Then $P[(B, Y) \neq (\top, 0)] = \frac{1}{2} (e^{-1/s} + 1)$\cite{CKS20}.
+\end{lemma}
+
+\begin{proof}
+\begin{align*}
+    P[(B, Y) \neq (\top, 0)] &= P[B = \top, Y > 0] + P[B = \bot] && \text{by LOTP} \\
+    &= P[B = \top] P[Y > 0] + P[B = \bot] && \text{by independence of B, Y} \\
+    &= \frac{1}{2} e^{-1/s} + \frac{1}{2} \\
+    &= \frac{1}{2} (e^{-1/s} + 1)
+\end{align*}
+\end{proof}
+
+\begin{theorem}
+\label{P_Lx_BY_ne_T0}
+Given random variables $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$, define $X|_{B=\top} = Y$, and $X|_{B=\bot} = -Y$. If $(B, Y) \neq (\top, 0)$, then $X \sim \mathcal{L}_\mathbb{Z}(0, scale)$. That is, $P[X = x | (B, Y) \neq (\top, 0)] = \frac{1 - e^{-1/\sigma}}{1 + e^{-1/\sigma}} e^{-|x|/\sigma}$ for any $x \in \mathbb{Z}$\cite{CKS20}.
+\end{theorem}
+
+\begin{proof}
+\begin{align*}
+P[X = x | (B, Y) \neq (\top, 0)] &= \frac{P[X = x, (B, Y) \neq (\top, 0)]}{P[(B, Y) \neq (\top, 0)]} \\
+    &= \frac{P[X = |x|, B = \mathbb{I}[x < 0]]}{P[(B, Y) \neq (\top, 0)]} && \text{since x = }\pm y \\
+    &= \frac{P[X = |x|] P[B = \mathbb{I}[x < 0]]}{P[(B, Y) \neq (\top, 0)]} && \text{by independence of B, Y} \\
+    &= \frac{P[X = |x|] \frac{1}{2}}{\frac{1}{2} (e^{-1/s} + 1)} && \text{by } \ref{P_B_Y_ne_T_0} \\
+    &= \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-|x|/s} \\
+\end{align*}
+\end{proof}
+
+Since \texttt{sign} is a realization of $B$, \texttt{magnitude} is a realization of $Y \sim Geometric(1 - e^{-1/scale})$, and the return is conditioned on $(B, Y) \neq (\top, 0)$ and not returning an error, then by \ref{P_Lx_BY_ne_T0} the function's return value is a realization of $\mathcal{L}_\mathbb{Z}(0, scale)$.
+
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}
