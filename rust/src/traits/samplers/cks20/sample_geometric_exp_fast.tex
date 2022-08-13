@@ -1,0 +1,104 @@
+\documentclass{article}
+\input{../../../mod.sty}
+
+\title{\texttt{fn sample\_geometric\_exp\_fast}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+From \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
+
+\section{Pseudocode}
+\subsubsection*{Precondition}
+$\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
+
+\subsubsection*{Implementation}        
+\begin{lstlisting}[language=Python]
+def sample_geometric_exp_fast(x) -> int:
+    if x == 0:
+        return 0
+    
+    s, t = into_numer_denom(x)
+    
+    while True:
+        u = sample_uniform_int_below(t)
+        d = sample_bernoulli_exp(Rational(u, t))
+        if d:
+            break
+        
+    v = sample_geometric_exp_slow(1)
+    z = u + t * v
+    return z // s
+\end{lstlisting}
+
+\subsubsection*{Postcondition}
+$\texttt{sample\_geometric\_exp\_fast}$ returns an integer sample from $Geometric(1 - exp(-x))$, or an error propagated from $\texttt{sample\_uniform\_int\_below}$ or $\texttt{sample\_geometric\_exp\_slow}$.
+
+\section{Proof}
+Since $x$ is a rational, let $x = s/t$. 
+
+\begin{enumerate}
+    \item Let $u$ be a realization of a random variable $U \sim Uniform(0, t)$.
+    \item Let $d$ be a realization of a random variable $D \sim Bernoulli(exp(-u/t))$
+    \item Let $v$ be a realization of a random variable $V \sim Geometric(1 - exp(-1))$
+\end{enumerate}
+
+\begin{lemma}
+\label{geom_1_t}
+Conditioned on $d = \top$, if $z = u + t * v$, then $z$ is a realization of a random variable $Z \sim Geometric(1 - exp(-1/t))$. Equivalently, $P[Z=z | D=1] = (1 - e^{-(1/s)}) e^{-(z/s)}$ \cite{CKS20}.
+\end{lemma}
+
+\begin{proof}
+For any z, define $u_z := z \ mod \ t$ and $v_z := \lfloor z/t \rfloor$, so that $z = u_z + t \ v_z$. 
+
+\begin{align*}
+    P[Z=z | D=\top] &= P[U = u_z, V = v_z | D = \top] \\
+    &= P[U = u_z | D = \top] P[V = v_z] \\
+    &= \frac{P[U = u_z]}{P[D=\top]} P[D=\top | U = u_z] * (1 - e^{-1}) e^{-v_z} \\
+    &= \frac{1/t}{1/t \sum_{k=0}^{t-1}e^{-k/t}} e^{-u_z/t} * (1 - e^{-1}) e^{-v_z} \\
+    &= (1 - e^{-1/t}) e^{-u_z/t + v_z} \\
+    &= (1 - e^{-1/t}) e^{-x/t}
+\end{align*}
+\end{proof}
+
+
+
+\begin{lemma}
+\label{divide_geometric}
+Fix $p \in (0, 1]$. Let G be a $Geometric(1 - p)$ random variable, and $n \geq 1$ be an integer. Then $\lfloor G / n \rfloor$ is a $Geometric(1 - q)$ random variable with $q = p^n$ \cite{CKS20}.
+\end{lemma}
+
+\begin{proof}
+\begin{align*}
+    P[\lfloor G/n \rfloor = k] &= P[nk < G < (k + 1)n] \\
+    &= \sum_{l=kn}^{(k+1)n - 1} (1 - p)p^l \\
+    &= (1 - p^n)p^{nk} \\
+    &= (1 - q)q^k
+\end{align*}
+\end{proof}
+
+\begin{theorem} 
+\label{geom_s_t}
+Given any $s,t \in \mathbb{Z}_+$ and $Z \sim Geometric(1-exp(-1/t))$, 
+define $Y = \lfloor Z / s \rfloor$.
+Then $Y \sim Geometric(1 - exp(-s/t))$\cite{CKS20}.
+\end{theorem}
+
+\begin{proof}
+\begin{align*}
+    P[Y = y | D = \top] &= P[\lfloor Z/s \rfloor = y | D = \top] \\
+    &= (1 - p^s) p^{sk} && \text{by } \ref{divide_geometric} \\
+    &= (1 - (e^{-1/t})^s) (e^{-1/t})^{sk} \\
+    &= (1 - e^{-s/t}) (e^{-s/t})^k
+\end{align*}
+\end{proof}
+
+
+By \ref{geom_1_t}, $\mathtt{z}$ is a realization of $Z \sim Geometric(1 - exp(-1/t)$.
+Let $y$ be the return value of \texttt{sample\_geometric\_exp\_fast(x)}, assuming the preconditions are met, and the function does not return an error.
+Since $z$ is a realization of $Z \sim Geometric(1 - exp(-1/t))$, then by \ref{geom_s_t}, $y \sim Geometric(exp(-s/t))$.
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+\end{document}
