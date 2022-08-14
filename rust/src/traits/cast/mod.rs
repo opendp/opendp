@@ -325,7 +325,7 @@ macro_rules! impl_round_cast_self_string_bool {
             }
         }
         impl RoundCast<$T> for bool {
-            fn round_cast(v: $T) -> Fallible<Self> {Ok(v.is_zero())}
+            fn round_cast(v: $T) -> Fallible<Self> {Ok(!v.is_zero())}
         }
         impl RoundCast<String> for $T {
             fn round_cast(v: String) -> Fallible<Self> {

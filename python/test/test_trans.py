@@ -299,3 +299,28 @@ def test_lipschitz_mul_float():
 
     print(trans([3.] * 10))
     print(trans.map(2))
+
+
+def test_df_cast_default():
+    from opendp.trans import make_split_dataframe, make_df_cast_default, make_select_column
+
+    query = (
+        make_split_dataframe(separator=",", col_names=["23", "17"]) >>
+        make_df_cast_default(column_name="23", TIA=str, TOA=int) >>
+        make_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
+        make_select_column(key="23", TOA=bool)
+    )
+    assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, True, True, True]
+    assert query.check(1, 1)
+
+
+def test_df_is_equal():
+    from opendp.trans import make_split_dataframe, make_df_is_equal, make_select_column
+
+    query = (
+        make_split_dataframe(separator=",", col_names=["23", "17"]) >>
+        make_df_is_equal(column_name="17", value="2.") >>
+        make_select_column(key="17", TOA=bool)
+    )
+    assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
+    assert query.check(1, 1)
