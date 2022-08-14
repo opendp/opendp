@@ -4,7 +4,7 @@ use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation, Measurement, Measure, PrivacyMap},
     domains::ProductDomain,
     error::{Fallible, ExplainUnwrap},
-    traits::{TotalOrd, InfMul, ExactIntCast}, metrics::ProductMetric, measures::{MaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence, SmoothedMaxDivergence, SMDCurve},
+    traits::{TotalOrd, InfMul, ExactIntCast}, metrics::{ProductMetric, IntDistance}, measures::{MaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence, SmoothedMaxDivergence, SMDCurve},
 };
 
 #[cfg(feature = "ffi")]
@@ -68,7 +68,7 @@ where
 
         ProductMetric::new(input_metric),
         ProductMetric::new(output_metric),
-        StabilityMap::new_fallible(move |(k, r): &(MI::Distance, usize)| {
+        StabilityMap::new_fallible(move |(k, r): &(MI::Distance, IntDistance)| {
             let k = maps.iter()
                 .map(|map| map.eval(k))
                 .reduce(|l, r| l?.total_max(r?))
@@ -79,11 +79,11 @@ where
 }
 
 pub trait ParallelCompositionMeasure: Measure {
-    fn compose(&self, d_i: Vec<Self::Distance>, partition_limit: usize) -> Fallible<Self::Distance>;
+    fn compose(&self, d_i: Vec<Self::Distance>, partition_limit: IntDistance) -> Fallible<Self::Distance>;
 }
 
-fn compose_scalars<Q>(mut d_mids: Vec<Q>, partition_limit: usize) -> Fallible<Q>
-    where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
+fn compose_scalars<Q>(mut d_mids: Vec<Q>, partition_limit: IntDistance) -> Fallible<Q>
+    where Q: Zero + Clone + TotalOrd + ExactIntCast<IntDistance> + InfMul {
     let seed = d_mids.pop().unwrap_or_else(Q::zero);
 
     let d_max = (d_mids.into_iter())
@@ -93,15 +93,15 @@ fn compose_scalars<Q>(mut d_mids: Vec<Q>, partition_limit: usize) -> Fallible<Q>
 }
 
 impl<Q> ParallelCompositionMeasure for MaxDivergence<Q>
-        where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
-    fn compose(&self, d_mids: Vec<Q>, partition_limit: usize) -> Fallible<Self::Distance> {
+        where Q: Zero + Clone + TotalOrd + ExactIntCast<IntDistance> + InfMul {
+    fn compose(&self, d_mids: Vec<Q>, partition_limit: IntDistance) -> Fallible<Self::Distance> {
         compose_scalars(d_mids, partition_limit)
     }
 }
 
 impl<Q> ParallelCompositionMeasure for FixedSmoothedMaxDivergence<Q>
-        where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
-    fn compose(&self, d_mids: Vec<Self::Distance>, partition_limit: usize) -> Fallible<Self::Distance> {
+        where Q: Zero + Clone + TotalOrd + ExactIntCast<IntDistance> + InfMul {
+    fn compose(&self, d_mids: Vec<Self::Distance>, partition_limit: IntDistance) -> Fallible<Self::Distance> {
         let (epsilons, deltas) = d_mids.into_iter().unzip();
         Ok((
             compose_scalars(epsilons, partition_limit)?, 
@@ -111,8 +111,8 @@ impl<Q> ParallelCompositionMeasure for FixedSmoothedMaxDivergence<Q>
 }
 
 impl<Q> ParallelCompositionMeasure for SmoothedMaxDivergence<Q>
-        where Q: 'static + Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
-    fn compose(&self, d_mids: Vec<Self::Distance>, partition_limit: usize) -> Fallible<Self::Distance> {
+        where Q: 'static + Zero + Clone + TotalOrd + ExactIntCast<IntDistance> + InfMul {
+    fn compose(&self, d_mids: Vec<Self::Distance>, partition_limit: IntDistance) -> Fallible<Self::Distance> {
         Ok(SMDCurve::new(move |delta| {
             let epsilons = d_mids.iter()
                 .map(|curve_i| curve_i.epsilon(delta))
@@ -123,8 +123,8 @@ impl<Q> ParallelCompositionMeasure for SmoothedMaxDivergence<Q>
 }
 
 impl<Q> ParallelCompositionMeasure for ZeroConcentratedDivergence<Q>
-        where Q: Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul {
-    fn compose(&self, d_mids: Vec<Q>, partition_limit: usize) -> Fallible<Self::Distance> {
+        where Q: Zero + Clone + TotalOrd + ExactIntCast<IntDistance> + InfMul {
+    fn compose(&self, d_mids: Vec<Q>, partition_limit: IntDistance) -> Fallible<Self::Distance> {
         compose_scalars(d_mids, partition_limit)
     }
 }
@@ -185,7 +185,7 @@ where
         }),
         ProductMetric::new(input_metric),
         output_measure.clone(),
-        PrivacyMap::new_fallible(move |(k, r): &(MI::Distance, usize)| {
+        PrivacyMap::new_fallible(move |(k, r): &(MI::Distance, IntDistance)| {
             let d_i = (maps.iter())
                 .map(|map| map.eval(k))
                 .collect::<Fallible<Vec<_>>>()?;

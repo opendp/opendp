@@ -9,7 +9,7 @@ use crate::{
     },
     error::Fallible, 
     traits::{TotalOrd, ExactIntCast, InfMul}, 
-    measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence, SmoothedMaxDivergence}, domains::ProductDomain, metrics::ProductMetric,
+    measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence, SmoothedMaxDivergence}, domains::ProductDomain, metrics::{ProductMetric, IntDistance},
 };
 
 use super::ParallelCompositionMeasure;
@@ -59,13 +59,13 @@ fn make_partition_map_meas(
 }
 
 impl ParallelCompositionMeasure for AnyMeasure {
-    fn compose(&self, d_i: Vec<AnyObject>, partition_limit: usize) -> crate::error::Fallible<Self::Distance> {
-        fn monomorphize1<Q: 'static + Zero + Clone + TotalOrd + ExactIntCast<usize> + InfMul>(
-            self_: &AnyMeasure, d_i: Vec<AnyObject>, partition_limit: usize
+    fn compose(&self, d_i: Vec<AnyObject>, partition_limit: IntDistance) -> crate::error::Fallible<Self::Distance> {
+        fn monomorphize1<Q: 'static + Zero + Clone + TotalOrd + ExactIntCast<IntDistance> + InfMul>(
+            self_: &AnyMeasure, d_i: Vec<AnyObject>, partition_limit: IntDistance
         ) -> Fallible<AnyObject> {
 
             fn monomorphize2<M: 'static + ParallelCompositionMeasure>(
-                self_: &AnyMeasure, d_i: Vec<AnyObject>, partition_limit: usize
+                self_: &AnyMeasure, d_i: Vec<AnyObject>, partition_limit: IntDistance
             ) -> Fallible<AnyObject>
                 where M::Distance: Clone {
                 let d_i = d_i.into_iter()
