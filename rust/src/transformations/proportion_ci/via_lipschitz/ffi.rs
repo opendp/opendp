@@ -94,7 +94,7 @@ mod tests {
         let res: f64 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 2.0 / 3.0);
 
-        let d_in = AnyObject::new_raw(1u32);
+        let d_in = AnyObject::new_raw(1i32);
         let res = core::opendp_core__transformation_map(&transformation, d_in);
         let res: f64 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 1.0 / 3.0);
@@ -116,7 +116,7 @@ mod tests {
         let res: f64 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 1.0044444444444445);
 
-        let d_in = AnyObject::new_raw(1u32);
+        let d_in = AnyObject::new_raw(1i32);
         let res = core::opendp_core__transformation_map(&transformation, d_in);
         let res: f64 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 0.011574074074074075);
