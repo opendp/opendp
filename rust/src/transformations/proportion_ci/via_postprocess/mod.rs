@@ -132,3 +132,29 @@ where
         }),
     )
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    // there are integration tests in python
+    #[test]
+    fn test_postprocess_sized_proportion_ci() -> Fallible<()> {
+        let strat_sizes = vec![100usize; 10];
+        let sample_sizes = vec![10usize; 10];
+        let trans = make_postprocess_sized_proportion_ci(strat_sizes, sample_sizes, 1.)?;
+
+        println!("invoke {:?}", trans.invoke(&vec![5.; 10])?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_postprocess_proportion_ci() -> Fallible<()> {
+        let strat_sizes = vec![100usize; 10];
+        let trans = make_postprocess_proportion_ci(strat_sizes, 1., 1.)?;
+
+        println!("invoke {:?}", trans.invoke(&vec![vec![5.; 10], vec![10.; 10]])?);
+        Ok(())
+    }
+}
