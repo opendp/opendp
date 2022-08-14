@@ -104,6 +104,6 @@ pub fn make_partition_by<TK: Hashable, TV: Hashable>(
         }),
         SymmetricDistance::default(),
         ProductMetric::new(SymmetricDistance::default()),
-        StabilityMap::new(move |d_in: &IntDistance| (vec![*d_in; output_partitions], *d_in.min(&output_partitions))),
+        StabilityMap::new(move |d_in: &IntDistance| (*d_in, *d_in.min(&output_partitions))),
     ))
 }

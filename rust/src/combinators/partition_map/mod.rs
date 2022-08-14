@@ -3,7 +3,7 @@ use num::Zero;
 use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation, Measurement, Measure, PrivacyMap},
     domains::ProductDomain,
-    error::Fallible,
+    error::{Fallible, ExplainUnwrap},
     traits::{TotalOrd, InfMul, ExactIntCast}, metrics::ProductMetric, measures::{MaxDivergence, ZeroConcentratedDivergence, FixedSmoothedMaxDivergence, SmoothedMaxDivergence, SMDCurve},
 };
 
@@ -22,6 +22,7 @@ where
     DO: 'static + Domain,
     MI: 'static + Metric,
     MO: 'static + Metric,
+    MO::Distance: TotalOrd
 {
     if transformations.is_empty() {
         return fallible!(MakeTransformation, "must pass at least one transformation");
@@ -67,14 +68,11 @@ where
 
         ProductMetric::new(input_metric),
         ProductMetric::new(output_metric),
-        StabilityMap::new_fallible(move |(k, r): &(Vec<MI::Distance>, usize)| {
-            if k.len() != maps.len() {
-                return fallible!(RelationDebug, "must pass as many k_i as there are partitions");
-            }
+        StabilityMap::new_fallible(move |(k, r): &(MI::Distance, usize)| {
             let k = maps.iter()
-                .zip(k.into_iter())
-                .map(|(map, k_i)| map.eval(k_i))
-                .collect::<Fallible<Vec<_>>>()?;
+                .map(|map| map.eval(k))
+                .reduce(|l, r| l?.total_max(r?))
+                .unwrap_assert("there is at least one transformation")?;
             Ok((k, *r))
         }),
     ))
@@ -187,9 +185,9 @@ where
         }),
         ProductMetric::new(input_metric),
         output_measure.clone(),
-        PrivacyMap::new_fallible(move |(k, r): &(Vec<MI::Distance>, usize)| {
-            let d_i = (maps.iter().zip(k))
-                .map(|(map, k_i)| map.eval(k_i))
+        PrivacyMap::new_fallible(move |(k, r): &(MI::Distance, usize)| {
+            let d_i = (maps.iter())
+                .map(|map| map.eval(k))
                 .collect::<Fallible<Vec<_>>>()?;
             
             output_measure.compose(d_i, *r)
