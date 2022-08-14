@@ -148,6 +148,7 @@ pub trait Number:
     + DivAssign
     + FiniteBounds
     + ExactIntCast<usize>
+    + ExactIntCast<IntDistance>
     + ExactIntCast<i32>
     + InfCast<IntDistance>
     + InfCast<usize>
@@ -178,6 +179,7 @@ impl<T> Number for T where
         + DivAssign
         + FiniteBounds
         + ExactIntCast<usize>
+        + ExactIntCast<IntDistance>
         + ExactIntCast<i32>
         + InfCast<IntDistance>
         + InfCast<usize>
