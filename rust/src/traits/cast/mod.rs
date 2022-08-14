@@ -146,13 +146,21 @@ impl_exact_int_cast_try_from!(isize, usize);
 
 
 // TRAIT InfCast
+impl<T> InfCast<T> for T {
+    fn inf_cast(v: T) -> Fallible<Self> {
+        Ok(v)
+    }
+}
+macro_rules! impl_inf_cast_none {
+    ($ti:ty, $to:ty) => ()
+}
 macro_rules! impl_inf_cast_exact {
     ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
         fn inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
         fn neg_inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
     })
 }
-cartesian!([u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize], impl_inf_cast_exact);
+cartesian!([u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize], impl_inf_cast_exact, impl_inf_cast_none, impl_inf_cast_exact);
 
 
 macro_rules! impl_inf_cast_from {
@@ -216,7 +224,6 @@ impl_inf_cast_from!(u32, f64);
 impl_inf_cast_int_float!(i32, f32);
 impl_inf_cast_from!(i32, f64);
 
-impl_inf_cast_from!(f32, f32);
 impl_inf_cast_from!(f32, f64);
 
 impl InfCast<f64> for f32 {
@@ -256,7 +263,6 @@ impl InfCast<f64> for f32 {
         Ok(vf32)
     }
 }
-impl_inf_cast_from!(f64, f64);
 
 macro_rules! impl_inf_cast_float_int {
     ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {

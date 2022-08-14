@@ -8,7 +8,7 @@ use crate::{
 
 use super::check_parameters;
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
 
 pub fn make_lipschitz_sized_proportion_ci_mean<TA: Float>(
@@ -57,7 +57,7 @@ pub fn make_lipschitz_sized_proportion_ci_mean<TA: Float>(
         }),
         L1Distance::default(),
         AbsoluteDistance::default(),
-        StabilityMap::new_fallible(move |d_in: &TA| d_in.inf_mul(&stability_constant)),
+        StabilityMap::new_from_constant(stability_constant),
     ))
 }
 
@@ -118,6 +118,6 @@ pub fn make_lipschitz_sized_proportion_ci_variance<TA: Float>(
         }),
         L1Distance::default(),
         AbsoluteDistance::default(),
-        StabilityMap::new_fallible(move |d_in: &TA| d_in.inf_mul(&stability_constant)),
+        StabilityMap::new_from_constant(stability_constant),
     ))
 }
