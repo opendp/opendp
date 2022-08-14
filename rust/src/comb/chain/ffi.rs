@@ -37,7 +37,7 @@ mod tests {
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
 
-        let d_in = AnyObject::new_raw(999i32);
+        let d_in = AnyObject::new_raw(999u32);
         let d_out = core::opendp_core__measurement_map(&chain, d_in);
         let d_out: f64 = Fallible::from(d_out)?.downcast()?;
         assert_eq!(d_out, 1000.);
@@ -54,9 +54,9 @@ mod tests {
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
 
-        let d_in = AnyObject::new_raw(999);
+        let d_in = AnyObject::new_raw(999u32);
         let d_out = core::opendp_core__transformation_map(&chain, d_in);
-        let d_out: i32 = Fallible::from(d_out)?.downcast()?;
+        let d_out: u32 = Fallible::from(d_out)?.downcast()?;
         assert_eq!(d_out, 999);
         Ok(())
     }
