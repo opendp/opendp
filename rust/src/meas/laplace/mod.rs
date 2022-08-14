@@ -60,7 +60,7 @@ pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurem
 pub(crate) fn get_discretization_consts<T>(k: Option<i32>) -> Fallible<(i32, T)>
     where T: Float, i32: ExactIntCast<T::Bits> {
     // the discretization may only be as fine as the subnormal ulp
-    let k_min = -i32::exact_int_cast(T::EXPONENT_BIAS)? - i32::exact_int_cast(T::MANTISSA_BITS)?;
+    let k_min = -i32::exact_int_cast(T::EXPONENT_BIAS)? - i32::exact_int_cast(T::MANTISSA_BITS)? + 1;
     let k = k.unwrap_or(k_min).max(k_min);
 
     let _2 = T::exact_int_cast(2)?;
