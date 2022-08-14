@@ -388,5 +388,5 @@ impl<M: Metric> Debug for ProductMetric<M> {
     }
 }
 impl<M: Metric> Metric for ProductMetric<M> {
-    type Distance = (Vec<M::Distance>, usize);
+    type Distance = (M::Distance, usize);
 }

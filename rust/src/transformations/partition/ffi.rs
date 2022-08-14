@@ -59,7 +59,7 @@ pub extern "C" fn opendp_trans__make_partition_by(
             ProductMetric::new(AnyMetric::new(trans.output_metric.inner_metric)),
             StabilityMap::new_fallible(move |d_in: &IntDistance| {
                 let (k, r) = stability_map.eval(d_in)?;
-                Ok((k.into_iter().map(AnyObject::new).collect(), r))
+                Ok((AnyObject::new(k), r))
             }),
         ))
         .into_any()
