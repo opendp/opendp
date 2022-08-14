@@ -7,7 +7,7 @@ from opendp.typing import InsertDeleteDistance
 enable_features("floating-point", "contrib")
 
 
-def test_dp_mean():
+def test_dp_proportion_cis():
     partitions = 2
     sample_size = 1000
 
@@ -24,23 +24,16 @@ def test_dp_mean():
 
     data = "\n".join(f"{v},{i}" for v, i in zip(values, idents))
 
-    bounds = (0., 1.)
-
-    scale_mean = 1.
-    scale_var = 1.
+    print(data)
+    scale_mean = 0.05
+    scale_var = 0.1
 
     mean_var_meas = (
-        # Convert data into Vec<Vec<String>>
         make_split_dataframe(separator=",", col_names=["values", "idents"]) >>
-        make_partition_by("idents", partition_idents, keep_columns=["values"]) >>
-        make_partition_map_trans([
-                make_select_column(key="values", TOA=str) >>
-                make_cast_default(TIA=str, TOA=float) >>
-                make_clamp(bounds) >>
-                make_bounded_resize(sample_size_i, bounds, 0., MO=InsertDeleteDistance) >>
-                make_sized_bounded_sum(sample_size_i, bounds)   
-                for sample_size_i in sample_sizes
-        ]) >> 
+        make_df_is_equal("values", "1") >>
+        make_filter_by("values", keep_columns=["idents"]) >>
+        make_select_column("idents", TOA=str) >>
+        make_count_by_categories(partition_idents) >>
         make_basic_composition([
             (
                 make_lipschitz_sized_proportion_ci_mean(strat_sizes, sample_sizes) >> 
@@ -55,3 +48,4 @@ def test_dp_mean():
     mean, var = mean_var_meas(data)
     print("mean:", mean)
     print("var:", var)
+    print("rho:", mean_var_meas.map(1))

@@ -4,7 +4,7 @@ use crate::{
     core::{Function, Postprocessor},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
-    traits::Float, trans::make_postprocess,
+    traits::Float, transformations::make_postprocess,
 };
 
 use super::check_parameters;

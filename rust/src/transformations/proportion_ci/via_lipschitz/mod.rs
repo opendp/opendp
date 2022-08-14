@@ -3,7 +3,7 @@ use crate::{
     domains::{AllDomain, VectorDomain},
     error::{ExplainUnwrap, Fallible},
     metrics::{AbsoluteDistance, L1Distance},
-    traits::Float,
+    traits::{Float, Integer, RoundCast, InfCast},
 };
 
 use super::check_parameters;
@@ -11,32 +11,35 @@ use super::check_parameters;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub fn make_lipschitz_sized_proportion_ci_mean<TA: Float>(
+pub fn make_lipschitz_sized_proportion_ci_mean<TIA: Integer, TOA: Float>(
     strat_sizes: Vec<usize>,
     sample_sizes: Vec<usize>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TA>>,
-        AllDomain<TA>,
-        L1Distance<TA>,
-        AbsoluteDistance<TA>,
+        VectorDomain<AllDomain<TIA>>,
+        AllDomain<TOA>,
+        L1Distance<TIA>,
+        AbsoluteDistance<TOA>,
     >,
-> {
+>
+where
+    TOA: RoundCast<TIA> + InfCast<TIA>,
+{
     check_parameters(&strat_sizes, &sample_sizes)?;
 
     let (_0, _1) = (From::from(0), From::from(1));
 
-    // cast sizes to TA
+    // cast sizes to TOA
     let sample_sizes = (sample_sizes.into_iter())
-        .map(TA::round_cast)
-        .collect::<Fallible<Vec<TA>>>()?;
+        .map(TOA::round_cast)
+        .collect::<Fallible<Vec<TOA>>>()?;
     let strat_sizes = (strat_sizes.into_iter())
-        .map(TA::round_cast)
-        .collect::<Fallible<Vec<TA>>>()?;
+        .map(TOA::round_cast)
+        .collect::<Fallible<Vec<TOA>>>()?;
 
     // compute weights
     let strat_size = strat_sizes.iter().copied().sum();
-    let weights: Vec<TA> = strat_sizes.iter().map(|&v| v / strat_size).collect();
+    let weights: Vec<TOA> = strat_sizes.iter().map(|&v| v / strat_size).collect();
 
     let stability_constant = (weights.iter())
         .zip(sample_sizes.iter())
@@ -47,13 +50,19 @@ pub fn make_lipschitz_sized_proportion_ci_mean<TA: Float>(
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
-        Function::new(move |sample_sums: &Vec<TA>| {
-            (sample_sums.iter())
+        Function::new_fallible(move |sample_sums: &Vec<TIA>| {
+            // convert sample_sums to TOA
+            let sample_sums = sample_sums
+                .iter()
+                .cloned()
+                .map(TOA::round_cast)
+                .collect::<Fallible<Vec<TOA>>>()?;
+            Ok((sample_sums.into_iter())
                 .zip(sample_sizes.iter())
-                .map(|(&s, &n)| (s / n).min(_1).max(_0))
+                .map(|(s, &n)| (s / n).min(_1).max(_0))
                 .zip(weights.iter())
                 .map(|(mean, &w)| mean * w)
-                .sum()
+                .sum())
         }),
         L1Distance::default(),
         AbsoluteDistance::default(),
@@ -61,33 +70,34 @@ pub fn make_lipschitz_sized_proportion_ci_mean<TA: Float>(
     ))
 }
 
-pub fn make_lipschitz_sized_proportion_ci_variance<TA: Float>(
+pub fn make_lipschitz_sized_proportion_ci_variance<TIA: Integer, TOA: Float>(
     strat_sizes: Vec<usize>,
     sample_sizes: Vec<usize>,
-    mean_scale: TA,
+    mean_scale: TOA,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TA>>,
-        AllDomain<TA>,
-        L1Distance<TA>,
-        AbsoluteDistance<TA>,
+        VectorDomain<AllDomain<TIA>>,
+        AllDomain<TOA>,
+        L1Distance<TIA>,
+        AbsoluteDistance<TOA>,
     >,
-> {
+>
+where TOA: RoundCast<TIA> + InfCast<TIA>, {
     check_parameters(&strat_sizes, &sample_sizes)?;
 
     let (_0, _1) = (From::from(0), From::from(1));
 
     // cast sizes to TA
     let sample_sizes = (sample_sizes.into_iter())
-        .map(TA::round_cast)
-        .collect::<Fallible<Vec<TA>>>()?;
+        .map(TOA::round_cast)
+        .collect::<Fallible<Vec<TOA>>>()?;
     let strat_sizes = (strat_sizes.into_iter())
-        .map(TA::round_cast)
-        .collect::<Fallible<Vec<TA>>>()?;
+        .map(TOA::round_cast)
+        .collect::<Fallible<Vec<TOA>>>()?;
 
     // compute weights
     let strat_size = strat_sizes.iter().copied().sum();
-    let weights: Vec<TA> = strat_sizes.iter().map(|&v| v / strat_size).collect();
+    let weights: Vec<TOA> = strat_sizes.iter().map(|&v| v / strat_size).collect();
 
     // let function constant c_i = (N_i - n_i) / (N_i * (n_i - 1)) * w^2
     //     where N_i is strat size i and n_i is sample_size i
@@ -95,7 +105,7 @@ pub fn make_lipschitz_sized_proportion_ci_variance<TA: Float>(
         .zip(sample_sizes.iter())
         .zip(weights.iter())
         .map(|((&N, &n), &w)| (N - n) / (N * (n - _1)) * w.powi(2))
-        .collect::<Vec<TA>>();
+        .collect::<Vec<TOA>>();
 
     let stability_constant = (strat_sizes.iter())
         .zip(sample_sizes.iter())
@@ -107,14 +117,20 @@ pub fn make_lipschitz_sized_proportion_ci_variance<TA: Float>(
     Ok(Transformation::new(
         VectorDomain::new_all(),
         AllDomain::new(),
-        Function::new(move |sample_sums: &Vec<TA>| {
-            (sample_sums.iter())
+        Function::new_fallible(move |sample_sums: &Vec<TIA>| {
+            // convert sample_sums to TOA
+            let sample_sums = sample_sums
+                .iter()
+                .cloned()
+                .map(TOA::round_cast)
+                .collect::<Fallible<Vec<TOA>>>()?;
+            Ok((sample_sums.into_iter())
                 .zip(sample_sizes.iter())
-                .map(|(&s, &n)| (s / n).min(_1).max(_0))
+                .map(|(s, &n)| (s / n).min(_1).max(_0))
                 .zip(function_constants.iter())
                 .map(|(p, &c)| p * (_1 - p) * c)
-                .sum::<TA>()
-                + mean_scale.powi(2)
+                .sum::<TOA>()
+                + mean_scale.powi(2))
         }),
         L1Distance::default(),
         AbsoluteDistance::default(),
@@ -131,10 +147,10 @@ mod test {
     fn test_lipschitz_sized_proportion_ci_mean() -> Fallible<()> {
         let strat_sizes = vec![100usize; 10];
         let sample_sizes = vec![10usize; 10];
-        let trans = make_lipschitz_sized_proportion_ci_mean(strat_sizes, sample_sizes)?;
+        let trans = make_lipschitz_sized_proportion_ci_mean::<i32, f64>(strat_sizes, sample_sizes)?;
 
-        println!("invoke {:?}", trans.invoke(&vec![5.; 10])?);
-        println!("map {:?}", trans.map(&1.)?);
+        println!("invoke {:?}", trans.invoke(&vec![5; 10])?);
+        println!("map {:?}", trans.map(&1)?);
         Ok(())
     }
 
@@ -142,10 +158,10 @@ mod test {
     fn test_lipschitz_sized_proportion_ci_variance() -> Fallible<()> {
         let strat_sizes = vec![100usize; 10];
         let sample_sizes = vec![10usize; 10];
-        let trans = make_lipschitz_sized_proportion_ci_variance(strat_sizes, sample_sizes, 1.)?;
+        let trans = make_lipschitz_sized_proportion_ci_variance::<i32, f64>(strat_sizes, sample_sizes, 1.)?;
 
-        println!("invoke {:?}", trans.invoke(&vec![5.; 10])?);
-        println!("map {:?}", trans.map(&1.)?);
+        println!("invoke {:?}", trans.invoke(&vec![5; 10])?);
+        println!("map {:?}", trans.map(&1)?);
         Ok(())
     }
 }
