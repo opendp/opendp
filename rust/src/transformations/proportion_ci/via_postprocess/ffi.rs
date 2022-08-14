@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
     ffi::{any::{AnyObject, AnyTransformation, Downcast}, util::Type},
     traits::Float,
-    trans::{make_postprocess_sized_proportion_ci, make_postprocess_proportion_ci},
+    transformations::{make_postprocess_sized_proportion_ci, make_postprocess_proportion_ci},
 };
 
 #[no_mangle]

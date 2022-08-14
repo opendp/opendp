@@ -989,9 +989,15 @@
                 "description": "A vector of sizes of sampled datasets in each stratification."
             },
             {
-                "name": "TA",
+                "name": "TIA",
                 "is_type": true,
-                "description": "Atomic data type. One of `f32` or `f64`",
+                "description": "Atomic Input Type. An integer type.",
+                "default": "int"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "Atomic Output Type. One of `f32` or `f64`",
                 "default": "float"
             }
         ],
@@ -1025,14 +1031,19 @@
             {
                 "name": "mean_scale",
                 "c_type": "void *",
-                "rust_type": "TA",
-                "default": "float",
+                "rust_type": "TOA",
                 "description": "Gaussian noise scale used to privatize the mean estimate."
             },
             {
-                "name": "TA",
+                "name": "TIA",
                 "is_type": true,
-                "description": "Atomic data type. One of `f32` or `f64`",
+                "description": "Atomic Input Type. An integer type.",
+                "default": "int"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "Atomic Output Type. One of `f32` or `f64`",
                 "default": "float"
             }
         ],
