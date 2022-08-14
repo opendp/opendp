@@ -7,7 +7,7 @@ use crate::{
     domains::ProductDomain,
     error::Fallible,
     metrics::{SymmetricDistance, ProductMetric, IntDistance},
-    traits::Hashable,
+    traits::{Hashable, ExactIntCast},
 };
 
 use super::{DataFrame, DataFrameDomain};
@@ -52,6 +52,7 @@ pub fn make_partition_by<TK: Hashable, TV: Hashable>(
         .collect();
     let true_partitions = partition_keys.len() + 1;
     let output_partitions = partition_keys.len() + if null_partition { 1 } else { 0 };
+    let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?;
 
     Ok(Transformation::new(
         DataFrameDomain::new_all(),
@@ -104,6 +105,6 @@ pub fn make_partition_by<TK: Hashable, TV: Hashable>(
         }),
         SymmetricDistance::default(),
         ProductMetric::new(SymmetricDistance::default()),
-        StabilityMap::new(move |d_in: &IntDistance| (*d_in, *d_in.min(&output_partitions))),
+        StabilityMap::new(move |d_in: &IntDistance| (*d_in, *d_in.min(&d_output_partitions))),
     ))
 }
