@@ -1,11 +1,12 @@
 mod via_postprocess;
 pub use via_postprocess::*;
 
+#[cfg(feature = "floating-point")]
 mod via_lipschitz;
+#[cfg(feature = "floating-point")]
 pub use via_lipschitz::*;
 
 use crate::error::Fallible;
-
 
 fn check_parameters(strat_sizes: &Vec<usize>, sample_sizes: &Vec<usize>) -> Fallible<()> {
     if strat_sizes.len() != sample_sizes.len() {
