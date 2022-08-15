@@ -57,5 +57,6 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           artifacts-token: ${{ secrets.ARTIFACTS_REPO_TOKEN }}
           artifacts-repo: opendp/artifacts
+          artifacts-dir: PR
           inter-link: false
           title: 🔖 Rendered Proofs
