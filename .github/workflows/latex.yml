@@ -24,7 +24,7 @@ jobs:
           echo "::set-output name=tex::$tex"
 
           # construct list of .pdf files
-          pdf="${files//'.tex'$/'.pdf'}"
+          pdf="${files//$'.tex'/.pdf}"
           pdf="${pdf//'%'/'%25'}"
           pdf="${pdf//$'\n'/'%0A'}"
           pdf="${pdf//$'\r'/'%0D'}"
