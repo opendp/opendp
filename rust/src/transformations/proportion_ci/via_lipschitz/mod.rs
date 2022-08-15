@@ -43,7 +43,7 @@ where
 
     let stability_constant = (weights.iter())
         .zip(sample_sizes.iter())
-        .map(|(&w, &n)| w * n)
+        .map(|(&w, &n)| w / n)
         .reduce(|l, r| l.max(r))
         .unwrap_assert("there is always at least one partition");
 

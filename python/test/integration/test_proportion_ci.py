@@ -2,7 +2,6 @@ from opendp.trans import *
 from opendp.meas import *
 from opendp.comb import *
 from opendp.mod import enable_features
-from opendp.typing import InsertDeleteDistance
 
 enable_features("floating-point", "contrib")
 
@@ -24,7 +23,6 @@ def test_dp_proportion_cis():
 
     data = "\n".join(f"{v},{i}" for v, i in zip(values, idents))
 
-    print(data)
     scale_mean = 0.05
     scale_var = 0.1
 
@@ -49,3 +47,4 @@ def test_dp_proportion_cis():
     print("mean:", mean)
     print("var:", var)
     print("rho:", mean_var_meas.map(1))
+    print("eps:", make_zCDP_to_approxDP(mean_var_meas).map(1).epsilon(1e-7))
