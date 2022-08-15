@@ -242,7 +242,7 @@
         }
     },
     "make_base_discrete_laplace": {
-        "description": "Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.",
+        "description": "Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.\nThis uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.",
         "features": ["contrib"],
         "args": [
             {

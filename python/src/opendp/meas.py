@@ -266,6 +266,7 @@ def make_base_discrete_laplace(
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
+    This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
     :param scale: noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
