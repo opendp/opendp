@@ -15,15 +15,24 @@ jobs:
       - name: Collect diffs
         id: "diffs"
         run: |
-          tex=$(git --no-pager diff --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
+          files=$(git --no-pager diff --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
 
-          tex="${tex//'%'/'%25'}"
+          # construct list of .tex files
+          tex="${files//'%'/'%25'}"
           tex="${tex//$'\n'/'%0A'}"
           tex="${tex//$'\r'/'%0D'}"
           echo "::set-output name=tex::$tex"
 
+          # construct list of .pdf files
+          pdf="${files//'.tex'$/'.pdf'}"
+          pdf="${pdf//'%'/'%25'}"
+          pdf="${pdf//$'\n'/'%0A'}"
+          pdf="${pdf//$'\r'/'%0D'}"
+          echo "::set-output name=pdf::$pdf"
+
     outputs:
      tex: ${{ steps.diffs.outputs.tex }}
+     pdf: ${{ steps.diffs.outputs.pdf }}
 
       
   latex-build:
@@ -41,10 +50,12 @@ jobs:
           work_in_root_file_dir: true
 
       - name: Pull request artifacts
-        uses: Shoeboxam/pull-request-artifacts@main
+        uses: opendp/pull-request-artifacts@generalize-changes
         with:
           commit: ${{ github.event.pull_request.head.sha }}
-          glob-pattern: rust/**/*.pdf
+          artifacts: ${{ needs.pre-latex-build.outputs.pdf }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           artifacts-token: ${{ secrets.ARTIFACTS_REPO_TOKEN }}
           artifacts-repo: opendp/artifacts
+          inter-link: false
+          title: 🔖 Rendered Proofs
