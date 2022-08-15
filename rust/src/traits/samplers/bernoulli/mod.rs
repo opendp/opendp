@@ -9,6 +9,9 @@ use crate::{
 
 use super::{fill_bytes, sample_geometric_buffer};
 
+#[cfg(feature="use-mpfr")]
+use super::SampleUniformIntBelow;
+
 pub trait SampleStandardBernoulli: Sized {
     fn sample_standard_bernoulli() -> Fallible<Self>;
 }
@@ -139,6 +142,14 @@ where
             i => !(prob.to_bits() & T::Bits::one() << (leading_zeros + T::MANTISSA_BITS - i))
                 .is_zero(),
         })
+    }
+}
+
+#[cfg(feature="use-mpfr")]
+impl SampleBernoulli<rug::Rational> for bool {
+    fn sample_bernoulli(prob: rug::Rational, _constant_time: bool) -> Fallible<bool> {
+        let (numer, denom) = prob.into_numer_denom();
+        rug::Integer::sample_uniform_int_below(denom).map(|s| s < numer)
     }
 }
 

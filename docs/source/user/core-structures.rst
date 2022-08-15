@@ -103,7 +103,7 @@ There's a few top-level constructor listings:
 * :ref:`measurement-constructors`
 * :ref:`transformation-constructors`
 
-In this simplified example with the :py:func:`opendp.meas.make_base_geometric` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
+In this simplified example with the :py:func:`opendp.meas.make_base_discrete_laplace` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
 
 .. testsetup::
 
@@ -112,17 +112,17 @@ In this simplified example with the :py:func:`opendp.meas.make_base_geometric` c
 
 .. doctest::
 
-    >>> from opendp.meas import make_base_geometric
+    >>> from opendp.meas import make_base_discrete_laplace
     ...
     >>> # call the constructor to produce a measurement
-    >>> base_geometric = make_base_geometric(scale=1.0)
+    >>> base_dl = make_base_discrete_laplace(scale=1.0)
     ...
     >>> # investigate the privacy relation
     >>> absolute_distance = 1
     >>> epsilon = 1.0
-    >>> assert base_geometric.check(d_in=absolute_distance, d_out=epsilon)
+    >>> assert base_dl.check(d_in=absolute_distance, d_out=epsilon)
     ...
     >>> # feed some data/invoke the measurement as a function
     >>> aggregated = 5
-    >>> release = base_geometric(aggregated)
+    >>> release = base_dl(aggregated)
 

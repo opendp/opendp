@@ -106,6 +106,18 @@ macro_rules! impl_check_null_for_float {
     }
 }
 impl_check_null_for_float!(f64, f32);
+#[cfg(feature="use-mpfr")]
+impl CheckNull for rug::Rational {
+    fn is_null(&self) -> bool {
+        self.denom().is_zero()
+    }
+}
+#[cfg(feature="use-mpfr")]
+impl CheckNull for rug::Integer {
+    fn is_null(&self) -> bool {
+        false
+    }
+}
 
 // TRAIT TotalOrd
 macro_rules! impl_total_ord_for_ord {
@@ -114,6 +126,9 @@ macro_rules! impl_total_ord_for_ord {
     })*}
 }
 impl_total_ord_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+
+#[cfg(feature="use-mpfr")]
+impl_total_ord_for_ord!(rug::Rational, rug::Integer);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {

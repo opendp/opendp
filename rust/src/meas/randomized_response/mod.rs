@@ -8,7 +8,7 @@ use crate::domains::AllDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::{SampleBernoulli, SampleUniformInt};
+use crate::traits::samplers::{SampleBernoulli, SampleUniformIntBelow};
 use crate::traits::{Hashable, Float};
 
 // There are two constructors:
@@ -102,7 +102,7 @@ pub fn make_randomized_response<T, Q>(
 
             // randomly sample a lie from among the categories with equal probability
             // if truth in categories, sample among n - 1 categories
-            let mut sample = usize::sample_uniform_int_0_u(
+            let mut sample = usize::sample_uniform_int_below(
                 categories.len() - if index.is_some() { 1 } else { 0 },
             )?;
             // shift the sample by one if index is greater or equal to the index of truth

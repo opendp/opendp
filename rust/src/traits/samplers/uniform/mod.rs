@@ -3,7 +3,14 @@ use std::{mem::size_of, ops::Sub};
 use crate::{error::Fallible, traits::{FloatBits, ExactIntCast, InfDiv}};
 
 use super::{fill_bytes, sample_geometric_buffer};
+
+#[cfg(feature="use-mpfr")]
+use super::GeneratorOpenDP;
+
 use num::One;
+
+#[cfg(feature="use-mpfr")]
+use rug::rand::ThreadRandState;
 
 pub trait SampleUniform: Sized {
 
@@ -113,8 +120,11 @@ impl_sample_mantissa!(f32, 0b01111111);
 pub trait SampleUniformInt: Sized {
     /// sample uniformly from [Self::MIN, Self::MAX]
     fn sample_uniform_int() -> Fallible<Self>;
+}
+
+pub trait SampleUniformIntBelow: Sized {
     /// sample uniformly from [0, upper)
-    fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self>;
+    fn sample_uniform_int_below(upper: Self) -> Fallible<Self>;
 }
 
 macro_rules! impl_sample_uniform_unsigned_int {
@@ -125,7 +135,9 @@ macro_rules! impl_sample_uniform_unsigned_int {
                 fill_bytes(&mut buffer)?;
                 Ok(Self::from_be_bytes(buffer))
             }
-            fn sample_uniform_int_0_u(upper: Self) -> Fallible<Self> {
+        }
+        impl SampleUniformIntBelow for $ty {
+            fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
                 // v % upper is unbiased for any v < MAX - MAX % upper, because
                 // MAX - MAX % upper evenly folds into [0, upper) RAND_MAX/upper times
                 loop {
@@ -141,6 +153,18 @@ macro_rules! impl_sample_uniform_unsigned_int {
 }
 impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
+#[cfg(feature="use-mpfr")]
+impl SampleUniformIntBelow for rug::Integer {
+    fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
+        let mut rng = GeneratorOpenDP::new();
+        let ret = {
+            let mut state = ThreadRandState::new_custom(&mut rng);
+            upper.random_below(&mut state)
+        };
+        rng.error.map(|_| ret)
+    }
+}
+
 #[cfg(test)]
 mod test_uniform_int {
     use super::*;
@@ -148,11 +172,11 @@ mod test_uniform_int {
 
     #[test]
     #[ignore]
-    fn test_sample_uniform_int() -> Fallible<()> {
+    fn test_sample_uniform_int_below() -> Fallible<()> {
         let mut counts = HashMap::new();
         // this checks that the output distribution of each number is uniform
         (0..10000).try_for_each(|_| {
-            let sample = u32::sample_uniform_int_0_u(7)?;
+            let sample = u32::sample_uniform_int_below(7)?;
             *counts.entry(sample).or_insert(0) += 1;
             Fallible::Ok(())
         })?;
@@ -160,4 +184,17 @@ mod test_uniform_int {
         Ok(())
     }
 
+    #[test]
+    #[ignore]
+    fn test_sample_uniform_int() -> Fallible<()> {
+        let mut counts = HashMap::new();
+        // this checks that the output distribution of each number is uniform
+        (0..10000).try_for_each(|_| {
+            let sample = u32::sample_uniform_int()?;
+            *counts.entry(sample).or_insert(0) += 1;
+            Fallible::Ok(())
+        })?;
+        println!("{:?}", counts);
+        Ok(())
+    }
 }

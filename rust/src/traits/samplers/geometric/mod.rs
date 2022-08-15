@@ -74,7 +74,7 @@ impl<T, P> SampleGeometric<P> for T
     }
 }
 
-pub trait SampleTwoSidedGeometric<P>: SampleGeometric<P> {
+pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
 
     /// Sample from the censored two-sided geometric distribution with parameter `prob`.
     /// If `bounds` is None, there are no timing protections, and the support is:
@@ -94,17 +94,17 @@ pub trait SampleTwoSidedGeometric<P>: SampleGeometric<P> {
     ///
     /// # Example
     /// ```
-    /// use opendp::traits::samplers::SampleTwoSidedGeometric;
-    /// let geom = u8::sample_two_sided_geometric(0, 0.1, Some((20, 30)));
+    /// use opendp::traits::samplers::SampleDiscreteLaplaceLinear;
+    /// let geom = u8::sample_discrete_laplace_linear(0, 0.1, Some((20, 30)));
     /// # use opendp::error::ExplainUnwrap;
     /// # geom.unwrap_test();
     /// ```
-    fn sample_two_sided_geometric(
+    fn sample_discrete_laplace_linear(
         shift: Self, scale: P, bounds: Option<(Self, Self)>
     ) -> Fallible<Self>;
 }
 
-impl<T, P> SampleTwoSidedGeometric<P> for T
+impl<T, P> SampleDiscreteLaplaceLinear<P> for T
     where 
         T: Clone + SampleGeometric<P> + Sub<Output=T> + FiniteBounds + Zero + One + TotalOrd + AlertingSub,
         P: Float,
@@ -123,7 +123,7 @@ impl<T, P> SampleTwoSidedGeometric<P> for T
     ///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
     ///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
     ///             the analyst can deduce that the input was greater than or equal to upper
-    fn sample_two_sided_geometric(mut shift: T, scale: P, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
+    fn sample_discrete_laplace_linear(mut shift: T, scale: P, bounds: Option<(Self, Self)>) -> Fallible<Self>  {
         if scale.is_zero() {return Ok(shift)}
         let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
             // if the output interval is a point
@@ -167,8 +167,6 @@ impl<T, P> SampleTwoSidedGeometric<P> for T
 /// The algorithm generates B * 8 bits at random and returns
 /// - Some(index of the first set bit)
 /// - None (if all bits are 0)
-///
-/// This is a lower-level version of the SampleGeometric
 pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) -> Fallible<Option<usize>> {
     Ok(if constant_time {
         let mut buffer = vec![0_u8; buffer_len];

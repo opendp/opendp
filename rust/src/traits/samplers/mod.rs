@@ -1,6 +1,11 @@
 mod bernoulli;
 pub use bernoulli::*;
 
+#[cfg(feature="use-mpfr")]
+mod cks20;
+#[cfg(feature="use-mpfr")]
+pub use cks20::*;
+
 mod continuous;
 pub use continuous::*;
 

@@ -16,7 +16,8 @@ num = "0.3.1"
 thiserror = "1.0.24"
 backtrace = "0.3"
 statrs = "0.13.0"
-rug = { version = "1.14.0", default-features = false, features = ["integer", "float", "rand"], optional = true }
+rug = { version = "1.14.0", default-features = false, features = ["integer", "float", "rational", "num-traits", "rand"], optional = true }
+az = { version = "1.2.0", optional = true }
 gmp-mpfr-sys = { version = "1.4.7", default-features = false, features = ["mpfr", "force-cross"], optional = true }
 openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 
@@ -32,7 +33,7 @@ contrib = []
 untrusted = ["floating-point", "contrib"]
 
 use-openssl = ["openssl"]
-use-mpfr = ["gmp-mpfr-sys", "rug"]
+use-mpfr = ["gmp-mpfr-sys", "rug", "az"]
 # re-export use-system-libs from mpfr
 use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 
@@ -47,9 +48,15 @@ serde_json = { version = "1.0.64", features = ["preserve_order"] }
 serde = { version = "1.0.126", features = ["derive"] }
 indexmap = { version = "1.6.2", features = ["serde"] }
 
+[dev-dependencies]
+criterion = "0.3"
 
 [lib]
 crate-type = ["rlib", "cdylib"]
 
 [package.metadata.docs.rs]
 features = ["untrusted", "ffi"]
+
+[[bench]]
+name = "discrete_laplace"
+harness = false
