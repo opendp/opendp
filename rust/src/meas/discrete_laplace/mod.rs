@@ -23,7 +23,7 @@ mod linear;
 pub use linear::*;
 
 pub trait MappableDomain: Domain {
-    type Atom;
+    type Atom: Clone;
     fn map_over(
         arg: &Self::Carrier,
         func: &impl Fn(&Self::Atom) -> Fallible<Self::Atom>,
@@ -36,7 +36,7 @@ pub trait MappableDomain: Domain {
     }
 }
 
-impl<T: CheckNull> MappableDomain for AllDomain<T> {
+impl<T: Clone + CheckNull> MappableDomain for AllDomain<T> {
     type Atom = T;
     fn map_over(
         arg: &Self::Carrier,
@@ -58,10 +58,10 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
 pub trait DiscreteLaplaceDomain: MappableDomain + Default {
     type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
 }
-impl<T: CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
+impl<T: Clone + CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 
