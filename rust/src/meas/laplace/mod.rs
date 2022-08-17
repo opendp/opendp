@@ -96,9 +96,6 @@ mod tests {
     fn test_big_laplace() -> Fallible<()> {
         let chain = make_base_laplace::<AllDomain<f64>>(f64::MAX, None)?;
         println!("{:?}", chain.invoke(&f64::MAX)?);
-        // println!("{:?}", chain.invoke(&f64::MAX)?);
-        // println!("{:?}", chain.invoke(&f64::MAX)?);
-        // println!("{:?}", chain.invoke(&f64::MAX)?);
         Ok(())
     }
 
@@ -107,7 +104,7 @@ mod tests {
         let measurement = make_base_laplace::<AllDomain<_>>(1.0, None)?;
         let _ret = measurement.invoke(&0.0)?;
 
-        assert!(measurement.check(&1., &1.00001)?);
+        assert!(measurement.check(&1., &1.)?);
         Ok(())
     }
 
@@ -117,7 +114,7 @@ mod tests {
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.invoke(&arg)?;
 
-        assert!(measurement.check(&1., &1.00001)?);
+        assert!(measurement.check(&1., &1.)?);
         Ok(())
     }
 }
