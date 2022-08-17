@@ -45,7 +45,6 @@
 use crate::{error::Fallible, traits::Float};
 
 pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
-    let tol = Q::round_cast(1e-8)?;
     let _2 = Q::one() + Q::one();
 
     if delta.is_sign_negative() {
@@ -73,11 +72,11 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
 
     loop {
         let diff = e_max - e_min;
-        if diff <= tol {
-            break;
-        }
 
         let e_mid = e_min + diff / _2;
+        if e_mid == e_max || e_mid == e_min {
+            break;
+        }
         if cdp_delta(rho, e_mid)? <= delta {
             e_max = e_mid;
         } else {
@@ -103,7 +102,6 @@ where
         return Ok(Q::zero());
     }
 
-    let tol = Q::round_cast(1e-8)?;
     let _1 = Q::one();
     let _2 = _1 + _1;
 
@@ -119,7 +117,7 @@ where
 
     // We now choose bounds for the binary search over alpha.
 
-    // The optimal alpha is no greater than (ε+1)/(2ρ) + 2
+    // The optimal alpha is no greater than (ε+1)/(2ρ)
     let mut a_max = eps
         .inf_add(&_1)?
         .inf_div(&_2.neg_inf_mul(&rho)?)?
@@ -136,11 +134,12 @@ where
     //     the ideal alpha is the critical point of the derivative of the function for delta
     loop {
         let diff = a_max - a_min;
-        if diff <= tol {
-            break;
-        }
 
         let a_mid = a_min + diff / _2;
+
+        if a_mid == a_max || a_mid == a_min {
+            break;
+        }
 
         // calculate derivative
         let deriv = (_2 * a_mid - _1) * rho - eps + a_mid.recip().neg().ln_1p();
