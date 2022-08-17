@@ -12,8 +12,8 @@
             {
                 "name": "k",
                 "c_type": "int32_t",
-                "default": -1075,
-                "description": "The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map."
+                "default": -1074,
+                "description": "The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity."
             },
             {
                 "name": "D",
@@ -49,8 +49,8 @@
             {
                 "name": "k",
                 "c_type": "int32_t",
-                "default": -1075,
-                "description": "The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map."
+                "default": -1074,
+                "description": "The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity."
             },
             {
                 "name": "D",
@@ -372,8 +372,8 @@
             {
                 "name": "k",
                 "c_type": "int32_t",
-                "default": -1075,
-                "description": "The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map."
+                "default": -1074,
+                "description": "The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity."
             },
             {
                 "name": "TK",

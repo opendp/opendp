@@ -20,14 +20,14 @@ __all__ = [
 
 def make_base_laplace(
     scale,
-    k: int = -1075,
+    k: int = -1074,
     D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     Adjust D to noise vector-valued data.
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param k: The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map.
+    :param k: The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity.
     :type k: int
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
@@ -59,7 +59,7 @@ def make_base_laplace(
 
 def make_base_gaussian(
     scale,
-    k: int = -1075,
+    k: int = -1074,
     D: RuntimeTypeDescriptor = "AllDomain<T>",
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
@@ -68,7 +68,7 @@ def make_base_gaussian(
     The output epsilon may be no greater than one.
     
     :param scale: noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-    :param k: The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map.
+    :param k: The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity.
     :type k: int
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
@@ -394,14 +394,14 @@ def make_base_ptr(
     scale,
     threshold,
     TK: RuntimeTypeDescriptor,
-    k: int = -1075,
+    k: int = -1074,
     TV: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param threshold: Exclude counts that are less than this minimum value.
-    :param k: The distance between adjacent noisy outputs in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map.
+    :param k: The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity.
     :type k: int
     :param TK: Type of Key. Must be hashable/categorical.
     :type TK: :ref:`RuntimeTypeDescriptor`

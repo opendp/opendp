@@ -129,7 +129,7 @@ def test_bounded_float_sum():
 
     print(laplace_sum_from_dataframe(data))
     print(gaussian_sum_from_dataframe(data))
-test_bounded_float_sum()
+
 
 def test_bounded_int_sum():
     """bounded int sum (assuming n is unknown)"""

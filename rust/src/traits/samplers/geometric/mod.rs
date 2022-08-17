@@ -196,7 +196,7 @@ pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) ->
 
 
 #[cfg(all(test, feature="test-plot"))]
-mod test {
+mod test_plotting {
     use crate::traits::samplers::Fallible;
     use crate::error::ExplainUnwrap;
     use super::*;

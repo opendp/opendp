@@ -80,6 +80,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_make_gaussian_mechanism() -> Fallible<()> {
+        let measurement =
+            make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
+        let arg = 0.0;
+        let _ret = measurement.invoke(&arg)?;
+
+        assert!(measurement.check(&0.1, &0.0050000001)?);
+        Ok(())
+    }
+
+    #[test]
     fn test_make_gaussian_vec_mechanism() -> Fallible<()> {
         let measurement =
             make_base_gaussian::<VectorDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
@@ -87,17 +98,6 @@ mod tests {
         let _ret = measurement.invoke(&arg)?;
 
         assert!(measurement.map(&0.1)? <= 0.0050000001);
-        Ok(())
-    }
-
-    #[test]
-    fn test_make_gaussian_mechanism_zcdp() -> Fallible<()> {
-        let measurement =
-            make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
-        let arg = 0.0;
-        let _ret = measurement.invoke(&arg)?;
-
-        assert!(measurement.check(&0.1, &0.0050000001)?);
         Ok(())
     }
 }
