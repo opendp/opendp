@@ -30,7 +30,7 @@ def test_dp_proportion_cis_population():
     mean_var_meas = (
         make_split_dataframe(separator=",", col_names=["values", "idents"]) >>
         make_df_is_equal("values", "1") >>
-        make_filter_by("values", keep_columns=["idents"]) >>
+        make_subset_by("values", keep_columns=["idents"]) >>
         make_select_column("idents", TOA=str) >>
         make_count_by_categories(partition_idents) >>
         make_basic_composition([
@@ -73,7 +73,7 @@ def test_postprocess_sized_proportion_ci():
     mean_var_meas = (
         make_split_dataframe(separator=",", col_names=["values", "idents"]) >>
         make_df_is_equal("values", "1") >>
-        make_filter_by("values", keep_columns=["idents"]) >>
+        make_subset_by("values", keep_columns=["idents"]) >>
         make_select_column("idents", TOA=str) >>
         make_count_by_categories(partition_idents, TOA=float, MO=L2Distance[float]) >>
         make_base_gaussian(scale, D=VectorDomain[AllDomain[float]]) >>
@@ -113,7 +113,7 @@ def test_postprocess_proportion_ci():
         make_basic_composition([
             (
                 make_df_is_equal("values", "1") >>
-                make_filter_by("values", keep_columns=["idents"]) >>
+                make_subset_by("values", keep_columns=["idents"]) >>
                 make_select_column("idents", TOA=str) >>
                 make_count_by_categories(partition_idents, TOA=float, MO=L2Distance[float]) >>
                 make_base_gaussian(sum_scale, D=VectorDomain[AllDomain[float]])
