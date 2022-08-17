@@ -107,25 +107,33 @@ where
     let _1 = Q::one();
     let _2 = _1 + _1;
 
-    // search for best alpha
-    // Any alpha in (1, infty) yields a valid upper bound on delta.
-    // Therefore the search does not need to be exact
-    // Thus if this search is slightly "incorrect" it will only result in larger delta (still valid)
+    // It has been proven that...
+    //    delta = exp((α-1) (αρ - ε) + α ln1p(-1/α)) / (α-1)
+    // ...for any choice of alpha in (1, infty)
 
-    // Don't let alpha be too small, due to numerical stability.
-    // The optimal alpha is at least (1+eps/rho)/2,
-    //     thus we only encounter α <= 1.01 when eps <= rho or close to it.
-    // This is not an interesting parameter regime, as you will
-    //     inherently get large delta in this regime.
-    let mut a_min = Q::round_cast(1.01f64)?;
+    // This algorithm searches for the best alpha, the alpha that minimizes delta.
 
-    // (ε+1)/(2ρ) + 2
+    // Since any alpha in (1, infty) yields a valid upper bound on delta,
+    //    the search for alpha does not need conservative rounding.
+    // If this search is slightly "incorrect" by float rounding it will only result in larger delta (still valid)
+
+    // We now choose bounds for the binary search over alpha.
+
+    // The optimal alpha is no greater than (ε+1)/(2ρ) + 2
     let mut a_max = eps
         .inf_add(&_1)?
         .inf_div(&_2.neg_inf_mul(&rho)?)?
         .inf_add(&_2)?;
 
-    // find alpha
+    // Don't let alpha be too small, due to numerical stability.
+    // We only encounter α <= 1.01 when eps <= rho or close to it.
+    // This is not an interesting parameter regime, as you will
+    //     inherently get large delta in this regime.
+    let mut a_min = Q::round_cast(1.01f64)?;
+
+    // run binary search to find ideal alpha
+    // Since the function is convex (when restricted to the bounds) 
+    //     the ideal alpha is the critical point of the derivative of the function for delta
     loop {
         let diff = a_max - a_min;
         if diff <= tol {
@@ -134,7 +142,7 @@ where
 
         let a_mid = a_min + diff / _2;
 
-        // calculate derivative. inf_* arithmetic is not necessary because any choice of α is valid
+        // calculate derivative
         let deriv = (_2 * a_mid - _1) * rho - eps + a_mid.recip().neg().ln_1p();
         //        = (2α - 1)            ρ   - ε   + ln1p(-1/α)
 
