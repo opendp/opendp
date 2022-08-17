@@ -90,15 +90,15 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_filter_by": {
-        "description": "Make a Transformation that filters a dataframe by a boolean column.",
+    "make_subset_by": {
+        "description": "Make a Transformation that subsets a dataframe by a boolean column.",
         "features": ["contrib"],
         "args": [
             {
-                "name": "identifier_column",
+                "name": "indicator_column",
                 "c_type": "AnyObject *",
                 "rust_type": "TK",
-                "description": "column name of the boolean filter"
+                "description": "name of the boolean column that indicates inclusion in the subset"
             },
             {
                 "name": "TK",

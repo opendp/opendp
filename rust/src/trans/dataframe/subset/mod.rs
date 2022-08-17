@@ -10,8 +10,8 @@ use super::{DataFrame, DataFrameDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
-pub fn make_filter_by<TK: Hashable>(
-    identifier_column: TK,
+pub fn make_subset_by<TK: Hashable>(
+    indicator_column: TK,
     keep_columns: Vec<TK>,
 ) -> Fallible<
     Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
@@ -21,12 +21,12 @@ pub fn make_filter_by<TK: Hashable>(
         DataFrameDomain::new_all(),
         Function::new_fallible(move |data: &DataFrame<TK>| {
             // the partition to move each row into
-            let filter = (data.get(&identifier_column))
+            let indicator = (data.get(&indicator_column))
                 .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
                 .as_form::<Vec<bool>>()?;
 
             // where to collect partitioned data
-            let mut filtered = DataFrame::new();
+            let mut subsetted = DataFrame::new();
 
             // iteratively partition each column
             keep_columns.iter().try_for_each(|column_name| {
@@ -35,12 +35,12 @@ pub fn make_filter_by<TK: Hashable>(
                     err!(FailedFunction, "{:?} does not exist in the input dataframe")
                 })?;
 
-                filtered.insert(column_name.clone(), column.subset(&filter));
+                subsetted.insert(column_name.clone(), column.subset(&indicator));
 
                 Fallible::Ok(())
             })?;
 
-            Ok(filtered)
+            Ok(subsetted)
         }),
         SymmetricDistance::default(),
         SymmetricDistance::default(),

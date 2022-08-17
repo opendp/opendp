@@ -15,7 +15,7 @@ pub trait IsVec: Debug {
     fn as_any(&self) -> &dyn Any;
     fn box_clone(&self) -> Box<dyn IsVec>;
     fn eq(&self, other: &dyn Any) -> bool;
-    fn subset(&self, filter: &Vec<bool>) -> Box<dyn IsVec>;
+    fn subset(&self, indicator: &Vec<bool>) -> Box<dyn IsVec>;
 }
 
 impl<T> IsVec for Vec<T> where
@@ -24,9 +24,9 @@ impl<T> IsVec for Vec<T> where
     fn as_any(&self) -> &dyn Any { self }
     fn box_clone(&self) -> Box<dyn IsVec> { Box::new(self.clone()) }
     fn eq(&self, other: &dyn Any) -> bool { other.downcast_ref::<Self>().map_or(false, |o| o == self) }
-    fn subset(&self, filter: &Vec<bool>) -> Box<dyn IsVec> {
+    fn subset(&self, indicator: &Vec<bool>) -> Box<dyn IsVec> {
         Box::new((self.iter())
-            .zip(filter)
+            .zip(indicator)
             .filter_map(|(v, b)| b.then_some(v))
             .cloned()
             .collect::<Vec<_>>()) as Box<dyn IsVec>
@@ -60,8 +60,8 @@ impl Column {
             .map_err(|_e| err!(FailedCast))
             .map(|v| *v)
     }
-    pub fn subset(&self, filter: &Vec<bool>) -> Self {
-        Self(self.0.subset(filter))
+    pub fn subset(&self, indicator: &Vec<bool>) -> Self {
+        Self(self.0.subset(indicator))
     }
 }
 

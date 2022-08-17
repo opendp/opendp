@@ -9,7 +9,7 @@ __all__ = [
     "make_cast_default",
     "make_df_cast_default",
     "make_df_is_equal",
-    "make_filter_by",
+    "make_subset_by",
     "make_is_equal",
     "make_is_null",
     "make_cast_inherent",
@@ -215,17 +215,17 @@ def make_df_is_equal(
     return c_to_py(unwrap(function(column_name, value, TK, TIA), Transformation))
 
 
-def make_filter_by(
-    identifier_column: Any,
+def make_subset_by(
+    indicator_column: Any,
     TK: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that filters a dataframe by a boolean column.
+    """Make a Transformation that subsets a dataframe by a boolean column.
     
-    :param identifier_column: column name of the boolean filter
-    :type identifier_column: Any
+    :param indicator_column: name of the boolean column that indicates inclusion in the subset
+    :type indicator_column: Any
     :param TK: type of the column name
     :type TK: :ref:`RuntimeTypeDescriptor`
-    :return: A filter_by step.
+    :return: A subset_by step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -234,18 +234,18 @@ def make_filter_by(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=identifier_column)
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=indicator_column)
     
     # Convert arguments to c types.
-    identifier_column = py_to_c(identifier_column, c_type=AnyObjectPtr, type_name=TK)
+    indicator_column = py_to_c(indicator_column, c_type=AnyObjectPtr, type_name=TK)
     TK = py_to_c(TK, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_trans__make_filter_by
+    function = lib.opendp_trans__make_subset_by
     function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(identifier_column, TK), Transformation))
+    return c_to_py(unwrap(function(indicator_column, TK), Transformation))
 
 
 def make_is_equal(
