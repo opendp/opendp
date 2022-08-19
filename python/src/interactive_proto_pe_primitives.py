@@ -61,7 +61,7 @@ class Queryable:
 
     # Queries are marked with a tag, which allows us to distinguish between user and system queries.
     def _query(self, tag, query):
-        answer, new_state = self.eval(tag, query)
+        answer, new_state = self.eval(tag, query, self.state)
         self.state = new_state
         return answer
 
