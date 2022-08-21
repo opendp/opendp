@@ -86,6 +86,91 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
     Ok(e_max)
 }
 
+fn cdp_epsilon2<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
+    if rho.is_sign_negative() {
+        return fallible!(FailedRelation, "rho must be non-negative");
+    }
+
+    if delta.is_sign_negative() {
+        return fallible!(FailedRelation, "delta must be non-negative");
+    }
+
+    if rho.is_zero() {
+        return Ok(Q::zero());
+    }
+
+    let _1 = Q::one();
+    let _2 = _1 + _1;
+
+    // It has been proven that...
+    //     delta = exp((α-1) (αρ - ε) + α ln1p(-1/α)) / (α-1)
+    // ...for any choice of alpha in (1, infty)
+    
+    // The following expression is equivalent for ε:
+    //   epsilon = δρ + (ln(1/δ) + (α - 1)ln(1 - 1/α) - ln(α)) / (α - 1)
+
+    // This algorithm searches for the best alpha, the alpha that minimizes delta.
+
+    // Since any alpha in (1, infty) yields a valid upper bound on epsilon,
+    //    the search for alpha does not need conservative rounding.
+    // If this search is slightly "incorrect" by float rounding it will only result in larger delta (still valid)
+
+    // We now choose bounds for the binary search over alpha.
+
+    // Take the derivative wrt α and check if positive:
+    let deriv_pos = |a: Q| rho > -(a * delta).ln() / (a - _1).powi(2);
+    //                     ρ   > -ln(αδ)           / (α - 1)^2
+
+    // Don't let alpha be too small, due to numerical stability.
+    // We only encounter α <= 1.01 when eps <= rho or close to it.
+    // This is not an interesting parameter regime, as you will
+    //     inherently get large delta in this regime.
+    let mut a_min = Q::round_cast(1.01f64)?;
+
+    // Find an upper bound for alpha via an exponential search
+    let mut a_max = _2;
+    while !deriv_pos(a_max) {
+        a_max *= _2;
+    }
+
+    // run binary search to find ideal alpha
+    // Since the function is convex (when restricted to the bounds)
+    //     the ideal alpha is the critical point of the derivative of the function for delta
+    loop {
+        let diff = a_max - a_min;
+
+        let a_mid = a_min + diff / _2;
+
+        if a_mid == a_max || a_mid == a_min {
+            break;
+        }
+
+        if deriv_pos(a_mid) {
+            a_max = a_mid;
+        } else {
+            a_min = a_mid;
+        }
+    }
+
+    // calculate epsilon
+
+    //  numer = ln((α-1)/α)(α - 1) - ln(α) + ln(1/δ)
+    let a_m1 = a_max.inf_sub(&_1)?;
+    let numer = (a_m1.inf_div(&a_max)?.inf_ln()?.inf_mul(&a_m1)?)
+        .inf_sub(&a_max.inf_ln()?)?
+        .inf_add(&delta.recip().inf_ln()?)?;
+
+    //  denom = α - 1
+    let denom = a_max.neg_inf_sub(&_1)?;
+
+    //  epsilon = αρ + (ln(1/δ) + (α - 1) ln(1 - 1/α) - ln(α)) / (α - 1)
+    //                  -------------------------------------  /  -----
+    //          = αρ                          + numer          / denom
+    let epsilon = a_max.inf_mul(&rho)?.inf_add(&numer.inf_div(&denom)?)?;
+
+    Ok(epsilon)
+}
+
 fn cdp_delta<Q>(rho: Q, eps: Q) -> Fallible<Q>
 where
     Q: Float,
@@ -130,7 +215,7 @@ where
     let mut a_min = Q::round_cast(1.01f64)?;
 
     // run binary search to find ideal alpha
-    // Since the function is convex (when restricted to the bounds) 
+    // Since the function is convex (when restricted to the bounds)
     //     the ideal alpha is the critical point of the derivative of the function for delta
     loop {
         let diff = a_max - a_min;
@@ -170,4 +255,45 @@ where
 
     // delta is always <= 1
     Ok(delta.min(Q::one()))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn run_comparison(rho: f64, delta: f64) -> (f64, f64) {
+        (
+            cdp_epsilon(rho, delta).unwrap(),
+            cdp_epsilon2(rho, delta).unwrap(),
+        )
+    }
+
+    #[test]
+    fn test_comparison() -> Fallible<()> {
+        println!("{:?}", run_comparison(0.05, 1e-6));
+        // println!("{:?}", run_comparison(0.1, 1e-8));
+        // println!("{:?}", run_comparison(1.0, 1e-3));
+        // println!("{:?}", run_comparison(0.05, 1e-6));
+        // println!("{:?}", run_comparison(0.05, 1e-6));
+
+        Ok(())
+    }
+
+    #[test]
+    fn time_indirect() -> Fallible<()> {
+        (0..10000).for_each(|_| {
+            cdp_epsilon(0.15, 1e-8).unwrap();
+        });
+        
+        Ok(())
+    }
+
+    #[test]
+    fn time_direct() -> Fallible<()> {
+        (0..10000).for_each(|_| {
+            cdp_epsilon2(0.15, 1e-8).unwrap();
+        });
+        
+        Ok(())
+    }
 }
