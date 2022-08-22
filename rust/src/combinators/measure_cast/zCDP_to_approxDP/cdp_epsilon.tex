@@ -18,7 +18,21 @@ From \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} 
 % Implementation:
 % https://github.com/opendp/opendp/blob/504-zcdp-smd-cast/rust/src/comb/measure_cast/zCDP_to_approxDP/cks20.rs
 
-\section{Bound}
+
+\section{Pseudocode}
+\subsubsection*{Precondition}
+
+\begin{itemize}
+    \item Type \texttt{Q} must have trait \texttt{Float}.
+\end{itemize}
+
+\subsubsection*{Implementation}        
+\lstinputlisting[language=Python, firstline=2]{cdp_epsilon.py}
+
+\subsubsection*{Postcondition}
+Either a valid epsilon is returned or an error is returned.
+
+\section{Proof}
 
 \begin{definition}
 \label{plrv}
@@ -115,7 +129,7 @@ Our approach is to pick $c > 0$ such that $max\{0, 1 - e^{\epsilon - Z} \} \leq 
 
 We identify the smallest possible value of $c$:
 \begin{equation}
-    c = \sup\limits_{z \in \mathbb{R}} \frac{max\{0, 1 - e^{\epsilon - Z} \}}{e^{(\alpha -1)z}} 
+    c = \sup\limits_{z \in \mathbb{R}} \frac{max\{0, 1 - e^{\epsilon - z} \}}{e^{(\alpha -1)z}} 
     = \sup\limits_{z \in \mathbb{R}} e^{z - \alpha z} - e^{\epsilon - \alpha z} 
     = \sup\limits_{z \in \mathbb{R}}f(z)
 \end{equation}
