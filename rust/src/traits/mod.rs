@@ -2,7 +2,7 @@ use crate::domains::InherentNull;
 use crate::metrics::IntDistance;
 use num::{One, Zero};
 use std::hash::Hash;
-use std::ops::{AddAssign, SubAssign};
+use std::ops::{AddAssign, SubAssign, MulAssign};
 
 mod bounded;
 pub use bounded::*;
@@ -57,6 +57,7 @@ pub trait Number:
     + PartialEq
     + AddAssign
     + SubAssign
+    + MulAssign
     + FiniteBounds
     + ExactIntCast<usize>
     + InfCast<IntDistance>
@@ -80,6 +81,7 @@ impl<T> Number for T where
         + PartialEq
         + AddAssign
         + SubAssign
+        + MulAssign
         + FiniteBounds
         + ExactIntCast<usize>
         + InfCast<IntDistance>
@@ -110,6 +112,7 @@ pub trait Float:
     + CastInternalReal
     + FloatBits
     + ExactIntCast<Self::Bits>
+    + RoundCast<f64>
 {
 }
 impl<T> Float for T where
@@ -129,5 +132,6 @@ impl<T> Float for T where
         + CastInternalReal
         + FloatBits
         + ExactIntCast<Self::Bits>
+        + RoundCast<f64>
 {
 }

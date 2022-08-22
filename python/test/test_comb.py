@@ -2,7 +2,7 @@ import pytest
 from opendp.mod import enable_features
 from opendp.meas import *
 from opendp.trans import *
-from opendp.typing import AllDomain, L1Distance, VectorDomain
+from opendp.typing import AllDomain, L1Distance, VectorDomain, ZeroConcentratedDivergence
 
 enable_features("floating-point", "contrib")
 
@@ -74,7 +74,21 @@ def test_make_basic_composition_leak():
     for i in range(1000):
         print('iteration', i)
         meas([0] * 10_000_000)
+    
+
+def test_cast_zcdp_approxdp():
+    from opendp.comb import make_zCDP_to_approxDP
+
+    base_gaussian = make_base_gaussian(10., MO=ZeroConcentratedDivergence[float])
+
+    print(base_gaussian.map(1.))
+
+    smd_gaussian = make_zCDP_to_approxDP(base_gaussian)
+
+    print(smd_gaussian.map(1.).epsilon(1e-6))
+    print(make_base_gaussian(10.).map(1.).epsilon(1e-6))
+
 
 if __name__ == "__main__":
-    test_make_basic_composition()
+    test_cast_zcdp_approxdp()
 
