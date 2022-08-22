@@ -18,21 +18,7 @@ From \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} 
 % Implementation:
 % https://github.com/opendp/opendp/blob/504-zcdp-smd-cast/rust/src/comb/measure_cast/zCDP_to_approxDP/cks20.rs
 
-
-\section{Pseudocode}
-\subsubsection*{Precondition}
-
-\begin{itemize}
-    \item Type \texttt{Q} must have trait \texttt{Float}.
-\end{itemize}
-
-\subsubsection*{Implementation}        
-\lstinputlisting[language=Python, firstline=2]{cdp_epsilon.py}
-
-\subsubsection*{Postcondition}
-Either a valid epsilon is returned or an error is returned.
-
-\section{Proof}
+\section{Bound Derivation}
 
 \begin{definition}
 \label{plrv}
@@ -182,7 +168,6 @@ Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfy
 This follows from \ref{renyidp-approxdp-epsilon} by taking the infimum over all divergence parameters $\alpha$.
 \end{proof}
 
-
 \subsection[Efficient computation of epsilon]{Efficient computation of $\epsilon$}
 
 From \ref{zcdp-approxdp-epsilon}, we have 
@@ -204,9 +189,35 @@ Otherwise the curve is concave, with a non-negative derivative for any choice of
     \geq 0
 \end{equation}
 
-We can find the minimizer $\alpha^{*}$ by conducting a binary search over the interval $(1, \alpha_{max})$, where $\alpha_{max}$ is discovered via exponential search for a positive derivative.
+We can find the minimizer $\alpha_{*}$ by conducting a binary search over the interval $(1, \alpha_{max})$, where $\alpha_{max}$ is discovered via exponential search for a positive derivative.
 
 
+\section{Pseudocode}
+\subsubsection*{Precondition}
+
+\begin{itemize}
+    \item Type \texttt{Q} must have trait \texttt{Float}.
+\end{itemize}
+
+\subsubsection*{Implementation}        
+\lstinputlisting[language=Python, firstline=2]{cdp_epsilon.py}
+
+\subsubsection*{Postcondition}
+Either a valid epsilon is returned or an error is returned.
+
+\section{Proof}
+
+\begin{theorem}
+For any possible setting of $\rho$ and $\delta$, $\texttt{cdp\_epsilon}$ either returns an error, or an $\epsilon$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
+\end{theorem}
+
+\begin{proof}
+The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
+Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{zcdp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
+Define $\epsilon_{cons}(\alpha)$ as a ``looser'' function for computing $\epsilon(\alpha)$, 
+where floating-point arithmetic is computed with conservative rounding such that $\epsilon_{cons}(\alpha) \geq \epsilon(\alpha)$ for $\forall \alpha \in (1, \infty)$.
+Since $\texttt{epsilon} = \epsilon_{cons}(\texttt{a\_max}) \geq \epsilon(\texttt{a\_max})$, then any $(\epsilon(\texttt{a\_max}), \delta)$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
+\end{proof}
 
 
 \bibliographystyle{alpha}
