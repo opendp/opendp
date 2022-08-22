@@ -266,9 +266,9 @@ class SMDCurve(object):
     def __init__(self, curve):
         self.curve = curve
 
-    def epsilon(self, delta, T=None):
+    def epsilon(self, delta):
         from opendp._data import smd_curve_epsilon
-        return smd_curve_epsilon(self.curve, delta, T=T)
+        return smd_curve_epsilon(self.curve, delta)
 
 
 class UnknownTypeException(Exception):
