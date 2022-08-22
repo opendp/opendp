@@ -7,7 +7,6 @@ from opendp.typing import *
 __all__ = [
     "make_base_laplace",
     "make_base_gaussian",
-    "make_base_analytic_gaussian",
     "make_base_geometric",
     "make_base_discrete_laplace_linear",
     "make_base_discrete_laplace_cks20",
@@ -21,12 +20,15 @@ __all__ = [
 
 def make_base_laplace(
     scale,
+    k: int = -1074,
     D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     Adjust D to noise vector-valued data.
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+    :param k: The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity.
+    :type k: int
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
     :return: A base_laplace step.
@@ -44,30 +46,33 @@ def make_base_laplace(
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    k = py_to_c(k, c_type=ctypes.c_int32)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_laplace
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_int32, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D), Measurement))
+    return c_to_py(unwrap(function(scale, k, D), Measurement))
 
 
 def make_base_gaussian(
     scale,
+    k: int = -1074,
     D: RuntimeTypeDescriptor = "AllDomain<T>",
-    MO: RuntimeTypeDescriptor = "SmoothedMaxDivergence<T>"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     Adjust D to noise vector-valued data.
     The output epsilon may be no greater than one.
-    Use make_base_analytic_gaussian for a tighter analysis that supports epsilon > 1.
     
     :param scale: noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+    :param k: The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity.
+    :type k: int
     :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
     :type D: :ref:`RuntimeTypeDescriptor`
-    :param MO: Output measure. Valid values are SmoothedMaxDivergence<T> or ZeroConcentratedDivergence<T>
+    :param MO: Output measure. The only valid measure is ZeroConcentratedDivergence<T>.
     :type MO: :ref:`RuntimeTypeDescriptor`
     :return: A base_gaussian step.
     :rtype: Measurement
@@ -86,51 +91,16 @@ def make_base_gaussian(
     
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    k = py_to_c(k, c_type=ctypes.c_int32)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_int32, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D, MO), Measurement))
-
-
-def make_base_analytic_gaussian(
-    scale: float,
-    D: RuntimeTypeDescriptor = "AllDomain<f64>"
-) -> Measurement:
-    """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
-    Adjust D to noise vector-valued data.
-    The privacy relation is based on the analytic gaussian mechanism.
-    
-    :param scale: noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-    :type scale: float
-    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<f64>> or AllDomain<f64>
-    :type D: :ref:`RuntimeTypeDescriptor`
-    :return: A base_analytic_gaussian step.
-    :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("floating-point", "contrib")
-    
-    # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
-    T = get_atom_or_infer(D, scale)
-    
-    # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_double)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_meas__make_base_analytic_gaussian
-    function.argtypes = [ctypes.c_double, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(scale, D), Measurement))
+    return c_to_py(unwrap(function(scale, k, D, MO), Measurement))
 
 
 def make_base_geometric(
@@ -424,12 +394,15 @@ def make_base_ptr(
     scale,
     threshold,
     TK: RuntimeTypeDescriptor,
+    k: int = -1074,
     TV: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param threshold: Exclude counts that are less than this minimum value.
+    :param k: The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity.
+    :type k: int
     :param TK: Type of Key. Must be hashable/categorical.
     :type TK: :ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Must be float.
@@ -449,12 +422,13 @@ def make_base_ptr(
     # Convert arguments to c types.
     scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
     threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
+    k = py_to_c(k, c_type=ctypes.c_int32)
     TK = py_to_c(TK, c_type=ctypes.c_char_p)
     TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_meas__make_base_ptr
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int32, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, threshold, TK, TV), Measurement))
+    return c_to_py(unwrap(function(scale, threshold, k, TK, TV), Measurement))

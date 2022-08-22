@@ -22,9 +22,9 @@ def test_amplification():
 
 
 def test_fix_delta():
-    from opendp.comb import make_fix_delta
+    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
 
-    base_gaussian = make_base_gaussian(10.)
+    base_gaussian = make_zCDP_to_approxDP(make_base_gaussian(10.))
     print(base_gaussian.map(1.).epsilon(1e-6))
     fixed_base_gaussian = make_fix_delta(base_gaussian, 1e-6)
 
@@ -86,7 +86,6 @@ def test_cast_zcdp_approxdp():
     smd_gaussian = make_zCDP_to_approxDP(base_gaussian)
 
     print(smd_gaussian.map(1.).epsilon(1e-6))
-    print(make_base_gaussian(10.).map(1.).epsilon(1e-6))
 
 
 if __name__ == "__main__":

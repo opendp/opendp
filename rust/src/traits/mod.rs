@@ -16,8 +16,6 @@ pub use cast::*;
 mod operations;
 pub use operations::*;
 
-use self::samplers::{SampleGaussian, SampleLaplace, SampleUniform};
-
 pub mod samplers;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
@@ -60,6 +58,7 @@ pub trait Number:
     + MulAssign
     + FiniteBounds
     + ExactIntCast<usize>
+    + ExactIntCast<i32>
     + InfCast<IntDistance>
     + InfCast<usize>
     + std::iter::Sum<Self>
@@ -84,6 +83,7 @@ impl<T> Number for T where
         + MulAssign
         + FiniteBounds
         + ExactIntCast<usize>
+        + ExactIntCast<i32>
         + InfCast<IntDistance>
         + InfCast<usize>
         + std::iter::Sum<Self>
@@ -106,9 +106,6 @@ pub trait Float:
     + InfExpM1
     + InfPow
     + InfSqrt
-    + SampleUniform
-    + SampleGaussian
-    + SampleLaplace
     + CastInternalReal
     + FloatBits
     + ExactIntCast<Self::Bits>
@@ -126,9 +123,6 @@ impl<T> Float for T where
         + InfExpM1
         + InfPow
         + InfSqrt
-        + SampleUniform
-        + SampleGaussian
-        + SampleLaplace
         + CastInternalReal
         + FloatBits
         + ExactIntCast<Self::Bits>

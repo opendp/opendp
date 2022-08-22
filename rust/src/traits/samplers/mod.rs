@@ -6,14 +6,23 @@ mod cks20;
 #[cfg(feature="use-mpfr")]
 pub use cks20::*;
 
-mod continuous;
-pub use continuous::*;
+#[cfg(feature="use-mpfr")]
+mod discretize;
+#[cfg(feature="use-mpfr")]
+pub use discretize::*;
 
 mod geometric;
 pub use geometric::*;
 
 mod uniform;
 pub use uniform::*;
+
+// these samplers are only accessible if the library is compiled in an explicitly unsafe way
+#[cfg(not(feature = "use-mpfr"))]
+mod vulnerable_fallbacks;
+#[cfg(not(feature = "use-mpfr"))]
+pub use vulnerable_fallbacks::*;
+
 
 use rand::RngCore;
 use rand::prelude::SliceRandom;

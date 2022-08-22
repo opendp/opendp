@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_make_basic_composition_2() -> Fallible<()> {
-        let laplace = make_base_laplace::<AllDomain<_>>(1.0f64)?;
+        let laplace = make_base_laplace::<AllDomain<_>>(1.0f64, None)?;
         let measurements = vec![&laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;
@@ -159,10 +159,9 @@ mod tests {
 
         assert_eq!(ret.len(), 2);
         println!("return: {:?}", ret);
-
+        
         assert!(composition.check(&1., &2.)?);
-        assert!(composition.check(&1., &2.0001)?);
-        assert!(!composition.check(&1., &1.999)?);
+        assert!(!composition.check(&1., &1.9999)?);
         Ok(())
     }
 }

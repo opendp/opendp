@@ -10,6 +10,12 @@
                 "description": "Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation."
             },
             {
+                "name": "k",
+                "c_type": "int32_t",
+                "default": -1074,
+                "description": "The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity."
+            },
+            {
                 "name": "D",
                 "default": "AllDomain<T>",
                 "generics": ["T"],
@@ -31,7 +37,7 @@
         "ret": {"c_type": "FfiResult<AnyMeasurement *>"}
     },
     "make_base_gaussian": {
-        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.\nThe output epsilon may be no greater than one.\nUse make_base_analytic_gaussian for a tighter analysis that supports epsilon > 1.",
+        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.\nThe output epsilon may be no greater than one.",
         "features": ["floating-point", "contrib"],
         "args": [
             {
@@ -39,6 +45,12 @@
                 "c_type": "void *",
                 "rust_type": "T",
                 "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
+            },
+            {
+                "name": "k",
+                "c_type": "int32_t",
+                "default": -1074,
+                "description": "The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity."
             },
             {
                 "name": "D",
@@ -49,40 +61,9 @@
             },
             {
                 "name": "MO",
-                "default": "SmoothedMaxDivergence<T>",
+                "default": "ZeroConcentratedDivergence<T>",
                 "generics": ["T"],
-                "description": "Output measure. Valid values are SmoothedMaxDivergence<T> or ZeroConcentratedDivergence<T>",
-                "is_type": true
-            }
-        ],
-        "derived_types": [
-            {
-                "name": "T",
-                "rust_type": {
-                    "function": "get_atom_or_infer",
-                    "params": [
-                        "D", "scale"
-                    ]
-                }
-            }
-        ],
-        "ret": {
-            "c_type": "FfiResult<AnyMeasurement *>"
-        }
-    },
-    "make_base_analytic_gaussian": {
-        "description": "Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.\nAdjust D to noise vector-valued data.\nThe privacy relation is based on the analytic gaussian mechanism.",
-        "features": ["floating-point", "contrib"],
-        "args": [
-            {
-                "name": "scale",
-                "c_type": "double",
-                "description": "noise scale parameter for the gaussian distribution. `scale` == standard_deviation."
-            },
-            {
-                "name": "D",
-                "default": "AllDomain<f64>",
-                "description": "Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<f64>> or AllDomain<f64>",
+                "description": "Output measure. The only valid measure is ZeroConcentratedDivergence<T>.",
                 "is_type": true
             }
         ],
@@ -387,6 +368,12 @@
                 "c_type": "void *",
                 "rust_type": "TV",
                 "description": "Exclude counts that are less than this minimum value."
+            },
+            {
+                "name": "k",
+                "c_type": "int32_t",
+                "default": -1074,
+                "description": "The noise granularity in terms of 2^k. Larger values are more computationally efficient, but have a looser privacy map. Defaults to the smallest granularity."
             },
             {
                 "name": "TK",

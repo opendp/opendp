@@ -60,7 +60,7 @@
 //!     // Construct a Measurement to calculate a noisy sum.
 //!     let clamp = make_clamp(bounds)?;
 //!     let bounded_sum = make_bounded_sum(bounds)?;
-//!     let laplace = make_base_laplace(sigma)?;
+//!     let laplace = make_base_laplace(sigma, None)?;
 //!     let intermediate = make_chain_tt(&bounded_sum, &clamp)?;
 //!     let noisy_sum = make_chain_mt(&laplace, &intermediate)?;
 //!
@@ -73,7 +73,7 @@
 //!         make_cast_default::<String, f64>()? >>
 //!         make_clamp(bounds)? >>
 //!         make_bounded_sum(bounds)? >>
-//!         make_base_laplace(sigma)?
+//!         make_base_laplace(sigma, None)?
 //!     )?;
 //!
 //!     // Check that the pipeline is (1, 1.0)-close

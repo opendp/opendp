@@ -195,10 +195,12 @@ pub(super) fn sample_geometric_buffer(buffer_len: usize, constant_time: bool) ->
 
 
 
-#[cfg(test)]
-mod test {
+#[cfg(all(test, feature="test-plot"))]
+mod test_plotting {
+    use crate::traits::samplers::Fallible;
+    use crate::error::ExplainUnwrap;
+    use super::*;
     #[test]
-    #[cfg(feature="test-plot")]
     fn plot_geometric() -> Fallible<()> {
 
         let shift = 0;
@@ -206,7 +208,7 @@ mod test {
 
         let title = format!("Geometric(shift={}, scale={}) distribution", shift, scale);
         let data = (0..10_000)
-            .map(|_| i8::sample_two_sided_geometric(0, 1., None))
+            .map(|_| i8::sample_discrete_laplace_linear(0, 1., None))
             .collect::<Fallible<Vec<i8>>>()?;
 
         use vega_lite_4::*;
@@ -227,7 +229,7 @@ mod test {
                         .build()?)
                     .build()?,
             )
-            .build()?.show().unwrap();
+            .build()?.show().unwrap_test();
         Ok(())
     }
 }

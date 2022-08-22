@@ -6,6 +6,7 @@ use crate::domains::{AllDomain, InherentNull, InherentNullDomain, OptionNullDoma
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
+use crate::traits::samplers::SampleUniform;
 use crate::traits::{CheckNull, Float};
 use crate::trans::{DropNullDomain, ImputeConstantDomain, make_drop_null, make_impute_constant, make_impute_uniform_float};
 
@@ -19,7 +20,7 @@ pub extern "C" fn opendp_trans__make_impute_uniform_float(
     fn monomorphize<TA>(
         bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where TA: Float {
+        where TA: Float + SampleUniform {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
         make_impute_uniform_float::<TA>(bounds).into_any()
     }

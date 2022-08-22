@@ -10,24 +10,29 @@ use crate::metrics::L1Distance;
 use crate::measures::{SmoothedMaxDivergence, SMDCurve};
 use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
-use crate::traits::{Float, Hashable};
+use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
+use crate::traits::{Float, Hashable, ExactIntCast};
+
+use super::get_discretization_consts;
 
 // propose-test-release count grouped by unknown categories,
 // IMPORTANT: Assumes that dataset distance is bounded above by d_in.
 //  This assumption holds for count queries in L1-space.
 pub fn make_base_ptr<TK, TV>(
-    scale: TV, threshold: TV,
+    scale: TV, threshold: TV, k: Option<i32>
 ) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
     where TK: Hashable,
-          TV: Float {
+          TV: Float + SampleDiscreteLaplaceZ2k,
+          i32: ExactIntCast<TV::Bits> {
     let _2 = TV::exact_int_cast(2)?;
+    let (k, relaxation) = get_discretization_consts(k)?;
     Ok(Measurement::new(
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
             data.clone().into_iter()
                 // noise output count
-                .map(|(k, v)| TV::sample_laplace(v, scale, false).map(|v| (k, v)))
+                .map(|(key, v)| TV::sample_discrete_laplace_Z2k(v, scale, k).map(|v| (key, v)))
                 // remove counts that fall below threshold
                 .filter(|res| res.as_ref().map(|(_k, c)| c >= &threshold).unwrap_or(true))
                 // fail the whole computation if any cast or noise addition failed
@@ -41,6 +46,7 @@ pub fn make_base_ptr<TK, TV>(
                     if del.is_sign_negative() || del.is_zero() {
                         return fallible!(FailedRelation, "delta must be positive");
                     }
+                    let d_in = d_in.inf_add(&relaxation)?;
                     let min_eps = d_in / scale;
                     let min_threshold = (d_in / (_2 * del)).ln() * scale + d_in;
                     if threshold < min_threshold {
@@ -71,7 +77,7 @@ mod tests {
 
         let measurement = (
             make_count_by()? >>
-            make_base_ptr::<char, f64>(scale, threshold)?
+            make_base_ptr::<char, f64>(scale, threshold, None)?
         )?;
         let ret = measurement.invoke(
             &vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;

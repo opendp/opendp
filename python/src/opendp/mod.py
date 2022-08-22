@@ -485,20 +485,20 @@ def binary_search(
         from opendp.typing import L2Distance, VectorDomain, AllDomain
         from opendp.trans import make_sized_bounded_mean
         from opendp.meas import make_base_gaussian
-        from opendp.comb import make_fix_delta
+        from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
         from opendp.mod import enable_features
         enable_features("contrib", "floating-point")
 
     >>> # build a histogram that emits float counts
-    >>> dp_mean = make_fix_delta(
-    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >> make_base_gaussian(1.), 
+    >>> dp_mean = make_fix_delta(make_zCDP_to_approxDP(
+    ...     make_sized_bounded_mean(1000, bounds=(0., 100.)) >> make_base_gaussian(1.)), 
     ...     1e-8
     ... )
     ...
     >>> binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
     ...     bounds = (0., 1.))
-    0.6105625903365299
+    0.5235561269546629
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 

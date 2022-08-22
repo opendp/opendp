@@ -1,4 +1,5 @@
-
+from opendp.mod import enable_features
+enable_features("floating-point", "contrib")
 
 from opendp.typing import InsertDeleteDistance
 
@@ -9,10 +10,8 @@ def test_sized_bounded_float_sum():
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_resize, make_sized_bounded_sum
     from opendp.meas import make_base_laplace, make_base_gaussian
-    from opendp.comb import make_fix_delta
-    from opendp.mod import binary_search_chain, enable_features
-
-    enable_features("floating-point", "contrib")
+    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
+    from opendp.mod import binary_search_chain
 
     size = 200
     bounds = (0., 20.)
@@ -40,7 +39,7 @@ def test_sized_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_known_n_sum_from_dataframe = binary_search_chain(
-        lambda s: make_fix_delta(preprocess >> make_base_gaussian(s), 1e-5),
+        lambda s: make_fix_delta(make_zCDP_to_approxDP(preprocess >> make_base_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_known_n_sum_from_dataframe.check(1, 1.)
@@ -57,9 +56,7 @@ def test_sized_bounded_int_sum():
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_resize, make_sized_bounded_sum
     from opendp.meas import make_base_discrete_laplace
-    from opendp.mod import binary_search_chain, enable_features
-
-    enable_features("floating-point", "contrib")
+    from opendp.mod import binary_search_chain
 
     size = 200
     bounds = (0, 20)
@@ -98,10 +95,9 @@ def test_bounded_float_sum():
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_sum
     from opendp.meas import make_base_laplace, make_base_gaussian
-    from opendp.comb import make_fix_delta
-    from opendp.mod import binary_search_chain, enable_features
-
-    enable_features("floating-point")
+    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
+    from opendp.mod import binary_search_chain
+    
     bounds = (0., 20.)
 
     preprocess = (
@@ -124,7 +120,7 @@ def test_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_sum_from_dataframe = binary_search_chain(
-        lambda s: make_fix_delta(preprocess >> make_base_gaussian(s), 1e-5),
+        lambda s: make_fix_delta(preprocess >> make_zCDP_to_approxDP(make_base_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_sum_from_dataframe.check(1, 1.)
