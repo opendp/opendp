@@ -77,15 +77,15 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
 fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> 
     where C: Integer + ToPrimitive,
           T: CastInternalReal {
-    let mut scalar = scale.into_internal();
-    scalar.div_assign_round(alpha.into_internal(), Round::Down);
+    let mut scalar = scale.neg_inf_into_internal();
+    scalar.div_assign_round(alpha.inf_into_internal(), Round::Down);
     // Truncate bits that represents values below 2^-53
     scalar.set_prec_round((f64::MANTISSA_DIGITS as i32 - scalar.get_exp().unwrap()).max(1) as u32, Round::Down);
 
     let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.max(C::zero()).to_u64().unwrap_or_default()) * scalar;
-    let floored = f64::from_internal(r.clone().floor()) as usize;
+    let floored = f64::inf_from_internal(r.clone().floor()) as usize;
     
-    match bool::sample_bernoulli(f64::from_internal(r.fract()), false)? {
+    match bool::sample_bernoulli(f64::inf_from_internal(r.fract()), false)? {
         true => Ok(floored + 1),
         false => Ok(floored)
     }
@@ -93,16 +93,16 @@ fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize>
 
 // Probability of flipping bits = 1 / (alpha + 2)
 fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
-    let mut a = alpha.into_internal();
+    let mut a = alpha.neg_inf_into_internal();
     a.add_assign_round(2, Round::Down);
-    let mut p = 1f64.into_internal();
-    p.div_assign_round( a, Round::Up); // Round up to preserve privacy
-    f64::from_internal(p)
+    a.recip_round(Round::Up);
+    // Round up to preserve privacy
+    f64::inf_from_internal(a)
 }
 
 // Due to privacy concerns the current implementation discards bits with significance less than 2^-52 from scale/alpha
 fn check_parameters<T : CastInternalReal>(alpha: T, scale: T) -> bool {
-    scale.into_internal() * Float::with_val(53, 52).exp2() < alpha.into_internal()
+    scale.inf_into_internal() * Float::with_val(53, 52).exp2() < alpha.neg_inf_into_internal()
 }
 
 // Computes the DP projection. This corresponds to Algorithm 4 in the paper
