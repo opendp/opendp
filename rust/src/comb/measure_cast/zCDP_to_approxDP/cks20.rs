@@ -114,6 +114,7 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
 
     let a_m1 = a_max.inf_sub(&_1)?;
 
+    // reorganize 1 - 1/α -> (α-1)/α for numerical stability
     //  numer = ln(1/δ) + (α-1) ln((α-1)/α) - ln(α)
     let numer = (a_m1.inf_div(&a_max)?.inf_ln()?.inf_mul(&a_m1)?)
         .inf_sub(&a_max.inf_ln()?)?
