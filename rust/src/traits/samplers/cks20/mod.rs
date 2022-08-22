@@ -113,15 +113,15 @@ pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
         return Ok(0.into())
     }
     let inv_scale = scale.recip();
+    
     loop {
-
-        let sign = bool::sample_standard_bernoulli()?;
+        let positive = bool::sample_standard_bernoulli()?;
         let magnitude = sample_geometric_exp_fast(inv_scale.clone())?;
-        if sign || !magnitude.is_zero() {
-            return Ok(if sign {
-                -magnitude
-            } else {
+        if positive || !magnitude.is_zero() {
+            return Ok(if positive {
                 magnitude
+            } else {
+                -magnitude
             })
         }
     }
