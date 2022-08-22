@@ -120,7 +120,7 @@ macro_rules! impl_exact_int_cast_int_float {
     ($int:ty, $float:ty) => (impl ExactIntCast<$int> for $float {
         fn exact_int_cast(v_int: $int) -> Fallible<Self> {
             let v_float = v_int as $float;
-            if <$float>::MIN_CONSECUTIVE > v_float || <$float>::MAX_CONSECUTIVE < v_float {
+            if !(<$float>::MIN_CONSECUTIVE..<$float>::MAX_CONSECUTIVE).contains(&v_float) {
                 fallible!(FailedCast, "exact_int_cast: integer is outside of consecutive integer bounds and may be subject to rounding")
             } else {
                 Ok(v_float)

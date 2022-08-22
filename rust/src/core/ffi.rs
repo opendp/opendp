@@ -191,7 +191,7 @@ pub extern "C" fn opendp_core__transformation_map(
 ) -> FfiResult<*mut AnyObject> {
     let transformation = try_as_ref!(transformation);
     let distance_in = try_as_ref!(distance_in);
-    let distance_out = transformation.map(&distance_in);
+    let distance_out = transformation.map(distance_in);
     distance_out.into()
 }
 
@@ -204,7 +204,7 @@ pub extern "C" fn opendp_core__transformation_check(
     let transformation = try_as_ref!(transformation);
     let distance_in = try_as_ref!(distance_in);
     let distance_out = try_as_ref!(distance_out);
-    let status = try_!(transformation.check(&distance_in, &distance_out));
+    let status = try_!(transformation.check(distance_in, distance_out));
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
@@ -215,7 +215,7 @@ pub extern "C" fn opendp_core__measurement_map(
 ) -> FfiResult<*mut AnyObject> {
     let measurement = try_as_ref!(measurement);
     let distance_in = try_as_ref!(distance_in);
-    let distance_out = measurement.map(&distance_in);
+    let distance_out = measurement.map(distance_in);
     distance_out.into()
 }
 

@@ -41,8 +41,8 @@ pub extern "C" fn opendp_trans__make_sized_bounded_covariance(
         {
             make_sized_bounded_covariance::<S>(size, bounds_0, bounds_1, ddof).into_any()
         }
-        let bounds_0 = try_!(try_as_ref!(bounds_0).downcast_ref::<(T, T)>()).clone();
-        let bounds_1 = try_!(try_as_ref!(bounds_1).downcast_ref::<(T, T)>()).clone();
+        let bounds_0 = *try_!(try_as_ref!(bounds_0).downcast_ref::<(T, T)>());
+        let bounds_1 = *try_!(try_as_ref!(bounds_1).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [
             (S, [Sequential<T>, Pairwise<T>])
         ], (size, bounds_0, bounds_1, ddof))

@@ -69,7 +69,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for A
         self.value.downcast_ref().ok_or_else(|| {
             let other_type = Type::of_id(&self.value.type_id())
                 .map(|t| format!(" AnyBox contains {:?}.", t))
-                .unwrap_or(String::new());
+                .unwrap_or_default();
             err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
         })
     }
@@ -77,7 +77,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for A
 
 impl<const PARTIALEQ: bool, const DEBUG: bool> Clone for AnyBoxBase<true, PARTIALEQ, DEBUG> {
     fn clone(&self) -> Self {
-        (self.clone_glue.as_ref().unwrap_assert("clone_glue always exists for CLONE=true AnyBoxBase"))(&self)
+        (self.clone_glue.as_ref().unwrap_assert("clone_glue always exists for CLONE=true AnyBoxBase"))(self)
     }
 }
 
@@ -279,7 +279,7 @@ impl<DI, DO> IntoAnyFunctionExt for Function<DI, DO>
         let function = move |arg: &<AnyDomain as Domain>::Carrier| -> Fallible<<AnyDomain as Domain>::Carrier> {
             let arg = arg.downcast_ref()?;
             let res = self.eval(arg);
-            res.map(|o| AnyObject::new(o))
+            res.map(AnyObject::new)
         };
         Function::new_fallible(function)
     }
@@ -295,7 +295,7 @@ impl<DO> IntoAnyFunctionOutExt for Function<AnyDomain, DO>
     fn into_any_out(self) -> AnyFunction {
         let function = move |arg: &<AnyDomain as Domain>::Carrier| -> Fallible<<AnyDomain as Domain>::Carrier> {
             let res = self.eval(arg);
-            res.map(|o| AnyObject::new(o))
+            res.map(AnyObject::new)
         };
         Function::new_fallible(function)
     }

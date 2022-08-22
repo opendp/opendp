@@ -14,14 +14,14 @@ macro_rules! fallible {
 #[macro_export]
 macro_rules! err {
     // error without message
-    ($variant:ident) => (crate::error::Error {
-        variant: crate::error::ErrorVariant::$variant,
+    ($variant:ident) => ($crate::error::Error {
+        variant: $crate::error::ErrorVariant::$variant,
         message: None,
         backtrace: err!(@backtrace)
     });
     // error with explicit message
-    ($variant:ident, $message:expr) => (crate::error::Error {
-        variant: crate::error::ErrorVariant::$variant,
+    ($variant:ident, $message:expr) => ($crate::error::Error {
+        variant: $crate::error::ErrorVariant::$variant,
         message: Some($message.to_string()), // ToString is impl'ed for String
         backtrace: err!(@backtrace)
     });

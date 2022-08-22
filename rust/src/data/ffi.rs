@@ -207,7 +207,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             } else { fallible!(FFI, "unrecognized generic {:?}", name) }
         }
         // This list is explicit because it allows us to avoid including u32 in the @primitives
-        _ => { dispatch!(plain_to_raw, [(&obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (obj)) }
+        _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (obj)) }
     }.into()
 }
 
@@ -270,7 +270,7 @@ impl std::fmt::Debug for AnyObject {
             (Box<(Box<f64>, Box<f64>)>, Box<f64>),
             (AnyObject, AnyObject),
             AnyObject
-        ])], (self)).unwrap_or("[Non-debuggable]".to_string()).as_str())
+        ])], (self)).unwrap_or_else(|_| "[Non-debuggable]".to_string()).as_str())
     }
 }
 
@@ -318,7 +318,7 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(curve: *const AnyObject, delta:
     }
     let curve = try_as_ref!(curve);
     let delta = try_as_ref!(delta);
-    dispatch!(monomorphize, [(&delta.type_, @floats)], (curve, delta)).into()
+    dispatch!(monomorphize, [(delta.type_, @floats)], (curve, delta)).into()
 }
 
 #[no_mangle]

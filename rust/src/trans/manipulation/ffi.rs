@@ -27,7 +27,7 @@ pub extern "C" fn opendp_trans__make_identity(
             }
             let atomic_domain = try_!(Type::of_id(&args[0]));
             let T = match atomic_domain.contents {
-                TypeContents::GENERIC { name, args } if &name == &"AllDomain" => {
+                TypeContents::GENERIC { name, args } if name == "AllDomain" => {
                     if args.len() != 1 {
                         return err!(FFI, "AllDomain only accepts one argument.").into();
                     }

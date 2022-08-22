@@ -42,9 +42,9 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace_linear(
         {
             make_base_discrete_laplace_linear::<D, QO>(scale, bounds).into_any()
         }
-        let scale = try_as_ref!(scale as *const QO).clone();
+        let scale = *try_as_ref!(scale as *const QO);
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
-            Some(try_!(bounds.downcast_ref::<(T, T)>()).clone())
+            Some(*try_!(bounds.downcast_ref::<(T, T)>()))
         } else {
             None
         };

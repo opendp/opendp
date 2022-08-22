@@ -30,7 +30,7 @@ fn conform_records<'a>(len: usize, records: &[Vec<&'a str>]) -> Vec<Vec<&'a str>
 
 fn create_dataframe<K: Eq + Hash>(col_names: Vec<K>, records: &[Vec<&str>]) -> DataFrame<K> {
     // make data rectangular
-    let records = conform_records(col_names.len(), &records);
+    let records = conform_records(col_names.len(), records);
 
     // transpose and collect into dataframe
     col_names.into_iter().enumerate()
@@ -76,7 +76,7 @@ pub fn make_split_dataframe<K>(
     Ok(Transformation::new(
         AllDomain::new(),
         create_dataframe_domain(),
-        Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
+        Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1)))

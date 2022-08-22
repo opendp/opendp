@@ -35,7 +35,7 @@ where
         );
     }
 
-    let (lower, upper) = bounds.clone();
+    let (lower, upper) = bounds;
     let ideal_sensitivity = upper.inf_sub(&lower)?.total_max(lower.alerting_abs()?.total_max(upper)?)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
@@ -85,7 +85,7 @@ where
         );
     }
 
-    let (lower, upper) = bounds.clone();
+    let (lower, upper) = bounds;
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     let relaxation = S::relaxation(size, lower, upper)?;
 
@@ -121,7 +121,7 @@ impl<T: Float> UncheckedSum for Pairwise<T> {
     fn unchecked_sum(arg: &[T]) -> T {
         match arg.len() {
             0 => T::zero(),
-            1 => arg[0].clone(),
+            1 => arg[0],
             n => {
                 let m = n / 2;
                 Self::unchecked_sum(&arg[..m]) + Self::unchecked_sum(&arg[m..])

@@ -58,6 +58,11 @@ impl GeneratorOpenDP {
         GeneratorOpenDP { error: Ok(()) }
     }
 }
+impl Default for GeneratorOpenDP {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[cfg(feature="use-mpfr")]
 impl ThreadRandGen for GeneratorOpenDP {

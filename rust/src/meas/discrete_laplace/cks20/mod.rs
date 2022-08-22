@@ -35,10 +35,10 @@ where
         D::default(),
         D::default(),
         if scale.is_zero() {
-            D::new_map_function(move |arg: &D::Atom| Ok(arg.clone()))
+            D::new_map_function(move |arg: &D::Atom| Ok(*arg))
         } else {
             D::new_map_function(move |arg: &D::Atom| {
-                let arg = Integer::from(arg.clone());
+                let arg = Integer::from(*arg);
                 let noise = sample_discrete_laplace(scale_rational.clone())?;
                 Ok((arg + noise).saturating_as())
             })
@@ -46,7 +46,7 @@ where
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
-            let d_in = QO::inf_cast(d_in.clone())?;
+            let d_in = QO::inf_cast(*d_in)?;
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }

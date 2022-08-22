@@ -39,7 +39,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_variance(
         {
             make_sized_bounded_variance::<S>(size, bounds, ddof).into_any()
         }
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
+        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (size, bounds, ddof))
     }
     let size = size as usize;

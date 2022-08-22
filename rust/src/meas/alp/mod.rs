@@ -112,7 +112,7 @@ fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T
     let mut z = vec![false; s];
 
     for (k, v) in x.iter() {
-        let round = scale_and_round(v.clone(), alpha.clone(), scale.clone())?;
+        let round = scale_and_round(v.clone(), alpha, scale)?;
         h.iter().take(round).for_each(|f| z[f(k) % s] = true); // ^= true TODO: Hash collisions can be handled using OR or XOR
     }
 
@@ -213,7 +213,7 @@ pub fn make_base_alp<K, C, T>(total: usize, size_factor: Option<u32>, alpha: Opt
           AlpState<K,T> : CheckNull {
 
     let factor = size_factor.unwrap_or(SIZE_FACTOR_DEFAULT) as f64;
-    let alpha = alpha.unwrap_or(T::from(ALPHA_DEFAULT).unwrap());
+    let alpha = alpha.unwrap_or_else(|| T::from(ALPHA_DEFAULT).unwrap());
 
     let beta: f64 = T::inf_cast(beta)?.to_f64()
         .ok_or_else(|| err!(MakeTransformation, "failed to parse beta"))?;

@@ -36,7 +36,7 @@ pub extern "C" fn opendp_trans__make_bounded_float_ordered_sum(
         {
             make_bounded_float_ordered_sum::<S>(size_limit, bounds).into_any()
         }
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
+        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (size_limit, bounds))
     }
     let size_limit = size_limit as usize;
@@ -71,7 +71,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_float_ordered_sum(
         {
             make_sized_bounded_float_ordered_sum::<S>(size, bounds).into_any()
         }
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
+        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (size, bounds))
     }
     let size = size as usize;

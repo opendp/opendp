@@ -38,7 +38,7 @@ where
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
-            let d_in = QO::inf_cast(d_in.clone())?;
+            let d_in = QO::inf_cast(*d_in)?;
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }

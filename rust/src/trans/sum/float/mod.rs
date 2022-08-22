@@ -49,7 +49,6 @@ impl<T: Float> SumRelaxation for Pairwise<T> {
 
         // u * k where k = log_2(n)
         let uk = size
-            .clone()
             .inf_log2()?
             .inf_div(&_2.inf_pow(&mantissa_bits)?)?;
 

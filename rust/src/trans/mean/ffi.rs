@@ -31,7 +31,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_mean(
         AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
     {
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
+        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         make_sized_bounded_mean::<MI, T>(size, bounds).into_any()
     }
     let size = size as usize;
