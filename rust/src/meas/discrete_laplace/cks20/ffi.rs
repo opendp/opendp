@@ -37,7 +37,7 @@ pub extern "C" fn opendp_meas__make_base_discrete_laplace_cks20(
         {
             make_base_discrete_laplace_cks20::<D, QO>(scale).into_any()
         }
-        let scale = try_as_ref!(scale as *const QO).clone();
+        let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
             (QO, [QO])

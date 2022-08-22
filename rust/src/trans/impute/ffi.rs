@@ -21,7 +21,7 @@ pub extern "C" fn opendp_trans__make_impute_uniform_float(
         bounds: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
         where TA: Float + SampleUniform {
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
+        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>());
         make_impute_uniform_float::<TA>(bounds).into_any()
     }
     dispatch!(monomorphize, [(TA, @floats)], (bounds))

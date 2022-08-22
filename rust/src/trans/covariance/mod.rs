@@ -42,8 +42,8 @@ where
     }
     let _size = S::Item::exact_int_cast(size)?;
     let _ddof = S::Item::exact_int_cast(ddof)?;
-    let (lower_0, upper_0) = bounds_0.clone();
-    let (lower_1, upper_1) = bounds_1.clone();
+    let (lower_0, upper_0) = bounds_0;
+    let (lower_1, upper_1) = bounds_1;
     let _1 = S::Item::one();
     let _2 = S::Item::exact_int_cast(2)?;
 
@@ -88,8 +88,8 @@ where
     Ok(Transformation::new(
         SizedDomain::new(
             VectorDomain::new(BoundedDomain::new_closed((
-                (bounds_0.0.clone(), bounds_1.0.clone()),
-                (bounds_0.1.clone(), bounds_1.1.clone()),
+                (bounds_0.0, bounds_1.0),
+                (bounds_0.1, bounds_1.1),
             ))?),
             size,
         ),

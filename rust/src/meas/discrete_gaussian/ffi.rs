@@ -36,7 +36,7 @@ pub extern "C" fn opendp_meas__make_base_discrete_gaussian(
         {
             make_base_discrete_gaussian::<D, MO>(scale).into_any()
         }
-        let scale = try_as_ref!(scale as *const Q).clone();
+        let scale = *try_as_ref!(scale as *const Q);
         dispatch!(monomorphize2, [
             (D, [VectorDomain<AllDomain<T>>, AllDomain<T>]),
             (MO, [ZeroConcentratedDivergence<Q>])

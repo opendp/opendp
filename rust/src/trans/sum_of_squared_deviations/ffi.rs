@@ -32,7 +32,7 @@ pub extern "C" fn opendp_trans__make_sized_bounded_sum_of_squared_deviations(
         {
             make_sized_bounded_sum_of_squared_deviations::<S>(size_limit, bounds).into_any()
         }
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
+        let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (size_limit, bounds))
     }
     let size_limit = size_limit as usize;

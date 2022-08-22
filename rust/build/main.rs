@@ -84,7 +84,7 @@ impl Argument {
         self.c_type.clone().expect("unknown c_type when parsing argument")
     }
     fn c_type_origin(&self) -> String {
-        self.c_type().split("<").next().unwrap().to_string()
+        self.c_type().split('<').next().unwrap().to_string()
     }
 }
 
@@ -97,9 +97,9 @@ enum RuntimeType {
     // get the ith subtype of an existing RuntimeType
     Lower { root: Box<RuntimeType>, index: i32 },
     // build a higher level RuntimeType
-    Raise { origin: String, args: Vec<Box<RuntimeType>> },
+    Raise { origin: String, args: Vec<RuntimeType> },
     // construct the RuntimeType via function call
-    Function { function: String, params: Vec<Box<RuntimeType>> },
+    Function { function: String, params: Vec<RuntimeType> },
 }
 
 impl<S: Into<String>> From<S> for RuntimeType {
@@ -110,7 +110,7 @@ impl<S: Into<String>> From<S> for RuntimeType {
 
 fn main() {
     // only build the bindings if you're in dev mode
-    if env::var("CARGO_PKG_VERSION").unwrap().as_str() != "0.0.0-development" { return }
+    if env::var("CARGO_PKG_VERSION").unwrap().as_str() != "0.0.0+development" { return }
 
     let module_names = vec!["comb", "meas", "trans", "data", "core", "accuracy"];
 
@@ -152,7 +152,7 @@ fn write_bindings(files: IndexMap<PathBuf, String>) {
 
 #[allow(dead_code)]
 fn indent(text: String) -> String {
-    text.split("\n").map(|v| format!("    {}", v)).collect::<Vec<_>>().join("\n")
+    text.split('\n').map(|v| format!("    {}", v)).collect::<Vec<_>>().join("\n")
 }
 
 /// resolve references to derived types
@@ -177,7 +177,7 @@ fn flatten_runtime_type(runtime_type: &RuntimeType, derived_types: &Vec<Argument
             RuntimeType::Raise {
                 origin: origin.clone(),
                 args: args.iter().map(|arg|
-                    Box::new(flatten_runtime_type(arg, derived_types))).collect()
+                    flatten_runtime_type(arg, derived_types)).collect()
             },
         other => other.clone()
     }

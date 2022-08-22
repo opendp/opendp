@@ -52,7 +52,7 @@ pub fn make_randomized_response_bool<Q>(
             if *d_in == 0 {
                 Q::zero()
             } else {
-                privacy_constant.clone()
+                privacy_constant
             }
         }),
     ))
@@ -124,7 +124,7 @@ pub fn make_randomized_response<T, Q>(
             if *d_in == 0 {
                 Q::zero()
             } else {
-                privacy_constant.clone()
+                privacy_constant
             }
         }),
     ))

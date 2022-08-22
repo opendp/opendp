@@ -26,7 +26,7 @@ pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf,
 
     modules.into_iter()
         .map(|(module_name, module)| (
-            PathBuf::from(format!("{}.py", if module_name == "data".to_string() {"_data".to_string()} else {module_name.clone()})),
+            PathBuf::from(format!("{}.py", if &module_name == "data" {"_data"} else {module_name.as_str()})),
             generate_module(module_name, module, &typemap, &hierarchy)
         ))
         .collect()
@@ -89,8 +89,8 @@ def {func_name}(
             func_name = func_name,
             args = crate::indent(args),
             sig_return = sig_return,
-            docstring = crate::indent(generate_docstring(&func, func_name, hierarchy)),
-            body = crate::indent(generate_body(module_name, func_name, &func, typemap)))
+            docstring = crate::indent(generate_docstring(func, func_name, hierarchy)),
+            body = crate::indent(generate_body(module_name, func_name, func, typemap)))
 }
 
 
@@ -173,7 +173,7 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
 
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
-fn generate_docstring(func: &Function, func_name: &String, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring(func: &Function, func_name: &str, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let mut description = func.description.as_ref()
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
@@ -210,18 +210,18 @@ fn generate_docstring(func: &Function, func_name: &String, hierarchy: &HashMap<S
 
 /// generate the part of a docstring corresponding to an argument
 fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String>>) -> String {
-    let name = arg.name.clone().unwrap_or_else(String::new);
+    let name = arg.name.clone().unwrap_or_default();
     format!(r#":param {name}: {description}{type_}"#,
             name = name,
             type_ = arg.python_type_hint(hierarchy)
                 .map(|v| if v.as_str() == "RuntimeTypeDescriptor" {":ref:`RuntimeTypeDescriptor`".to_string()} else {v})
                 .map(|v| format!("\n:type {}: {}", name, v))
-                .unwrap_or_else(String::new),
-            description = arg.description.clone().unwrap_or_else(String::new))
+                .unwrap_or_default(),
+            description = arg.description.clone().unwrap_or_default())
 }
 
 /// generate the part of a docstring corresponding to a return argument
-fn generate_docstring_return_arg(arg: &Argument, func_name: &String, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring_return_arg(arg: &Argument, func_name: &str, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let mut ret = Vec::new();
     if let Some(description) = &arg.description {
         ret.push(format!(":return: {description}", description = description));
@@ -288,7 +288,7 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
             Some(RuntimeType::Name(name)) => (name == type_name).then(|| arg.name()),
             Some(RuntimeType::Raise { origin, args }) =>
                 if origin == "Vec" {
-                    if let RuntimeType::Name(arg_name) = &*args[0] {
+                    if let RuntimeType::Name(arg_name) = &args[0] {
                         if arg_name == type_name {
                             Some(format!("next(iter({name}), None)", name = arg.name()))
                         } else { None }

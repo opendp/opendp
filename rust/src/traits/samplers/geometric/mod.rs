@@ -153,7 +153,7 @@ where
         if scale.is_zero() {
             return Ok(shift);
         }
-        let trials: Option<T> = if let Some((lower, upper)) = bounds.clone() {
+        let trials: Option<T> = if let Some((lower, upper)) = bounds {
             // if the output interval is a point
             if lower == upper {
                 return Ok(lower);

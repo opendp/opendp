@@ -12,6 +12,11 @@ pub struct PolyDomain {}
 impl PolyDomain {
     pub fn new() -> Self { PolyDomain {} }
 }
+impl Default for PolyDomain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl Debug for PolyDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "PolyDomain()")

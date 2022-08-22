@@ -30,7 +30,7 @@ where
         return fallible!(MakeTransformation, "size must be greater than zero")
     }
     let size_ = S::Item::exact_int_cast(size)?;
-    let (lower, upper) = bounds.clone();
+    let (lower, upper) = bounds;
     let _1 = S::Item::one();
 
     // DERIVE RELAXATION TERM

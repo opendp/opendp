@@ -16,6 +16,7 @@ mod ffi;
 pub trait SplitSatSum: Sized {
     /// Method which takes an iterator and generates `Self` from the elements by
     /// "summing up" the items.
+    #[allow(clippy::ptr_arg)]
     fn split_sat_sum(v: &Vec<Self>) -> Self;
 }
 

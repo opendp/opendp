@@ -42,12 +42,12 @@ pub extern "C" fn opendp_trans__make_lipschitz_float_mul(
             make_lipschitz_float_mul::<D, M>(constant, bounds).into_any()
         }
 
-        let constant = try_as_ref!(constant as *const T).clone();
+        let constant = *try_as_ref!(constant as *const T);
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [
             (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
             (M, [AbsoluteDistance<T>, L1Distance<T>, L2Distance<T>])
-        ], (constant, bounds.clone()))
+        ], (constant, *bounds))
     }
 
     let D = try_!(Type::try_from(D));

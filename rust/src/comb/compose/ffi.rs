@@ -26,16 +26,16 @@ pub extern "C" fn opendp_comb__make_basic_composition(
 
 
 impl BasicCompositionMeasure for AnyMeasure {
-    fn compose(&self, d_i: &Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
-            self_: &AnyMeasure, d_i: &Vec<AnyObject>
+            self_: &AnyMeasure, d_i: Vec<AnyObject>
         ) -> Fallible<AnyObject> {
 
             fn monomorphize2<M: 'static + BasicCompositionMeasure>(
-                self_: &AnyMeasure, d_i: &Vec<AnyObject>
+                self_: &AnyMeasure, d_i: Vec<AnyObject>
             ) -> Fallible<AnyObject>
                 where M::Distance: Clone {
-                self_.downcast_ref::<M>()?.compose(&d_i.iter()
+                self_.downcast_ref::<M>()?.compose(d_i.iter()
                     .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
                     .collect::<Fallible<Vec<M::Distance>>>()?).map(AnyObject::new)
             }

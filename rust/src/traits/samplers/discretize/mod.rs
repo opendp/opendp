@@ -2,7 +2,6 @@ use num::One;
 use std::convert::TryFrom;
 
 // stands for Big Integer, an integer with unlimited precision, from gmp
-#[cfg(feature = "use-mpfr")]
 use rug::{Integer, Rational};
 
 use crate::traits::samplers::sample_discrete_laplace;
@@ -11,6 +10,7 @@ use crate::error::Fallible;
 use super::sample_discrete_gaussian;
 
 pub trait SampleDiscreteLaplaceZ2k: Sized {
+    #![allow(non_snake_case)]
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
 }
 
@@ -32,10 +32,10 @@ where
 }
 
 pub trait SampleDiscreteGaussianZ2k: Sized {
+    #![allow(non_snake_case)]
     fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
 }
 
-#[cfg(feature = "use-mpfr")]
 impl<T> SampleDiscreteGaussianZ2k for T
 where
     Rational: TryFrom<T>,
