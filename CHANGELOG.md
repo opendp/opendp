@@ -69,6 +69,18 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - Added conservative rounding when converting between MFPR floats and native floats
     - MFPR has a different exponent range, which could lead to unintended rounding of floats that are out of exponent range
 
+
+### Migration
+- `make_base_gaussian`'s output measure is now ZeroConcentratedDivergence.
+    - This means the output distance is now a single scalar, rho (it used to be an (ε, δ) tuple)
+    - Use `adp_meas = opendp.comb.make_zCDP_to_approxDP(zcdp_meas)` to convert to an ε(δ) curve. 
+    - Use `fadp_meas = opendp.comb.make_fix_delta(adp_meas)` to change output distance from an ε(δ) curve to an (ε, δ) tuple
+        - `fadp_meas.check(d_in, (ε, δ))` is equivalent to the check on `make_base_gaussian` in 0.4
+- replace `make_base_analytic_gaussian` with `make_base_gaussian`
+- replace `make_base_geometric` with `make_base_discrete_laplace`
+- `make_basic_composition` accepts a list of measurements as its first argument (it used to have two arguments)
+- slight increase in sensitivities/privacy utilization across the library as a byproduct of floating-point attack mitigations
+
 ## [0.4.0] - 2021-12-10
 [0.4.0]: https://github.com/opendp/opendp/compare/v0.3.0...v0.4.0
 
@@ -185,6 +197,7 @@ just add it by copying from those below.
 ### Removed
 ### Fixed
 ### Security
+### Migration
 
 When a new version is released, a script will turn the Unreleased heading into a new heading with appropriate values for the version, date, and link. 
 Then the script will generate a new Unreleased section for future work.
