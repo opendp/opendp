@@ -13,7 +13,7 @@ assert config['metadata']['version'] == version, \
     "python/setup.cfg package version is incorrect"
 
 # check that opendp crate version is set properly
-opendp_toml = toml.load('../rust/Cargo.toml')
+opendp_toml = toml.load('rust/Cargo.toml')
 assert opendp_toml['package']['version'] == version, \
     "rust/Cargo.toml crate version is incorrect"
 
