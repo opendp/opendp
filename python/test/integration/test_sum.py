@@ -28,7 +28,7 @@ def test_sized_bounded_float_sum():
         # Clamp values
         make_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_bounded_resize(size=size, bounds=bounds, constant=0., MO=InsertDeleteDistance) >>
+        make_bounded_resize(size=size, bounds=bounds, constant=0.) >>
         # Aggregate with sum
         make_sized_bounded_sum(size=size, bounds=bounds)
     )
@@ -73,7 +73,7 @@ def test_sized_bounded_int_sum():
         # Clamp values
         make_clamp(bounds=bounds) >>
         # Resize dataset length
-        make_bounded_resize(size=size, bounds=bounds, constant=0, MO=InsertDeleteDistance) >>
+        make_bounded_resize(size=size, bounds=bounds, constant=0) >>
         # Aggregate with sum
         make_sized_bounded_sum(size=size, bounds=bounds)
     )

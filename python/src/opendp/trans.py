@@ -1205,7 +1205,7 @@ def make_sized_bounded_mean(
     :type size: int
     :param bounds: Tuple of inclusive lower and upper bounds of the input data.
     :type bounds: Tuple[Any, Any]
-    :param MI: input metric. One of SymmetricDistance or InsertDeleteDistance
+    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
     :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic data type
     :type T: :ref:`RuntimeTypeDescriptor`
@@ -1239,7 +1239,7 @@ def make_resize(
     size: int,
     constant: Any,
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    MO: RuntimeTypeDescriptor = "InsertDeleteDistance",
+    MO: RuntimeTypeDescriptor = "SymmetricDistance",
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
@@ -1248,9 +1248,9 @@ def make_resize(
     :type size: int
     :param constant: Value to impute with.
     :type constant: Any
-    :param MI: Input metric.
+    :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MI: :ref:`RuntimeTypeDescriptor`
-    :param MO: Output metric.
+    :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MO: :ref:`RuntimeTypeDescriptor`
     :param TA: Atomic type.
     :type TA: :ref:`RuntimeTypeDescriptor`
@@ -1297,9 +1297,9 @@ def make_bounded_resize(
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
     :param constant: Value to impute with.
-    :param MI: Input metric.
+    :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MI: :ref:`RuntimeTypeDescriptor`
-    :param MO: Output metric.
+    :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MO: :ref:`RuntimeTypeDescriptor`
     :param TA: Atomic type. If not passed, TA is inferred from the lower bound.
     :type TA: :ref:`RuntimeTypeDescriptor`
@@ -1342,7 +1342,7 @@ def make_bounded_sum(
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
-    :param MI: input metric. One of SymmetricDistance or InsertDeleteDistance.
+    :param MI: Input Metric. One of SymmetricDistance or InsertDeleteDistance.
     :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic type of data
     :type T: :ref:`RuntimeTypeDescriptor`
@@ -1374,7 +1374,7 @@ def make_bounded_sum(
 def make_sized_bounded_sum(
     size: int,
     bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "InsertDeleteDistance",
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known dataset size. 
@@ -1385,7 +1385,7 @@ def make_sized_bounded_sum(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
-    :param MI: input metric. One of SymmetricDistance or InsertDeleteDistance.
+    :param MI: Input Metric. One of SymmetricDistance or InsertDeleteDistance.
     :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic type of data
     :type T: :ref:`RuntimeTypeDescriptor`
