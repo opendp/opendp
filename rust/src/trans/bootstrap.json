@@ -737,7 +737,7 @@
             {
                 "name": "MI",
                 "is_type": true,
-                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance",
+                "description": "Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`",
                 "default": "SymmetricDistance"
             },
             {
@@ -773,13 +773,13 @@
                 "name": "MI",
                 "is_type": true,
                 "default": "SymmetricDistance",
-                "description": "Input metric."
+                "description": "Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
             },
             {
                 "name": "MO",
                 "is_type": true,
-                "default": "InsertDeleteDistance",
-                "description": "Output metric."
+                "default": "SymmetricDistance",
+                "description": "Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
             },
             {
                 "name": "TA",
@@ -821,13 +821,13 @@
                 "name": "MI",
                 "is_type": true,
                 "default": "SymmetricDistance",
-                "description": "Input metric."
+                "description": "Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
             },
             {
                 "name": "MO",
                 "is_type": true,
                 "default": "SymmetricDistance",
-                "description": "Output metric."
+                "description": "Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`"
             },
             {
                 "name": "TA",
@@ -862,7 +862,7 @@
                 "name": "MI",
                 "is_type": true,
                 "default": "SymmetricDistance",
-                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance."
+                "description": "Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`."
             },
             {
                 "name": "T",
@@ -900,8 +900,8 @@
             {
                 "name": "MI",
                 "is_type": true,
-                "default": "InsertDeleteDistance",
-                "description": "input metric. One of SymmetricDistance or InsertDeleteDistance."
+                "default": "SymmetricDistance",
+                "description": "Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`."
             },
             {
                 "name": "T",
