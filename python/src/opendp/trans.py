@@ -1342,7 +1342,7 @@ def make_bounded_sum(
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain
     :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of SymmetricDistance or InsertDeleteDistance.
+    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
     :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic type of data
     :type T: :ref:`RuntimeTypeDescriptor`
@@ -1385,7 +1385,7 @@ def make_sized_bounded_sum(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for input data
     :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of SymmetricDistance or InsertDeleteDistance.
+    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
     :type MI: :ref:`RuntimeTypeDescriptor`
     :param T: atomic type of data
     :type T: :ref:`RuntimeTypeDescriptor`
