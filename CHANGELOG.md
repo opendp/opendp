@@ -8,6 +8,10 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+
+## [0.5.0] - 2022-08-23
+[0.5.0]: https://github.com/opendp/opendp/compare/v0.4.0...v0.5.0
+
 ### Added
 - Account for finite data types in aggregators based on our paper [CSVW22](https://arxiv.org/abs/2207.10635)
     - For the [sum #467](https://github.com/opendp/opendp/pull/467), [variance #475](https://github.com/opendp/opendp/pull/475) and [mean #476](https://github.com/opendp/opendp/pull/476)
