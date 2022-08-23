@@ -8,14 +8,11 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
-## [0.5.0] - 2022-8-17
-[0.5.0]: https://github.com/opendp/opendp/compare/v0.4.0...v0.5.0
-
 ### Added
 - Account for finite data types in aggregators based on our paper [CSVW22](https://arxiv.org/abs/2207.10635)
     - For the [sum #467](https://github.com/opendp/opendp/pull/467), [variance #475](https://github.com/opendp/opendp/pull/475) and [mean #476](https://github.com/opendp/opendp/pull/476)
     - Formalize privacy analysis of data ordering [#465](https://github.com/opendp/opendp/pull/465) [#466](https://github.com/opendp/opendp/pull/466)
-- Stability/privacy maps [#463](https://github.com/opendp/opendp/pull/463)
+- Stability/privacy relations replaced with maps [#463](https://github.com/opendp/opendp/pull/463)
     - You can now call `.map` on transformations and measurements to directly get the tightest `d_out`
 - Composition of measurements [#482](https://github.com/opendp/opendp/pull/482)
     - Permits arbitrary nestings of compositions of an arbitrary number of measurements
