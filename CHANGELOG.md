@@ -9,12 +9,65 @@ Please keep this up to date, following the [instructions](#instructions) below.
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
 ### Added
+- Account for finite data types in aggregators based on our paper [CSVW22](https://arxiv.org/abs/2207.10635)
+    - For the [sum #467](https://github.com/opendp/opendp/pull/467), [variance #475](https://github.com/opendp/opendp/pull/475) and [mean #476](https://github.com/opendp/opendp/pull/476)
+    - Formalize privacy analysis of data ordering [#465](https://github.com/opendp/opendp/pull/465) [#466](https://github.com/opendp/opendp/pull/466)
+- Stability/privacy relations replaced with maps [#463](https://github.com/opendp/opendp/pull/463)
+    - You can now call `.map` on transformations and measurements to directly get the tightest `d_out`
+- Composition of measurements [#482](https://github.com/opendp/opendp/pull/482)
+    - Permits arbitrary nestings of compositions of an arbitrary number of measurements
+- Discrete noise mechanisms from [CKS20](https://arxiv.org/pdf/2004.00010.pdf)
+    - `make_base_discrete_laplace` is equivalent to `make_base_geometric`, but executes in a constant-time number of operations
+    - `make_base_discrete_gaussian` for the discrete gaussian mechanism
+- Add zero-concentrated differential privacy to the gaussian and discrete gaussian mechanisms
+    - Output measure is now always `ZeroConcentratedDivergence<Q>`, and output distance is in terms of rho
+- Add combinator to cast a measurement's output measure from `ZeroConcentratedDivergence<Q>` to `SmoothedMaxDivergence<Q>`
+    - `meas_smd = opendp.comb.make_zCDP_to_approxDP(meas_zcd)`
+- The `SmoothedMaxDivergence<Q>` measure represents distances as an `ε(δ)` privacy curve: 
+    - Can construct a curve by invoking the map: `curve = meas_smd.map(d_in)`
+    - Can evaluate a curve at a given delta `epsilon = curve.epsilon(delta)`
+- Add `make_fix_delta` combinator to fix the delta parameter in a `SmoothedMaxDivergence<Q>` measure
+    - The resulting measure is `FixedSmoothedMaxDivergence<Q>`, where the output distance is an `(ε, δ)` pair
+    - `eps, delta = make_fix_delta(meas_smd, delta=1e-8).map(d_in)`
+    - The fixed measure supports composition (unlike the curve measure)
+- Utility functions `set_default_float_type` and `set_default_int_type` to set the default bit depth of ints and floats
+- Exponential search when bounds are not specified in binary search utilities [#453](https://github.com/opendp/opendp/pull/453)
 - Support for Apple silicon (`aarch64-apple-darwin` target)
-- More example notebooks
 
 ### Changed
 - Switched to a single Rust crate (merged `opendp-ffi` into `opendp`)
+- Updated documentation to reflect feedback from users and added more example notebooks
+- Packaging for Contributor License Agreements
+- Improved formatting of rust stack traces in Python
+- Expanded error-indexes
 
+### Deprecated
+- `make_base_geometric` in favor of the more efficient `make_base_discrete_laplace`
+    - Constant-time execution can still be accessed via `make_base_discrete_laplace_linear`
+
+### Removed
+- `make_base_analytic_gaussian` in favor of the (now generally tighter) `make_base_gaussian`
+    - This would have been a deprecation, but updating to be consistent with forward maps is nontrivial
+
+### Fixed
+- Rust documentation on docs.rs is built with "untrusted" flag enabled
+- Python documentation for historical versions is rebuilt on correct tag
+- Avoid potential infinite loop in binary search utility
+
+### Security
+- Replace the underlying implementation of `make_base_laplace` and `make_base_gaussian` to [address precision-based attacks](https://tpdp.journalprivacyconfidentiality.org/2022/papers/HaneyDHSH22.pdf)
+    - Both measurements map input floats exactly to an integer discretization, apply discrete laplace or discrete gaussian noise, and then postprocess back to floats
+    - The discretization is on ℤ*2^k, where k can be configured, similar to the Google Differential Privacy Library
+    - In contrast to the Google library, the approximation to real sampling continues to improve as k is chosen to be smaller than -45. We choose a k of -1074, which matches the subnormal ULP, giving a tight privacy map
+- Fixed function in `make_randomized_response_bool`
+    - from proofwriting by Vicki Xu and Hanwen Zhang [#481](https://github.com/opendp/opendp/pull/481)
+- Multiplicative difference in probabilities in linear-time discrete laplace sampler are now exact around zero
+    - eliminates an un-accounted δ < ulp(e^-(1/scale)) from differing conservative roundings
+- Biased bernoulli sampler on float probabilities is now exact
+    - eliminates an un-accounted δ < 2^-500 in RR and linear-time discrete laplace sampler
+    - from proofwriting by Vicki Xu and Hanwen Zhang [#496](https://github.com/opendp/opendp/pull/496)
+- Added conservative rounding when converting between MFPR floats and native floats
+    - MFPR has a different exponent range, which could lead to unintended rounding of floats that are out of exponent range
 
 ## [0.4.0] - 2021-12-10
 [0.4.0]: https://github.com/opendp/opendp/compare/v0.3.0...v0.4.0

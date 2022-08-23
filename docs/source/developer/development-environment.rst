@@ -6,7 +6,7 @@ Development Environment
 Follow the steps below to get an OpenDP development environment set up, including the ability to run tests in both Rust and Python.
 
 * Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
-* Install `Python version 3.6 or higher <https://www.python.org>`_.
+* Install `Python version 3.7 or higher <https://www.python.org>`_.
 
 
 Clone the OpenDP Repo
@@ -203,11 +203,14 @@ These tasks can be used to directly build or test OpenDP.
             {
                 "type": "cargo",
                 "command": "build",
-                "problemMatcher": [
-                    "$rustc"
-                ],
+                "problemMatcher": {
+                    "base": "$rustc",
+                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                },
+                "options": {
+                    "cwd": "./rust"
+                },
                 "args": [
-                    "--manifest-path=./rust/Cargo.toml",
                     "--features", "untrusted"
                 ],
                 "group": "build",
@@ -219,11 +222,14 @@ These tasks can be used to directly build or test OpenDP.
             {
                 "type": "cargo",
                 "command": "build",
-                "problemMatcher": [
-                    "$rustc"
-                ],
+                "problemMatcher": {
+                    "base": "$rustc",
+                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                },
+                "options": {
+                    "cwd": "./rust"
+                },
                 "args": [
-                    "--manifest-path=./rust/Cargo.toml",
                     "--features", "bindings-python untrusted"
                 ],
                 "group": "build",
@@ -235,11 +241,14 @@ These tasks can be used to directly build or test OpenDP.
             {
                 "type": "cargo",
                 "command": "test",
-                "problemMatcher": [
-                    "$rustc"
-                ],
+                "problemMatcher": {
+                    "base": "$rustc",
+                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                },
+                "options": {
+                    "cwd": "./rust"
+                },
                 "args": [
-                    "--manifest-path=./rust/Cargo.toml",
                     "--features", "bindings-python untrusted"
                 ],
                 "group": "build",

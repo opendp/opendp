@@ -1,7 +1,7 @@
 # OpenDP
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8%20%7C%203.9-blue)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/)
 [![ci tests](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
 
 The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of
@@ -58,4 +58,4 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 ## Contributing
 
 OpenDP is a community effort, and we welcome your contributions to its development! 
-If you'd like to participate, please see the [Contributing section of the Developer Guide](https://docs.opendp.org/en/stable/developer/contribution-process.html)
+If you'd like to participate, please contact us! We also have a [contribution process section in the Developer Guide](https://docs.opendp.org/en/stable/developer/contribution-process.html).

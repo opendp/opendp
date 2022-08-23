@@ -5,10 +5,11 @@ license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
-version = "0.0.0-development"
+version = "0.0.0+development"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
 build = "build/main.rs"
+rust-version = "1.59.0" # MSRV via `cargo intall msrv && cargo msrv -- cargo check --features=untrusted,bindings-python`
 
 [dependencies]
 rand = "0.7.3"
