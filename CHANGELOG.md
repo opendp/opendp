@@ -186,6 +186,6 @@ just add it by copying from those below.
 ### Fixed
 ### Security
 
-When a new version is released, a script will turn the Unreleased heading into a new heading with appropriate values
-for the version, date, and link. Then the script they will generate a new Unreleased section for future work.
+When a new version is released, a script will turn the Unreleased heading into a new heading with appropriate values for the version, date, and link. 
+Then the script will generate a new Unreleased section for future work.
 Please keep the existing dummy heading and link as they are, so that things operate correctly. Thanks!
