@@ -1,23 +1,15 @@
+\documentclass{article}
 \input{../../../mod.sty}
 
 
 \title{\texttt{fn cdp\_epsilon}}
-\author{}
+\author{Michael Shoemate}
 
 \begin{document}
 \maketitle
 
-From \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} of \cite{CKS20}.
-
-% Based on this proof:
-% https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3
-
-% To close this issue:
-% https://github.com/opendp/opendp/issues/524
-
-% Implementation:
-% https://github.com/opendp/opendp/blob/504-zcdp-smd-cast/rust/src/comb/measure_cast/zCDP_to_approxDP/cks20.rs
-
+Proves soundness of \texttt{fn cdp\_epsilon} in \asOfCommit{cdp_epsilon.rs}{0b8f4222}.
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} of \cite{CKS20}.
 \section{Bound Derivation}
 
 \begin{definition}
