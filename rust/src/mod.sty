@@ -13,6 +13,7 @@
 \usepackage{graphicx}
 \usepackage{tcolorbox}
 \usepackage{catchfile}
+\usepackage{pdftexcmds}
 
 % hyperref
 \hypersetup{
@@ -21,22 +22,39 @@
   linkbordercolor={0 0 1}
 }
 
+% \contrib macro to indicate inclusion in "contrib"
 \usepackage{tcolorbox}
 \newtcolorbox{contrib_box}{colback=red!5!white,colframe=red!75!black}
-\newcommand{\contrib}{{\begin{contrib_box}This proof is in ``contrib'' and is still in the vetting process.\end{contrib_box}}} 
+\newcommand{\contrib}{{\begin{contrib_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{contrib_box}}} 
 
 % asOfCommit macro to version a code dependency
-\newcommand{\linkOpendpBlob}[3]{\href{https://github.com/opendp/opendp/blob/#1/#2#3}{#3 at commit #1}}
-\immediate\write18{git rev-parse --show-prefix > out/cwd.txt}
-\CatchFileDef\GitWorkingDir{cwd.txt}{\endlinechar=-1}
 \makeatletter
-\newcommand{\asOfCommit}[2]{%
-    \linkOpendpBlob{#2}{\GitWorkingDir}{#1}
-    \setbox0=\hbox{\input|"grep '^#2.*' <<< $(git --no-pager log -n1 --pretty='\@percentchar H' #1)"\unskip}\ifdim\wd0=0pt
-      (outdated\footnote{See new changes with \texttt{git diff #2..\input|"git --no-pager log -n1 --pretty='\@percentchar h' #1}\texttt{\GitWorkingDir#1}})\else
-      (up to date)\fi
-}
+\ifnum\pdf@shellescape=1
+   % "private" command that builds a link to a blob
+  \newcommand{\linkOpendpBlob}[3]{
+    \href{https://github.com/opendp/opendp/blob/#1/#2#3}{#3 at commit #1}}
 
+  % latex macro expansion has a separate phase for \input evaluation
+  %     we instead immediately evaluate a command to write a temp file to ./out containing the current directory
+  \immediate\write18{mkdir -p out && git rev-parse --show-prefix > out/cwd.txt}
+  %     ...and then retrieve the current working directory by loading the temp file
+  \CatchFileDef\GitWorkingDir{out/cwd.txt}{\endlinechar=-1}
+
+  \newcommand{\asOfCommit}[2]{%
+      % permalink the target
+      \linkOpendpBlob{#2}{\GitWorkingDir}{#1}
+      % conditionally add (outdated) or (up to date) depending on matching commit hash
+      \setbox0=\hbox{\input|"git --no-pager log -n1 --pretty='\@percentchar H' #1 | grep -E '^#2.*'"\unskip}\ifdim\wd0=0pt
+        (outdated\footnote{See new changes with \texttt{git diff #2..\input|"git --no-pager log -n1 --pretty='\@percentchar h' #1}\texttt{\GitWorkingDir#1}})\else
+        (up to date)\fi
+  }
+\else
+  % simplified command if shell-escape not enabled
+  \newcommand{\asOfCommit}[2]{#1 at commit #2 (unknown status\footnote{Shell-escape is not enabled. Enable \texttt{--shell-escape} to check if this proof is up-to-date with the code.})}
+\fi
+\makeatother
+
+% \vettingPR macro to link a PR
 \newcommand{\vettingPR}[1]{\href{https://github.com/opendp/opendp/pull/#1}{Pull Request \##1}}
 
 % minted (pseudocode)
@@ -89,7 +107,7 @@
 \newcommand{\dout}{\texttt{d\_out}}
 \newcommand{\T}{\texttt{T} }
 \newcommand{\F}{\texttt{F} }
-\newcommand{\Relation}{\texttt{Relation}}
+\newcommand{\Map}{\texttt{Map}}
 \newcommand{\X}{\mathcal{X}}
 \newcommand{\Y}{\mathcal{Y}}
 \newcommand{\True}{\texttt{True}}
