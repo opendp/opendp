@@ -1,3 +1,4 @@
+from opendp.trans import make_subset_by
 from opendp.typing import *
 from opendp.mod import enable_features
 
@@ -323,4 +324,16 @@ def test_df_is_equal():
         make_select_column(key="17", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
+    assert query.check(1, 1)
+
+def test_df_subset():
+    from opendp.trans import make_split_dataframe, make_df_is_equal, make_select_column
+
+    query = (
+        make_split_dataframe(separator=",", col_names=["A", "B"]) >>
+        make_df_is_equal(column_name="B", value="2.") >>
+        make_subset_by(indicator_column="B", keep_columns=["A"]) >>
+        make_select_column(key="A", TOA=str)
+    )
+    assert query("0,0.\n1,1.\n2,2.\n3,3.") == ["2"]
     assert query.check(1, 1)

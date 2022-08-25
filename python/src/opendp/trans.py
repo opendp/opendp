@@ -217,12 +217,15 @@ def make_df_is_equal(
 
 def make_subset_by(
     indicator_column: Any,
+    keep_columns: Any,
     TK: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that subsets a dataframe by a boolean column.
     
     :param indicator_column: name of the boolean column that indicates inclusion in the subset
     :type indicator_column: Any
+    :param keep_columns: list of column names to apply subset to
+    :type keep_columns: Any
     :param TK: type of the column name
     :type TK: :ref:`RuntimeTypeDescriptor`
     :return: A subset_by step.
@@ -238,14 +241,15 @@ def make_subset_by(
     
     # Convert arguments to c types.
     indicator_column = py_to_c(indicator_column, c_type=AnyObjectPtr, type_name=TK)
+    keep_columns = py_to_c(keep_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TK]))
     TK = py_to_c(TK, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_trans__make_subset_by
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(indicator_column, TK), Transformation))
+    return c_to_py(unwrap(function(indicator_column, keep_columns, TK), Transformation))
 
 
 def make_is_equal(
