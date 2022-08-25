@@ -18,7 +18,7 @@ use super::any::{AnyMeasurement, AnyTransformation};
 
 // If untrusted is not enabled, then these structs don't exist. 
 #[cfg(feature="untrusted")]
-use crate::trans::{Sequential, Pairwise};
+use crate::transformations::{Sequential, Pairwise};
 #[cfg(not(feature="untrusted"))]
 use std::marker::PhantomData;
 #[cfg(not(feature="untrusted"))]

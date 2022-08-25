@@ -1,4 +1,4 @@
-from opendp.trans import *
+from opendp.transformations import *
 from opendp.mod import enable_features
 import pytest
 

@@ -5,13 +5,13 @@ enable_features('floating-point', 'contrib')
 
 
 def test_type_getters():
-    from opendp.trans import make_sized_bounded_mean
+    from opendp.transformations import make_sized_bounded_mean
     transformation = make_sized_bounded_mean(size=9, bounds=(0., 10.), T=float)
     assert transformation.input_distance_type == "u32"
     assert transformation.output_distance_type == "f64"
     assert transformation.input_carrier_type == "Vec<f64>"
 
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.measurements import make_base_discrete_laplace
     measurement = make_base_discrete_laplace(scale=1.5)
     assert measurement.input_distance_type == "i32"
     assert measurement.output_distance_type == "f64"
@@ -19,8 +19,8 @@ def test_type_getters():
 
 
 def test_chain():
-    from opendp.trans import make_count
-    from opendp.meas import make_base_laplace, make_base_discrete_laplace
+    from opendp.transformations import make_count
+    from opendp.measurements import make_base_laplace, make_base_discrete_laplace
     enable_features("floating-point", "contrib")
 
     data = [1, 2, 3, 4, 5]
@@ -67,8 +67,8 @@ def test_bisect_edge():
 
 def test_bisect_chain():
     from opendp.mod import binary_search_chain, binary_search_param, enable_features
-    from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
-    from opendp.meas import make_base_laplace
+    from opendp.transformations import make_clamp, make_bounded_resize, make_sized_bounded_mean
+    from opendp.measurements import make_base_laplace
     enable_features("contrib")
 
     pre = (

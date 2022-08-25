@@ -28,7 +28,7 @@ In the example below, we'll construct an identity :class:`opendp.mod.Transformat
 
 .. doctest::
 
-    >>> from opendp.trans import make_identity
+    >>> from opendp.transformations import make_identity
     >>> from opendp.typing import SymmetricDistance, VectorDomain, AllDomain
     ...
     >>> identity = make_identity(D=VectorDomain[AllDomain[str]], M=SymmetricDistance)

@@ -103,7 +103,7 @@ There's a few top-level constructor listings:
 * :ref:`measurement-constructors`
 * :ref:`transformation-constructors`
 
-In this simplified example with the :py:func:`opendp.meas.make_base_discrete_laplace` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
+In this simplified example with the :py:func:`opendp.measurements.make_base_discrete_laplace` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
 
 .. testsetup::
 
@@ -112,7 +112,7 @@ In this simplified example with the :py:func:`opendp.meas.make_base_discrete_lap
 
 .. doctest::
 
-    >>> from opendp.meas import make_base_discrete_laplace
+    >>> from opendp.measurements import make_base_discrete_laplace
     ...
     >>> # call the constructor to produce a measurement
     >>> base_dl = make_base_discrete_laplace(scale=1.0)

@@ -295,7 +295,7 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMe
 
 #[cfg(test)]
 mod tests {
-    use crate::comb::tests::{make_test_measurement, make_test_transformation};
+    use crate::combinators::tests::{make_test_measurement, make_test_transformation};
     use crate::ffi::any::{Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
     use crate::ffi::util::ToCharP;
 

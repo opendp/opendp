@@ -63,7 +63,7 @@ pub mod test {
     use std::ops::{Mul, Sub};
 
     use super::*;
-    use crate::meas::{make_base_laplace, make_base_gaussian, make_base_discrete_laplace, make_base_discrete_gaussian};
+    use crate::measurements::{make_base_laplace, make_base_gaussian, make_base_discrete_laplace, make_base_discrete_gaussian};
     use crate::error::ExplainUnwrap;
     use crate::domains::AllDomain;
     use crate::measures::ZeroConcentratedDivergence;

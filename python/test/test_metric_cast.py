@@ -1,4 +1,4 @@
-from opendp.trans import (
+from opendp.transformations import (
     make_metric_bounded,
     make_metric_unbounded,
     make_ordered_random,

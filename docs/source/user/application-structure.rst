@@ -55,11 +55,11 @@ or derive the necessary noise scale to meet a given target accuracy and statisti
 The noise distribution may be either laplace or gaussian.
 
 :laplacian: | Applies to any L1 noise addition mechanism.
-  | :func:`make_base_laplace() <opendp.meas.make_base_laplace>`
-  | :func:`base_discrete_laplace() <opendp.meas.base_discrete_laplace>`
-  | :func:`make_base_ptr() <opendp.meas.make_base_ptr>`
+  | :func:`make_base_laplace() <opendp.measurements.make_base_laplace>`
+  | :func:`base_discrete_laplace() <opendp.measurements.base_discrete_laplace>`
+  | :func:`make_base_ptr() <opendp.measurements.make_base_ptr>`
 :gaussian: | Applies to any L2 noise addition mechanism.
-  | :func:`make_base_gaussian() <opendp.meas.make_base_gaussian>`
+  | :func:`make_base_gaussian() <opendp.measurements.make_base_gaussian>`
 
 The library provides the following functions for converting between noise scale and accuracy:
 
@@ -107,17 +107,17 @@ so our symmetric distance ``d_in`` is 3.
 Referencing the :ref:`transformation-constructors` section,
 we'll need to write a :ref:`transformation <transformation>` that computes a mean on a csv.
 Our transformation will
-:func:`parse a csv <opendp.trans.make_split_dataframe>`,
-:func:`select a column <opendp.trans.make_select_column>`,
-:func:`cast <opendp.trans.make_cast>`,
-:func:`impute <opendp.trans.make_impute_constant>`,
-:func:`clamp <opendp.trans.make_clamp>`,
-:func:`resize <opendp.trans.make_bounded_resize>` and then aggregate with the
-:func:`mean <opendp.trans.make_sized_bounded_mean>`.
+:func:`parse a csv <opendp.transformations.make_split_dataframe>`,
+:func:`select a column <opendp.transformations.make_select_column>`,
+:func:`cast <opendp.transformations.make_cast>`,
+:func:`impute <opendp.transformations.make_impute_constant>`,
+:func:`clamp <opendp.transformations.make_clamp>`,
+:func:`resize <opendp.transformations.make_bounded_resize>` and then aggregate with the
+:func:`mean <opendp.transformations.make_sized_bounded_mean>`.
 
 .. doctest::
 
-    >>> from opendp.trans import *
+    >>> from opendp.transformations import *
     >>> from opendp.mod import enable_features
     >>> enable_features('contrib') # we are using un-vetted constructors
     ...
@@ -146,21 +146,21 @@ Our transformation will
     which allowed us to infer dataset size.
     If your dataset size is not public knowledge, you could either:
 
-    * release a DP count first (:func:`count <opendp.trans.make_count>` >> :func:`base_discrete_laplace <opendp.meas.make_base_discrete_laplace>`), and then supply that count to resize
+    * release a DP count first (:func:`count <opendp.transformations.make_count>` >> :func:`base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>`), and then supply that count to resize
     * release a DP count and DP sum separately, and then postprocess
 
 The next step is to make this computation differentially private.
 
 Referencing the :ref:`measurement-constructors` section,
 we'll need to choose a :ref:`measurement <measurement>` that can be chained with our transformation.
-The :func:`base_laplace <opendp.meas.make_base_laplace>` measurement qualifies (barring :ref:`floating-point issues <floating-point>`).
+The :func:`base_laplace <opendp.measurements.make_base_laplace>` measurement qualifies (barring :ref:`floating-point issues <floating-point>`).
 
 Referencing the :ref:`parameter-search` section, :func:`binary_search_param <opendp.mod.binary_search_param>`
 will help us find a noise scale parameter that satisfies our given budget.
 
 .. doctest::
 
-    >>> from opendp.meas import make_base_laplace
+    >>> from opendp.measurements import make_base_laplace
     >>> from opendp.mod import enable_features, binary_search_param
     ...
     >>> # Please make yourself aware of the dangers of floating point numbers

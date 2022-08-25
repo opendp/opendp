@@ -95,12 +95,12 @@ mod tests {
     use crate::metrics::ChangeOneDistance;
     use crate::domains::AllDomain;
     use crate::error::*;
-    use crate::meas;
-    use crate::trans;
+    use crate::measurements;
+    use crate::transformations;
     
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
-        let op_plain = meas::make_base_laplace::<AllDomain<_>>(0.0, None)?;
+        let op_plain = measurements::make_base_laplace::<AllDomain<_>>(0.0, None)?;
         let arg = 100.;
         let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_poly_transformation() -> Fallible<()> {
-        let op_plain = trans::make_identity(AllDomain::new(), ChangeOneDistance::default())?;
+        let op_plain = transformations::make_identity(AllDomain::new(), ChangeOneDistance::default())?;
         let arg = 99.9;
         let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);

@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use opendp::{
     domains::{AllDomain, VectorDomain},
-    meas::{make_base_discrete_laplace_cks20, make_base_discrete_laplace_linear},
+    measurements::{make_base_discrete_laplace_cks20, make_base_discrete_laplace_linear},
 };
 
 pub fn collect(c: &mut Criterion) {

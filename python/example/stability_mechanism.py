@@ -3,9 +3,9 @@ from collections import Counter
 
 import matplotlib.pyplot as plt
 import numpy as np
-from opendp.meas import make_base_ptr
-from opendp.trans import make_count_by
-from opendp.comb import make_fix_delta
+from opendp.measurements import make_base_ptr
+from opendp.transformations import make_count_by
+from opendp.combinators import make_fix_delta
 from opendp.mod import enable_features, binary_search_param
 from opendp.typing import L1Distance
 

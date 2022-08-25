@@ -4,15 +4,15 @@ from opendp.typing import ZeroConcentratedDivergence
 enable_features('floating-point', 'contrib')
 
 def test_base_gaussian_curve():
-    from opendp.meas import make_base_gaussian
-    from opendp.comb import make_zCDP_to_approxDP
+    from opendp.measurements import make_base_gaussian
+    from opendp.combinators import make_zCDP_to_approxDP
     curve = make_zCDP_to_approxDP(make_base_gaussian(4.)).map(1.)
     print(curve.epsilon(1e-3))
 
 
 def test_base_gaussian_search():
-    from opendp.meas import make_base_gaussian
-    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
+    from opendp.measurements import make_base_gaussian
+    from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_param
 
     def make_smd_gauss(scale, delta):
@@ -29,7 +29,7 @@ def test_base_gaussian_search():
 
 
 def test_base_laplace():
-    from opendp.meas import make_base_laplace
+    from opendp.measurements import make_base_laplace
     meas = make_base_laplace(scale=10.5)
     print("base laplace:", meas(100.))
     print("epsilon", meas.map(1.))
@@ -37,15 +37,15 @@ def test_base_laplace():
 
 
 def test_base_vector_laplace():
-    from opendp.meas import make_base_laplace
+    from opendp.measurements import make_base_laplace
     meas = make_base_laplace(scale=10.5, D="VectorDomain<AllDomain<f64>>")
     print("base laplace:", meas([80., 90., 100.]))
     assert meas.check(1., 1.3)
 
 
 def test_base_gaussian_smoothed_max_divergence():
-    from opendp.comb import make_zCDP_to_approxDP
-    from opendp.meas import make_base_gaussian
+    from opendp.combinators import make_zCDP_to_approxDP
+    from opendp.measurements import make_base_gaussian
 
     meas = make_zCDP_to_approxDP(make_base_gaussian(scale=10.5))
     print("base gaussian:", meas(100.))
@@ -56,7 +56,7 @@ def test_base_gaussian_smoothed_max_divergence():
 
 
 def test_base_gaussian_zcdp():
-    from opendp.meas import make_base_gaussian
+    from opendp.measurements import make_base_gaussian
 
     meas = make_base_gaussian(scale=1.5, MO=ZeroConcentratedDivergence[float])
     print("base gaussian:", meas(100.))
@@ -67,8 +67,8 @@ def test_base_gaussian_zcdp():
 
 
 def test_base_vector_gaussian():
-    from opendp.meas import make_base_gaussian
-    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
+    from opendp.measurements import make_base_gaussian
+    from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     delta = .000001
     meas = make_fix_delta(
         make_zCDP_to_approxDP(
@@ -78,7 +78,7 @@ def test_base_vector_gaussian():
 
 
 def test_base_geometric():
-    from opendp.meas import make_base_geometric
+    from opendp.measurements import make_base_geometric
     meas = make_base_geometric(scale=2., bounds=(1, 10))
     print("base_geometric in constant time:", meas(100))
     assert meas.check(1, 0.5)
@@ -91,14 +91,14 @@ def test_base_geometric():
 
 
 def test_base_discrete_laplace():
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.measurements import make_base_discrete_laplace
     meas = make_base_discrete_laplace(scale=2.)
     print("base_discrete_laplace:", meas(100))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
 def test_base_discrete_laplace_cks20():
-    from opendp.meas import make_base_discrete_laplace_cks20
+    from opendp.measurements import make_base_discrete_laplace_cks20
     meas = make_base_discrete_laplace_cks20(scale=2.)
     print("base_discrete_laplace:", meas(100))
     assert meas.check(1, 0.5)
@@ -106,7 +106,7 @@ def test_base_discrete_laplace_cks20():
 
 
 def test_base_vector_discrete_laplace_cks20():
-    from opendp.meas import make_base_discrete_laplace_cks20
+    from opendp.measurements import make_base_discrete_laplace_cks20
     meas = make_base_discrete_laplace_cks20(scale=2., D="VectorDomain<AllDomain<i32>>")
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
@@ -114,7 +114,7 @@ def test_base_vector_discrete_laplace_cks20():
 
 
 def test_base_discrete_laplace_linear():
-    from opendp.meas import make_base_discrete_laplace_linear
+    from opendp.measurements import make_base_discrete_laplace_linear
     meas = make_base_discrete_laplace_linear(scale=2., bounds=(1, 10))
     print("base_discrete_laplace:", meas(100))
     assert meas.check(1, 0.5)
@@ -122,14 +122,14 @@ def test_base_discrete_laplace_linear():
 
 
 def test_base_vector_discrete_laplace():
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.measurements import make_base_discrete_laplace
     meas = make_base_discrete_laplace(scale=2., D="VectorDomain<AllDomain<i32>>")
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
 def test_base_discrete_gaussian():
-    from opendp.meas import make_base_discrete_gaussian
+    from opendp.measurements import make_base_discrete_gaussian
     meas = make_base_discrete_gaussian(scale=2.)
     print("base_discrete_gaussian:", meas(100))
     assert meas.check(1., 0.5)
@@ -137,16 +137,16 @@ def test_base_discrete_gaussian():
 
 
 def test_base_vector_discrete_gaussian():
-    from opendp.meas import make_base_discrete_gaussian
+    from opendp.measurements import make_base_discrete_gaussian
     meas = make_base_discrete_gaussian(scale=2., D="VectorDomain<AllDomain<i32>>")
     print("vector base_dl:", meas([100, 10, 12]))
     assert meas.check(1., 0.125)
     assert not meas.check(1., 0.124)
 
 def test_make_count_by_ptr():
-    from opendp.trans import make_count_by
-    from opendp.meas import make_base_ptr
-    from opendp.comb import make_fix_delta
+    from opendp.transformations import make_count_by
+    from opendp.measurements import make_base_ptr
+    from opendp.combinators import make_fix_delta
     from opendp.typing import L1Distance
 
     meas = make_count_by(MO=L1Distance[float], TK=str, TV=float) \
@@ -158,7 +158,7 @@ def test_make_count_by_ptr():
     assert fixed_meas.check(1, (1.0, 1e-6))
 
 def test_randomized_response():
-    from opendp.meas import make_randomized_response
+    from opendp.measurements import make_randomized_response
     meas = make_randomized_response(categories=["A", "B", "C", "D"], prob=0.75)
     print("randomized response:", meas("A"))
     import math
@@ -167,7 +167,7 @@ def test_randomized_response():
 
 
 def test_randomized_response_bool():
-    from opendp.meas import make_randomized_response_bool
+    from opendp.measurements import make_randomized_response_bool
     meas = make_randomized_response_bool(prob=0.75)
     print("randomized response:", meas(True))
     import math

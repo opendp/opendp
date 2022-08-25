@@ -1,5 +1,5 @@
-from opendp.trans import *
-from opendp.meas import *
+from opendp.transformations import *
+from opendp.measurements import *
 from opendp.mod import enable_features
 
 enable_features("floating-point", "contrib")
