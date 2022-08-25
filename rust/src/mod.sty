@@ -37,14 +37,14 @@
 
   % latex macro expansion has a separate phase for \input evaluation
   %     we instead immediately evaluate a command to write a temp file to ./out containing the current directory
-  \immediate\write18{[ ! -f out/cwd.txt ] && (mkdir -p out && git rev-parse --show-prefix > out/cwd.txt)}
+  \immediate\write18{[ ! -f out/cwd.txt ] && (mkdir -p out && git rev-parse --show-prefix | sed "s|_|\@backslashchar\@backslashchar\@backslashchar_|g" > out/cwd.txt)}
   %     ...and then retrieve the current working directory by loading the temp file
   \CatchFileDef\GitWorkingDir{out/cwd.txt}{\endlinechar=-1}
 
   % command for building the (up to date) or (outdated) status
   \newcommand{\fileStatus}[2]{%
-    \setbox0=\hbox{\input|"git --no-pager log -n1 --pretty='\@percentchar H' #1 | grep -E '^#2.*'"\unskip}\ifdim\wd0=0pt
-        (outdated\footnote{See new changes with \texttt{git diff #2..\input|"git --no-pager log -n1 --pretty='\@percentchar h' #1" \GitWorkingDir#1}})\else
+  \setbox0=\hbox{\input|"git --no-pager log -n1 --pretty='\@percentchar H' #1 | grep -E '^#2.*'"\unskip}\ifdim\wd0=0pt
+        (outdated\footnote{See new changes with \texttt{git diff #2..\input|"git --no-pager log -n1 --pretty='\@percentchar h' #1" \GitWorkingDir\path{#1}}})\else
         (up to date)\fi
   }
 
