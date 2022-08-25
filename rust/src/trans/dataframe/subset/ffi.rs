@@ -33,3 +33,51 @@ pub extern "C" fn opendp_trans__make_subset_by(
         (TK, @hashable)
     ], (indicator_column, keep_columns))
 }
+
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::data::Column;
+    use crate::error::{Fallible, ExplainUnwrap};
+    use crate::trans::DataFrame;
+
+    use crate::core;
+    use crate::ffi::any::{AnyObject, Downcast};
+    use crate::ffi::util::ToCharP;
+
+    use super::*;
+
+    fn to_owned(strs: &[&'static str]) -> Vec<String> {
+        strs.into_iter().map(|s| s.to_owned().to_owned()).collect()
+    }
+
+    fn dataframe(pairs: Vec<(&str, Column)>) -> DataFrame<String> {
+        pairs.into_iter().map(|(k, v)| (k.to_owned(), v)).collect()
+    }
+
+    #[test]
+    fn test_make_subset_by_ffi() -> Fallible<()> {
+        let transformation = Result::from(opendp_trans__make_subset_by(
+            AnyObject::new_raw("A".to_string()),
+            AnyObject::new_raw(vec!["B".to_owned()]),
+            "String".to_char_p(),
+        ))?;
+        let arg = AnyObject::new_raw(dataframe(vec![
+            ("A", Column::new(vec![true, false, false])),
+            ("B", Column::new(to_owned(&["1.0", "2.0", "3.0"])))
+        ]));
+        let res = core::opendp_core__transformation_invoke(&transformation, arg);
+        let res: HashMap<String, Column> = Fallible::from(res)?.downcast()?;
+        
+        let subset = res
+            .get("B")
+            .unwrap_test()
+            .as_form::<Vec<String>>()?
+            .clone();
+        
+        assert_eq!(subset, vec!["1.0".to_string()]);
+        Ok(())
+    }
+}

@@ -101,6 +101,15 @@
                 "description": "name of the boolean column that indicates inclusion in the subset"
             },
             {
+                "name": "keep_columns",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TK"]
+                },
+                "description": "list of column names to apply subset to"
+            },
+            {
                 "name": "TK",
                 "is_type": true,
                 "description": "type of the column name"
