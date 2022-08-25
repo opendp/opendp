@@ -30,8 +30,8 @@ pub trait DistanceConstant<TI>: 'static + Clone + InfCast<TI> + InfMul + TotalOr
 impl<TI, TO> DistanceConstant<TI> for TO where TO: 'static + Clone + InfCast<TI> + InfMul + TotalOrd {}
 
 // Primitives are the broadest set of valid atomic types.
-pub trait Primitive: 'static + Clone + std::fmt::Debug + CheckNull + PartialEq {}
-impl<T> Primitive for T where T: 'static + Clone + std::fmt::Debug + CheckNull + PartialEq {}
+pub trait Primitive: 'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default {}
+impl<T> Primitive for T where T: 'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default {}
 
 // Hashable types are the subset of primitive types that implement Eq and Hash.
 // They can be used as HashMap keys and in HashSets.

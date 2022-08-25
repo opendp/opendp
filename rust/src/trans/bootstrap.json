@@ -33,6 +33,90 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
+    "make_df_cast_default": {
+        "description": "Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. If cast fails, fill with default.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "column_name",
+                "c_type": "AnyObject *",
+                "rust_type": "TK",
+                "description": "column name to be transformed"
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "type of the column name"
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "atomic input data type to cast from"
+            },
+            {
+                "name": "TOA",
+                "is_type": true,
+                "description": "atomic data type to cast into"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_df_is_equal": {
+        "description": "Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "column_name",
+                "c_type": "AnyObject *",
+                "rust_type": "TK",
+                "description": "column name to be transformed"
+            },
+            {
+                "name": "value",
+                "c_type": "AnyObject *",
+                "rust_type": "TIA",
+                "description": "value to check for equality"
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "type of the column name"
+            },
+            {
+                "name": "TIA",
+                "is_type": true,
+                "description": "atomic input data type to cast from"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
+    "make_subset_by": {
+        "description": "Make a Transformation that subsets a dataframe by a boolean column.",
+        "features": ["contrib"],
+        "args": [
+            {
+                "name": "indicator_column",
+                "c_type": "AnyObject *",
+                "rust_type": "TK",
+                "description": "name of the boolean column that indicates inclusion in the subset"
+            },
+            {
+                "name": "keep_columns",
+                "c_type": "AnyObject *",
+                "rust_type": {
+                    "origin": "Vec",
+                    "args": ["TK"]
+                },
+                "description": "list of column names to apply subset to"
+            },
+            {
+                "name": "TK",
+                "is_type": true,
+                "description": "type of the column name"
+            }
+        ],
+        "ret": {"c_type": "FfiResult<AnyTransformation *>"}
+    },
     "make_is_equal": {
         "description": "Make a Transformation that checks if each element is equal to `value`.",
         "features": ["contrib"],

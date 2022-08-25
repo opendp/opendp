@@ -7,6 +7,9 @@ from opendp.typing import *
 __all__ = [
     "make_cast",
     "make_cast_default",
+    "make_df_cast_default",
+    "make_df_is_equal",
+    "make_subset_by",
     "make_is_equal",
     "make_is_null",
     "make_cast_inherent",
@@ -125,6 +128,128 @@ def make_cast_default(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(TIA, TOA), Transformation))
+
+
+def make_df_cast_default(
+    column_name: Any,
+    TIA: RuntimeTypeDescriptor,
+    TOA: RuntimeTypeDescriptor,
+    TK: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. If cast fails, fill with default.
+    
+    :param column_name: column name to be transformed
+    :type column_name: Any
+    :param TK: type of the column name
+    :type TK: :ref:`RuntimeTypeDescriptor`
+    :param TIA: atomic input data type to cast from
+    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :param TOA: atomic data type to cast into
+    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :return: A df_cast_default step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
+    TIA = RuntimeType.parse(type_name=TIA)
+    TOA = RuntimeType.parse(type_name=TOA)
+    
+    # Convert arguments to c types.
+    column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_df_cast_default
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(column_name, TK, TIA, TOA), Transformation))
+
+
+def make_df_is_equal(
+    column_name: Any,
+    value: Any,
+    TK: RuntimeTypeDescriptor = None,
+    TIA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`
+    
+    :param column_name: column name to be transformed
+    :type column_name: Any
+    :param value: value to check for equality
+    :type value: Any
+    :param TK: type of the column name
+    :type TK: :ref:`RuntimeTypeDescriptor`
+    :param TIA: atomic input data type to cast from
+    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :return: A df_is_equal step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
+    
+    # Convert arguments to c types.
+    column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
+    value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_df_is_equal
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(column_name, value, TK, TIA), Transformation))
+
+
+def make_subset_by(
+    indicator_column: Any,
+    keep_columns: Any,
+    TK: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that subsets a dataframe by a boolean column.
+    
+    :param indicator_column: name of the boolean column that indicates inclusion in the subset
+    :type indicator_column: Any
+    :param keep_columns: list of column names to apply subset to
+    :type keep_columns: Any
+    :param TK: type of the column name
+    :type TK: :ref:`RuntimeTypeDescriptor`
+    :return: A subset_by step.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=indicator_column)
+    
+    # Convert arguments to c types.
+    indicator_column = py_to_c(indicator_column, c_type=AnyObjectPtr, type_name=TK)
+    keep_columns = py_to_c(keep_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TK]))
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_trans__make_subset_by
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(indicator_column, keep_columns, TK), Transformation))
 
 
 def make_is_equal(

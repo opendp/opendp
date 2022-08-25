@@ -1,14 +1,16 @@
-use std::convert::TryFrom;
-use std::os::raw::c_char;
+use std::{os::raw::c_char, convert::TryFrom};
 
-use crate::err;
-use crate::trans::{make_create_dataframe, make_select_column, make_split_dataframe, make_split_lines, make_split_records};
+use crate::{
+    core::{FfiResult, IntoAnyTransformationFfiResultExt},
+    ffi::{
+        any::{AnyObject, AnyTransformation, Downcast},
+        util::{self, Type},
+    },
+    traits::Hashable,
+    trans::{make_create_dataframe, make_split_dataframe},
+};
 
-use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::ffi::util::Type;
-use crate::ffi::util;
-use crate::traits::{Hashable, Primitive};
+use super::{make_split_lines, make_split_records};
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_split_lines() -> FfiResult<*mut AnyTransformation> {
@@ -25,10 +27,13 @@ pub extern "C" fn opendp_trans__make_split_records(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_create_dataframe(
-    col_names: *const AnyObject, K: *const c_char,
+    col_names: *const AnyObject,
+    K: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<K>(col_names: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where K: Hashable {
+    where
+        K: Hashable,
+    {
         let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
         make_create_dataframe::<K>(col_names).into_any()
     }
@@ -38,11 +43,17 @@ pub extern "C" fn opendp_trans__make_create_dataframe(
 
 #[no_mangle]
 pub extern "C" fn opendp_trans__make_split_dataframe(
-    separator: *const c_char, col_names: *const AnyObject,
+    separator: *const c_char,
+    col_names: *const AnyObject,
     K: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K>(separator: Option<&str>, col_names: *const AnyObject) -> FfiResult<*mut AnyTransformation>
-        where K: Hashable {
+    fn monomorphize<K>(
+        separator: Option<&str>,
+        col_names: *const AnyObject,
+    ) -> FfiResult<*mut AnyTransformation>
+    where
+        K: Hashable,
+    {
         let col_names = try_!(try_as_ref!(col_names).downcast_ref::<Vec<K>>()).clone();
         make_split_dataframe::<K>(separator, col_names).into_any()
     }
@@ -51,26 +62,6 @@ pub extern "C" fn opendp_trans__make_split_dataframe(
 
     dispatch!(monomorphize, [(K, @hashable)], (separator, col_names))
 }
-
-#[no_mangle]
-pub extern "C" fn opendp_trans__make_select_column(
-    key: *const AnyObject, K: *const c_char, TOA: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K, TOA>(key: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
-        K: Hashable,
-        TOA: Primitive {
-        let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
-        make_select_column::<K, TOA>(key).into_any()
-    }
-    let K = try_!(Type::try_from(K));
-    let TOA = try_!(Type::try_from(TOA));
-
-    dispatch!(monomorphize, [
-        (K, @hashable),
-        (TOA, @primitives)
-    ], (key))
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -81,8 +72,8 @@ mod tests {
     use crate::error::Fallible;
     use crate::trans::DataFrame;
 
-    use crate::ffi::any::{AnyObject, Downcast};
     use crate::core;
+    use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util::ToCharP;
 
     use super::*;
