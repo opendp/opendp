@@ -23,47 +23,47 @@ You can choose whether to construct scalar or vector-valued versions by setting 
      - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.meas.make_base_discrete_laplace`
+   * - :func:`opendp.measurements.make_base_discrete_laplace`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_discrete_laplace`
+   * - :func:`opendp.measurements.make_base_discrete_laplace`
      - ``VectorDomain<AllDomain<T>>``
      - ``L1Distance<T>``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_laplace`
+   * - :func:`opendp.measurements.make_base_laplace`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_laplace`
+   * - :func:`opendp.measurements.make_base_laplace`
      - ``VectorDomain<AllDomain<T>>``
      - ``L1Distance<T>``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_discrete_gaussian`
+   * - :func:`opendp.measurements.make_base_discrete_gaussian`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_discrete_gaussian`
+   * - :func:`opendp.measurements.make_base_discrete_gaussian`
      - ``VectorDomain<AllDomain<T>>``
      - ``L1Distance<T>``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_gaussian`
+   * - :func:`opendp.measurements.make_base_gaussian`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
      - ``SmoothedMaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_gaussian`
+   * - :func:`opendp.measurements.make_base_gaussian`
      - ``VectorDomain<AllDomain<T>>``
      - ``L2Distance<T>``
      - ``SmoothedMaxDivergence<T>``
-   * - :func:`opendp.meas.make_base_ptr`
+   * - :func:`opendp.measurements.make_base_ptr`
      - ``MapDomain<AllDomain<TIA>, AllDomain<TOA>>``
      - ``L1Distance<T>``
      - ``SmoothedMaxDivergence<T>``
-   * - :func:`opendp.meas.make_randomized_response_bool`
+   * - :func:`opendp.measurements.make_randomized_response_bool`
      - ``AllDomain<bool>``
      - ``SymmetricDistance``
      - ``MaxDivergence<T>``
-   * - :func:`opendp.meas.make_randomized_response`
+   * - :func:`opendp.measurements.make_randomized_response`
      - ``AllDomain<T>``
      - ``SymmetricDistance``
      - ``MaxDivergence<T>``
@@ -74,7 +74,7 @@ Floating-Point
 --------------
 
 Given the context of measurements, this section goes into greater detail than :ref:`limitations` on floating-point issues.
-Be warned that :func:`opendp.meas.make_base_laplace`, :func:`opendp.meas.make_base_gaussian` and :func:`opendp.meas.make_base_ptr`
+Be warned that :func:`opendp.measurements.make_base_laplace`, :func:`opendp.measurements.make_base_gaussian` and :func:`opendp.measurements.make_base_ptr`
 depend on continuous distributions that are poorly approximated by finite computers.
 
 At this time these mechanisms are present in the library, but require explicit opt-in:

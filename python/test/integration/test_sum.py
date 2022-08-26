@@ -6,11 +6,11 @@ from opendp.typing import InsertDeleteDistance
 
 def test_sized_bounded_float_sum():
     """known-n bounded float sum (assuming n is public)"""
-    from opendp.trans import make_split_dataframe, make_select_column, \
+    from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_resize, make_sized_bounded_sum
-    from opendp.meas import make_base_laplace, make_base_gaussian
-    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
+    from opendp.measurements import make_base_laplace, make_base_gaussian
+    from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_chain
 
     size = 200
@@ -52,10 +52,10 @@ def test_sized_bounded_float_sum():
 
 def test_sized_bounded_int_sum():
     """known-n bounded int sum (assuming n is public)"""
-    from opendp.trans import make_split_dataframe, make_select_column, \
+    from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_resize, make_sized_bounded_sum
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.measurements import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
 
     size = 200
@@ -91,11 +91,11 @@ def test_sized_bounded_int_sum():
 
 def test_bounded_float_sum():
     """bounded float sum (assuming n is unknown)"""
-    from opendp.trans import make_split_dataframe, make_select_column, \
+    from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_sum
-    from opendp.meas import make_base_laplace, make_base_gaussian
-    from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
+    from opendp.measurements import make_base_laplace, make_base_gaussian
+    from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_chain
     
     bounds = (0., 20.)
@@ -133,10 +133,10 @@ def test_bounded_float_sum():
 
 def test_bounded_int_sum():
     """bounded int sum (assuming n is unknown)"""
-    from opendp.trans import make_split_dataframe, make_select_column, \
+    from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
         make_clamp, make_bounded_sum
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.measurements import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
 
     bounds = (0, 20)

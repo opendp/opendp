@@ -122,7 +122,7 @@ def test_numpy_data():
 @pytest.mark.skipif('numpy' not in sys.modules,
                     reason="requires the Numpy library")
 def test_numpy_trans():
-    from opendp.trans import make_bounded_sum
+    from opendp.transformations import make_bounded_sum
     from opendp.mod import enable_features
     enable_features("contrib")
     assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3], dtype=np.int32)) == 6

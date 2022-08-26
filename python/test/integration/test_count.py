@@ -5,8 +5,8 @@ enable_features('contrib')
 
 
 def test_count():
-    from opendp.trans import make_count, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.transformations import make_count, make_split_dataframe, make_select_column
+    from opendp.measurements import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
@@ -27,8 +27,8 @@ def test_count():
 
 
 def test_count_distinct():
-    from opendp.trans import make_count_distinct, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.transformations import make_count_distinct, make_split_dataframe, make_select_column
+    from opendp.measurements import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
@@ -49,8 +49,8 @@ def test_count_distinct():
 
 
 def test_float_count():
-    from opendp.trans import make_count, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_laplace, make_base_gaussian
+    from opendp.transformations import make_count, make_split_dataframe, make_select_column
+    from opendp.measurements import make_base_laplace, make_base_gaussian
     from opendp.mod import enable_features
     enable_features("floating-point")
     preprocess = (

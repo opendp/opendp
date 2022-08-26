@@ -163,9 +163,9 @@ mod tests {
     use crate::metrics::{AbsoluteDistance, SymmetricDistance};
     use crate::domains::VectorDomain;
     use crate::error::*;
-    use crate::meas::*;
+    use crate::measurements::*;
     use crate::poly::PolyDomain;
-    use crate::trans::*;
+    use crate::transformations::*;
 
     use super::*;
 

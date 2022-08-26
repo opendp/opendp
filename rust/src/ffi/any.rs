@@ -411,8 +411,8 @@ mod tests {
     use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
     use crate::domains::{AllDomain, BoundedDomain};
     use crate::error::*;
-    use crate::meas;
-    use crate::trans;
+    use crate::measurements;
+    use crate::transformations;
 
     use super::*;
 
@@ -472,12 +472,12 @@ mod tests {
 
     #[test]
     fn test_any_chain() -> Fallible<()> {
-        let t1 = trans::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?.into_any();
-        let t2 = trans::make_select_column::<_, String>("a".to_owned())?.into_any();
-        let t3 = trans::make_cast_default::<String, f64>()?.into_any();
-        let t4 = trans::make_clamp((0.0, 10.0))?.into_any();
-        let t5 = trans::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = meas::make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(0.0, None)?.into_any();
+        let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?.into_any();
+        let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
+        let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
+        let t4 = transformations::make_clamp((0.0, 10.0))?.into_any();
+        let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
+        let m1 = measurements::make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(0.0, None)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg);

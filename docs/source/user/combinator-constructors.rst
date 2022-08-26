@@ -28,13 +28,13 @@ The :py:func:`opendp.comb.make_chain_mt` constructor similarly creates a new Mea
 Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
-In the following example we chain :py:func:`opendp.meas.make_base_discrete_laplace` with :py:func:`opendp.trans.make_bounded_sum`.
+In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_bounded_sum`.
 
 .. doctest::
 
-    >>> from opendp.trans import make_bounded_sum
-    >>> from opendp.meas import make_base_discrete_laplace
-    >>> from opendp.comb import make_chain_mt
+    >>> from opendp.transformations import make_bounded_sum
+    >>> from opendp.measurements import make_base_discrete_laplace
+    >>> from opendp.combinators import make_chain_mt
     ...
     >>> # call a constructor to produce a transformation
     >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
@@ -83,7 +83,7 @@ but the chaining fails because the sum emits floats and the discrete laplace mec
         input_domain:  AllDomain(i32)
 
 Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
-This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.trans.make_cast>`, :py:func:`make_impute_constant <opendp.trans.make_impute_constant>`, :py:func:`make_clamp <opendp.trans.make_clamp>` and :py:func:`make_bounded_resize <opendp.trans.make_bounded_resize>`.
+This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_bounded_resize <opendp.transformations.make_bounded_resize>`.
 See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
 
 Composition
@@ -93,7 +93,7 @@ OpenDP has a basic composition combinator for composing a list of measurements i
 
 .. doctest::
 
-    >>> from opendp.comb import make_basic_composition
+    >>> from opendp.combinators import make_basic_composition
     >>> noisy_sum_pair = make_basic_composition([noisy_sum, noisy_sum])
 
 
@@ -108,8 +108,8 @@ The resulting measurement expects the size of the input dataset to be 10.
 
 .. doctest::
 
-    >>> from opendp.trans import make_sized_bounded_mean
-    >>> from opendp.meas import make_base_laplace
+    >>> from opendp.transformations import make_sized_bounded_mean
+    >>> from opendp.measurements import make_base_laplace
     >>> meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> make_base_laplace(scale=0.5)
     >>> print("standard mean:", amplified([1.] * 10)) # -> 1.03 # doctest: +SKIP
 
@@ -118,7 +118,7 @@ The function on the amplified measurement is identical to the standard measureme
 
 .. doctest::
 
-    >>> from opendp.comb import make_population_amplification
+    >>> from opendp.combinators import make_population_amplification
     >>> amplified = make_population_amplification(meas, population_size=100)
     >>> print("amplified mean:", amplified([1.] * 10)) # -> .97 # doctest: +SKIP
 

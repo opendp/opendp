@@ -5,8 +5,8 @@ enable_features('contrib')
 
 def test_count_by_categories():
     """Compute histogram with known category set"""
-    from opendp.trans import make_count_by_categories, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_discrete_laplace
+    from opendp.transformations import make_count_by_categories, make_split_dataframe, make_select_column
+    from opendp.measurements import make_base_discrete_laplace
     from opendp.typing import L1Distance, VectorDomain, AllDomain
     from opendp.mod import binary_search_chain
     preprocess = (
@@ -28,8 +28,8 @@ def test_count_by_categories():
 
 def test_count_by_categories_float():
     """Compute histogram with known category set"""
-    from opendp.trans import make_count_by_categories, make_split_dataframe, make_select_column
-    from opendp.meas import make_base_laplace, make_base_gaussian
+    from opendp.transformations import make_count_by_categories, make_split_dataframe, make_select_column
+    from opendp.measurements import make_base_laplace, make_base_gaussian
     from opendp.typing import L1Distance, L2Distance, VectorDomain, AllDomain
     from opendp.mod import enable_features
     enable_features("floating-point")
@@ -52,9 +52,9 @@ def test_count_by_categories_float():
 
 def test_count_by_ptr():
     """Compute histogram with unknown category set"""
-    from opendp.trans import make_split_dataframe, make_select_column, make_count_by
-    from opendp.meas import make_base_ptr
-    from opendp.comb import make_fix_delta
+    from opendp.transformations import make_split_dataframe, make_select_column, make_count_by
+    from opendp.measurements import make_base_ptr
+    from opendp.combinators import make_fix_delta
     from opendp.typing import L1Distance
     from opendp.mod import binary_search_param, enable_features
     enable_features("floating-point")

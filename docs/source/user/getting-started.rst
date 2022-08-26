@@ -98,7 +98,7 @@ Then we'll apply that transformation to a vector consisting of one string, and g
 
 .. doctest::
 
-    >>> from opendp.trans import make_identity
+    >>> from opendp.transformations import make_identity
     >>> from opendp.typing import VectorDomain, AllDomain, SymmetricDistance
     ...
     >>> identity = make_identity(D=VectorDomain[AllDomain[str]], M=SymmetricDistance)
@@ -106,7 +106,7 @@ Then we'll apply that transformation to a vector consisting of one string, and g
     ['Hello, world!']
 
 First, we import some types to have them in scope.
-:func:`make_identity <opendp.trans.make_identity>` is a :ref:`constructor function <constructors>`,
+:func:`make_identity <opendp.transformations.make_identity>` is a :ref:`constructor function <constructors>`,
 and the imports from :mod:`opendp.typing` are necessary for disambiguating the types the transformation will work with.
 
 Next we call ``make_identity()`` to construct an identity ``Transformation``.

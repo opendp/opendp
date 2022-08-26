@@ -38,7 +38,7 @@ Some common domains are:
 
 In many cases, you provide some qualities about the underlying domain and the rest is automatically chosen by the constructor.
 
-Let's look at the Transformation returned from :py:func:`make_bounded_sum(bounds=(0, 1)) <opendp.trans.make_bounded_sum>`.
+Let's look at the Transformation returned from :py:func:`make_bounded_sum(bounds=(0, 1)) <opendp.transformations.make_bounded_sum>`.
 The input domain has type ``VectorDomain<BoundedDomain<i32>>``,
 read as "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 The bounds argument to the constructor provides L and U, and since TIA (atomic input type) is not passed,
@@ -48,7 +48,7 @@ The output domain is simply ``AllDomain<i32>``, or "the set of all 32-bit signed
 These domains serve two purposes:
 
 #. The relation depends on the input and output domain in its proof to restrict the set of neighboring datasets or distributions.
-   An example is the relation for :py:func:`opendp.trans.make_sized_bounded_sum`,
+   An example is the relation for :py:func:`opendp.transformations.make_sized_bounded_sum`,
    which makes use of a ``SizedDomain`` domain descriptor to more tightly bound the sensitivity.
 #. Combinators also use domains to ensure the output is well-defined.
    For instance, chainer constructors check that intermediate domains are equivalent
@@ -147,7 +147,7 @@ Putting this to practice, the following example checks the stability relation on
 
 .. doctest::
 
-    >>> from opendp.trans import make_clamp
+    >>> from opendp.transformations import make_clamp
     >>> clamp = make_clamp(bounds=(1, 10))
     ...
     >>> # The maximum number of records that any one individual may influence in your dataset
@@ -233,9 +233,9 @@ There are additional modifiers:
 
 Some examples being:
 
-* `TA` for the atomic type. `float` could be the TA for a float :py:func:`clamp transformation <opendp.trans.make_clamp>`.
-* `TIA` for Atomic Input Type. `str` could be the TIA for a :py:func:`count transformation <opendp.trans.make_count>`.
-* `MO` for Output Metric. `AbsoluteDistance[int]` could be the MO for a :py:func:`histogram transformation <opendp.trans.make_count_by_categories>`.
-* `QO` for Output distance. `float` could be the QO for a :py:func:`discrete laplace measurement <opendp.meas.make_base_discrete_laplace>`.
+* `TA` for the atomic type. `float` could be the TA for a float :py:func:`clamp transformation <opendp.transformations.make_clamp>`.
+* `TIA` for Atomic Input Type. `str` could be the TIA for a :py:func:`count transformation <opendp.transformations.make_count>`.
+* `MO` for Output Metric. `AbsoluteDistance[int]` could be the MO for a :py:func:`histogram transformation <opendp.transformations.make_count_by_categories>`.
+* `QO` for Output distance. `float` could be the QO for a :py:func:`discrete laplace measurement <opendp.measurements.make_base_discrete_laplace>`.
 
 The API docs should also include explanations in most contexts.

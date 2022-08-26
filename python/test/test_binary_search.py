@@ -1,6 +1,6 @@
 from opendp.mod import binary_search_param, enable_features, binary_search
-from opendp.trans import make_bounded_sum, make_clamp, make_sized_bounded_sum, make_sized_bounded_mean
-from opendp.meas import make_base_laplace
+from opendp.transformations import make_bounded_sum, make_clamp, make_sized_bounded_sum, make_sized_bounded_mean
+from opendp.measurements import make_base_laplace
 
 enable_features('floating-point', 'contrib')
 

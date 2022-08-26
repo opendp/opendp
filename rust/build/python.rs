@@ -47,7 +47,7 @@ fn generate_module(
         .join("\n");
 
     // the comb module needs access to core functions for type introspection on measurements/transformations
-    let comb_import = if module_name == "comb" {"from opendp.core import *\n"} else {""};
+    let comb_import = if module_name == "combinators" {"from opendp.core import *\n"} else {""};
 
     format!(r#"# Auto-generated. Do not edit.
 from opendp._convert import *

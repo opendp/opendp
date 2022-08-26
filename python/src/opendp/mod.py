@@ -16,7 +16,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> enable_features("contrib")
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> from opendp.meas import make_base_discrete_laplace
+    >>> from opendp.measurements import make_base_discrete_laplace
     >>> base_dl: Measurement = make_base_discrete_laplace(scale=2.)
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
@@ -28,7 +28,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> assert base_dl.check(1, 0.5)
     ...
     >>> # chain with a transformation from the trans module
-    >>> from opendp.trans import make_count
+    >>> from opendp.transformations import make_count
     >>> chained = (
     ...     make_count(TIA=int) >>
     ...     base_dl
@@ -140,7 +140,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> enable_features("contrib")
     ...
     >>> # create an instance of Transformation using a constructor from the trans module
-    >>> from opendp.trans import make_count
+    >>> from opendp.transformations import make_count
     >>> count: Transformation = make_count(TIA=int)
     ...
     >>> # invoke the transformation (invoke and __call__ are equivalent)
@@ -152,7 +152,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.trans import make_split_lines, make_cast, make_impute_constant
+    >>> from opendp.transformations import make_split_lines, make_cast, make_impute_constant
     >>> chained = (
     ...     make_split_lines() >>
     ...     make_cast(TIA=str, TOA=int) >>
@@ -211,11 +211,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
 
     def __rshift__(self, other: Union["Measurement", "Transformation"]):
         if isinstance(other, Measurement):
-            from opendp.comb import make_chain_mt
+            from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
 
         if isinstance(other, Transformation):
-            from opendp.comb import make_chain_tt
+            from opendp.combinators import make_chain_tt
             return make_chain_tt(other, self)
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
@@ -355,8 +355,8 @@ def binary_search_chain(
     Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
     >>> from opendp.mod import binary_search_chain, enable_features
-    >>> from opendp.trans import make_clamp, make_bounded_resize, make_sized_bounded_mean
-    >>> from opendp.meas import make_base_laplace
+    >>> from opendp.transformations import make_clamp, make_bounded_resize, make_sized_bounded_mean
+    >>> from opendp.measurements import make_base_laplace
     >>> enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
@@ -377,8 +377,8 @@ def binary_search_chain(
     Build a (2 neighboring, 1. epsilon)-close sized bounded sum with discrete_laplace(100.) noise.
     It should have the widest possible admissible clamping bounds (-b, b).
 
-    >>> from opendp.trans import make_sized_bounded_sum
-    >>> from opendp.meas import make_base_discrete_laplace
+    >>> from opendp.transformations import make_sized_bounded_sum
+    >>> from opendp.measurements import make_base_discrete_laplace
     ...
     >>> def make_sum(b):
     ...     return make_sized_bounded_sum(10_000, (-b, b)) >> make_base_discrete_laplace(100.)
@@ -413,7 +413,7 @@ def binary_search_param(
     :example:
 
     >>> from opendp.mod import binary_search_param, enable_features
-    >>> from opendp.meas import make_base_laplace
+    >>> from opendp.measurements import make_base_laplace
     ...
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The first argument is any function that returns your complete computation chain
@@ -483,9 +483,9 @@ def binary_search(
     .. testsetup:: *
 
         from opendp.typing import L2Distance, VectorDomain, AllDomain
-        from opendp.trans import make_sized_bounded_mean
-        from opendp.meas import make_base_gaussian
-        from opendp.comb import make_fix_delta, make_zCDP_to_approxDP
+        from opendp.transformations import make_sized_bounded_mean
+        from opendp.measurements import make_base_gaussian
+        from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
         from opendp.mod import enable_features
         enable_features("contrib", "floating-point")
 
@@ -502,7 +502,7 @@ def binary_search(
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
-    >>> from opendp.trans import make_count_by_categories
+    >>> from opendp.transformations import make_count_by_categories
     >>> histogram = make_count_by_categories(categories=["a"], MO=L2Distance[int])
     ...
     >>> binary_search(
