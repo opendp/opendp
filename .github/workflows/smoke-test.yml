@@ -86,9 +86,6 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Prepare for libs
-        run: mkdir -p src/opendp/v1/lib
-
       - name: Download libs
         uses: actions/download-artifact@v2
         with:
@@ -106,3 +103,50 @@ jobs:
           cd ../docs
           python -m pip install -r requirements.txt
           make doctest-python
+
+
+  python-test-notebooks:
+    needs: rust-build-and-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    strategy:
+      matrix:
+        python-version: [3.7]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('python/setup.cfg') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install flake8 pytest nbmake pytest-xdist
+
+      - name: Download libs
+        uses: actions/download-artifact@v2
+        with:
+          name: libs
+          path: python/src/opendp/lib
+
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Test
+        run: pytest --nbmake **/*.ipynb -n=auto
