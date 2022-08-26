@@ -12,7 +12,7 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_b_ary_tree_consistent(
+pub extern "C" fn opendp_transformations__make_b_ary_tree_consistent(
     branching_factor: c_uint,
     TIA: *const c_char,
     TOA: *const c_char,

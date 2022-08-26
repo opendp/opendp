@@ -14,7 +14,7 @@ use crate::{
 use super::choose_branching_factor;
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_b_ary_tree(
+pub extern "C" fn opendp_transformations__make_b_ary_tree(
     leaf_count: c_uint,
     branching_factor: c_uint,
     M: *const c_char,
@@ -56,7 +56,7 @@ pub extern "C" fn opendp_trans__make_b_ary_tree(
 
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__choose_branching_factor(
+pub extern "C" fn opendp_transformations__choose_branching_factor(
     size_guess: c_uint,
 ) -> c_uint {
     let size_guess = size_guess as usize;

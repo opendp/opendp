@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_cdf(TA: *const c_char) -> FfiResult<*mut AnyTransformation> {
+pub extern "C" fn opendp_transformations__make_cdf(TA: *const c_char) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<TA: Float>() -> FfiResult<*mut AnyTransformation> {
         make_cdf::<TA>().into_any()
     }
@@ -22,7 +22,7 @@ pub extern "C" fn opendp_trans__make_cdf(TA: *const c_char) -> FfiResult<*mut An
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_quantiles_from_counts(
+pub extern "C" fn opendp_transformations__make_quantiles_from_counts(
     bin_edges: *const AnyObject,
     alphas: *const AnyObject,
     interpolation: *const c_char,

@@ -18,7 +18,7 @@ pub extern "C" fn opendp_combinators__make_chain_tt(transformation1: *const AnyT
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_chain_tm(transformation1: *const AnyTransformation, measurement0: *const AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
+pub extern "C" fn opendp_combinators__make_chain_tm(transformation1: *const AnyTransformation, measurement0: *const AnyMeasurement) -> FfiResult<*mut AnyMeasurement> {
     let transformation1 = try_as_ref!(transformation1);
     let measurement0 = try_as_ref!(measurement0);
     make_chain_tm(transformation1, measurement0).into()
@@ -72,7 +72,7 @@ mod tests {
     fn test_make_chain_tm_ffi() -> Fallible<()> {
         let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
         let transformation1 = util::into_raw(make_test_transformation::<i32>().into_any());
-        let chain = Result::from(opendp_comb__make_chain_tm(transformation1, measurement0))?;
+        let chain = Result::from(opendp_combinators__make_chain_tm(transformation1, measurement0))?;
         let arg = AnyObject::new_raw(999);
         let res = core::opendp_core__measurement_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;

@@ -88,7 +88,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     def __rshift__(self, other: "Transformation"):
         if isinstance(other, Transformation):
-            from opendp.comb import make_chain_tm
+            from opendp.combinators import make_chain_tm
             return make_chain_tm(other, self)
 
         raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
