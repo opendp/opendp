@@ -645,7 +645,13 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        raise ValueError("predicate always fails")
+        err = ""
+        try:
+            predicate(center)
+        except Exception as err:
+            error = f". Error at center: {err}"
+        
+        raise ValueError(f"predicate always fails{error}")
 
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
