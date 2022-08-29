@@ -160,3 +160,16 @@ impl Debug for DiscreteDistance {
 impl Metric for DiscreteDistance {
     type Distance = IntDistance;
 }
+
+
+#[derive(Clone, Default, PartialEq)]
+pub struct AgnosticMetric;
+
+impl Debug for AgnosticMetric {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "AgnosticMetric()")
+    }
+}
+impl Metric for AgnosticMetric {
+    type Distance = ();
+}

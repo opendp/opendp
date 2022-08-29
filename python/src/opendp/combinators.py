@@ -8,6 +8,7 @@ from opendp.core import *
 __all__ = [
     "make_chain_mt",
     "make_chain_tt",
+    "make_chain_tm",
     "make_basic_composition",
     "make_population_amplification",
     "make_fix_delta",
@@ -75,6 +76,37 @@ def make_chain_tt(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(transformation1, transformation0), Transformation))
+
+
+def make_chain_tm(
+    transformation: Transformation,
+    measurement: Measurement
+) -> Measurement:
+    """Construct the functional composition (`transformation` ○ `measurement`). Returns a Measurement. Used for postprocessing.
+    
+    :param transformation: outer postprocessor
+    :type transformation: Transformation
+    :param measurement: inner privatizer
+    :type measurement: Measurement
+    :return: Measurement representing the chained computation.
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    transformation = py_to_c(transformation, c_type=Transformation)
+    measurement = py_to_c(measurement, c_type=Measurement)
+    
+    # Call library function.
+    function = lib.opendp_combinators__make_chain_tm
+    function.argtypes = [Transformation, Measurement]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation, measurement), Measurement))
 
 
 def make_basic_composition(
