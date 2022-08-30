@@ -645,7 +645,7 @@ def exponential_bounds_search(
             return False
     exception_bounds = exponential_bounds_search(exception_predicate, T=T)
     if exception_bounds is None:
-        err = ""
+        error = ""
         try:
             predicate(center)
         except Exception as err:
