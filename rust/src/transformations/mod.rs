@@ -9,6 +9,11 @@ pub mod covariance;
 pub use crate::transformations::covariance::*;
 
 #[cfg(feature="contrib")]
+pub mod b_ary_tree;
+#[cfg(feature="contrib")]
+pub use crate::transformations::b_ary_tree::*;
+
+#[cfg(feature="contrib")]
 pub mod dataframe;
 #[cfg(feature="contrib")]
 pub use crate::transformations::dataframe::*;
@@ -37,6 +42,11 @@ pub use crate::transformations::sum_of_squared_deviations::*;
 pub mod count;
 #[cfg(feature="contrib")]
 pub use crate::transformations::count::*;
+
+#[cfg(feature="contrib")]
+pub mod count_cdf;
+#[cfg(feature="contrib")]
+pub use crate::transformations::count_cdf::*;
 
 #[cfg(feature="contrib")]
 pub mod mean;

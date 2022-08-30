@@ -53,7 +53,8 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 
 // count with unknown n, known categories
 pub fn make_count_by_categories<MO, TI, TO>(
-    categories: Vec<TI>
+    categories: Vec<TI>,
+    null_category: bool
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
     where MO: CountByCategoriesConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: Number,
@@ -81,7 +82,7 @@ pub fn make_count_by_categories<MO, TI, TO>(
 
             categories.iter().map(|cat| counts.remove(cat)
                 .unwrap_assert("categories are distinct and every category is in the map"))
-                .chain(vec![null_count])
+                .chain(if null_category {vec![null_count]} else {vec![]})
                 .collect()
         }),
         SymmetricDistance::default(),
@@ -160,7 +161,7 @@ mod tests {
     #[test]
     fn test_make_count_by_categories() {
         let transformation = make_count_by_categories::<L2Distance<f64>, i64, i8>(
-            vec![2, 1, 3]
+            vec![2, 1, 3], true
         ).unwrap_test();
         let arg = vec![1, 2, 3, 4, 5, 1, 1, 1, 2];
         let ret = transformation.invoke(&arg).unwrap_test();

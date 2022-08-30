@@ -7,7 +7,7 @@ use crate::metrics::{L1Distance, L2Distance};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::any::Downcast;
-use crate::ffi::util::Type;
+use crate::ffi::util::{Type, c_bool, to_bool};
 use crate::traits::{Number, Hashable, Primitive, Float};
 use crate::transformations::{CountByCategoriesConstant, CountByConstant, make_count, make_count_by, make_count_by_categories, make_count_distinct};
 
@@ -52,35 +52,40 @@ pub extern "C" fn opendp_transformations__make_count_distinct(
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_count_by_categories(
     categories: *const AnyObject,
+    null_category: c_bool,
     MO: *const c_char, TI: *const c_char, TO: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<QO>(
         categories: *const AnyObject,
+        null_category: bool,
         MO: Type, TI: Type, TO: Type,
     ) -> FfiResult<*mut AnyTransformation>
         where QO: Number {
-        fn monomorphize2<MO, TI, TO>(categories: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+        fn monomorphize2<MO, TI, TO>(
+            categories: *const AnyObject, 
+            null_category: bool
+        ) -> FfiResult<*mut AnyTransformation>
             where MO: 'static + SensitivityMetric + CountByCategoriesConstant<MO::Distance>,
                   MO::Distance: Number,
                   TI: Hashable,
                   TO: Number {
             let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
-            make_count_by_categories::<MO, TI, TO>(categories).into_any()
+            make_count_by_categories::<MO, TI, TO>(categories, null_category).into_any()
         }
         dispatch!(monomorphize2, [
             (MO, [L1Distance<QO>, L2Distance<QO>]),
             (TI, @hashable),
             (TO, @numbers)
-        ], (categories))
+        ], (categories, null_category))
     }
+    let null_category = to_bool(null_category);
     let MO = try_!(Type::try_from(MO));
     let TI = try_!(Type::try_from(TI));
     let TO = try_!(Type::try_from(TO));
-
     let QO = try_!(MO.get_atom());
     dispatch!(monomorphize, [
         (QO, @numbers)
-    ], (categories, MO, TI, TO))
+    ], (categories, null_category, MO, TI, TO))
 }
 
 #[no_mangle]
