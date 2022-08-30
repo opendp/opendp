@@ -102,9 +102,11 @@ fn num_nodes_from_num_layers(num_layers: usize, b: usize) -> usize {
 pub trait BAryTreeMetric: Metric {}
 impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
 
-/// Choose the optimal branching factor.
-/// Proposition 1: http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf
-/// From "Optimal Branching Factor", try different values of b, up to flat.
+/// Choose the optimal branching factor from a size guess.
+/// 
+/// # Citations
+/// * QYL13, Understanding Hierarchical Methods for Differentially Private Histograms
+///   Proposition 1: http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf
 ///
 /// # Arguments
 /// * `size_guess` - ballpark estimate of dataset size
@@ -223,7 +225,7 @@ pub mod test_b_trees {
         let b = 2;
         let trans = make_b_ary_tree::<L1Distance<i32>, i32>(10, b)?;
         let meas = (trans.clone() >> make_base_discrete_laplace(0.)?)?;
-        let post = make_b_ary_tree_consistent::<i32, f64>(b)?;
+        let post = make_consistent_b_ary_tree::<i32, f64>(b)?;
 
         let noisy_tree = meas.invoke(&vec![1; 10])?;
         // casting should not lose data, as noise was integral

@@ -340,7 +340,7 @@ def test_df_subset():
     assert query.check(1, 1)
 
 def test_lipschitz_b_ary_tree():
-    from opendp.transformations import make_count_by_categories, make_b_ary_tree, make_b_ary_tree_consistent, make_cdf, choose_branching_factor
+    from opendp.transformations import make_count_by_categories, make_b_ary_tree, make_consistent_b_ary_tree, make_cdf, choose_branching_factor
     from opendp.measurements import make_base_geometric
     leaf_count = 7
     branching_factor = 2
@@ -357,7 +357,7 @@ def test_lipschitz_b_ary_tree():
         make_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
         tree_builder >> 
         make_base_geometric(1., D=VectorDomain[AllDomain[int]]) >> 
-        make_b_ary_tree_consistent(branching_factor)
+        make_consistent_b_ary_tree(branching_factor)
     )
 
     meas_cdf = meas_base >> make_cdf()

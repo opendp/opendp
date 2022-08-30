@@ -7,7 +7,21 @@ mod ffi;
 
 
 /// Postprocessing transformation that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
-pub fn make_b_ary_tree_consistent<TIA, TOA>(
+/// 
+/// The input argument of the function is a balanced `b`-ary tree implicitly stored in breadth-first order
+/// Tree is assumed to be complete, as in, all leaves on the last layer are on the left.
+/// Non-existent leaves are assumed to be zero.
+/// 
+/// The output remains consistent even when leaf nodes are missing.
+/// This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
+/// 
+/// # Citations
+/// * HRMS09, Boosting the Accuracy of Differentially Private Histograms Through Consistency
+///   Section 4.1: https://arxiv.org/pdf/0904.0942.pdf
+/// 
+/// # Arguments
+/// * `branching factor` - the maximum number of children
+pub fn make_consistent_b_ary_tree<TIA, TOA>(
     branching_factor: usize,
 ) -> Fallible<
     Transformation<

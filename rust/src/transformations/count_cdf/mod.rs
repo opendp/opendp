@@ -3,16 +3,16 @@ use std::ops::Sub;
 use num::Zero;
 
 use crate::{
-    core::{Transformation, Function},
-    metrics::AgnosticMetric,
+    core::{Function, Transformation},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
-    traits::{RoundCast, Float, Number},
+    metrics::AgnosticMetric,
+    traits::{Float, Number, RoundCast},
 };
 
 use super::postprocess::make_postprocess;
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
 
 /// Constructs a [`Transformation`] that maps a float vector of counts into a cumulative distribution
@@ -34,11 +34,11 @@ where
             let cumsum = arg
                 .iter()
                 .scan(TA::zero(), |acc, v| {
-                    *acc += v.clone();
+                    *acc += *v;
                     Some(*acc)
                 })
                 .collect::<Vec<TA>>();
-            let sum = cumsum[cumsum.len() - 1].clone();
+            let sum = cumsum[cumsum.len() - 1];
             Ok(cumsum.into_iter().map(|v| v / sum).collect())
         }),
     )
@@ -112,68 +112,57 @@ where
                 &arg[..]
             };
             // compute the cumulative sum of the input counts
-            let cumsum = arg
-                .iter()
+            let cumsum = (arg.iter())
                 .scan(TA::zero(), |acc, v| {
                     *acc += v.clone();
                     Some(acc.clone())
                 })
-                .collect::<Vec<TA>>();
+                .map(F::round_cast)
+                .collect::<Fallible<Vec<F>>>()?;
 
             // reuse the last element of the cumsum
-            let sum = F::round_cast(cumsum[cumsum.len() - 1].clone())?;
+            let sum = cumsum[cumsum.len() - 1];
 
-            // scale alphas up into T space and convert to T
-            let alpha_edges = alphas
-                .iter()
-                .cloned()
-                .map(|a| TA::round_cast(a * sum))
-                .collect::<Fallible<Vec<TA>>>()?;
+            let cdf: Vec<F> = cumsum.into_iter().map(|v| v / sum).collect();
 
             // each index is the number of bins whose combined mass is less than the alpha_edge mass
             let mut indices = vec![0; alphas.len()];
-            count_lt_recursive(
-                indices.as_mut_slice(),
-                alpha_edges.as_slice(),
-                cumsum.as_slice(),
-                0,
-            );
+            count_lt_recursive(indices.as_mut_slice(), alphas.as_slice(), cdf.as_slice(), 0);
 
-            Ok(indices
+            indices
                 .into_iter()
-                .zip(alpha_edges)
-                .map(|(idx, edge)| {
+                .zip(&alphas)
+                .map(|(idx, &alpha)| {
                     // Want to find the cumulative values to the left and right of edge
                     // When no elements less than edge, consider cumulative value to be zero
-                    let left = if idx == 0 {
-                        TA::zero()
-                    } else {
-                        cumsum[idx - 1].clone()
-                    };
-                    let right = cumsum[idx].clone();
+                    let left_cdf = if idx == 0 { F::zero() } else { cdf[idx - 1] };
+                    let right_cdf = cdf[idx];
 
                     // println!("x's {:?}, {:?}", edge, (left.clone(), right.clone()));
                     // println!("y's {:?}", (&bin_edges[idx], &bin_edges[idx + 1]));
                     match interpolation {
                         Interpolation::Nearest => {
                             // if edge nearer to right than to left, then increment index
-                            bin_edges[idx + (edge.clone() - left > right - edge) as usize].clone()
+                            Ok(bin_edges[idx + (alpha - left_cdf > right_cdf - alpha) as usize])
                         }
                         Interpolation::Linear => {
+                            let left_edge = F::round_cast(bin_edges[idx])?;
+                            let right_edge = F::round_cast(bin_edges[idx + 1])?;
+
                             // find the interpolant between the bin edges.
                             // denominator is never zero because bin edges is strictly increasing
-                            let slope = (bin_edges[idx + 1].clone() - bin_edges[idx].clone())
-                                / (right - left.clone());
-                            bin_edges[idx].clone() + (edge.clone() - left) * slope
+                            let t = (alpha - left_cdf) / (right_cdf - left_cdf);
+                            let v = (F::one() - t) * left_edge + t * right_edge;
+                            TA::round_cast(v)
                         }
                     }
                 })
-                .collect())
+                .collect()
         }),
     )
 }
 
-fn abs_diff<T: PartialOrd + Sub<Output=T>>(a: T, b: T) -> T {
+fn abs_diff<T: PartialOrd + Sub<Output = T>>(a: T, b: T) -> T {
     if a < b {
         b - a
     } else {
@@ -277,13 +266,11 @@ mod test_cdf {
         let quantile_trans =
             make_quantiles_from_counts(edges.clone(), alphas.clone(), Interpolation::Nearest)?;
         let quantiles = quantile_trans.invoke(&vec![100, 100, 100, 100])?;
-        println!("{:?}", quantiles);
         assert_eq!(quantiles, vec![0, 0, 25, 50, 75, 75, 75, 100, 100]);
 
         let quantile_trans = make_quantiles_from_counts(edges, alphas, Interpolation::Linear)?;
         let quantiles = quantile_trans.invoke(&vec![100, 100, 100, 100])?;
-        println!("{:?}", quantiles);
-        // assert_eq!(quantiles, vec![0, 0, 0, 50, 75, 75, 75, 100, 100]);
+        assert_eq!(quantiles, vec![0, 10, 24, 51, 74, 75, 76, 99, 100]);
         Ok(())
     }
 
@@ -311,7 +298,7 @@ mod test_cdf {
         let quantiles = quantile_trans.invoke(&vec![2.23, 3.4, 5.])?;
         assert_eq!(
             quantiles,
-            vec![9.533632286995514, 15.947058823529412, 23.622]
+            vec![9.533632286995514, 15.94705882352941, 23.622]
         );
         println!("{:?}", quantiles);
         Ok(())

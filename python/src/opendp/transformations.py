@@ -6,7 +6,7 @@ from opendp.typing import *
 
 __all__ = [
     "make_b_ary_tree",
-    "make_b_ary_tree_consistent",
+    "make_consistent_b_ary_tree",
     "choose_branching_factor",
     "make_cast",
     "make_cast_default",
@@ -108,7 +108,7 @@ def make_b_ary_tree(
     return c_to_py(unwrap(function(leaf_count, branching_factor, M, TA), Transformation))
 
 
-def make_b_ary_tree_consistent(
+def make_consistent_b_ary_tree(
     branching_factor: int,
     TIA: RuntimeTypeDescriptor = "int",
     TOA: RuntimeTypeDescriptor = "float"
@@ -121,7 +121,7 @@ def make_b_ary_tree_consistent(
     :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic type of the output data. Should be a float type.
     :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A b_ary_tree_consistent step.
+    :return: A consistent_b_ary_tree step.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -139,7 +139,7 @@ def make_b_ary_tree_consistent(
     TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__make_b_ary_tree_consistent
+    function = lib.opendp_transformations__make_consistent_b_ary_tree
     function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
@@ -149,10 +149,11 @@ def make_b_ary_tree_consistent(
 def choose_branching_factor(
     size_guess: int
 ) -> int:
-    """Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.
+    """Returns an approximation to the ideal branching factor, b, for a dataset of a given size, that minimizes error in cdf and quantile estimates based on b-ary trees.
     
     :param size_guess: A guess at the size of your dataset.
     :type size_guess: int
+    :return: An approximation to the ideal branching factor, b.
     :rtype: int
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse

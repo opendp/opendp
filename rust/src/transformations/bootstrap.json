@@ -27,7 +27,7 @@
         ],
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
-    "make_b_ary_tree_consistent": {
+    "make_consistent_b_ary_tree": {
         "description": "Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.",
         "features": ["contrib"],
         "args": [
@@ -52,7 +52,7 @@
         "ret": {"c_type": "FfiResult<AnyTransformation *>"}
     },
     "choose_branching_factor": {
-        "description": "Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.",
+        "description": "Returns an approximation to the ideal branching factor, b, for a dataset of a given size, that minimizes error in cdf and quantile estimates based on b-ary trees.",
         "features": ["contrib"],
         "args": [
             {
@@ -61,7 +61,10 @@
                 "description": "A guess at the size of your dataset."
             }
         ],
-        "ret": {"c_type": "unsigned int"}
+        "ret": {
+            "c_type": "unsigned int",
+            "description": "An approximation to the ideal branching factor, b."
+        }
     },
     "make_cast": {
         "description": "Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. \nFailure to parse results in None, else Some<TOA>.",
