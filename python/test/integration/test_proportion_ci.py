@@ -1,6 +1,6 @@
-from opendp.trans import *
-from opendp.meas import *
-from opendp.comb import *
+from opendp.transformations import *
+from opendp.measurements import *
+from opendp.combinators import *
 from opendp.mod import enable_features
 from opendp.typing import *
 
