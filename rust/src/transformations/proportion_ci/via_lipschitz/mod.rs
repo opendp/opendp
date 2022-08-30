@@ -110,7 +110,7 @@ where TOA: RoundCast<TIA> + InfCast<TIA>, {
     let stability_constant = (strat_sizes.iter())
         .zip(sample_sizes.iter())
         .zip(weights.iter())
-        .map(|((&N, &n), &w)| w.powi(2) * (N - n) / N / (n - _1 / n))
+        .map(|((&N, &n), &w)| w.powi(2) * (N - n) / (N * (n - _1) * n))
         .reduce(|l, r| l.max(r))
         .unwrap_assert("there is always at least one partition");
 
