@@ -17,7 +17,7 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_transformation__make_postprocess_sized_proportion_ci(
+pub extern "C" fn opendp_transformations__make_postprocess_sized_proportion_ci(
     strat_sizes: *const AnyObject,
     sample_sizes: *const AnyObject,
     scale: *const c_void,
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_transformation__make_postprocess_sized_proportion_ci(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_transformation__make_postprocess_proportion_ci(
+pub extern "C" fn opendp_transformations__make_postprocess_proportion_ci(
     strat_sizes: *const AnyObject,
     sum_scale: *const c_void,
     size_scale: *const c_void,
