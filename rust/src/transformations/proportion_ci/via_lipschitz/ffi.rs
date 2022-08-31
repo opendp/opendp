@@ -119,7 +119,7 @@ mod tests {
         let d_in = AnyObject::new_raw(1i32);
         let res = core::opendp_core__transformation_map(&transformation, d_in);
         let res: f64 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 0.011574074074074075);
+        assert_eq!(res, 0.002777777777777778);
         Ok(())
     }
 }
