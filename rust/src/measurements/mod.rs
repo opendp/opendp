@@ -37,7 +37,7 @@ mod alp;
 #[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
 pub use crate::measurements::alp::*;
 
-#[cfg(feature="contrib")]
+#[cfg(all(feature="use-mpfr", feature="contrib"))]
 pub mod synthetic_data;
-#[cfg(feature="contrib")]
+#[cfg(all(feature="use-mpfr", feature="contrib"))]
 pub use crate::measurements::synthetic_data::*;
