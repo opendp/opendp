@@ -11,7 +11,7 @@ use crate::transformations::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_transformation__make_lipschitz_sized_proportion_ci_mean(
+pub extern "C" fn opendp_transformations__make_lipschitz_sized_proportion_ci_mean(
     strat_sizes: *const AnyObject,
     sample_sizes: *const AnyObject,
     TIA: *const c_char,
@@ -38,7 +38,7 @@ pub extern "C" fn opendp_transformation__make_lipschitz_sized_proportion_ci_mean
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_transformation__make_lipschitz_sized_proportion_ci_variance(
+pub extern "C" fn opendp_transformations__make_lipschitz_sized_proportion_ci_variance(
     strat_sizes: *const AnyObject,
     sample_sizes: *const AnyObject,
     mean_scale: *const c_void,
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_make_lipschitz_sized_proportion_ci_mean_ffi() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformation__make_lipschitz_sized_proportion_ci_mean(
+        let transformation = Result::from(opendp_transformations__make_lipschitz_sized_proportion_ci_mean(
             util::into_raw(AnyObject::new(vec![1usize, 1usize, 1usize])),
             util::into_raw(AnyObject::new(vec![1usize, 1usize, 1usize])),
             "i32".to_char_p(),
@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn test_lipschitz_sized_proportion_ci_variance_ffi() -> Fallible<()> {
         let transformation =
-            Result::from(opendp_transformation__make_lipschitz_sized_proportion_ci_variance(
+            Result::from(opendp_transformations__make_lipschitz_sized_proportion_ci_variance(
                 util::into_raw(AnyObject::new(vec![10usize; 3])),
                 util::into_raw(AnyObject::new(vec![5usize; 3])),
                 util::into_raw(1.0) as *const c_void,
