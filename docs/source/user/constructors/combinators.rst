@@ -5,12 +5,10 @@
 
 .. _combinator-constructors:
 
-Combinator Constructors
-=======================
+Combinators
+===========
 
-Combinator constructors use transformations or measurements to produce new transformations or measurements.
-Combinators are an area of OpenDP that are still heavily in development,
-but the chainers in particular are foundational and well-tested.
+Combinator constructors use Transformations or Measurements to produce a new Transformation or Measurement.
 
 .. _chaining:
 
@@ -20,13 +18,17 @@ Chaining
 Two of the most essential constructors are the "chainers" that chain transformations with transformations, and transformations with measurements.
 Chainers are used to incrementally piece Transformations or Measurements together that represent longer computational pipelines.
 
-The :py:func:`opendp.comb.make_chain_tt` constructor creates a new Transformation by combining an inner and an outer Transformation.
+The :py:func:`opendp.combinators.make_chain_tt` constructor creates a new Transformation by combining an inner and an outer Transformation.
 The resulting Transformation contains a function that sequentially executes the function of the constituent Transformations.
-It also contains a privacy relation that relates an input distance bound on the inner Transformation with an output distance bound on the outer transformation.
+It also contains a privacy map that takes an input distance bound on the inner Transformation and emits an output distance bound on the outer transformation.
 
-The :py:func:`opendp.comb.make_chain_mt` constructor similarly creates a new Measurement by combining an inner Transformation with an outer Measurement.
+The :py:func:`opendp.combinators.make_chain_mt` constructor similarly creates a new Measurement by combining an inner Transformation with an outer Measurement.
 Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
+
+This functionality is provided by the :py:func:`opendp.combinators.make_chain_tm` constructor that allows postprocess transformations to be chained onto a Measurement.
+Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
+In this case, it is only necessary for the domains to conform.
 
 In the following example we chain :py:func:`opendp.measurements.make_base_discrete_laplace` with :py:func:`opendp.transformations.make_bounded_sum`.
 
@@ -51,9 +53,8 @@ In the following example we chain :py:func:`opendp.measurements.make_base_discre
     >>> dataset = [0, 0, 1, 1, 0, 1, 1, 1]
     >>> release = noisy_sum(dataset)
 
-
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
-The syntax automatically chooses between :func:`make_chain_mt <opendp.mod.make_chain_mt>` and :func:`make_chain_tt <opendp.mod.make_chain_tt>`.
+The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, :func:`make_chain_tt <opendp.combinators.make_chain_tt>`, and `make_chain_tm <opendp.combinators.make_chain_tt>`.
 
 .. doctest::
 
@@ -95,6 +96,56 @@ OpenDP has a basic composition combinator for composing a list of measurements i
 
     >>> from opendp.combinators import make_basic_composition
     >>> noisy_sum_pair = make_basic_composition([noisy_sum, noisy_sum])
+    >>> release_1, release_2 = noisy_sum_pair(dataset)
+
+This kind of composition primitive gives a structural guarantee that all statistics are computed together in a batch.
+Thus the privacy map simply sums the constituent output distances.
+
+.. doctest::
+
+    >>> noisy_sum_pair.map(1)
+    2.0
+
+This combinator can compose Measurements with `ZeroConcentratedDivergence`, `MaxDivergence` and `FixedSmoothedMaxDivergence` output measures.
+
+Measure Casting
+---------------
+
+There are two combinators for casting the output measure of a Measurement. 
+The first is used for casting an output measure from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
+
+.. doctest::
+
+    >>> from opendp.measurements import make_base_gaussian
+    >>> from opendp.combinators import make_zCDP_to_approxDP
+    >>> meas_zCDP = make_base_gaussian(scale=0.5)
+    >>> # convert the output measure to `SmoothedMaxDivergence`
+    >>> meas_approxDP = make_zCDP_to_approxDP(meas_zCDP)
+    ...
+    >>> # SmoothedMaxDivergence distances are ε(δ) curves
+    >>> curve = meas_approxDP.map(d_in=1.)
+    >>> curve.epsilon(delta=1e-6)
+    11.688596249354896
+
+The second is used for fixing the delta parameter in the curve. 
+This changes the output measure from `SmoothedMaxDivergence` to `FixedSmoothedMaxDivergence`.
+
+.. doctest::
+
+    >>> from opendp.combinators import make_fix_delta
+    >>> # convert the output measure to `FixedSmoothedMaxDivergence`
+    >>> meas_fixed_approxDP = make_fix_delta(meas_approxDP, delta=1e-8)
+    ...
+    >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
+    >>> meas_approxDP.map(d_in=1.)
+    ...
+    >>> # FixedSmoothedMaxDivergences can be composed
+    >>> composed = make_basic_composition([meas_approxDP] * 2)
+    ...
+    >>> # the map on the composed measurement is 2x looser
+    >>> meas_approxDP.map(d_in=1.)
+
+These combinators allow you to convert output distances in terms of ρ-zCDP to ε(δ)-approxDP, and then to (ε, δ)-approxDP.
 
 
 Amplification

@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
-SPHINXOPTS    = -W
+SPHINXOPTS    = -W -v
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =

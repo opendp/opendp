@@ -1,7 +1,7 @@
 .. _measurement-constructors:
 
-Measurement Constructors
-========================
+Measurements
+============
 
 This section gives a high-level overview of the measurements that are available in the library.
 Refer to the :ref:`measurement` section for an explanation of what a measurement is.

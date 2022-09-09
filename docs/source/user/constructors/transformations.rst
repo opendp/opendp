@@ -1,7 +1,7 @@
 .. _transformation-constructors:
 
-Transformation Constructors
-===========================
+Transformations
+===============
 
 This section gives a high-level overview of the transformations that are available in the library.
 Refer to the :ref:`transformation` section for an explanation of what a transformation is.

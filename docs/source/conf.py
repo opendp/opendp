@@ -23,6 +23,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx-prompt',
     'sphinx_multiversion',
+    'nbsphinx',
 ]
 
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
@@ -128,5 +129,23 @@ html_logo = "_static/images/opendp-logo.png"
 
 rst_prolog = """
 .. |toctitle| replace:: Contents:
-.. |anotherSub| replace:: Yes, there can be multiple.
+"""
+
+version = next(open('../../VERSION'))
+if version == "0.0.0+development":
+    version_frag = ""
+else:
+    version_frag = f"/release/{version}"
+
+# insert this header on nbsphinx pages to link to binder and github:
+nbsphinx_prolog = r"""
+{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}
+.. raw:: html
+
+    <div class="admonition note">
+      This page was generated from
+      <a class="reference external" href="https://github.com/opendp/opendp/blob{{ env.config.version_frag|e }}/{{ docname|e }}">{{ docname|e }}</a>.
+      Interactive online version:
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp{{ env.config.version_frag|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+    </div>
 """

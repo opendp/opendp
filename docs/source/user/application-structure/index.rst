@@ -1,6 +1,14 @@
 Application Structure
 =====================
 
+.. toctree::
+
+  pums_data_analysis
+  accuracy_pitfalls
+  unknown_dataset_size
+  histograms
+
+
 .. _parameter-search:
 
 Parameter Search
