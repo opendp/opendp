@@ -8,5 +8,6 @@ User Guide
    getting-started
    programming-framework/index
    constructors/index
-   application-structure/index
-   attacks/index
+   utilities/index
+   pums-data-analysis
+   topics-in-privacy/index

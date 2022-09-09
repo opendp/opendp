@@ -13,7 +13,7 @@ Summary
 The OpenDP Programming Framework consists of a set of high-level conceptual elements. 
 We'll cover the highlights here, which should be enough for you to get acquainted with OpenDP programming. 
 If you're interested in more of the details and motivations behind the framework, you're encouraged to read `the paper <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf>`_.
-There is also an illustrative notebook `_A Framework to Understand DP_ <demonstration>_`.
+There is also an illustrative notebook `A Framework to Understand DP <a-framework-to-understand-dp.html>`_.
 
 .. note::
 
@@ -53,7 +53,14 @@ There is also an illustrative notebook `_A Framework to Understand DP_ <demonstr
 
 As you can see, these elements are interdependent and support each other. 
 The interaction of these elements is what gives the OpenDP Programming Framework its flexibility and expressiveness.
+These topics are covered at a more granular level in the following sections:
 
+.. toctree::
+  :titlesonly:
+
+  core-structures
+  supporting-elements
+  a-framework-to-understand-dp
 
 Key Points
 ----------
@@ -91,11 +98,3 @@ Applying the Concepts
 
 This is just a glance at the abstract concepts in the OpenDP Programming Framework. 
 The following sections of this guide describe the actual software components in OpenDP implementing these concepts, and how they can be used in your programs.
-
-
-.. toctree::
-  :titlesonly:
-
-  core-structures
-  supporting-elements
-  demonstration

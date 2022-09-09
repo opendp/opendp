@@ -13,13 +13,12 @@ Privacy Concerns
 As a work in progress, OpenDP has some known privacy concerns.
 These vulnerabilities may have an impact on some applications, depending on how they operate.
 
-* **Floating point issues:** Some of the OpenDP privacy mechanisms are based on assuming an idealized model of real-number arithmetic
+* **Floating point issues:** Some OpenDP Transformations and Measurements assume an idealized model of real-number arithmetic
   (as is common in the differential privacy research literature).
   Their implementations using floating-point numbers have `known issues <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_,
   where the differential privacy property is not satisfied due to discrepancies between real-number arithmetic and floating-point arithmetic.
-  Through the ongoing process of vetting privacy proofs (see below), we plan to clearly distinguish such mechanisms from ones
-  whose concrete implementations faithfully satisfy differential privacy (e.g. discrete noise-addition mechanisms).
-  See :ref:`floating-point` for additional comments.
+  Through the ongoing process of vetting privacy proofs (see below), we clearly distinguish such mechanisms from ones
+  whose concrete implementations faithfully satisfy differential privacy.
 * **Side-channel attacks:** OpenDP has not yet been hardened against side-channel attacks.
   These include things like timing attacks, cache effects, etc.
   These may make it possible for an attacker who interacts with the system running OpenDP software to obtain information outside

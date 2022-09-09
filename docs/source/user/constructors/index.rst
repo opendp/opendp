@@ -4,8 +4,8 @@ Constructors
 ============
 
 In OpenDP, Measurements and Transformations are created by calling constructor functions.
-The majority of the library's interface consists of these `make_*` constructors.
-Constructor functions always start with `make_*`, like :py:func:`make_clamp <opendp.transformations.make_clamp>` or :py:func:`make_base_laplace <opendp.measurements.make_base_laplace>`.
+The majority of the library's interface consists of these `make_*` constructors,
+like :py:func:`make_clamp <opendp.transformations.make_clamp>` or :py:func:`make_base_laplace <opendp.measurements.make_base_laplace>`.
 
 Because Measurements and Transformations are themselves like functions (they can be invoked on an input and return an output),
 you can think of constructors as higher-order functions:
@@ -19,9 +19,6 @@ Constructors are organized into three modules:
    measurements
    combinators
 
-
-Essentials
-----------
 
 We start by using a constructor to build a clamp transformation:
 
@@ -59,7 +56,7 @@ Similarly, we can check if the transformation is (`d_in`, `d_out`)-close (that i
     True
 
 We can use the `>>` shorthand to chain multiple transformations
-(internally uses the `make_chain_tt <chaining>_` combinator).
+(internally uses the `make_chain_tt <chaining>`_ combinator).
 
 .. doctest::
 

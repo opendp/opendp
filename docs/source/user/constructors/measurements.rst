@@ -6,6 +6,9 @@ Measurements
 This section gives a high-level overview of the measurements that are available in the library.
 Refer to the :ref:`measurement` section for an explanation of what a measurement is.
 
+Central DP
+----------
+
 As covered in the :ref:`chaining` section, the intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
 
@@ -14,7 +17,6 @@ You can choose whether to construct scalar or vector-valued versions by setting 
 
 :Scalar: ``D=AllDomain[T]`` (default)
 :Vector: ``D=VectorDomain[AllDomain[T]]``
-
 
 .. list-table::
    :header-rows: 1
@@ -59,42 +61,39 @@ You can choose whether to construct scalar or vector-valued versions by setting 
      - ``MapDomain<AllDomain<TIA>, AllDomain<TOA>>``
      - ``L1Distance<T>``
      - ``SmoothedMaxDivergence<T>``
+
+
+Notice that there is a symmetric structure to the core measurements:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Input Metric
+     - Integer
+     - Float
+   * - ``L1Distance<T>``
+     - :func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>`
+     - :func:`make_base_laplace <opendp.measurements.make_base_laplace>`
+   * - ``L2Distance<T>``
+     - :func:`make_base_discrete_gaussian <opendp.measurements.make_base_discrete_gaussian>`
+     - :func:`make_base_gaussian <opendp.measurements.make_base_gaussian>`
+
+
+Local DP
+--------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Measurement
+     - Input Domain
+     - Input Metric
+     - Output Measure
    * - :func:`opendp.measurements.make_randomized_response_bool`
      - ``AllDomain<bool>``
-     - ``SymmetricDistance``
+     - ``DiscreteDistance``
      - ``MaxDivergence<T>``
    * - :func:`opendp.measurements.make_randomized_response`
      - ``AllDomain<T>``
-     - ``SymmetricDistance``
+     - ``DiscreteDistance``
      - ``MaxDivergence<T>``
-
-.. _floating-point:
-
-Floating-Point
---------------
-
-Given the context of measurements, this section goes into greater detail than :ref:`limitations` on floating-point issues.
-Be warned that :func:`opendp.measurements.make_base_laplace`, :func:`opendp.measurements.make_base_gaussian` and :func:`opendp.measurements.make_base_ptr`
-depend on continuous distributions that are poorly approximated by finite computers.
-
-At this time these mechanisms are present in the library, but require explicit opt-in:
-
-.. doctest::
-
-    >>> from opendp.mod import enable_features
-    >>> enable_features("floating-point")
-
-The canonical paper on this and introduction of the snapping mechanism is here:
-`On Significance of the Least Significant Bits For Differential Privacy <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_.
-
-Precautions have been made to sample noise using the GNU MPFR library in a way
-that provides cryptographically secure, non-porous noise at standard scale.
-Noise at arbitrary scale is achieved through a combination of preprocessing and postprocessing
-that preserves the properties of differential privacy.
-
-Precautions have also been made to explicitly specify floating-point rounding modes
-in such a way that the privacy budget is always slightly overestimated.
-
-We acknowledge the snapping mechanism and have an implementation of it `in PR #84 <https://github.com/opendp/opendp/pull/84>`_.
-
-We are also working towards adding support for fixed-point data types `in PR #184 <https://github.com/opendp/opendp/pull/184>`_.

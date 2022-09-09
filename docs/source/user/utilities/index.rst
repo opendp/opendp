@@ -1,102 +1,12 @@
-Application Structure
-=====================
+Utilities
+=========
 
 .. toctree::
+    :titlesonly:
 
-  pums_data_analysis
-  accuracy_pitfalls
-  unknown_dataset_size
-  histograms
-
-
-.. _parameter-search:
-
-Parameter Search
-----------------
-
-There are many parameters in a typical DP measurement:
-
-* ``d_in`` input distance (oftentimes how many records differ when you perturb one individual)
-* ``d_out`` output distance (oftentimes the privacy budget)
-* noise scale and any other parameters passed to the constructors
-
-To evaluate a relation, you must fix all of these parameters.
-The relation simply returns a boolean indicating if it passed.
-As alluded to in the :ref:`relations` section,
-if the relation passes for a given ``d_out``, it will also pass for any value greater than ``d_out``.
-This behavior makes it possible to solve for any one parameter using a binary search
-because the relation itself acts as your predicate function.
-This is extremely powerful!
-
-* | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
-  | This is useful when you want to find the smallest budget that will satisfy a target accuracy.
-* | If you have a bound on ``d_in`` and a budget ``d_out``, you can solve for the smallest noise scale that is still differentially private.
-  | This is useful when you want to determine how accurate you can make a query with a given budget.
-* | If you have a noise scale and a budget ``d_out``, you can solve for the smallest bound on ``d_in`` that is still differentially private.
-  | This is useful when you want to determine an upper bound on how many records can be collected from an individual before needing to truncate.
-* | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, you can solve for the smallest dataset size ``n`` that is still differentially private.
-  | This is useful when you want to determine the necessary sample size when collecting data.
-* | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, you can solve for the greatest clipping range that is still differentially private
-  | This is useful when you want to minimize the likelihood of introducing bias.
-
-OpenDP comes with some utility functions to make these binary searches easier to conduct:
-
-* :func:`opendp.mod.binary_search_chain`: Pass it a function that makes a chain from one numeric argument, as well as ``d_in`` and ``d_out``. Returns the tightest chain.
-* :func:`opendp.mod.binary_search_param`: Same as binary_search_chain, but returns the discovered parameter.
-* :func:`opendp.mod.binary_search`: Pass a predicate function and bounds. Returns the discovered parameter. Useful when you just want to solve for ``d_in`` or ``d_out``.
-
-
-.. _determining-accuracy:
-
-Determining Accuracy
---------------------
-
-The library contains utilities to estimate accuracy at a given noise scale and statistical significance level
-or derive the necessary noise scale to meet a given target accuracy and statistical significance level.
-
-.. note::
-
-    This confidence interval is specifically for the input to the noise addition mechanism.
-    We cannot privately compensate for the bias introduced from clipping or other preprocessing.
-    `There is a notebook demonstrating this limitation. <https://github.com/opendp/opendp/blob/main/python/example/accuracy_pitfalls.ipynb>`_
-
-The noise distribution may be either laplace or gaussian.
-
-:laplacian: | Applies to any L1 noise addition mechanism.
-  | :func:`make_base_laplace() <opendp.measurements.make_base_laplace>`
-  | :func:`base_discrete_laplace() <opendp.measurements.base_discrete_laplace>`
-  | :func:`make_base_ptr() <opendp.measurements.make_base_ptr>`
-:gaussian: | Applies to any L2 noise addition mechanism.
-  | :func:`make_base_gaussian() <opendp.measurements.make_base_gaussian>`
-
-The library provides the following functions for converting between noise scale and accuracy:
-
-* :func:`opendp.accuracy.laplacian_scale_to_accuracy`
-* :func:`opendp.accuracy.accuracy_to_laplacian_scale`
-* :func:`opendp.accuracy.gaussian_scale_to_accuracy`
-* :func:`opendp.accuracy.accuracy_to_gaussian_scale`
-
-To demonstrate, the following snippet finds the necessary gaussian scale such that the input to 
-:code:`make_base_gaussian(scale=1.)` differs from the release by no more than 2 with 95% confidence.
-
-.. doctest::
-
-    >>> from opendp.accuracy import accuracy_to_gaussian_scale
-    >>> confidence = 95
-    >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
-    1.020426913849308
-
-There is another example of building a confidence interval at the end of the page.
-
-You can generally plug the distribution (laplace or gaussian), scale, accuracy and alpha
-into the following statement to interpret these functions:
-
-.. code-block:: python
-
-    f"When the {distribution} scale is {scale}, "
-    f"the DP estimate differs from the true value by no more than {accuracy} "
-    f"at a statistical significance level alpha of {alpha}, "
-    f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
+    accuracy/index
+    parameter-search
+    typing
 
 
 .. _putting-together:
@@ -161,7 +71,7 @@ The next step is to make this computation differentially private.
 
 Referencing the :ref:`measurement-constructors` section,
 we'll need to choose a :ref:`measurement <measurement>` that can be chained with our transformation.
-The :func:`base_laplace <opendp.measurements.make_base_laplace>` measurement qualifies (barring :ref:`floating-point issues <floating-point>`).
+The :func:`base_laplace <opendp.measurements.make_base_laplace>` measurement qualifies.
 
 Referencing the :ref:`parameter-search` section, :func:`binary_search_param <opendp.mod.binary_search_param>`
 will help us find a noise scale parameter that satisfies our given budget.
@@ -210,5 +120,3 @@ can be used to convert the earlier discovered noise scale parameter into an accu
 Please be aware that the preprocessing (impute, clamp, resize) can introduce bias that the accuracy estimate cannot account for.
 In this example, since the sensitive dataset is short two exams,
 the release is slightly biased toward the imputation constant ``70.0``.
-
-There are more examples in the next section!
