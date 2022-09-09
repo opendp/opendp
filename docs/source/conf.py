@@ -40,6 +40,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenDP'
+html_favicon = u'favicon.ico'
 copyright = u'%d' % datetime.now().year
 
 # The version info for the project you're documenting, acts as replacement for
