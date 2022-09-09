@@ -137,13 +137,8 @@ This changes the output measure from `SmoothedMaxDivergence` to `FixedSmoothedMa
     >>> meas_fixed_approxDP = make_fix_delta(meas_approxDP, delta=1e-8)
     ...
     >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
-    >>> meas_approxDP.map(d_in=1.)
-    ...
-    >>> # FixedSmoothedMaxDivergences can be composed
-    >>> composed = make_basic_composition([meas_approxDP] * 2)
-    ...
-    >>> # the map on the composed measurement is 2x looser
-    >>> meas_approxDP.map(d_in=1.)
+    >>> meas_fixed_approxDP.map(d_in=1.)
+    (13.3861046488579, 1e-08)
 
 These combinators allow you to convert output distances in terms of ρ-zCDP to ε(δ)-approxDP, and then to (ε, δ)-approxDP.
 
