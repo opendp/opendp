@@ -12,9 +12,6 @@
 \contrib
 Proves soundness of \texttt{fn make\_clamp} in \asOfCommit{mod.rs}{0db9c6036}.
 
-% Check the macro when commit hash is up-to-date:
-% \asOfCommit{mod.rs}{5223a69c9}
-
 \section{Vetting history}
 \begin{itemize}
     \item \vettingPR{512}
@@ -101,27 +98,27 @@ Lastly, both \texttt{L} and \texttt{U} have type \texttt{T} by the type signatur
 \textbf{(Domain-metric compatibility).} For \texttt{make\_clamp}, both the input and output cases correspond to showing that \texttt{VectorDomain(T)} is compatible with the symmetric distance metric. This follows directly from the definition of symmetric distance, as stated in \href{https://www.overleaf.com/project/60d215bf90b337ac02200a99}{``List of definitions used in the pseudocode"}.
 
 \smallskip
-\textbf{(Stability guarantee).} Throughout the stability guarantee proof, we can assume that $\function(v)$ and $\function(w)$ are in the correct output domain, by the \textit{appropriate output domain property} shown above. 
+\textbf{(Stability guarantee).} Throughout the stability guarantee proof, we can assume that $\function(u)$ and $\function(v)$ are in the correct output domain, by the \textit{appropriate output domain property} shown above. 
 
 Since by assumption $\Map(\din) \leq \dout$, by the \texttt{make\_clamp} stability map (as defined in line~\ref{line:map} in the pseudocode), we have that $\din \leq \dout$. 
-Moreover, $v, w$ are assumed to be $\din$-close. By the definition of the symmetric difference metric, this is equivalent to stating that $d_{Sym}(v, w) = |\MultiSet(v) \Delta \MultiSet(w)| \leq \din$.
+Moreover, $u, v$ are assumed to be $\din$-close. By the definition of the symmetric difference metric, this is equivalent to stating that $d_{Sym}(u, v) = |\MultiSet(u) \Delta \MultiSet(v)| \leq \din$.
 
 Let $\mathcal{X}$ be the domain of all elements of type \texttt{T}. By applying the histogram notation,\footnote{Note that there is a bijection between multisets and histograms, which is why the proof can be carried out with either notion. For further details, please consult \url{https://www.overleaf.com/project/60d214e390b337703d200982}.}  it follows that
 \[
-d_{Sym}(v, w) = \lVert h_{v} - h_{w}\rVert_1 = \sum_{z \in \mathcal{X}} |h_v(z) - h_w(z)| \leq \din \leq \dout.
+d_{Sym}(u, v) = \lVert h_{u} - h_{v}\rVert_1 = \sum_{z \in \mathcal{X}} |h_u(z) - h_v(z)| \leq \din \leq \dout.
 \]
 
 By Definition 3.10 in \href{https://www.overleaf.com/project/60d214e390b337703d200982}{``List of definitions used in the proofs"} and the definition of \texttt{clamp} in lines \ref{line:clamp}--\ref{line:fn-map} in the pseudocode, it follows that the \texttt{function} defined in \texttt{make\_clamp}, which maps elements from \texttt{VectorDomain} to \texttt{VectorDomain}, is a row transform. Therefore, by Lemma 3.13 in \href{https://www.overleaf.com/project/60d214e390b337703d200982}{``List of definitions used in the proofs"}, it follows that for every pair of elements $v, w$ in \texttt{input\_domain},
 \[
-    d_{Sym}(\texttt{function}(v), \texttt{function}(w)) \leq d_{Sym}(v, w).
+    d_{Sym}(\texttt{function}(u), \texttt{function}(v)) \leq d_{Sym}(u, v).
 \]
 Then, by the initial assumptions \texttt{relation(\din, \dout) = True} and $\din \leq \dout$, it follows that
 \[
-    d_{Sym}(\texttt{function}(v), \texttt{function}(w)) \leq d_{Sym}(v, w) \leq \din \leq \dout.
+    d_{Sym}(\texttt{function}(u), \texttt{function}(v)) \leq d_{Sym}(u, v) \leq \din \leq \dout.
 \]
 Hence,
 \[
-    d_{Sym}(\texttt{function}(v), \texttt{function}(w)) \leq \dout,
+    d_{Sym}(\texttt{function}(u), \texttt{function}(v)) \leq \dout,
 \]
 as we wanted to show.
 \end{proof}
