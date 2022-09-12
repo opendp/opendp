@@ -222,6 +222,8 @@ Note however, that \texttt{SomeDomain::Imputed} may contain a null value. See th
 %\silvia{Discuss: bounded vs lower bound and upper bound}
 %\todonei{Include info on MPFR, and possibly relate it to our existing definitions of floats.}
 \questionr{Should we have a general definition for ``floats'' (and ``integers''?), or is it sufficiently understood what a float is?}
+
+
 \section{Domains}
 \label{sec:domains}
 $\sfi$ A \emph{data domain} is a representation of the set of values on which the function associated with a transformation or measurement can operate.  Each metric (see section \ref{sec:metrics}) is associated with certain data domains. Types used for implementing domains in OpenDP have trait \texttt{Domain} (defined in definition \ref{defn:traits-domain}).
@@ -400,7 +402,7 @@ A type $\T$ has trait \texttt{InfSub} if and only if the function \texttt{inf\_s
 \end{definition}
 \subsection{Traits that need not appear in the preconditions}
 \begin{itemize}
-    \item \texttt{\textquotesingle static}. Notes: \texttt{\textquotesingle static} is not a type; it is a lifetime name (this is a Rust definition).
+    \item \texttt{'static}. Notes: \texttt{'static} is not a type; it is a lifetime name (this is a Rust definition).
     \item \texttt{Clone}
     \item \texttt{Copy}
 \end{itemize}
@@ -668,7 +670,7 @@ class Measurement:
         self.privacy_map = privacy_map
 \end{lstlisting}
     
-    \inOpenDPRust{Measurement}{https://github.com/opendp/opendp/blob/35dbdc73d7d74e049f5101a704d4e036bed365e8/rust/opendp/src/core.rs/#L339-L346} When we refer to a \textit{valid measurement} in the proofs, this is the precise definition.
+\inOpenDPRust{Measurement}{https://github.com/opendp/opendp/blob/35dbdc73d7d74e049f5101a704d4e036bed365e8/rust/opendp/src/core.rs\#L339-L346} When we refer to a \textit{valid measurement} in the proofs, this is the precise definition.
 \end{definition}
 Therefore, there is no need to include the following code snippet in all of the pseudocodes:
 \begin{lstlisting}[language=Python]
