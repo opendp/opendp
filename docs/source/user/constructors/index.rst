@@ -11,7 +11,7 @@ Because Measurements and Transformations are themselves like functions (they can
 you can think of constructors as higher-order functions:
 You call them to produce another function that you will then feed data.
 
-Constructors are organized into three modules:
+Constructors are organized into Transformations, Measurements and Combinators:
 
 .. toctree::
 
@@ -19,8 +19,8 @@ Constructors are organized into three modules:
    measurements
    combinators
 
-
-We start by using a constructor to build a clamp transformation:
+Lets demonstrate with a few examples!
+In this example, we use a constructor to build a clamp transformation:
 
 .. testsetup::
 
@@ -93,3 +93,6 @@ In this simplified example with the :py:func:`opendp.measurements.make_base_disc
     >>> # feed some data/invoke the measurement as a function
     >>> aggregated = 5
     >>> release = base_dl(aggregated)
+
+As you can see, constructor functions are the gateway to building differentially private analyses in OpenDP.
+The next sections are a tour of the available constructor functions.

@@ -1,7 +1,26 @@
 Typing
 ======
 
+OpenDP computations are always strict about the types being used. 
+Integers and floats are never treated interchangeably and there is never implicit casting between types.
+In fact, OpenDP is particular about the bit-depth of data types, as it can impact the choice of constants in the privacy analysis.
 
+OpenDP supports the following atomic data types:
+
+* i8 (8-bit signed integer)
+* i16 (16-bit signed integer)
+* i32 
+* i64
+* i128
+* u8 (8-bit unsigned integer)
+* u16 (16-bit unsigned integer)
+* u32 
+* u64
+* u128
+* f32 (32-bit single-precision float)
+* f64 (64-bit double-precision float)
+* String
+* bool
 
 
 .. _RuntimeTypeDescriptor:
@@ -13,8 +32,6 @@ Many of the API docs indicate that parameters like `TIA` or `D` are type argumen
 When you want to describe the type of a domain, metric, measure, or other elements, you can do so via a type descriptor.
 The canonical form is a literal string, like `"i32"` to denote that the type should be a 32-bit integer,
 or `"SymmetricDistance"` to denote the type of a metric.
-In practice, people like to denote types in ways they are already familiar, 
-like the python type `int`, which is treated like `"i32"`, so we've made this as flexible as possible.
 These arguments accept any of the following, depending on the context:
 
 * string
@@ -43,3 +60,19 @@ Some examples being:
 * `QO` for Output distance. `float` could be the QO for a :py:func:`discrete laplace measurement <opendp.measurements.make_base_discrete_laplace>`.
 
 The API docs should also include explanations in most contexts.
+
+
+Type Aliases
+------------
+
+In practice, it is more convenient to denote types in terms of python types, so we've added some aliases for python types.
+
+* `float` -> `"f64"`
+* `int` -> `"i32"`
+* `str` -> `"String"`
+* `bool` -> `"bool"`
+
+You can change the default type for floats and ints via :py:func:`opendp.mod.set_default_float_type` and :py:func:`opendp.mod.set_default_int_type`, respectively.
+These functions make it easy to set the default bit depth throughout your code, all at once.
+
+This can be particularly useful when working with NumPy arrays which default to `i64`, or when working with deep learning libraries that default to single-precision floats. 

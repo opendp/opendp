@@ -9,5 +9,4 @@ User Guide
    programming-framework/index
    constructors/index
    utilities/index
-   pums-data-analysis
-   topics-in-privacy/index
+   putting-it-together

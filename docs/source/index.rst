@@ -27,7 +27,7 @@ Documentation for past releases are available in the drop down on the left panel
   :titlesonly:
   :maxdepth: 3
 
-  examples
+  examples/index
 
 .. toctree::
   :glob:

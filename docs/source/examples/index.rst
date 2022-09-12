@@ -19,13 +19,13 @@ There are a few useful examples embedded in the user guide and API docs:
 Python Notebooks
 ----------------
 
-Example notebooks can be found in `python/example`_ in the OpenDP library source tree.
+.. toctree::
 
-.. _python/example: https://github.com/opendp/opendp/tree/main/python/example
+  pums-data-analysis
+  attacks/index
+  unknown-dataset-size
+  histograms
 
-You can open and run these notebooks online in Binder_ (navigate to ``python/example``).
-
-.. _Binder: https://mybinder.org/v2/gh/opendp/opendp/HEAD
 
 Rust Examples
 -------------
