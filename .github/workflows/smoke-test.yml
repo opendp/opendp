@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: python
+        working-directory: docs
     strategy:
       matrix:
         python-version: [3.7]
