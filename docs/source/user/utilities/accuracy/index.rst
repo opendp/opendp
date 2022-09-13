@@ -18,13 +18,13 @@ or derive the necessary noise scale to meet a given target accuracy and statisti
 
         accuracy-pitfalls
 
-The noise distribution may be either laplace or gaussian.
+The noise distribution may be either Laplace or Gaussian.
 
-:laplacian: | Applies to any L1 noise addition mechanism.
+:Laplacian: | Applies to any L1 noise addition mechanism.
   | :func:`make_base_laplace() <opendp.measurements.make_base_laplace>`
   | :func:`make_base_discrete_laplace() <opendp.measurements.make_base_discrete_laplace>`
   | :func:`make_base_ptr() <opendp.measurements.make_base_ptr>`
-:gaussian: | Applies to any L2 noise addition mechanism.
+:Gaussian: | Applies to any L2 noise addition mechanism.
   | :func:`make_base_gaussian() <opendp.measurements.make_base_gaussian>`
   | :func:`make_base_discrete_gaussian() <opendp.measurements.make_base_discrete_gaussian>`
 
@@ -47,7 +47,7 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
 
 There is another example of building a confidence interval at the end of the page.
 
-You can generally plug the distribution (laplace or gaussian), scale, accuracy and alpha
+You can generally plug the distribution (Laplace or Gaussian), scale, accuracy and alpha
 into the following statement to interpret these functions:
 
 .. code-block:: python
