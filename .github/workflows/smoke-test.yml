@@ -154,5 +154,5 @@ jobs:
 
       - name: Test
         run: |
-          cd source
-          pytest --nbmake **/*.ipynb -n=auto
+          shopt -s globstar
+          pytest --nbmake source/**/*.ipynb -n=auto
