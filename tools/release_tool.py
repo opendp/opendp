@@ -6,9 +6,12 @@ import platform
 import subprocess
 import sys
 import types
+import time
 
 import semver
 
+ANSI_FAIL = '\033[91m' # Prints Terminal Text Red
+ANSI_END = '\033[0m'
 
 def log(message, command=False):
     prefix = "$" if command else "#"
@@ -21,7 +24,7 @@ def run_command(description, args, capture_output=True, shell=True):
     printed_args = args.join(" ") if type(args) == list else args
     log(printed_args, command=True)
     stdout = subprocess.PIPE if capture_output else None
-    completed_process = subprocess.run(args, stdout=stdout, shell=shell, check=True, encoding="utf-8")
+    completed_process = subprocess.run(args, stdout=stdout, stderr=stdout, shell=shell, check=True, encoding="utf-8")
     return completed_process.stdout.rstrip() if capture_output else None
 
 
@@ -182,7 +185,7 @@ def version(args):
     commit("versioned files", versioned_files, f"RELEASE_TOOL: Set version to {resolved_target_version}.")
 
 
-def python_version(version):
+def format_python_version(version):
     # Python doesn't like versions of the form "X.Y.Z-rc.N" (even though they're correct), and collapses them
     # to "X.Y.ZrcN", but semver can't handle those, so we map to strings.
     if version.prerelease:
@@ -193,11 +196,25 @@ def python_version(version):
 
 
 def sanity(venv, version, published=False):
-    version = python_version(version)
+    version = format_python_version(version)
     run_command("Creating venv", f"rm -rf {venv} && python -m venv {venv}")
     package = f"opendp=={version}" if published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
-    run_command(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
+    run_command_with_retries(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
     run_command("Running test script", f"source {venv}/bin/activate && python python/example/test.py")
+
+
+def run_command_with_retries(description, args, retries = 3, wait_time_seconds = 5):
+  while retries > 0:
+    try:
+      return run_command(description, args)
+    except Exception as e:
+      was_final_attempt = retries == 1
+      if was_final_attempt:
+        log(f"{ANSI_FAIL}{e.stderr}{ANSI_END}")
+        raise e
+      log(f"Waiting {wait_time_seconds} Seconds | Retries Left: {retries - 1}")
+      time.sleep(wait_time_seconds)
+    retries -= 1
 
 
 def preflight(args):
