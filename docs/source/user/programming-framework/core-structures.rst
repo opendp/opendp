@@ -26,7 +26,7 @@ Measurement
 -----------
 
 A :py:class:`Measurement <opendp.mod.Measurement>` is a randomized mapping from datasets to outputs of an arbitrary type.
-Lets say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``meas.check(d_in, d_out)``.
+Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``meas.check(d_in, d_out)``.
 If the code snippet evaluates to True, then ``meas`` is ``d_out``-DP on ``d_in``-close inputs,
 or equivalently "(``d_in``, ``d_out``)-close".
 The code snippet simply checks the privacy relation that comes bundled inside ``meas``.
@@ -62,7 +62,7 @@ Transformation
 A :py:class:`Transformation <opendp.mod.Transformation>` is a (deterministic) mapping from datasets to datasets.
 Transformations are used to preprocess and aggregate data before chaining with a measurement.
 
-Similarly to ``meas`` above, let's say we have an arbitrary instance of a Transformation, called ``trans``,
+Similarly to ``meas`` above, say we have an arbitrary instance of a Transformation, called ``trans``,
 and a code snippet ``trans.check(d_in, d_out)``.
 If the code snippet evaluates to True, then ``trans`` is ``d_out``-close on ``d_in``-close inputs,
 or equivalently "(``d_in``, ``d_out``)-close".

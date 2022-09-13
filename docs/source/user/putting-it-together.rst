@@ -4,7 +4,7 @@
 Putting It Together
 ===================
 
-Let's say we want to compute the DP mean of a csv dataset of student exam scores,
+Lets say we want to compute the DP mean of a csv dataset of student exam scores,
 using a privacy budget of 1 epsilon.
 We also want an accuracy estimate with 95% confidence.
 

@@ -19,7 +19,7 @@ Constructors are organized into Transformations, Measurements and Combinators:
    measurements
    combinators
 
-Lets demonstrate with a few examples!
+Let's demonstrate with a few examples!
 In this example, we use a constructor to build a clamp transformation:
 
 .. testsetup::
