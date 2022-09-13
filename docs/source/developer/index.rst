@@ -12,6 +12,5 @@ If your focus is using OpenDP to build your own applications, please consult the
    cla
    development-environment
    code-structure
-   rust-initiation
    developer-faq
    maintainer-notes

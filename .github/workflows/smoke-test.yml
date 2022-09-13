@@ -150,4 +150,4 @@ jobs:
         run: (cd ../python && python -m pip install -e .)
 
       - name: Test
-        run: pytest --nbmake **/*.ipynb -n=auto
+        run: pytest --nbmake source/**/*.ipynb -n=auto
