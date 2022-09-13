@@ -22,10 +22,11 @@ The noise distribution may be either laplace or gaussian.
 
 :laplacian: | Applies to any L1 noise addition mechanism.
   | :func:`make_base_laplace() <opendp.measurements.make_base_laplace>`
-  | :func:`base_discrete_laplace() <opendp.measurements.base_discrete_laplace>`
+  | :func:`make_base_discrete_laplace() <opendp.measurements.make_base_discrete_laplace>`
   | :func:`make_base_ptr() <opendp.measurements.make_base_ptr>`
 :gaussian: | Applies to any L2 noise addition mechanism.
   | :func:`make_base_gaussian() <opendp.measurements.make_base_gaussian>`
+  | :func:`make_base_discrete_gaussian() <opendp.measurements.make_base_discrete_gaussian>`
 
 The library provides the following functions for converting between noise scale and accuracy:
 

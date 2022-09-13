@@ -12,7 +12,7 @@ Type Argument
 
 You can explicitly set the types that a transformation or measurement work with via type arguments in the constructor.
 Each constructor has its own set of permissible types, based on the type of computation it is performing.
-For instance, the clamp constructor accepts any numerical type for its type argument `TA``:
+For instance, the clamp constructor accepts any numerical type for its type argument `TA`:
 
 .. testsetup::
 
@@ -59,8 +59,8 @@ Some examples being:
 
 The API docs should also include explanations in most contexts.
 
-Permissible Types
------------------
+Supported Types
+---------------
 
 OpenDP supports the following atomic data types:
 
@@ -80,30 +80,42 @@ OpenDP supports the following atomic data types:
 * bool
 
 Some types are parameterized by another type, like:
+
 * AllDomain
 * VectorDomain
 * AbsoluteDistance
 * L1Distance
 * L2Distance
 
-Some examples being:
+Examples of these types include:
+
 * AllDomain[bool]
 * VectorDomain[AllDomain[f32]]
 * L1Distance[u128]
 
 The docstrings on the constructor APIs should typically guide you as to what types are permissible.
-If you aren't familiar with these concepts, it may help to review the :ref:`domains` and :ref:`metrics`.
+If you aren't familiar with these concepts, it may help to review :ref:`domains` and :ref:`metrics`.
 
 
-Type Alias
-----------
+Type Aliases
+------------
 
-In practice, it is oftentimes more convenient to denote types in terms of python types, so we've added some aliases for python types.
+It can be more convenient to denote types in terms of python types, so we've added some aliases for python types.
 
-* `float` -> `"f64"`
-* `int` -> `"i32"`
-* `str` -> `"String"`
-* `bool` -> `"bool"`
+
+.. list-table::
+   :header-rows: 1
+
+   * - Python Type Alias
+     - Default Rust Type
+   * - ``float``
+     - ``f64``
+   * - ``int``
+     - ``i32``
+   * - ``str``
+     - ``String``
+   * - ``bool``
+     - ``bool``
 
 You can change the default type for floats and ints via :py:func:`opendp.typing.set_default_float_type` and :py:func:`opendp.typing.set_default_int_type`, respectively.
 These functions make it easy to set the default bit depth throughout your code, all at once.

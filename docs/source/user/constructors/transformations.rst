@@ -48,10 +48,6 @@ You need to chain with ``make_select_column`` first.
      - ``AllDomain<String>``
      - ``DataFrameDomain<K>``
      - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_select_column`
-     - ``DataFrameDomain<K>``
-     - ``VectorDomain<AllDomain<TOA>>``
-     - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_split_lines`
      - ``AllDomain<String>``
      - ``VectorDomain<AllDomain<String>>``
@@ -64,6 +60,38 @@ You need to chain with ``make_select_column`` first.
      - ``VectorDomain<VectorDomain<AllDomain<String>>>``
      - ``DataFrameDomain<K>``
      - ``SymmetricDistance``
+   * - :func:`opendp.transformations.make_select_column`
+     - ``DataFrameDomain<K>``
+     - ``VectorDomain<AllDomain<TOA>>``
+     - ``SymmetricDistance``
+
+
+Dataframe Subsetting
+--------------------
+It can be useful to subset to data that meets a certain condition. 
+The library contains some transformations that can be used to create a predicate column,
+and :func:`opendp.transformations.make_subset_by` to filter by the predicate column.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Preprocessor
+     - Input Domain
+     - Output Domain
+     - Input/Output Metric
+   * - :func:`opendp.transformations.make_df_cast_default`
+     - ``DataFrameDomain<K>``
+     - ``DataFrameDomain<K>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.transformations.make_df_is_equal`
+     - ``DataFrameDomain<K>``
+     - ``DataFrameDomain<K>``
+     - ``SymmetricDistance``
+   * - :func:`opendp.transformations.make_subset_by`
+     - ``DataFrameDomain<K>``
+     - ``DataFrameDomain<K>``
+     - ``SymmetricDistance``
+     
 
 Casting
 -------
@@ -405,7 +433,7 @@ The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time becau
      - ``VectorDomain<BoundedDomain<TI>>``
      - ``MapDomain<AllDomain<TI>,AllDomain<TO>>``
      - ``SymmetricDistance``
-     - ``AbsoluteDistance<TO>``
+     - ``L1Distance<TO>``
    * - :func:`opendp.transformations.make_bounded_sum`
      - ``VectorDomain<BoundedDomain<T>>``
      - ``AllDomain<T>``

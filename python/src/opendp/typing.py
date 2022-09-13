@@ -61,7 +61,9 @@ def set_default_int_type(T: RuntimeTypeDescriptor):
     When you build a computation chain, any unspecified integer types default to this int type.
 
     The default int type is i32.
+    
     :params T: must be one of [u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize]
+    :type T: :ref:`RuntimeTypeDescriptor`
     """
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
     assert T in equivalence_class, f"T must be one of {equivalence_class}"
@@ -76,7 +78,9 @@ def set_default_float_type(T: RuntimeTypeDescriptor):
     When you build a computation chain, any unspecified float types default to this float type.
 
     The default float type is f64.
+
     :params T: must be one of [f32, f64]
+    :type T: :ref:`RuntimeTypeDescriptor`
     """
 
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[float]]

@@ -26,7 +26,7 @@ The :py:func:`opendp.combinators.make_chain_mt` constructor similarly creates a 
 Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
-This functionality is provided by the :py:func:`opendp.combinators.make_chain_tm` constructor that allows postprocess transformations to be chained onto a Measurement.
+Postprocessing functionality is provided by the :py:func:`opendp.combinators.make_chain_tm` constructor that allows transformations to be chained onto a Measurement.
 Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
 In this case, it is only necessary for the domains to conform.
 
@@ -54,7 +54,7 @@ In the following example we chain :py:func:`opendp.measurements.make_base_discre
     >>> release = noisy_sum(dataset)
 
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
-The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, :func:`make_chain_tt <opendp.combinators.make_chain_tt>`, and `make_chain_tm <opendp.combinators.make_chain_tt>`.
+The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, :func:`make_chain_tt <opendp.combinators.make_chain_tt>`, and `make_chain_tm <opendp.combinators.make_chain_tm>`.
 
 .. doctest::
 
@@ -90,7 +90,8 @@ See the section on :ref:`transformation-constructors` for more information on ho
 Composition
 -----------
 
-OpenDP has a basic composition combinator for composing a list of measurements into a new measurement.
+OpenDP has a basic composition combinator for composing a list of measurements into a new measurement:
+:func:`opendp.combinators.make_basic_composition`.
 
 .. doctest::
 
@@ -108,11 +109,14 @@ Thus the privacy map simply sums the constituent output distances.
 
 This combinator can compose Measurements with `ZeroConcentratedDivergence`, `MaxDivergence` and `FixedSmoothedMaxDivergence` output measures.
 
+.. _measure-casting:
+
 Measure Casting
 ---------------
 
 There are two combinators for casting the output measure of a Measurement. 
-The first is used for casting an output measure from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
+The first is used for casting an output measure from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`:
+:func:`opendp.combinators.make_zCDP_to_approxDP`.
 
 .. doctest::
 
@@ -128,7 +132,8 @@ The first is used for casting an output measure from `ZeroConcentratedDivergence
     11.688596249354896
 
 The second is used for fixing the delta parameter in the curve. 
-This changes the output measure from `SmoothedMaxDivergence` to `FixedSmoothedMaxDivergence`.
+This changes the output measure from `SmoothedMaxDivergence` to `FixedSmoothedMaxDivergence`:
+:func:`opendp.combinators.make_fix_delta`.
 
 .. doctest::
 
@@ -147,7 +152,8 @@ Amplification
 -------------
 
 If your dataset is a simple sample from a larger population,
-you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator.
+you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator:
+:func:`opendp.combinators.make_population_amplification`.
 
 In order to demonstrate this API, we'll first create a measurement with a sized input domain.
 The resulting measurement expects the size of the input dataset to be 10.
