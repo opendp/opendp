@@ -133,20 +133,25 @@ rst_prolog = """
 """
 
 version = next(open('../../VERSION'))
-if version == "0.0.0+development":
-    version_frag = ""
-else:
-    version_frag = f"/release/{version}"
+
+github_frag = ''
+binder_frag = ''
+
+if version != "0.0.0+development":
+    branch = f"release/{'.'.join(version.split('.')[:2])}.x"
+
+    github_frag = f'/tree/{branch}'
+    binder_frag = f'/{branch}'
 
 # insert this header on nbsphinx pages to link to binder and github:
-nbsphinx_prolog = r"""
-{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}
+nbsphinx_prolog = fr"""
+{{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}}
 .. raw:: html
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="https://github.com/opendp/opendp/blob{{ env.config.version_frag|e }}/{{ docname|e }}">{{ docname|e }}</a>.
+      <a class="reference external" href="https://github.com/opendp/opendp{github_frag}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
       Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp{{ env.config.version_frag|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp{binder_frag}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
     </div>
 """
