@@ -3,6 +3,8 @@ mod ffi;
 
 use std::collections::Bound;
 
+use opendp_derive::proven_by;
+
 use crate::core::Transformation;
 use crate::metrics::SymmetricDistance;
 use crate::domains::{AllDomain, BoundedDomain, VectorDomain};
@@ -10,6 +12,7 @@ use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 
+#[proven_by("transformations/clamp/make_clamp.tex")]
 pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull>(
     bounds: (T, T)
 ) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<BoundedDomain<T>>, SymmetricDistance, SymmetricDistance>> {

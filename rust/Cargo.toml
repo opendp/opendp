@@ -12,6 +12,7 @@ build = "build/main.rs"
 rust-version = "1.59.0" # MSRV via `cargo intall msrv && cargo msrv -- cargo check --features=untrusted,bindings-python`
 
 [dependencies]
+opendp_derive = {path = "opendp_derive"}
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"

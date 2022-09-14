@@ -1,0 +1,15 @@
+[package]
+name = "opendp_derive"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0.81", features = ["full", "parsing"] }
+quote = { version = "1.0.10" }
+proc-macro2 = { version = "1.0.32" }
+
+[features]
+local = []
