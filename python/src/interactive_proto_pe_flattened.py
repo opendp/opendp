@@ -7,7 +7,7 @@ class InteractiveMeasurement:
         # Domains, Metrics & Measures omitted for simplicity
         self.function = function
         self.privacy_loss = privacy_loss  # Fixed privacy loss for simplicity
-        self.description = description
+        self.description = description    # For logging purposes only
 
     # Public interface
     def invoke(self, data) -> "Queryable":
@@ -35,7 +35,7 @@ class Odometer:
     def __init__(self, function, description="Odometer"):
         # Domains, Metrics & Measures omitted for simplicity
         self.function = function
-        self.description = description
+        self.description = description  # For logging purposes only
 
     # Public interface
     def invoke(self, data) -> "Queryable":
@@ -49,7 +49,7 @@ class Queryable:
         self.eval = eval.__get__(self)  # fn: Q x S -> A x S
         self.listener = None            # Generalization of "parent"
         self.tag = None                 # Generalization of "sibling_index"
-        self.description = description  # For debugging purposes only
+        self.description = description  # For logging purposes only
 
     # Public interface
     def query(self, query):
@@ -60,14 +60,6 @@ class Queryable:
     def _set_listener(self, listener, tag):
         self.listener = listener
         self.tag = tag
-
-    def _get_name(self):
-        if self.listener is None:
-            return "root"
-        elif self.listener.listener is None:
-            return f"child_{self.tag}"
-        else:
-            return f"{self.listener._get_name()}_{self.tag}"
 
     def _notify_listener(self, query):
         return self.listener.query(query) if self.listener is not None else None
@@ -100,12 +92,10 @@ def query(self, query):
         print(f"QUERY>  {self._get_name():11} question={query}")
     try:
         answer = self._query(query)
-        answer_string = answer.query(None) if isinstance(query, Measurement) else answer
     except Exception as e:
         answer = f"ERROR: {e}"
-        answer_string = answer
     if query is not None:
-        print(f"QUERY<  {self._get_name():11} answer={answer_string}")
+        print(f"QUERY<  {self._get_name():11} answer={answer}")
     return answer
 Queryable.query = query
 def _notify_listener(self, query):
@@ -123,7 +113,7 @@ Queryable.__str__ = __str__
 
 
 CheckDescendantChange = collections.namedtuple("CheckDescendantChange", ["index", "new_privacy_loss", "pre_invoke"])
-
+GetPrivacyLoss = collections.namedtuple("GetPrivacyLoss", [])
 
 def make_concurrent_filter(max_privacy_loss):
 
@@ -155,7 +145,8 @@ def make_concurrent_filter(max_privacy_loss):
                 new_child = query.invoke(data)
                 new_child._set_listener(self, new_child_index)
                 new_state = check_new_state(self, new_child_index, new_child_privacy_loss, False)
-                answer = new_child
+                # Convenience to get non-interactive answer
+                answer = new_child.query(None) if isinstance(query, Measurement) else new_child
             elif isinstance(query, CheckDescendantChange):
                 new_state = check_new_state(self, query.index, query.new_privacy_loss, query.pre_invoke)
                 answer = "OK"
@@ -181,7 +172,7 @@ def make_concurrent_odometer():
             new_child_privacy_losses[child_index:] = [child_privacy_loss]
             new_privacy_loss = sum(new_child_privacy_losses)
             if pre_invoke:
-                print(f"CHECK?  {self._get_name():11} child={child_index}, child_pl={child_privacy_loss}, new_pl={new_privacy_loss}, max_pl={self.state.max_privacy_loss}")
+                print(f"CHECK?  {self._get_name():11} child={child_index}, child_pl={child_privacy_loss}, new_pl={new_privacy_loss}")
             # NB: The only difference from make_concurrent_filter is that there's no budget check here.
             # Notify our parent.
             self._notify_listener(CheckDescendantChange(index=self.tag, new_privacy_loss=new_privacy_loss, pre_invoke=pre_invoke))
@@ -196,13 +187,14 @@ def make_concurrent_odometer():
                 new_child = query.invoke(data)
                 new_child._set_listener(self, new_child_index)
                 new_state = check_new_state(self, new_child_index, new_child_privacy_loss, False)
-                if isinstance(query, Measurement):
-                    answer = new_child.query(None)
-                else:
-                    answer = new_child
+                # Convenience to get non-interactive answer
+                answer = new_child.query(None) if isinstance(query, Measurement) else new_child
             elif isinstance(query, CheckDescendantChange):
                 new_state = check_new_state(self, query.index, query.new_privacy_loss, query.pre_invoke)
                 answer = "OK"
+            elif isinstance(query, GetPrivacyLoss):
+                new_state = self.state
+                answer = self.state.privacy_loss
             else:
                 raise Exception(f"Unrecognized query {query}")
             return answer, new_state
@@ -213,7 +205,13 @@ def make_concurrent_odometer():
 
 
 def make_odomoter_to_filter(odometer, max_privacy_loss):
-    pass
+
+    def function(data):
+        filter = make_concurrent_filter(max_privacy_loss)
+        filter_queryable = filter.invoke(data)
+        return filter_queryable.query(odometer)
+
+    return InteractiveMeasurement(function, max_privacy_loss, "OdometerToFilter")
 
 
 def make_sequential_filter(max_privacy_loss):
@@ -250,10 +248,14 @@ def make_sequential_filter(max_privacy_loss):
                 new_child = query.invoke(data)
                 new_child._set_listener(self, new_child_index)
                 new_state = check_new_state(self, new_child_index, new_child_privacy_loss, False)
-                answer = new_child
+                # Convenience to get non-interactive answer
+                answer = new_child.query(None) if isinstance(query, Measurement) else new_child
             elif isinstance(query, CheckDescendantChange):
                 new_state = check_new_state(self, query.index, query.new_privacy_loss, query.pre_invoke)
                 answer = "OK"
+            elif isinstance(query, GetPrivacyLoss):
+                new_state = self.state
+                answer = self.state.privacy_loss
             else:
                 raise Exception(f"Unrecognized query {query}")
             return answer, new_state
@@ -281,7 +283,8 @@ def test_noninteractive():
     print("\nNON-INTERACTIVE MEASUREMENT")
     data = 123.0
     measurement = make_base_laplace(eps_to_sigma(1.0))
-    _answer = measurement.invoke1(data)
+    answer = measurement.invoke1(data)
+    assert type(answer) == float
 
 
 def test_concurrent_filter():
@@ -289,9 +292,13 @@ def test_concurrent_filter():
     budget = 1.0
     data = 123.0
     root = make_concurrent_filter(budget).invoke(data)._mark_root()
-    _answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
-    _answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
-    _answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))  # Should fail here
+    answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
+    assert type(answer) == float
+    answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
+    assert type(answer) == float
+
+    answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))  # Should fail here
+    assert answer == f"ERROR: New privacy loss {1.5 * budget} exceeds max privacy loss {budget}"
 
 
 def test_concurrent_filter_nested():
@@ -301,15 +308,52 @@ def test_concurrent_filter_nested():
     root = make_concurrent_filter(budget).invoke(data)._mark_root()
     child_0 = root.query(make_concurrent_filter(budget * 0.5))
     child_0_0 = child_0.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
-    _answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
+    answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
     child_0_1 = child_0.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_0_1.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
-    _answer = child_0_1.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_0_1.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
+    answer = child_0_1.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
     child_1 = root.query(make_concurrent_filter(budget * 0.5))
     child_1_0 = child_1.query(make_concurrent_filter(budget * 0.25))
-    child_1_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
-    child_1_0.query(make_base_laplace(eps_to_sigma(budget * 0.5)))  # Should fail here
+    answer = child_1_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
+
+    answer = child_1_0.query(make_base_laplace(eps_to_sigma(budget * 0.5)))  # Should fail here
+    assert answer == f"ERROR: New privacy loss {0.625 * budget} exceeds max privacy loss {0.25 * budget}"
+
+
+def test_concurrent_odometer():
+    print("\nCONCURRENT ODOMETER")
+    budget = 1.0
+    data = 123.0
+    root = make_concurrent_odometer().invoke(data)._mark_root()
+    answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
+    assert type(answer) == float
+    answer = root.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
+    assert type(answer) == float
+
+    answer = root.query(GetPrivacyLoss())
+    assert answer == budget
+
+
+def test_odometer_to_filter():
+    print("\nODOMETER TO FILTER")
+    budget = 1.0
+    data = 123.0
+    odometer = make_concurrent_odometer()
+    filter = make_odomoter_to_filter(odometer, budget)
+    filter_queryable = filter.invoke(data)
+    answer = filter_queryable.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
+    assert type(answer) == float
+    answer = filter_queryable.query(make_base_laplace(eps_to_sigma(budget * 0.5)))
+    assert type(answer) == float
+
+    answer = filter_queryable.query(make_base_laplace(eps_to_sigma(budget * 0.5)))  # Should fail here
+    assert answer == f"ERROR: New privacy loss {1.5 * budget} exceeds max privacy loss {budget}"
 
 
 def test_sequential_filter():
@@ -318,13 +362,17 @@ def test_sequential_filter():
     data = 123.0
     root = make_sequential_filter(budget).invoke(data)._mark_root()
     child_0 = root.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
     child_1 = root.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_1.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_1.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
     child_2 = root.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_2.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_2.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
 
-    _answer = child_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))  # Should fail here
+    answer = child_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))  # Should fail here
+    assert answer == f"ERROR: Non-sequential access of children"
 
 
 def test_sequential_filter_nested():
@@ -334,21 +382,27 @@ def test_sequential_filter_nested():
     root = make_sequential_filter(budget).invoke(data)._mark_root()
     child_0 = root.query(make_concurrent_filter(budget * 0.25))
     child_0_0 = child_0.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
     child_1 = root.query(make_concurrent_filter(budget * 0.25))
     child_1_0 = child_1.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_1_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_1_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
     child_2 = root.query(make_concurrent_filter(budget * 0.25))
     child_2_0 = child_2.query(make_concurrent_filter(budget * 0.25))
-    _answer = child_2_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    answer = child_2_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))
+    assert type(answer) == float
 
-    _answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))  # Should fail here
+    answer = child_0_0.query(make_base_laplace(eps_to_sigma(budget * 0.125)))  # Should fail here
+    assert answer == f"ERROR: Non-sequential access of children"
 
 
 def main():
     test_noninteractive()
     test_concurrent_filter()
     test_concurrent_filter_nested()
+    test_concurrent_odometer()
+    test_odometer_to_filter()
     test_sequential_filter()
     test_sequential_filter_nested()
 
