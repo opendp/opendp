@@ -33,20 +33,21 @@ Work-in-progress R bindings for OpenDP.
     ```
 
     This should emit:
-    > REALSXP
-    > Data inside rust: [1.2, 2.3]
-    > Success or error: 0
-    > [1] 1.2 2.3
-    > INTSXP
-    > Data inside rust: [1, 2]
-    > Success or error: 0
-    > [1] 1 2
-    Each call to slice_as_object first prints the typename, if recognized.
-    It then extracts the data from the SEXP into an FfiSlice, and passes the FfiSlice into a function in the OpenDP library.
-    The OpenDP library rust code reads the FfiSlice, interprets the contents based on the typename, prints the interpreted data, 
+    > REALSXP  
+    > Data inside rust: [1.2, 2.3]  
+    > Success or error: 0  
+    > [1] 1.2 2.3  
+    > INTSXP  
+    > Data inside rust: [1, 2]  
+    > Success or error: 0  
+    > [1] 1 2  
+    
+    1. Each call to slice_as_object first prints the typename, if recognized.  
+    1. It then extracts the data from the SEXP into an FfiSlice, and passes the FfiSlice into a function in the OpenDP library.  
+    1. The OpenDP library rust code reads the FfiSlice, interprets the contents based on the typename, prints the interpreted data, 
         packages the data into an AnyObject (or error) and returns the AnyObject (or error).
-    The execution returns to wrapper.c, where the resulting structure is checked for an error.
-    wrapper.c finally returns the input SEXP unmodified, which gets printed out into the repl. 
+    1. The execution returns to wrapper.c, where the resulting structure is checked for an error.
+    1. wrapper.c finally returns the input SEXP unmodified, which gets printed out into the repl. 
 
 The following command currently fails:
 
