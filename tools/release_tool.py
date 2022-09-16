@@ -28,7 +28,7 @@ def run_command(description, args, capture_output=True, shell=True):
     return completed_process.stdout.rstrip() if capture_output else None
 
 
-def run_command_with_retries(description, args, retries = 3, wait_time_seconds = 5):
+def run_command_with_retries(description, args, retries = 10, wait_time_seconds = 30):
     while retries > 0:
         try:
             return run_command(description, args)
