@@ -1,0 +1,35 @@
+[package]
+name = "opendp_codegen"
+version = "0.0.0+development"
+edition = "2021"
+build = "build/main.rs"
+
+[dependencies]
+opendp = {path = "../opendp", features=["ffi", "bootstrap"]}
+opendp_derive = {path = "../opendp_derive"}
+
+[build-dependencies]
+serde_json = { version = "1.0.64", features = ["preserve_order"] }
+serde = { version = "1.0.126", features = ["derive"] }
+indexmap = { version = "1.6.2", features = ["serde"] }
+
+
+[features]
+# re-export features from opendp
+default = ["use-openssl", "use-mpfr"]
+
+floating-point = ["opendp/floating-point"]
+contrib = ["opendp/contrib"]
+untrusted = ["floating-point", "contrib"]
+
+use-openssl = ["opendp/use-openssl"]
+use-mpfr = ["opendp/use-mpfr"]
+use-system-libs = ["opendp/use-system-libs"]
+
+local-docs = ["opendp/local-docs"]
+
+# opendp-codegen features
+bindings-python = []
+
+[lib]
+crate-type = ["cdylib"]

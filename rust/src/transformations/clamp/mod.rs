@@ -3,7 +3,7 @@ mod ffi;
 
 use std::collections::Bound;
 
-use opendp_derive::proven_by;
+use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
 use crate::metrics::SymmetricDistance;
@@ -12,19 +12,35 @@ use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 
-#[proven_by("transformations/clamp/make_clamp.tex")]
-pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (T, T)
-) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<BoundedDomain<T>>, SymmetricDistance, SymmetricDistance>> {
+#[bootstrap(
+    proof = "transformations/clamp/make_clamp.tex",
+    module = "transformations",
+    features("contrib"),
+    generics(TA(example(get_first("bounds")))),
+    arguments(bounds(hint = "Tuple[Any, Any]")),
+    ret(rust_type(FfiResult("AnyMeasurement *"))) // this syntax is temporary
+)]
+/// Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
+/// If datum is less than lower, let datum be lower. 
+/// If datum is greater than upper, let datum be upper.
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of inclusive lower and upper bounds.
+/// 
+/// # Generics
+/// * `TA` - Atomic Type
+pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
+    bounds: (TA, TA)
+) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<BoundedDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row_fallible(
         AllDomain::new(),
         BoundedDomain::new_closed(bounds.clone())?,
-        move |arg: &T| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
+        move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
 }
 
-pub fn make_unclamp<T: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (Bound<T>, Bound<T>)
-) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>> {
+pub fn make_unclamp<TA: 'static + Clone + TotalOrd + CheckNull>(
+    bounds: (Bound<TA>, Bound<TA>)
+) -> Fallible<Transformation<VectorDomain<BoundedDomain<TA>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row(
         BoundedDomain::new(bounds)?,
         AllDomain::new(),
