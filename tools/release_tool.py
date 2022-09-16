@@ -28,6 +28,20 @@ def run_command(description, args, capture_output=True, shell=True):
     return completed_process.stdout.rstrip() if capture_output else None
 
 
+def run_command_with_retries(description, args, retries = 3, wait_time_seconds = 5):
+    while retries > 0:
+        try:
+            return run_command(description, args)
+        except Exception as e:
+            was_final_attempt = retries == 1
+            if was_final_attempt:
+                log(f"{ANSI_FAIL}{e.stderr}{ANSI_END}")
+                raise e
+            log(f"Waiting {wait_time_seconds} Seconds | Retries Left: {retries - 1}")
+            time.sleep(wait_time_seconds)
+        retries -= 1
+
+
 def clone_repo(url, dir):
     run_command(f"Cloning repo {url} -> {dir}", f"git clone {url} {dir}")
     os.chdir(dir)
@@ -201,20 +215,6 @@ def sanity(venv, version, published=False):
     package = f"opendp=={version}" if published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
     run_command_with_retries(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
     run_command("Running test script", f"source {venv}/bin/activate && python python/example/test.py")
-
-
-def run_command_with_retries(description, args, retries = 3, wait_time_seconds = 5):
-  while retries > 0:
-    try:
-      return run_command(description, args)
-    except Exception as e:
-      was_final_attempt = retries == 1
-      if was_final_attempt:
-        log(f"{ANSI_FAIL}{e.stderr}{ANSI_END}")
-        raise e
-      log(f"Waiting {wait_time_seconds} Seconds | Retries Left: {retries - 1}")
-      time.sleep(wait_time_seconds)
-    retries -= 1
 
 
 def preflight(args):
