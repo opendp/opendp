@@ -59,7 +59,6 @@ fn main() {
             (module_name, module_fns)
         })
         .collect();
-
     if cfg!(feature = "bindings-python") {
         write_bindings(python::generate_bindings(_modules));
     }

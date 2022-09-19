@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{error::Fallible, core::{Transformation, Function}, domains::{VectorDomain, AllDomain}, metrics::AgnosticMetric, traits::{Float, CheckNull, RoundCast}, transformations::make_postprocess};
 
 use super::{num_layers_from_num_nodes, num_nodes_from_num_layers};
@@ -6,6 +8,12 @@ use super::{num_layers_from_num_nodes, num_nodes_from_num_layers};
 mod ffi;
 
 
+#[bootstrap(
+    module = "transformations",
+    features("contrib"),
+    generics(
+        TIA(default = "int"), TOA(default = "float"))
+)]
 /// Postprocessing transformation that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
 /// 
 /// The input argument of the function is a balanced `b`-ary tree implicitly stored in breadth-first order
@@ -21,6 +29,10 @@ mod ffi;
 /// 
 /// # Arguments
 /// * `branching factor` - the maximum number of children
+/// 
+/// # Generics
+/// * `TIA` - Atomic type of the input data. Should be an integer type.
+/// * `TOA` - Atomic type of the output data. Should be a float type.
 pub fn make_consistent_b_ary_tree<TIA, TOA>(
     branching_factor: usize,
 ) -> Fallible<

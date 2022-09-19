@@ -11,8 +11,23 @@ mod ffi;
 
 mod consistency_postprocessor;
 pub use consistency_postprocessor::*;
+use opendp_derive::bootstrap;
 
-
+#[bootstrap(
+    module = "transformations",
+    features("contrib"),
+    generics(TA(default = "int"))
+)]
+/// Expand a vector of counts into a b-ary tree of counts, 
+/// where each branch is the sum of its `b` immediate children.
+/// 
+/// # Arguments
+/// * `leaf_count` - The number of leaf nodes in the b-ary tree.
+/// * `branching_factor` - The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
+/// 
+/// # Generics
+/// * `M` - Metric. Must be L1Distance<Q> or L2Distance<Q>
+/// * `TA` - Atomic Type of the input data.
 pub fn make_b_ary_tree<M, TA>(
     leaf_count: usize,
     branching_factor: usize,
@@ -102,14 +117,20 @@ fn num_nodes_from_num_layers(num_layers: usize, b: usize) -> usize {
 pub trait BAryTreeMetric: Metric {}
 impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
 
-/// Choose the optimal branching factor from a size guess.
+#[bootstrap(
+    module = "transformations",
+    features("contrib"),
+    generics(TA(default = "int"))
+)]
+/// Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
+/// that minimizes error in cdf and quantile estimates based on b-ary trees.
 /// 
 /// # Citations
 /// * QYL13, Understanding Hierarchical Methods for Differentially Private Histograms
 ///   Proposition 1: http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf
 ///
 /// # Arguments
-/// * `size_guess` - ballpark estimate of dataset size
+/// * `size_guess` - A guess at the size of your dataset.
 pub fn choose_branching_factor(size_guess: usize) -> usize {
     // Formula (3) estimates variance
     fn v_star_avg(n: f64, b: f64) -> f64 {
