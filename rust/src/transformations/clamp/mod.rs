@@ -13,7 +13,6 @@ use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 
 #[bootstrap(
-    proof = "transformations/clamp/make_clamp.tex",
     module = "transformations",
     features("contrib"),
     arguments(bounds(hint = "Tuple[Any, Any]")),

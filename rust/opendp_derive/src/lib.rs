@@ -5,14 +5,16 @@ use proc_macro::TokenStream;
 use std::{
     collections::{HashMap, HashSet},
     env,
-    path::PathBuf
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
 };
 use syn::{
     parse_macro_input, AttributeArgs, FnArg, GenericArgument, GenericParam, ItemFn, Pat,
     PathArguments, ReturnType, Signature, Type, TypeParam, TypePath, Visibility,
 };
 
-use opendp_pre_derive::{Argument, Function, RuntimeType, target::find_target_dir};
+use opendp_pre_derive::{target::find_target_dir, Argument, Function, RuntimeType};
 
 use crate::{docstring::parse_doc_comments, parse::Bootstrap};
 
@@ -38,7 +40,7 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
     let attr_args = parse_macro_input!(attr as AttributeArgs);
     let original_input = input.clone();
 
-    let bootstrap = match Bootstrap::from_list(&attr_args) {
+    let mut bootstrap = match Bootstrap::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => {
             return TokenStream::from(e.write_errors());
@@ -53,16 +55,38 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
     // assert that visibility must be public
     extract!(vis, Visibility::Public(_) => ());
 
-    let doc_comments = parse_doc_comments(attrs);
+    if bootstrap.proof.is_none() {
+        let search_dir = PathBuf::from(
+            env::var_os("CARGO_MANIFEST_DIR").expect("Failed to determine location of Cargo.toml.")
+        ).join("src").join(&bootstrap.module);
 
-    let (module, name, function) = match make_bootstrap_json(sig, bootstrap.clone(), doc_comments) {
-        Ok(v) => v,
-        Err(e) => {
-            return TokenStream::from(e.write_errors());
+        let func_name = sig.ident.to_string();
+        let relative_path = search_dirs_rs(&format!("pub fn {}", func_name), &search_dir)
+            .unwrap()
+            .expect("failed to find source file");
+        let mut proof_path = relative_path.clone();
+        proof_path.set_file_name(func_name + ".tex");
+        if PathBuf::from(proof_path).exists() {
+            bootstrap.proof = relative_path.to_str().map(ToString::to_string);
         }
-    };
+    }
+    
+    let mut output = (bootstrap.proof.as_deref())
+        .map(make_proof_link)
+        .map(|link| TokenStream::from(quote::quote!(#[doc = #link])))
+        .unwrap_or_else(TokenStream::default);
+    output.extend(original_input);
 
     if cfg!(feature = "bootstrap-json") {
+        let doc_comments = parse_doc_comments(attrs);
+
+        let (module, name, function) = match make_bootstrap_json(sig, bootstrap.clone(), doc_comments) {
+            Ok(v) => v,
+            Err(e) => {
+                return TokenStream::from(e.write_errors());
+            }
+        };
+
         let json_str = serde_json::to_string_pretty(&function).expect("failed to serialize function to json");
         println!("{module}::{name}({json_str})");
 
@@ -81,16 +105,10 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
             .expect(format!("unable to write file {{target_dir}}/opendp_bootstrap/{module}/{filename}").as_str());
     }
 
-    let mut ts = (function.proof)
-        .map(make_proof_link)
-        .map(|link| TokenStream::from(quote::quote!(#[doc = #link])))
-        .unwrap_or_else(TokenStream::default);
-
-    ts.extend(original_input);
-    ts
+    output
 }
 
-fn make_proof_link(relative_path: String) -> String {
+fn make_proof_link(relative_path: &str) -> String {
     let mut relative_path = PathBuf::from(relative_path);
 
     // construct absolute path
@@ -100,8 +118,7 @@ fn make_proof_link(relative_path: String) -> String {
     .join("src")
     .join(relative_path.clone());
 
-    // enable this when we actually have proofs
-    // assert!(absolute_path.exists(), "{:?} does not exist!", absolute_path);
+    assert!(absolute_path.exists(), "{:?} does not exist!", absolute_path);
 
     let target = if cfg!(feature = "local") {
         // build path to local pdf
@@ -334,4 +351,30 @@ fn rust_to_c_type(ty: Type) -> darling::Result<String> {
         Type::Tuple(_) => "AnyObject *".to_string(),
         _ => return Err(darling::Error::custom("unrecognized type structure")),
     })
+}
+
+// one possible implementation of walking a directory only visiting files
+fn search_dirs_rs(search: &str, dir: &Path) -> std::io::Result<Option<PathBuf>> {
+    if dir.is_dir() {
+        for entry in std::fs::read_dir(dir)? {
+            let path = entry?.path();
+            if path.is_dir() {
+                if let Some(found) = search_dirs_rs(search, &path)? {
+                    return Ok(Some(found));
+                }
+            } else {
+                // skip non-rust files
+                if path.extension().unwrap_or_default() != "rs" {
+                    continue;
+                }
+
+                let mut contents = String::new();
+                File::open(&path)?.read_to_string(&mut contents)?;
+                if contents.contains(search) {
+                    return Ok(Some(path.to_path_buf()));
+                }
+            };
+        }
+    }
+    Ok(None)
 }
