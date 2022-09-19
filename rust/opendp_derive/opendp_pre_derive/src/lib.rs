@@ -1,31 +1,32 @@
-use indexmap::map::IndexMap;
+use std::collections::HashMap;
+
+pub mod target;
+
 use serde::{Deserialize, Serialize, Deserializer};
 use serde_json::Value;
 
-// a module contains functions by name
-#[allow(dead_code)]
-pub type Module = IndexMap<String, Function>;
 
 // metadata for each function in a module
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Function {
-    #[serde(default)]
-    pub(crate) args: Vec<Argument>,
-    // metadata for return type
-    #[serde(default)]
-    pub ret: Argument,
-    // required feature flags to execute function
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub features: Vec<String>,
-    // metadata for constructing new types based on existing types or introspection
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub derived_types: Vec<Argument>,
     // plaintext description of the function used to generate documentation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     // URL pointing to the location of the DP proof for the function
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub proof: Option<String>
+    pub proof: Option<String>,
+    // required feature flags to execute function
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub features: Vec<String>,
+    // arguments and generics
+    #[serde(default)]
+    pub args: Vec<Argument>,
+    // metadata for constructing new types based on existing types or introspection
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub derived_types: Vec<Argument>,
+    // metadata for return type
+    #[serde(default)]
+    pub ret: Argument,
 }
 
 // Metadata for function arguments, derived types and returns.
@@ -65,6 +66,59 @@ pub struct Argument {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub example: Option<RuntimeType>
 }
+
+
+impl Argument {
+    /// retrieve the python ctype corresponding to the type inside FfiResult<*>
+    pub fn python_unwrapped_ctype(&self, typemap: &HashMap<String, String>) -> String {
+        assert_eq!(&self.c_type()[..9], "FfiResult");
+        typemap.get(&self.c_type()[10..self.c_type().len() - 1]).unwrap().clone()
+    }
+    /// retrieve the python ctypes corresponding to the origin of a type (subtypes/args omitted)
+    pub fn python_origin_ctype(&self, typemap: &HashMap<String, String>) -> String {
+        typemap.get(&self.c_type_origin()).cloned().expect("ctype not recognized in typemap")
+    }
+    pub fn python_type_hint(&self, hierarchy: &HashMap<String, Vec<String>>) -> Option<String> {
+        if self.hint.is_some() {
+            return self.hint.clone()
+        }
+        if self.is_type {
+            return Some("RuntimeTypeDescriptor".to_string())
+        }
+        self.c_type.clone().and_then(|mut c_type| {
+            if c_type.starts_with("FfiResult<") {
+                c_type = c_type[10..c_type.len() - 1].to_string();
+            }
+            if c_type.ends_with("AnyTransformation *") {
+                return Some("Transformation".to_string())
+            }
+            if c_type.ends_with("AnyMeasurement *") {
+                return Some("Measurement".to_string())
+            }
+            if c_type.ends_with("AnyObject *") {
+                // py_to_object converts Any to AnyObjectPtr
+                return Some("Any".to_string())
+            }
+            if c_type.ends_with("FfiSlice *") {
+                // py_to_c converts Any to FfiSlicePtr
+                return Some("Any".to_string())
+            }
+
+            hierarchy.iter()
+                .find(|(_k, members)| members.contains(&c_type))
+                .and_then(|(k, _)| Some(match k.as_str() {
+                    k if k == "integer" => "int",
+                    k if k == "float" => "float",
+                    k if k == "string" => "str",
+                    k if k == "bool" => "bool",
+                    _ => return None
+                }))
+                .map(|v| v.to_string())
+        })
+    }
+}
+
+
 fn is_false(v: &bool) -> bool {
     !v
 }
@@ -77,17 +131,17 @@ fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
 
 #[allow(dead_code)]
 impl Argument {
-    fn name(&self) -> String {
+    pub fn name(&self) -> String {
         self.name.clone().expect("unknown name when parsing argument")
     }
-    fn c_type(&self) -> String {
+    pub fn c_type(&self) -> String {
         if self.is_type {
             if self.c_type.is_some() { panic!("c_type should not be specified when is_type") }
             return "char *".to_string()
         }
         self.c_type.clone().expect("unknown c_type when parsing argument")
     }
-    fn c_type_origin(&self) -> String {
+    pub fn c_type_origin(&self) -> String {
         self.c_type().split('<').next().unwrap().to_string()
     }
 }
@@ -111,3 +165,25 @@ impl<S: Into<String>> From<S> for RuntimeType {
         RuntimeType::Name(name.into())
     }
 }
+
+
+impl RuntimeType {
+    /// translate the abstract derived_types info into python RuntimeType constructors
+    pub fn to_python(&self) -> String {
+        match self {
+            Self::Name(name) =>
+                name.clone(),
+            Self::Lower { root: arg, index } =>
+                format!("{}.args[{}]", arg.to_python(), index),
+            Self::Function { function, params } =>
+                format!("{function}({params})", function = function, params = params.iter()
+                    .map(|v| v.to_python())
+                    .collect::<Vec<_>>().join(", ")),
+            Self::Raise { origin, args } =>
+                format!("RuntimeType(origin='{origin}', args=[{args}])",
+                        origin = origin,
+                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(", ")),
+        }
+    }
+}
+

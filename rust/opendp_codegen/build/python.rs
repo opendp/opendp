@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use indexmap::map::IndexMap;
 use serde_json::Value;
 
-use crate::{Argument, Function, Module, RuntimeType};
+use opendp_pre_derive::{Argument, Function, RuntimeType};
+
+use crate::Module;
 
 /// Top-level function to generate python bindings, including all modules.
 pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf, String> {
@@ -91,57 +93,6 @@ def {func_name}(
             sig_return = sig_return,
             docstring = crate::indent(generate_docstring(func, func_name, hierarchy)),
             body = crate::indent(generate_body(module_name, func_name, func, typemap)))
-}
-
-
-impl Argument {
-    /// retrieve the python ctype corresponding to the type inside FfiResult<*>
-    fn python_unwrapped_ctype(&self, typemap: &HashMap<String, String>) -> String {
-        assert_eq!(&self.c_type()[..9], "FfiResult");
-        typemap.get(&self.c_type()[10..self.c_type().len() - 1]).unwrap().clone()
-    }
-    /// retrieve the python ctypes corresponding to the origin of a type (subtypes/args omitted)
-    fn python_origin_ctype(&self, typemap: &HashMap<String, String>) -> String {
-        typemap.get(&self.c_type_origin()).cloned().expect("ctype not recognized in typemap")
-    }
-    fn python_type_hint(&self, hierarchy: &HashMap<String, Vec<String>>) -> Option<String> {
-        if self.hint.is_some() {
-            return self.hint.clone()
-        }
-        if self.is_type {
-            return Some("RuntimeTypeDescriptor".to_string())
-        }
-        self.c_type.clone().and_then(|mut c_type| {
-            if c_type.starts_with("FfiResult<") {
-                c_type = c_type[10..c_type.len() - 1].to_string();
-            }
-            if c_type.ends_with("AnyTransformation *") {
-                return Some("Transformation".to_string())
-            }
-            if c_type.ends_with("AnyMeasurement *") {
-                return Some("Measurement".to_string())
-            }
-            if c_type.ends_with("AnyObject *") {
-                // py_to_object converts Any to AnyObjectPtr
-                return Some("Any".to_string())
-            }
-            if c_type.ends_with("FfiSlice *") {
-                // py_to_c converts Any to FfiSlicePtr
-                return Some("Any".to_string())
-            }
-
-            hierarchy.iter()
-                .find(|(_k, members)| members.contains(&c_type))
-                .and_then(|(k, _)| Some(match k.as_str() {
-                    k if k == "integer" => "int",
-                    k if k == "float" => "float",
-                    k if k == "string" => "str",
-                    k if k == "bool" => "bool",
-                    _ => return None
-                }))
-                .map(|v| v.to_string())
-        })
-    }
 }
 
 /// generate an input argument, complete with name, hint and default.
@@ -344,26 +295,6 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         format!(r#"# Standardize type arguments.
 {formatter}
 "#, formatter = type_arg_formatter)
-    }
-}
-
-impl RuntimeType {
-    /// translate the abstract derived_types info into python RuntimeType constructors
-    fn to_python(&self) -> String {
-        match self {
-            Self::Name(name) =>
-                name.clone(),
-            Self::Lower { root: arg, index } =>
-                format!("{}.args[{}]", arg.to_python(), index),
-            Self::Function { function, params } =>
-                format!("{function}({params})", function = function, params = params.iter()
-                    .map(|v| v.to_python())
-                    .collect::<Vec<_>>().join(", ")),
-            Self::Raise { origin, args } =>
-                format!("RuntimeType(origin='{origin}', args=[{args}])",
-                        origin = origin,
-                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(", ")),
-        }
     }
 }
 

@@ -1,0 +1,8 @@
+[package]
+name = "opendp_pre_derive"
+version = "0.0.0+development"
+edition = "2021"
+
+[dependencies]
+serde_json = { version = "1.0.64", features = ["preserve_order"] }
+serde = { version = "1.0.126", features = ["derive"] }

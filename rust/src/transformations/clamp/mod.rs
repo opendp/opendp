@@ -16,9 +16,8 @@ use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
     proof = "transformations/clamp/make_clamp.tex",
     module = "transformations",
     features("contrib"),
-    generics(TA(example(get_first("bounds")))),
     arguments(bounds(hint = "Tuple[Any, Any]")),
-    ret(rust_type(FfiResult("AnyMeasurement *"))) // this syntax is temporary
+    generics(TA(example(get_first("bounds")))),
 )]
 /// Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
 /// If datum is less than lower, let datum be lower. 
@@ -38,6 +37,24 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
         move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
 }
 
+#[bootstrap(
+    module = "transformations",
+    features("contrib"),
+    arguments(
+        bounds(rust_type(id="(TA, TA)"), hint = "Tuple[Any, Any]")
+    ),
+    generics(
+        TA(example(get_first("bounds")))
+    ),
+)]
+/// Make a Transformation that unclamps numeric data in Vec<`T`>.
+/// Used to convert a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of lower and upper bounds.
+/// 
+/// # Generics
+/// * `TA` - Atomic Type
 pub fn make_unclamp<TA: 'static + Clone + TotalOrd + CheckNull>(
     bounds: (Bound<TA>, Bound<TA>)
 ) -> Fallible<Transformation<VectorDomain<BoundedDomain<TA>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>> {

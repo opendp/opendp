@@ -46,7 +46,7 @@ test-plot = ["vega_lite_4"]
 
 ffi = ["lazy_static"]
 # write bootstrap json to OUT_DIR (dev-only)
-bootstrap-json = ["ffi"]
+bootstrap-json = ["opendp_derive/bootstrap-json"]
 
 [dev-dependencies]
 criterion = "0.3"
@@ -60,3 +60,9 @@ features = ["untrusted", "ffi"]
 [[bench]]
 name = "discrete_laplace"
 harness = false
+
+[workspace]
+
+members = [
+    "opendp_codegen"
+]

@@ -1,6 +1,6 @@
 [package]
 name = "opendp_derive"
-version = "0.1.0"
+version = "0.0.0+development"
 edition = "2021"
 
 [lib]
@@ -14,6 +14,8 @@ darling = { version = "0.14" }
 serde_json = { version = "1.0.64", features = ["preserve_order"] }
 serde = { version = "1.0.126", features = ["derive"] }
 indexmap = { version = "1.6.2", features = ["serde"] }
+opendp_pre_derive = { path = "opendp_pre_derive" }
 
 [features]
 local-docs = []
+bootstrap-json = []

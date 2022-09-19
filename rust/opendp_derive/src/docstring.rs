@@ -1,14 +1,17 @@
 use std::collections::HashMap;
 
+use syn::Ident;
 use syn::{Attribute, Path, Meta, Lit};
 use crate::extract;
 use quote::quote;
 use darling::Result;
 
-pub(crate) fn path_to_str(path: Path) -> Result<String> {
+pub(crate) fn path_to_ident(path: &Path) -> Result<&Ident> {
     path.get_ident()
         .ok_or_else(|| darling::Error::custom(format!("Path must be of length 1! {:?}", quote!(#path).to_string())))
-        .map(ToString::to_string)
+}
+pub(crate) fn path_to_str(path: Path) -> Result<String> {
+    path_to_ident(&path).map(ToString::to_string)
 }
 
 

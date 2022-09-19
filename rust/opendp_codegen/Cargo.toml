@@ -5,13 +5,14 @@ edition = "2021"
 build = "build/main.rs"
 
 [dependencies]
-opendp = {path = "../opendp", features=["ffi", "bootstrap"]}
-opendp_derive = {path = "../opendp_derive"}
+opendp = {path = "..", features=["ffi", "bootstrap-json"]}
 
 [build-dependencies]
 serde_json = { version = "1.0.64", features = ["preserve_order"] }
 serde = { version = "1.0.126", features = ["derive"] }
 indexmap = { version = "1.6.2", features = ["serde"] }
+opendp_derive = {path = "../opendp_derive"}
+opendp_pre_derive = {path = "../opendp_derive/opendp_pre_derive"}
 
 
 [features]
