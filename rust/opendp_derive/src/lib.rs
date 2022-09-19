@@ -19,6 +19,29 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
     let attr_args = parse_macro_input!(attr as AttributeArgs);
     let item_fn = parse_macro_input!(input as ItemFn);
 
+    let features = (attr_args.iter())
+        // filter down to NameValues
+        .filter_map(|nm| match nm {
+            NestedMeta::Meta(Meta::List(ml)) => Some(ml),
+            _ => None,
+        })
+        // find the features NestedMeta
+        .find(|ml| {
+            ml.path
+                .get_ident()
+                .map(|ident| ident.to_string() == "features")
+                .unwrap_or(false)
+        })
+        // extract a vector of Strings from the features NestedMeta
+        .map(|meta_feats| {
+            meta_feats
+                .nested
+                .iter()
+                .map(|feat| extract!(feat, NestedMeta::Lit(Lit::Str(lit)) => lit.value()))
+                .collect()
+        })
+        .unwrap_or_else(Vec::new);
+
     let manifest_dir =
         env::var_os("CARGO_MANIFEST_DIR").expect("Failed to determine location of Cargo.toml.");
     let src_dir = PathBuf::from(manifest_dir).join("src");
@@ -48,14 +71,19 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
                 .map(|pb| pb.strip_prefix(&src_dir).unwrap().to_path_buf())
         });
 
+    #[cfg(feature = "bootstrap-json")]
+    // first, retrieve a relative path (either to the proof or to the source)
     let module_name = (proof_path.clone())
         .unwrap_or_else(|| {
             // detect location of call site
             find_source_path(&format!("pub fn {func_name}"), &src_dir)
                 .unwrap()
                 .expect("No matching source file found.")
-                .strip_prefix(&src_dir).unwrap().to_path_buf()
+                .strip_prefix(&src_dir)
+                .unwrap()
+                .to_path_buf()
         })
+        // retrieve the first component as a string
         .components()
         .next()
         .unwrap()
@@ -64,15 +92,21 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
         .expect("module name must be non-empty")
         .to_string();
 
+    let proof_link = proof_path.map(|relative| make_proof_link(&src_dir, &relative));
+
     #[cfg(feature = "bootstrap-json")]
-    if let Err(e) = bootstrap::write_json(module_name, attr_args, item_fn) {
+    if let Err(e) = bootstrap::write_json(module_name, attr_args, item_fn, proof_link.clone()) {
         return TokenStream::from(e.write_errors());
     }
 
-    let mut output = proof_path
-        .map(|relative| make_proof_link(&src_dir, &relative))
+    // embed link to proof in documentation
+    let mut output = proof_link
         .map(|link| TokenStream::from(quote::quote!(#[doc = #link])))
         .unwrap_or_else(TokenStream::default);
+
+    features.iter()
+        .for_each(|feat| output.extend(TokenStream::from(quote::quote!(#[cfg(feature=#feat)]))));
+
     output.extend(original_input);
 
     output

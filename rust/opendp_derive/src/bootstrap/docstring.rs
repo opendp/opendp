@@ -81,10 +81,13 @@ pub(crate) struct DocComments {
     pub ret: Vec<String>,
 }
 
-pub(crate) fn parse_doc_comments(attrs: Vec<Attribute>) -> DocComments {
+pub(crate) fn parse_doc_comments(attrs: Vec<Attribute>, proof_link: Option<String>) -> DocComments {
     let mut doc_sections = parse_doc_comment_sections(attrs);
 
     let mut description = doc_sections.remove("Description").unwrap_or_else(Vec::new);
+
+    // insert the proof link into the documentation
+    proof_link.map(|pl| description.insert(0, pl));
 
     let mut insert_section = |section_name: &str| {
         doc_sections.remove(section_name).map(|section| {

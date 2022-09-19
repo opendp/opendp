@@ -20,17 +20,15 @@ mod attribute;
 mod docstring;
 
 
-pub fn write_json(module: String, attr: AttributeArgs, input: ItemFn) -> darling::Result<()> {
-    // Parse the function signature
-    let ItemFn {
-        attrs, vis, sig, ..
-    } = input;
-
+pub fn write_json(module: String, attr: AttributeArgs, input: ItemFn, proof_link: Option<String>) -> darling::Result<()> {
+    // Parse the attributes and function signature
     let bootstrap = BootstrapAttribute::from_list(&attr)?;
+    let ItemFn {attrs, vis, sig, ..} = input;
 
-    // assert that visibility must be public
+    // assert that visibility is public
     extract!(vis, Visibility::Public(_) => ());
-    let doc_comments = parse_doc_comments(attrs);
+
+    let doc_comments = parse_doc_comments(attrs, proof_link);
 
     let (name, function) = make_bootstrap_json(sig, bootstrap.clone(), doc_comments)?;
 
