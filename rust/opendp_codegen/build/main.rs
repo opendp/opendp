@@ -31,7 +31,7 @@ fn main() {
                 .expect("module name must be valid unicode")
                 .to_string();
 
-            let module_fns = std::fs::read_dir(&mod_dir)
+            let mut module_fns = std::fs::read_dir(&mod_dir)
                 .expect("failed to read mod_dir")
                 .map(|fn_entry| {
                     let fn_path = fn_entry
@@ -53,7 +53,8 @@ fn main() {
                     let fn_body = serde_json::from_str(&contents).expect("failed to parse json");
                     (fn_name, fn_body)
                 })
-                .collect();
+                .collect::<IndexMap<_, _>>();
+            module_fns.sort_keys();
 
             (module_name, module_fns)
         })

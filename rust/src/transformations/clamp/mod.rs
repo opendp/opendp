@@ -15,7 +15,6 @@ use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 #[bootstrap(
     module = "transformations",
     features("contrib"),
-    arguments(bounds(hint = "Tuple[Any, Any]")),
     generics(TA(example(get_first("bounds")))),
 )]
 /// Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
@@ -39,12 +38,8 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
 #[bootstrap(
     module = "transformations",
     features("contrib"),
-    arguments(
-        bounds(rust_type(id="(TA, TA)"), hint = "Tuple[Any, Any]")
-    ),
-    generics(
-        TA(example(get_first("bounds")))
-    ),
+    arguments(bounds(rust_type(id="(TA, TA)"))),
+    generics(TA(example(get_first("bounds")))),
 )]
 /// Make a Transformation that unclamps numeric data in Vec<`T`>.
 /// Used to convert a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.

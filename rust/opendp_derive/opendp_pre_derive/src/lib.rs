@@ -85,6 +85,11 @@ impl Argument {
         if self.is_type {
             return Some("RuntimeTypeDescriptor".to_string())
         }
+        if let Some(RuntimeType::Raise { origin, args }) = &self.rust_type {
+            if origin == "Tuple" {
+                return Some(format!("Tuple[{}]", vec!["Any"; args.len()].join(", ")))
+            }
+        }
         self.c_type.clone().and_then(|mut c_type| {
             if c_type.starts_with("FfiResult<") {
                 c_type = c_type[10..c_type.len() - 1].to_string();

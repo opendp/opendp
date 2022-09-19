@@ -12,7 +12,9 @@ pub(crate) struct Bootstrap {
     pub proof: Option<String>,
     pub module: String,
     pub features: Features,
+    #[darling(default)]
     pub generics: BootTypes,
+    #[darling(default)]
     pub arguments: BootTypes,
     pub derived_types: Option<DerivedTypes>,
     pub ret: Option<BootType>,
@@ -64,7 +66,7 @@ impl FromMeta for Features {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct BootTypes(pub HashMap<String, BootType>);
 
 impl FromMeta for BootTypes {

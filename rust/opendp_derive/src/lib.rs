@@ -1,6 +1,6 @@
 use darling::FromMeta;
 use docstring::{path_to_str, DocComments};
-use parse::{DerivedTypes, NewRuntimeType};
+use bootstrap::{DerivedTypes, NewRuntimeType};
 use proc_macro::TokenStream;
 use std::{
     collections::{HashMap, HashSet},
@@ -16,10 +16,10 @@ use syn::{
 
 use opendp_pre_derive::{target::find_target_dir, Argument, Function, RuntimeType};
 
-use crate::{docstring::parse_doc_comments, parse::Bootstrap};
+use crate::{docstring::parse_doc_comments, bootstrap::Bootstrap};
 
 mod docstring;
-mod parse;
+mod bootstrap;
 
 macro_rules! extract {
     ($value:expr, $pattern:pat => $extracted_value:expr) => {
