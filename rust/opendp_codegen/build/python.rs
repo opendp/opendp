@@ -91,7 +91,7 @@ def {func_name}(
             func_name = func_name,
             args = crate::indent(args),
             sig_return = sig_return,
-            docstring = crate::indent(generate_docstring(func, func_name, hierarchy)),
+            docstring = crate::indent(generate_docstring(func, hierarchy)),
             body = crate::indent(generate_body(module_name, func_name, func, typemap)))
 }
 
@@ -124,7 +124,7 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
 
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
-fn generate_docstring(func: &Function, func_name: &str, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let mut description = func.description.as_ref()
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
@@ -155,7 +155,7 @@ fn generate_docstring(func: &Function, func_name: &str, hierarchy: &HashMap<Stri
 """"#,
             description = description,
             doc_args = doc_args,
-            ret_arg = generate_docstring_return_arg(&func.ret, func_name, hierarchy),
+            ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
             raises = raises)
 }
 
@@ -172,12 +172,10 @@ fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String
 }
 
 /// generate the part of a docstring corresponding to a return argument
-fn generate_docstring_return_arg(arg: &Argument, func_name: &str, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring_return_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String>>) -> String {
     let mut ret = Vec::new();
     if let Some(description) = &arg.description {
         ret.push(format!(":return: {description}", description = description));
-    } else if func_name.starts_with("make_") {
-        ret.push(format!(":return: A {name} step.", name = func_name.replace("make_", "")))
     }
     if let Some(type_) = arg.python_type_hint(hierarchy) {
         ret.push(format!(":rtype: {type_}", type_ = type_));

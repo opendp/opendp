@@ -4,13 +4,13 @@ use darling::FromMeta;
 use serde_json::{Number, Value};
 use syn::{parse, GenericArgument, Lit, Meta, MetaList, NestedMeta, Path, Type};
 
-use crate::extract;
 use opendp_pre_derive::RuntimeType;
 
+use crate::extract;
+
 #[derive(Debug, FromMeta, Clone)]
-pub(crate) struct Bootstrap {
+pub(crate) struct BootstrapAttribute {
     pub proof: Option<String>,
-    pub module: String,
     pub features: Features,
     #[darling(default)]
     pub generics: BootTypes,

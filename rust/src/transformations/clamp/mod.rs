@@ -13,9 +13,8 @@ use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 
 #[bootstrap(
-    module = "transformations",
     features("contrib"),
-    generics(TA(example(get_first("bounds")))),
+    generics(TA(example(get_first("bounds"))))
 )]
 /// Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
 /// If datum is less than lower, let datum be lower. 
@@ -36,7 +35,6 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
 }
 
 #[bootstrap(
-    module = "transformations",
     features("contrib"),
     arguments(bounds(rust_type(id="(TA, TA)"))),
     generics(TA(example(get_first("bounds")))),

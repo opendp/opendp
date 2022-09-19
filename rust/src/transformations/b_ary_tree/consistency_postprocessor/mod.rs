@@ -9,10 +9,8 @@ mod ffi;
 
 
 #[bootstrap(
-    module = "transformations",
     features("contrib"),
-    generics(
-        TIA(default = "int"), TOA(default = "float"))
+    generics(TIA(default = "int"), TOA(default = "float"))
 )]
 /// Postprocessing transformation that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
 /// 

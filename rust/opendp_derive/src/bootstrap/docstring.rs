@@ -1,21 +1,20 @@
 use std::collections::HashMap;
 
-use crate::extract;
 use darling::Result;
 use quote::quote;
-use syn::Ident;
-use syn::{Attribute, Lit, Meta, Path};
+use syn::{Attribute, Path, Meta, Lit};
 
-pub(crate) fn path_to_ident(path: &Path) -> Result<&Ident> {
-    path.get_ident().ok_or_else(|| {
-        darling::Error::custom(format!(
-            "Path must be of length 1! {:?}",
-            quote!(#path).to_string()
-        ))
-    })
-}
+use crate::extract;
+
 pub(crate) fn path_to_str(path: Path) -> Result<String> {
-    path_to_ident(&path).map(ToString::to_string)
+    path.get_ident()
+        .ok_or_else(|| {
+            darling::Error::custom(format!(
+                "Path must be of length 1! {:?}",
+                quote!(#path).to_string()
+            ))
+        })
+        .map(ToString::to_string)
 }
 
 fn parse_doc_comment_args(mut args: Vec<String>) -> HashMap<String, Vec<String>> {
@@ -87,13 +86,15 @@ pub(crate) fn parse_doc_comments(attrs: Vec<Attribute>) -> DocComments {
 
     let mut description = doc_sections.remove("Description").unwrap_or_else(Vec::new);
 
-    let mut insert_section = |section_name: &str| doc_sections.remove(section_name).map(|section| {
-        description.extend(vec![
-            section_name.to_string(),
-            "-".repeat(section_name.len())
-        ]);
-        description.extend(section)
-    });
+    let mut insert_section = |section_name: &str| {
+        doc_sections.remove(section_name).map(|section| {
+            description.extend(vec![
+                section_name.to_string(),
+                "-".repeat(section_name.len()),
+            ]);
+            description.extend(section)
+        })
+    };
     insert_section("Citations");
 
     DocComments {

@@ -14,7 +14,6 @@ pub use consistency_postprocessor::*;
 use opendp_derive::bootstrap;
 
 #[bootstrap(
-    module = "transformations",
     features("contrib"),
     generics(TA(default = "int"))
 )]
@@ -118,9 +117,7 @@ pub trait BAryTreeMetric: Metric {}
 impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
 
 #[bootstrap(
-    module = "transformations",
-    features("contrib"),
-    generics(TA(default = "int"))
+    features("contrib")
 )]
 /// Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
 /// that minimizes error in cdf and quantile estimates based on b-ary trees.
