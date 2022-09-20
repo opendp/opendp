@@ -56,7 +56,7 @@ pub enum Interpolation {
 
 #[bootstrap(
     features("contrib"), 
-    arguments(interpolation(c_type = "char *", default = "linear")),
+    arguments(interpolation(c_type = "char *", rust_type(id="String"), default = "linear")),
     generics(F(default = "float"))
 )]
 /// Postprocess a noisy array of summary counts into quantiles.

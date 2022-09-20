@@ -429,6 +429,7 @@ u128 = 'u128'
 usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
+String = 'String'
 
 
 class Domain(RuntimeType):
