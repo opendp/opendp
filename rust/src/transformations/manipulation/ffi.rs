@@ -2,16 +2,31 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use num::One;
+use opendp_derive::bootstrap;
 
-use crate::core::{DatasetMetric, SensitivityMetric};
+use crate::core::{DatasetMetric, SensitivityMetric, Transformation, Metric, Domain};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
+use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance};
 use crate::domains::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::traits::{CheckNull, DistanceConstant, Primitive};
-use crate::transformations::{make_identity, make_is_equal, make_is_null};
+use crate::transformations::{make_is_equal, make_is_null};
+
+
+#[bootstrap(features("contrib"))]
+/// Make a Transformation representing the identity function.
+/// 
+/// # Generics
+/// * `D` - Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>
+/// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
+fn make_identity<D, M>() -> Fallible<Transformation<D, D, M, M>>
+    where D: Domain + Default, D::Carrier: Clone,
+          M: Metric, M::Distance: DistanceConstant<M::Distance> + One {
+    super::make_identity(Default::default(), Default::default())
+}
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_identity(
@@ -38,9 +53,7 @@ pub extern "C" fn opendp_transformations__make_identity(
             fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
                 where M: 'static + DatasetMetric,
                       T: 'static + Clone + CheckNull {
-                make_identity::<VectorDomain<AllDomain<T>>, M>(
-                    VectorDomain::new(AllDomain::<T>::new()),
-                    M::default()).into_any()
+                make_identity::<VectorDomain<AllDomain<T>>, M>().into_any()
             }
             dispatch!(monomorphize, [
                 (M, [ChangeOneDistance, InsertDeleteDistance, SymmetricDistance, HammingDistance]),
@@ -58,9 +71,7 @@ pub extern "C" fn opendp_transformations__make_identity(
                 fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
                     where M: 'static + SensitivityMetric,
                           M::Distance: CheckNull + DistanceConstant<M::Distance> + One {
-                    make_identity::<AllDomain<M::Distance>, M>(
-                        AllDomain::<M::Distance>::new(),
-                        M::default()).into_any()
+                    make_identity::<AllDomain<M::Distance>, M>().into_any()
                 }
                 dispatch!(monomorphize, [
                     (M, [AbsoluteDistance<T>, L1Distance<T>, L2Distance<T>])
