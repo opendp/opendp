@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 
 use num::One;
+use opendp_derive::bootstrap;
 
 use crate::core::{Function, SensitivityMetric, StabilityMap, Transformation};
 use crate::metrics::{AbsoluteDistance, SymmetricDistance, LpDistance};
@@ -12,6 +13,12 @@ use crate::domains::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{Number, Hashable, Primitive, Float};
 
+#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+/// Make a Transformation that computes a count of the number of records in data.
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+/// * `TOA` - Output Type. Must be numeric.
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Primitive,
@@ -28,6 +35,12 @@ pub fn make_count<TIA, TO>(
 }
 
 
+#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+/// Make a Transformation that computes a count of the number of unique, distinct records in data.
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+/// * `TOA` - Output Type. Must be numeric.
 pub fn make_count_distinct<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Hashable,
@@ -51,7 +64,28 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
     fn get_stability_constant() -> Q { Q::one() }
 }
 
-// count with unknown n, known categories
+#[bootstrap(
+    features("contrib"), 
+    arguments(
+        null_category(default = true)),
+    generics(
+        MO(hint = "SensitivityMetric", default = "L1Distance<int>"), 
+        TOA(default = "int"))
+)]
+/// Make a Transformation that computes the number of times each category appears in the data. 
+/// This assumes that the category set is known.
+/// 
+/// # Arguments
+/// * `categories` - The set of categories to compute counts for.
+/// * `null_category` - Include a count of the number of elements that were not in the category set at the end of the vector.
+/// 
+/// # Generics
+/// * `MO` - Output Metric.
+/// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
+/// * `TV - Type of Value. Express counts in terms of this integral type.
+/// 
+/// # Returns
+/// The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
 pub fn make_count_by_categories<MO, TI, TO>(
     categories: Vec<TI>,
     null_category: bool
@@ -100,7 +134,21 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
     }
 }
 
-// count with unknown n, unknown categories
+
+#[bootstrap(
+    features("contrib"), 
+    generics(MO(hint = "SensitivityMetric"), TV(default = "int"))
+)]
+/// Make a Transformation that computes the count of each unique value in data. 
+/// This assumes that the category set is unknown.
+/// 
+/// # Generics
+/// * `MO` - Output Metric.
+/// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
+/// * `TV - Type of Value. Express counts in terms of this integral type.
+/// 
+/// # Returns
+/// The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
 pub fn make_count_by<MO, TK, TV>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TK>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,

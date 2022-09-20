@@ -110,6 +110,6 @@ pub(crate) fn parse_doc_comments(attrs: Vec<Attribute>, proof_link: Option<Strin
             .remove("Generics")
             .map(parse_doc_comment_args)
             .unwrap_or_else(HashMap::new),
-        ret: doc_sections.remove("Return").unwrap_or_else(Vec::new),
+        ret: doc_sections.remove("Returns").unwrap_or_else(Vec::new),
     }
 }
