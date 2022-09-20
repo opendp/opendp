@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{core::{Transformation, Function, StabilityMap}, error::Fallible, domains::{VectorDomain, AllDomain}, metrics::SymmetricDistance, traits::{Hashable, Primitive}};
 
 use super::{DataFrameDomain, DataFrame};
@@ -5,6 +7,15 @@ use super::{DataFrameDomain, DataFrame};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.
+/// 
+/// # Arguments
+/// * `key` - categorical/hashable data type of the key/column name
+/// 
+/// # Generics
+/// * `K` - data type of key
+/// * `TOA` - Atomic Output Type to downcast vector to
 pub fn make_select_column<K, TOA>(
     key: K,
 ) -> Fallible<
