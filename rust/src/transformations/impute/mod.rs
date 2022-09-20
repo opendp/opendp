@@ -1,6 +1,8 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
+use opendp_derive::bootstrap;
+
 use crate::core::{Domain, Transformation, Function, StabilityMap};
 use crate::domains::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain, InherentNull};
 use crate::error::Fallible;
@@ -52,10 +54,24 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
     fn new() -> Self { InherentNullDomain::new(AllDomain::new()) }
 }
 
-/// A [`Transformation`] that imputes elementwise with a constant value.
+#[bootstrap(
+    features("contrib"), 
+    arguments(constant(rust_type(id="TA"), c_type="AnyObject *")),
+    derived_types(TA(get_atom_or_infer("DA", "constant")))
+)]
+/// Make a Transformation that replaces null/None data with `constant`.
+/// By default, the input type is Vec<Option<TA>>, as emitted by make_cast.
+/// Set `DA` to InherentNullDomain<AllDomain<TA>> for imputing on types 
+/// that have an inherent representation of nullity, like floats.
+/// 
 /// Maps a Vec<Option<T>> -> Vec<T> if input domain is AllDomain<Option<T>>,
 ///     or Vec<T> -> Vec<T> if input domain is NullableDomain<AllDomain<T>>
-/// Type argument DA is "Domain of the Atom"; the domain type inside VectorDomain.
+/// 
+/// # Arguments
+/// * `constant` - Value to replace nulls with.
+/// 
+/// # Generics
+/// * `DA` - Atomic Domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
 pub fn make_impute_constant<DA>(
     constant: DA::Imputed
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>

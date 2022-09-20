@@ -63,7 +63,7 @@ fn make_bootstrap_json(
         .map(|param| param.ident.to_string())
         .chain(
             bootstrap
-                .derived_types
+                .derived_types.clone()
                 .unwrap_or_else(|| DerivedTypes(HashMap::new()))
                 .0
                 .keys()
@@ -176,7 +176,18 @@ fn make_bootstrap_json(
             do_not_convert: bootstrap.ret.map(|ret| ret.do_not_convert).unwrap_or(false),
             example: None,
         },
-        derived_types: Vec::new(),
+        derived_types: bootstrap.derived_types.map(|dt| dt.0).unwrap_or_else(HashMap::new).into_iter().map(|(name, rt)| Argument {
+            name: Some(name),
+            c_type: None,
+            rust_type: Some(rt.0),
+            generics: Vec::new(),
+            hint: None,
+            description: None,
+            default: None,
+            is_type: false,
+            do_not_convert: false,
+            example: None,
+        }).collect(),
     };
 
     Ok((signature.ident.to_string(), function))
