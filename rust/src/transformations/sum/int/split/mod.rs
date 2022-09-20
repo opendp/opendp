@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Function, StabilityMap, Transformation},
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
@@ -45,6 +47,19 @@ macro_rules! impl___signed_int_split_sat_sum {
 impl_unsigned_int_split_sat_sum! { u8 u16 u32 u64 u128 usize }
 impl___signed_int_split_sat_sum! { i8 i16 i32 i64 i128 isize }
 
+
+#[bootstrap(
+    features("contrib"),
+    generics(T(example(get_first("bounds"))))
+)]
+/// Make a Transformation that computes the sum of bounded ints. 
+/// Adds the saturating sum of the positives to the saturating sum of the negatives.
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `T` - Atomic Input Type and Output Type
 pub fn make_bounded_int_split_sum<T>(
     bounds: (T, T),
 ) -> Fallible<
@@ -71,6 +86,20 @@ where
     ))
 }
 
+#[bootstrap(
+    features("contrib"),
+    generics(T(example(get_first("bounds"))))
+)]
+/// Make a Transformation that computes the sum of bounded ints with known dataset size. 
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+/// Adds the saturating sum of the positives to the saturating sum of the negatives.
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `T` - Atomic Input Type and Output Type
 pub fn make_sized_bounded_int_split_sum<T>(
     size: usize,
     bounds: (T, T),

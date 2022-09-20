@@ -81,19 +81,19 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 /// 
 /// # Generics
 /// * `MO` - Output Metric.
-/// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
-/// * `TV - Type of Value. Express counts in terms of this integral type.
+/// * `TIA` - Atomic Input Type that is categorical/hashable. Input data must be Vec<TIA>
+/// * `TOA` - Atomic Output Type that is numeric.
 /// 
 /// # Returns
 /// The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
-pub fn make_count_by_categories<MO, TI, TO>(
-    categories: Vec<TI>,
+pub fn make_count_by_categories<MO, TIA, TOA>(
+    categories: Vec<TIA>,
     null_category: bool
-) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
+) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, MO>>
     where MO: CountByCategoriesConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: Number,
-          TI: Hashable,
-          TO: Number {
+          TIA: Hashable,
+          TOA: Number {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct")
@@ -101,17 +101,17 @@ pub fn make_count_by_categories<MO, TI, TO>(
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new(move |data: &Vec<TI>| {
+        Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories.iter()
-                .map(|cat| (cat, TO::zero())).collect::<HashMap<&TI, TO>>();
-            let mut null_count = TO::zero();
+                .map(|cat| (cat, TOA::zero())).collect::<HashMap<&TIA, TOA>>();
+            let mut null_count = TOA::zero();
 
             data.iter().for_each(|v| {
                 let count = match counts.entry(v) {
                     Entry::Occupied(v) => v.into_mut(),
                     Entry::Vacant(_v) => &mut null_count
                 };
-                *count = TO::one().saturating_add(count)
+                *count = TOA::one().saturating_add(count)
             });
 
             categories.iter().map(|cat| counts.remove(cat)

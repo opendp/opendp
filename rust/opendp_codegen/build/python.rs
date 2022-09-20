@@ -235,7 +235,7 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
     args.iter()
         .filter_map(|arg| match &arg.rust_type {
             Some(RuntimeType::Name(name)) => (name == type_name).then(|| arg.name()),
-            Some(RuntimeType::Raise { origin, args }) =>
+            Some(RuntimeType::Nest { origin, args }) =>
                 if origin == "Vec" {
                     if let RuntimeType::Name(arg_name) = &args[0] {
                         if arg_name == type_name {

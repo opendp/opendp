@@ -6,6 +6,7 @@ pub use int::*;
 
 mod float;
 pub use float::*;
+use opendp_derive::bootstrap;
 
 use crate::core::{Metric, Transformation};
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
@@ -14,6 +15,22 @@ use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::{make_ordered_random, make_unordered};
 
+#[bootstrap(
+    features("contrib"),
+    generics(
+        MI(default = "SymmetricDistance"),
+        T(example(get_first("bounds")))),
+    returns(c_type = "FfiResult<AnyTransformation *>")
+)]
+/// Make a Transformation that computes the sum of bounded data. 
+/// Use `make_clamp` to bound data.
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
+/// * `T` - Atomic Input Type and Output Type.
 pub fn make_bounded_sum<MI, T>(bounds: (T, T)) -> Fallible<BoundedSumTrans<MI, T>>
 where
     MI: Metric,
@@ -21,6 +38,26 @@ where
 {
     T::make_bounded_sum(bounds)
 }
+
+#[bootstrap(
+    module = "transformations",
+    features("contrib"),
+    generics(
+        MI(default = "SymmetricDistance"),
+        T(example(get_first("bounds")))),
+    returns(c_type = "FfiResult<AnyTransformation *>")
+)]
+/// Make a Transformation that computes the sum of bounded data with known dataset size. 
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
+/// * `T` - Atomic Input Type and Output Type.
 pub fn make_sized_bounded_sum<MI, T>(
     size: usize,
     bounds: (T, T),

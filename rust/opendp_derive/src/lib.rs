@@ -1,8 +1,6 @@
 use std::{
     env,
     ffi::OsStr,
-    fs::File,
-    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -45,7 +43,26 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
     let manifest_dir =
         env::var_os("CARGO_MANIFEST_DIR").expect("Failed to determine location of Cargo.toml.");
     let src_dir = PathBuf::from(manifest_dir).join("src");
-    let func_name = item_fn.sig.ident.to_string();
+
+    let func_name = (attr_args.iter())
+        // filter down to NameValues
+        .filter_map(|nm| match nm {
+            NestedMeta::Meta(Meta::NameValue(mnv)) => Some(mnv),
+            _ => None,
+        })
+        // find the proof NameValue
+        .find(|mnv| {
+            mnv.path
+                .get_ident()
+                .map(|ident| ident.to_string() == "name")
+                .unwrap_or(false)
+        })
+        // extract the Value
+        .map(|mnv| extract!(mnv.lit, Lit::Str(ref litstr) => litstr.value()))
+        // otherwise if no proof path was provided, search for it
+        .unwrap_or_else(|| {
+            item_fn.sig.ident.to_string()
+        });
 
     // an optional relative PathBuf
     let proof_path = (attr_args.iter())
@@ -166,6 +183,8 @@ fn find_file_path(file_name: &OsStr, dir: &Path) -> std::io::Result<Option<PathB
 
 #[cfg(feature = "bootstrap-json")]
 fn find_source_path(source: &str, dir: &Path) -> std::io::Result<Option<PathBuf>> {
+    use std::{fs::File, io::Read};
+
     let mut matches = Vec::new();
     if dir.is_dir() {
         for entry in std::fs::read_dir(dir)? {

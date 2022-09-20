@@ -42,9 +42,6 @@ pub struct Argument {
     // Includes various RuntimeType constructors
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rust_type: Option<RuntimeType>,
-    // a list of names in the rust_type that should be considered generics
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub generics: Vec<String>,
     // type hint- a more abstract type that all potential arguments inherit from
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
@@ -54,6 +51,9 @@ pub struct Argument {
     // default value for the argument
     #[serde(default, deserialize_with = "deserialize_some", skip_serializing_if = "Option::is_none")]
     pub default: Option<Value>,
+    // a list of names in the default that should be considered generics
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub generics: Vec<String>,
     // set to true if the argument represents a type
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_type: bool,
@@ -85,7 +85,7 @@ impl Argument {
         if self.is_type {
             return Some("RuntimeTypeDescriptor".to_string())
         }
-        if let Some(RuntimeType::Raise { origin, args }) = &self.rust_type {
+        if let Some(RuntimeType::Nest { origin, args }) = &self.rust_type {
             if origin == "Tuple" {
                 return Some(format!("Tuple[{}]", vec!["Any"; args.len()].join(", ")))
             }
@@ -157,10 +157,10 @@ impl Argument {
 pub enum RuntimeType {
     // reference an existing RuntimeType
     Name(String),
-    // get the ith subtype of an existing RuntimeType
-    Lower { root: Box<RuntimeType>, index: i32 },
     // build a higher level RuntimeType
-    Raise { origin: String, args: Vec<RuntimeType> },
+    Nest { origin: String, args: Vec<RuntimeType> },
+    // explicitly absent
+    None,
     // construct the RuntimeType via function call
     Function { function: String, params: Vec<RuntimeType> },
 }
@@ -178,16 +178,15 @@ impl RuntimeType {
         match self {
             Self::Name(name) =>
                 name.clone(),
-            Self::Lower { root: arg, index } =>
-                format!("{}.args[{}]", arg.to_python(), index),
             Self::Function { function, params } =>
                 format!("{function}({params})", function = function, params = params.iter()
                     .map(|v| v.to_python())
                     .collect::<Vec<_>>().join(", ")),
-            Self::Raise { origin, args } =>
+            Self::Nest { origin, args } =>
                 format!("RuntimeType(origin='{origin}', args=[{args}])",
                         origin = origin,
                         args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(", ")),
+            Self::None => "None".to_string()
         }
     }
 }

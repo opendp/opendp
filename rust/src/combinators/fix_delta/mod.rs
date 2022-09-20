@@ -5,7 +5,7 @@ use crate::{
 };
 
 #[cfg(feature = "ffi")]
-pub mod ffi;
+mod ffi;
 
 pub trait FixDeltaMeasure: Measure {
     type Atom;

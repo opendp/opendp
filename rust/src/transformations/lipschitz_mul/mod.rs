@@ -19,7 +19,7 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(
-        constant(c_type = "void *"), 
+        constant(rust_type(id = "T"), c_type = "void *"), 
         bounds(rust_type(id = "(T, T)"))),
     generics(
         D(default = "AllDomain<T>", generics("T")),

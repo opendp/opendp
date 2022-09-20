@@ -1,5 +1,5 @@
 #[cfg(feature = "ffi")]
-pub mod ffi;
+mod ffi;
 
 use num::Zero;
 

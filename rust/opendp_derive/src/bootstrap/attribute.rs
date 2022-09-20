@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use darling::FromMeta;
 use serde_json::{Number, Value};
-use syn::{parse, GenericArgument, Lit, Meta, MetaList, NestedMeta, Path, Type};
+use syn::{parse, GenericArgument, Lit, Meta, MetaList, NestedMeta, Path, Type, MetaNameValue};
 
 use opendp_pre_derive::RuntimeType;
 
@@ -12,18 +12,20 @@ use crate::extract;
 pub(crate) struct BootstrapAttribute {
     #[allow(dead_code)]
     pub module: Option<String>,
+    #[allow(dead_code)]
+    pub name: Option<String>,
     pub proof: Option<String>,
     pub features: Features,
     #[darling(default)]
-    pub generics: BootTypes,
+    pub generics: BootstrapTypes,
     #[darling(default)]
-    pub arguments: BootTypes,
+    pub arguments: BootstrapTypes,
     pub derived_types: Option<DerivedTypes>,
-    pub ret: Option<BootType>,
+    pub returns: Option<BootstrapType>,
 }
 
 #[derive(Debug, Clone)]
-pub struct DerivedTypes(pub HashMap<String, NewRuntimeType>);
+pub struct DerivedTypes(pub HashMap<String, RuntimeType>);
 
 impl FromMeta for DerivedTypes {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
@@ -44,13 +46,20 @@ impl FromMeta for DerivedTypes {
                         ));
                     }
 
-                    let type_ = NewRuntimeType::from_nested_meta(&nested.first().expect("nested must have length at least 1"))?;
-                    Ok((type_name, type_))
+                    let type_ = OptionRuntimeType::from_nested_meta(
+                        &nested.first().expect("nested must have length at least 1"),
+                    )?;
+                    Ok((
+                        type_name,
+                        type_
+                            .0
+                            .expect("derived types must have valid type information"),
+                    ))
                 } else {
                     Err(darling::Error::custom("expected metalist"))
                 }
             })
-            .collect::<darling::Result<HashMap<String, NewRuntimeType>>>()
+            .collect::<darling::Result<HashMap<String, RuntimeType>>>()
             .map(DerivedTypes)
     }
 }
@@ -69,9 +78,9 @@ impl FromMeta for Features {
 }
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct BootTypes(pub HashMap<String, BootType>);
+pub(crate) struct BootstrapTypes(pub HashMap<String, BootstrapType>);
 
-impl FromMeta for BootTypes {
+impl FromMeta for BootstrapTypes {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
         items
             .iter()
@@ -84,134 +93,103 @@ impl FromMeta for BootTypes {
                         })?
                         .to_string();
                     let type_ =
-                        BootType::from_list(&nested.into_iter().cloned().collect::<Vec<_>>())?;
+                        BootstrapType::from_list(&nested.into_iter().cloned().collect::<Vec<_>>())?;
                     Ok((type_name, type_))
                 } else {
                     Err(darling::Error::custom("expected metalist"))
                 }
             })
-            .collect::<darling::Result<HashMap<String, BootType>>>()
-            .map(BootTypes)
+            .collect::<darling::Result<HashMap<String, BootstrapType>>>()
+            .map(BootstrapTypes)
     }
 }
 
 #[derive(Debug, FromMeta, Clone)]
-pub(crate) struct BootType {
+pub(crate) struct BootstrapType {
     pub c_type: Option<String>,
-    pub rust_type: Option<NewRuntimeType>,
-    pub generics: Option<RuntimeTypeGenerics>,
+    #[darling(default)]
+    pub rust_type: OptionRuntimeType,
     pub hint: Option<String>,
-    pub default: Option<NewValue>,
+    #[darling(default)]
+    pub default: OptionValue,
+    #[darling(default)]
+    pub generics: DefaultGenerics,
     #[darling(default)]
     pub do_not_convert: bool,
-    #[darling(map = "runtimetype_first")]
-    pub example: Option<NewRuntimeType>,
+    #[darling(map = "runtimetype_first", default)]
+    pub example: OptionRuntimeType,
 }
 
-#[derive(Debug, Clone)]
-pub struct NewRuntimeType(pub RuntimeType);
+#[derive(Debug, Clone, Default)]
+pub struct OptionRuntimeType(pub Option<RuntimeType>);
 
-#[derive(Debug, Clone)]
-pub struct NewValue(pub Value);
+#[derive(Debug, Default, Clone)]
+pub struct OptionValue(pub Option<Value>);
 
-impl From<RuntimeType> for NewRuntimeType {
+impl From<RuntimeType> for OptionRuntimeType {
     fn from(v: RuntimeType) -> Self {
-        NewRuntimeType(v)
+        OptionRuntimeType(Some(v))
     }
 }
 
-impl FromMeta for NewValue {
+impl FromMeta for OptionValue {
     fn from_value(value: &syn::Lit) -> darling::Result<Self> {
-        Ok(NewValue(match value {
+        Ok(OptionValue(Some(match value {
             syn::Lit::Str(str) => Value::String(str.value()),
             syn::Lit::Int(int) => Value::Number(int.base10_parse::<i64>()?.into()),
-            syn::Lit::Float(float) => {
-                Value::Number(Number::from_f64(float.base10_parse::<f64>()?).expect("failed to parse f64"))
-            }
+            syn::Lit::Float(float) => Value::Number(
+                Number::from_f64(float.base10_parse::<f64>()?).expect("failed to parse f64"),
+            ),
             syn::Lit::Bool(bool) => Value::Bool(bool.value),
             _ => return Err(darling::Error::custom("unrecognized type")),
-        }))
+        })))
     }
 }
 
 /// retrieve the first child of the first node
-fn runtimetype_first(v: Option<NewRuntimeType>) -> Option<NewRuntimeType> {
-    Some(match v?.0 {
+fn runtimetype_first(v: OptionRuntimeType) -> OptionRuntimeType {
+    OptionRuntimeType(v.0.map(|v| match v {
         RuntimeType::Function { mut params, .. } => params.remove(0),
-        RuntimeType::Raise { mut args, .. } => args.remove(0),
+        RuntimeType::Nest { mut args, .. } => args.remove(0),
         _ => unimplemented!(),
-    }.into())
+    }))
 }
 
-impl FromMeta for NewRuntimeType {
+impl FromMeta for OptionRuntimeType {
     fn from_nested_meta(item: &NestedMeta) -> darling::Result<Self> {
         match item {
             NestedMeta::Meta(meta) => Self::from_meta(meta),
             NestedMeta::Lit(lit) => Self::from_value(lit),
         }
     }
+
     fn from_meta(item: &Meta) -> darling::Result<Self> {
-        fn path_to_rtype(path: Path) -> RuntimeType {
-            let segment = path.segments.last().expect("no last segment");
-            match segment.arguments.clone() {
-                syn::PathArguments::None => RuntimeType::Name(segment.ident.to_string()),
-                syn::PathArguments::AngleBracketed(angle_bracketed) => RuntimeType::Raise {
-                    origin: segment.ident.to_string(),
-                    args: angle_bracketed
-                        .args
-                        .into_iter()
-                        .map(|arg| extract!(arg, GenericArgument::Type(v) => v))
-                        .map(type_to_rtype)
-                        .collect(),
-                },
-                syn::PathArguments::Parenthesized(_) => panic!("parenthesized paths are not supported"),
-            }
-        }
-
-        fn type_to_rtype(type_: Type) -> RuntimeType {
-            match type_ {
-                Type::Path(path) => path_to_rtype(path.path),
-                Type::Tuple(tuple) => RuntimeType::Raise {
-                    origin: String::from("Tuple"),
-                    args: tuple.elems.into_iter().map(type_to_rtype).collect(),
-                },
-                _ => panic!("unexpected type_ variant {:?}", type_),
-            }
-        }
-
+        
         if let Meta::List(MetaList { path, nested, .. }) = item {
-            let (name_values, nested): (Vec<NestedMeta>, Vec<NestedMeta>) = nested
-                .iter()
-                .cloned()
-                .partition(|nm| matches!(nm, NestedMeta::Meta(Meta::NameValue(_))));
+            
+            let first_child = nested.iter().next();
 
-            let id_lit = (name_values.iter())
-                .map(|nv| extract!(nv, NestedMeta::Meta(Meta::NameValue(nv)) => nv))
-                .find(|nv| {
-                    nv.path
-                        .get_ident()
-                        .map(|nv| nv == "id")
-                        .unwrap_or(false)
-                })
-                .map(|nv| nv.lit.clone());
+            // check if the left hand side of a MetaNameValue is equal to value
+            let lhs_eq = |nv: &MetaNameValue, value| nv.path.get_ident().map(|nv| nv == value).unwrap_or(false);
 
-            Ok(if let Some(id_lit) = id_lit {
-                let ts: proc_macro::TokenStream = extract!(id_lit, Lit::Str(litstr) => litstr.value().parse()
-                    .map_err(|e| darling::Error::custom(format!("syn error: {:?}", e)))?);
-                type_to_rtype(parse::<Type>(ts)?).into()
-            } else {
-                RuntimeType::Function {
+            Ok(match first_child {
+                Some(NestedMeta::Meta(Meta::NameValue(mnv))) if lhs_eq(mnv, "id") => {
+                    let ts: proc_macro::TokenStream = extract!(mnv.lit, Lit::Str(ref litstr) => litstr)
+                        .value().parse()
+                        .map_err(|e| darling::Error::custom(format!("syn error: {:?}", e)))?;
+                    type_to_rtype(parse::<Type>(ts)?)
+                }
+                None => RuntimeType::None,
+                _ => RuntimeType::Function {
                     function: (path.get_ident())
-                        .ok_or_else(|| {
-                            darling::Error::custom("path must consist of a single ident")
-                        })?
+                        .ok_or_else(|| darling::Error::custom("path must consist of a single ident"))?
                         .to_string(),
                     params: (nested.iter())
-                        .map(NewRuntimeType::from_nested_meta)
-                        .map(|nrt| nrt.map(|nrt| nrt.0))
+                        .map(OptionRuntimeType::from_nested_meta)
+                        .map(|ort| ort.map(|ort| ort.0.unwrap()))
                         .collect::<darling::Result<Vec<RuntimeType>>>()?,
-                }.into()
-            })
+                },
+            }.into())
         } else {
             Err(darling::Error::custom("expected metalist"))
         }
@@ -225,18 +203,53 @@ impl FromMeta for NewRuntimeType {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct RuntimeTypeGenerics(pub HashSet<String>);
+fn path_to_rtype(path: Path) -> RuntimeType {
+    let segment = path.segments.last().expect("no last segment");
+    match segment.arguments.clone() {
+        syn::PathArguments::None => RuntimeType::Name(segment.ident.to_string()),
+        syn::PathArguments::AngleBracketed(angle_bracketed) => RuntimeType::Nest {
+            origin: segment.ident.to_string(),
+            args: angle_bracketed
+                .args
+                .into_iter()
+                .map(|arg| extract!(arg, GenericArgument::Type(v) => v))
+                .map(type_to_rtype)
+                .collect(),
+        },
+        syn::PathArguments::Parenthesized(_) => {
+            panic!("parenthesized paths are not supported")
+        }
+    }
+}
 
-impl FromMeta for RuntimeTypeGenerics {
+fn type_to_rtype(type_: Type) -> RuntimeType {
+    match type_ {
+        Type::Path(path) => path_to_rtype(path.path),
+        Type::Tuple(tuple) => RuntimeType::Nest {
+            origin: String::from("Tuple"),
+            args: tuple.elems.into_iter().map(type_to_rtype).collect(),
+        },
+        _ => panic!("unexpected type_ variant {:?}", type_),
+    }
+}
+
+
+#[derive(Debug, Default, Clone)]
+pub(crate) struct DefaultGenerics(pub HashSet<String>);
+
+impl FromMeta for DefaultGenerics {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
-        items.iter()
+        items
+            .iter()
             .map(|item| extract!(item, NestedMeta::Lit(lit) => lit))
-            .map(|lit| if let syn::Lit::Str(value) = lit {
-                Ok(value.value())
-            } else {
-                Err(darling::Error::custom("expected string"))
+            .map(|lit| {
+                if let syn::Lit::Str(value) = lit {
+                    Ok(value.value())
+                } else {
+                    Err(darling::Error::custom("expected string"))
+                }
             })
-            .collect::<darling::Result<_>>().map(RuntimeTypeGenerics)
+            .collect::<darling::Result<_>>()
+            .map(DefaultGenerics)
     }
 }

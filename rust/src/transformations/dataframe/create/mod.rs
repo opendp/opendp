@@ -104,7 +104,7 @@ fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> 
 
 #[bootstrap(
     features("contrib"), 
-    arguments(separator(c_type = "char *"))
+    arguments(separator(c_type = "char *", rust_type()))
 )]
 /// Make a Transformation that splits each record in a String into a Vec<Vec<String>>,
 /// and loads the resulting table into a dataframe keyed by `col_names`.
@@ -181,7 +181,7 @@ fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
 
 #[bootstrap(
     features("contrib"), 
-    arguments(separator(c_type = "char *"))
+    arguments(separator(c_type = "char *", rust_type()))
 )]
 /// Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.
 /// 

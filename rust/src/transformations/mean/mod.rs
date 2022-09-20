@@ -17,7 +17,7 @@ use super::{
 
 #[bootstrap(
     features("contrib"),
-    generics(M(default = "SymmetricDistance"), T(example(get_first("bounds"))))
+    generics(MI(default = "SymmetricDistance"), T(example(get_first("bounds"))))
 )]
 /// Make a Transformation that computes the mean of bounded data.
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size.

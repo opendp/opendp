@@ -14,8 +14,10 @@ fn main() {
     let target_dir = find_target_dir(&out_dir);
     let json_dir = target_dir.join("opendp_bootstrap");
 
-    dbg!(&json_dir);
+    // Tell Cargo that if the folder changes, to rerun this build script.
+    println!("cargo:rerun-if-changed={:?}", json_dir);
 
+    
     // allow modules to be unused if no bindings feature flags are enabled
     let _modules = std::fs::read_dir(json_dir)
         .expect("failed to read json_dir")
@@ -30,6 +32,9 @@ fn main() {
                 .to_str()
                 .expect("module name must be valid unicode")
                 .to_string();
+            
+            println!("cargo:rerun-if-changed={:?}", mod_dir);
+
 
             let mut module_fns = std::fs::read_dir(&mod_dir)
                 .expect("failed to read mod_dir")
@@ -37,6 +42,8 @@ fn main() {
                     let fn_path = fn_entry
                         .expect("failed to read module folder filesystem entry")
                         .path();
+
+                    println!("cargo:rerun-if-changed={:?}", fn_path);
 
                     let fn_name = (&fn_path)
                         .file_stem()
@@ -98,11 +105,7 @@ fn flatten_runtime_type(runtime_type: &RuntimeType, derived_types: &Vec<Argument
 
     match runtime_type {
         RuntimeType::Name(name) => resolve_name(name),
-        RuntimeType::Lower { root, index } => RuntimeType::Lower {
-            root: Box::new(flatten_runtime_type(root, derived_types)),
-            index: *index,
-        },
-        RuntimeType::Raise { origin, args } => RuntimeType::Raise {
+        RuntimeType::Nest { origin, args } => RuntimeType::Nest {
             origin: origin.clone(),
             args: args
                 .iter()

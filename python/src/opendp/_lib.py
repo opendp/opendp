@@ -20,9 +20,9 @@ if not os.path.exists(lib_dir):
 
 if os.path.exists(lib_dir):
     platform_to_name = {
-        "darwin": "libopendp.dylib",
-        "linux": "libopendp.so",
-        "win32": "opendp.dll",
+        "darwin": "libopendp_codegen.dylib",
+        "linux": "libopendp_codegen.so",
+        "win32": "opendp_codegen.dll",
     }
     if sys.platform not in platform_to_name:
         raise Exception("Platform not supported", sys.platform)

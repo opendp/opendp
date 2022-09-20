@@ -1,4 +1,4 @@
-use attribute::{DerivedTypes, NewRuntimeType};
+use attribute::DerivedTypes;
 use darling::FromMeta;
 use docstring::DocComments;
 use std::{
@@ -83,24 +83,16 @@ fn make_bootstrap_json(
             .inputs
             .into_iter()
             .map(|v| extract!(v, FnArg::Typed(v) => v))
-            .map(|v| {
-                (
-                    extract!(*v.pat, Pat::Ident(v) => v.ident.to_string()),
-                    *v.ty,
-                )
-            })
+            .map(|v| (
+                extract!(*v.pat, Pat::Ident(v) => v.ident.to_string()),
+                *v.ty,
+            ))
             .map(|(name, ty)| {
                 let boot_type = bootstrap.arguments.0.get(&name);
                 // if rust type is given, use it. Otherwise parse the rust type on the function
-                let (rust_type, generics) = match boot_type.and_then(|bt| bt.rust_type.clone()) {
-                    Some(v) => (
-                        v,
-                        boot_type
-                            .and_then(|bt| bt.generics.clone())
-                            .map(|gen| gen.0)
-                            .unwrap_or_else(HashSet::new),
-                    ),
-                    None => syntype_to_runtimetype(ty.clone(), &all_generics)?,
+                let rust_type = match boot_type.and_then(|bt| bt.rust_type.0.clone()) {
+                    Some(v) => v,
+                    None => syntype_to_runtimetype(ty.clone())?,
                 };
                 Ok(Argument {
                     name: Some(name.clone()),
@@ -108,14 +100,14 @@ fn make_bootstrap_json(
                         Some(ref v) => v.to_string(),
                         None => rust_to_c_type(ty, &all_generics)?,
                     }),
-                    rust_type: Some(rust_type.0),
-                    generics: generics.into_iter().collect(),
+                    rust_type: Some(rust_type),
+                    generics: boot_type.map(|bt| Vec::from_iter(bt.generics.0.iter().cloned())).unwrap_or_else(Vec::new),
                     description: doc_comments
                         .arguments
                         .remove(&name)
                         .map(|dc| dc.join("\n").trim().to_string()),
                     hint: boot_type.and_then(|bt| bt.hint.clone()),
-                    default: boot_type.and_then(|bt| bt.default.clone().map(|def| def.0)),
+                    default: boot_type.and_then(|bt| bt.default.0.clone()),
                     is_type: false,
                     do_not_convert: boot_type.map(|bt| bt.do_not_convert).unwrap_or(false),
                     example: None,
@@ -138,12 +130,12 @@ fn make_bootstrap_json(
                                 .remove(&name)
                                 .map(|dc| dc.join("\n").trim().to_string()),
                             rust_type: None,
-                            generics: Vec::new(),
+                            generics: boot_type.map(|bt| Vec::from_iter(bt.generics.0.iter().cloned())).unwrap_or_else(Vec::new),
                             hint: boot_type.and_then(|bt| bt.hint.clone()),
-                            default: boot_type.and_then(|bt| bt.default.clone().map(|def| def.0)),
+                            default: boot_type.and_then(|bt| bt.default.0.clone()),
                             is_type: true,
                             do_not_convert: false,
-                            example: boot_type.and_then(|bt| bt.example.clone()).map(|bt| bt.0),
+                            example: boot_type.and_then(|bt| bt.example.0.clone()),
                         })
                     }),
             )
@@ -151,7 +143,7 @@ fn make_bootstrap_json(
         ret: Argument {
             name: None,
             c_type: Some(
-                match bootstrap.ret.as_ref().and_then(|bt| bt.c_type.as_ref()) {
+                match bootstrap.returns.as_ref().and_then(|bt| bt.c_type.as_ref()) {
                     Some(ref v) => v.to_string(),
                     None => rust_to_c_type(
                         extract!(signature.output, ReturnType::Type(_, ty) => *ty),
@@ -160,10 +152,9 @@ fn make_bootstrap_json(
                 },
             ),
             rust_type: bootstrap
-                .ret
+                .returns
                 .as_ref()
-                .and_then(|bs| bs.rust_type.clone())
-                .map(|bt| bt.0),
+                .and_then(|bs| bs.rust_type.0.clone()),
             generics: Vec::new(),
             description: if doc_comments.ret.is_empty() {
                 None
@@ -173,13 +164,13 @@ fn make_bootstrap_json(
             hint: None,
             default: None,
             is_type: false,
-            do_not_convert: bootstrap.ret.map(|ret| ret.do_not_convert).unwrap_or(false),
+            do_not_convert: bootstrap.returns.map(|ret| ret.do_not_convert).unwrap_or(false),
             example: None,
         },
         derived_types: bootstrap.derived_types.map(|dt| dt.0).unwrap_or_else(HashMap::new).into_iter().map(|(name, rt)| Argument {
             name: Some(name),
             c_type: None,
-            rust_type: Some(rt.0),
+            rust_type: Some(rt),
             generics: Vec::new(),
             hint: None,
             description: None,
@@ -190,34 +181,26 @@ fn make_bootstrap_json(
         }).collect(),
     };
 
-    Ok((signature.ident.to_string(), function))
+    let fn_name = bootstrap.name.unwrap_or_else(|| signature.ident.to_string());
+
+    Ok((fn_name, function))
 }
 
 fn syntype_to_runtimetype(
-    type_: Type,
-    all_generics: &HashSet<String>,
-) -> darling::Result<(NewRuntimeType, HashSet<String>)> {
-    let mut found_generics = HashSet::new();
+    type_: Type
+) -> darling::Result<RuntimeType> {
     let runtime_type = match type_ {
         Type::Path(tpath) => {
             let segment = tpath.path.segments.last().expect("paths must have at least one segment");
             let name = segment.ident.to_string();
             match &segment.arguments {
-                PathArguments::None => {
-                    if all_generics.contains(&name) {
-                        found_generics.insert(name.clone());
-                    }
-                    RuntimeType::Name(name)
-                },
+                PathArguments::None => RuntimeType::Name(name),
                 PathArguments::AngleBracketed(ab) => {
                     let args = (ab.args.iter())
-                        .map(|arg| extract!(arg, GenericArgument::Type(ty) => syntype_to_runtimetype(ty.clone(), all_generics)))
-                        .collect::<darling::Result<Vec<_>>>()?.into_iter().map(|(arg, gens)| {
-                            found_generics.extend(gens);
-                            arg.0
-                        }).collect();
+                        .map(|arg| extract!(arg, GenericArgument::Type(ty) => syntype_to_runtimetype(ty.clone())))
+                        .collect::<darling::Result<Vec<_>>>()?;
                     
-                    RuntimeType::Raise {
+                    RuntimeType::Nest {
                         origin: name,
                         args: args
                     }
@@ -225,29 +208,17 @@ fn syntype_to_runtimetype(
                 PathArguments::Parenthesized(_) => return Err(darling::Error::custom("parenthesized paths are not supported")),
             }.into()
         }
-        Type::Reference(refer) => {
-            let (rtype, fg) = syntype_to_runtimetype(*refer.elem, &all_generics)?;
-            found_generics.extend(fg);
-            rtype
-        }
-        Type::Tuple(tuple) => {
-            let (args, fgs) = (tuple.elems.into_iter())
-                .map(|type_| syntype_to_runtimetype(type_, all_generics))
-                .collect::<darling::Result<Vec<(_, _)>>>()?
-                .into_iter()
-                .map(|(rt, gen)| (rt.0, gen))
-                .unzip::<_, _, Vec<RuntimeType>, Vec<HashSet<String>>>();
-            fgs.into_iter().for_each(|fg| found_generics.extend(fg));
-            RuntimeType::Raise {
+        Type::Reference(refer) => syntype_to_runtimetype(*refer.elem)?,
+        Type::Tuple(tuple) => RuntimeType::Nest {
                 origin: "Tuple".to_string(),
-                args,
-            }
-            .into()
-        }
-        _ => todo!(),
+                args: (tuple.elems.into_iter())
+                    .map(|type_| syntype_to_runtimetype(type_))
+                    .collect::<darling::Result<Vec<_>>>()?
+            }.into(),
+        t => panic!("unrecognized Type {:?}", t),
     };
 
-    Ok((runtime_type, found_generics))
+    Ok(runtime_type)
 }
 
 fn rust_to_c_type(ty: Type, generics: &HashSet<String>) -> darling::Result<String> {

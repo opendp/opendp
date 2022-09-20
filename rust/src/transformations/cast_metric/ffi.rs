@@ -17,7 +17,11 @@ use crate::transformations::cast_metric::traits::{
     BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric,
 };
 
-#[bootstrap(module = "transformations", features("contrib"))]
+#[bootstrap(
+    name = "make_ordered_random", 
+    module = "transformations", 
+    features("contrib")
+)]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
 /// to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
 /// Operates exclusively on VectorDomain<AllDomain<`TA`>>.
@@ -26,7 +30,7 @@ use crate::transformations::cast_metric::traits::{
 ///
 /// # Generics
 /// * `TA` - Atomic Type.
-fn make_ordered_random<TA: Clone + CheckNull>() -> Fallible<
+pub fn make_ordered_random_wrapper<TA: Clone + CheckNull>() -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TA>>,
         VectorDomain<AllDomain<TA>>,
@@ -44,7 +48,7 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
     let TA = try_!(Type::try_from(TA));
 
     fn monomorphize<TA: 'static + Clone + CheckNull>() -> FfiResult<*mut AnyTransformation> {
-        make_ordered_random::<TA>().into_any()
+        make_ordered_random_wrapper::<TA>().into_any()
     }
     dispatch!(monomorphize, [
         (TA, @primitives)

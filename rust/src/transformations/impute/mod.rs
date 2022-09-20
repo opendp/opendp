@@ -67,6 +67,7 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
 #[bootstrap(
     features("contrib"), 
     arguments(constant(rust_type(id="TA"), c_type="AnyObject *")),
+    generics(DA(default = "OptionNullDomain<AllDomain<TA>>", generics("TA"))),
     derived_types(TA(get_atom_or_infer("DA", "constant")))
 )]
 /// Make a Transformation that replaces null/None data with `constant`.
