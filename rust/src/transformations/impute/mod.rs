@@ -11,8 +11,18 @@ use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckNull, Float};
 
-/// A [`Transformation`] that imputes elementwise with a sample from Uniform(lower, upper).
-/// Maps a Vec<TA> -> Vec<TA>, where the input is a type with built-in nullity.
+#[bootstrap(
+    features("contrib"), 
+    generics(TA(example(get_first("bounds"))))
+)]
+/// Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
+/// Operates on InherentNullDomain<AllDomain<TA>>
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of inclusive lower and upper bounds.
+/// 
+/// # Generics
+/// * `TA` - Atomic Type of data being imputed. One of f32 or f64
 pub fn make_impute_uniform_float<TA>(
     bounds: (TA, TA)
 ) -> Fallible<Transformation<VectorDomain<InherentNullDomain<AllDomain<TA>>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>>
@@ -109,6 +119,12 @@ impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>
     fn new() -> Self { InherentNullDomain::new(AllDomain::new()) }
 }
 
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that drops null values.
+/// Operates on OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>.
+/// 
+/// # Generics
+/// * `DA` - atomic domain of input data that contains nulls.
 pub fn make_drop_null<DA>(
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
     where DA: DropNullDomain, DA::Imputed: CheckNull {

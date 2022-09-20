@@ -2,11 +2,12 @@
 mod ffi;
 
 use num::Float;
+use opendp_derive::bootstrap;
 
 use crate::core::{Metric, Transformation};
-use crate::metrics::AbsoluteDistance;
 use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
+use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, InfMul};
 
 use super::{
@@ -14,6 +15,21 @@ use super::{
     LipschitzMulFloatMetric, MakeSizedBoundedSum,
 };
 
+#[bootstrap(
+    features("contrib"),
+    generics(M(default = "SymmetricDistance"), T(example(get_first("bounds"))))
+)]
+/// Make a Transformation that computes the mean of bounded data.
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size.
+/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+///
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of inclusive lower and upper bounds.
+///
+/// # Generics
+/// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
+/// * `T` - Atomic Input Type and Output Type.
 pub fn make_sized_bounded_mean<MI, T>(
     size: usize,
     bounds: (T, T),
@@ -43,8 +59,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::metrics::SymmetricDistance;
     use crate::error::ExplainUnwrap;
+    use crate::metrics::SymmetricDistance;
     use crate::transformations::mean::make_sized_bounded_mean;
 
     #[test]
