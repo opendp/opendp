@@ -10,6 +10,8 @@ use crate::extract;
 
 #[derive(Debug, FromMeta, Clone)]
 pub(crate) struct BootstrapAttribute {
+    #[allow(dead_code)]
+    pub module: Option<String>,
     pub proof: Option<String>,
     pub features: Features,
     #[darling(default)]

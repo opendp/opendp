@@ -72,25 +72,42 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
         });
 
     #[cfg(feature = "bootstrap-json")]
-    // first, retrieve a relative path (either to the proof or to the source)
-    let module_name = (proof_path.clone())
-        .unwrap_or_else(|| {
-            // detect location of call site
-            find_source_path(&format!("pub fn {func_name}"), &src_dir)
-                .unwrap()
-                .expect("No matching source file found.")
-                .strip_prefix(&src_dir)
-                .unwrap()
-                .to_path_buf()
+    let module_name = (attr_args.iter())
+        // filter down to NameValues
+        .filter_map(|nm| match nm {
+            NestedMeta::Meta(Meta::NameValue(mnv)) => Some(mnv),
+            _ => None,
         })
-        // retrieve the first component as a string
-        .components()
-        .next()
-        .unwrap()
-        .as_os_str()
-        .to_str()
-        .expect("module name must be non-empty")
-        .to_string();
+        // find the proof NameValue
+        .find(|mnv| {
+            mnv.path
+                .get_ident()
+                .map(|ident| ident.to_string() == "module")
+                .unwrap_or(false)
+        })
+        // extract the Value
+        .map(|mnv| extract!(mnv.lit, Lit::Str(ref litstr) => litstr.value()))
+        .unwrap_or_else(|| {
+            // first, retrieve a relative path (either to the proof or to the source)
+            (proof_path.clone())
+                .unwrap_or_else(|| {
+                    // detect location of call site
+                    find_source_path(&format!("pub fn {func_name}"), &src_dir)
+                        .unwrap()
+                        .expect("No matching source file found.")
+                        .strip_prefix(&src_dir)
+                        .unwrap()
+                        .to_path_buf()
+                })
+                // retrieve the first component as a string
+                .components()
+                .next()
+                .unwrap()
+                .as_os_str()
+                .to_str()
+                .expect("module name must be non-empty")
+                .to_string()
+        });
 
     let proof_link = proof_path.map(|relative| make_proof_link(&src_dir, &relative));
 
@@ -104,7 +121,8 @@ pub fn bootstrap(attr: TokenStream, input: TokenStream) -> TokenStream {
         .map(|link| TokenStream::from(quote::quote!(#[doc = #link])))
         .unwrap_or_else(TokenStream::default);
 
-    features.iter()
+    features
+        .iter()
         .for_each(|feat| output.extend(TokenStream::from(quote::quote!(#[cfg(feature=#feat)]))));
 
     output.extend(original_input);
@@ -146,6 +164,7 @@ fn find_file_path(file_name: &OsStr, dir: &Path) -> std::io::Result<Option<PathB
     Ok(matches.get(0).cloned())
 }
 
+#[cfg(feature = "bootstrap-json")]
 fn find_source_path(source: &str, dir: &Path) -> std::io::Result<Option<PathBuf>> {
     let mut matches = Vec::new();
     if dir.is_dir() {

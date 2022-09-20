@@ -8,7 +8,7 @@ use std::{
 };
 use syn::{
     AttributeArgs, FnArg, GenericArgument, GenericParam, ItemFn, Pat,
-    PathArguments, ReturnType, Signature, Type, TypeParam, TypePath, Visibility,
+    PathArguments, ReturnType, Signature, Type, TypeParam, TypePath,
 };
 
 use opendp_pre_derive::{target::find_target_dir, Argument, Function, RuntimeType};
@@ -23,10 +23,7 @@ mod docstring;
 pub fn write_json(module: String, attr: AttributeArgs, input: ItemFn, proof_link: Option<String>) -> darling::Result<()> {
     // Parse the attributes and function signature
     let bootstrap = BootstrapAttribute::from_list(&attr)?;
-    let ItemFn {attrs, vis, sig, ..} = input;
-
-    // assert that visibility is public
-    extract!(vis, Visibility::Public(_) => ());
+    let ItemFn {attrs, sig, ..} = input;
 
     let doc_comments = parse_doc_comments(attrs, proof_link);
 
