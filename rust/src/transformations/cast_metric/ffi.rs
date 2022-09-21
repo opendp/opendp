@@ -29,7 +29,7 @@ use crate::transformations::cast_metric::traits::{
 ///
 /// # Generics
 /// * `TA` - Atomic Type.
-fn make_ordered_random_wrapper<TA: Clone + CheckNull>() -> Fallible<
+fn make_ordered_random<TA: Clone + CheckNull>() -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TA>>,
         VectorDomain<AllDomain<TA>>,
@@ -47,7 +47,7 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
     let TA = try_!(Type::try_from(TA));
 
     fn monomorphize<TA: 'static + Clone + CheckNull>() -> FfiResult<*mut AnyTransformation> {
-        make_ordered_random_wrapper::<TA>().into_any()
+        make_ordered_random::<TA>().into_any()
     }
     dispatch!(monomorphize, [
         (TA, @primitives)

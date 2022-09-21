@@ -8,6 +8,6 @@ serde_json = { version = "1.0.64", features = ["preserve_order"] }
 serde = { version = "1.0.126", features = ["derive"] }
 syn = { version = "1.0.81", features = ["full", "parsing"] }
 quote = { version = "1.0.10" }
-darling = { version = "0.14" }
+darling = { version = "0.14", features = ["suggestions"] }
 proc-macro2 = { version = "1.0" }
 

@@ -1,9 +1,14 @@
-use std::{collections::{HashMap, HashSet}, str::FromStr};
-use darling::FromMeta;
+use darling::{Error, FromMeta, Result};
 use proc_macro2::TokenStream;
-use syn::{Meta, MetaList, NestedMeta, Path, Type, MetaNameValue, Lit, GenericArgument};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
+use syn::{Lit, Meta, MetaList, MetaNameValue, NestedMeta, Type};
 
-use crate::{extract, RuntimeType, Value};
+use crate::{RuntimeType, Value};
+
+use super::syn_type_to_runtime_type;
 
 #[derive(Debug, FromMeta, Clone)]
 pub struct Bootstrap {
@@ -29,7 +34,7 @@ impl Bootstrap {
 pub struct DerivedTypes(pub HashMap<String, RuntimeType>);
 
 impl FromMeta for DerivedTypes {
-    fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
+    fn from_list(items: &[NestedMeta]) -> Result<Self> {
         items
             .iter()
             .map(|nested| {
@@ -37,30 +42,31 @@ impl FromMeta for DerivedTypes {
                     let type_name = path
                         .get_ident()
                         .ok_or_else(|| {
-                            darling::Error::custom("path must consist of a single ident")
+                            Error::custom("path must consist of a single ident").with_span(path)
                         })?
                         .to_string();
 
                     if nested.len() != 1 {
-                        return Err(darling::Error::custom(
-                            "nested must consist of a single meta",
-                        ));
+                        return Err(Error::custom("nested must consist of a single meta")
+                            .with_span(&nested));
                     }
 
-                    let type_ = OptionRuntimeType::from_nested_meta(
-                        &nested.first().expect("nested must have length at least 1"),
-                    )?;
+                    let ty =
+                        OptionRuntimeType::from_nested_meta(nested.first().ok_or_else(|| {
+                            Error::custom("must have length at least 1").with_span(nested)
+                        })?)?;
                     Ok((
                         type_name,
-                        type_
-                            .0
-                            .expect("derived types must have valid type information"),
+                        ty.0.ok_or_else(|| {
+                            Error::custom("derived types must have valid type information")
+                                .with_span(&nested)
+                        })?,
                     ))
                 } else {
-                    Err(darling::Error::custom("expected metalist"))
+                    Err(Error::custom("expected metalist").with_span(nested))
                 }
             })
-            .collect::<darling::Result<HashMap<String, RuntimeType>>>()
+            .collect::<Result<HashMap<String, RuntimeType>>>()
             .map(DerivedTypes)
     }
 }
@@ -83,21 +89,21 @@ pub struct BootstrapTypes(pub HashMap<String, BootstrapType>);
 
 impl FromMeta for BootstrapTypes {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
-        items
-            .iter()
+        (items.iter())
             .map(|nested| {
                 if let NestedMeta::Meta(Meta::List(MetaList { path, nested, .. })) = nested {
                     let type_name = path
                         .get_ident()
                         .ok_or_else(|| {
                             darling::Error::custom("path must consist of a single ident")
+                                .with_span(path)
                         })?
                         .to_string();
                     let type_ =
                         BootstrapType::from_list(&nested.into_iter().cloned().collect::<Vec<_>>())?;
                     Ok((type_name, type_))
                 } else {
-                    Err(darling::Error::custom("expected metalist"))
+                    Err(darling::Error::custom("expected metalist").with_span(nested))
                 }
             })
             .collect::<darling::Result<HashMap<String, BootstrapType>>>()
@@ -140,7 +146,7 @@ impl FromMeta for OptionValue {
             syn::Lit::Int(int) => Value::Integer(int.base10_parse::<i64>()?),
             syn::Lit::Float(float) => Value::Float(float.base10_parse::<f64>()?),
             syn::Lit::Bool(bool) => Value::Bool(bool.value),
-            _ => return Err(darling::Error::custom("unrecognized type")),
+            lit => return Err(darling::Error::unexpected_lit_type(lit).with_span(value)),
         })))
     }
 }
@@ -150,7 +156,7 @@ fn runtimetype_first(v: OptionRuntimeType) -> OptionRuntimeType {
     OptionRuntimeType(v.0.map(|v| match v {
         RuntimeType::Function { mut params, .. } => params.remove(0),
         RuntimeType::Nest { mut args, .. } => args.remove(0),
-        _ => unimplemented!(),
+        _ => unreachable!(),
     }))
 }
 
@@ -162,92 +168,81 @@ impl FromMeta for OptionRuntimeType {
         }
     }
 
-    fn from_meta(item: &Meta) -> darling::Result<Self> {
-        
+    fn from_meta(item: &Meta) -> Result<Self> {
         if let Meta::List(MetaList { path, nested, .. }) = item {
-            
             let first_child = nested.iter().next();
 
             // check if the left hand side of a MetaNameValue is equal to value
-            let lhs_eq = |nv: &MetaNameValue, value| nv.path.get_ident().map(|nv| nv == value).unwrap_or(false);
+            let lhs_eq = |nv: &MetaNameValue, value| {
+                nv.path.get_ident().map(|nv| nv == value).unwrap_or(false)
+            };
 
             Ok(match first_child {
                 Some(NestedMeta::Meta(Meta::NameValue(mnv))) if lhs_eq(mnv, "id") => {
-                    let ts = TokenStream::from_str(&extract!(mnv.lit, Lit::Str(ref litstr) => litstr).value())
-                        .map_err(|e| darling::Error::custom(format!("syn error: {:?}", e)))?;
-                    type_to_rtype(syn::parse2::<Type>(ts)?)
+                    let ts = TokenStream::from_str(
+                        match &mnv.lit {
+                            Lit::Str(ref litstr) => litstr.value(),
+                            lit => {
+                                return Err(Error::custom("type id literals must be strings")
+                                    .with_span(&lit))
+                            }
+                        }
+                        .as_str(),
+                    )
+                    .map_err(|e| {
+                        Error::custom(format!("error while lexing: {:?}", e)).with_span(mnv)
+                    })?;
+                    let ty = syn::parse2::<Type>(ts.clone()).map_err(|e| {
+                        Error::custom(format!(
+                            "error while parsing type {}: {}",
+                            ts,
+                            e.to_string()
+                        ))
+                        .with_span(&mnv.lit)
+                    })?;
+                    syn_type_to_runtime_type(&ty)?
                 }
                 None => RuntimeType::None,
                 _ => RuntimeType::Function {
                     function: (path.get_ident())
-                        .ok_or_else(|| darling::Error::custom("path must consist of a single ident"))?
+                        .ok_or_else(|| {
+                            darling::Error::custom("path must consist of a single ident")
+                                .with_span(path)
+                        })?
                         .to_string(),
                     params: (nested.iter())
                         .map(OptionRuntimeType::from_nested_meta)
-                        .map(|ort| ort.map(|ort| ort.0.unwrap()))
+                        .map(|ort| ort.map(|ort| ort.0.unwrap_or(RuntimeType::None)))
                         .collect::<darling::Result<Vec<RuntimeType>>>()?,
                 },
-            }.into())
+            }
+            .into())
         } else {
-            Err(darling::Error::custom("expected metalist"))
+            Err(Error::custom("expected metalist").with_span(item))
         }
     }
-    fn from_value(value: &syn::Lit) -> darling::Result<Self> {
-        if let syn::Lit::Str(value) = value {
-            Ok(RuntimeType::Name(value.value()).into())
-        } else {
-            Err(darling::Error::custom("expected string"))
-        }
-    }
-}
-
-fn path_to_rtype(path: Path) -> RuntimeType {
-    let segment = path.segments.last().expect("no last segment");
-    match segment.arguments.clone() {
-        syn::PathArguments::None => RuntimeType::Name(segment.ident.to_string()),
-        syn::PathArguments::AngleBracketed(angle_bracketed) => RuntimeType::Nest {
-            origin: segment.ident.to_string(),
-            args: angle_bracketed
-                .args
-                .into_iter()
-                .map(|arg| extract!(arg, GenericArgument::Type(v) => v))
-                .map(type_to_rtype)
-                .collect(),
-        },
-        syn::PathArguments::Parenthesized(_) => {
-            panic!("parenthesized paths are not supported")
+    fn from_value(value: &Lit) -> Result<Self> {
+        match value {
+            Lit::Str(litstr) => Ok(RuntimeType::Name(litstr.value()).into()),
+            _ => Err(Error::custom("expected string").with_span(value)),
         }
     }
 }
-
-fn type_to_rtype(type_: Type) -> RuntimeType {
-    match type_ {
-        Type::Path(path) => path_to_rtype(path.path),
-        Type::Tuple(tuple) => RuntimeType::Nest {
-            origin: String::from("Tuple"),
-            args: tuple.elems.into_iter().map(type_to_rtype).collect(),
-        },
-        _ => panic!("unexpected type_ variant {:?}", type_),
-    }
-}
-
 
 #[derive(Debug, Default, Clone)]
 pub struct DefaultGenerics(pub HashSet<String>);
 
 impl FromMeta for DefaultGenerics {
-    fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
-        items
-            .iter()
-            .map(|item| extract!(item, NestedMeta::Lit(lit) => lit))
-            .map(|lit| {
-                if let syn::Lit::Str(value) = lit {
-                    Ok(value.value())
+    fn from_list(items: &[NestedMeta]) -> Result<Self> {
+        (items.iter())
+            .map(|item| {
+                if let NestedMeta::Lit(Lit::Str(litstr)) = item {
+                    Ok(litstr.value())
                 } else {
-                    Err(darling::Error::custom("expected string"))
+                    Err(Error::custom("expected string").with_span(item))
                 }
             })
-            .collect::<darling::Result<_>>()
+            .collect::<Result<_>>()
             .map(DefaultGenerics)
     }
 }

@@ -50,13 +50,13 @@ use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 test-plot = ["vega_lite_4"]
 
 ffi = ["lazy_static"]
-bindings-python = []
+bindings-python = ["ffi"]
 
 [dev-dependencies]
 criterion = "0.4"
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["rlib", "dylib"]
 
 [package.metadata.docs.rs]
 features = ["untrusted", "ffi"]

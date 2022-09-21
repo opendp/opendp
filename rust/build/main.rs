@@ -11,23 +11,19 @@ use syn::{File, Item, ItemFn};
 
 mod codegen;
 
-
-// sets OUT_DIR for proc-macro usage
 fn main() {
-    let modules = parse_modules().unwrap();
-
-    let _modules = modules.into_iter().map(|(name, module)| {
-        let mut module = module.into_iter().filter(|(_k, v)| !v.is_empty()).collect::<Vec<(String, Function)>>();
-        module.sort_by_key(|(k, _)| k.clone());
-        (name, module)
-    }).collect();
-
-    if cfg!(feature = "bindings-python") {
-        codegen::write_bindings(codegen::python::generate_bindings(_modules));
+    // parse crate into module metadata
+    // this function returns None if code is malformed/unparseable
+    if let Some(_modules) = parse_crate().expect("io error while parsing opendp") {
+        // generate and write bindings based on collected metadata
+        if cfg!(feature = "bindings-python") {
+            codegen::write_bindings(codegen::python::generate_bindings(_modules));
+        }
     }
 }
 
-fn parse_modules() -> std::io::Result<HashMap<String, HashMap<String, Function>>> {
+/// Parses all modules in opendp crate
+fn parse_crate() -> std::io::Result<Option<HashMap<String, Vec<(String, Function)>>>> {
     let manifest_dir =
         env::var_os("CARGO_MANIFEST_DIR").expect("Failed to determine location of Cargo.toml.");
     let src_dir = PathBuf::from(manifest_dir).join("src");
@@ -35,29 +31,46 @@ fn parse_modules() -> std::io::Result<HashMap<String, HashMap<String, Function>>
     let mut modules = HashMap::new();
     for entry in std::fs::read_dir(src_dir)? {
         let path = entry?.path();
-        let module_name = path
-            .file_name()
-            .expect("file name must not be empty")
-            .to_str()
-            .unwrap()
-            .to_string();
+
+        let module_name =
+            if let Some(name) = path.file_name().expect("paths are canonicalized").to_str() {
+                name.to_string()
+            } else {
+                continue;
+            };
 
         if path.is_dir() {
-            modules.insert(module_name, parse_file_tree(&path)?);
+            if let Some(module) = parse_file_tree(&path)? {
+                if !module.is_empty() {
+                    // sort module functions
+                    let mut module = module.into_iter().collect::<Vec<(String, Function)>>();
+                    module.sort_by_key(|(k, _)| k.clone());
+                    modules.insert(module_name, module);
+                }
+            } else {
+                // parsing failed
+                return Ok(None);
+            }
         }
     }
-    Ok(modules)
+    Ok(Some(modules))
 }
 
-fn parse_file_tree(dir: &Path) -> std::io::Result<HashMap<String, Function>> {
+/// Search for bootstrap macro invocations by recursing over `dir`
+fn parse_file_tree(dir: &Path) -> std::io::Result<Option<Vec<(String, Function)>>> {
+    // use here to shadow syn::File
     use std::{fs::File, io::Read};
 
-    let mut matches = HashMap::new();
+    let mut matches = Vec::new();
     if dir.is_dir() {
         for entry in std::fs::read_dir(dir)? {
             let path = entry?.path();
             if path.is_dir() {
-                matches.extend(parse_file_tree(&path)?);
+                if let Some(parsed) = parse_file_tree(&path)? {
+                    matches.extend(parsed);
+                } else {
+                    return Ok(None)
+                };
             } else {
                 // skip non-rust files
                 if path.extension().unwrap_or_default() != "rs" {
@@ -66,20 +79,26 @@ fn parse_file_tree(dir: &Path) -> std::io::Result<HashMap<String, Function>> {
 
                 let mut contents = String::new();
                 File::open(&path)?.read_to_string(&mut contents)?;
-                matches.extend(parse_file(contents))
+                if let Some(funcs) = parse_file(contents) {
+                    matches.extend(funcs);
+                } else {
+                    return Ok(None);
+                }
             };
         }
     }
-    Ok(matches)
+    Ok(Some(matches))
 }
 
-fn parse_file(text: String) -> HashMap<String, Function> {
-    let items = TokenStream::from_str(&text)
-        .ok()
-        .and_then(|ts| syn::parse2::<File>(ts).ok())
-        .map(|file| file.items)
-        .unwrap_or_else(Vec::new);
+/// Search a file for bootstrap macro invocations
+fn parse_file(text: String) -> Option<Vec<(String, Function)>> {
+    // ignore files that fail to parse so as not to break IDE tooling
+    let ts = TokenStream::from_str(&text).ok()?;
 
+    // use parse2 and TokenStream from proc_macro2 because we are not in a proc_macro context
+    let items = syn::parse2::<File>(ts).ok()?.items;
+
+    // flatten and filter the contents of a file into a vector of functions
     fn flatten_fns(item: Item) -> Vec<ItemFn> {
         match item {
             Item::Fn(func) => vec![func],
@@ -90,28 +109,31 @@ fn parse_file(text: String) -> HashMap<String, Function> {
             _ => Vec::new(),
         }
     }
+
     fn path_is_eq(path: &syn::Path, name: &str) -> bool {
         path.get_ident().map(ToString::to_string).as_deref() == Some(name)
     }
+
+    // parse all functions
     (items.into_iter())
         .flat_map(flatten_fns)
-        .filter(|func| {
-            func.attrs
-                .iter()
-                .any(|attr| path_is_eq(&attr.path, "bootstrap"))
-        })
-        .filter_map(|mut func| {
-            let idx = func
-                .attrs
-                .iter()
-                .position(|attr| path_is_eq(&attr.path, "bootstrap")).unwrap();
-            let attr = func.attrs.remove(idx);
-            let attr_args = match attr.parse_meta().expect("failed to parse bootstrap meta") {
-                syn::Meta::List(ml) => ml.nested.into_iter().collect(),
-                _ => return None
-            };
+        // ignore the function if it doesn't have a bootstrap proc macro invocation
+        .filter(|func| (func.attrs.iter()).any(|attr| path_is_eq(&attr.path, "bootstrap")))
+        // attempt to parse and simulate the proc macro on the function
+        .map(|mut func| {
+            // extract the bootstrap attribute
+            let idx = (func.attrs.iter())
+                .position(|attr| path_is_eq(&attr.path, "bootstrap"))
+                .expect("bootstrap attr always exists because of filter");
+            let bootstrap_attr = func.attrs.remove(idx);
 
-            Some(Function::from_ast(attr_args, func).unwrap())
+            // parse args to the bootstrap macro
+            let attr_args = match bootstrap_attr.parse_meta().ok()? {
+                syn::Meta::List(ml) => ml.nested.into_iter().collect(),
+                _ => return None,
+            };
+            // use the bootstrap crate to parse a Function 
+            Function::from_ast(attr_args, func).ok()
         })
         .collect()
 }

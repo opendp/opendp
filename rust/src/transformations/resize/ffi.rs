@@ -17,7 +17,6 @@ use crate::transformations::resize::IsMetricOrdered;
 #[bootstrap(
     module = "transformations",
     features("contrib"),
-    arguments(constant(c_type = "void *")),
     generics(
         MI(default = "SymmetricDistance"),
         MO(default = "SymmetricDistance")
@@ -80,6 +79,7 @@ pub extern "C" fn opendp_transformations__make_resize(
 
 #[bootstrap(
     features("contrib"),
+    arguments(constant(c_type = "void *")),
     generics(
         MI(default = "SymmetricDistance"),
         MO(default = "SymmetricDistance"),

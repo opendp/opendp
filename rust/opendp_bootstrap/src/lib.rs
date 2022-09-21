@@ -167,18 +167,3 @@ impl RuntimeType {
         }
     }
 }
-
-
-macro_rules! extract {
-    ($value:expr, $pattern:pat => $extracted_value:expr) => {
-        match $value {
-            $pattern => $extracted_value,
-            _ => panic!(concat!(
-                stringify!($value),
-                " doesn't match ",
-                stringify!($pattern)
-            )),
-        }
-    };
-}
-pub(crate) use extract;

@@ -1,8 +1,7 @@
-use std::{collections::HashMap, env, path::PathBuf, ffi::OsStr};
+use std::{collections::HashMap, env, ffi::OsStr, path::PathBuf};
 
-use syn::{Attribute, Meta, Lit};
-
-use crate::extract;
+use darling::{Error, Result};
+use syn::{Attribute, Lit, Meta, MetaNameValue};
 
 #[derive(Debug, Default)]
 pub struct Docstring {
@@ -13,11 +12,11 @@ pub struct Docstring {
 }
 
 impl Docstring {
-    pub fn from_attrs(attrs: Vec<Attribute>) -> Docstring {
-        let mut doc_sections = parse_docstring_sections(attrs);
-    
+    pub fn from_attrs(attrs: Vec<Attribute>) -> Result<Docstring> {
+        let mut doc_sections = parse_docstring_sections(attrs)?;
+
         let mut description = doc_sections.remove("Description").unwrap_or_else(Vec::new);
-    
+
         let mut insert_section = |section_name: &str| {
             doc_sections.remove(section_name).map(|section| {
                 description.extend(vec![
@@ -28,8 +27,8 @@ impl Docstring {
             })
         };
         insert_section("Citations");
-    
-        Docstring {
+
+        Ok(Docstring {
             description,
             arguments: doc_sections
                 .remove("Arguments")
@@ -40,7 +39,7 @@ impl Docstring {
                 .map(parse_docstring_args)
                 .unwrap_or_else(HashMap::new),
             ret: doc_sections.remove("Returns").unwrap_or_else(Vec::new),
-        }
+        })
     }
 }
 
@@ -68,13 +67,21 @@ fn parse_docstring_args(mut args: Vec<String>) -> HashMap<String, Vec<String>> {
         .collect::<HashMap<String, Vec<String>>>()
 }
 
-fn parse_docstring_sections(attrs: Vec<Attribute>) -> HashMap<String, Vec<String>> {
-    let mut docstrings = attrs
-        .into_iter()
+fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Vec<String>>> {
+    let mut docstrings = (attrs.into_iter())
         .filter(|v| v.path.get_ident().map(ToString::to_string).as_deref() == Some("doc"))
-        .map(|v| v.parse_meta().unwrap())
-        .map(|v| extract!(v, Meta::NameValue(v) => v.lit))
-        .map(|v| extract!(v, Lit::Str(v) => v.value()))
+        .map(|v| {
+            if let Meta::NameValue(MetaNameValue {
+                lit: Lit::Str(v), ..
+            }) = v.parse_meta()?
+            {
+                Ok(v.value())
+            } else {
+                Err(Error::custom("doc attribute must have string literal").with_span(&v))
+            }
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
         .filter_map(|v| v.starts_with(" ").then(|| v[1..].to_string()))
         .collect::<Vec<String>>();
 
@@ -82,7 +89,7 @@ fn parse_docstring_sections(attrs: Vec<Attribute>) -> HashMap<String, Vec<String
     docstrings.insert(0, "# Description".to_string());
     docstrings.push("# End".to_string());
 
-    docstrings
+    Ok(docstrings
         .iter()
         .enumerate()
         .filter_map(|(i, v)| v.starts_with("# ").then(|| i))
@@ -92,18 +99,21 @@ fn parse_docstring_sections(attrs: Vec<Attribute>) -> HashMap<String, Vec<String
             (
                 docstrings[window[0]]
                     .strip_prefix("# ")
-                    .unwrap()
+                    .expect("won't panic (because of filter)")
                     .to_string(),
                 docstrings[window[0] + 1..window[1]].to_vec(),
             )
         })
-        .collect::<HashMap<String, Vec<String>>>()
+        .collect::<HashMap<String, Vec<String>>>())
 }
 
 pub fn find_relative_proof_path(func_name: &str) -> Option<String> {
     let src_dir = get_src_dir();
 
-    fn find_absolute_path(file_name: &OsStr, dir: &std::path::Path) -> std::io::Result<Option<PathBuf>> {
+    fn find_absolute_path(
+        file_name: &OsStr,
+        dir: &std::path::Path,
+    ) -> std::io::Result<Option<PathBuf>> {
         let mut matches = Vec::new();
         if dir.is_dir() {
             for entry in std::fs::read_dir(dir)? {
@@ -122,16 +132,23 @@ pub fn find_relative_proof_path(func_name: &str) -> Option<String> {
         }
         Ok(matches.get(0).cloned())
     }
+
     find_absolute_path(&OsStr::new(format!("{func_name}.tex").as_str()), &src_dir)
-        .unwrap()
+        .expect("failed to read crate source")
         // turn into relative PathBuf
-        .map(|pb| pb.strip_prefix(&src_dir).unwrap().to_path_buf().to_str().unwrap().to_string())
+        .map(|pb| {
+            pb.strip_prefix(&src_dir)
+                .expect("failed to strip src_dir from proof path")
+                .to_path_buf()
+                .to_str()
+                .expect("relative proof path is empty")
+                .to_string()
+        })
 }
 
-
 pub fn get_src_dir() -> PathBuf {
-    let manifest_dir =
-        std::env::var_os("CARGO_MANIFEST_DIR").expect("Failed to determine location of Cargo.toml.");
+    let manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR")
+        .expect("Failed to determine location of Cargo.toml.");
     PathBuf::from(manifest_dir).join("src")
 }
 
@@ -148,7 +165,7 @@ pub fn make_proof_link(relative_path: PathBuf) -> String {
     let target = if cfg!(feature = "local") {
         absolute_path
             .to_str()
-            .expect("failed to retrieve str")
+            .expect("absolute path is empty")
             .to_string()
     } else {
         format!(
