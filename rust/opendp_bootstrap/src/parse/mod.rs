@@ -240,7 +240,7 @@ fn syn_type_to_runtime_type(ty: &Type) -> Result<RuntimeType> {
                 .collect::<Result<Vec<_>>>()?,
         }
         .into(),
-        t => return Err(Error::custom("unrecognized type").with_span(t)),
+        t => return Err(Error::custom("unrecognized type for RuntimeType").with_span(t)),
     })
 }
 
@@ -301,10 +301,10 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                     )
                 }
                 i if generics.contains(&i) => "AnyObject *".to_string(),
-                _ => return Err(Error::custom("unrecognized type").with_span(segment)),
+                _ => return Err(Error::custom("Unrecognized rust type. Failed to convert to C type.").with_span(segment)),
             }
         }
         Type::Tuple(_) => "AnyObject *".to_string(),
-        ty => return Err(Error::custom("unrecognized type structure").with_span(&ty)),
+        ty => return Err(Error::custom("Unrecognized rust type structure. Failed to convert to C type.").with_span(&ty)),
     })
 }

@@ -6,7 +6,7 @@ use proc_macro::TokenStream;
 
 use opendp_bootstrap::parse::{
     bootstrap::Bootstrap,
-    docstring::{find_relative_proof_path, make_proof_link, Docstring},
+    docstring::{find_relative_proof_path, make_proof_link, Docstring}, reconcile_function,
 };
 
 macro_rules! try_ {
@@ -32,15 +32,17 @@ pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     let ItemFn { attrs, sig, .. } = parse_macro_input!(input as ItemFn);
 
     // attempt to parse docstring to detect formatting errors
-    try_!(Docstring::from_attrs(attrs), original_input);
+    let docstrings = try_!(Docstring::from_attrs(attrs), original_input);
 
     // parse bootstrap arguments
     let attr_args = parse_macro_input!(attr_args as AttributeArgs);
     let mut bootstrap = try_!(Bootstrap::from_attribute_args(&attr_args), original_input);
 
+
     if let None = bootstrap.proof {
         bootstrap.proof = find_relative_proof_path(&sig.ident.to_string());
     }
+    try_!(reconcile_function(bootstrap.clone(), docstrings, sig), original_input);
 
     let mut output = TokenStream::new();
 
