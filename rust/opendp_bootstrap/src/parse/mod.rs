@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use syn::{
     AttributeArgs, FnArg, GenericArgument, GenericParam, ItemFn, Pat, PathArguments, ReturnType,
     Signature, Type, TypeParam, TypePath,
@@ -13,7 +13,7 @@ use darling::{Error, Result};
 
 use crate::parse::{bootstrap::Bootstrap, docstring::Docstring};
 
-use self::{bootstrap::DerivedTypes, docstring::find_relative_proof_path};
+use self::docstring::find_relative_proof_path;
 
 impl Function {
     pub fn from_ast(attr_args: AttributeArgs, item_fn: ItemFn) -> Result<(String, Function)> {
@@ -63,10 +63,9 @@ pub fn reconcile_function(
             bootstrap
                 .derived_types
                 .clone()
-                .unwrap_or_else(|| DerivedTypes(HashMap::new()))
+                .unwrap_or_default()
                 .0
-                .keys()
-                .cloned(),
+                .iter().map(|v| v.0.clone()),
         )
         .collect::<HashSet<String>>();
 
@@ -98,7 +97,7 @@ pub fn reconcile_function(
                 let boot_type = bootstrap.arguments.0.get(&name);
 
                 // if rust type is given, use it. Otherwise parse the rust type on the function
-                let rust_type = match boot_type.and_then(|bt| bt.rust_type.0.clone()) {
+                let rust_type = match boot_type.and_then(|bt| bt.rust_type.clone().map(|rt| rt.0)) {
                     Some(v) => v,
                     None => syn_type_to_runtime_type(&*pat_type.ty)?,
                 };
@@ -143,7 +142,7 @@ pub fn reconcile_function(
                         default: boot_type.and_then(|bt| bt.default.0.clone()),
                         is_type: true,
                         do_not_convert: false,
-                        example: boot_type.and_then(|bt| bt.example.0.clone()),
+                        example: boot_type.and_then(|bt| bt.example.clone().map(|rt| rt.0)),
                     })
                 }),
             )
@@ -169,7 +168,7 @@ pub fn reconcile_function(
             rust_type: bootstrap
                 .returns
                 .as_ref()
-                .and_then(|bs| bs.rust_type.0.clone()),
+                .and_then(|bs| bs.rust_type.clone().map(|rt| rt.0)),
             description: if doc_comments.ret.is_empty() {
                 None
             } else {
@@ -184,7 +183,7 @@ pub fn reconcile_function(
         derived_types: bootstrap
             .derived_types
             .map(|dt| dt.0)
-            .unwrap_or_else(HashMap::new)
+            .unwrap_or_default()
             .into_iter()
             .map(|(name, rt)| Argument {
                 name: Some(name),
@@ -269,6 +268,24 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 .ok_or_else(|| Error::custom("at least one segment required").with_span(&path))?;
 
             match segment.ident.to_string() {
+                i if i == "Option" => {
+                    let first_arg = if let PathArguments::AngleBracketed(ab) = &segment.arguments {
+                        ab.args.first().ok_or_else(|| Error::custom("Option must have one argument").with_span(&ab))?
+                    } else {
+                        return Err(Error::custom("Option must have angle brackets").with_span(segment))
+                    };
+
+                    let inner_c_type = if let GenericArgument::Type(ty) = first_arg {
+                        syn_type_to_c_type(ty.clone(), generics)?
+                    } else {
+                        return Err(Error::custom("Option's argument must be a Type").with_span(segment))
+                    };
+                    match inner_c_type.as_str() {
+                        "AnyObject *" => "AnyObject *".to_string(),
+                        "char *" => "char *".to_string(),
+                        _ => "void *".to_string()
+                    }
+                },
                 i if i == "String" => "AnyObject *".to_string(),
                 i if i == "Vec" => "AnyObject *".to_string(),
                 i if i == "bool" => "bool".to_string(),

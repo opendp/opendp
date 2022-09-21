@@ -4,7 +4,7 @@ use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
 };
-use syn::{Lit, Meta, MetaList, MetaNameValue, NestedMeta, Type};
+use syn::{Lit, Meta, MetaList, MetaNameValue, NestedMeta, Path, Type};
 
 use crate::{RuntimeType, Value};
 
@@ -30,13 +30,13 @@ impl Bootstrap {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct DerivedTypes(pub HashMap<String, RuntimeType>);
+#[derive(Debug, Clone, Default)]
+pub struct DerivedTypes(pub Vec<(String, RuntimeType)>);
 
 impl FromMeta for DerivedTypes {
     fn from_list(items: &[NestedMeta]) -> Result<Self> {
-        items
-            .iter()
+        // each item should be a metalist consisting of the derived type name and runtime type info: T(id = "X")
+        (items.iter())
             .map(|nested| {
                 if let NestedMeta::Meta(Meta::List(MetaList { path, nested, .. })) = nested {
                     let type_name = path
@@ -52,21 +52,15 @@ impl FromMeta for DerivedTypes {
                     }
 
                     let ty =
-                        OptionRuntimeType::from_nested_meta(nested.first().ok_or_else(|| {
+                        NewRuntimeType::from_nested_meta(nested.first().ok_or_else(|| {
                             Error::custom("must have length at least 1").with_span(nested)
                         })?)?;
-                    Ok((
-                        type_name,
-                        ty.0.ok_or_else(|| {
-                            Error::custom("derived types must have valid type information")
-                                .with_span(&nested)
-                        })?,
-                    ))
+                    Ok((type_name, ty.0))
                 } else {
-                    Err(Error::custom("expected metalist").with_span(nested))
+                    Err(Error::custom("expected metalist in DerivedTypes").with_span(nested))
                 }
             })
-            .collect::<Result<HashMap<String, RuntimeType>>>()
+            .collect::<Result<Vec<(String, RuntimeType)>>>()
             .map(DerivedTypes)
     }
 }
@@ -103,7 +97,10 @@ impl FromMeta for BootstrapTypes {
                         BootstrapType::from_list(&nested.into_iter().cloned().collect::<Vec<_>>())?;
                     Ok((type_name, type_))
                 } else {
-                    Err(darling::Error::custom("expected metalist").with_span(nested))
+                    Err(
+                        darling::Error::custom("expected metalist in BootstrapTypes")
+                            .with_span(nested),
+                    )
                 }
             })
             .collect::<darling::Result<HashMap<String, BootstrapType>>>()
@@ -114,8 +111,8 @@ impl FromMeta for BootstrapTypes {
 #[derive(Debug, FromMeta, Clone)]
 pub struct BootstrapType {
     pub c_type: Option<String>,
-    #[darling(default)]
-    pub rust_type: OptionRuntimeType,
+    #[darling(map = "runtimetype_first")]
+    pub rust_type: Option<NewRuntimeType>,
     pub hint: Option<String>,
     #[darling(default)]
     pub default: OptionValue,
@@ -123,19 +120,19 @@ pub struct BootstrapType {
     pub generics: DefaultGenerics,
     #[darling(default)]
     pub do_not_convert: bool,
-    #[darling(map = "runtimetype_first", default)]
-    pub example: OptionRuntimeType,
+    #[darling(map = "runtimetype_first")]
+    pub example: Option<NewRuntimeType>,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct OptionRuntimeType(pub Option<RuntimeType>);
+#[derive(Debug, Clone)]
+pub struct NewRuntimeType(pub RuntimeType);
 
 #[derive(Debug, Default, Clone)]
 pub struct OptionValue(pub Option<Value>);
 
-impl From<RuntimeType> for OptionRuntimeType {
+impl From<RuntimeType> for NewRuntimeType {
     fn from(v: RuntimeType) -> Self {
-        OptionRuntimeType(Some(v))
+        NewRuntimeType(v)
     }
 }
 
@@ -149,77 +146,96 @@ impl FromMeta for OptionValue {
             lit => return Err(darling::Error::unexpected_lit_type(lit).with_span(value)),
         })))
     }
+    fn from_list(items: &[NestedMeta]) -> Result<Self> {
+        if items.is_empty() {
+            Ok(OptionValue(Some(Value::Null)))
+        } else {
+            Err(Error::custom("option meta list must be empty to denote a null value"))
+        }
+    }
 }
 
 /// retrieve the first child of the first node
-fn runtimetype_first(v: OptionRuntimeType) -> OptionRuntimeType {
-    OptionRuntimeType(v.0.map(|v| match v {
-        RuntimeType::Function { mut params, .. } => params.remove(0),
-        RuntimeType::Nest { mut args, .. } => args.remove(0),
-        _ => unreachable!(),
-    }))
+fn runtimetype_first(v: Option<NewRuntimeType>) -> Option<NewRuntimeType> {
+    v.map(|v| v.0)
+        .map(|v| {
+            match v {
+                RuntimeType::Function { params, .. } => params,
+                RuntimeType::Nest { args, .. } => args,
+                _ => unreachable!(),
+            }
+            .first().cloned().unwrap_or(RuntimeType::None)
+        })
+        .map(NewRuntimeType)
 }
 
-impl FromMeta for OptionRuntimeType {
-    fn from_nested_meta(item: &NestedMeta) -> darling::Result<Self> {
-        match item {
-            NestedMeta::Meta(meta) => Self::from_meta(meta),
-            NestedMeta::Lit(lit) => Self::from_value(lit),
+impl FromMeta for NewRuntimeType {
+    fn from_list(items: &[NestedMeta]) -> Result<Self> {
+        match items.len() {
+            0 => Ok(NewRuntimeType(RuntimeType::None)),
+            1 => NewRuntimeType::from_nested_meta(&items[0]),
+            _ => {
+                Err(darling::Error::custom("rust_type given too many arguments")
+                    .with_span(&items[1]))
+            }
         }
     }
-
     fn from_meta(item: &Meta) -> Result<Self> {
-        if let Meta::List(MetaList { path, nested, .. }) = item {
-            let first_child = nested.iter().next();
-
-            // check if the left hand side of a MetaNameValue is equal to value
-            let lhs_eq = |nv: &MetaNameValue, value| {
-                nv.path.get_ident().map(|nv| nv == value).unwrap_or(false)
-            };
-
-            Ok(match first_child {
-                Some(NestedMeta::Meta(Meta::NameValue(mnv))) if lhs_eq(mnv, "id") => {
-                    let ts = TokenStream::from_str(
-                        match &mnv.lit {
-                            Lit::Str(ref litstr) => litstr.value(),
-                            lit => {
-                                return Err(Error::custom("type id literals must be strings")
-                                    .with_span(&lit))
-                            }
-                        }
-                        .as_str(),
+        let extract_ident = |path: &Path| {
+            Result::Ok(
+                path.get_ident()
+                    .ok_or_else(|| {
+                        darling::Error::custom("path must consist of a single ident")
+                            .with_span(&path)
+                    })?
+                    .to_string(),
+            )
+        };
+        Ok(NewRuntimeType(match item {
+            Meta::List(MetaList { path, nested, .. }) => RuntimeType::Function {
+                function: extract_ident(path)?,
+                params: (nested.iter())
+                    .map(NewRuntimeType::from_nested_meta)
+                    .map(|ort| ort.map(|ort| ort.0))
+                    .collect::<darling::Result<Vec<RuntimeType>>>()?,
+            },
+            Meta::NameValue(MetaNameValue { path, lit, .. }) => {
+                if extract_ident(path)?.as_str() != "id" {
+                    return Err(darling::Error::custom(
+                        "The only supported NameValue argument is \"id\"",
                     )
-                    .map_err(|e| {
-                        Error::custom(format!("error while lexing: {:?}", e)).with_span(mnv)
-                    })?;
-                    let ty = syn::parse2::<Type>(ts.clone()).map_err(|e| {
-                        Error::custom(format!(
-                            "error while parsing type {}: {}",
-                            ts,
-                            e.to_string()
-                        ))
-                        .with_span(&mnv.lit)
-                    })?;
-                    syn_type_to_runtime_type(&ty)?
+                    .with_span(&path));
                 }
-                None => RuntimeType::None,
-                _ => RuntimeType::Function {
-                    function: (path.get_ident())
-                        .ok_or_else(|| {
-                            darling::Error::custom("path must consist of a single ident")
-                                .with_span(path)
-                        })?
-                        .to_string(),
-                    params: (nested.iter())
-                        .map(OptionRuntimeType::from_nested_meta)
-                        .map(|ort| ort.map(|ort| ort.0.unwrap_or(RuntimeType::None)))
-                        .collect::<darling::Result<Vec<RuntimeType>>>()?,
-                },
+                let ts = TokenStream::from_str(
+                    match &lit {
+                        Lit::Str(ref litstr) => litstr.value(),
+                        lit => {
+                            return Err(
+                                Error::custom("type id literals must be strings").with_span(&lit)
+                            )
+                        }
+                    }
+                    .as_str(),
+                )
+                .map_err(|e| {
+                    Error::custom(format!("error while lexing: {:?}", e)).with_span(lit)
+                })?;
+                let ty = syn::parse2::<Type>(ts.clone()).map_err(|e| {
+                    Error::custom(format!(
+                        "error while parsing type {}: {}",
+                        ts,
+                        e.to_string()
+                    ))
+                    .with_span(&lit)
+                })?;
+                syn_type_to_runtime_type(&ty)?
             }
-            .into())
-        } else {
-            Err(Error::custom("expected metalist").with_span(item))
-        }
+            Meta::Path(path) => {
+                return Err(
+                    Error::custom("paths are invalid arguments to rust_type").with_span(path)
+                )
+            }
+        }))
     }
     fn from_value(value: &Lit) -> Result<Self> {
         match value {

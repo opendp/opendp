@@ -1,4 +1,5 @@
 use num::Float as _;
+use opendp_derive::bootstrap;
 
 use crate::{
     core::{Measure, Measurement, PrivacyMap, SensitivityMetric},
@@ -52,6 +53,30 @@ where
     }
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        scale(rust_type(id = "T"), c_type = "void *"),
+        k(default = -1074, rust_type(id = "i32"), c_type = "uint32_t")),
+    generics(
+        D(default = "AllDomain<T>", generics("T")),
+        MO(default = "ZeroConcentratedDivergence<T>", generics("T"))),
+    derived_types(T(get_atom_or_infer("D", "scale")))
+)]
+/// Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
+/// Adjust D to noise vector-valued data.
+/// 
+/// This function takes a noise granularity in terms of 2^k. 
+/// Larger granularities are more computationally efficient, but have a looser privacy map. 
+/// If k is not set, k defaults to the smallest granularity.
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+/// * `k` - The noise granularity.
+/// 
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>.
+/// * `MO` - Output Measure. The only valid measure is ZeroConcentratedDivergence<T>.
 pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MO>>
 where
     D: GaussianDomain,

@@ -1,6 +1,8 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use opendp_derive::bootstrap;
+
 use crate::core::{Measurement, PrivacyMap};
 use crate::error::*;
 use crate::measures::MaxDivergence;
@@ -54,6 +56,17 @@ where
     ))
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        scale(c_type = "void *"),
+        bounds(rust_type(id = "OptionT"), default())),
+    generics(
+        D(default = "AllDomain<int>")),
+    derived_types(
+        T(get_atom("D")),
+        OptionT(id = "Option<(T, T)>"))
+)]
 #[deprecated(
     since = "0.5.0",
     note = "Use `make_base_discrete_laplace` instead. For a constant-time algorithm, pass bounds into `make_base_discrete_laplace_linear`."

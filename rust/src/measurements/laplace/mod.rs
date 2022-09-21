@@ -26,8 +26,8 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
 #[bootstrap(
     features("contrib"),
     arguments(
-        scale(c_type = "void *", rust_type(id = "T")),
-        k(default = -1074, c_type = "void *")),
+        scale(rust_type(id = "T"), c_type = "void *"),
+        k(default = -1074, rust_type(id = "i32"), c_type = "uint32_t")),
     generics(
         D(default = "AllDomain<T>", generics("T"))),
     derived_types(T(get_atom_or_infer("D", "scale")))
