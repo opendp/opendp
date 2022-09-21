@@ -1,6 +1,6 @@
 //! Various implementations of Transformations.
 //!
-//! The different [`Transformation`] implementations in this module are accessed by calling the appropriate constructor function.
+//! The different [`crate::core::Transformation`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
 #[cfg(feature="contrib")]

@@ -72,10 +72,11 @@ def choose_branching_factor(
     """Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
     that minimizes error in cdf and quantile estimates based on b-ary trees.
     
-    Citations
-    ---------
+    **Citations**
+    
     * QYL13, Understanding Hierarchical Methods for Differentially Private Histograms
-      Proposition 1: http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf
+    
+       * Proposition 1: <http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf>
     
     :param size_guess: A guess at the size of your dataset.
     :type size_guess: int
@@ -585,10 +586,11 @@ def make_consistent_b_ary_tree(
     The output remains consistent even when leaf nodes are missing.
     This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
     
-    Citations
-    ---------
+    **Citations**
+    
     * HRMS09, Boosting the Accuracy of Differentially Private Histograms Through Consistency
-      Section 4.1: https://arxiv.org/pdf/0904.0942.pdf
+      
+       * Section 4.1: <https://arxiv.org/pdf/0904.0942.pdf>
     
     :param branching_factor: 
     :type branching_factor: int

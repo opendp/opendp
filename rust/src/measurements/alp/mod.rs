@@ -154,7 +154,7 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
 /// * `scale` - Privacy loss parameter. This is equal to epsilon/sensitivity.
 /// * `s` - Size of the projection. This should be sufficiently large to limit hash collisions.
 /// * `h` - Hash functions used to project and estimate entries. The hash functions are not allowed to panic on any input.
-/// The hash functions in `h` should have type K -> [s]. To limit collisions the functions should be universal and uniform.
+/// The hash functions in `h` should have type K -> \[s\]. To limit collisions the functions should be universal and uniform.
 /// The evaluation time of post-processing is O(h.len()).
 pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: HashFunctions<K>)
         -> Fallible<Measurement<SparseDomain<K, C>,

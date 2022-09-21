@@ -23,7 +23,8 @@ mod ffi;
 /// 
 /// # Citations
 /// * HRMS09, Boosting the Accuracy of Differentially Private Histograms Through Consistency
-///   Section 4.1: https://arxiv.org/pdf/0904.0942.pdf
+///   
+///    * Section 4.1: <https://arxiv.org/pdf/0904.0942.pdf>
 /// 
 /// # Arguments
 /// * `branching factor` - the maximum number of children
