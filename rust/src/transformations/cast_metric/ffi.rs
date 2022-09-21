@@ -18,7 +18,6 @@ use crate::transformations::cast_metric::traits::{
 };
 
 #[bootstrap(
-    name = "make_ordered_random", 
     module = "transformations", 
     features("contrib")
 )]
@@ -30,7 +29,7 @@ use crate::transformations::cast_metric::traits::{
 ///
 /// # Generics
 /// * `TA` - Atomic Type.
-pub fn make_ordered_random_wrapper<TA: Clone + CheckNull>() -> Fallible<
+fn make_ordered_random_wrapper<TA: Clone + CheckNull>() -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TA>>,
         VectorDomain<AllDomain<TA>>,

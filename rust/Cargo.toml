@@ -8,7 +8,7 @@ repository = "https://github.com/opendp/opendp"
 version = "0.0.0+development"
 authors = ["The OpenDP Project <info@opendp.org>"]
 edition = "2018"
-build = "build.rs"
+build = "build/main.rs"
 rust-version = "1.59.0" # MSRV via `cargo intall msrv && cargo msrv -- cargo check --features=untrusted,bindings-python`
 
 [dependencies]
@@ -24,8 +24,13 @@ gmp-mpfr-sys = { version = "1.4.7", default-features = false, features = ["mpfr"
 openssl = { version = "0.10.29", features = ["vendored"], optional = true }
 
 lazy_static = { version = "1.4.0", optional = true }
-
 vega_lite_4 = { version = "0.6.0", optional = true }
+
+[build-dependencies]
+opendp_bootstrap = {path = "opendp_bootstrap"}
+syn = { version = "1.0" }
+proc-macro2 = { version = "1.0" }
+serde_json = "1.0"
 
 [features]
 default = ["use-openssl", "use-mpfr"]
@@ -45,11 +50,10 @@ use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 test-plot = ["vega_lite_4"]
 
 ffi = ["lazy_static"]
-# write bootstrap json to OUT_DIR (dev-only)
-bootstrap-json = ["opendp_derive/bootstrap-json"]
+bindings-python = []
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.4"
 
 [lib]
 crate-type = ["rlib"]
@@ -64,5 +68,6 @@ harness = false
 [workspace]
 
 members = [
-    "opendp_codegen"
+    "opendp_bootstrap",
+    "opendp_derive",
 ]

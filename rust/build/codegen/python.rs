@@ -3,24 +3,23 @@ use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 
-use indexmap::map::IndexMap;
-use serde_json::Value;
+use opendp_bootstrap::{Argument, Function, RuntimeType, Value};
 
-use opendp_pre_derive::{Argument, Function, RuntimeType};
+use crate::codegen::indent;
 
-use crate::Module;
+use super::flatten_runtime_type;
 
 /// Top-level function to generate python bindings, including all modules.
-pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf, String> {
+pub fn generate_bindings(modules: HashMap<String, Vec<(String, Function)>>) -> HashMap<PathBuf, String> {
     let mut contents = String::new();
-    File::open("build/python_typemap.json")
+    File::open("build/codegen/python_typemap.json")
         .expect("python typemap not found")
         .read_to_string(&mut contents)
         .expect("failed reading python typemap json");
     let typemap: HashMap<String, String> = serde_json::from_str(&contents).unwrap();
 
     let mut contents = String::new();
-    File::open("build/type_hierarchy.json")
+    File::open("build/codegen/type_hierarchy.json")
         .expect("type hierarchy not found")
         .read_to_string(&mut contents)
         .expect("failed reading type hierarchy json");
@@ -38,11 +37,11 @@ pub fn generate_bindings(modules: IndexMap<String, Module>) -> IndexMap<PathBuf,
 /// Each call corresponds to one python file.
 fn generate_module(
     module_name: String,
-    module: Module,
+    module: Vec<(String, Function)>,
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
-    let all = module.keys().map(|v| format!("    \"{}\"", v)).collect::<Vec<_>>().join(",\n");
+    let all = module.iter().map(|(v, _)| format!("    \"{}\"", v)).collect::<Vec<_>>().join(",\n");
     let functions = module.into_iter()
         .map(|(func_name, func)| generate_function(&module_name, &func_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
@@ -89,10 +88,10 @@ def {func_name}(
 {body}
 "#,
             func_name = func_name,
-            args = crate::indent(args),
+            args = indent(args),
             sig_return = sig_return,
-            docstring = crate::indent(generate_docstring(func, hierarchy)),
-            body = crate::indent(generate_body(module_name, func_name, func, typemap)))
+            docstring = indent(generate_docstring(func, hierarchy)),
+            body = indent(generate_body(module_name, func_name, func, typemap)))
 }
 
 /// generate an input argument, complete with name, hint and default.
@@ -102,10 +101,9 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
         Some(match default {
             Value::Null => "None".to_string(),
             Value::Bool(value) => if *value {"True"} else {"False"}.to_string(),
-            Value::Number(number) => number.to_string(),
+            Value::Integer(int) => int.to_string(),
+            Value::Float(float) => float.to_string(),
             Value::String(string) => format!("\"{}\"", string),
-            Value::Array(array) => format!("{:?}", array),
-            Value::Object(_) => unimplemented!()
         })
     } else {
         // let default value be None if it is a type arg and there is a public example
@@ -228,7 +226,7 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
     let mut args = func.args.clone();
     args.iter_mut()
         .filter(|arg| arg.rust_type.is_some())
-        .for_each(|arg| arg.rust_type = Some(crate::flatten_runtime_type(
+        .for_each(|arg| arg.rust_type = Some(flatten_runtime_type(
             arg.rust_type.as_ref().unwrap(), &func.derived_types)));
 
     // code generation

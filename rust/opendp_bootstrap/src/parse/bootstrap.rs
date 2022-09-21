@@ -1,19 +1,14 @@
-use std::collections::{HashMap, HashSet};
-
+use std::{collections::{HashMap, HashSet}, str::FromStr};
 use darling::FromMeta;
-use serde_json::{Number, Value};
-use syn::{parse, GenericArgument, Lit, Meta, MetaList, NestedMeta, Path, Type, MetaNameValue};
+use proc_macro2::TokenStream;
+use syn::{Meta, MetaList, NestedMeta, Path, Type, MetaNameValue, Lit, GenericArgument};
 
-use opendp_pre_derive::RuntimeType;
-
-use crate::extract;
+use crate::{extract, RuntimeType, Value};
 
 #[derive(Debug, FromMeta, Clone)]
-pub(crate) struct BootstrapAttribute {
+pub struct Bootstrap {
     #[allow(dead_code)]
     pub module: Option<String>,
-    #[allow(dead_code)]
-    pub name: Option<String>,
     pub proof: Option<String>,
     pub features: Features,
     #[darling(default)]
@@ -22,6 +17,12 @@ pub(crate) struct BootstrapAttribute {
     pub arguments: BootstrapTypes,
     pub derived_types: Option<DerivedTypes>,
     pub returns: Option<BootstrapType>,
+}
+
+impl Bootstrap {
+    pub fn from_attribute_args(items: &[NestedMeta]) -> darling::Result<Self> {
+        Self::from_list(items)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -78,7 +79,7 @@ impl FromMeta for Features {
 }
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct BootstrapTypes(pub HashMap<String, BootstrapType>);
+pub struct BootstrapTypes(pub HashMap<String, BootstrapType>);
 
 impl FromMeta for BootstrapTypes {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
@@ -105,7 +106,7 @@ impl FromMeta for BootstrapTypes {
 }
 
 #[derive(Debug, FromMeta, Clone)]
-pub(crate) struct BootstrapType {
+pub struct BootstrapType {
     pub c_type: Option<String>,
     #[darling(default)]
     pub rust_type: OptionRuntimeType,
@@ -136,10 +137,8 @@ impl FromMeta for OptionValue {
     fn from_value(value: &syn::Lit) -> darling::Result<Self> {
         Ok(OptionValue(Some(match value {
             syn::Lit::Str(str) => Value::String(str.value()),
-            syn::Lit::Int(int) => Value::Number(int.base10_parse::<i64>()?.into()),
-            syn::Lit::Float(float) => Value::Number(
-                Number::from_f64(float.base10_parse::<f64>()?).expect("failed to parse f64"),
-            ),
+            syn::Lit::Int(int) => Value::Integer(int.base10_parse::<i64>()?),
+            syn::Lit::Float(float) => Value::Float(float.base10_parse::<f64>()?),
             syn::Lit::Bool(bool) => Value::Bool(bool.value),
             _ => return Err(darling::Error::custom("unrecognized type")),
         })))
@@ -174,10 +173,9 @@ impl FromMeta for OptionRuntimeType {
 
             Ok(match first_child {
                 Some(NestedMeta::Meta(Meta::NameValue(mnv))) if lhs_eq(mnv, "id") => {
-                    let ts: proc_macro::TokenStream = extract!(mnv.lit, Lit::Str(ref litstr) => litstr)
-                        .value().parse()
+                    let ts = TokenStream::from_str(&extract!(mnv.lit, Lit::Str(ref litstr) => litstr).value())
                         .map_err(|e| darling::Error::custom(format!("syn error: {:?}", e)))?;
-                    type_to_rtype(parse::<Type>(ts)?)
+                    type_to_rtype(syn::parse2::<Type>(ts)?)
                 }
                 None => RuntimeType::None,
                 _ => RuntimeType::Function {
@@ -235,7 +233,7 @@ fn type_to_rtype(type_: Type) -> RuntimeType {
 
 
 #[derive(Debug, Default, Clone)]
-pub(crate) struct DefaultGenerics(pub HashSet<String>);
+pub struct DefaultGenerics(pub HashSet<String>);
 
 impl FromMeta for DefaultGenerics {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {

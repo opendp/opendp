@@ -1,72 +1,61 @@
 use std::collections::HashMap;
 
-pub mod target;
-
-use serde::{Deserialize, Serialize, Deserializer};
-use serde_json::Value;
-
+pub mod parse;
 
 // metadata for each function in a module
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Debug)]
 pub struct Function {
     // plaintext description of the function used to generate documentation
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     // URL pointing to the location of the DP proof for the function
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub proof: Option<String>,
     // required feature flags to execute function
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub features: Vec<String>,
     // arguments and generics
-    #[serde(default)]
     pub args: Vec<Argument>,
     // metadata for constructing new types based on existing types or introspection
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub derived_types: Vec<Argument>,
     // metadata for return type
-    #[serde(default)]
     pub ret: Argument,
 }
 
 // Metadata for function arguments, derived types and returns.
-#[derive(Deserialize, Serialize, Debug, Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Argument {
     // argument name. Optional for return types
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     // c type to translate to/from for FFI. Optional for derived types
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub c_type: Option<String>,
     // RuntimeType expressed in terms of rust types with generics.
     // Includes various RuntimeType constructors
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub rust_type: Option<RuntimeType>,
     // type hint- a more abstract type that all potential arguments inherit from
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub hint: Option<String>,
     // plaintext description of the argument used to generate documentation
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     // default value for the argument
-    #[serde(default, deserialize_with = "deserialize_some", skip_serializing_if = "Option::is_none")]
     pub default: Option<Value>,
     // a list of names in the default that should be considered generics
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub generics: Vec<String>,
     // set to true if the argument represents a type
-    #[serde(default, skip_serializing_if = "is_false")]
     pub is_type: bool,
     // most functions convert c_to_py or py_to_c. Set to true to leave the value as-is
     // an example usage is slice_as_object,
     //  to prevent the returned AnyObject from getting converted back to python
-    #[serde(default, skip_serializing_if = "is_false")]
     pub do_not_convert: bool,
     // when is_type, use this as an example to infer the type
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub example: Option<RuntimeType>
 }
 
+#[derive(Debug, Default, Clone)]
+pub enum Value {
+    #[default]
+    Null,
+    Bool(bool),
+    String(String),
+    Integer(i64),
+    Float(f64),
+}
 
 impl Argument {
     /// retrieve the python ctype corresponding to the type inside FfiResult<*>
@@ -124,17 +113,6 @@ impl Argument {
 }
 
 
-fn is_false(v: &bool) -> bool {
-    !v
-}
-
-// deserialize "k": null as `Some(Value::Null)` and no key as `None`.
-fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
-    where T: Deserialize<'de>, D: Deserializer<'de> {
-    Deserialize::deserialize(deserializer).map(Some)
-}
-
-#[allow(dead_code)]
 impl Argument {
     pub fn name(&self) -> String {
         self.name.clone().expect("unknown name when parsing argument")
@@ -152,8 +130,7 @@ impl Argument {
 }
 
 // RuntimeType contains the metadata to generate code that evaluates to a rust type name
-#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RuntimeType {
     // reference an existing RuntimeType
     Name(String),
@@ -191,3 +168,17 @@ impl RuntimeType {
     }
 }
 
+
+macro_rules! extract {
+    ($value:expr, $pattern:pat => $extracted_value:expr) => {
+        match $value {
+            $pattern => $extracted_value,
+            _ => panic!(concat!(
+                stringify!($value),
+                " doesn't match ",
+                stringify!($pattern)
+            )),
+        }
+    };
+}
+pub(crate) use extract;

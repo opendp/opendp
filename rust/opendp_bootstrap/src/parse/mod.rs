@@ -1,63 +1,46 @@
-use attribute::DerivedTypes;
-use darling::FromMeta;
-use docstring::DocComments;
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
 use syn::{
     AttributeArgs, FnArg, GenericArgument, GenericParam, ItemFn, Pat,
     PathArguments, ReturnType, Signature, Type, TypeParam, TypePath,
 };
 
-use opendp_pre_derive::{target::find_target_dir, Argument, Function, RuntimeType};
+use crate::{Argument, Function, RuntimeType};
 
-use crate::bootstrap::{attribute::BootstrapAttribute, docstring::parse_doc_comments};
 use crate::extract;
 
-mod attribute;
-mod docstring;
+pub mod bootstrap;
+pub mod docstring;
 
+use crate::parse::{bootstrap::Bootstrap, docstring::Docstring};
 
-pub fn write_json(module: String, attr: AttributeArgs, input: ItemFn, proof_link: Option<String>) -> darling::Result<()> {
-    // Parse the attributes and function signature
-    let bootstrap = BootstrapAttribute::from_list(&attr)?;
-    let ItemFn {attrs, sig, ..} = input;
+use self::{bootstrap::DerivedTypes, docstring::{find_relative_proof_path}};
 
-    let doc_comments = parse_doc_comments(attrs, proof_link);
+impl Function {
+    pub fn from_ast(attr_args: AttributeArgs, item_fn: ItemFn) -> darling::Result<(String, Function)> {
+        // Parse the proc bootstrap macro args
+        let mut bootstrap = Bootstrap::from_attribute_args(&attr_args)?;
+        
+        // Parse the function signature
+        let ItemFn { attrs, sig, .. } = item_fn;
+        let func_name = sig.ident.to_string();
+        
+        // Try to enrich the bootstrap with a proof file
+        if let None = bootstrap.proof {
+            bootstrap.proof = find_relative_proof_path(&func_name);
+        }
 
-    let (name, function) = make_bootstrap_json(sig, bootstrap.clone(), doc_comments)?;
+        // aggregate info from all sources
+        let function = reconcile_function(bootstrap, Docstring::from_attrs(attrs), sig)?;
 
-    let json_str =
-        serde_json::to_string_pretty(&function)
-        .expect("failed to serialize function to json");
-    // println!("{module}::{name}({json_str})");
-
-    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR must be set."));
-    let target_dir = find_target_dir(&out_dir);
-    let json_module_dir = target_dir.join("opendp_bootstrap").join(module.clone());
-
-    // dbg!(&json_module_dir);
-
-    std::fs::create_dir_all(&json_module_dir).expect(
-        format!("unable to create folder {{target_dir}}/opendp_bootstrap/{module}").as_str(),
-    );
-
-    let filename = format!("{}.json", name);
-    let json_path = json_module_dir.join(filename.clone());
-    std::fs::write(&json_path, json_str).expect(
-        format!("unable to write file {{target_dir}}/opendp_bootstrap/{module}/{filename}")
-            .as_str(),
-    );
-    Ok(())
+        Ok((func_name, function))
+    }
 }
 
-fn make_bootstrap_json(
+pub fn reconcile_function(
+    bootstrap: Bootstrap,
+    mut doc_comments: Docstring,
     signature: Signature,
-    bootstrap: BootstrapAttribute,
-    mut doc_comments: DocComments,
-) -> darling::Result<(String, Function)> {
+) -> darling::Result<Function> {
     let all_generics = (signature.generics.params.iter())
         .map(|param| extract!(param, GenericParam::Type(v) => v))
         .map(|param| param.ident.to_string())
@@ -71,7 +54,7 @@ fn make_bootstrap_json(
         )
         .collect::<HashSet<String>>();
 
-    let function = Function {
+    Ok(Function {
         features: bootstrap.features.0,
         description: if doc_comments.description.is_empty() {
             None
@@ -179,11 +162,7 @@ fn make_bootstrap_json(
             do_not_convert: false,
             example: None,
         }).collect(),
-    };
-
-    let fn_name = bootstrap.name.unwrap_or_else(|| signature.ident.to_string());
-
-    Ok((fn_name, function))
+    })
 }
 
 fn syntype_to_runtimetype(
@@ -262,3 +241,4 @@ fn rust_to_c_type(ty: Type, generics: &HashSet<String>) -> darling::Result<Strin
         _ => return Err(darling::Error::custom("unrecognized type structure")),
     })
 }
+

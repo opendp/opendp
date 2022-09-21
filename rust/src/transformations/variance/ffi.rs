@@ -43,7 +43,8 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_variance(
         // println!("S: {:?} {}", S, S.to_string());
         // let S_p = TypeId::of::<Pairwise<T>>();
         // println!("{:?} == {:?} -> {}", &S.id, S_p, S.id == S_p);
-        dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (size, bounds, ddof))
+        dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], 
+        (size, bounds, ddof))
     }
     let size = size as usize;
     let ddof = ddof as usize;
