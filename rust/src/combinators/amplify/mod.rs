@@ -31,6 +31,21 @@ impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
     }
 }
 
+/// Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
+/// This measurement does not perform any sampling. 
+/// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
+/// 
+/// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
+/// 
+/// # Arguments
+/// * `measurement` - the computation to apply privacy amplification to
+/// * `population_size` - the size of the population from which the input dataset is a simple sample
+/// 
+/// # Generics
+/// * `DIA` - Atomic Input Domain. The domain of individual records in the input dataset.
+/// * `DO` - Output Domain. 
+/// * `MI` - Input Metric.
+/// * `MO` - Output Metric.
 pub fn make_population_amplification<DIA, DO, MI, MO>(
     measurement: &Measurement<DIA, DO, MI, MO>,
     population_size: usize,

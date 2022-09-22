@@ -430,6 +430,8 @@ usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
 String = 'String'
+AnyMeasurementPtr = "AnyMeasurementPtr"
+AnyTransformationPtr = "AnyTransformationPtr"
 
 
 class Domain(RuntimeType):

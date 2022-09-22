@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use syn::{
     AttributeArgs, FnArg, GenericArgument, GenericParam, ItemFn, Pat, PathArguments, ReturnType,
-    Signature, Type, TypeParam, TypePath,
+    Signature, Type, TypeParam, TypePath, TypeReference,
 };
 
 use crate::{Argument, Function, RuntimeType};
@@ -287,6 +287,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                     }
                 },
                 i if i == "String" => "AnyObject *".to_string(),
+                i if i == "AnyObject" => "AnyObject *".to_string(),
                 i if i == "Vec" => "AnyObject *".to_string(),
                 i if i == "HashSet" => "AnyObject *".to_string(),
                 i if i == "bool" => "bool".to_string(),
@@ -303,6 +304,8 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "usize" => "size_t".to_string(),
                 i if i == "Transformation" => "AnyTransformation *".to_string(),
                 i if i == "Measurement" => "AnyMeasurement *".to_string(),
+                i if i == "AnyTransformation" => "AnyTransformation *".to_string(),
+                i if i == "AnyMeasurement" => "AnyMeasurement *".to_string(),
                 i if i == "Fallible" => {
                     let args = match &segment.arguments {
                         PathArguments::AngleBracketed(ref ab) => &ab.args,
@@ -323,6 +326,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
             }
         }
         Type::Tuple(_) => "AnyObject *".to_string(),
+        Type::Reference(TypeReference {elem, ..}) => syn_type_to_c_type(*elem, generics)?,
         ty => return Err(Error::custom("Unrecognized rust type structure. Failed to convert to C type.").with_span(&ty)),
     })
 }

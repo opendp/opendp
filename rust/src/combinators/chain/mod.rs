@@ -20,6 +20,20 @@ fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2
     return format!("Intermediate {}s don't match. See {}{}", mode, ERROR_URL, explanation)
 }
 
+/// Construct the functional composition (`measurement1` ○ `transformation0`).
+/// Returns a Measurement that when invoked, computes measurement1(transformation0(x)).
+/// 
+/// # Arguments
+/// * `measurement1` - outer measurement/mechanism
+/// * `transformation0` - inner transformation
+/// 
+/// # Generics
+/// * `DI` - Input Domain.
+/// * `DX` - Intermediate Domain.
+/// * `DO` - Output Domain.
+/// * `MI` - Input Metric.
+/// * `MX` - Intermediate Metric.
+/// * `MO` - Output Measure.
 pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     measurement1: &Measurement<DX, DO, MX, MO>,
     transformation0: &Transformation<DI, DX, MI, MX>
@@ -47,6 +61,20 @@ pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
     ))
 }
 
+/// Construct the functional composition (`transformation1` ○ `transformation0`).
+/// Returns a Measurement that when invoked, computes transformation1(transformation0(x)).
+/// 
+/// # Arguments
+/// * `transformation1` - outer transformation
+/// * `transformation0` - inner transformation
+/// 
+/// # Generics
+/// * `DI` - Input Domain.
+/// * `DX` - Intermediate Domain.
+/// * `DO` - Output Domain.
+/// * `MI` - Input Metric.
+/// * `MX` - Intermediate Metric.
+/// * `MO` - Output Metric.
 pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
     transformation1: &Transformation<DX, DO, MX, MO>,
     transformation0: &Transformation<DI, DX, MI, MX>,
@@ -74,7 +102,22 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
     ))
 }
 
-// chain a measurement with a transformation as postprocessing
+/// Construct the functional composition (`transformation1` ○ `measurement0`).
+/// Returns a Measurement that when invoked, computes transformation1(measurement0(x)).
+/// Used to represent non-interactive postprocessing.
+/// 
+/// # Arguments
+/// * `transformation1` - outer postprocessing transformation
+/// * `measurement0` - inner measurement/mechanism
+/// 
+/// # Generics
+/// * `DI` - Input Domain.
+/// * `DX` - Intermediate Domain.
+/// * `DO` - Output Domain.
+/// * `MMI` - Input Measurement Metric.
+/// * `MMO` - Output Measurement Metric.
+/// * `MTI` - Input Transformation Metric.
+/// * `MTO` - Output Transformation Metric.
 pub fn make_chain_tm<DI, DX, DO, MMI, MMO, MTI, MTO>(
     transformation1: &Transformation<DX, DO, MTI, MTO>,
     measurement0: &Measurement<DI, DX, MMI, MMO>,
