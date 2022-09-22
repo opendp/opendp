@@ -10,8 +10,6 @@ import time
 
 import semver
 
-ANSI_FAIL = '\033[91m' # Prints Terminal Text Red
-ANSI_END = '\033[0m'
 
 def log(message, command=False):
     prefix = "$" if command else "#"
@@ -24,7 +22,7 @@ def run_command(description, args, capture_output=True, shell=True):
     printed_args = args.join(" ") if type(args) == list else args
     log(printed_args, command=True)
     stdout = subprocess.PIPE if capture_output else None
-    completed_process = subprocess.run(args, stdout=stdout, stderr=stdout, shell=shell, check=True, encoding="utf-8")
+    completed_process = subprocess.run(args, stdout=stdout, shell=shell, check=True, encoding="utf-8")
     return completed_process.stdout.rstrip() if capture_output else None
 
 
@@ -35,7 +33,6 @@ def run_command_with_retries(description, args, retries = 10, wait_time_seconds 
         except Exception as e:
             was_final_attempt = retries == 1
             if was_final_attempt:
-                log(f"{ANSI_FAIL}{e.stderr}{ANSI_END}")
                 raise e
             log(f"Waiting {wait_time_seconds} Seconds | Retries Left: {retries - 1}")
             time.sleep(wait_time_seconds)
