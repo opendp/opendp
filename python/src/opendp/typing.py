@@ -462,3 +462,7 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 def get_first(value):
     return next(iter(value), None)
+
+
+def parse_or_infer(type_name: RuntimeType, example):
+    return RuntimeType.parse_or_infer(type_name, example)

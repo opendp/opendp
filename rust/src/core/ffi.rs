@@ -182,7 +182,7 @@ impl<T> From<FfiResult<*mut T>> for Fallible<T> {
 
 #[bootstrap(
     name = "_error_free",
-    arguments(this(c_type = "FfiError *", do_not_convert = true))
+    arguments(this(c_type = "FfiError *", do_not_convert = true, hint = "FfiError"))
 )]
 /// Internal function. Free the memory associated with `error`.
 /// 
@@ -196,7 +196,9 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
 
 #[bootstrap(
     name = "transformation_map",
-    arguments(d_in(rust_type(transformation_input_distance_type("transformation"))))
+    arguments(
+        transformation(rust_type()),
+        distance_in(rust_type(transformation_input_distance_type("transformation"))))
 )]
 /// Use the `transformation` to map a given `d_in` to `d_out`.
 /// 
@@ -217,11 +219,11 @@ pub extern "C" fn opendp_core__transformation_map(
 #[bootstrap(
     name = "transformation_check",
     arguments(
-        measurement(rust_type()),
+        transformation(rust_type()),
         distance_in(rust_type(transformation_input_distance_type("transformation"))),
         distance_out(rust_type(transformation_output_distance_type("transformation"))),
     ),
-    returns(hint = "bool")
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
 /// 
@@ -247,7 +249,11 @@ pub extern "C" fn opendp_core__transformation_check(
 
 #[bootstrap(
     name = "measurement_map",
-    arguments(d_in(rust_type(transformation_input_distance_type("measurement"))))
+    arguments(
+        measurement(rust_type()),
+        distance_in(rust_type(measurement_input_distance_type("measurement"))),
+        distance_out(rust_type(measurement_output_distance_type("measurement"))),
+    )
 )]
 /// Use the `measurement` to map a given `d_in` to `d_out`.
 /// 
@@ -272,7 +278,7 @@ pub extern "C" fn opendp_core__measurement_map(
         distance_in(rust_type(measurement_input_distance_type("measurement"))),
         distance_out(rust_type(measurement_output_distance_type("measurement"))),
     ),
-    returns(hint = "bool")
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
 /// 
@@ -300,7 +306,7 @@ pub extern "C" fn opendp_core__measurement_check(
 #[bootstrap(
     name = "measurement_invoke",
     arguments(
-        measurement(rust_type()),
+        this(rust_type()),
         arg(rust_type(measurement_input_carrier_type("this")))
     )
 )]
@@ -316,7 +322,11 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const AnyMeasurement, a
     this.invoke(arg).into()
 }
 
-#[bootstrap(name = "measurement_free")]
+#[bootstrap(
+    name = "_measurement_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
 /// Internal function. Free the memory associated with `this`.
 #[no_mangle]
 pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> FfiResult<*mut ()> {
@@ -326,8 +336,8 @@ pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> F
 #[bootstrap(
     name = "transformation_invoke",
     arguments(
-        measurement(rust_type()),
-        arg(rust_type(measurement_input_carrier_type("this")))
+        this(rust_type()),
+        arg(rust_type(transformation_input_carrier_type("this")))
     )
 )]
 /// Invoke the `transformation` with `arg`. Returns a differentially private release.
@@ -342,14 +352,22 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformat
     this.invoke(arg).into()
 }
 
-#[bootstrap(name = "transformation_free")]
+#[bootstrap(
+    name = "_transformation_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
 /// Internal function. Free the memory associated with `this`.
 #[no_mangle]
 pub extern "C" fn opendp_core___transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
-#[bootstrap(name = "transformation_input_carrier_type",)]
+#[bootstrap(
+    name = "transformation_input_carrier_type",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<char *>")
+)]
 /// Get the input (carrier) data type of `this`.
 /// 
 /// # Arguments
@@ -360,7 +378,11 @@ pub extern "C" fn opendp_core__transformation_input_carrier_type(this: *mut AnyT
     FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
 }
 
-#[bootstrap(name = "measurement_input_carrier_type",)]
+#[bootstrap(
+    name = "measurement_input_carrier_type",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<char *>")
+)]
 /// Get the input (carrier) data type of `this`.
 /// 
 /// # Arguments
@@ -371,7 +393,11 @@ pub extern "C" fn opendp_core__measurement_input_carrier_type(this: *mut AnyMeas
     FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
 }
 
-#[bootstrap(name = "transformation_input_distance_type",)]
+#[bootstrap(
+    name = "transformation_input_distance_type",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<char *>")
+)]
 /// Get the input distance type of `transformation`.
 /// 
 /// # Arguments
@@ -382,7 +408,11 @@ pub extern "C" fn opendp_core__transformation_input_distance_type(this: *mut Any
     FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
 }
 
-#[bootstrap(name = "transformation_output_distance_type",)]
+#[bootstrap(
+    name = "transformation_output_distance_type",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<char *>")
+)]
 /// Get the output distance type of `transformation`.
 /// 
 /// # Arguments
@@ -393,7 +423,11 @@ pub extern "C" fn opendp_core__transformation_output_distance_type(this: *mut An
     FfiResult::Ok(try_!(into_c_char_p(this.output_metric.distance_type.descriptor.to_string())))
 }
 
-#[bootstrap(name = "measurement_input_distance_type",)]
+#[bootstrap(
+    name = "measurement_input_distance_type",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<char *>")
+)]
 /// Get the input distance type of `measurement`.
 /// 
 /// # Arguments
@@ -404,7 +438,11 @@ pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMea
     FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
 }
 
-#[bootstrap(name = "measurement_output_distance_type",)]
+#[bootstrap(
+    name = "measurement_output_distance_type",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<char *>")
+)]
 /// Get the output distance type of `measurement`.
 /// 
 /// # Arguments

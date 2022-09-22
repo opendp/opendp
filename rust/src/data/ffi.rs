@@ -6,6 +6,8 @@ use std::hash::Hash;
 use std::os::raw::c_char;
 use std::slice;
 
+use opendp_derive::bootstrap;
+
 use crate::measures::SMDCurve;
 use crate::traits::TotalOrd;
 use crate::{err, fallible, try_, try_as_ref};
@@ -16,6 +18,17 @@ use crate::ffi::any::{AnyObject, Downcast};
 use crate::ffi::util;
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 
+#[bootstrap(
+    name = "slice_as_object",
+    arguments(raw(rust_type(id = "T"), hint="FfiSlicePtr"), T(c_type = "char *", rust_type())),
+    returns(do_not_convert = true, c_type = "FfiResult<const AnyObject *>"),
+    derived_types(T(parse_or_infer("T", "raw")))
+)]
+/// Internal function. Load data from a `slice` into an AnyObject
+/// 
+/// # Returns
+/// An AnyObject that contains the data in `slice`. 
+/// The AnyObject also captures rust type information.
 #[no_mangle]
 pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c_char) -> FfiResult<*mut AnyObject> {
     let raw = try_as_ref!(raw);
@@ -114,6 +127,12 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
     }.into()
 }
 
+#[bootstrap(
+    name = "object_type",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<const char *>")
+)]
+/// Internal function. Retrieve the type descriptor string of an AnyObject.
 #[no_mangle]
 pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*mut c_char> {
     let obj: &AnyObject = try_as_ref!(this);
@@ -124,6 +143,15 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
     }
 }
 
+#[bootstrap(
+    name = "object_as_slice",
+    arguments(obj(rust_type())),
+    returns(do_not_convert = true, c_type = "FfiResult<const FfiSlice *>")
+)]
+/// Internal function. Unload data from an AnyObject into an FfiSlicePtr.
+/// 
+/// # Returns
+/// An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
 #[no_mangle]
 pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
     let obj = try_as_ref!(obj);
@@ -211,7 +239,11 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }.into()
 }
 
-
+#[bootstrap(
+    name = "ffislice_of_anyobjectptrs",
+    arguments(raw(rust_type())),
+    returns(do_not_convert = true))]
+/// Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
 #[no_mangle]
 pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
     raw: *const FfiSlice,
@@ -229,22 +261,49 @@ pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
     Ok(FfiSlice::new(vec_any_ptrs.leak() as *mut _ as *mut c_void, raw.len)).into()
 }
 
+#[bootstrap(
+    name = "object_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`, an AnyObject.
 #[no_mangle]
 pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
-#[no_mangle]
+#[bootstrap(
+    name = "slice_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
+/// Used to clean up after object_as_slice.
 /// Frees the slice, but not what the slice references!
+#[no_mangle]
 pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(
+    name = "str_free",
+    arguments(this(do_not_convert = true, c_type = "char *")),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`, a string. 
+/// Used to clean up after the type getter functions.
 #[no_mangle]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(
+    name = "bool_free",
+    arguments(this(do_not_convert = true, c_type = "bool *")),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`, a bool. 
+/// Used to clean up after the relation check.
 #[no_mangle]
 pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
@@ -310,6 +369,16 @@ impl TotalOrd for AnyObject {
     }
 }
 
+#[bootstrap(
+    name = "smd_curve_epsilon",
+    arguments(
+        curve(rust_type()),
+        delta(rust_type(get_atom(object_type("curve")))))
+)]
+/// Internal function. Use an SMDCurve to find epsilon at a given `delta`.
+/// 
+/// # Returns
+/// Epsilon at a given `delta`.
 #[no_mangle]
 pub extern "C" fn opendp_data__smd_curve_epsilon(curve: *const AnyObject, delta: *const AnyObject) -> FfiResult<*mut AnyObject> {
     fn monomorphize<T: 'static>(curve: &AnyObject, delta: &AnyObject) -> Fallible<AnyObject> {
@@ -321,6 +390,12 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(curve: *const AnyObject, delta:
     dispatch!(monomorphize, [(delta.type_, @floats)], (curve, delta)).into()
 }
 
+#[bootstrap(
+    name = "to_string",
+    arguments(this(rust_type())),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Internal function. Convert the AnyObject to a string representation.
 #[no_mangle]
 pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*mut c_char> {
     util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
