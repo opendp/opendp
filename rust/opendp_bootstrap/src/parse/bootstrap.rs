@@ -12,6 +12,7 @@ use super::syn_type_to_runtime_type;
 
 #[derive(Debug, FromMeta, Clone)]
 pub struct Bootstrap {
+    pub name: Option<String>,
     #[allow(dead_code)]
     pub module: Option<String>,
     pub proof: Option<String>,

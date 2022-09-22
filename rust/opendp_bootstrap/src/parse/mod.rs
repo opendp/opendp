@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use syn::{
     AttributeArgs, FnArg, GenericArgument, GenericParam, ItemFn, Pat, PathArguments, ReturnType,
-    Signature, Type, TypeParam, TypePath, TypeReference,
+    Signature, Type, TypeParam, TypePath, TypeReference, TypePtr,
 };
 
 use crate::{Argument, Function, RuntimeType};
@@ -22,7 +22,7 @@ impl Function {
 
         // Parse the function signature
         let ItemFn { attrs, sig, .. } = item_fn;
-        let func_name = sig.ident.to_string();
+        let func_name = bootstrap.name.clone().unwrap_or_else(|| sig.ident.to_string());
 
         // Try to enrich the bootstrap with a proof file
         if let None = bootstrap.proof {
@@ -237,8 +237,8 @@ fn syn_type_to_runtime_type(ty: &Type) -> Result<RuntimeType> {
             args: (tuple.elems.iter())
                 .map(|ty| syn_type_to_runtime_type(ty))
                 .collect::<Result<Vec<_>>>()?,
-        }
-        .into(),
+        }.into(),
+        Type::Ptr(ptr) => syn_type_to_runtime_type(&*ptr.elem)?,
         t => return Err(Error::custom("unrecognized type for RuntimeType").with_span(t)),
     })
 }
@@ -286,11 +286,11 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                         _ => "void *".to_string()
                     }
                 },
-                i if i == "String" => "AnyObject *".to_string(),
+                i if i == "String" || i == "c_char" => "AnyObject *".to_string(),
                 i if i == "AnyObject" => "AnyObject *".to_string(),
                 i if i == "Vec" => "AnyObject *".to_string(),
                 i if i == "HashSet" => "AnyObject *".to_string(),
-                i if i == "bool" => "bool".to_string(),
+                i if i == "bool" || i == "c_bool" => "bool".to_string(),
                 i if i == "i8" => "int8_t".to_string(),
                 i if i == "i16" => "int16_t".to_string(),
                 i if i == "i32" => "int32_t".to_string(),
@@ -306,7 +306,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "Measurement" => "AnyMeasurement *".to_string(),
                 i if i == "AnyTransformation" => "AnyTransformation *".to_string(),
                 i if i == "AnyMeasurement" => "AnyMeasurement *".to_string(),
-                i if i == "Fallible" => {
+                i if i == "Fallible" || i == "FfiResult" => {
                     let args = match &segment.arguments {
                         PathArguments::AngleBracketed(ref ab) => &ab.args,
                         args => return Err(Error::custom("Fallible expects one type argument").with_span(&args)),
@@ -327,6 +327,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
         }
         Type::Tuple(_) => "AnyObject *".to_string(),
         Type::Reference(TypeReference {elem, ..}) => syn_type_to_c_type(*elem, generics)?,
+        Type::Ptr(TypePtr {elem, ..}) => syn_type_to_c_type(*elem, generics)?,
         ty => return Err(Error::custom("Unrecognized rust type structure. Failed to convert to C type.").with_span(&ty)),
     })
 }
