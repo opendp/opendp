@@ -16,6 +16,11 @@ use crate::traits::{Number, Hashable, Primitive, Float};
 #[bootstrap(features("contrib"), generics(TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of records in data.
 /// 
+/// # Citations
+/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+/// 
+///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+/// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
 /// * `TOA` - Output Type. Must be numeric.
@@ -37,6 +42,11 @@ pub fn make_count<TIA, TO>(
 
 #[bootstrap(features("contrib"), generics(TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of unique, distinct records in data.
+/// 
+/// # Citations
+/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+/// 
+///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
 /// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
@@ -74,6 +84,15 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 )]
 /// Make a Transformation that computes the number of times each category appears in the data. 
 /// This assumes that the category set is known.
+/// 
+/// # Citations
+/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+/// 
+///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+/// 
+/// * BV17, Differential Privacy on Finite Computers
+/// 
+///     * <https://arxiv.org/abs/1709.05396>
 /// 
 /// # Arguments
 /// * `categories` - The set of categories to compute counts for.
@@ -141,6 +160,11 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 )]
 /// Make a Transformation that computes the count of each unique value in data. 
 /// This assumes that the category set is unknown.
+/// 
+/// # Citations
+/// * BV17, Differential Privacy on Finite Computers
+/// 
+///     * <https://arxiv.org/abs/1709.05396>
 /// 
 /// # Generics
 /// * `MO` - Output Metric.

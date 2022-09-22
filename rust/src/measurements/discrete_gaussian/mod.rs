@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use az::{SaturatingAs, SaturatingCast};
 use num::{traits::Pow, Float as _, Zero};
+use opendp_derive::bootstrap;
 use rug::{Integer, Rational};
 
 use crate::{
@@ -64,6 +65,25 @@ where
     }
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        scale(rust_type(id = "Q"), c_type = "void *")),
+    generics(
+        D(default = "AllDomain<int>"),
+        MO(default = "ZeroConcentratedDivergence<Q>", generics("Q"))),
+    derived_types(Q(get_atom_or_infer("MO", "scale")))
+)]
+/// Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
+/// Adjust D to noise vector-valued data.
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+/// * `k` - The noise granularity.
+/// 
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>.
+/// * `MO` - Output measure. The only valid measure is ZeroConcentratedDivergence<Q>, but Q can be f32 or f64
 pub fn make_base_discrete_gaussian<D, MO>(
     scale: MO::Atom,
 ) -> Fallible<Measurement<D, D, D::InputMetric, MO>>

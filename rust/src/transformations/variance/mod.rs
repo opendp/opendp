@@ -27,6 +27,11 @@ use super::{
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 
+/// # Citations
+/// * DHK15, Differential Privacy for Social Science Inference
+/// 
+///     * <http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf>
+/// 
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.

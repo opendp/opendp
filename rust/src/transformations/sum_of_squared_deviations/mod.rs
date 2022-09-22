@@ -22,6 +22,15 @@ use super::UncheckedSum;
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 
+/// # Citations
+/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+/// 
+///     * <https://arxiv.org/pdf/2207.10635.pdf>
+/// 
+/// * Calibrating Noise to Sensitivity in Private Data Analysis
+///     
+///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// 
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
