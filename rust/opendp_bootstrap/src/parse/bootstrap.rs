@@ -15,6 +15,7 @@ pub struct Bootstrap {
     #[allow(dead_code)]
     pub module: Option<String>,
     pub proof: Option<String>,
+    #[darling(default)]
     pub features: Features,
     #[darling(default)]
     pub generics: BootstrapTypes,
@@ -65,7 +66,7 @@ impl FromMeta for DerivedTypes {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Features(pub Vec<String>);
 
 impl FromMeta for Features {
