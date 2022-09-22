@@ -22,76 +22,21 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
         with:
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
-
-      - name: Collect file listing
-        id: "collect"
-        run: |
-          shopt -s globstar
-          files=$(echo **/*.tex)
-
-          # escape list of .tex files
-          tex="${files//'%'/'%25'}"
-          tex="${tex//$'\n'/'%0A'}"
-          tex="${tex//$'\r'/'%0D'}"
-          echo "::set-output name=tex::$tex"
-
-          # escape list of .pdf files
-          pdf="${files//$'.tex'/.pdf}"
-          pdf="${pdf//'%'/'%25'}"
-          pdf="${pdf//$'\n'/'%0A'}"
-          pdf="${pdf//$'\r'/'%0D'}"
-          echo "::set-output name=pdf::$pdf"
-
-          # name the version
-          version=$(cat VERSION)
-          if [ "$version" == "0.0.0+development" ]; then
-              version=latest
-          else
-              version="v$version"
-          fi
-          echo "::set-output name=version::$pdf"
-
-      - name: Compile LaTeX documents
-        uses: xu-cheng/latex-action@v2
-        with:
-          root_file: ${{ steps.collect.outputs.tex }}
-          # so that cwd is relative to .tex file, not repository root
-          work_in_root_file_dir: true
-          # so that shell commands run in .tex files
-          latexmk_shell_escape: true
-          # git is necessary for some shell commands to run
-          extra_system_packages: git
-          # give permissions for git commands to run
-          pre_compile: git config --global --add safe.directory /github/workspace
-
-      - name: Push to artifacts repo
-        uses: opendp/pull-request-artifacts@main
-        with:
-          commit: ${{ github.sha }}
-          artifacts: ${{ steps.collect.outputs.pdf }}
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts-token: ${{ secrets.ARTIFACTS_REPO_TOKEN }}
-          artifacts-repo: opendp/artifacts
-          artifacts-dir: release/${{ steps.collect.outputs.version }}
-          inter-link: false
-          post-comment: false
-
-      - name: Build docs site
+      # Runs a set of commands using the runners shell
+      - name: Run a multi-line script
         run: |
           echo "Install Sphinx and deploy docs..."
           cd docs
           python --version
           python -m venv venv
           source venv/bin/activate
-          
           echo "Upgrade pip and install requirements."
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
           echo "Create docs."
           make versions
           cp -r build /tmp
@@ -104,32 +49,10 @@ jobs:
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
-      
-      - name: Checkout artifacts
-        uses: actions/checkout@v3
-        with:
-          path: artifacts
-      
-      - name: Populate docs site with pdfs
-        run: |
-          # copy each folder over
-          for folder in en/*; do
-            source=artifacts/release/$folder
-            target=en/$folder/proofs
-
-            if [ -d "$source" ]; then
-              mkdir -p "$target";
-              mv "$source" "$target";
-            fi;
-          done
-          
-          # discard unused pdfs
-          rm -r artifacts
-
+          git add --all --force
       - name: Push docs to gh-pages branch
         #if: success() && github.ref == 'refs/heads/main'
         run: |
-          git add --all --force
           echo "Push docs to gh-pages branch"
           git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
           git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
