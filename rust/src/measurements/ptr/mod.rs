@@ -5,6 +5,8 @@ mod ffi;
 
 use std::collections::HashMap;
 
+use opendp_derive::bootstrap;
+
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::metrics::L1Distance;
 use crate::measures::{SmoothedMaxDivergence, SMDCurve};
@@ -18,6 +20,29 @@ use super::get_discretization_consts;
 // propose-test-release count grouped by unknown categories,
 // IMPORTANT: Assumes that dataset distance is bounded above by d_in.
 //  This assumption holds for count queries in L1-space.
+
+
+#[bootstrap(
+    features("contrib", "floating-point"),
+    arguments(
+        scale(c_type = "void *"),
+        threshold(c_type = "void *"),
+        k(default = -1074, rust_type(id = "i32"), c_type = "uint32_t"))
+)]
+/// Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
+///
+/// This function takes a noise granularity in terms of 2^k. 
+/// Larger granularities are more computationally efficient, but have a looser privacy map. 
+/// If k is not set, k defaults to the smallest granularity.
+///
+/// # Arguments
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `threshold` - Exclude counts that are less than this minimum value.
+/// * `k` - The noise granularity in terms of 2^k. 
+/// 
+/// # Generics
+/// * `TK` - Type of Key. Must be hashable/categorical.
+/// * `TV` - Type of Value. Must be float.
 pub fn make_base_ptr<TK, TV>(
     scale: TV, threshold: TV, k: Option<i32>
 ) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>

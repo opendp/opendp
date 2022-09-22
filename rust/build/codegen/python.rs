@@ -237,7 +237,7 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
                 if origin == "Vec" {
                     if let RuntimeType::Name(arg_name) = &args[0] {
                         if arg_name == type_name {
-                            Some(format!("next(iter({name}), None)", name = arg.name()))
+                            Some(format!("get_first({name})", name = arg.name()))
                         } else { None }
                     } else { None }
                 } else { None }

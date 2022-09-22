@@ -459,4 +459,4 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 
 def get_first(value):
-    return value[0]
+    return next(iter(value), None)

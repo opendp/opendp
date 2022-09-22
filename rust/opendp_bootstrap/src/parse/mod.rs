@@ -288,6 +288,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 },
                 i if i == "String" => "AnyObject *".to_string(),
                 i if i == "Vec" => "AnyObject *".to_string(),
+                i if i == "HashSet" => "AnyObject *".to_string(),
                 i if i == "bool" => "bool".to_string(),
                 i if i == "i8" => "int8_t".to_string(),
                 i if i == "i16" => "int16_t".to_string(),

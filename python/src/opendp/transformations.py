@@ -149,6 +149,16 @@ def make_bounded_float_checked_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param size_limit: Upper bound on number of records to keep in the input data.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -189,6 +199,16 @@ def make_bounded_float_ordered_sum(
     You may need to use `make_ordered_random` to impose an ordering on the data.
     The utility loss from overestimating the `size_limit` is small.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param size_limit: Upper bound on the number of records in input data. Used to bound sensitivity.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -227,6 +247,16 @@ def make_bounded_int_monotonic_sum(
     """Make a Transformation that computes the sum of bounded ints, 
     where all values share the same sign.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
@@ -260,6 +290,16 @@ def make_bounded_int_ordered_sum(
     """Make a Transformation that computes the sum of bounded ints.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
@@ -292,6 +332,16 @@ def make_bounded_int_split_sum(
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded ints. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
+    
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
@@ -377,6 +427,16 @@ def make_bounded_sum(
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data. 
     Use `make_clamp` to bound data.
+    
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
@@ -628,6 +688,12 @@ def make_count(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
+    **Citations**
+    
+    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    
+        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+    
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: :ref:`RuntimeTypeDescriptor`
     :param TO: 
@@ -662,6 +728,12 @@ def make_count_by(
 ) -> Transformation:
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown.
+    
+    **Citations**
+    
+    * BV17, Differential Privacy on Finite Computers
+    
+        * <https://arxiv.org/abs/1709.05396>
     
     :param MO: Output Metric.
     :type MO: SensitivityMetric
@@ -705,6 +777,16 @@ def make_count_by_categories(
     """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
     
+    **Citations**
+    
+    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    
+        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+    
+    * BV17, Differential Privacy on Finite Computers
+    
+        * <https://arxiv.org/abs/1709.05396>
+    
     :param categories: The set of categories to compute counts for.
     :type categories: Any
     :param null_category: Include a count of the number of elements that were not in the category set at the end of the vector.
@@ -725,7 +807,7 @@ def make_count_by_categories(
     
     # Standardize type arguments.
     MO = RuntimeType.parse(type_name=MO)
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(categories), None))
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(categories))
     TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
@@ -748,6 +830,12 @@ def make_count_distinct(
     TO: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
+    
+    **Citations**
+    
+    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    
+        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: :ref:`RuntimeTypeDescriptor`
@@ -794,7 +882,7 @@ def make_create_dataframe(
     assert_features("contrib")
     
     # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
+    K = RuntimeType.parse_or_infer(type_name=K, public_example=get_first(col_names))
     
     # Convert arguments to c types.
     col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
@@ -939,7 +1027,7 @@ def make_find(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(categories), None))
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(categories))
     
     # Convert arguments to c types.
     categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
@@ -971,7 +1059,7 @@ def make_find_bin(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(edges), None))
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(edges))
     
     # Convert arguments to c types.
     edges = py_to_c(edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
@@ -1112,7 +1200,7 @@ def make_index(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=next(iter(categories), None))
+    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=get_first(categories))
     
     # Convert arguments to c types.
     categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TOA]))
@@ -1378,8 +1466,8 @@ def make_quantiles_from_counts(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=next(iter(bin_edges), None))
-    F = RuntimeType.parse_or_infer(type_name=F, public_example=next(iter(alphas), None))
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bin_edges))
+    F = RuntimeType.parse_or_infer(type_name=F, public_example=get_first(alphas))
     
     # Convert arguments to c types.
     bin_edges = py_to_c(bin_edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TA]))
@@ -1489,6 +1577,16 @@ def make_sized_bounded_float_checked_sum(
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1529,6 +1627,16 @@ def make_sized_bounded_float_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1568,6 +1676,16 @@ def make_sized_bounded_int_checked_sum(
     """Make a Transformation that computes the sum of bounded ints. 
     The effective range is reduced, as (bounds * size) must not overflow.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1604,6 +1722,16 @@ def make_sized_bounded_int_monotonic_sum(
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded ints, 
     where all values share the same sign.
+    
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
     
     :param size: Number of records in input data.
     :type size: int
@@ -1643,6 +1771,16 @@ def make_sized_bounded_int_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1680,6 +1818,16 @@ def make_sized_bounded_int_split_sum(
     """Make a Transformation that computes the sum of bounded ints with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
+    
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
     
     :param size: Number of records in input data.
     :type size: int
@@ -1808,6 +1956,16 @@ def make_sized_bounded_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1849,6 +2007,16 @@ def make_sized_bounded_sum_of_squared_deviations(
     """Make a Transformation that computes the sum of squared deviations of bounded data. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+    
+    **Citations**
+    
+    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    
+        * <https://arxiv.org/pdf/2207.10635.pdf>
+    
+    * Calibrating Noise to Sensitivity in Private Data Analysis
+        
+        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
     
     :param size: Number of records in input data.
     :type size: int
@@ -1935,6 +2103,12 @@ def make_sized_bounded_variance(
     """Make a Transformation that computes the variance of bounded data. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+    
+    **Citations**
+    
+    * DHK15, Differential Privacy for Social Science Inference
+    
+        * <http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf>
     
     :param size: Number of records in input data.
     :type size: int
@@ -2074,7 +2248,7 @@ def make_split_dataframe(
     assert_features("contrib")
     
     # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
+    K = RuntimeType.parse_or_infer(type_name=K, public_example=get_first(col_names))
     
     # Convert arguments to c types.
     separator = py_to_c(separator, c_type=ctypes.c_char_p, type_name=None)
