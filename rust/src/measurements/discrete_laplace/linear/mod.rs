@@ -22,21 +22,27 @@ use super::DiscreteLaplaceDomain;
         T(get_atom("D")),
         OptionT(id = "Option<(T, T)>"))
 )]
-/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
+/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+/// using a linear-time algorithm on finite data types.
+/// 
 /// This algorithm can be executed in constant time if bounds are passed.
-/// Adjust D to noise vector-valued data.
+/// Set `D` to change the input data type:
+/// ```text
+/// | `D`                        | input type |
+/// | -------------------------- | ---------- | 
+/// | AllDomain<T> (default)     | T          |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     |
+/// ```
 /// 
 /// # Citations
-/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
-/// 
-///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 /// 
 /// # Arguments
 /// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 /// 
-/// # Arguments
-/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 /// * `QO` - Data type of the scale and output distance.
 pub fn make_base_discrete_laplace_linear<D, QO>(
     scale: QO,
@@ -103,7 +109,7 @@ where
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 /// 
 /// # Arguments
-/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 /// * `QO` - Data type of the scale and output distance
 #[deprecated(
     since = "0.5.0",

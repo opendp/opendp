@@ -10,7 +10,7 @@ use crate::ffi::any::{AnyMeasurement, AnyTransformation};
     arguments(measurement1(rust_type()), transformation0(rust_type()))
 )]
 /// Construct the functional composition (`measurement1` ○ `transformation0`).
-/// Returns a Measurement that when invoked, computes measurement1(transformation0(x)).
+/// Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
 ///
 /// # Arguments
 /// * `measurement1` - outer mechanism
@@ -37,7 +37,7 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
     arguments(transformation1(rust_type()), transformation0(rust_type()))
 )]
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
-/// Returns a Transformation that when invoked, computes transformation1(transformation0(x)).
+/// Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.
 ///
 /// # Arguments
 /// * `transformation1` - outer transformation
@@ -63,7 +63,7 @@ pub extern "C" fn opendp_combinators__make_chain_tt(
     arguments(transformation1(rust_type()), measurement0(rust_type()))
 )]
 /// Construct the functional composition (`transformation1` ○ `measurement0`).
-/// Returns a Measurement that when invoked, computes transformation1(measurement0(x)).
+/// Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
 /// Used to represent non-interactive postprocessing.
 ///
 /// # Arguments

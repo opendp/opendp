@@ -21,19 +21,25 @@ mod ffi;
     arguments(scale(c_type = "void *")),
     generics(D(default = "AllDomain<int>"))
 )]
-/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
-/// Adjust D to noise vector-valued data.
+/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+/// using an efficient algorithm on rational bignums.
+/// 
+/// Set `D` to change the input data type:
+/// ```text
+/// | `D`                        | input type |
+/// | -------------------------- | ---------- | 
+/// | AllDomain<T> (default)     | T          |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     |
+/// ```
 /// 
 /// # Citations
-/// * CKS20, The Discrete Gaussian for Differential Privacy
-/// 
-///     * Based on Section 5.2 <https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2>
+/// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
 /// 
 /// # Arguments
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
 /// 
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 /// * `QO` - Data type of the output distance and scale.
 pub fn make_base_discrete_laplace_cks20<D, QO>(
     scale: QO,

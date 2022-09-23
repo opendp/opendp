@@ -40,7 +40,7 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
     generics(TA(example(get_first("bounds")))),
 )]
 /// Make a Transformation that unclamps numeric data in Vec<`T`>.
-/// Used to convert a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.
+/// Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
 /// 
 /// # Arguments
 /// * `bounds` - Tuple of lower and upper bounds.

@@ -7,7 +7,6 @@ from opendp.typing import *
 __all__ = [
     "make_base_discrete_gaussian",
     "make_base_discrete_laplace",
-    "make_base_discrete_laplace",
     "make_base_discrete_laplace_cks20",
     "make_base_discrete_laplace_linear",
     "make_base_gaussian",
@@ -25,13 +24,20 @@ def make_base_discrete_gaussian(
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<Q>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
-    Adjust D to noise vector-valued data.
+    
+    Set `D` to change the input data type:
+    ```text
+    | `D`                        | input type |
+    | -------------------------- | ---------- | 
+    | AllDomain<T> (default)     | T          |
+    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    ```
     
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>.
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output measure. The only valid measure is ZeroConcentratedDivergence<Q>, but Q can be f32 or f64
-    :type MO: :ref:`RuntimeTypeDescriptor`
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -64,58 +70,27 @@ def make_base_discrete_laplace(
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
-    Adjust D to noise vector-valued data.
+    
+    Set `D` to change the input data type:
+    ```text
+    | `D`                        | input type |
+    | -------------------------- | ---------- | 
+    | AllDomain<T> (default)     | T          |
+    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    ```
+    
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
-    **Citations**
     
-    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    **Citations:**
     
-        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
-    
-    * CKS20, The Discrete Gaussian for Differential Privacy
-    
-        * Based on Section 5.2 <https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2>
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+    * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the output distance and scale.
-    :type QO: :ref:`RuntimeTypeDescriptor`
-    :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
-    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    
-    # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    QO = py_to_c(QO, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_measurements__make_base_discrete_laplace
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(scale, D, QO), Measurement))
-
-
-def make_base_discrete_laplace(
-    scale,
-    D: RuntimeTypeDescriptor = "AllDomain<int>",
-    QO: RuntimeTypeDescriptor = None
-) -> Measurement:
-    """
-    :param scale: 
-    :param D: 
-    :type D: :ref:`RuntimeTypeDescriptor`
-    :param QO: 
-    :type QO: :ref:`RuntimeTypeDescriptor`
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -145,20 +120,27 @@ def make_base_discrete_laplace_cks20(
     D: RuntimeTypeDescriptor = "AllDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
-    Adjust D to noise vector-valued data.
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+    using an efficient algorithm on rational bignums.
     
-    **Citations**
+    Set `D` to change the input data type:
+    ```text
+    | `D`                        | input type |
+    | -------------------------- | ---------- | 
+    | AllDomain<T> (default)     | T          |
+    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    ```
     
-    * CKS20, The Discrete Gaussian for Differential Privacy
     
-        * Based on Section 5.2 <https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2>
+    **Citations:**
+    
+    * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the output distance and scale.
-    :type QO: :ref:`RuntimeTypeDescriptor`
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -189,23 +171,30 @@ def make_base_discrete_laplace_linear(
     D: RuntimeTypeDescriptor = "AllDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+    using a linear-time algorithm on finite data types.
+    
     This algorithm can be executed in constant time if bounds are passed.
-    Adjust D to noise vector-valued data.
+    Set `D` to change the input data type:
+    ```text
+    | `D`                        | input type |
+    | -------------------------- | ---------- | 
+    | AllDomain<T> (default)     | T          |
+    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    ```
     
-    **Citations**
     
-    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    **Citations:**
     
-        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     
-    :param scale: 
-    :param bounds: 
+    :param scale: Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+    :param bounds: Set bounds on the count to make the algorithm run in constant-time.
     :type bounds: Any
-    :param D: 
-    :type D: :ref:`RuntimeTypeDescriptor`
-    :param QO: 
-    :type QO: :ref:`RuntimeTypeDescriptor`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Data type of the scale and output distance.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -240,7 +229,14 @@ def make_base_gaussian(
     MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
-    Adjust D to noise vector-valued data.
+    
+    Set `D` to change the input data type:
+    ```text
+    | `D`                        | input type |
+    | -------------------------- | ---------- | 
+    | AllDomain<T> (default)     | T          |
+    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    ```
     
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
@@ -249,10 +245,10 @@ def make_base_gaussian(
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param k: The noise granularity.
     :type k: int
-    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>.
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Measure. The only valid measure is ZeroConcentratedDivergence<T>.
-    :type MO: :ref:`RuntimeTypeDescriptor`
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -295,9 +291,9 @@ def make_base_geometric(
     :param bounds: 
     :type bounds: Any
     :param D: 
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: 
-    :type QO: :ref:`RuntimeTypeDescriptor`
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -331,7 +327,14 @@ def make_base_laplace(
     D: RuntimeTypeDescriptor = "AllDomain<T>"
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
-    Adjust D to noise vector-valued data.
+    
+    Set `D` to change the input data type:
+    ```text
+    | `D`                        | input type |
+    | -------------------------- | ---------- | 
+    | AllDomain<T> (default)     | T          |
+    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    ```
     
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
@@ -340,8 +343,8 @@ def make_base_laplace(
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param k: The noise granularity.
     :type k: int
-    :param D: Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -384,9 +387,9 @@ def make_base_ptr(
     :param k: The noise granularity in terms of 2^k.
     :type k: int
     :param TK: Type of Key. Must be hashable/categorical.
-    :type TK: :ref:`RuntimeTypeDescriptor`
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TV: Type of Value. Must be float.
-    :type TV: :ref:`RuntimeTypeDescriptor`
+    :type TV: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -428,9 +431,9 @@ def make_randomized_response(
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
     :param T: Data type of a category.
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :param Q: Data type of probability and output distance.
-    :type Q: :ref:`RuntimeTypeDescriptor`
+    :type Q: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -468,7 +471,7 @@ def make_randomized_response_bool(
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
     :param Q: Data type of probability and output distance.
-    :type Q: :ref:`RuntimeTypeDescriptor`
+    :type Q: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse

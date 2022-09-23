@@ -15,6 +15,7 @@ use super::{get_discretization_consts, MappableDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[doc(hidden)]
 pub trait GaussianDomain: MappableDomain + Default {
     type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
 }
@@ -25,6 +26,7 @@ impl<T: Clone + CheckNull> GaussianDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L2Distance<T>;
 }
 
+#[doc(hidden)]
 pub trait GaussianMeasure<DI: GaussianDomain>: Measure + Default {
     fn new_forward_map(scale: DI::Atom, relaxation: DI::Atom) -> PrivacyMap<DI::InputMetric, Self>;
 }
@@ -64,7 +66,14 @@ where
     derived_types(T(get_atom_or_infer("D", "scale")))
 )]
 /// Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
-/// Adjust D to noise vector-valued data.
+/// 
+/// Set `D` to change the input data type:
+/// ```text
+/// | `D`                        | input type |
+/// | -------------------------- | ---------- | 
+/// | AllDomain<T> (default)     | T          |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     |
+/// ```
 /// 
 /// This function takes a noise granularity in terms of 2^k. 
 /// Larger granularities are more computationally efficient, but have a looser privacy map. 
@@ -75,7 +84,7 @@ where
 /// * `k` - The noise granularity.
 /// 
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>.
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is ZeroConcentratedDivergence<T>.
 pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MO>>
 where

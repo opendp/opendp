@@ -19,6 +19,7 @@ mod ffi;
 
 use super::MappableDomain;
 
+#[doc(hidden)]
 pub trait DiscreteGaussianDomain<Q>: MappableDomain + Default {
     type InputMetric: SensitivityMetric<Distance = Q> + Default;
 }
@@ -29,6 +30,7 @@ impl<T: Clone + CheckNull, Q> DiscreteGaussianDomain<Q> for VectorDomain<AllDoma
     type InputMetric = L2Distance<Q>;
 }
 
+#[doc(hidden)]
 pub trait DiscreteGaussianMeasure<DI>: Measure + Default
 where
     DI: DiscreteGaussianDomain<Self::Atom>,
@@ -75,14 +77,21 @@ where
     derived_types(Q(get_atom_or_infer("MO", "scale")))
 )]
 /// Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
-/// Adjust D to noise vector-valued data.
+/// 
+/// Set `D` to change the input data type:
+/// ```text
+/// | `D`                        | input type |
+/// | -------------------------- | ---------- | 
+/// | AllDomain<T> (default)     | T          |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     |
+/// ```
 /// 
 /// # Arguments
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 /// * `k` - The noise granularity.
 /// 
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>.
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
 /// * `MO` - Output measure. The only valid measure is ZeroConcentratedDivergence<Q>, but Q can be f32 or f64
 pub fn make_base_discrete_gaussian<D, MO>(
     scale: MO::Atom,

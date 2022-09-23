@@ -21,7 +21,7 @@ fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2
 }
 
 /// Construct the functional composition (`measurement1` ○ `transformation0`).
-/// Returns a Measurement that when invoked, computes measurement1(transformation0(x)).
+/// Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
 /// 
 /// # Arguments
 /// * `measurement1` - outer measurement/mechanism
@@ -62,7 +62,7 @@ pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
 }
 
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
-/// Returns a Measurement that when invoked, computes transformation1(transformation0(x)).
+/// Returns a Measurement that when invoked, computes `transformation1(transformation0(x))`.
 /// 
 /// # Arguments
 /// * `transformation1` - outer transformation
@@ -103,7 +103,7 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
 }
 
 /// Construct the functional composition (`transformation1` ○ `measurement0`).
-/// Returns a Measurement that when invoked, computes transformation1(measurement0(x)).
+/// Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
 /// Used to represent non-interactive postprocessing.
 /// 
 /// # Arguments

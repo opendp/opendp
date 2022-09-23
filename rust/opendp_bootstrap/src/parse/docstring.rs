@@ -19,7 +19,7 @@ impl Docstring {
 
         let mut insert_section = |section_name: &str| {
             doc_sections.remove(section_name).map(|section| {
-                description.push(format!("**{section_name}**\n"));
+                description.push(format!("\n**{section_name}:**\n"));
                 description.extend(section)
             })
         };

@@ -20,7 +20,7 @@ use crate::transformations::{make_is_equal, make_is_null};
 /// Make a Transformation representing the identity function.
 /// 
 /// # Generics
-/// * `D` - Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>
+/// * `D` - Domain of the identity function. Must be `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 /// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
 fn make_identity<D, M>() -> Fallible<Transformation<D, D, M, M>>
     where D: Domain + Default, D::Carrier: Clone,

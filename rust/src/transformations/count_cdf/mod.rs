@@ -20,7 +20,7 @@ mod ffi;
 /// Postprocess a noisy array of float summary counts into a cumulative distribution.
 /// 
 /// # Generics
-/// * `TA` - Atomic Type. One of f32 or f64
+/// * `TA` - Atomic Type. One of `f32` or `f64`
 pub fn make_cdf<TA>() -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TA>>,
@@ -68,7 +68,7 @@ pub enum Interpolation {
 /// 
 /// # Generics
 /// * `TA` - Atomic Type of the bin edges and data.
-/// * `F` - Float type of the alpha argument. One of f32 or f64
+/// * `F` - Float type of the alpha argument. One of `f32` or `f64`
 pub fn make_quantiles_from_counts<TA, F>(
     bin_edges: Vec<TA>,
     alphas: Vec<F>,

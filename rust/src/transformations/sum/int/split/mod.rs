@@ -56,13 +56,8 @@ impl___signed_int_split_sat_sum! { i8 i16 i32 i64 i128 isize }
 /// Adds the saturating sum of the positives to the saturating sum of the negatives.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
@@ -104,13 +99,8 @@ where
 /// Adds the saturating sum of the positives to the saturating sum of the negatives.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.

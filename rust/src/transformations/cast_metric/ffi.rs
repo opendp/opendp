@@ -63,14 +63,18 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
 /// to the respective ordered dataset metric by assigning a random permutatation.
 /// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 ///
-/// If `MI` is "SymmetricDistance", then output metric is "InsertDeleteDistance",
-/// and respectively "ChangeOneDistance" maps to "HammingDistance".
-///
+/// ```text
+/// | `MI`              | output metric        |
+/// | ----------------- | -------------------- |
+/// | SymmetricDistance | InsertDeleteDistance |
+/// | ChangeOneDistance | HammingDistance      |
+/// ```
+/// 
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// 
 /// # Generics
-/// * `MI` - Input Metric. One of "SymmetricDistance" or "ChangeOneDistance"
+/// * `MI` - Input Metric.
 /// * `TA` - Atomic Type.
 fn make_sized_ordered_random<MI, TA>(
     size: usize
@@ -122,15 +126,19 @@ pub extern "C" fn opendp_transformations__make_sized_ordered_random(
 /// to the respective ordered dataset metric by assigning a random permutatation.
 /// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
 ///
-/// If `MI` is "SymmetricDistance", then output metric is "InsertDeleteDistance",
-/// and respectively "ChangeOneDistance" maps to "HammingDistance".
+/// ```text
+/// | `MI`              | output metric        |
+/// | ----------------- | -------------------- |
+/// | SymmetricDistance | InsertDeleteDistance |
+/// | ChangeOneDistance | HammingDistance      |
+/// ```
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
 /// 
 /// # Generics
-/// * `MI` - Input Metric. One of "SymmetricDistance" or "ChangeOneDistance"
+/// * `MI` - Input Metric.
 /// * `TA` - Atomic Type.
 fn make_sized_bounded_ordered_random<MI, TA>(
     size: usize,
@@ -188,6 +196,12 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_ordered_random(
 ///
 /// The dataset metric is not generic over HammingDistance because the dataset size is unknown.
 /// 
+/// ```text
+/// | input metric         | output metric        |
+/// | -------------------- | -------------------- |
+/// | InsertDeleteDistance | SymmetricDistance    |
+/// ```
+/// 
 /// # Generics
 /// * `TA` - Atomic Type.
 fn make_unordered<TA: Clone + CheckNull>() -> Fallible<
@@ -224,14 +238,18 @@ pub extern "C" fn opendp_transformations__make_unordered(
 /// to the respective unordered dataset metric via a no-op.
 /// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 ///
-/// If `MI` is "InsertDeleteDistance", then output metric is "SymmetricDistance",
-/// and respectively "HammingDistance" maps to "ChangeOneDistance".
+/// ```text
+/// | `MI`                 | output metric      |
+/// | -------------------- | ------------------ |
+/// | InsertDeleteDistance | SymmetricDistance  |
+/// | HammingDistance      | ChangeOneDistance  |
+/// ```
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// 
 /// # Generics
-/// * `MI` - Input Metric. One of "InsertDeleteDistance" or "HammingDistance"
+/// * `MI` - Input Metric.
 /// * `TA` - Atomic Type.
 fn make_sized_unordered<MI, TA>(
     size: usize
@@ -283,15 +301,19 @@ pub extern "C" fn opendp_transformations__make_sized_unordered(
 /// to the respective unordered dataset metric via a no-op.
 /// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
 ///
-/// If `MI` is "InsertDeleteDistance", then output metric is "SymmetricDistance",
-/// and respectively "HammingDistance" maps to "ChangeOneDistance".
+/// ```text
+/// | `MI`                 | output metric      |
+/// | -------------------- | ------------------ |
+/// | InsertDeleteDistance | SymmetricDistance  |
+/// | HammingDistance      | ChangeOneDistance  |
+/// ```
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
 /// 
 /// # Generics
-/// * `MI` - Input Metric. One of "InsertDeleteDistance" or "HammingDistance"
+/// * `MI` - Input Metric.
 /// * `TA` - Atomic Type.
 fn make_sized_bounded_unordered<MI, TA>(
     size: usize,
@@ -352,14 +374,18 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_unordered(
 /// 
 /// While it is valid to operate with bounded data, there is no constructor for it in Python.
 /// 
-/// If MI is "SymmetricDistance", then output metric is "ChangeOneDistance", 
-/// and respectively "InsertDeleteDistance" maps to "HammingDistance".
+/// ```text
+/// | `MI`                 | output metric     |
+/// | -------------------- | ----------------- |
+/// | SymmetricDistance    | ChangeOneDistance |
+/// | InsertDeleteDistance | HammingDistance   |
+/// ```
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// 
 /// # Generics
-/// * `MI` - Input Metric. One of "SymmetricDistance" or "InsertDeleteDistance"
+/// * `MI` - Input Metric.
 /// * `TA` - Atomic Type.
 fn make_metric_bounded<MI, TA>(
     size: usize
@@ -412,14 +438,18 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
 /// to the respective unbounded dataset metric with a no-op. 
 /// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 /// 
-/// If "ChangeOneDistance", then output metric is "SymmetricDistance", 
-/// and respectively "HammingDistance" maps to "InsertDeleteDistance".
-///
+/// ```text
+/// | `MI`              | output metric        |
+/// | ----------------- | -------------------- |
+/// | ChangeOneDistance | SymmetricDistance    |
+/// | HammingDistance   | InsertDeleteDistance |
+/// ```
+/// 
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// 
 /// # Generics
-/// * `MI` - Input Metric. One of "ChangeOneDistance" or "HammingDistance"
+/// * `MI` - Input Metric.
 /// * `TA` - Atomic Type.
 fn make_metric_unbounded<MI, TA>(
     size: usize

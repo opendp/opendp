@@ -123,9 +123,7 @@ impl<const P: usize, T> BAryTreeMetric for LpDistance<P, T> {}
 /// that minimizes error in cdf and quantile estimates based on b-ary trees.
 /// 
 /// # Citations
-/// * QYL13, Understanding Hierarchical Methods for Differentially Private Histograms
-/// 
-///    * Proposition 1: <http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf>
+/// * [QYL13 Understanding Hierarchical Methods for Differentially Private Histograms](http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf)
 ///
 /// # Arguments
 /// * `size_guess` - A guess at the size of your dataset.

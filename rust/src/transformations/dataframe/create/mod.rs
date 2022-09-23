@@ -62,7 +62,7 @@ fn create_dataframe<K: Hashable>(col_names: Vec<K>, records: &[Vec<&str>]) -> Da
 }
 
 #[bootstrap(features("contrib"))]
-/// Make a Transformation that constructs a dataframe from a Vec<Vec<String>> (a vector of records).
+/// Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
 /// 
 /// # Arguments
 /// * `col_names` - Column names for each record entry.
@@ -106,7 +106,7 @@ fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> 
     features("contrib"), 
     arguments(separator(c_type = "char *", rust_type()))
 )]
-/// Make a Transformation that splits each record in a String into a Vec<Vec<String>>,
+/// Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
 /// and loads the resulting table into a dataframe keyed by `col_names`.
 /// 
 /// # Arguments
@@ -148,7 +148,7 @@ fn split_lines(s: &str) -> Vec<&str> {
 }
 
 #[bootstrap(features("contrib"))]
-/// Make a Transformation that takes a string and splits it into a Vec<String> of its lines.
+/// Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
 pub fn make_split_lines() -> Fallible<
     Transformation<
         AllDomain<String>,
@@ -183,7 +183,7 @@ fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
     features("contrib"), 
     arguments(separator(c_type = "char *", rust_type()))
 )]
-/// Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.
+/// Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
 /// 
 /// # Arguments
 /// * `separator` - The token(s) that separate entries in each record.

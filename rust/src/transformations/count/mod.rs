@@ -17,9 +17,7 @@ use crate::traits::{Number, Hashable, Primitive, Float};
 /// Make a Transformation that computes a count of the number of records in data.
 /// 
 /// # Citations
-/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
-/// 
-///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 /// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
@@ -44,9 +42,7 @@ pub fn make_count<TIA, TO>(
 /// Make a Transformation that computes a count of the number of unique, distinct records in data.
 /// 
 /// # Citations
-/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
-/// 
-///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 /// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
@@ -86,13 +82,8 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 /// This assumes that the category set is known.
 /// 
 /// # Citations
-/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
-/// 
-///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
-/// 
-/// * BV17, Differential Privacy on Finite Computers
-/// 
-///     * <https://arxiv.org/abs/1709.05396>
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+/// * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
 /// 
 /// # Arguments
 /// * `categories` - The set of categories to compute counts for.
@@ -104,7 +95,7 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 /// * `TOA` - Atomic Output Type that is numeric.
 /// 
 /// # Returns
-/// The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
+/// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
 pub fn make_count_by_categories<MO, TIA, TOA>(
     categories: Vec<TIA>,
     null_category: bool
@@ -162,9 +153,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// This assumes that the category set is unknown.
 /// 
 /// # Citations
-/// * BV17, Differential Privacy on Finite Computers
-/// 
-///     * <https://arxiv.org/abs/1709.05396>
+/// * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
 /// 
 /// # Generics
 /// * `MO` - Output Metric.
@@ -172,7 +161,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// * `TV - Type of Value. Express counts in terms of this integral type.
 /// 
 /// # Returns
-/// The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
+/// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
 pub fn make_count_by<MO, TK, TV>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TK>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,

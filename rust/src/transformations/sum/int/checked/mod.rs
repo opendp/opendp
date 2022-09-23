@@ -24,13 +24,8 @@ mod ffi;
 /// The effective range is reduced, as (bounds * size) must not overflow.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.

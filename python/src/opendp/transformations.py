@@ -72,11 +72,10 @@ def choose_branching_factor(
     """Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
     that minimizes error in cdf and quantile estimates based on b-ary trees.
     
-    **Citations**
     
-    * QYL13, Understanding Hierarchical Methods for Differentially Private Histograms
+    **Citations:**
     
-       * Proposition 1: <http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf>
+    * [QYL13 Understanding Hierarchical Methods for Differentially Private Histograms](http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf)
     
     :param size_guess: A guess at the size of your dataset.
     :type size_guess: int
@@ -112,9 +111,9 @@ def make_b_ary_tree(
     :param branching_factor: The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
     :type branching_factor: int
     :param M: Metric. Must be L1Distance<Q> or L2Distance<Q>
-    :type M: :ref:`RuntimeTypeDescriptor`
+    :type M: :py:ref:`RuntimeTypeDescriptor`
     :param TA: Atomic Type of the input data.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -149,22 +148,18 @@ def make_bounded_float_checked_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size_limit: Upper bound on number of records to keep in the input data.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -199,22 +194,18 @@ def make_bounded_float_ordered_sum(
     You may need to use `make_ordered_random` to impose an ordering on the data.
     The utility loss from overestimating the `size_limit` is small.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size_limit: Upper bound on the number of records in input data. Used to bound sensitivity.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -247,20 +238,16 @@ def make_bounded_int_monotonic_sum(
     """Make a Transformation that computes the sum of bounded ints, 
     where all values share the same sign.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -290,20 +277,16 @@ def make_bounded_int_ordered_sum(
     """Make a Transformation that computes the sum of bounded ints.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -333,20 +316,16 @@ def make_bounded_int_split_sum(
     """Make a Transformation that computes the sum of bounded ints. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -386,11 +365,11 @@ def make_bounded_resize(
     :type bounds: Tuple[Any, Any]
     :param constant: Value to impute with.
     :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MI: :ref:`RuntimeTypeDescriptor`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MO: :ref:`RuntimeTypeDescriptor`
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     :param TA: Atomic type. If not passed, TA is inferred from the lower bound
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -428,22 +407,18 @@ def make_bounded_sum(
     """Make a Transformation that computes the sum of bounded data. 
     Use `make_clamp` to bound data.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
-    :type MI: :ref:`RuntimeTypeDescriptor`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param T: Atomic Input Type and Output Type.
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -476,9 +451,9 @@ def make_cast(
     Failure to parse results in None, else Some<TOA>.
     
     :param TIA: Atomic Input Type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -510,9 +485,9 @@ def make_cast_default(
     If the cast fails, fill with default.
     
     :param TIA: Atomic Input Type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -544,9 +519,9 @@ def make_cast_inherent(
     If cast fails, fill with `TO`'s null value.
     
     :param TIA: Atomic Input Type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -575,8 +550,8 @@ def make_cdf(
 ) -> Transformation:
     """Postprocess a noisy array of float summary counts into a cumulative distribution.
     
-    :param TA: Atomic Type. One of f32 or f64
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic Type. One of `f32` or `f64`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -609,7 +584,7 @@ def make_clamp(
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param TA: Atomic Type
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -646,18 +621,17 @@ def make_consistent_b_ary_tree(
     The output remains consistent even when leaf nodes are missing.
     This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
     
-    **Citations**
     
-    * HRMS09, Boosting the Accuracy of Differentially Private Histograms Through Consistency
-      
-       * Section 4.1: <https://arxiv.org/pdf/0904.0942.pdf>
+    **Citations:**
+    
+    * [HRMS09 Boosting the Accuracy of Differentially Private Histograms Through Consistency, section 4.1](https://arxiv.org/pdf/0904.0942.pdf)
     
     :param branching_factor: 
     :type branching_factor: int
     :param TIA: Atomic type of the input data. Should be an integer type.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic type of the output data. Should be a float type.
-    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -688,16 +662,15 @@ def make_count(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
-    **Citations**
     
-    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    **Citations:**
     
-        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TO: 
-    :type TO: :ref:`RuntimeTypeDescriptor`
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -729,19 +702,18 @@ def make_count_by(
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown.
     
-    **Citations**
     
-    * BV17, Differential Privacy on Finite Computers
+    **Citations:**
     
-        * <https://arxiv.org/abs/1709.05396>
+    * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
     
     :param MO: Output Metric.
     :type MO: SensitivityMetric
     :param TK: Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
-    :type TK: :ref:`RuntimeTypeDescriptor`
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TV: 
-    :type TV: :ref:`RuntimeTypeDescriptor`
-    :return: The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
+    :type TV: :py:ref:`RuntimeTypeDescriptor`
+    :return: The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -777,15 +749,11 @@ def make_count_by_categories(
     """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
     
-    **Citations**
     
-    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    **Citations:**
     
-        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
-    
-    * BV17, Differential Privacy on Finite Computers
-    
-        * <https://arxiv.org/abs/1709.05396>
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+    * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
     
     :param categories: The set of categories to compute counts for.
     :type categories: Any
@@ -794,10 +762,10 @@ def make_count_by_categories(
     :param MO: Output Metric.
     :type MO: SensitivityMetric
     :param TIA: Atomic Input Type that is categorical/hashable. Input data must be Vec<TIA>
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type that is numeric.
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :return: The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -831,16 +799,15 @@ def make_count_distinct(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
-    **Citations**
     
-    * GRS12, Universally Utility-Maximizing Privacy Mechanisms
+    **Citations:**
     
-        * <https://theory.stanford.edu/~tim/papers/priv.pdf>
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TO: 
-    :type TO: :ref:`RuntimeTypeDescriptor`
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -868,12 +835,12 @@ def make_create_dataframe(
     col_names: Any,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that constructs a dataframe from a Vec<Vec<String>> (a vector of records).
+    """Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
     
     :param col_names: Column names for each record entry.
     :type col_names: Any
     :param K: categorical/hashable data type of column names
-    :type K: :ref:`RuntimeTypeDescriptor`
+    :type K: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -908,11 +875,11 @@ def make_df_cast_default(
     :param column_name: column name to be transformed
     :type column_name: Any
     :param TK: Type of the column name
-    :type TK: :ref:`RuntimeTypeDescriptor`
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -952,9 +919,9 @@ def make_df_is_equal(
     :param value: 
     :type value: Any
     :param TK: Type of the column name
-    :type TK: :ref:`RuntimeTypeDescriptor`
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -984,10 +951,10 @@ def make_drop_null(
     DA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that drops null values.
-    Operates on OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>.
+    `DA` is one of `OptionNullDomain<AllDomain<TA>>` or `InherentNullDomain<AllDomain<TA>>`.
     
     :param DA: atomic domain of input data that contains nulls.
-    :type DA: :ref:`RuntimeTypeDescriptor`
+    :type DA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1018,7 +985,7 @@ def make_find(
     :param categories: The set of categories to find indexes from.
     :type categories: Any
     :param TIA: Atomic Input Type that is categorical/hashable
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1050,7 +1017,7 @@ def make_find_bin(
     :param edges: The set of edges to split bins by.
     :type edges: Any
     :param TIA: Atomic Input Type that is numeric
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1079,10 +1046,10 @@ def make_identity(
 ) -> Transformation:
     """Make a Transformation representing the identity function.
     
-    :param D: Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :param D: Domain of the identity function. Must be `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param M: Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
-    :type M: :ref:`RuntimeTypeDescriptor`
+    :type M: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1111,17 +1078,21 @@ def make_impute_constant(
     DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<TA>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
-    By default, the input type is Vec<Option<TA>>, as emitted by make_cast.
-    Set `DA` to InherentNullDomain<AllDomain<TA>> for imputing on types 
+    By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
+    Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
     that have an inherent representation of nullity, like floats.
     
-    Maps a Vec<Option<T>> -> Vec<T> if input domain is AllDomain<Option<T>>,
-        or Vec<T> -> Vec<T> if input domain is NullableDomain<AllDomain<T>>
+    ```text
+    | Input Domain `DI`            |  Input Type    | Output Type |
+    | ---------------------------- | -------------- | ----------- |
+    | AllDomain<Option<T>>         | Vec<Option<T>> | Vec<T>      |
+    | NullableDomain<AllDomain<T>> | Vec<T>         | Vec<T>      |
+    ```
     
     :param constant: Value to replace nulls with.
     :type constant: Any
-    :param DA: Atomic Domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
-    :type DA: :ref:`RuntimeTypeDescriptor`
+    :param DA: Atomic Domain of data being imputed.
+    :type DA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1151,12 +1122,12 @@ def make_impute_uniform_float(
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
-    Operates on InherentNullDomain<AllDomain<TA>>
+    Operates on `InherentNullDomain<AllDomain<TA>>`
     
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param TA: Atomic Type of data being imputed. One of f32 or f64
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic Type of data being imputed. One of `f32` or `f64`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1191,7 +1162,7 @@ def make_index(
     :param null: Category to return if the index is out-of-range of the category set.
     :type null: Any
     :param TOA: 
-    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1224,7 +1195,7 @@ def make_is_equal(
     :param value: value to check against
     :type value: Any
     :param TIA: Atomic Input Type. Type of elements in the input vector
-    :type TIA: :ref:`RuntimeTypeDescriptor`
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1253,7 +1224,7 @@ def make_is_null(
     """Make a Transformation that checks if each element in a vector is null.
     
     :param DIA: Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
-    :type DIA: :ref:`RuntimeTypeDescriptor`
+    :type DIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1288,9 +1259,9 @@ def make_lipschitz_float_mul(
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param D: Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param M: Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>
-    :type M: :ref:`RuntimeTypeDescriptor`
+    :type M: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1333,15 +1304,19 @@ def make_metric_bounded(
     
     While it is valid to operate with bounded data, there is no constructor for it in Python.
     
-    If MI is "SymmetricDistance", then output metric is "ChangeOneDistance", 
-    and respectively "InsertDeleteDistance" maps to "HammingDistance".
+    ```text
+    | `MI`                 | output metric     |
+    | -------------------- | ----------------- |
+    | SymmetricDistance    | ChangeOneDistance |
+    | InsertDeleteDistance | HammingDistance   |
+    ```
     
     :param size: Number of records in input data.
     :type size: int
-    :param MI: Input Metric. One of "SymmetricDistance" or "InsertDeleteDistance"
+    :param MI: Input Metric.
     :type MI: DatasetMetric
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1375,15 +1350,19 @@ def make_metric_unbounded(
     to the respective unbounded dataset metric with a no-op. 
     Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
     
-    If "ChangeOneDistance", then output metric is "SymmetricDistance", 
-    and respectively "HammingDistance" maps to "InsertDeleteDistance".
+    ```text
+    | `MI`              | output metric        |
+    | ----------------- | -------------------- |
+    | ChangeOneDistance | SymmetricDistance    |
+    | HammingDistance   | InsertDeleteDistance |
+    ```
     
     :param size: Number of records in input data.
     :type size: int
-    :param MI: Input Metric. One of "ChangeOneDistance" or "HammingDistance"
+    :param MI: Input Metric.
     :type MI: DatasetMetric
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1417,7 +1396,7 @@ def make_ordered_random(
     The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
     
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1455,9 +1434,9 @@ def make_quantiles_from_counts(
     :param interpolation: Must be one of `linear` or `nearest`
     :type interpolation: str
     :param TA: Atomic Type of the bin edges and data.
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :param F: Float type of the alpha argument. One of f32 or f64
-    :type F: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :param F: Float type of the alpha argument. One of `f32` or `f64`
+    :type F: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1499,11 +1478,11 @@ def make_resize(
     :param constant: Value to impute with.
     :type constant: Any
     :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MI: :ref:`RuntimeTypeDescriptor`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MO: :ref:`RuntimeTypeDescriptor`
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
     :param TA: Atomic type. If not passed, TA is inferred from the lower bound
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1542,9 +1521,9 @@ def make_select_column(
     :param key: categorical/hashable data type of the key/column name
     :type key: Any
     :param K: data type of key
-    :type K: :ref:`RuntimeTypeDescriptor`
+    :type K: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to downcast vector to
-    :type TOA: :ref:`RuntimeTypeDescriptor`
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1577,22 +1556,18 @@ def make_sized_bounded_float_checked_sum(
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1627,22 +1602,18 @@ def make_sized_bounded_float_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1676,22 +1647,18 @@ def make_sized_bounded_int_checked_sum(
     """Make a Transformation that computes the sum of bounded ints. 
     The effective range is reduced, as (bounds * size) must not overflow.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1723,22 +1690,18 @@ def make_sized_bounded_int_monotonic_sum(
     """Make a Transformation that computes the sum of bounded ints, 
     where all values share the same sign.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1771,22 +1734,18 @@ def make_sized_bounded_int_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1819,22 +1778,18 @@ def make_sized_bounded_int_split_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1873,9 +1828,9 @@ def make_sized_bounded_mean(
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
-    :type MI: :ref:`RuntimeTypeDescriptor`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param T: Atomic Input Type and Output Type.
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1910,17 +1865,21 @@ def make_sized_bounded_ordered_random(
     """Make a Transformation that converts the unordered dataset metric `MI`
     to the respective ordered dataset metric by assigning a random permutatation.
     Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
-    If `MI` is "SymmetricDistance", then output metric is "InsertDeleteDistance",
-    and respectively "ChangeOneDistance" maps to "HammingDistance".
+    ```text
+    | `MI`              | output metric        |
+    | ----------------- | -------------------- |
+    | SymmetricDistance | InsertDeleteDistance |
+    | ChangeOneDistance | HammingDistance      |
+    ```
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of "SymmetricDistance" or "ChangeOneDistance"
+    :param MI: Input Metric.
     :type MI: DatasetMetric
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1956,24 +1915,20 @@ def make_sized_bounded_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
-    :type MI: :ref:`RuntimeTypeDescriptor`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param T: Atomic Input Type and Output Type.
-    :type T: :ref:`RuntimeTypeDescriptor`
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2008,22 +1963,18 @@ def make_sized_bounded_sum_of_squared_deviations(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    **Citations**
     
-    * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
+    **Citations:**
     
-        * <https://arxiv.org/pdf/2207.10635.pdf>
-    
-    * Calibrating Noise to Sensitivity in Private Data Analysis
-        
-        * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2058,17 +2009,21 @@ def make_sized_bounded_unordered(
     """Make a Transformation that converts the ordered dataset metric `MI`
     to the respective unordered dataset metric via a no-op.
     Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
-    If `MI` is "InsertDeleteDistance", then output metric is "SymmetricDistance",
-    and respectively "HammingDistance" maps to "ChangeOneDistance".
+    ```text
+    | `MI`                 | output metric      |
+    | -------------------- | ------------------ |
+    | InsertDeleteDistance | SymmetricDistance  |
+    | HammingDistance      | ChangeOneDistance  |
+    ```
     
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of "InsertDeleteDistance" or "HammingDistance"
+    :param MI: Input Metric.
     :type MI: DatasetMetric
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2104,11 +2059,10 @@ def make_sized_bounded_variance(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    **Citations**
     
-    * DHK15, Differential Privacy for Social Science Inference
+    **Citations:**
     
-        * <http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf>
+    * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
     
     :param size: Number of records in input data.
     :type size: int
@@ -2116,8 +2070,8 @@ def make_sized_bounded_variance(
     :type bounds: Tuple[Any, Any]
     :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
     :type ddof: int
-    :param S: Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2152,15 +2106,19 @@ def make_sized_ordered_random(
     """Make a Transformation that converts the unordered dataset metric `MI`
     to the respective ordered dataset metric by assigning a random permutatation.
     Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
-    If `MI` is "SymmetricDistance", then output metric is "InsertDeleteDistance",
-    and respectively "ChangeOneDistance" maps to "HammingDistance".
+    ```text
+    | `MI`              | output metric        |
+    | ----------------- | -------------------- |
+    | SymmetricDistance | InsertDeleteDistance |
+    | ChangeOneDistance | HammingDistance      |
+    ```
     
     :param size: Number of records in input data.
     :type size: int
-    :param MI: Input Metric. One of "SymmetricDistance" or "ChangeOneDistance"
+    :param MI: Input Metric.
     :type MI: DatasetMetric
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2193,15 +2151,19 @@ def make_sized_unordered(
     """Make a Transformation that converts the ordered dataset metric `MI`
     to the respective unordered dataset metric via a no-op.
     Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
-    If `MI` is "InsertDeleteDistance", then output metric is "SymmetricDistance",
-    and respectively "HammingDistance" maps to "ChangeOneDistance".
+    ```text
+    | `MI`                 | output metric      |
+    | -------------------- | ------------------ |
+    | InsertDeleteDistance | SymmetricDistance  |
+    | HammingDistance      | ChangeOneDistance  |
+    ```
     
     :param size: Number of records in input data.
     :type size: int
-    :param MI: Input Metric. One of "InsertDeleteDistance" or "HammingDistance"
+    :param MI: Input Metric.
     :type MI: DatasetMetric
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2231,7 +2193,7 @@ def make_split_dataframe(
     col_names: Any,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that splits each record in a String into a Vec<Vec<String>>,
+    """Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
     and loads the resulting table into a dataframe keyed by `col_names`.
     
     :param separator: The token(s) that separate entries in each record.
@@ -2239,7 +2201,7 @@ def make_split_dataframe(
     :param col_names: Column names for each record entry.
     :type col_names: Any
     :param K: categorical/hashable data type of column names
-    :type K: :ref:`RuntimeTypeDescriptor`
+    :type K: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2266,7 +2228,7 @@ def make_split_dataframe(
 def make_split_lines(
     
 ) -> Transformation:
-    """Make a Transformation that takes a string and splits it into a Vec<String> of its lines.
+    """Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
     
     
     :rtype: Transformation
@@ -2289,7 +2251,7 @@ def make_split_lines(
 def make_split_records(
     separator: str
 ) -> Transformation:
-    """Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.
+    """Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
     
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
@@ -2324,7 +2286,7 @@ def make_subset_by(
     :param keep_columns: list of column names to apply subset to
     :type keep_columns: Any
     :param TK: Type of the column name
-    :type TK: :ref:`RuntimeTypeDescriptor`
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2353,12 +2315,12 @@ def make_unclamp(
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that unclamps numeric data in Vec<`T`>.
-    Used to convert a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.
+    Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
     
     :param bounds: Tuple of lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param TA: Atomic Type
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2389,8 +2351,14 @@ def make_unordered(
     Operates exclusively on VectorDomain<AllDomain<`TA`>>.
     The dataset metric is not generic over HammingDistance because the dataset size is unknown.
     
+    ```text
+    | input metric         | output metric        |
+    | -------------------- | -------------------- |
+    | InsertDeleteDistance | SymmetricDistance    |
+    ```
+    
     :param TA: Atomic Type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse

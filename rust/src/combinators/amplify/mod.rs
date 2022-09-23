@@ -35,7 +35,7 @@ impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
 /// This measurement does not perform any sampling. 
 /// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
 /// 
-/// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
+/// The `DIA`, `DO`, `MI` and `MO` between the input measurement and amplified output measurement all match.
 /// 
 /// # Arguments
 /// * `measurement` - the computation to apply privacy amplification to

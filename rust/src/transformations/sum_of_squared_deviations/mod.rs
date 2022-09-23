@@ -23,20 +23,15 @@ use super::UncheckedSum;
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_sized_bounded_sum_of_squared_deviations<S>(
     size: usize,
     bounds: (S::Item, S::Item),

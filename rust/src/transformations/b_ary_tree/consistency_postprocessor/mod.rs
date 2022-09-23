@@ -22,9 +22,7 @@ mod ffi;
 /// This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
 /// 
 /// # Citations
-/// * HRMS09, Boosting the Accuracy of Differentially Private Histograms Through Consistency
-///   
-///    * Section 4.1: <https://arxiv.org/pdf/0904.0942.pdf>
+/// * [HRMS09 Boosting the Accuracy of Differentially Private Histograms Through Consistency, section 4.1](https://arxiv.org/pdf/0904.0942.pdf)
 /// 
 /// # Arguments
 /// * `branching factor` - the maximum number of children

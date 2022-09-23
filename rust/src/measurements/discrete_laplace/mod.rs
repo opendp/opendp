@@ -24,6 +24,7 @@ pub use cks20::*;
 mod linear;
 pub use linear::*;
 
+#[doc(hidden)]
 pub trait MappableDomain: Domain {
     type Atom: Clone;
     fn map_over(
@@ -57,6 +58,7 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
     }
 }
 
+#[doc(hidden)]
 pub trait DiscreteLaplaceDomain: MappableDomain + Default {
     type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
 }
@@ -73,23 +75,26 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
     generics(D(default = "AllDomain<int>"))
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
-/// Adjust D to noise vector-valued data.
+/// 
+/// Set `D` to change the input data type:
+/// ```text
+/// | `D`                        | input type |
+/// | -------------------------- | ---------- | 
+/// | AllDomain<T> (default)     | T          |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     |
+/// ```
+/// 
 /// This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
 ///
 /// # Citations
-/// * GRS12, Universally Utility-Maximizing Privacy Mechanisms
-/// 
-///     * <https://theory.stanford.edu/~tim/papers/priv.pdf>
-/// 
-/// * CKS20, The Discrete Gaussian for Differential Privacy
-/// 
-///     * Based on Section 5.2 <https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2>
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+/// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
 /// 
 /// # Arguments
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
 /// 
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are VectorDomain<AllDomain<T>> or AllDomain<T>
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 /// * `QO` - Data type of the output distance and scale.
 #[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
@@ -136,11 +141,6 @@ where
     }
 }
 
-#[bootstrap(
-    features("contrib"),
-    arguments(scale(c_type = "void *")),
-    generics(D(default = "AllDomain<int>"))
-)]
 #[cfg(not(feature = "use-mpfr"))]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,

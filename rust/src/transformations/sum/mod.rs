@@ -26,13 +26,8 @@ use crate::transformations::{make_ordered_random, make_unordered};
 /// Use `make_clamp` to bound data.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
@@ -61,13 +56,8 @@ where
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.

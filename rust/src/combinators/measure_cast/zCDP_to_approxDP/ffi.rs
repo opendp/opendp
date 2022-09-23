@@ -10,7 +10,7 @@ use crate::{
 
 #[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
-/// is casted from ZeroConcentratedDivergence<QO> to SmoothedMaxDivergence<QO>.
+/// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy curve to be casted

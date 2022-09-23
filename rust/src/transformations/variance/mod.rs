@@ -28,9 +28,7 @@ use super::{
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 
 /// # Citations
-/// * DHK15, Differential Privacy for Social Science Inference
-/// 
-///     * <http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf>
+/// * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -38,7 +36,7 @@ use super::{
 /// * `ddof` - Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_sized_bounded_variance<S>(
     size: usize,
     bounds: (S::Item, S::Item),

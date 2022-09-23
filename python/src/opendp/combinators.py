@@ -50,7 +50,7 @@ def make_chain_mt(
     transformation0: Transformation
 ) -> Measurement:
     """Construct the functional composition (`measurement1` ○ `transformation0`).
-    Returns a Measurement that when invoked, computes measurement1(transformation0(x)).
+    Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
     
     :param measurement1: outer mechanism
     :type measurement1: Measurement
@@ -81,7 +81,7 @@ def make_chain_tm(
     measurement0: Measurement
 ) -> Measurement:
     """Construct the functional composition (`transformation1` ○ `measurement0`).
-    Returns a Measurement that when invoked, computes transformation1(measurement0(x)).
+    Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
     Used to represent non-interactive postprocessing.
     
     :param transformation1: outer postprocessing transformation
@@ -113,7 +113,7 @@ def make_chain_tt(
     transformation0: Transformation
 ) -> Transformation:
     """Construct the functional composition (`transformation1` ○ `transformation0`).
-    Returns a Transformation that when invoked, computes transformation1(transformation0(x)).
+    Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.
     
     :param transformation1: outer transformation
     :type transformation1: Transformation
@@ -207,7 +207,7 @@ def make_zCDP_to_approxDP(
     measurement: Measurement
 ) -> Measurement:
     """Constructs a new output measurement where the output measure
-    is casted from ZeroConcentratedDivergence<QO> to SmoothedMaxDivergence<QO>.
+    is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
     
     :param measurement: a measurement with a privacy curve to be casted
     :type measurement: Measurement

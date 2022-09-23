@@ -13,7 +13,7 @@ mod ffi;
 mod cks20;
 
 /// Constructs a new output measurement where the output measure 
-/// is casted from ZeroConcentratedDivergence<QO> to SmoothedMaxDivergence<QO>.
+/// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
 /// 
 /// # Arguments
 /// * `meas` - a measurement with a privacy curve to be casted
@@ -22,7 +22,7 @@ mod cks20;
 /// * `DI` - Input Domain
 /// * `DO` - Output Domain
 /// * `MI` - Input Metric
-/// * `QO` - Output distance type. One of f32 or f64.
+/// * `QO` - Output distance type. One of `f32` or `f64`.
 pub fn make_zCDP_to_approxDP<DI, DO, MI, QO>(
     meas: Measurement<DI, DO, MI, ZeroConcentratedDivergence<QO>>,
 ) -> Fallible<Measurement<DI, DO, MI, SmoothedMaxDivergence<QO>>>

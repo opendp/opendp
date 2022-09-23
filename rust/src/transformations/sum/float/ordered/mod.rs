@@ -24,20 +24,15 @@ mod ffi;
 /// The utility loss from overestimating the `size_limit` is small.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `size_limit` - Upper bound on the number of records in input data. Used to bound sensitivity.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_bounded_float_ordered_sum<S>(
     size_limit: usize,
     bounds: (S::Item, S::Item),
@@ -88,20 +83,15 @@ where
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
 /// 
 /// # Citations
-/// * Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It
-/// 
-///     * <https://arxiv.org/pdf/2207.10635.pdf>
-/// 
-/// * Calibrating Noise to Sensitivity in Private Data Analysis
-///     
-///     * <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_sized_bounded_float_ordered_sum<S>(
     size: usize,
     bounds: (S::Item, S::Item),
