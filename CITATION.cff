@@ -1,0 +1,42 @@
+abstract: >-
+  The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of
+  differential privacy. It can be used to build applications of privacy-preserving computations, using a number
+  of different models of privacy. OpenDP is implemented in Rust, with bindings for easy use from Python.
+authors:
+  - name: The OpenDP Team
+cff-version: 1.2.0
+contact:
+  - email: info@opendp.org
+    name: The OpenDP Team
+    website: https://opendp.org
+identifiers:
+  - type: url
+    value: https://github.com/opendp/opendp
+license: MIT
+message: If you use this software, please cite it using the metadata from this file.
+references:
+  - abstract: >-
+      In this working paper, we propose a programming framework for the library of differentially private
+      algorithms that will be at the core of the OpenDP open-source software project, and recommend programming
+      languages in which to implement the framework.
+    authors:
+    - family-names: Hay
+      given-names: Michael
+    - family-names: Gaboardi
+      given-names: Marco
+    - family-names: Vadhan
+      given-names: Salil
+    conference:
+      date-end: 2020-05-15
+      date-start: 2020-05-13
+      name: 2020 OpenDP Community Meeting
+    status: preprint
+    title: A Programming Framework for OpenDP
+    type: conference-paper
+    url: https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf
+    year: 2020
+repository-artifact: https://pypi.org/project/opendp
+repository-code: https://github.com/opendp/opendp
+title: OpenDP Library
+type: software
+url: https://github.com/opendp/opendp
