@@ -7,12 +7,35 @@ use crate::{
 };
 
 use num::{Zero, One};
+use opendp_derive::bootstrap;
 
 use super::{Float, Pairwise, Sequential, SumRelaxation};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
+
+#[bootstrap(
+    features("contrib"),
+    arguments(bounds(rust_type(id = "(T, T)"))),
+    generics(S(default = "Pairwise<T>", generics("T"))),
+    returns(c_type = "FfiResult<AnyTransformation *>"),
+    derived_types(T(get_atom_or_infer("S", get_first("bounds"))))
+)]
+/// Make a Transformation that computes the sum of bounded data with known dataset size. 
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+/// 
+/// # Citations
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+/// 
+/// # Arguments
+/// * `size_limit` - Upper bound on number of records to keep in the input data.
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_bounded_float_checked_sum<S>(
     size_limit: usize,
     bounds: (S::Item, S::Item),
@@ -63,6 +86,26 @@ where
     ))
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(bounds(rust_type(id="(T, T)"))),
+    generics(S(default = "Pairwise<T>", generics("T"))),
+    returns(c_type = "FfiResult<AnyTransformation *>"),
+    derived_types(T(get_atom_or_infer("S", get_first("bounds"))))
+)]
+/// Make a Transformation that computes the sum of bounded floats with known dataset size. 
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
+/// 
+/// # Citations
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_sized_bounded_float_checked_sum<S>(
     size: usize,
     bounds: (S::Item, S::Item),

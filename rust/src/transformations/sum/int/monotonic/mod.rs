@@ -1,4 +1,5 @@
 use num::Zero;
+use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
@@ -13,6 +14,22 @@ use super::AddIsExact;
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[bootstrap(
+    features("contrib"),
+    generics(T(example(get_first("bounds"))))
+)]
+/// Make a Transformation that computes the sum of bounded ints, 
+/// where all values share the same sign.
+/// 
+/// # Citations
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `T` - Atomic Input Type and Output Type
 pub fn make_bounded_int_monotonic_sum<T>(
     bounds: (T, T),
 ) -> Fallible<
@@ -51,6 +68,23 @@ where
     ))
 }
 
+#[bootstrap(
+    features("contrib"),
+    generics(T(example(get_first("bounds"))))
+)]
+/// Make a Transformation that computes the sum of bounded ints, 
+/// where all values share the same sign.
+/// 
+/// # Citations
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `T` - Atomic Input Type and Output Type
 pub fn make_sized_bounded_int_monotonic_sum<T>(
     size: usize,
     bounds: (T, T),

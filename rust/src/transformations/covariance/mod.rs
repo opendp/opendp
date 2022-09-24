@@ -12,7 +12,7 @@ use super::UncheckedSum;
 
 
 #[cfg(feature="ffi")]
-pub mod ffi;
+mod ffi;
 
 
 type CovarianceDomain<T> = SizedDomain<VectorDomain<BoundedDomain<(T, T)>>>;

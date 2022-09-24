@@ -1,6 +1,7 @@
 use std::ops::Sub;
 
 use num::Zero;
+use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, Transformation},
@@ -15,7 +16,11 @@ use super::postprocess::make_postprocess;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-/// Constructs a [`Transformation`] that maps a float vector of counts into a cumulative distribution
+#[bootstrap(features("contrib"), generics(TA(default = "float")))]
+/// Postprocess a noisy array of float summary counts into a cumulative distribution.
+/// 
+/// # Generics
+/// * `TA` - Atomic Type. One of `f32` or `f64`
 pub fn make_cdf<TA>() -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TA>>,
@@ -49,7 +54,21 @@ pub enum Interpolation {
     Linear,
 }
 
-/// Constructs a [`Transformation`] that retrieves nearest bin edge to quantile
+#[bootstrap(
+    features("contrib"), 
+    arguments(interpolation(c_type = "char *", rust_type(id="String"), default = "linear")),
+    generics(F(default = "float"))
+)]
+/// Postprocess a noisy array of summary counts into quantiles.
+/// 
+/// # Arguments
+/// * `bin_edges` - The edges that the input data was binned into before counting.
+/// * `alphas` - Return all specified `alpha`-quantiles.
+/// * `interpolation` - Must be one of `linear` or `nearest`
+/// 
+/// # Generics
+/// * `TA` - Atomic Type of the bin edges and data.
+/// * `F` - Float type of the alpha argument. One of `f32` or `f64`
 pub fn make_quantiles_from_counts<TA, F>(
     bin_edges: Vec<TA>,
     alphas: Vec<F>,

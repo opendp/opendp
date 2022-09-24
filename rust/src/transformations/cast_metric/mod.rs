@@ -14,6 +14,11 @@ use self::traits::{
 mod ffi;
 mod traits;
 
+/// Make a Transformation that converts the unordered dataset metric `MI` 
+/// to the respective ordered dataset metric MI::OrderedMetric by assigning a random permutatation.
+/// 
+/// # Generics
+/// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
 pub fn make_ordered_random<D, MI>(
     domain: D,
 ) -> Fallible<Transformation<D, D, MI, MI::OrderedMetric>>
