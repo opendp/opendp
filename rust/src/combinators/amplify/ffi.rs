@@ -1,6 +1,8 @@
 use std::os::raw::c_uint;
 
-use crate::combinators::{AmplifiableMeasure, IsSizedDomain, make_population_amplification};
+use opendp_derive::bootstrap;
+
+use crate::combinators::{AmplifiableMeasure, IsSizedDomain};
 use crate::core::FfiResult;
 use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
@@ -56,6 +58,23 @@ impl IsSizedDomain for AnyDomain {
 
         dispatch!(monomorphize1, [(TIA, @numbers)], (self, DI))
     }
+}
+
+#[bootstrap(features("contrib"))]
+/// Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
+/// This measurement does not perform any sampling. 
+/// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
+/// 
+/// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
+/// 
+/// # Arguments
+/// * `measurement` - the computation to amplify
+/// * `population_size` - the size of the population from which the input dataset is a simple sample
+fn make_population_amplification(
+    measurement: &AnyMeasurement,
+    population_size: usize
+) -> Fallible<AnyMeasurement> {
+    super::make_population_amplification(measurement, population_size)
 }
 
 #[no_mangle]
