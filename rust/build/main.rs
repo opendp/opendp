@@ -1,184 +1,139 @@
-use std::env;
-use std::fs::{File, canonicalize};
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    env,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
-use indexmap::map::IndexMap;
-use serde::{Deserialize, Deserializer};
-use serde_json::Value;
+use opendp_bootstrap::Function;
+use proc_macro2::TokenStream;
+use syn::{File, Item, ItemFn};
 
-pub mod python;
-
-// a module contains functions by name
-type Module = IndexMap<String, Function>;
-
-// metadata for each function in a module
-#[derive(Deserialize, Debug)]
-pub struct Function {
-    #[serde(default)]
-    args: Vec<Argument>,
-    // metadata for return type
-    #[serde(default)]
-    ret: Argument,
-    // required feature flags to execute function
-    #[serde(default)]
-    features: Vec<String>,
-    // metadata for constructing new types based on existing types or introspection
-    #[serde(default)]
-    derived_types: Vec<Argument>,
-    // plaintext description of the function used to generate documentation
-    description: Option<String>,
-    // URL pointing to the location of the DP proof for the function
-    proof: Option<String>
-}
-
-// Metadata for function arguments, derived types and returns.
-#[derive(Deserialize, Debug, Default, Clone)]
-pub struct Argument {
-    // argument name. Optional for return types
-    name: Option<String>,
-    // c type to translate to/from for FFI. Optional for derived types
-    c_type: Option<String>,
-    // RuntimeType expressed in terms of rust types with generics.
-    // Includes various RuntimeType constructors
-    rust_type: Option<RuntimeType>,
-    // a list of names in the rust_type that should be considered generics
-    #[serde(default)]
-    generics: Vec<String>,
-    // type hint- a more abstract type that all potential arguments inherit from
-    hint: Option<String>,
-    // plaintext description of the argument used to generate documentation
-    description: Option<String>,
-    // default value for the argument
-    #[serde(default, deserialize_with = "deserialize_some")]
-    default: Option<Value>,
-    // set to true if the argument represents a type
-    #[serde(default)]
-    is_type: bool,
-    // most functions convert c_to_py or py_to_c. Set to true to leave the value as-is
-    // an example usage is slice_as_object,
-    //  to prevent the returned AnyObject from getting converted back to python
-    #[serde(default)]
-    do_not_convert: bool,
-    // when is_type, use this as an example to infer the type
-    #[serde(default)]
-    example: Option<RuntimeType>
-}
-
-// deserialize "k": null as `Some(Value::Null)` and no key as `None`.
-fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
-    where T: Deserialize<'de>, D: Deserializer<'de> {
-    Deserialize::deserialize(deserializer).map(Some)
-}
-
-#[allow(dead_code)]
-impl Argument {
-    fn name(&self) -> String {
-        self.name.clone().expect("unknown name when parsing argument")
-    }
-    fn c_type(&self) -> String {
-        if self.is_type {
-            if self.c_type.is_some() { panic!("c_type should not be specified when is_type") }
-            return "char *".to_string()
-        }
-        self.c_type.clone().expect("unknown c_type when parsing argument")
-    }
-    fn c_type_origin(&self) -> String {
-        self.c_type().split('<').next().unwrap().to_string()
-    }
-}
-
-// RuntimeType contains the metadata to generate code that evaluates to a rust type name
-#[derive(Deserialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
-enum RuntimeType {
-    // reference an existing RuntimeType
-    Name(String),
-    // get the ith subtype of an existing RuntimeType
-    Lower { root: Box<RuntimeType>, index: i32 },
-    // build a higher level RuntimeType
-    Raise { origin: String, args: Vec<RuntimeType> },
-    // construct the RuntimeType via function call
-    Function { function: String, params: Vec<RuntimeType> },
-}
-
-impl<S: Into<String>> From<S> for RuntimeType {
-    fn from(name: S) -> Self {
-        RuntimeType::Name(name.into())
-    }
-}
+mod codegen;
 
 fn main() {
-    // only build the bindings if you're in dev mode
-    if env::var("CARGO_PKG_VERSION").unwrap().as_str() != "0.0.0+development" { return }
+    // parse crate into module metadata
+    // this function returns None if code is malformed/unparseable
+    if let Some(_modules) = parse_crate().expect("io error while parsing opendp") {
+        // generate and write bindings based on collected metadata
+        if cfg!(feature = "bindings-python") {
+            codegen::write_bindings(codegen::python::generate_bindings(_modules));
+        }
+    }
+}
 
-    let module_names = vec!["combinators", "measurements", "transformations", "data", "core", "accuracy"];
+/// Parses all modules in opendp crate
+fn parse_crate() -> std::io::Result<Option<HashMap<String, Vec<(String, Function)>>>> {
+    let manifest_dir =
+        env::var_os("CARGO_MANIFEST_DIR").expect("Failed to determine location of Cargo.toml.");
+    let src_dir = PathBuf::from(manifest_dir).join("src");
 
-    let get_bootstrap_path = |val: &str|
-        Path::new("src").join(val).join("bootstrap.json");
+    let mut modules = HashMap::new();
+    for entry in std::fs::read_dir(src_dir)? {
+        let path = entry?.path();
 
-    // Tell Cargo that if the given file changes, to rerun this build script.
-    module_names.iter().for_each(|module_name|
-        println!("cargo:rerun-if-changed={:?}", get_bootstrap_path(module_name)));
+        let module_name =
+            if let Some(name) = path.file_name().expect("paths are canonicalized").to_str() {
+                name.to_string()
+            } else {
+                continue;
+            };
 
-    // allow modules to be unused if no bindings feature flags are enabled
-    let _modules = module_names.iter()
-        .map(|module_name| {
-            println!("parsing module: {}", module_name);
-            let mut contents = String::new();
-            File::open(get_bootstrap_path(module_name))
-                .expect("file not found")
-                .read_to_string(&mut contents)
-                .expect("failed reading module json");
+        if path.is_dir() {
+            if let Some(module) = parse_file_tree(&path)? {
+                if !module.is_empty() {
+                    // sort module functions
+                    let mut module = module.into_iter().collect::<Vec<(String, Function)>>();
+                    module.sort_by_key(|(k, _)| k.clone());
+                    modules.insert(module_name, module);
+                }
+            } else {
+                // parsing failed
+                return Ok(None);
+            }
+        }
+    }
+    Ok(Some(modules))
+}
 
-            (module_name.to_string(), serde_json::from_str(&contents).expect("failed to parse json"))
+/// Search for bootstrap macro invocations by recursing over `dir`
+fn parse_file_tree(dir: &Path) -> std::io::Result<Option<Vec<(String, Function)>>> {
+    // use here to shadow syn::File
+    use std::{fs::File, io::Read};
+
+    let mut matches = Vec::new();
+    if dir.is_dir() {
+        for entry in std::fs::read_dir(dir)? {
+            let path = entry?.path();
+            if path.is_dir() {
+                if let Some(parsed) = parse_file_tree(&path)? {
+                    matches.extend(parsed);
+                } else {
+                    return Ok(None)
+                };
+            } else {
+                // skip non-rust files
+                if path.extension().unwrap_or_default() != "rs" {
+                    continue;
+                }
+
+                let mut contents = String::new();
+                File::open(&path)?.read_to_string(&mut contents)?;
+                if let Some(funcs) = parse_file(contents) {
+                    matches.extend(funcs);
+                } else {
+                    return Ok(None);
+                }
+            };
+        }
+    }
+    Ok(Some(matches))
+}
+
+/// Search a file for bootstrap macro invocations
+fn parse_file(text: String) -> Option<Vec<(String, Function)>> {
+    // ignore files that fail to parse so as not to break IDE tooling
+    let ts = TokenStream::from_str(&text).ok()?;
+
+    // use parse2 and TokenStream from proc_macro2 because we are not in a proc_macro context
+    let items = syn::parse2::<File>(ts).ok()?.items;
+
+    // flatten and filter the contents of a file into a vector of functions
+    fn flatten_fns(item: Item) -> Vec<ItemFn> {
+        match item {
+            Item::Fn(func) => vec![func],
+            Item::Mod(module) => module
+                .content
+                .map(|v| v.1.into_iter().flat_map(flatten_fns).collect())
+                .unwrap_or_else(Vec::new),
+            _ => Vec::new(),
+        }
+    }
+
+    fn path_is_eq(path: &syn::Path, name: &str) -> bool {
+        path.get_ident().map(ToString::to_string).as_deref() == Some(name)
+    }
+
+    // parse all functions
+    (items.into_iter())
+        .flat_map(flatten_fns)
+        // ignore the function if it doesn't have a bootstrap proc macro invocation
+        .filter(|func| (func.attrs.iter()).any(|attr| path_is_eq(&attr.path, "bootstrap")))
+        // attempt to parse and simulate the proc macro on the function
+        .map(|mut func| {
+            // extract the bootstrap attribute
+            let idx = (func.attrs.iter())
+                .position(|attr| path_is_eq(&attr.path, "bootstrap"))
+                .expect("bootstrap attr always exists because of filter");
+            let bootstrap_attr = func.attrs.remove(idx);
+
+            // parse args to the bootstrap macro
+            let attr_args = match bootstrap_attr.parse_meta().ok()? {
+                syn::Meta::List(ml) => ml.nested.into_iter().collect(),
+                _ => return None,
+            };
+            // use the bootstrap crate to parse a Function 
+            Function::from_ast(attr_args, func).ok()
         })
-        .collect::<IndexMap<String, Module>>();
-
-    if cfg!(feature="bindings-python") {
-        write_bindings(python::generate_bindings(_modules));
-    }
-}
-
-#[allow(dead_code)]
-fn write_bindings(files: IndexMap<PathBuf, String>) {
-    let base_dir = canonicalize("../python/src/opendp").unwrap();
-    for (file_path, file_contents) in files {
-        File::create(base_dir.join(file_path)).unwrap()
-            .write_all(file_contents.as_ref()).unwrap();
-    }
-}
-
-
-#[allow(dead_code)]
-fn indent(text: String) -> String {
-    text.split('\n').map(|v| format!("    {}", v)).collect::<Vec<_>>().join("\n")
-}
-
-/// resolve references to derived types
-#[allow(dead_code)]
-fn flatten_runtime_type(runtime_type: &RuntimeType, derived_types: &Vec<Argument>) -> RuntimeType {
-    let resolve_name = |name: &String|
-        derived_types.iter()
-            .find(|derived| derived.name.as_ref().unwrap() == name)
-            .map(|derived_type| flatten_runtime_type(
-                derived_type.rust_type.as_ref().unwrap(), derived_types))
-            .unwrap_or_else(|| runtime_type.clone());
-
-    match runtime_type {
-        RuntimeType::Name(name) =>
-            resolve_name(name),
-        RuntimeType::Lower { root, index } =>
-            RuntimeType::Lower {
-                root: Box::new(flatten_runtime_type(root, derived_types)),
-                index: *index
-            },
-        RuntimeType::Raise { origin, args } =>
-            RuntimeType::Raise {
-                origin: origin.clone(),
-                args: args.iter().map(|arg|
-                    flatten_runtime_type(arg, derived_types)).collect()
-            },
-        other => other.clone()
-    }
+        .collect()
 }

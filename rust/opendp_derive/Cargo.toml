@@ -1,0 +1,18 @@
+[package]
+name = "opendp_derive"
+version = "0.0.0+development"
+edition = "2021"
+description = "Minimal packaging for a bootstrap proc-macro that uses the opendp_bootstrap crate."
+
+# proc-macro crates can only export proc-macros
+[lib]
+proc-macro = true
+
+# we need to reuse the bootstrap logic in the opendp build script, so it is factored into a separate crate
+[dependencies]
+syn = { version = "1.0", features = ["full", "parsing"] }
+quote = { version = "1.0" }
+opendp_bootstrap = { path = "../opendp_bootstrap" }
+
+[features]
+local-docs = []
