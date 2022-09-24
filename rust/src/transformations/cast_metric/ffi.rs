@@ -1,21 +1,44 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
+use opendp_derive::bootstrap;
+
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Transformation};
+use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::err;
+use crate::error::Fallible;
+use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
+use crate::ffi::util::Type;
 use crate::metrics::{
     ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
 };
-use crate::domains::{AllDomain, SizedDomain, VectorDomain, BoundedDomain};
-use crate::err;
-use crate::ffi::any::{AnyTransformation, AnyObject, Downcast};
-use crate::ffi::util::Type;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::cast_metric::traits::{
     BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric,
 };
-use crate::transformations::{
-    make_metric_bounded, make_metric_unbounded, make_ordered_random, make_unordered,
-};
+
+#[bootstrap(
+    module = "transformations", 
+    features("contrib")
+)]
+/// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
+/// to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
+/// Operates exclusively on VectorDomain<AllDomain<`TA`>>.
+///
+/// The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
+///
+/// # Generics
+/// * `TA` - Atomic Type.
+fn make_ordered_random<TA: Clone + CheckNull>() -> Fallible<
+    Transformation<
+        VectorDomain<AllDomain<TA>>,
+        VectorDomain<AllDomain<TA>>,
+        SymmetricDistance,
+        InsertDeleteDistance,
+    >,
+> {
+    super::make_ordered_random(Default::default())
+}
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_ordered_random(
@@ -23,18 +46,52 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
 ) -> FfiResult<*mut AnyTransformation> {
     let TA = try_!(Type::try_from(TA));
 
-    fn monomorphize<TA>() -> FfiResult<*mut AnyTransformation>
-    where
-        TA: 'static + Clone + CheckNull,
-    {
-        make_ordered_random::<VectorDomain<AllDomain<TA>>, SymmetricDistance>(
-            VectorDomain::new_all(),
-        )
-        .into_any()
+    fn monomorphize<TA: 'static + Clone + CheckNull>() -> FfiResult<*mut AnyTransformation> {
+        make_ordered_random::<TA>().into_any()
     }
     dispatch!(monomorphize, [
         (TA, @primitives)
     ], ())
+}
+
+#[bootstrap(
+    module = "transformations", 
+    features("contrib"),
+    generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
+)]
+/// Make a Transformation that converts the unordered dataset metric `MI`
+/// to the respective ordered dataset metric by assigning a random permutatation.
+/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+///
+/// ```text
+/// | `MI`              | output metric        |
+/// | ----------------- | -------------------- |
+/// | SymmetricDistance | InsertDeleteDistance |
+/// | ChangeOneDistance | HammingDistance      |
+/// ```
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// 
+/// # Generics
+/// * `MI` - Input Metric.
+/// * `TA` - Atomic Type.
+fn make_sized_ordered_random<MI, TA>(
+    size: usize
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        MI,
+        MI::OrderedMetric,
+    >,
+>
+where
+    MI: 'static + UnorderedMetric<Distance = IntDistance>,
+    TA: 'static + Clone + CheckNull,
+{
+    let domain = SizedDomain::new(VectorDomain::new(AllDomain::<TA>::new()), size);
+    super::make_ordered_random(domain)
 }
 
 #[no_mangle]
@@ -52,8 +109,7 @@ pub extern "C" fn opendp_transformations__make_sized_ordered_random(
         MI: 'static + UnorderedMetric<Distance = IntDistance>,
         TA: 'static + Clone + CheckNull,
     {
-        let domain = SizedDomain::new(VectorDomain::new(AllDomain::<TA>::new()), size);
-        make_ordered_random::<_, MI>(domain).into_any()
+        make_sized_ordered_random::<MI, TA>(size).into_any()
     }
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, ChangeOneDistance]),
@@ -61,6 +117,50 @@ pub extern "C" fn opendp_transformations__make_sized_ordered_random(
     ], (size))
 }
 
+#[bootstrap(
+    module = "transformations", 
+    features("contrib"),
+    generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
+)]
+/// Make a Transformation that converts the unordered dataset metric `MI`
+/// to the respective ordered dataset metric by assigning a random permutatation.
+/// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
+///
+/// ```text
+/// | `MI`              | output metric        |
+/// | ----------------- | -------------------- |
+/// | SymmetricDistance | InsertDeleteDistance |
+/// | ChangeOneDistance | HammingDistance      |
+/// ```
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of inclusive lower and upper bounds.
+/// 
+/// # Generics
+/// * `MI` - Input Metric.
+/// * `TA` - Atomic Type.
+fn make_sized_bounded_ordered_random<MI, TA>(
+    size: usize,
+    bounds: (TA, TA)
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<BoundedDomain<TA>>>,
+        SizedDomain<VectorDomain<BoundedDomain<TA>>>,
+        MI,
+        MI::OrderedMetric,
+    >,
+>
+where
+    MI: 'static + UnorderedMetric<Distance = IntDistance>,
+    TA: 'static + Clone + CheckNull + TotalOrd,
+{
+    let domain = SizedDomain::new(
+        VectorDomain::new(BoundedDomain::<TA>::new_closed(bounds)?),
+        size,
+    );
+    super::make_ordered_random(domain)
+}
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_sized_bounded_ordered_random(
@@ -80,13 +180,39 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_ordered_random(
         TA: 'static + Clone + CheckNull + TotalOrd,
     {
         let bounds = try_!(bounds.downcast_ref::<(TA, TA)>()).clone();
-        let domain = SizedDomain::new(VectorDomain::new(try_!(BoundedDomain::<TA>::new_closed(bounds))), size);
-        make_ordered_random::<_, MI>(domain).into_any()
+        make_sized_bounded_ordered_random::<MI, TA>(size, bounds).into_any()
     }
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, ChangeOneDistance]),
         (TA, @numbers)
     ], (size, bounds))
+}
+
+
+#[bootstrap(module = "transformations", features("contrib"))]
+/// Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance`
+/// to the respective ordered dataset metric SymmetricDistance with a no-op.
+/// Operates exclusively on VectorDomain<AllDomain<`TA`>>.
+///
+/// The dataset metric is not generic over HammingDistance because the dataset size is unknown.
+/// 
+/// ```text
+/// | input metric         | output metric        |
+/// | -------------------- | -------------------- |
+/// | InsertDeleteDistance | SymmetricDistance    |
+/// ```
+/// 
+/// # Generics
+/// * `TA` - Atomic Type.
+fn make_unordered<TA: Clone + CheckNull>() -> Fallible<
+    Transformation<
+        VectorDomain<AllDomain<TA>>,
+        VectorDomain<AllDomain<TA>>,
+        InsertDeleteDistance,
+        SymmetricDistance,
+    >,
+> {
+    super::make_unordered(Default::default())
 }
 
 #[no_mangle]
@@ -95,15 +221,52 @@ pub extern "C" fn opendp_transformations__make_unordered(
 ) -> FfiResult<*mut AnyTransformation> {
     let TA = try_!(Type::try_from(TA));
 
-    fn monomorphize<TA>() -> FfiResult<*mut AnyTransformation>
-    where
-        TA: 'static + Clone + CheckNull,
-    {
-        make_unordered::<VectorDomain<AllDomain<TA>>, InsertDeleteDistance>(VectorDomain::new_all()).into_any()
+    fn monomorphize<TA: 'static + Clone + CheckNull>() -> FfiResult<*mut AnyTransformation> {
+        make_unordered::<TA>().into_any()
     }
     dispatch!(monomorphize, [
         (TA, @primitives)
     ], ())
+}
+
+#[bootstrap(
+    module = "transformations", 
+    features("contrib"),
+    generics(MI(hint = "DatasetMetric", default = "InsertDeleteDistance"))
+)]
+/// Make a Transformation that converts the ordered dataset metric `MI`
+/// to the respective unordered dataset metric via a no-op.
+/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+///
+/// ```text
+/// | `MI`                 | output metric      |
+/// | -------------------- | ------------------ |
+/// | InsertDeleteDistance | SymmetricDistance  |
+/// | HammingDistance      | ChangeOneDistance  |
+/// ```
+///
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// 
+/// # Generics
+/// * `MI` - Input Metric.
+/// * `TA` - Atomic Type.
+fn make_sized_unordered<MI, TA>(
+    size: usize
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        MI,
+        MI::UnorderedMetric,
+    >,
+>
+where
+    MI: 'static + OrderedMetric<Distance = IntDistance>,
+    TA: 'static + Clone + CheckNull,
+{
+    let domain = SizedDomain::new(VectorDomain::new(AllDomain::<TA>::new()), size);
+    super::make_unordered(domain)
 }
 
 #[no_mangle]
@@ -121,8 +284,7 @@ pub extern "C" fn opendp_transformations__make_sized_unordered(
         MI: 'static + OrderedMetric<Distance = IntDistance>,
         TA: 'static + Clone + CheckNull,
     {
-        let domain = SizedDomain::new(VectorDomain::new(AllDomain::<TA>::new()), size);
-        make_unordered::<_, MI>(domain).into_any()
+        make_sized_unordered::<MI, TA>(size).into_any()
     }
     dispatch!(monomorphize, [
         (MI, [InsertDeleteDistance, HammingDistance]),
@@ -130,6 +292,47 @@ pub extern "C" fn opendp_transformations__make_sized_unordered(
     ], (size))
 }
 
+#[bootstrap(
+    module = "transformations", 
+    features("contrib"),
+    generics(MI(hint = "DatasetMetric", default = "InsertDeleteDistance"))
+)]
+/// Make a Transformation that converts the ordered dataset metric `MI`
+/// to the respective unordered dataset metric via a no-op.
+/// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
+///
+/// ```text
+/// | `MI`                 | output metric      |
+/// | -------------------- | ------------------ |
+/// | InsertDeleteDistance | SymmetricDistance  |
+/// | HammingDistance      | ChangeOneDistance  |
+/// ```
+///
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of inclusive lower and upper bounds.
+/// 
+/// # Generics
+/// * `MI` - Input Metric.
+/// * `TA` - Atomic Type.
+fn make_sized_bounded_unordered<MI, TA>(
+    size: usize,
+    bounds: (TA, TA)
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<BoundedDomain<TA>>>,
+        SizedDomain<VectorDomain<BoundedDomain<TA>>>,
+        MI,
+        MI::UnorderedMetric,
+    >,
+>
+where
+    MI: 'static + OrderedMetric<Distance = IntDistance>,
+    TA: 'static + Clone + CheckNull + TotalOrd,
+{
+    let domain = SizedDomain::new(VectorDomain::new(BoundedDomain::<TA>::new_closed(bounds)?), size);
+    super::make_unordered(domain)
+}
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_sized_bounded_unordered(
@@ -149,13 +352,57 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_unordered(
         TA: 'static + Clone + CheckNull + TotalOrd,
     {
         let bounds = try_!(bounds.downcast_ref::<(TA, TA)>()).clone();
-        let domain = SizedDomain::new(VectorDomain::new(try_!(BoundedDomain::<TA>::new_closed(bounds))), size);
-        make_unordered::<_, MI>(domain).into_any()
+        make_sized_bounded_unordered::<MI, TA>(size, bounds).into_any()
     }
     dispatch!(monomorphize, [
         (MI, [InsertDeleteDistance, HammingDistance]),
         (TA, @numbers)
     ], (size, bounds))
+}
+
+#[bootstrap(
+    module = "transformations", 
+    features("contrib"),
+    generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
+)]
+/// Make a Transformation that converts the unbounded dataset metric `MI` 
+/// to the respective bounded dataset metric with a no-op. 
+/// 
+/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+/// The constructor enforces that the input domain has known size, 
+/// because it must have known size to be valid under a bounded dataset metric.
+/// 
+/// While it is valid to operate with bounded data, there is no constructor for it in Python.
+/// 
+/// ```text
+/// | `MI`                 | output metric     |
+/// | -------------------- | ----------------- |
+/// | SymmetricDistance    | ChangeOneDistance |
+/// | InsertDeleteDistance | HammingDistance   |
+/// ```
+///
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// 
+/// # Generics
+/// * `MI` - Input Metric.
+/// * `TA` - Atomic Type.
+fn make_metric_bounded<MI, TA>(
+    size: usize
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        MI,
+        MI::BoundedMetric,
+    >,
+>
+where
+    MI: 'static + UnboundedMetric<Distance = IntDistance>,
+    TA: 'static + Clone + CheckNull,
+{
+    let domain = SizedDomain::new(VectorDomain::new_all(), size);
+    super::make_metric_bounded(domain)
 }
 
 #[no_mangle]
@@ -172,14 +419,54 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
         MI: 'static + UnboundedMetric<Distance = IntDistance>,
         TA: 'static + Clone + CheckNull,
     {
-        let domain = SizedDomain::new(VectorDomain::new_all(), size);
-        make_metric_bounded::<VectorDomain<AllDomain<TA>>, MI>(domain).into_any()
+        make_metric_bounded::<MI, TA>(size).into_any()
     }
     let size = size as usize;
     dispatch!(monomorphize, [
         (MI, [SymmetricDistance, InsertDeleteDistance]),
         (TA, @primitives)
     ], (size))
+}
+
+
+#[bootstrap(
+    module = "transformations", 
+    features("contrib"),
+    generics(MI(hint = "DatasetMetric", default = "ChangeOneDistance"))
+)]
+/// Make a Transformation that converts the bounded dataset metric `MI` 
+/// to the respective unbounded dataset metric with a no-op. 
+/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+/// 
+/// ```text
+/// | `MI`              | output metric        |
+/// | ----------------- | -------------------- |
+/// | ChangeOneDistance | SymmetricDistance    |
+/// | HammingDistance   | InsertDeleteDistance |
+/// ```
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// 
+/// # Generics
+/// * `MI` - Input Metric.
+/// * `TA` - Atomic Type.
+fn make_metric_unbounded<MI, TA>(
+    size: usize
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        SizedDomain<VectorDomain<AllDomain<TA>>>,
+        MI,
+        MI::UnboundedMetric,
+    >,
+>
+where
+    MI: 'static + BoundedMetric<Distance = IntDistance>,
+    TA: 'static + Clone + CheckNull,
+{
+    let domain = SizedDomain::new(VectorDomain::new_all(), size);
+    super::make_metric_unbounded(domain)
 }
 
 #[no_mangle]
@@ -196,8 +483,7 @@ pub extern "C" fn opendp_transformations__make_metric_unbounded(
         MI: 'static + BoundedMetric<Distance = IntDistance>,
         TA: 'static + Clone + CheckNull,
     {
-        let domain = SizedDomain::new(VectorDomain::new_all(), size);
-        make_metric_unbounded::<VectorDomain<AllDomain<TA>>, MI>(domain).into_any()
+        make_metric_unbounded::<MI, TA>(size).into_any()
     }
     let size = size as usize;
     dispatch!(monomorphize, [
