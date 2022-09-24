@@ -85,7 +85,7 @@ This is extremely powerful!
     >>> binary_search_param(
     ...     lambda c: make_bounded_sum((-c, c)) >> make_base_gaussian(scale=1.), 
     ...     d_in=2, d_out=1.)
-    0.7071067778938249
+    0.3535533897700931
 
 The API documentation on these functions have more specific usage examples.
 
