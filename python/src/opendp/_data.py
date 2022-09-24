@@ -53,7 +53,7 @@ def slice_as_object(
     :type slice: FfiSlicePtr
     :param T: 
     :type T: :ref:`RuntimeTypeDescriptor`
-    :return: An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
+    :return: An AnyObject that contains the data in `slice`. The AnyObject also captures Rust type information.
     :rtype: Any
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -81,7 +81,7 @@ def object_type(
     
     :param this: 
     :type this: Any
-    :return: The rust type associated with `this` AnyObject.
+    :return: The Rust type associated with `this` AnyObject.
     :rtype: str
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse

@@ -45,8 +45,6 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
     >>> accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
     1.020426913849308
 
-There is another example of building a confidence interval at the end of the page.
-
 You can generally plug the distribution (Laplace or Gaussian), scale, accuracy and alpha
 into the following statement to interpret these functions:
 

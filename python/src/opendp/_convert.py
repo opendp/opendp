@@ -29,7 +29,7 @@ ATOM_MAP = {
 
 
 def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
-    """Map from python `value` to ctypes `c_type`.
+    """Map from Python `value` to ctypes `c_type`.
 
     :param value: value to convert to c_type
     :param c_type: expected ctypes type to convert to
@@ -86,11 +86,11 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
 
 def c_to_py(value):
-    """Map from ctypes `value` to python value.
-    It is assumed that the c type is simpler than in py_to_c, as the library returns fewer types.
+    """Map from ctypes `value` to Python value.
+    It is assumed that the C type is simpler than in py_to_c, as the library returns fewer types.
 
     :param value: data in ctypes format
-    :return: copy of data in python representation
+    :return: copy of data in Python representation
     """
     if isinstance(value, AnyObjectPtr):
         from opendp._data import object_type, object_as_slice, slice_free
@@ -127,13 +127,13 @@ def c_to_py(value):
 
 
 def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
-    """Convert from `raw` FfiSlicePtr to python type.
+    """Convert from `raw` FfiSlicePtr to Python type.
     This is the postprocessing step after _object_to_slice that unloads data from a ctypes representation.
     External checks allow this function to assume that `raw` is compatible with the type_name type.
 
-    :param raw: raw pointer to an FfiSlice that will be unloaded into a python type
-    :param type_name: rust type name that determines the python type to unload into
-    :return: a standard python reference-counted data type
+    :param raw: raw pointer to an FfiSlice that will be unloaded into a Python type
+    :param type_name: Rust type name that determines the Python type to unload into
+    :return: a standard Python reference-counted data type
     """
     if isinstance(type_name, str) and type_name in ATOM_MAP:
         return _slice_to_scalar(raw, type_name)
@@ -154,13 +154,13 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
 
 
 def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
-    """Convert from python `value` to FfiSlicePtr.
+    """Convert from Python `value` to FfiSlicePtr.
     The initial preprocessing step for _slice_to_object that loads data into a ctypes representation.
     External checks allow this function to assume that `value` is compatible with the type_name type.
 
     :param value: data to load into an FfiSlice
-    :param type_name: rust type name to load value into.
-    :return: pointer to an FfiSlice owned by python.
+    :param type_name: Rust type name to load value into.
+    :return: pointer to an FfiSlice owned by Python.
     """
     if isinstance(type_name, str) and type_name in ATOM_MAP:
         return _scalar_to_slice(value, type_name)
@@ -301,7 +301,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> Tuple[Any, ...]
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     # list of void*
     ptr_data = void_array_ptr[0:raw.contents.len]
-    # tuple of instances of python types
+    # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value
                  for void_p, name in zip(ptr_data, inner_type_names))
 

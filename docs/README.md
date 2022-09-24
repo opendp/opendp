@@ -20,7 +20,7 @@ make html
 open build/html/index.html
 ```
 
-To make html and run python doctests:
+To make html and run Python doctests:
 
 ```shell
 make doctest-python

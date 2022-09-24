@@ -44,7 +44,7 @@ This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
-Substitute ``cargo build`` with ``cargo test``, ``cargo doc`` or ``cargo check`` to test, build rust documentation, or run a lightweight check that the code is valid.
+Substitute ``cargo build`` with ``cargo test``, ``cargo doc`` or ``cargo check`` to test, build Rust documentation, or run a lightweight check that the code is valid.
 
 In the above command, the features ``untrusted`` and ``bindings-python`` are enabled.
 Setting a feature changes how the crate compiles:
@@ -68,7 +68,7 @@ Setting a feature changes how the crate compiles:
    * - ``floating-point``
      - Enable to include measurements with floating-point vulnerabilities.
    * - ``bindings-python``
-     - Enables the ``ffi`` feature and regenerates sources in the python package.
+     - Enables the ``ffi`` feature and regenerates sources in the Python package.
    * - ``ffi``
      - Enable to include C foreign function interfaces.
    * - ``use-system-libs``
@@ -87,7 +87,7 @@ To make the crate compile faster, ffi functions in debug builds support a reduce
 Release-mode builds support the full set of primitive types and undergo compiler optimizations, but take longer to compile.
 You can compile a release build by adding the ``--release`` flag.
 In contrast to debug builds, release builds are located in ``opendp/rust/target/release``.
-To use a release-mode binary from the python bindings, 
+To use a release-mode binary from the Python bindings, 
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
 If you run into compilation problems, please contact us!
@@ -137,7 +137,7 @@ At this point, you should be able use OpenDP as a locally installed package.
 
 Testing Python
 --------------
-You can test that things are working by running OpenDP's python test suite, using ``pytest``.
+You can test that things are working by running OpenDP's Python test suite, using ``pytest``.
 Run the tests from the ``python`` directory. 
 
 .. code-block:: bash
@@ -180,7 +180,7 @@ Use whatever tooling you are comfortable with.
 
 A few notes on VS Code:
 
-* Be sure to install the `rust-analyzer <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_ plugin, not the rust plugin
+* Be sure to install the `rust-analyzer <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_ plugin, not the Rust plugin
 * Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings-python"``
 * Look for ``Problems`` in the bottom panel for live compilation errors as you work
 * Other useful extensions are "Better Toml", "crates" and "LaTex Workshop"
@@ -321,4 +321,4 @@ A few notes on Intellij IDEA:
 * Be sure to open the project at the root of the git repository
 * Be sure to install the Python and Rust plugins for interactivity
 * Be sure to "attach" the Cargo.toml in the red banner the first time you open a Rust source file
-* Use run configurations to `build the rust library <https://plugins.jetbrains.com/plugin/8182-rust/docs/cargo-command-configuration.html#cargo-command-config>`_ and run tests
+* Use run configurations to `build the Rust library <https://plugins.jetbrains.com/plugin/8182-rust/docs/cargo-command-configuration.html#cargo-command-config>`_ and run tests

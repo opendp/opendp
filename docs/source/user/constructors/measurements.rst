@@ -165,6 +165,14 @@ The stability histogram is used to release a category set and frequency counts, 
 
 Randomized Response
 -------------------
+These measurements are used to randomize an individual's response to a query. 
+
+.. doctest::
+
+    >>> from opendp.measurements import make_randomized_response_bool
+    >>> meas = make_randomized_response_bool(prob=0.75)
+    >>> release = meas(True)
+    >>> epsilon = meas.map(1)
 
 .. list-table::
    :header-rows: 1

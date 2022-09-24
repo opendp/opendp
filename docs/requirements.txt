@@ -1,6 +1,6 @@
-sphinx==4.1.2
+sphinx==5.1.1
 sphinx-prompt
 git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
-pydata-sphinx-theme
+pydata-sphinx-theme==0.10
 nbsphinx
 ipython  # for notebook syntax highlighting in docs

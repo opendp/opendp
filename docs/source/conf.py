@@ -48,7 +48,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = open('../../VERSION').read()
+version = open('../../VERSION').readline()
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
@@ -88,6 +88,9 @@ html_theme_options = {
 }
 
 html_theme = 'pydata_sphinx_theme'
+html_css_files = [
+    'css/custom.css',
+]
 
 # See https://pydata-sphinx-theme.readthedocs.io/en/v0.6.3/user_guide/configuring.html#configure-the-sidebar
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
@@ -131,8 +134,6 @@ html_logo = "_static/images/opendp-logo.png"
 rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
-
-version = next(open('../../VERSION'))
 
 github_frag = ''
 binder_frag = ''

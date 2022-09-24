@@ -54,7 +54,9 @@ In the following example we chain :py:func:`opendp.measurements.make_base_discre
     >>> release = noisy_sum(dataset)
 
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
-The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, :func:`make_chain_tt <opendp.combinators.make_chain_tt>`, and `make_chain_tm <opendp.combinators.make_chain_tm>`.
+The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, 
+:func:`make_chain_tt <opendp.combinators.make_chain_tt>`, 
+and :func:`make_chain_tm <opendp.combinators.make_chain_tm>`.
 
 .. doctest::
 

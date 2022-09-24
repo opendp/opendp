@@ -48,9 +48,9 @@ except ImportError:
 # all ways of providing type information
 RuntimeTypeDescriptor = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
-    _GenericAlias,  # a python type hint from the std typing module -- List[int]
-    str,  # plaintext string in terms of rust types -- "Vec<i32>"
-    Type[Union[typing.List, typing.Tuple, int, float, str, bool]],  # using the python type class itself -- int, float
+    _GenericAlias,  # a Python type hint from the std typing module -- List[int]
+    str,  # plaintext string in terms of Rust types -- "Vec<i32>"
+    Type[Union[typing.List, typing.Tuple, int, float, str, bool]],  # using the Python type class itself -- int, float
     tuple,  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, List[int])
 ]
 
@@ -117,13 +117,13 @@ class RuntimeType(object):
 
     @classmethod
     def parse(cls, type_name: RuntimeTypeDescriptor, generics: List[str] = None) -> Union["RuntimeType", str]:
-        """Parse type descriptor into a normalized rust type.
+        """Parse type descriptor into a normalized Rust type.
 
         Type descriptor may be expressed as:
 
-        - python type hints from std typing module
-        - plaintext rust type strings for setting specific bit depth
-        - python type class - one of {int, str, float, bool}
+        - Python type hints from std typing module
+        - plaintext Rust type strings for setting specific bit depth
+        - Python type class - one of {int, str, float, bool}
         - tuple of type information - for example: (float, float)
 
         :param type_name: type specifier
@@ -148,7 +148,7 @@ class RuntimeType(object):
         # parse type hints from the typing module
         if isinstance(type_name, _GenericAlias):
             if sys.version_info < (3, 8):
-                raise NotImplementedError("parsing type hint annotations are only supported in python 3.8 and above")
+                raise NotImplementedError("parsing type hint annotations are only supported in Python 3.8 and above")
 
             origin = typing.get_origin(type_name)
             args = [RuntimeType.parse(v, generics=generics) for v in typing.get_args(type_name)] or None

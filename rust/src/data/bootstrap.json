@@ -18,7 +18,7 @@
         "ret": {
             "c_type": "FfiResult<const AnyObject *>",
             "do_not_convert": true,
-            "description": "An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information."
+            "description": "An AnyObject that contains the data in `slice`. The AnyObject also captures Rust type information."
         }
     },
     "object_type": {
@@ -28,7 +28,7 @@
         ],
         "ret": {
             "c_type": "FfiResult<const char *>",
-            "description": "The rust type associated with `this` AnyObject."
+            "description": "The Rust type associated with `this` AnyObject."
         }
     },
     "object_as_slice": {

@@ -28,14 +28,14 @@ For instance, the clamp constructor accepts any numerical type for its type argu
 
 Many of the API docs indicate that parameters like `TIA` or `D` are type arguments.
 When you want to describe the type of a domain, metric, measure, or other elements, you can do so via a type descriptor.
-The canonical form is a literal string, like `"i32"` to denote that the type should be a 32-bit integer,
-or `"SymmetricDistance"` to denote the type of a metric.
+The canonical form is a literal string, like ``"i32"`` to denote that the type should be a 32-bit integer,
+or ``"SymmetricDistance"`` to denote the type of a metric.
 These arguments accept any of the following, depending on the context:
 
 * string
-* python type (like `float` or `bool`)
-* python typing module annotation (like `List[str]`)
-* :py:mod:`opendp.typing` (mimics python type annotations for OpenDP types)
+* Python type (like `float` or `bool`)
+* Python typing module annotation (like `List[str]`)
+* :py:mod:`opendp.typing` (mimics Python type annotations for OpenDP types)
 
 In addition, there is a common pattern to the naming of type arguments.
 
@@ -100,7 +100,7 @@ If you aren't familiar with these concepts, it may help to review :ref:`domains`
 Type Aliases
 ------------
 
-It can be more convenient to denote types in terms of python types, so we've added some aliases for python types.
+It can be more convenient to denote types in terms of Python types, so we've added some aliases for Python types.
 
 
 .. list-table::

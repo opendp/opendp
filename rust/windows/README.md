@@ -67,15 +67,15 @@ These instructions are part of the process for preparing a multiplatform OpenDP 
    If you add the RUSTFLAGS command to .bashrc, you don't need to set it every time you run cargo commands.
    Use `cargo build --release` for slower compilation and faster runtime.
    The .dll located in `/rust/target/{release|debug}/opendp.dll` can be used in language bindings.
-   The python package should just work as-is once the build succeeds.
+   The Python package should just work as-is once the build succeeds.
 
 
 # Technical Details
-The rust compiler is modified to use the currently-installed mingw binaries.
+The Rust compiler is modified to use the currently-installed mingw binaries.
 This is the `cp` in step 5.
 [The `cp` fix is based on this comment.](https://github.com/rust-lang/rust/issues/47048#issuecomment-569225821)
 Re-run this `cp` anytime you update Rust or mingw. The motivation for this is:
-1. The rust install bundles an outdated version of mingw.
+1. The Rust install bundles an outdated version of mingw.
 2. We use a newer mingw to build gmp and mpfr.
 3. You can't mix multiple versions of mingw to compile the same binary.
 
@@ -84,8 +84,8 @@ GMP and MPFR are built from source. This is because:
 2. Pacman only stores latest
 3. The binaries linked by precompiled .a files differ across machines
 
-The build script for the rust crate gmp-mpfr-sys is modified to read the gmp and mpfr built binaries.  
-The Cargo.toml for the rust crate rug is modified to point to the customized gmp-mpfr-sys.  
+The build script for the Rust crate gmp-mpfr-sys is modified to read the gmp and mpfr built binaries.  
+The Cargo.toml for the Rust crate rug is modified to point to the customized gmp-mpfr-sys.  
 The Cargo.toml for the opendp crate is modified to point to the modified rug and gmp-mpfr-sys crates.
 
 # Attribution
