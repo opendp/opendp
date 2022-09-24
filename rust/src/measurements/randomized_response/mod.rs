@@ -3,6 +3,8 @@ mod ffi;
 
 use std::collections::HashSet;
 
+use opendp_derive::bootstrap;
+
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::AllDomain;
 use crate::error::Fallible;
@@ -23,6 +25,21 @@ use crate::traits::{Hashable, Float};
 // In the case of privatizing a balanced coin flip,
 //     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
 
+
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        prob(c_type = "void *"), 
+        constant_time(default = false))
+)]
+/// Make a Measurement that implements randomized response on a boolean value.
+///
+/// # Arguments
+/// * `prob` - Probability of returning the correct answer. Must be in [0.5, 1)
+/// * `constant_time` - Set to true to enable constant time. Slower.
+/// 
+/// # Generics
+/// * `Q` - Data type of probability and output distance.
 pub fn make_randomized_response_bool<Q>(
     prob: Q,
     constant_time: bool,
@@ -58,6 +75,25 @@ pub fn make_randomized_response_bool<Q>(
     ))
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        categories(rust_type(id = "Vec<T>")),
+        prob(c_type = "void *"), 
+        constant_time(default = false)),
+    generics(
+        T(example(get_first("categories"))))
+)]
+/// Make a Measurement that implements randomized response on a categorical value.
+///
+/// # Arguments
+/// * `categories` - Set of valid outcomes
+/// * `prob` - Probability of returning the correct answer. Must be in [1/num_categories, 1)
+/// * `constant_time` - Set to true to enable constant time. Slower.
+/// 
+/// # Generics
+/// * `T` - Data type of a category.
+/// * `Q` - Data type of probability and output distance.
 pub fn make_randomized_response<T, Q>(
     categories: HashSet<T>,
     prob: Q,

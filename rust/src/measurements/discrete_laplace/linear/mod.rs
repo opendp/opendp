@@ -1,6 +1,8 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use opendp_derive::bootstrap;
+
 use crate::core::{Measurement, PrivacyMap};
 use crate::error::*;
 use crate::measures::MaxDivergence;
@@ -9,6 +11,39 @@ use crate::traits::{Float, InfCast, Integer};
 
 use super::DiscreteLaplaceDomain;
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        scale(c_type = "void *"),
+        bounds(rust_type(id = "OptionT"), default())),
+    generics(
+        D(default = "AllDomain<int>")),
+    derived_types(
+        T(get_atom("D")),
+        OptionT(id = "Option<(T, T)>"))
+)]
+/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+/// using a linear-time algorithm on finite data types.
+/// 
+/// This algorithm can be executed in constant time if bounds are passed.
+/// Set `D` to change the input data type and input metric:
+/// ```text
+/// | `D`                        | input type | `D::InputMetric`     |
+/// | -------------------------- | ---------- | -------------------- |
+/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
+/// ```
+/// 
+/// # Citations
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
+/// 
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `QO` - Data type of the scale and output distance.
 pub fn make_base_discrete_laplace_linear<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
@@ -54,6 +89,28 @@ where
     ))
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        scale(c_type = "void *"),
+        bounds(rust_type(id = "OptionT"), default())),
+    generics(
+        D(default = "AllDomain<int>")),
+    derived_types(
+        T(get_atom("D")),
+        OptionT(id = "Option<(T, T)>"))
+)]
+/// Deprecated. 
+/// Use `make_base_discrete_laplace` instead (more efficient). 
+/// `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
+/// 
+/// # Arguments
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `QO` - Data type of the scale and output distance
 #[deprecated(
     since = "0.5.0",
     note = "Use `make_base_discrete_laplace` instead. For a constant-time algorithm, pass bounds into `make_base_discrete_laplace_linear`."

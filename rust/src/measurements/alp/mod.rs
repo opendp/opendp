@@ -30,6 +30,8 @@ type SparseDomain<K, C> = MapDomain<AllDomain<K>, AllDomain<C>>;
 type BitVector = Vec<bool>;
 type HashFunctions<K> = Vec<Rc<dyn Fn(&K) -> usize>>;
 #[derive(Clone)]
+
+#[doc(hidden)]
 pub struct AlpState<K, T>{
     alpha: T,
     scale: T,
@@ -145,7 +147,9 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
     estimate_unary::<T>(&v) * T::from(state.alpha).unwrap() / state.scale
 }
 
-/// Measurement to compute a DP projection of bounded sparse data. See arxiv.org/abs/2106.10068 (Algorithm 4).
+/// Measurement to compute a DP projection of bounded sparse data. 
+/// 
+/// See arxiv.org/abs/2106.10068 (Algorithm 4).
 /// This function allows the user to create custom hash functions. The mechanism provides no utility guarantees 
 /// if hash functions are chosen poorly. It is recommended to use make_base_alp.
 /// 
@@ -154,7 +158,7 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
 /// * `scale` - Privacy loss parameter. This is equal to epsilon/sensitivity.
 /// * `s` - Size of the projection. This should be sufficiently large to limit hash collisions.
 /// * `h` - Hash functions used to project and estimate entries. The hash functions are not allowed to panic on any input.
-/// The hash functions in `h` should have type K -> [s]. To limit collisions the functions should be universal and uniform.
+/// The hash functions in `h` should have type K -> \[s\]. To limit collisions the functions should be universal and uniform.
 /// The evaluation time of post-processing is O(h.len()).
 pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: HashFunctions<K>)
         -> Fallible<Measurement<SparseDomain<K, C>,
@@ -191,7 +195,9 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
     ))
 }
 
-/// Measurement to compute a DP projection of bounded sparse data. See arxiv.org/abs/2106.10068 (Algorithm 4).
+/// Measurement to compute a DP projection of bounded sparse data. 
+/// 
+/// See arxiv.org/abs/2106.10068 (Algorithm 4).
 /// The size of the projection is O(total * size_factor * scale / alpha).
 /// The evaluation time of post-processing is O(beta * scale / alpha). 
 ///
@@ -240,7 +246,7 @@ pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K,
     })
 }
 
-/// Wrapper Measurement. See post_process above
+/// Wrapper Measurement. See [`post_process`].
 pub fn make_alp_histogram_post_process<K, C, T>(
     m: &Measurement<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>
 ) -> Fallible<Measurement<SparseDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
