@@ -16,7 +16,6 @@ impl Docstring {
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
         if let Some(sup_elements) = parse_sig_output(output)? {
-            println!("{sup_elements:?}");
             doc_sections.insert("Supporting Elements".to_string(), sup_elements);
         }
 
