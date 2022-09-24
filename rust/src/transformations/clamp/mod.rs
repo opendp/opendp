@@ -3,6 +3,8 @@ mod ffi;
 
 use std::collections::Bound;
 
+use opendp_derive::bootstrap;
+
 use crate::core::Transformation;
 use crate::metrics::SymmetricDistance;
 use crate::domains::{AllDomain, BoundedDomain, VectorDomain};
@@ -10,18 +12,44 @@ use crate::error::*;
 use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 
-pub fn make_clamp<T: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (T, T)
-) -> Fallible<Transformation<VectorDomain<AllDomain<T>>, VectorDomain<BoundedDomain<T>>, SymmetricDistance, SymmetricDistance>> {
+#[bootstrap(
+    features("contrib"),
+    generics(TA(example(get_first("bounds"))))
+)]
+/// Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
+/// If datum is less than lower, let datum be lower. 
+/// If datum is greater than upper, let datum be upper.
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of inclusive lower and upper bounds.
+/// 
+/// # Generics
+/// * `TA` - Atomic Type
+pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
+    bounds: (TA, TA)
+) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<BoundedDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row_fallible(
         AllDomain::new(),
         BoundedDomain::new_closed(bounds.clone())?,
-        move |arg: &T| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
+        move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()))
 }
 
-pub fn make_unclamp<T: 'static + Clone + TotalOrd + CheckNull>(
-    bounds: (Bound<T>, Bound<T>)
-) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, VectorDomain<AllDomain<T>>, SymmetricDistance, SymmetricDistance>> {
+#[bootstrap(
+    features("contrib"),
+    arguments(bounds(rust_type(id="(TA, TA)"))),
+    generics(TA(example(get_first("bounds")))),
+)]
+/// Make a Transformation that unclamps numeric data in Vec<`T`>.
+/// Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
+/// 
+/// # Arguments
+/// * `bounds` - Tuple of lower and upper bounds.
+/// 
+/// # Generics
+/// * `TA` - Atomic Type
+pub fn make_unclamp<TA: 'static + Clone + TotalOrd + CheckNull>(
+    bounds: (Bound<TA>, Bound<TA>)
+) -> Fallible<Transformation<VectorDomain<BoundedDomain<TA>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>> {
     make_row_by_row(
         BoundedDomain::new(bounds)?,
         AllDomain::new(),
