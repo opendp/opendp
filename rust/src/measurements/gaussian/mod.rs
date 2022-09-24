@@ -67,12 +67,12 @@ where
 )]
 /// Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
 /// 
-/// Set `D` to change the input data type:
+/// Set `D` to change the input data type and input metric:
 /// ```text
-/// | `D`                        | input type |
-/// | -------------------------- | ---------- | 
-/// | AllDomain<T> (default)     | T          |
-/// | VectorDomain<AllDomain<T>> | Vec<T>     |
+/// | `D`                        | input type | `D::InputMetric`     |
+/// | -------------------------- | ---------- | -------------------- |
+/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     | L2Distance<T>        |
 /// ```
 /// 
 /// This function takes a noise granularity in terms of 2^k. 

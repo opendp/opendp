@@ -25,13 +25,21 @@ def make_base_discrete_gaussian(
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
     
-    Set `D` to change the input data type:
+    Set `D` to change the input data type and input metric:
     ```text
-    | `D`                        | input type |
-    | -------------------------- | ---------- | 
-    | AllDomain<T> (default)     | T          |
-    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    | `D`                        | input type | `D::InputMetric`     |
+    | -------------------------- | ---------- | -------------------- |
+    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+    | VectorDomain<AllDomain<T>> | Vec<T>     | L2Distance<T>        |
     ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MO`
     
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
@@ -71,12 +79,12 @@ def make_base_discrete_laplace(
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
     
-    Set `D` to change the input data type:
+    Set `D` to change the input data type and input metric:
     ```text
-    | `D`                        | input type |
-    | -------------------------- | ---------- | 
-    | AllDomain<T> (default)     | T          |
-    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    | `D`                        | input type | `D::InputMetric`     |
+    | -------------------------- | ---------- | -------------------- |
+    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
     ```
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
@@ -85,6 +93,14 @@ def make_base_discrete_laplace(
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MaxDivergence<QO>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
@@ -123,18 +139,26 @@ def make_base_discrete_laplace_cks20(
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
     using an efficient algorithm on rational bignums.
     
-    Set `D` to change the input data type:
+    Set `D` to change the input data type and input metric:
     ```text
-    | `D`                        | input type |
-    | -------------------------- | ---------- | 
-    | AllDomain<T> (default)     | T          |
-    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    | `D`                        | input type | `D::InputMetric`     |
+    | -------------------------- | ---------- | -------------------- |
+    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
     ```
     
     
     **Citations:**
     
     * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MaxDivergence<QO>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
@@ -175,18 +199,26 @@ def make_base_discrete_laplace_linear(
     using a linear-time algorithm on finite data types.
     
     This algorithm can be executed in constant time if bounds are passed.
-    Set `D` to change the input data type:
+    Set `D` to change the input data type and input metric:
     ```text
-    | `D`                        | input type |
-    | -------------------------- | ---------- | 
-    | AllDomain<T> (default)     | T          |
-    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    | `D`                        | input type | `D::InputMetric`     |
+    | -------------------------- | ---------- | -------------------- |
+    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
     ```
     
     
     **Citations:**
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MaxDivergence<QO>`
     
     :param scale: Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
@@ -230,17 +262,25 @@ def make_base_gaussian(
 ) -> Measurement:
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     
-    Set `D` to change the input data type:
+    Set `D` to change the input data type and input metric:
     ```text
-    | `D`                        | input type |
-    | -------------------------- | ---------- | 
-    | AllDomain<T> (default)     | T          |
-    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    | `D`                        | input type | `D::InputMetric`     |
+    | -------------------------- | ---------- | -------------------- |
+    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+    | VectorDomain<AllDomain<T>> | Vec<T>     | L2Distance<T>        |
     ```
     
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MO`
     
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param k: The noise granularity.
@@ -287,6 +327,14 @@ def make_base_geometric(
     Use `make_base_discrete_laplace` instead (more efficient). 
     `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MaxDivergence<QO>`
+    
     :param scale: 
     :param bounds: 
     :type bounds: Any
@@ -328,17 +376,25 @@ def make_base_laplace(
 ) -> Measurement:
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     
-    Set `D` to change the input data type:
+    Set `D` to change the input data type and input metric:
     ```text
-    | `D`                        | input type |
-    | -------------------------- | ---------- | 
-    | AllDomain<T> (default)     | T          |
-    | VectorDomain<AllDomain<T>> | Vec<T>     |
+    | `D`                        | input type | `D::InputMetric`     |
+    | -------------------------- | ---------- | -------------------- |
+    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
     ```
     
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MaxDivergence<D::Atom>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param k: The noise granularity.
@@ -381,6 +437,13 @@ def make_base_ptr(
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `MapDomain<AllDomain<TK>, AllDomain<TV>>`
+    * Output Domain:  `MapDomain<AllDomain<TK>, AllDomain<TV>>`
+    * Input Metric:   `L1Distance<TV>`
+    * Output Measure: `SmoothedMaxDivergence<TV>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param threshold: Exclude counts that are less than this minimum value.
@@ -425,6 +488,13 @@ def make_randomized_response(
 ) -> Measurement:
     """Make a Measurement that implements randomized response on a categorical value.
     
+    **Supporting Elements:**
+    
+    * Input Domain:   `AllDomain<T>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `DiscreteDistance`
+    * Output Measure: `MaxDivergence<Q>`
+    
     :param categories: Set of valid outcomes
     :type categories: Any
     :param prob: Probability of returning the correct answer. Must be in [1/num_categories, 1)
@@ -466,6 +536,13 @@ def make_randomized_response_bool(
     Q: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that implements randomized response on a boolean value.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `AllDomain<bool>`
+    * Output Domain:  `AllDomain<bool>`
+    * Input Metric:   `DiscreteDistance`
+    * Output Measure: `MaxDivergence<Q>`
     
     :param prob: Probability of returning the correct answer. Must be in [0.5, 1)
     :param constant_time: Set to true to enable constant time. Slower.

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, env, ffi::OsStr, path::PathBuf};
 
 use darling::{Error, Result};
-use syn::{Attribute, Lit, Meta, MetaNameValue};
+use syn::{Attribute, Lit, Meta, MetaNameValue, Path, PathSegment, ReturnType, Type, TypePath};
 
 #[derive(Debug, Default)]
 pub struct Docstring {
@@ -12,8 +12,13 @@ pub struct Docstring {
 }
 
 impl Docstring {
-    pub fn from_attrs(attrs: Vec<Attribute>) -> Result<Docstring> {
+    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType) -> Result<Docstring> {
         let mut doc_sections = parse_docstring_sections(attrs)?;
+
+        if let Some(sup_elements) = parse_sig_output(output)? {
+            println!("{sup_elements:?}");
+            doc_sections.insert("Supporting Elements".to_string(), sup_elements);
+        }
 
         let mut description = doc_sections.remove("Description").unwrap_or_else(Vec::new);
 
@@ -23,7 +28,9 @@ impl Docstring {
                 description.extend(section)
             })
         };
+        // can add more sections here...
         insert_section("Citations");
+        insert_section("Supporting Elements");
 
         Ok(Docstring {
             description,
@@ -183,5 +190,69 @@ fn get_version() -> String {
         "latest".to_string()
     } else {
         version
+    }
+}
+
+fn parse_sig_output(output: &ReturnType) -> Result<Option<Vec<String>>> {
+    match output {
+        ReturnType::Default => Ok(None),
+        ReturnType::Type(_, ty) => parse_supporting_elements(&*ty),
+    }
+}
+
+fn parse_supporting_elements(ty: &Type) -> Result<Option<Vec<String>>> {
+    let PathSegment { ident, arguments } = match &ty {
+        syn::Type::Path(TypePath {
+            path: Path { segments, .. },
+            ..
+        }) => segments.last().ok_or_else(|| {
+            Error::custom("return type cannot be an empty path").with_span(&segments)
+        })?,
+        _ => return Ok(None),
+    };
+
+    match ident {
+        i if i == "Fallible" => parse_supporting_elements(match arguments {
+            syn::PathArguments::AngleBracketed(ab) => {
+                if ab.args.len() != 1 {
+                    return Err(Error::custom("Fallible needs one angle-bracketed argument").with_span(&ab.args))
+                }
+                match ab.args.first().unwrap() {
+                    syn::GenericArgument::Type(ty) => ty,
+                    arg => return Err(Error::custom("argument to Fallible must to be a type").with_span(&arg))
+                }
+
+            },
+            arg => return Err(Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)),
+        }),
+        i if i == "Transformation" || i == "Measurement" => {
+            match arguments {
+                syn::PathArguments::AngleBracketed(ab) => {
+                    if ab.args.len() != 4 {
+                        return Err(Error::custom(format!("{i} needs four angle-bracketed arguments")).with_span(&ab.args))
+                    }
+                    let [input_domain, output_domain, input_metric, output_metmeas] = <[_; 4]>::try_from(ab.args.iter().collect::<Vec<_>>())
+                        .map_err(|_| Error::custom(format!("{i} needs four angle-bracketed arguments")).with_span(&ab.args))?;
+                    
+                    let output_distance = match i {
+                        i if i == "Transformation" => "Metric: ",
+                        i if i == "Measurement" => "Measure:",
+                        _ => unreachable!()
+                    };
+
+                    // syn doesn't have a pretty printer but we don't need to add a dep...
+                    let pprint = |ty| quote::quote!(#ty).to_string().replace(" ", "").replace(",", ", ");
+
+                    Ok(Some(vec![
+                        format!("* Input Domain:   `{}`", pprint(input_domain)),
+                        format!("* Output Domain:  `{}`", pprint(output_domain)),
+                        format!("* Input Metric:   `{}`", pprint(input_metric)),
+                        format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
+                    ]))
+                },
+                arg => return Err(Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)),
+            }
+        }
+        _ => Ok(None)
     }
 }

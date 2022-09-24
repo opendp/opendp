@@ -30,7 +30,7 @@ impl Function {
         }
 
         // aggregate info from all sources
-        let function = reconcile_function(bootstrap, Docstring::from_attrs(attrs)?, sig)?;
+        let function = reconcile_function(bootstrap, Docstring::from_attrs(attrs, &sig.output)?, sig)?;
 
         Ok((func_name, function))
     }

@@ -24,12 +24,12 @@ mod ffi;
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
 /// using an efficient algorithm on rational bignums.
 /// 
-/// Set `D` to change the input data type:
+/// Set `D` to change the input data type and input metric:
 /// ```text
-/// | `D`                        | input type |
-/// | -------------------------- | ---------- | 
-/// | AllDomain<T> (default)     | T          |
-/// | VectorDomain<AllDomain<T>> | Vec<T>     |
+/// | `D`                        | input type | `D::InputMetric`     |
+/// | -------------------------- | ---------- | -------------------- |
+/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
+/// | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
 /// ```
 /// 
 /// # Citations

@@ -106,6 +106,14 @@ def make_b_ary_tree(
     """Expand a vector of counts into a b-ary tree of counts, 
     where each branch is the sum of its `b` immediate children.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
     :param leaf_count: The number of leaf nodes in the b-ary tree.
     :type leaf_count: int
     :param branching_factor: The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
@@ -154,6 +162,14 @@ def make_bounded_float_checked_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size_limit: Upper bound on number of records to keep in the input data.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -200,6 +216,14 @@ def make_bounded_float_ordered_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size_limit: Upper bound on the number of records in input data. Used to bound sensitivity.
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -244,6 +268,14 @@ def make_bounded_int_monotonic_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
@@ -282,6 +314,14 @@ def make_bounded_int_ordered_sum(
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
     
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
@@ -322,6 +362,14 @@ def make_bounded_int_split_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param T: Atomic Input Type and Output Type
@@ -358,6 +406,14 @@ def make_bounded_resize(
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records 
     with `constant` in a Vec<`TA`> to match a provided `size`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<TA>>`
+    * Output Domain:  `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MO`
     
     :param size: Number of records in output data.
     :type size: int
@@ -450,6 +506,14 @@ def make_cast(
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
     Failure to parse results in None, else Some<TOA>.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<OptionNullDomain<AllDomain<TOA>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
@@ -483,6 +547,14 @@ def make_cast_default(
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
     If the cast fails, fill with default.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
@@ -518,6 +590,14 @@ def make_cast_inherent(
     """Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. 
     If cast fails, fill with `TO`'s null value.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<InherentNullDomain<AllDomain<TOA>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
@@ -550,6 +630,14 @@ def make_cdf(
 ) -> Transformation:
     """Postprocess a noisy array of float summary counts into a cumulative distribution.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `AgnosticMetric`
+    * Output Metric:  `AgnosticMetric`
+    
     :param TA: Atomic Type. One of `f32` or `f64`
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -580,6 +668,14 @@ def make_clamp(
     """Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
     If datum is less than lower, let datum be lower. 
     If datum is greater than upper, let datum be upper.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<BoundedDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
@@ -626,6 +722,14 @@ def make_consistent_b_ary_tree(
     
     * [HRMS09 Boosting the Accuracy of Differentially Private Histograms Through Consistency, section 4.1](https://arxiv.org/pdf/0904.0942.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `AgnosticMetric`
+    * Output Metric:  `AgnosticMetric`
+    
     :param branching_factor: 
     :type branching_factor: int
     :param TIA: Atomic type of the input data. Should be an integer type.
@@ -667,6 +771,14 @@ def make_count(
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `AllDomain<TO>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<TO>`
+    
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TO: 
@@ -706,6 +818,14 @@ def make_count_by(
     **Citations:**
     
     * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TK>>`
+    * Output Domain:  `MapDomain<AllDomain<TK>, AllDomain<TV>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `MO`
     
     :param MO: Output Metric.
     :type MO: SensitivityMetric
@@ -754,6 +874,14 @@ def make_count_by_categories(
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `MO`
     
     :param categories: The set of categories to compute counts for.
     :type categories: Any
@@ -804,6 +932,14 @@ def make_count_distinct(
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `AllDomain<TO>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<TO>`
+    
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TO: 
@@ -836,6 +972,14 @@ def make_create_dataframe(
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<VectorDomain<AllDomain<String>>>`
+    * Output Domain:  `DataFrameDomain<K>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param col_names: Column names for each record entry.
     :type col_names: Any
@@ -871,6 +1015,14 @@ def make_df_cast_default(
 ) -> Transformation:
     """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. 
     If cast fails, fill with default.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<TK>`
+    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param column_name: column name to be transformed
     :type column_name: Any
@@ -914,6 +1066,14 @@ def make_df_is_equal(
 ) -> Transformation:
     """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<TK>`
+    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param column_name: Column name to be transformed
     :type column_name: Any
     :param value: 
@@ -953,6 +1113,14 @@ def make_drop_null(
     """Make a Transformation that drops null values.
     `DA` is one of `OptionNullDomain<AllDomain<TA>>` or `InherentNullDomain<AllDomain<TA>>`.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<DA>`
+    * Output Domain:  `VectorDomain<AllDomain<DA::Imputed>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param DA: atomic domain of input data that contains nulls.
     :type DA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -981,6 +1149,14 @@ def make_find(
     TIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Find the index of a data value in a set of categories.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<OptionNullDomain<AllDomain<usize>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param categories: The set of categories to find indexes from.
     :type categories: Any
@@ -1014,6 +1190,14 @@ def make_find_bin(
 ) -> Transformation:
     """Make a transformation that finds the bin index in a monotonically increasing vector of edges.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<usize>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param edges: The set of edges to split bins by.
     :type edges: Any
     :param TIA: Atomic Input Type that is numeric
@@ -1045,6 +1229,14 @@ def make_identity(
     M: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation representing the identity function.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
     :param D: Domain of the identity function. Must be `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
@@ -1089,6 +1281,14 @@ def make_impute_constant(
     | NullableDomain<AllDomain<T>> | Vec<T>         | Vec<T>      |
     ```
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<DA>`
+    * Output Domain:  `VectorDomain<AllDomain<DA::Imputed>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param constant: Value to replace nulls with.
     :type constant: Any
     :param DA: Atomic Domain of data being imputed.
@@ -1124,6 +1324,14 @@ def make_impute_uniform_float(
     """Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
     Operates on `InherentNullDomain<AllDomain<TA>>`
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<InherentNullDomain<AllDomain<TA>>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param TA: Atomic Type of data being imputed. One of `f32` or `f64`
@@ -1156,6 +1364,14 @@ def make_index(
     TOA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a transformation that treats each element as an index into a vector of categories.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<usize>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param categories: The set of categories to index into.
     :type categories: Any
@@ -1192,6 +1408,14 @@ def make_is_equal(
 ) -> Transformation:
     """Make a Transformation that checks if each element is equal to `value`.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<bool>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param value: value to check against
     :type value: Any
     :param TIA: Atomic Input Type. Type of elements in the input vector
@@ -1222,6 +1446,14 @@ def make_is_null(
     DIA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that checks if each element in a vector is null.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<DIA>`
+    * Output Domain:  `VectorDomain<AllDomain<bool>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param DIA: Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
     :type DIA: :py:ref:`RuntimeTypeDescriptor`
@@ -1254,6 +1486,14 @@ def make_lipschitz_float_mul(
 ) -> Transformation:
     """Make a transformation that multiplies an aggregate by a constant.
     The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
     :param constant: The constant to multiply aggregates by.
     :param bounds: Tuple of inclusive lower and upper bounds.
@@ -1311,6 +1551,13 @@ def make_metric_bounded(
     | InsertDeleteDistance | HammingDistance   |
     ```
     
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::BoundedMetric`
+    
     :param size: Number of records in input data.
     :type size: int
     :param MI: Input Metric.
@@ -1357,6 +1604,14 @@ def make_metric_unbounded(
     | HammingDistance   | InsertDeleteDistance |
     ```
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::UnboundedMetric`
+    
     :param size: Number of records in input data.
     :type size: int
     :param MI: Input Metric.
@@ -1395,6 +1650,13 @@ def make_ordered_random(
     Operates exclusively on VectorDomain<AllDomain<`TA`>>.
     The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
     
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `InsertDeleteDistance`
+    
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1426,6 +1688,14 @@ def make_quantiles_from_counts(
     F: RuntimeTypeDescriptor = "float"
 ) -> Transformation:
     """Postprocess a noisy array of summary counts into quantiles.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `AgnosticMetric`
+    * Output Metric:  `AgnosticMetric`
     
     :param bin_edges: The edges that the input data was binned into before counting.
     :type bin_edges: Any
@@ -1473,6 +1743,14 @@ def make_resize(
     """Make a Transformation that either truncates or imputes records 
     with `constant` in a Vec<`TA`> to match a provided `size`.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MO`
+    
     :param size: Number of records in output data.
     :type size: int
     :param constant: Value to impute with.
@@ -1518,6 +1796,14 @@ def make_select_column(
 ) -> Transformation:
     """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<K>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param key: categorical/hashable data type of the key/column name
     :type key: Any
     :param K: data type of key
@@ -1561,6 +1847,14 @@ def make_sized_bounded_float_checked_sum(
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
     
     :param size: Number of records in input data.
     :type size: int
@@ -1608,6 +1902,14 @@ def make_sized_bounded_float_ordered_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1653,6 +1955,14 @@ def make_sized_bounded_int_checked_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1695,6 +2005,14 @@ def make_sized_bounded_int_monotonic_sum(
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
     
     :param size: Number of records in input data.
     :type size: int
@@ -1740,6 +2058,14 @@ def make_sized_bounded_int_ordered_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1784,6 +2110,14 @@ def make_sized_bounded_int_split_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -1822,6 +2156,13 @@ def make_sized_bounded_mean(
     """Make a Transformation that computes the mean of bounded data.
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `MI`
+    * Output Metric:  `AbsoluteDistance<T>`
     
     :param size: Number of records in input data.
     :type size: int
@@ -1871,6 +2212,14 @@ def make_sized_bounded_ordered_random(
     | SymmetricDistance | InsertDeleteDistance |
     | ChangeOneDistance | HammingDistance      |
     ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::OrderedMetric`
     
     :param size: Number of records in input data.
     :type size: int
@@ -1969,6 +2318,14 @@ def make_sized_bounded_sum_of_squared_deviations(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size: Number of records in input data.
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
@@ -2015,6 +2372,13 @@ def make_sized_bounded_unordered(
     | InsertDeleteDistance | SymmetricDistance  |
     | HammingDistance      | ChangeOneDistance  |
     ```
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::UnorderedMetric`
     
     :param size: Number of records in input data.
     :type size: int
@@ -2063,6 +2427,14 @@ def make_sized_bounded_variance(
     **Citations:**
     
     * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
     
     :param size: Number of records in input data.
     :type size: int
@@ -2113,6 +2485,14 @@ def make_sized_ordered_random(
     | ChangeOneDistance | HammingDistance      |
     ```
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::OrderedMetric`
+    
     :param size: Number of records in input data.
     :type size: int
     :param MI: Input Metric.
@@ -2158,6 +2538,13 @@ def make_sized_unordered(
     | HammingDistance      | ChangeOneDistance  |
     ```
     
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::UnorderedMetric`
+    
     :param size: Number of records in input data.
     :type size: int
     :param MI: Input Metric.
@@ -2196,6 +2583,14 @@ def make_split_dataframe(
     """Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
     and loads the resulting table into a dataframe keyed by `col_names`.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `AllDomain<String>`
+    * Output Domain:  `DataFrameDomain<K>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
     :param col_names: Column names for each record entry.
@@ -2230,6 +2625,13 @@ def make_split_lines(
 ) -> Transformation:
     """Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
     
+    **Supporting Elements:**
+    
+    * Input Domain:   `AllDomain<String>`
+    * Output Domain:  `VectorDomain<AllDomain<String>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -2252,6 +2654,14 @@ def make_split_records(
     separator: str
 ) -> Transformation:
     """Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<String>>`
+    * Output Domain:  `VectorDomain<VectorDomain<AllDomain<String>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
@@ -2280,6 +2690,14 @@ def make_subset_by(
     TK: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that subsets a dataframe by a boolean column.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<TK>`
+    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param indicator_column: name of the boolean column that indicates inclusion in the subset
     :type indicator_column: Any
@@ -2316,6 +2734,14 @@ def make_unclamp(
 ) -> Transformation:
     """Make a Transformation that unclamps numeric data in Vec<`T`>.
     Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param bounds: Tuple of lower and upper bounds.
     :type bounds: Tuple[Any, Any]
@@ -2356,6 +2782,14 @@ def make_unordered(
     | -------------------- | -------------------- |
     | InsertDeleteDistance | SymmetricDistance    |
     ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`

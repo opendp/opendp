@@ -123,17 +123,11 @@ fn generate_input_argument(arg: &Argument, func: &Function, hierarchy: &HashMap<
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
 fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
-    let mut description = func.description.as_ref()
+    let description = func.description.as_ref()
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
-    if let Some(proof) = &func.proof {
-        description = format!(r#"{description}
 
-`This constructor is supported by the linked proof. <{proof}>`_
-"#,
-        description=description,
-        proof=proof);
-    }
+    println!("{description}");
 
     let doc_args = func.args.iter()
         .map(|v| generate_docstring_arg(v, hierarchy))

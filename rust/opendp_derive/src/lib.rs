@@ -32,7 +32,7 @@ pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     let ItemFn { attrs, sig, .. } = parse_macro_input!(input as ItemFn);
 
     // attempt to parse docstring to detect formatting errors
-    let docstrings = try_!(Docstring::from_attrs(attrs), original_input);
+    let docstrings = try_!(Docstring::from_attrs(attrs, &sig.output), original_input);
 
     // parse bootstrap arguments
     let attr_args = parse_macro_input!(attr_args as AttributeArgs);
