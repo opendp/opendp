@@ -97,8 +97,8 @@
 //!
 //! ## Adding Constructors
 //!
-//! Measurement constructors go in the module [`meas`], and Transformation constructors
-//! in the module [`trans`].
+//! Measurement constructors go in the module [`crate::measurements`], and Transformation constructors
+//! in the module [`crate::transformations`].
 //!
 //! There are two code steps to adding a constructor function: Writing the function itself, and adding the FFI wrapper.
 //!
