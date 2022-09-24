@@ -6,125 +6,36 @@ from opendp.typing import *
 from opendp.core import *
 
 __all__ = [
-    "make_chain_mt",
-    "make_chain_tt",
-    "make_chain_tm",
     "make_basic_composition",
-    "make_population_amplification",
+    "make_chain_mt",
+    "make_chain_tm",
+    "make_chain_tt",
     "make_fix_delta",
+    "make_population_amplification",
     "make_zCDP_to_approxDP"
 ]
-
-
-def make_chain_mt(
-    measurement: Measurement,
-    transformation: Transformation
-) -> Measurement:
-    """Construct the functional composition (`measurement` ○ `transformation`). Returns a Measurement.
-    
-    :param measurement: outer privatizer
-    :type measurement: Measurement
-    :param transformation: inner query
-    :type transformation: Transformation
-    :return: Measurement representing the chained computation.
-    :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement)
-    transformation = py_to_c(transformation, c_type=Transformation)
-    
-    # Call library function.
-    function = lib.opendp_combinators__make_chain_mt
-    function.argtypes = [Measurement, Transformation]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(measurement, transformation), Measurement))
-
-
-def make_chain_tt(
-    transformation1: Transformation,
-    transformation0: Transformation
-) -> Transformation:
-    """Construct the functional composition (`transformation1` ○ `transformation0`). Returns a Transformation.
-    
-    :param transformation1: outer transformation
-    :type transformation1: Transformation
-    :param transformation0: inner transformation
-    :type transformation0: Transformation
-    :return: Transformation representing the chained computation.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    transformation1 = py_to_c(transformation1, c_type=Transformation)
-    transformation0 = py_to_c(transformation0, c_type=Transformation)
-    
-    # Call library function.
-    function = lib.opendp_combinators__make_chain_tt
-    function.argtypes = [Transformation, Transformation]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(transformation1, transformation0), Transformation))
-
-
-def make_chain_tm(
-    transformation: Transformation,
-    measurement: Measurement
-) -> Measurement:
-    """Construct the functional composition (`transformation` ○ `measurement`). Returns a Measurement. Used for postprocessing.
-    
-    :param transformation: outer postprocessor
-    :type transformation: Transformation
-    :param measurement: inner privatizer
-    :type measurement: Measurement
-    :return: Measurement representing the chained computation.
-    :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    transformation = py_to_c(transformation, c_type=Transformation)
-    measurement = py_to_c(measurement, c_type=Measurement)
-    
-    # Call library function.
-    function = lib.opendp_combinators__make_chain_tm
-    function.argtypes = [Transformation, Measurement]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(transformation, measurement), Measurement))
 
 
 def make_basic_composition(
     measurements: Any
 ) -> Measurement:
-    """Construct the DP composition [`measurement0`, `measurement1`, ...]. Returns a Measurement.
+    """Construct the DP composition [`measurement0`, `measurement1`, ...]. 
+    Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
     
-    :param measurements: A list of measurements to compose.
+    All metrics and domains must be equivalent, except for the output domain.
+    
+    :param measurements: A vector of Measurements to compose.
     :type measurements: Any
-    :return: Measurement representing the composed transformations.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurements = py_to_c(measurements, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=["AnyMeasurementPtr"]))
+    measurements = py_to_c(measurements, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyMeasurementPtr]))
     
     # Call library function.
     function = lib.opendp_combinators__make_basic_composition
@@ -134,33 +45,98 @@ def make_basic_composition(
     return c_to_py(unwrap(function(measurements), Measurement))
 
 
-def make_population_amplification(
-    measurement: Measurement,
-    population_size: int
+def make_chain_mt(
+    measurement1: Measurement,
+    transformation0: Transformation
 ) -> Measurement:
-    """Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
+    """Construct the functional composition (`measurement1` ○ `transformation0`).
+    Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
     
-    :param measurement: The measurement to amplify.
-    :type measurement: Measurement
-    :param population_size: Number of records in population.
-    :type population_size: int
-    :return: New measurement with the same function, but an adjusted privacy map.
+    :param measurement1: outer mechanism
+    :type measurement1: Measurement
+    :param transformation0: inner transformation
+    :type transformation0: Transformation
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement)
-    population_size = py_to_c(population_size, c_type=ctypes.c_uint)
+    measurement1 = py_to_c(measurement1, c_type=Measurement, type_name=None)
+    transformation0 = py_to_c(transformation0, c_type=Transformation, type_name=None)
     
     # Call library function.
-    function = lib.opendp_combinators__make_population_amplification
-    function.argtypes = [Measurement, ctypes.c_uint]
+    function = lib.opendp_combinators__make_chain_mt
+    function.argtypes = [Measurement, Transformation]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(measurement, population_size), Measurement))
+    return c_to_py(unwrap(function(measurement1, transformation0), Measurement))
+
+
+def make_chain_tm(
+    transformation1: Transformation,
+    measurement0: Measurement
+) -> Measurement:
+    """Construct the functional composition (`transformation1` ○ `measurement0`).
+    Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
+    Used to represent non-interactive postprocessing.
+    
+    :param transformation1: outer postprocessing transformation
+    :type transformation1: Transformation
+    :param measurement0: inner measurement/mechanism
+    :type measurement0: Measurement
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    transformation1 = py_to_c(transformation1, c_type=Transformation, type_name=None)
+    measurement0 = py_to_c(measurement0, c_type=Measurement, type_name=None)
+    
+    # Call library function.
+    function = lib.opendp_combinators__make_chain_tm
+    function.argtypes = [Transformation, Measurement]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation1, measurement0), Measurement))
+
+
+def make_chain_tt(
+    transformation1: Transformation,
+    transformation0: Transformation
+) -> Transformation:
+    """Construct the functional composition (`transformation1` ○ `transformation0`).
+    Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.
+    
+    :param transformation1: outer transformation
+    :type transformation1: Transformation
+    :param transformation0: inner transformation
+    :type transformation0: Transformation
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    transformation1 = py_to_c(transformation1, c_type=Transformation, type_name=None)
+    transformation0 = py_to_c(transformation0, c_type=Transformation, type_name=None)
+    
+    # Call library function.
+    function = lib.opendp_combinators__make_chain_tt
+    function.argtypes = [Transformation, Transformation]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(transformation1, transformation0), Transformation))
 
 
 def make_fix_delta(
@@ -169,19 +145,20 @@ def make_fix_delta(
 ) -> Measurement:
     """Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
     
-    :param measurement: The measurement with a privacy curve to be fixed.
+    :param measurement: a measurement with a privacy curve to be fixed
     :type measurement: Measurement
-    :param delta: The parameter to fix the privacy curve with.
+    :param delta: parameter to fix the privacy curve with
     :type delta: Any
-    :return: New measurement with the same function, but a fixed output measure and privacy map.
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement)
+    measurement = py_to_c(measurement, c_type=Measurement, type_name=None)
     delta = py_to_c(delta, c_type=AnyObjectPtr, type_name=get_atom(measurement_output_distance_type(measurement)))
     
     # Call library function.
@@ -192,22 +169,58 @@ def make_fix_delta(
     return c_to_py(unwrap(function(measurement, delta), Measurement))
 
 
-def make_zCDP_to_approxDP(
-    measurement: Measurement
+def make_population_amplification(
+    measurement: Measurement,
+    population_size: int
 ) -> Measurement:
-    """Constructs a new output measure where output measure is casted from ZeroConcentratedDivergence to SmoothedMaxDivergence.
+    """Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
+    This measurement does not perform any sampling. 
+    It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
     
-    :param measurement: Measurement with ZeroConcentratedDivergence output measure.
+    The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
+    
+    :param measurement: the computation to amplify
     :type measurement: Measurement
-    :return: Measurement with SmoothedMaxDivergence output measure.
+    :param population_size: the size of the population from which the input dataset is a simple sample
+    :type population_size: int
     :rtype: Measurement
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
+    assert_features("contrib")
+    
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement)
+    measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    population_size = py_to_c(population_size, c_type=ctypes.c_size_t, type_name=usize)
+    
+    # Call library function.
+    function = lib.opendp_combinators__make_population_amplification
+    function.argtypes = [Measurement, ctypes.c_size_t]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement, population_size), Measurement))
+
+
+def make_zCDP_to_approxDP(
+    measurement: Measurement
+) -> Measurement:
+    """Constructs a new output measurement where the output measure
+    is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
+    
+    :param measurement: a measurement with a privacy curve to be casted
+    :type measurement: Measurement
+    :rtype: Measurement
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
     
     # Call library function.
     function = lib.opendp_combinators__make_zCDP_to_approxDP
