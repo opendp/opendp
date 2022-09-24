@@ -5,65 +5,96 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
-    "make_b_ary_tree",
-    "make_consistent_b_ary_tree",
     "choose_branching_factor",
-    "make_cast",
-    "make_cast_default",
-    "make_df_cast_default",
-    "make_df_is_equal",
-    "make_subset_by",
-    "make_is_equal",
-    "make_is_null",
-    "make_cast_inherent",
-    "make_ordered_random",
-    "make_sized_ordered_random",
-    "make_sized_bounded_ordered_random",
-    "make_unordered",
-    "make_sized_unordered",
-    "make_sized_bounded_unordered",
-    "make_metric_bounded",
-    "make_metric_unbounded",
-    "make_clamp",
-    "make_unclamp",
-    "make_count",
-    "make_count_distinct",
-    "make_cdf",
-    "make_quantiles_from_counts",
-    "make_count_by",
-    "make_count_by_categories",
-    "make_split_lines",
-    "make_split_records",
-    "make_create_dataframe",
-    "make_split_dataframe",
-    "make_select_column",
-    "make_identity",
-    "make_impute_constant",
-    "make_drop_null",
-    "make_impute_uniform_float",
-    "make_find",
-    "make_find_bin",
-    "make_index",
-    "make_lipschitz_float_mul",
-    "make_sized_bounded_mean",
-    "make_resize",
+    "make_b_ary_tree",
+    "make_bounded_float_checked_sum",
+    "make_bounded_float_ordered_sum",
+    "make_bounded_int_monotonic_sum",
+    "make_bounded_int_ordered_sum",
+    "make_bounded_int_split_sum",
     "make_bounded_resize",
     "make_bounded_sum",
-    "make_sized_bounded_sum",
-    "make_bounded_float_checked_sum",
+    "make_cast",
+    "make_cast_default",
+    "make_cast_inherent",
+    "make_cdf",
+    "make_clamp",
+    "make_consistent_b_ary_tree",
+    "make_count",
+    "make_count_by",
+    "make_count_by_categories",
+    "make_count_distinct",
+    "make_create_dataframe",
+    "make_df_cast_default",
+    "make_df_is_equal",
+    "make_drop_null",
+    "make_find",
+    "make_find_bin",
+    "make_identity",
+    "make_impute_constant",
+    "make_impute_uniform_float",
+    "make_index",
+    "make_is_equal",
+    "make_is_null",
+    "make_lipschitz_float_mul",
+    "make_metric_bounded",
+    "make_metric_unbounded",
+    "make_ordered_random",
+    "make_quantiles_from_counts",
+    "make_resize",
+    "make_select_column",
     "make_sized_bounded_float_checked_sum",
-    "make_bounded_float_ordered_sum",
     "make_sized_bounded_float_ordered_sum",
     "make_sized_bounded_int_checked_sum",
-    "make_bounded_int_monotonic_sum",
     "make_sized_bounded_int_monotonic_sum",
-    "make_bounded_int_ordered_sum",
     "make_sized_bounded_int_ordered_sum",
-    "make_bounded_int_split_sum",
     "make_sized_bounded_int_split_sum",
+    "make_sized_bounded_mean",
+    "make_sized_bounded_ordered_random",
+    "make_sized_bounded_sum",
     "make_sized_bounded_sum_of_squared_deviations",
-    "make_sized_bounded_variance"
+    "make_sized_bounded_unordered",
+    "make_sized_bounded_variance",
+    "make_sized_ordered_random",
+    "make_sized_unordered",
+    "make_split_dataframe",
+    "make_split_lines",
+    "make_split_records",
+    "make_subset_by",
+    "make_unclamp",
+    "make_unordered"
 ]
+
+
+def choose_branching_factor(
+    size_guess: int
+) -> int:
+    """Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
+    that minimizes error in cdf and quantile estimates based on b-ary trees.
+    
+    
+    **Citations:**
+    
+    * [QYL13 Understanding Hierarchical Methods for Differentially Private Histograms](http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf)
+    
+    :param size_guess: A guess at the size of your dataset.
+    :type size_guess: int
+    :rtype: int
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    size_guess = py_to_c(size_guess, c_type=ctypes.c_size_t, type_name=usize)
+    
+    # Call library function.
+    function = lib.opendp_transformations__choose_branching_factor
+    function.argtypes = [ctypes.c_size_t]
+    function.restype = ctypes.c_size_t
+    
+    return c_to_py(function(size_guess))
 
 
 def make_b_ary_tree(
@@ -72,17 +103,25 @@ def make_b_ary_tree(
     M: RuntimeTypeDescriptor,
     TA: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
-    """Expand a vector of counts into a b-ary tree of counts, where each branch is the sum of its `b` immediate children.
+    """Expand a vector of counts into a b-ary tree of counts, 
+    where each branch is the sum of its `b` immediate children.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
     :param leaf_count: The number of leaf nodes in the b-ary tree.
     :type leaf_count: int
     :param branching_factor: The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
     :type branching_factor: int
     :param M: Metric. Must be L1Distance<Q> or L2Distance<Q>
-    :type M: :ref:`RuntimeTypeDescriptor`
-    :param TA: Atomic type of the input data.
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A b_ary_tree step.
+    :type M: :py:ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic Type of the input data.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -95,33 +134,48 @@ def make_b_ary_tree(
     TA = RuntimeType.parse(type_name=TA)
     
     # Convert arguments to c types.
-    leaf_count = py_to_c(leaf_count, c_type=ctypes.c_uint)
-    branching_factor = py_to_c(branching_factor, c_type=ctypes.c_uint)
+    leaf_count = py_to_c(leaf_count, c_type=ctypes.c_size_t, type_name=usize)
+    branching_factor = py_to_c(branching_factor, c_type=ctypes.c_size_t, type_name=usize)
     M = py_to_c(M, c_type=ctypes.c_char_p)
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_b_ary_tree
-    function.argtypes = [ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(leaf_count, branching_factor, M, TA), Transformation))
 
 
-def make_consistent_b_ary_tree(
-    branching_factor: int,
-    TIA: RuntimeTypeDescriptor = "int",
-    TOA: RuntimeTypeDescriptor = "float"
+def make_bounded_float_checked_sum(
+    size_limit: int,
+    bounds: Tuple[Any, Any],
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Postprocess a noisy b-ary tree of counts into a consistent tree, and then return the leaf nodes.
+    """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    :param branching_factor: The number of children on each branch of the resulting tree. Should be the same as the `branching_factor` used for `make_b_ary_tree`
-    :type branching_factor: int
-    :param TIA: Atomic type of the input data. Should be an integer type.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TOA: Atomic type of the output data. Should be a float type.
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A consistent_b_ary_tree step.
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
+    :param size_limit: Upper bound on number of records to keep in the input data.
+    :type size_limit: int
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -130,60 +184,340 @@ def make_consistent_b_ary_tree(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
-    TOA = RuntimeType.parse(type_name=TOA)
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
     
     # Convert arguments to c types.
-    branching_factor = py_to_c(branching_factor, c_type=ctypes.c_uint)
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    size_limit = py_to_c(size_limit, c_type=ctypes.c_size_t, type_name=usize)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__make_consistent_b_ary_tree
-    function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
+    function = lib.opendp_transformations__make_bounded_float_checked_sum
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(branching_factor, TIA, TOA), Transformation))
+    return c_to_py(unwrap(function(size_limit, bounds, S), Transformation))
 
 
-def choose_branching_factor(
-    size_guess: int
-) -> int:
-    """Returns an approximation to the ideal branching factor, b, for a dataset of a given size, that minimizes error in cdf and quantile estimates based on b-ary trees.
+def make_bounded_float_ordered_sum(
+    size_limit: int,
+    bounds: Tuple[Any, Any],
+    S: RuntimeTypeDescriptor = "Pairwise<T>"
+) -> Transformation:
+    """Make a Transformation that computes the sum of bounded floats. 
+    You may need to use `make_ordered_random` to impose an ordering on the data.
+    The utility loss from overestimating the `size_limit` is small.
     
-    :param size_guess: A guess at the size of your dataset.
-    :type size_guess: int
-    :return: An approximation to the ideal branching factor, b.
-    :rtype: int
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
+    :param size_limit: Upper bound on the number of records in input data. Used to bound sensitivity.
+    :type size_limit: int
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
     
-    # No type arguments to standardize.
+    # Standardize type arguments.
+    S = RuntimeType.parse(type_name=S, generics=["T"])
+    T = get_atom_or_infer(S, get_first(bounds))
+    S = S.substitute(T=T)
+    
     # Convert arguments to c types.
-    size_guess = py_to_c(size_guess, c_type=ctypes.c_uint)
+    size_limit = py_to_c(size_limit, c_type=ctypes.c_size_t, type_name=usize)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__choose_branching_factor
-    function.argtypes = [ctypes.c_uint]
-    function.restype = ctypes.c_uint
+    function = lib.opendp_transformations__make_bounded_float_ordered_sum
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
     
-    return c_to_py(function(size_guess))
+    return c_to_py(unwrap(function(size_limit, bounds, S), Transformation))
+
+
+def make_bounded_int_monotonic_sum(
+    bounds: Tuple[Any, Any],
+    T: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that computes the sum of bounded ints, 
+    where all values share the same sign.
+    
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param T: Atomic Input Type and Output Type
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_bounded_int_monotonic_sum
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(bounds, T), Transformation))
+
+
+def make_bounded_int_ordered_sum(
+    bounds: Tuple[Any, Any],
+    T: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that computes the sum of bounded ints.
+    You may need to use `make_ordered_random` to impose an ordering on the data.
+    
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param T: Atomic Input Type and Output Type
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_bounded_int_ordered_sum
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(bounds, T), Transformation))
+
+
+def make_bounded_int_split_sum(
+    bounds: Tuple[Any, Any],
+    T: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that computes the sum of bounded ints. 
+    Adds the saturating sum of the positives to the saturating sum of the negatives.
+    
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param T: Atomic Input Type and Output Type
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_bounded_int_split_sum
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(bounds, T), Transformation))
+
+
+def make_bounded_resize(
+    size: int,
+    bounds: Tuple[Any, Any],
+    constant,
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
+    MO: RuntimeTypeDescriptor = "SymmetricDistance",
+    TA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that either truncates or imputes records 
+    with `constant` in a Vec<`TA`> to match a provided `size`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<TA>>`
+    * Output Domain:  `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MO`
+    
+    :param size: Number of records in output data.
+    :type size: int
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param constant: Value to impute with.
+    :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic type. If not passed, TA is inferred from the lower bound
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :return: A vector of the same type `TA`, but with the provided `size`.
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    MO = RuntimeType.parse(type_name=MO)
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
+    constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=TA)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_bounded_resize
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, bounds, constant, MI, MO, TA), Transformation))
+
+
+def make_bounded_sum(
+    bounds: Tuple[Any, Any],
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
+    T: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that computes the sum of bounded data. 
+    Use `make_clamp` to bound data.
+    
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param T: Atomic Input Type and Output Type.
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_bounded_sum
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(bounds, MI, T), Transformation))
 
 
 def make_cast(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
+    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
     Failure to parse results in None, else Some<TOA>.
     
-    :param TIA: atomic input data type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TOA: atomic data type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A cast step.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<OptionNullDomain<AllDomain<TOA>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param TIA: Atomic Input Type to cast from
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type to cast into
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -211,13 +545,21 @@ def make_cast_default(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. If cast fails, fill with default.
+    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
+    If the cast fails, fill with default.
     
-    :param TIA: atomic input data type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TOA: atomic data type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A cast_default step.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param TIA: Atomic Input Type to cast from
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type to cast into
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -241,190 +583,6 @@ def make_cast_default(
     return c_to_py(unwrap(function(TIA, TOA), Transformation))
 
 
-def make_df_cast_default(
-    column_name: Any,
-    TIA: RuntimeTypeDescriptor,
-    TOA: RuntimeTypeDescriptor,
-    TK: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. If cast fails, fill with default.
-    
-    :param column_name: column name to be transformed
-    :type column_name: Any
-    :param TK: type of the column name
-    :type TK: :ref:`RuntimeTypeDescriptor`
-    :param TIA: atomic input data type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TOA: atomic data type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A df_cast_default step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
-    TIA = RuntimeType.parse(type_name=TIA)
-    TOA = RuntimeType.parse(type_name=TOA)
-    
-    # Convert arguments to c types.
-    column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
-    TK = py_to_c(TK, c_type=ctypes.c_char_p)
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_df_cast_default
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(column_name, TK, TIA, TOA), Transformation))
-
-
-def make_df_is_equal(
-    column_name: Any,
-    value: Any,
-    TK: RuntimeTypeDescriptor = None,
-    TIA: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`
-    
-    :param column_name: column name to be transformed
-    :type column_name: Any
-    :param value: value to check for equality
-    :type value: Any
-    :param TK: type of the column name
-    :type TK: :ref:`RuntimeTypeDescriptor`
-    :param TIA: atomic input data type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :return: A df_is_equal step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
-    
-    # Convert arguments to c types.
-    column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
-    value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
-    TK = py_to_c(TK, c_type=ctypes.c_char_p)
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_df_is_equal
-    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(column_name, value, TK, TIA), Transformation))
-
-
-def make_subset_by(
-    indicator_column: Any,
-    keep_columns: Any,
-    TK: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that subsets a dataframe by a boolean column.
-    
-    :param indicator_column: name of the boolean column that indicates inclusion in the subset
-    :type indicator_column: Any
-    :param keep_columns: list of column names to apply subset to
-    :type keep_columns: Any
-    :param TK: type of the column name
-    :type TK: :ref:`RuntimeTypeDescriptor`
-    :return: A subset_by step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=indicator_column)
-    
-    # Convert arguments to c types.
-    indicator_column = py_to_c(indicator_column, c_type=AnyObjectPtr, type_name=TK)
-    keep_columns = py_to_c(keep_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TK]))
-    TK = py_to_c(TK, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_subset_by
-    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(indicator_column, keep_columns, TK), Transformation))
-
-
-def make_is_equal(
-    value: Any,
-    TIA: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that checks if each element is equal to `value`.
-    
-    :param value: value to check against
-    :type value: Any
-    :param TIA: atomic input data type
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :return: A is_equal step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
-    
-    # Convert arguments to c types.
-    value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_is_equal
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(value, TIA), Transformation))
-
-
-def make_is_null(
-    DIA: RuntimeTypeDescriptor
-) -> Transformation:
-    """Make a Transformation that checks if each element in a vector is null.
-    
-    :param DIA: atomic input domain
-    :type DIA: :ref:`RuntimeTypeDescriptor`
-    :return: A is_null step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    DIA = RuntimeType.parse(type_name=DIA)
-    
-    # Convert arguments to c types.
-    DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_is_null
-    function.argtypes = [ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(DIA), Transformation))
-
-
 def make_cast_inherent(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
@@ -432,11 +590,18 @@ def make_cast_inherent(
     """Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. 
     If cast fails, fill with `TO`'s null value.
     
-    :param TIA: input data type to cast from
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TOA: data type to cast into
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A cast_inherent step.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<InherentNullDomain<AllDomain<TOA>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param TIA: Atomic Input Type to cast from
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type to cast into
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -460,15 +625,21 @@ def make_cast_inherent(
     return c_to_py(unwrap(function(TIA, TOA), Transformation))
 
 
-def make_ordered_random(
-    TA: RuntimeTypeDescriptor
+def make_cdf(
+    TA: RuntimeTypeDescriptor = "float"
 ) -> Transformation:
-    """Make a Transformation that converts the unordered dataset metric `SymmetricDistance` to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation. 
-    Operates exclusively on VectorDomain<AllDomain<`TA`>>.
+    """Postprocess a noisy array of float summary counts into a cumulative distribution.
     
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A ordered_random step.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `AgnosticMetric`
+    * Output Metric:  `AgnosticMetric`
+    
+    :param TA: Atomic Type. One of `f32` or `f64`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -483,303 +654,33 @@ def make_ordered_random(
     TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__make_ordered_random
+    function = lib.opendp_transformations__make_cdf
     function.argtypes = [ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(TA), Transformation))
-
-
-def make_sized_ordered_random(
-    size: int,
-    TA: RuntimeTypeDescriptor,
-    MI: DatasetMetric = "SymmetricDistance"
-) -> Transformation:
-    """Make a Transformation that converts the unordered dataset metric `MI` to the respective ordered dataset metric by assigning a random permutatation. 
-    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>. 
-    If `MI` is "SymmetricDistance", then output metric is "InsertDeleteDistance", and respectively "ChangeOneDistance" maps to "HammingDistance".
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param MI: input dataset metric
-    :type MI: DatasetMetric
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_ordered_random step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_sized_ordered_random
-    function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, MI, TA), Transformation))
-
-
-def make_sized_bounded_ordered_random(
-    size: int,
-    bounds: Tuple[Any, Any],
-    TA: RuntimeTypeDescriptor,
-    MI: DatasetMetric = "SymmetricDistance"
-) -> Transformation:
-    """Make a Transformation that converts the unordered dataset metric `MI` to the respective ordered dataset metric by assigning a random permutatation. 
-    Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>. 
-    If `MI` is "SymmetricDistance", then output metric is "InsertDeleteDistance", and respectively "ChangeOneDistance" maps to "HammingDistance".
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
-    :param MI: input dataset metric
-    :type MI: DatasetMetric
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_ordered_random step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_sized_bounded_ordered_random
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, bounds, MI, TA), Transformation))
-
-
-def make_unordered(
-    TA: RuntimeTypeDescriptor
-) -> Transformation:
-    """Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance` to the respective unordered dataset metric SymmetricDistance with a no-op. 
-    Operates exclusively on VectorDomain<AllDomain<`TA`>>. 
-    If `MI` is "InsertDeleteDistance", then output metric is "SymmetricDistance", and respectively "HammingDistance" maps to "ChangeOneDistance".
-    
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A unordered step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_unordered
-    function.argtypes = [ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(TA), Transformation))
-
-
-def make_sized_unordered(
-    size: int,
-    TA: RuntimeTypeDescriptor,
-    MI: DatasetMetric = "InsertDeleteDistance"
-) -> Transformation:
-    """Make a Transformation that converts the ordered dataset metric `MI` to the respective unordered dataset metric with a no-op. 
-    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>. 
-    If `MI` is "InsertDeleteDistance", then output metric is "SymmetricDistance", and respectively "HammingDistance" maps to "ChangeOneDistance".
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param MI: input dataset metric.
-    :type MI: DatasetMetric
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_unordered step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_sized_unordered
-    function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, MI, TA), Transformation))
-
-
-def make_sized_bounded_unordered(
-    size: int,
-    bounds: Tuple[Any, Any],
-    TA: RuntimeTypeDescriptor,
-    MI: DatasetMetric = "InsertDeleteDistance"
-) -> Transformation:
-    """Make a Transformation that converts the ordered dataset metric `MI` to the respective unordered dataset metric with a no-op. 
-    Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>. 
-    If `MI` is "InsertDeleteDistance", then output metric is "SymmetricDistance", and respectively "HammingDistance" maps to "ChangeOneDistance".
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
-    :param MI: input dataset metric
-    :type MI: DatasetMetric
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_unordered step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_sized_bounded_unordered
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, bounds, MI, TA), Transformation))
-
-
-def make_metric_bounded(
-    size: int,
-    TA: RuntimeTypeDescriptor,
-    MI: DatasetMetric = "SymmetricDistance"
-) -> Transformation:
-    """Make a Transformation that converts the unbounded dataset metric `MI` to the respective bounded dataset metric with a no-op. 
-    If "SymmetricDistance", then output metric is "ChangeOneDistance", and respectively "InsertDeleteDistance" maps to "HammingDistance".
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param MI: input dataset metric.
-    :type MI: DatasetMetric
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A metric_bounded step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_metric_bounded
-    function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, MI, TA), Transformation))
-
-
-def make_metric_unbounded(
-    size: int,
-    TA: RuntimeTypeDescriptor,
-    MI: DatasetMetric = "ChangeOneDistance"
-) -> Transformation:
-    """Make a Transformation that converts the bounded dataset metric `MI` to the respective unbounded dataset metric with a no-op. 
-    If "ChangeOneDistance", then output metric is "SymmetricDistance", and respectively "HammingDistance" maps to "InsertDeleteDistance".
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param MI: input dataset metric.
-    :type MI: DatasetMetric
-    :param TA: atomic type of data
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A metric_unbounded step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_metric_unbounded
-    function.argtypes = [ctypes.c_uint, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, MI, TA), Transformation))
 
 
 def make_clamp(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`. 
+    """Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
     If datum is less than lower, let datum be lower. 
     If datum is greater than upper, let datum be upper.
     
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<BoundedDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param TA: atomic data type
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A clamp step.
+    :param TA: Atomic Type
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -802,17 +703,39 @@ def make_clamp(
     return c_to_py(unwrap(function(bounds, TA), Transformation))
 
 
-def make_unclamp(
-    bounds: Tuple[Any, Any],
-    TA: RuntimeTypeDescriptor = None
+def make_consistent_b_ary_tree(
+    branching_factor: int,
+    TIA: RuntimeTypeDescriptor = "int",
+    TOA: RuntimeTypeDescriptor = "float"
 ) -> Transformation:
-    """Make a Transformation that unclamps a VectorDomain<BoundedDomain<T>> to a VectorDomain<AllDomain<T>>.
+    """Postprocessing transformation that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
     
-    :param bounds: Tuple of inclusive lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
-    :param TA: atomic data type
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A unclamp step.
+    The input argument of the function is a balanced `b`-ary tree implicitly stored in breadth-first order
+    Tree is assumed to be complete, as in, all leaves on the last layer are on the left.
+    Non-existent leaves are assumed to be zero.
+    
+    The output remains consistent even when leaf nodes are missing.
+    This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
+    
+    
+    **Citations:**
+    
+    * [HRMS09 Boosting the Accuracy of Differentially Private Histograms Through Consistency, section 4.1](https://arxiv.org/pdf/0904.0942.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `AgnosticMetric`
+    * Output Metric:  `AgnosticMetric`
+    
+    :param branching_factor: 
+    :type branching_factor: int
+    :param TIA: Atomic type of the input data. Should be an integer type.
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic type of the output data. Should be a float type.
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -821,18 +744,20 @@ def make_unclamp(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
+    TIA = RuntimeType.parse(type_name=TIA)
+    TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    branching_factor = py_to_c(branching_factor, c_type=ctypes.c_size_t, type_name=usize)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__make_unclamp
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function = lib.opendp_transformations__make_consistent_b_ary_tree
+    function.argtypes = [ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(bounds, TA), Transformation))
+    return c_to_py(unwrap(function(branching_factor, TIA, TOA), Transformation))
 
 
 def make_count(
@@ -841,11 +766,23 @@ def make_count(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
+    
+    **Citations:**
+    
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `AllDomain<TO>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<TO>`
+    
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TO: Output Type. Must be numeric.
-    :type TO: :ref:`RuntimeTypeDescriptor`
-    :return: A count step.
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TO: 
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -869,115 +806,6 @@ def make_count(
     return c_to_py(unwrap(function(TIA, TO), Transformation))
 
 
-def make_count_distinct(
-    TIA: RuntimeTypeDescriptor,
-    TO: RuntimeTypeDescriptor = "int"
-) -> Transformation:
-    """Make a Transformation that computes a count of the number of unique, distinct records in data.
-    
-    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TO: Output Type. Must be numeric.
-    :type TO: :ref:`RuntimeTypeDescriptor`
-    :return: A count_distinct step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
-    TO = RuntimeType.parse(type_name=TO)
-    
-    # Convert arguments to c types.
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    TO = py_to_c(TO, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_count_distinct
-    function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(TIA, TO), Transformation))
-
-
-def make_cdf(
-    TA: RuntimeTypeDescriptor = "float"
-) -> Transformation:
-    """Postprocess a noisy array of summary counts into a cdf.
-    
-    :param TA: Type of the data.
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A cdf step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TA = RuntimeType.parse(type_name=TA)
-    
-    # Convert arguments to c types.
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_cdf
-    function.argtypes = [ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(TA), Transformation))
-
-
-def make_quantiles_from_counts(
-    bin_edges: Any,
-    alphas: Any,
-    interpolation: str = "linear",
-    TA: RuntimeTypeDescriptor = None,
-    F: RuntimeTypeDescriptor = "float"
-) -> Transformation:
-    """Postprocess a noisy array of summary counts into quantiles.
-    
-    :param bin_edges: The edges that the input data was binned into before counting.
-    :type bin_edges: Any
-    :param alphas: Return all specified `alpha`-quantiles.
-    :type alphas: Any
-    :param interpolation: Must be one of `linear` or `nearest`
-    :type interpolation: str
-    :param TA: Atomic type of the data.
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :param F: Float type of the alpha argument. One of f32 or f64
-    :type F: :ref:`RuntimeTypeDescriptor`
-    :return: A quantiles_from_counts step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=next(iter(bin_edges), None))
-    F = RuntimeType.parse_or_infer(type_name=F, public_example=next(iter(alphas), None))
-    
-    # Convert arguments to c types.
-    bin_edges = py_to_c(bin_edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TA]))
-    alphas = py_to_c(alphas, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[F]))
-    interpolation = py_to_c(interpolation, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    F = py_to_c(F, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_quantiles_from_counts
-    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(bin_edges, alphas, interpolation, TA, F), Transformation))
-
-
 def make_count_by(
     MO: SensitivityMetric,
     TK: RuntimeTypeDescriptor,
@@ -986,13 +814,26 @@ def make_count_by(
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown.
     
+    
+    **Citations:**
+    
+    * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TK>>`
+    * Output Domain:  `MapDomain<AllDomain<TK>, AllDomain<TV>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `MO`
+    
     :param MO: Output Metric.
     :type MO: SensitivityMetric
     :param TK: Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
-    :type TK: :ref:`RuntimeTypeDescriptor`
-    :param TV: Type of Value. Express counts in terms of this integral type.
-    :type TV: :ref:`RuntimeTypeDescriptor`
-    :return: The carrier type is HashMap<TK, TV>, a hashmap of the count (TV) for each unique data input (TK).
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
+    :param TV: 
+    :type TV: :py:ref:`RuntimeTypeDescriptor`
+    :return: The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1028,17 +869,31 @@ def make_count_by_categories(
     """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
     
+    
+    **Citations:**
+    
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+    * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `MO`
+    
     :param categories: The set of categories to compute counts for.
     :type categories: Any
     :param null_category: Include a count of the number of elements that were not in the category set at the end of the vector.
     :type null_category: bool
-    :param MO: output sensitivity metric
+    :param MO: Output Metric.
     :type MO: SensitivityMetric
-    :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :param TOA: express counts in terms of this numeric type
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A count_by_categories step.
+    :param TIA: Atomic Input Type that is categorical/hashable. Input data must be Vec<TIA>
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type that is numeric.
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :return: The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1048,12 +903,12 @@ def make_count_by_categories(
     
     # Standardize type arguments.
     MO = RuntimeType.parse(type_name=MO)
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(categories), None))
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(categories))
     TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
     categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
-    null_category = py_to_c(null_category, c_type=ctypes.c_bool)
+    null_category = py_to_c(null_category, c_type=ctypes.c_bool, type_name=bool)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
     TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
@@ -1066,68 +921,29 @@ def make_count_by_categories(
     return c_to_py(unwrap(function(categories, null_category, MO, TIA, TOA), Transformation))
 
 
-def make_split_lines(
-    
+def make_count_distinct(
+    TIA: RuntimeTypeDescriptor,
+    TO: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
-    """Make a Transformation that takes a string and splits it into a Vec<String> of its lines.
+    """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
     
-    :return: A split_lines step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
+    **Citations:**
     
-    # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_transformations__make_split_lines
-    function.argtypes = []
-    function.restype = FfiResult
+    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     
-    return c_to_py(unwrap(function(), Transformation))
-
-
-def make_split_records(
-    separator: str
-) -> Transformation:
-    """Make a Transformation that splits each record in a Vec<String> into a Vec<Vec<String>>.
     
-    :param separator: The token(s) that separate entries in each record.
-    :type separator: str
-    :return: A split_records step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
+    **Supporting Elements:**
     
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    separator = py_to_c(separator, c_type=ctypes.c_char_p)
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `AllDomain<TO>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<TO>`
     
-    # Call library function.
-    function = lib.opendp_transformations__make_split_records
-    function.argtypes = [ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(separator), Transformation))
-
-
-def make_create_dataframe(
-    col_names: Any,
-    K: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that constructs a dataframe from a Vec<Vec<String>>.
-    
-    :param col_names: Column names for each record entry.
-    :type col_names: Any
-    :param K: categorical/hashable data type of column names
-    :type K: :ref:`RuntimeTypeDescriptor`
-    :return: A create_dataframe step.
+    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TO: 
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1136,7 +952,48 @@ def make_create_dataframe(
     assert_features("contrib")
     
     # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
+    TIA = RuntimeType.parse(type_name=TIA)
+    TO = RuntimeType.parse(type_name=TO)
+    
+    # Convert arguments to c types.
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    TO = py_to_c(TO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_count_distinct
+    function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(TIA, TO), Transformation))
+
+
+def make_create_dataframe(
+    col_names: Any,
+    K: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<VectorDomain<AllDomain<String>>>`
+    * Output Domain:  `DataFrameDomain<K>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param col_names: Column names for each record entry.
+    :type col_names: Any
+    :param K: categorical/hashable data type of column names
+    :type K: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    K = RuntimeType.parse_or_infer(type_name=K, public_example=get_first(col_names))
     
     # Convert arguments to c types.
     col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
@@ -1150,58 +1007,31 @@ def make_create_dataframe(
     return c_to_py(unwrap(function(col_names, K), Transformation))
 
 
-def make_split_dataframe(
-    separator: str,
-    col_names: Any,
-    K: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that splits each record in a String into a Vec<Vec<String>>,
-    and loads the resulting table into a dataframe keyed by `col_names`.
-    
-    :param separator: The token(s) that separate entries in each record.
-    :type separator: str
-    :param col_names: Column names for each record entry.
-    :type col_names: Any
-    :param K: categorical/hashable data type of column names
-    :type K: :ref:`RuntimeTypeDescriptor`
-    :return: A split_dataframe step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=next(iter(col_names), None))
-    
-    # Convert arguments to c types.
-    separator = py_to_c(separator, c_type=ctypes.c_char_p)
-    col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
-    K = py_to_c(K, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_split_dataframe
-    function.argtypes = [ctypes.c_char_p, AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(separator, col_names, K), Transformation))
-
-
-def make_select_column(
-    key: Any,
+def make_df_cast_default(
+    column_name: Any,
+    TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor,
-    K: RuntimeTypeDescriptor = None
+    TK: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.
+    """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. 
+    If cast fails, fill with default.
     
-    :param key: categorical/hashable data type of the key/column name
-    :type key: Any
-    :param K: data type of the key
-    :type K: :ref:`RuntimeTypeDescriptor`
-    :param TOA: atomic data type to downcast to
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A select_column step.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<TK>`
+    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param column_name: column name to be transformed
+    :type column_name: Any
+    :param TK: Type of the column name
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
+    :param TIA: Atomic Input Type to cast from
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type to cast into
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1210,33 +1040,208 @@ def make_select_column(
     assert_features("contrib")
     
     # Standardize type arguments.
-    K = RuntimeType.parse_or_infer(type_name=K, public_example=key)
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
+    TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
-    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
-    K = py_to_c(K, c_type=ctypes.c_char_p)
+    column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__make_select_column
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function = lib.opendp_transformations__make_df_cast_default
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(key, K, TOA), Transformation))
+    return c_to_py(unwrap(function(column_name, TK, TIA, TOA), Transformation))
+
+
+def make_df_is_equal(
+    column_name: Any,
+    value: Any,
+    TK: RuntimeTypeDescriptor = None,
+    TIA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<TK>`
+    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param column_name: Column name to be transformed
+    :type column_name: Any
+    :param value: 
+    :type value: Any
+    :param TK: Type of the column name
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
+    :param TIA: Atomic Input Type to cast from
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
+    
+    # Convert arguments to c types.
+    column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
+    value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_df_is_equal
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(column_name, value, TK, TIA), Transformation))
+
+
+def make_drop_null(
+    DA: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that drops null values.
+    `DA` is one of `OptionNullDomain<AllDomain<TA>>` or `InherentNullDomain<AllDomain<TA>>`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<DA>`
+    * Output Domain:  `VectorDomain<AllDomain<DA::Imputed>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param DA: atomic domain of input data that contains nulls.
+    :type DA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    DA = RuntimeType.parse(type_name=DA)
+    
+    # Convert arguments to c types.
+    DA = py_to_c(DA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_drop_null
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(DA), Transformation))
+
+
+def make_find(
+    categories: Any,
+    TIA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Find the index of a data value in a set of categories.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<OptionNullDomain<AllDomain<usize>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param categories: The set of categories to find indexes from.
+    :type categories: Any
+    :param TIA: Atomic Input Type that is categorical/hashable
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(categories))
+    
+    # Convert arguments to c types.
+    categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_find
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(categories, TIA), Transformation))
+
+
+def make_find_bin(
+    edges: Any,
+    TIA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a transformation that finds the bin index in a monotonically increasing vector of edges.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<usize>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param edges: The set of edges to split bins by.
+    :type edges: Any
+    :param TIA: Atomic Input Type that is numeric
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(edges))
+    
+    # Convert arguments to c types.
+    edges = py_to_c(edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_find_bin
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(edges, TIA), Transformation))
 
 
 def make_identity(
     D: RuntimeTypeDescriptor,
     M: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that simply passes the data through.
+    """Make a Transformation representing the identity function.
     
-    :param D: Domain of the identity function. Must be VectorDomain<AllDomain<_>> or AllDomain<_>
-    :type D: :ref:`RuntimeTypeDescriptor`
-    :param M: metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
-    :type M: :ref:`RuntimeTypeDescriptor`
-    :return: A transformation where the input and output domain are D and the input and output metric are M
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
+    
+    :param D: Domain of the identity function. Must be `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
+    :param M: Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
+    :type M: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1265,14 +1270,29 @@ def make_impute_constant(
     DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<TA>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
-    By default, the input type is Vec<Option<TA>>, as emitted by make_cast. 
-    Set `DA` to InherentNullDomain<AllDomain<TA>> for imputing on types that have an inherent representation of nullity, like floats.
+    By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
+    Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
+    that have an inherent representation of nullity, like floats.
+    
+    ```text
+    | Input Domain `DI`            |  Input Type    | Output Type |
+    | ---------------------------- | -------------- | ----------- |
+    | AllDomain<Option<T>>         | Vec<Option<T>> | Vec<T>      |
+    | NullableDomain<AllDomain<T>> | Vec<T>         | Vec<T>      |
+    ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<DA>`
+    * Output Domain:  `VectorDomain<AllDomain<DA::Imputed>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param constant: Value to replace nulls with.
     :type constant: Any
-    :param DA: domain of data being imputed. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
-    :type DA: :ref:`RuntimeTypeDescriptor`
-    :return: A impute_constant step.
+    :param DA: Atomic Domain of data being imputed.
+    :type DA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1297,46 +1317,25 @@ def make_impute_constant(
     return c_to_py(unwrap(function(constant, DA), Transformation))
 
 
-def make_drop_null(
-    DA: RuntimeTypeDescriptor
-) -> Transformation:
-    """Make a Transformation that drops null values.
-    
-    :param DA: atomic domain of input data that contains nulls. This is OptionNullDomain<AllDomain<TA>> or InherentNullDomain<AllDomain<TA>>
-    :type DA: :ref:`RuntimeTypeDescriptor`
-    :return: A drop_null step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    DA = RuntimeType.parse(type_name=DA)
-    
-    # Convert arguments to c types.
-    DA = py_to_c(DA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_drop_null
-    function.argtypes = [ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(DA), Transformation))
-
-
 def make_impute_uniform_float(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that replaces null/None data in Vec<`TA`> with uniformly distributed floats within `bounds`.
+    """Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
+    Operates on `InherentNullDomain<AllDomain<TA>>`
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<InherentNullDomain<AllDomain<TA>>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param TA: type of data being imputed
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A impute_uniform_float step.
+    :param TA: Atomic Type of data being imputed. One of `f32` or `f64`
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1359,86 +1358,27 @@ def make_impute_uniform_float(
     return c_to_py(unwrap(function(bounds, TA), Transformation))
 
 
-def make_find(
-    categories: Any,
-    TIA: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Find the index of a data value in a set of categories.
-    
-    :param categories: The set of categories to find indexes from.
-    :type categories: Any
-    :param TIA: categorical/hashable input type. Input data must be Vec<TIA>.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :return: A find step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(categories), None))
-    
-    # Convert arguments to c types.
-    categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_find
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(categories, TIA), Transformation))
-
-
-def make_find_bin(
-    edges: Any,
-    TIA: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Find the bin index from a monotonically increasing vector of edges.
-    
-    :param edges: The set of edges to split bins by.
-    :type edges: Any
-    :param TIA: numerical input type. Input data must be Vec<TIA>.
-    :type TIA: :ref:`RuntimeTypeDescriptor`
-    :return: A find_bin step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=next(iter(edges), None))
-    
-    # Convert arguments to c types.
-    edges = py_to_c(edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
-    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_find_bin
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(edges, TIA), Transformation))
-
-
 def make_index(
     categories: Any,
     null: Any,
     TOA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Index into a vector of categories.
+    """Make a transformation that treats each element as an index into a vector of categories.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<usize>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
     
     :param categories: The set of categories to index into.
     :type categories: Any
     :param null: Category to return if the index is out-of-range of the category set.
     :type null: Any
-    :param TOA: atomic output type. Output data will be Vec<TIA>.
-    :type TOA: :ref:`RuntimeTypeDescriptor`
-    :return: A index step.
+    :param TOA: 
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1447,7 +1387,7 @@ def make_index(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=next(iter(categories), None))
+    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=get_first(categories))
     
     # Convert arguments to c types.
     categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TOA]))
@@ -1462,22 +1402,106 @@ def make_index(
     return c_to_py(unwrap(function(categories, null, TOA), Transformation))
 
 
+def make_is_equal(
+    value: Any,
+    TIA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that checks if each element is equal to `value`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<bool>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param value: value to check against
+    :type value: Any
+    :param TIA: Atomic Input Type. Type of elements in the input vector
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
+    
+    # Convert arguments to c types.
+    value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_is_equal
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(value, TIA), Transformation))
+
+
+def make_is_null(
+    DIA: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that checks if each element in a vector is null.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<DIA>`
+    * Output Domain:  `VectorDomain<AllDomain<bool>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param DIA: Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
+    :type DIA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    DIA = RuntimeType.parse(type_name=DIA)
+    
+    # Convert arguments to c types.
+    DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_is_null
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(DIA), Transformation))
+
+
 def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
     D: RuntimeTypeDescriptor = "AllDomain<T>",
     M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
 ) -> Transformation:
-    """Multiply an aggregate by a constant.
+    """Make a transformation that multiplies an aggregate by a constant.
+    The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Domain:  `D`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
     :param constant: The constant to multiply aggregates by.
-    :param bounds: Tuple of inclusive lower and upper bounds of the input data.
+    :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param D: Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>
-    :type D: :ref:`RuntimeTypeDescriptor`
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param M: Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>
-    :type M: :ref:`RuntimeTypeDescriptor`
-    :return: A lipschitz_float_mul step.
+    :type M: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1506,25 +1530,40 @@ def make_lipschitz_float_mul(
     return c_to_py(unwrap(function(constant, bounds, D, M), Transformation))
 
 
-def make_sized_bounded_mean(
+def make_metric_bounded(
     size: int,
-    bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    T: RuntimeTypeDescriptor = None
+    TA: RuntimeTypeDescriptor,
+    MI: DatasetMetric = "SymmetricDistance"
 ) -> Transformation:
-    """Make a Transformation that computes the mean of bounded data. 
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
-    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+    """Make a Transformation that converts the unbounded dataset metric `MI` 
+    to the respective bounded dataset metric with a no-op. 
+    
+    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+    The constructor enforces that the input domain has known size, 
+    because it must have known size to be valid under a bounded dataset metric.
+    
+    While it is valid to operate with bounded data, there is no constructor for it in Python.
+    
+    ```text
+    | `MI`                 | output metric     |
+    | -------------------- | ----------------- |
+    | SymmetricDistance    | ChangeOneDistance |
+    | InsertDeleteDistance | HammingDistance   |
+    ```
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::BoundedMetric`
     
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of inclusive lower and upper bounds of the input data.
-    :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
-    :type MI: :ref:`RuntimeTypeDescriptor`
-    :param T: atomic data type
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_mean step.
+    :param MI: Input Metric.
+    :type MI: DatasetMetric
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1534,20 +1573,164 @@ def make_sized_bounded_mean(
     
     # Standardize type arguments.
     MI = RuntimeType.parse(type_name=MI)
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    TA = RuntimeType.parse(type_name=TA)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__make_sized_bounded_mean
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function = lib.opendp_transformations__make_metric_bounded
+    function.argtypes = [ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(size, bounds, MI, T), Transformation))
+    return c_to_py(unwrap(function(size, MI, TA), Transformation))
+
+
+def make_metric_unbounded(
+    size: int,
+    TA: RuntimeTypeDescriptor,
+    MI: DatasetMetric = "ChangeOneDistance"
+) -> Transformation:
+    """Make a Transformation that converts the bounded dataset metric `MI` 
+    to the respective unbounded dataset metric with a no-op. 
+    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+    
+    ```text
+    | `MI`              | output metric        |
+    | ----------------- | -------------------- |
+    | ChangeOneDistance | SymmetricDistance    |
+    | HammingDistance   | InsertDeleteDistance |
+    ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::UnboundedMetric`
+    
+    :param size: Number of records in input data.
+    :type size: int
+    :param MI: Input Metric.
+    :type MI: DatasetMetric
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    TA = RuntimeType.parse(type_name=TA)
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_metric_unbounded
+    function.argtypes = [ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, MI, TA), Transformation))
+
+
+def make_ordered_random(
+    TA: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
+    to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
+    Operates exclusively on VectorDomain<AllDomain<`TA`>>.
+    The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `InsertDeleteDistance`
+    
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TA = RuntimeType.parse(type_name=TA)
+    
+    # Convert arguments to c types.
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_ordered_random
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(TA), Transformation))
+
+
+def make_quantiles_from_counts(
+    bin_edges: Any,
+    alphas: Any,
+    interpolation: str = "linear",
+    TA: RuntimeTypeDescriptor = None,
+    F: RuntimeTypeDescriptor = "float"
+) -> Transformation:
+    """Postprocess a noisy array of summary counts into quantiles.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `AgnosticMetric`
+    * Output Metric:  `AgnosticMetric`
+    
+    :param bin_edges: The edges that the input data was binned into before counting.
+    :type bin_edges: Any
+    :param alphas: Return all specified `alpha`-quantiles.
+    :type alphas: Any
+    :param interpolation: Must be one of `linear` or `nearest`
+    :type interpolation: str
+    :param TA: Atomic Type of the bin edges and data.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :param F: Float type of the alpha argument. One of `f32` or `f64`
+    :type F: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bin_edges))
+    F = RuntimeType.parse_or_infer(type_name=F, public_example=get_first(alphas))
+    
+    # Convert arguments to c types.
+    bin_edges = py_to_c(bin_edges, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TA]))
+    alphas = py_to_c(alphas, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[F]))
+    interpolation = py_to_c(interpolation, c_type=ctypes.c_char_p, type_name=String)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    F = py_to_c(F, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_quantiles_from_counts
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(bin_edges, alphas, interpolation, TA, F), Transformation))
 
 
 def make_resize(
@@ -1557,18 +1740,27 @@ def make_resize(
     MO: RuntimeTypeDescriptor = "SymmetricDistance",
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
+    """Make a Transformation that either truncates or imputes records 
+    with `constant` in a Vec<`TA`> to match a provided `size`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MO`
     
     :param size: Number of records in output data.
     :type size: int
     :param constant: Value to impute with.
     :type constant: Any
     :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MI: :ref:`RuntimeTypeDescriptor`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MO: :ref:`RuntimeTypeDescriptor`
-    :param TA: Atomic type.
-    :type TA: :ref:`RuntimeTypeDescriptor`
+    :type MO: :py:ref:`RuntimeTypeDescriptor`
+    :param TA: Atomic type. If not passed, TA is inferred from the lower bound
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
@@ -1583,7 +1775,7 @@ def make_resize(
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=constant)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=TA)
     MI = py_to_c(MI, c_type=ctypes.c_char_p)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
@@ -1591,34 +1783,33 @@ def make_resize(
     
     # Call library function.
     function = lib.opendp_transformations__make_resize
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, constant, MI, MO, TA), Transformation))
 
 
-def make_bounded_resize(
-    size: int,
-    bounds: Tuple[Any, Any],
-    constant,
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    MO: RuntimeTypeDescriptor = "SymmetricDistance",
-    TA: RuntimeTypeDescriptor = None
+def make_select_column(
+    key: Any,
+    TOA: RuntimeTypeDescriptor,
+    K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records with `constant` in a Vec<`TA`> to match a provided `size`.
+    """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.
     
-    :param size: Number of records in output data.
-    :type size: int
-    :param bounds: Tuple of lower and upper bounds for data in the input domain
-    :type bounds: Tuple[Any, Any]
-    :param constant: Value to impute with.
-    :param MI: Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MI: :ref:`RuntimeTypeDescriptor`
-    :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-    :type MO: :ref:`RuntimeTypeDescriptor`
-    :param TA: Atomic type. If not passed, TA is inferred from the lower bound.
-    :type TA: :ref:`RuntimeTypeDescriptor`
-    :return: A vector of the same type `TA`, but with the provided `size`.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<K>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param key: categorical/hashable data type of the key/column name
+    :type key: Any
+    :param K: data type of key
+    :type K: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type to downcast vector to
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1627,147 +1818,20 @@ def make_bounded_resize(
     assert_features("contrib")
     
     # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    MO = RuntimeType.parse(type_name=MO)
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
+    K = RuntimeType.parse_or_infer(type_name=K, public_example=key)
+    TOA = RuntimeType.parse(type_name=TOA)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
-    constant = py_to_c(constant, c_type=ctypes.c_void_p, type_name=TA)
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
-    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    key = py_to_c(key, c_type=AnyObjectPtr, type_name=K)
+    K = py_to_c(K, c_type=ctypes.c_char_p)
+    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_transformations__make_bounded_resize
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, bounds, constant, MI, MO, TA), Transformation))
-
-
-def make_bounded_sum(
-    bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    T: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data. 
-    Use `make_clamp` to bound data.
-    
-    :param bounds: Tuple of lower and upper bounds for data in the input domain
-    :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
-    :type MI: :ref:`RuntimeTypeDescriptor`
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A bounded_sum step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
-    
-    # Convert arguments to c types.
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_bounded_sum
+    function = lib.opendp_transformations__make_select_column
     function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(bounds, MI, T), Transformation))
-
-
-def make_sized_bounded_sum(
-    size: int,
-    bounds: Tuple[Any, Any],
-    MI: RuntimeTypeDescriptor = "SymmetricDistance",
-    T: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data with known dataset size. 
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
-    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
-    
-    :param size: Number of records in input data.
-    :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
-    :type bounds: Tuple[Any, Any]
-    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
-    :type MI: :ref:`RuntimeTypeDescriptor`
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_sum step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    MI = RuntimeType.parse(type_name=MI)
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
-    
-    # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    MI = py_to_c(MI, c_type=ctypes.c_char_p)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_sized_bounded_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size, bounds, MI, T), Transformation))
-
-
-def make_bounded_float_checked_sum(
-    size_limit: int,
-    bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
-) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with unknown dataset size. 
-    This computes the sum on up to `size_limit` rows randomly selected from the input.
-    
-    :param size_limit: Limit on number of records in input data.
-    :type size_limit: int
-    :param bounds: Tuple of lower and upper bounds for input data
-    :type bounds: Tuple[Any, Any]
-    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
-    :return: A bounded_float_checked_sum step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
-    
-    # Convert arguments to c types.
-    size_limit = py_to_c(size_limit, c_type=ctypes.c_uint)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    S = py_to_c(S, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_bounded_float_checked_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size_limit, bounds, S), Transformation))
+    return c_to_py(unwrap(function(key, K, TOA), Transformation))
 
 
 def make_sized_bounded_float_checked_sum(
@@ -1778,13 +1842,26 @@ def make_sized_bounded_float_checked_sum(
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_float_checked_sum step.
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1798,56 +1875,16 @@ def make_sized_bounded_float_checked_sum(
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_float_checked_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, S), Transformation))
-
-
-def make_bounded_float_ordered_sum(
-    size_limit: int,
-    bounds: Tuple[Any, Any],
-    S: RuntimeTypeDescriptor = "Pairwise<T>"
-) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats. 
-    You may need to use `make_ordered_random` to impose an ordering on the data.
-    
-    :param size_limit: Upper bound on the number of records in input data. Used to bound sensitivity. Can be overestimated.
-    :type size_limit: int
-    :param bounds: Tuple of lower and upper bounds for data in the input domain
-    :type bounds: Tuple[Any, Any]
-    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
-    :return: A bounded_float_ordered_sum step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    S = RuntimeType.parse(type_name=S, generics=["T"])
-    T = get_atom_or_infer(S, get_first(bounds))
-    S = S.substitute(T=T)
-    
-    # Convert arguments to c types.
-    size_limit = py_to_c(size_limit, c_type=ctypes.c_uint)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    S = py_to_c(S, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_bounded_float_ordered_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(size_limit, bounds, S), Transformation))
 
 
 def make_sized_bounded_float_ordered_sum(
@@ -1859,13 +1896,26 @@ def make_sized_bounded_float_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_float_ordered_sum step.
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1879,13 +1929,13 @@ def make_sized_bounded_float_ordered_sum(
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_float_ordered_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, S), Transformation))
@@ -1899,13 +1949,26 @@ def make_sized_bounded_int_checked_sum(
     """Make a Transformation that computes the sum of bounded ints. 
     The effective range is reduced, as (bounds * size) must not overflow.
     
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_int_checked_sum step.
+    :param T: Atomic Input Type and Output Type
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1917,49 +1980,16 @@ def make_sized_bounded_int_checked_sum(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_int_checked_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, T), Transformation))
-
-
-def make_bounded_int_monotonic_sum(
-    bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints, where all values share the same sign.
-    
-    :param bounds: Tuple of lower and upper bounds for input data
-    :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A bounded_int_monotonic_sum step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
-    
-    # Convert arguments to c types.
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_bounded_int_monotonic_sum
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(bounds, T), Transformation))
 
 
 def make_sized_bounded_int_monotonic_sum(
@@ -1967,17 +1997,29 @@ def make_sized_bounded_int_monotonic_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints with known dataset size. 
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
-    Adds the saturating sum of the positives to the saturating sum of the negatives.
+    """Make a Transformation that computes the sum of bounded ints, 
+    where all values share the same sign.
+    
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
     
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_int_monotonic_sum step.
+    :param T: Atomic Input Type and Output Type
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -1989,50 +2031,16 @@ def make_sized_bounded_int_monotonic_sum(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_int_monotonic_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, T), Transformation))
-
-
-def make_bounded_int_ordered_sum(
-    bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints. 
-    You may need to use `make_ordered_random` to impose an ordering on the data.
-    
-    :param bounds: Tuple of lower and upper bounds for input data
-    :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A bounded_int_ordered_sum step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
-    
-    # Convert arguments to c types.
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_bounded_int_ordered_sum
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(bounds, T), Transformation))
 
 
 def make_sized_bounded_int_ordered_sum(
@@ -2044,13 +2052,26 @@ def make_sized_bounded_int_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_int_ordered_sum step.
+    :param T: Atomic Input Type and Output Type
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2062,50 +2083,16 @@ def make_sized_bounded_int_ordered_sum(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_int_ordered_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, T), Transformation))
-
-
-def make_bounded_int_split_sum(
-    bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints. 
-    Adds the saturating sum of the positives to the saturating sum of the negatives.
-    
-    :param bounds: Tuple of lower and upper bounds for input data
-    :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A bounded_int_split_sum step.
-    :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
-    
-    # Convert arguments to c types.
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    function = lib.opendp_transformations__make_bounded_int_split_sum
-    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    function.restype = FfiResult
-    
-    return c_to_py(unwrap(function(bounds, T), Transformation))
 
 
 def make_sized_bounded_int_split_sum(
@@ -2117,13 +2104,26 @@ def make_sized_bounded_int_split_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param T: atomic type of data
-    :type T: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_int_split_sum step.
+    :param T: Atomic Input Type and Output Type
+    :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2135,16 +2135,172 @@ def make_sized_bounded_int_split_sum(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_int_split_sum
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, T), Transformation))
+
+
+def make_sized_bounded_mean(
+    size: int,
+    bounds: Tuple[Any, Any],
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
+    T: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that computes the mean of bounded data.
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
+    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `MI`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
+    :param size: Number of records in input data.
+    :type size: int
+    :param bounds: Tuple of inclusive lower and upper bounds.
+    :type bounds: Tuple[Any, Any]
+    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param T: Atomic Input Type and Output Type.
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_sized_bounded_mean
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, bounds, MI, T), Transformation))
+
+
+def make_sized_bounded_ordered_random(
+    size: int,
+    bounds: Tuple[Any, Any],
+    TA: RuntimeTypeDescriptor,
+    MI: DatasetMetric = "SymmetricDistance"
+) -> Transformation:
+    """Make a Transformation that converts the unordered dataset metric `MI`
+    to the respective ordered dataset metric by assigning a random permutatation.
+    Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
+    ```text
+    | `MI`              | output metric        |
+    | ----------------- | -------------------- |
+    | SymmetricDistance | InsertDeleteDistance |
+    | ChangeOneDistance | HammingDistance      |
+    ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::OrderedMetric`
+    
+    :param size: Number of records in input data.
+    :type size: int
+    :param bounds: Tuple of inclusive lower and upper bounds.
+    :type bounds: Tuple[Any, Any]
+    :param MI: Input Metric.
+    :type MI: DatasetMetric
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    TA = RuntimeType.parse(type_name=TA)
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_sized_bounded_ordered_random
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, bounds, MI, TA), Transformation))
+
+
+def make_sized_bounded_sum(
+    size: int,
+    bounds: Tuple[Any, Any],
+    MI: RuntimeTypeDescriptor = "SymmetricDistance",
+    T: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+    
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    :param size: Number of records in input data.
+    :type size: int
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
+    :type bounds: Tuple[Any, Any]
+    :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
+    :type MI: :py:ref:`RuntimeTypeDescriptor`
+    :param T: Atomic Input Type and Output Type.
+    :type T: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    T = py_to_c(T, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_sized_bounded_sum
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, bounds, MI, T), Transformation))
 
 
 def make_sized_bounded_sum_of_squared_deviations(
@@ -2156,13 +2312,26 @@ def make_sized_bounded_sum_of_squared_deviations(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
+    
+    **Citations:**
+    
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+    * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_sum_of_squared_deviations step.
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2176,16 +2345,72 @@ def make_sized_bounded_sum_of_squared_deviations(
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
     S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_sum_of_squared_deviations
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, S), Transformation))
+
+
+def make_sized_bounded_unordered(
+    size: int,
+    bounds: Tuple[Any, Any],
+    TA: RuntimeTypeDescriptor,
+    MI: DatasetMetric = "InsertDeleteDistance"
+) -> Transformation:
+    """Make a Transformation that converts the ordered dataset metric `MI`
+    to the respective unordered dataset metric via a no-op.
+    Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
+    ```text
+    | `MI`                 | output metric      |
+    | -------------------- | ------------------ |
+    | InsertDeleteDistance | SymmetricDistance  |
+    | HammingDistance      | ChangeOneDistance  |
+    ```
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::UnorderedMetric`
+    
+    :param size: Number of records in input data.
+    :type size: int
+    :param bounds: Tuple of inclusive lower and upper bounds.
+    :type bounds: Tuple[Any, Any]
+    :param MI: Input Metric.
+    :type MI: DatasetMetric
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    TA = RuntimeType.parse(type_name=TA)
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_sized_bounded_unordered
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, bounds, MI, TA), Transformation))
 
 
 def make_sized_bounded_variance(
@@ -2198,15 +2423,27 @@ def make_sized_bounded_variance(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
+    
+    **Citations:**
+    
+    * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Output Domain:  `AllDomain<S::Item>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `AbsoluteDistance<S::Item>`
+    
     :param size: Number of records in input data.
     :type size: int
-    :param bounds: Tuple of lower and upper bounds for input data
+    :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param ddof: Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
     :type ddof: int
-    :param S: summation algorithm to use on data type T. One of Sequential<T> or Pairwise<T>.
-    :type S: :ref:`RuntimeTypeDescriptor`
-    :return: A sized_bounded_variance step.
+    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises AssertionError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type-argument fails to parse
@@ -2220,14 +2457,358 @@ def make_sized_bounded_variance(
     S = S.substitute(T=T)
     
     # Convert arguments to c types.
-    size = py_to_c(size, c_type=ctypes.c_uint)
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
     bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
-    ddof = py_to_c(ddof, c_type=ctypes.c_uint)
+    ddof = py_to_c(ddof, c_type=ctypes.c_size_t, type_name=usize)
     S = py_to_c(S, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_sized_bounded_variance
-    function.argtypes = [ctypes.c_uint, AnyObjectPtr, ctypes.c_uint, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_size_t, AnyObjectPtr, ctypes.c_size_t, ctypes.c_char_p]
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(size, bounds, ddof, S), Transformation))
+
+
+def make_sized_ordered_random(
+    size: int,
+    TA: RuntimeTypeDescriptor,
+    MI: DatasetMetric = "SymmetricDistance"
+) -> Transformation:
+    """Make a Transformation that converts the unordered dataset metric `MI`
+    to the respective ordered dataset metric by assigning a random permutatation.
+    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+    ```text
+    | `MI`              | output metric        |
+    | ----------------- | -------------------- |
+    | SymmetricDistance | InsertDeleteDistance |
+    | ChangeOneDistance | HammingDistance      |
+    ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::OrderedMetric`
+    
+    :param size: Number of records in input data.
+    :type size: int
+    :param MI: Input Metric.
+    :type MI: DatasetMetric
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    TA = RuntimeType.parse(type_name=TA)
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_sized_ordered_random
+    function.argtypes = [ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, MI, TA), Transformation))
+
+
+def make_sized_unordered(
+    size: int,
+    TA: RuntimeTypeDescriptor,
+    MI: DatasetMetric = "InsertDeleteDistance"
+) -> Transformation:
+    """Make a Transformation that converts the ordered dataset metric `MI`
+    to the respective unordered dataset metric via a no-op.
+    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+    ```text
+    | `MI`                 | output metric      |
+    | -------------------- | ------------------ |
+    | InsertDeleteDistance | SymmetricDistance  |
+    | HammingDistance      | ChangeOneDistance  |
+    ```
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `SizedDomain<VectorDomain<AllDomain<TA>>>`
+    * Input Metric:   `MI`
+    * Output Metric:  `MI::UnorderedMetric`
+    
+    :param size: Number of records in input data.
+    :type size: int
+    :param MI: Input Metric.
+    :type MI: DatasetMetric
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    MI = RuntimeType.parse(type_name=MI)
+    TA = RuntimeType.parse(type_name=TA)
+    
+    # Convert arguments to c types.
+    size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    MI = py_to_c(MI, c_type=ctypes.c_char_p)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_sized_unordered
+    function.argtypes = [ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(size, MI, TA), Transformation))
+
+
+def make_split_dataframe(
+    separator: str,
+    col_names: Any,
+    K: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
+    and loads the resulting table into a dataframe keyed by `col_names`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `AllDomain<String>`
+    * Output Domain:  `DataFrameDomain<K>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param separator: The token(s) that separate entries in each record.
+    :type separator: str
+    :param col_names: Column names for each record entry.
+    :type col_names: Any
+    :param K: categorical/hashable data type of column names
+    :type K: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    K = RuntimeType.parse_or_infer(type_name=K, public_example=get_first(col_names))
+    
+    # Convert arguments to c types.
+    separator = py_to_c(separator, c_type=ctypes.c_char_p, type_name=None)
+    col_names = py_to_c(col_names, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[K]))
+    K = py_to_c(K, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_split_dataframe
+    function.argtypes = [ctypes.c_char_p, AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(separator, col_names, K), Transformation))
+
+
+def make_split_lines(
+    
+) -> Transformation:
+    """Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `AllDomain<String>`
+    * Output Domain:  `VectorDomain<AllDomain<String>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # No arguments to convert to c types.
+    # Call library function.
+    function = lib.opendp_transformations__make_split_lines
+    function.argtypes = []
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(), Transformation))
+
+
+def make_split_records(
+    separator: str
+) -> Transformation:
+    """Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<String>>`
+    * Output Domain:  `VectorDomain<VectorDomain<AllDomain<String>>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param separator: The token(s) that separate entries in each record.
+    :type separator: str
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    separator = py_to_c(separator, c_type=ctypes.c_char_p, type_name=None)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_split_records
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(separator), Transformation))
+
+
+def make_subset_by(
+    indicator_column: Any,
+    keep_columns: Any,
+    TK: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that subsets a dataframe by a boolean column.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<TK>`
+    * Output Domain:  `DataFrameDomain<TK>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param indicator_column: name of the boolean column that indicates inclusion in the subset
+    :type indicator_column: Any
+    :param keep_columns: list of column names to apply subset to
+    :type keep_columns: Any
+    :param TK: Type of the column name
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=indicator_column)
+    
+    # Convert arguments to c types.
+    indicator_column = py_to_c(indicator_column, c_type=AnyObjectPtr, type_name=TK)
+    keep_columns = py_to_c(keep_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TK]))
+    TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_subset_by
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(indicator_column, keep_columns, TK), Transformation))
+
+
+def make_unclamp(
+    bounds: Tuple[Any, Any],
+    TA: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that unclamps numeric data in Vec<`T`>.
+    Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param bounds: Tuple of lower and upper bounds.
+    :type bounds: Tuple[Any, Any]
+    :param TA: Atomic Type
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
+    
+    # Convert arguments to c types.
+    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_unclamp
+    function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(bounds, TA), Transformation))
+
+
+def make_unordered(
+    TA: RuntimeTypeDescriptor
+) -> Transformation:
+    """Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance`
+    to the respective ordered dataset metric SymmetricDistance with a no-op.
+    Operates exclusively on VectorDomain<AllDomain<`TA`>>.
+    The dataset metric is not generic over HammingDistance because the dataset size is unknown.
+    
+    ```text
+    | input metric         | output metric        |
+    | -------------------- | -------------------- |
+    | InsertDeleteDistance | SymmetricDistance    |
+    ```
+    
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Metric:   `InsertDeleteDistance`
+    * Output Metric:  `SymmetricDistance`
+    
+    :param TA: Atomic Type.
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises AssertionError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TA = RuntimeType.parse(type_name=TA)
+    
+    # Convert arguments to c types.
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_unordered
+    function.argtypes = [ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(TA), Transformation))

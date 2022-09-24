@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 
 use num::One;
+use opendp_derive::bootstrap;
 
 use crate::core::{Function, SensitivityMetric, StabilityMap, Transformation};
 use crate::metrics::{AbsoluteDistance, SymmetricDistance, LpDistance};
@@ -12,6 +13,15 @@ use crate::domains::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::{Number, Hashable, Primitive, Float};
 
+#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+/// Make a Transformation that computes a count of the number of records in data.
+/// 
+/// # Citations
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+/// * `TOA` - Output Type. Must be numeric.
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Primitive,
@@ -28,6 +38,15 @@ pub fn make_count<TIA, TO>(
 }
 
 
+#[bootstrap(features("contrib"), generics(TO(default = "int")))]
+/// Make a Transformation that computes a count of the number of unique, distinct records in data.
+/// 
+/// # Citations
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+/// * `TOA` - Output Type. Must be numeric.
 pub fn make_count_distinct<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Hashable,
@@ -51,15 +70,40 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
     fn get_stability_constant() -> Q { Q::one() }
 }
 
-// count with unknown n, known categories
-pub fn make_count_by_categories<MO, TI, TO>(
-    categories: Vec<TI>,
+#[bootstrap(
+    features("contrib"), 
+    arguments(
+        null_category(default = true)),
+    generics(
+        MO(hint = "SensitivityMetric", default = "L1Distance<int>"), 
+        TOA(default = "int"))
+)]
+/// Make a Transformation that computes the number of times each category appears in the data. 
+/// This assumes that the category set is known.
+/// 
+/// # Citations
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+/// * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
+/// 
+/// # Arguments
+/// * `categories` - The set of categories to compute counts for.
+/// * `null_category` - Include a count of the number of elements that were not in the category set at the end of the vector.
+/// 
+/// # Generics
+/// * `MO` - Output Metric.
+/// * `TIA` - Atomic Input Type that is categorical/hashable. Input data must be Vec<TIA>
+/// * `TOA` - Atomic Output Type that is numeric.
+/// 
+/// # Returns
+/// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
+pub fn make_count_by_categories<MO, TIA, TOA>(
+    categories: Vec<TIA>,
     null_category: bool
-) -> Fallible<Transformation<VectorDomain<AllDomain<TI>>, VectorDomain<AllDomain<TO>>, SymmetricDistance, MO>>
+) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, MO>>
     where MO: CountByCategoriesConstant<MO::Distance> + SensitivityMetric,
           MO::Distance: Number,
-          TI: Hashable,
-          TO: Number {
+          TIA: Hashable,
+          TOA: Number {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct")
@@ -67,17 +111,17 @@ pub fn make_count_by_categories<MO, TI, TO>(
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new(move |data: &Vec<TI>| {
+        Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories.iter()
-                .map(|cat| (cat, TO::zero())).collect::<HashMap<&TI, TO>>();
-            let mut null_count = TO::zero();
+                .map(|cat| (cat, TOA::zero())).collect::<HashMap<&TIA, TOA>>();
+            let mut null_count = TOA::zero();
 
             data.iter().for_each(|v| {
                 let count = match counts.entry(v) {
                     Entry::Occupied(v) => v.into_mut(),
                     Entry::Vacant(_v) => &mut null_count
                 };
-                *count = TO::one().saturating_add(count)
+                *count = TOA::one().saturating_add(count)
             });
 
             categories.iter().map(|cat| counts.remove(cat)
@@ -100,7 +144,24 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
     }
 }
 
-// count with unknown n, unknown categories
+
+#[bootstrap(
+    features("contrib"), 
+    generics(MO(hint = "SensitivityMetric"), TV(default = "int"))
+)]
+/// Make a Transformation that computes the count of each unique value in data. 
+/// This assumes that the category set is unknown.
+/// 
+/// # Citations
+/// * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
+/// 
+/// # Generics
+/// * `MO` - Output Metric.
+/// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
+/// * `TV - Type of Value. Express counts in terms of this integral type.
+/// 
+/// # Returns
+/// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
 pub fn make_count_by<MO, TK, TV>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TK>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, SymmetricDistance, MO>>
     where MO: CountByConstant<MO::Distance> + SensitivityMetric,
