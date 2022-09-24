@@ -1,5 +1,6 @@
 sphinx==5.1.1
 sphinx-prompt
+commonmark
 git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
 pydata-sphinx-theme
 nbsphinx

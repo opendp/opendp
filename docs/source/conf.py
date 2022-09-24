@@ -26,6 +26,36 @@ extensions = [
     'nbsphinx',
 ]
 
+# convert markdown to rst when rendering with sphinx
+import commonmark
+import re
+py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
+
+def docstring(app, what, name, obj, options, lines):
+    path = name.split(".")
+    if len(path) > 1 and path[1] in {
+        "accuracy", 
+        "combinators", 
+        "core",
+        "measurements", 
+        "transformations", 
+    }:
+        ast = commonmark.Parser().parse('\n'.join(lines))
+        rst = commonmark.ReStructuredTextRenderer().render(ast)
+
+        # allow sphinx notation to pass through
+        indexes = set()
+        for match in py_attr_re.finditer(rst):
+            a, b = match.span(1)
+            indexes |= {a, b - 1}
+        rst = "".join(l for i, l in enumerate(rst) if i not in indexes)
+
+        lines.clear()
+        lines += rst.splitlines()
+
+def setup(app):
+    app.connect('autodoc-process-docstring', docstring)
+
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 

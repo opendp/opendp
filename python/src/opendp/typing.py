@@ -433,6 +433,9 @@ u128 = 'u128'
 usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
+String = 'String'
+AnyMeasurementPtr = "AnyMeasurementPtr"
+AnyTransformationPtr = "AnyTransformationPtr"
 
 
 class Domain(RuntimeType):
@@ -462,4 +465,8 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 
 def get_first(value):
-    return value[0]
+    return next(iter(value), None)
+
+
+def parse_or_infer(type_name: RuntimeType, example):
+    return RuntimeType.parse_or_infer(type_name, example)
