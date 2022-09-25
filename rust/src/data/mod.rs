@@ -1,5 +1,4 @@
 //! Framework for flexible abstract data type model for DataFrames.
-
 #[cfg(feature="ffi")]
 mod ffi;
 
