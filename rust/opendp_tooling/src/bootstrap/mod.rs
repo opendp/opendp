@@ -13,6 +13,8 @@ use darling::{Error, Result};
 
 use crate::bootstrap::{arguments::Bootstrap, docstring::Docstring};
 
+use self::arguments::BootstrapType;
+
 impl Function {
     pub fn from_ast(
         attr_args: AttributeArgs,
@@ -49,6 +51,7 @@ pub fn reconcile_function(
     proof_paths: &HashMap<String, Option<String>>,
 ) -> Result<Function> {
     // extract all generics from function
+    // used to identify when a type is a generic argument
     let all_generics = (signature.generics.params.iter())
         .map(syn_generic_to_syn_type_param)
         .collect::<Result<Vec<_>>>()?
@@ -67,127 +70,38 @@ pub fn reconcile_function(
 
     let name = signature.ident.to_string();
 
-    let proof_path = match bootstrap.proof_path {
-        Some(proof_path) => Some(proof_path),
-        None => match proof_paths.get(&name) {
-            Some(None) => return Err(Error::custom(format!("more than one file named {name}.tex. Please specify `proof_path = \"{{module}}/path/to/proof.tex\"` in the macro attributes."))),
-            Some(proof_path) => proof_path.clone(),
-            None => None
-        }
-    };
-
     Ok(Function {
-        name,
+        name: name.clone(),
         features: bootstrap.features.0,
         description: if doc_comments.description.is_empty() {
             None
         } else {
             Some(doc_comments.description.join("\n").trim().to_string())
         },
-        proof_path,
-        args: signature
-            .inputs
-            .into_iter()
-            .map(|v| {
-                let pat_type = match v {
-                    FnArg::Receiver(r) => {
-                        return Err(Error::custom(
-                            "bootstrap functions don't support receiver (self) args",
-                        )
-                        .with_span(&r))
-                    }
-                    FnArg::Typed(t) => t,
-                };
-
-                let name = syn_pat_to_name(*pat_type.pat)?;
-
-                // struct of additional metadata for this argument supplied by bootstrap macro
-                let boot_type = bootstrap.arguments.0.get(&name);
-
-                // if rust type is given, use it. Otherwise parse the rust type on the function
-                let rust_type = match boot_type.and_then(|bt| bt.rust_type.clone()) {
-                    Some(v) => v,
-                    None => syn_type_to_runtime_type(&*pat_type.ty)?,
-                };
-                Ok(Argument {
-                    name: Some(name.clone()),
-                    c_type: Some(match boot_type.as_ref().and_then(|bt| bt.c_type.as_ref()) {
-                        Some(ref v) => v.to_string(),
-                        None => syn_type_to_c_type(*pat_type.ty, &all_generics)?,
-                    }),
-                    rust_type: Some(rust_type),
-                    generics: boot_type
-                        .map(|bt| Vec::from_iter(bt.generics.0.iter().cloned()))
-                        .unwrap_or_else(Vec::new),
-                    description: doc_comments
-                        .arguments
-                        .remove(&name)
-                        .map(|dc| dc.join("\n").trim().to_string()),
-                    hint: boot_type.and_then(|bt| bt.hint.clone()),
-                    default: boot_type.and_then(|bt| bt.default.clone()),
-                    is_type: false,
-                    do_not_convert: boot_type.map(|bt| bt.do_not_convert).unwrap_or(false),
-                    example: None,
-                })
-            })
-            .chain(
-                (signature.generics.params.into_iter()).map(|generic: GenericParam| {
-                    let param = syn_generic_to_syn_type_param(&generic)?;
-                    let name = param.ident.to_string();
-                    let boot_type = bootstrap.generics.0.get(&name);
-                    Ok(Argument {
-                        name: Some(name.clone()),
-                        c_type: None,
-                        description: doc_comments
-                            .generics
-                            .remove(&name)
-                            .map(|dc| dc.join("\n").trim().to_string()),
-                        rust_type: None,
-                        generics: boot_type
-                            .map(|bt| Vec::from_iter(bt.generics.0.iter().cloned()))
-                            .unwrap_or_else(Vec::new),
-                        hint: boot_type.and_then(|bt| bt.hint.clone()),
-                        default: boot_type.and_then(|bt| bt.default.clone()),
-                        is_type: true,
-                        do_not_convert: false,
-                        example: boot_type.and_then(|bt| bt.example.clone()),
-                    })
-                }),
-            )
-            .collect::<Result<Vec<_>>>()?,
-        ret: Argument {
-            c_type: Some(
-                match bootstrap.returns.as_ref().and_then(|bt| bt.c_type.as_ref()) {
-                    Some(ref v) => v.to_string(),
-                    None => {
-                        syn_type_to_c_type(
-                            match signature.output {
-                                ReturnType::Default => return Err(Error::custom(
-                                    "default return types are not supported in bootstrap functions",
-                                )
-                                .with_span(&signature.output)),
-                                ReturnType::Type(_, ty) => *ty,
-                            },
-                            &all_generics,
-                        )?
-                    }
-                },
-            ),
-            rust_type: bootstrap
-                .returns
-                .as_ref()
-                .and_then(|bs| bs.rust_type.clone()),
-            description: if doc_comments.ret.is_empty() {
-                None
-            } else {
-                Some(doc_comments.ret.join("\n").trim().to_string())
-            },
-            do_not_convert: bootstrap
-                .returns
-                .map(|ret| ret.do_not_convert)
-                .unwrap_or(false),
-            ..Default::default()
-        },
+        proof_path: reconcile_proof_path(
+            bootstrap.proof_path,
+            &name,
+            proof_paths
+        )?,
+        args: reconcile_arguments(
+            &bootstrap.arguments.0,
+            &mut doc_comments.arguments,
+            signature.inputs.into_iter().collect(),
+            &all_generics,
+        )?
+        .into_iter()
+        .chain(reconcile_generics(
+            &bootstrap.generics.0,
+            &mut doc_comments.generics,
+            signature.generics.params.into_iter().collect(),
+        )?)
+        .collect::<Vec<_>>(),
+        ret: reconcile_return(
+            bootstrap.returns,
+            doc_comments.ret,
+            signature.output,
+            &all_generics,
+        )?,
         derived_types: bootstrap
             .derived_types
             .map(|dt| dt.0)
@@ -202,6 +116,134 @@ pub fn reconcile_function(
     })
 }
 
+fn reconcile_proof_path(
+    bootstrap: Option<String>,
+    name: &str,
+    proof_paths: &HashMap<String, Option<String>>
+) -> Result<Option<String>> {
+    Ok(match bootstrap {
+        Some(proof_path) => Some(proof_path),
+        None => match proof_paths.get(name) {
+            Some(None) => return Err(Error::custom(format!("more than one file named {name}.tex. Please specify `proof_path = \"{{module}}/path/to/proof.tex\"` in the macro attributes."))),
+            Some(proof_path) => proof_path.clone(),
+            None => None
+        }
+    })
+}
+
+fn reconcile_arguments(
+    bootstrap_args: &HashMap<String, BootstrapType>,
+    doc_comments: &mut HashMap<String, Vec<String>>,
+    inputs: Vec<FnArg>,
+    all_generics: &HashSet<String>,
+) -> Result<Vec<Argument>> {
+    (inputs.into_iter())
+        .map(|v| {
+            let pat_type = match v {
+                FnArg::Receiver(r) => {
+                    return Err(Error::custom(
+                        "bootstrap functions don't support receiver (self) args",
+                    )
+                    .with_span(&r))
+                }
+                FnArg::Typed(t) => t,
+            };
+
+            let name = syn_pat_to_name(*pat_type.pat)?;
+
+            // struct of additional metadata for this argument supplied by bootstrap macro
+            let boot_type = bootstrap_args.get(&name);
+
+            // if rust type is given, use it. Otherwise parse the rust type on the function
+            let rust_type = match boot_type.and_then(|bt| bt.rust_type.clone()) {
+                Some(v) => v,
+                None => syn_type_to_runtime_type(&*pat_type.ty)?,
+            };
+            Ok(Argument {
+                name: Some(name.clone()),
+                c_type: Some(match boot_type.as_ref().and_then(|bt| bt.c_type.as_ref()) {
+                    Some(ref v) => v.to_string(),
+                    None => syn_type_to_c_type(*pat_type.ty, &all_generics)?,
+                }),
+                rust_type: Some(rust_type),
+                generics: boot_type
+                    .map(|bt| Vec::from_iter(bt.generics.0.iter().cloned()))
+                    .unwrap_or_else(Vec::new),
+                description: doc_comments
+                    .remove(&name)
+                    .map(|dc| dc.join("\n").trim().to_string()),
+                hint: boot_type.and_then(|bt| bt.hint.clone()),
+                default: boot_type.and_then(|bt| bt.default.clone()),
+                is_type: false,
+                do_not_convert: boot_type.map(|bt| bt.do_not_convert).unwrap_or(false),
+                example: None,
+            })
+        })
+        .collect()
+}
+
+fn reconcile_generics(
+    bootstrap_args: &HashMap<String, BootstrapType>,
+    doc_comments: &mut HashMap<String, Vec<String>>,
+    inputs: Vec<GenericParam>,
+) -> Result<Vec<Argument>> {
+    (inputs.into_iter())
+        .map(|generic: GenericParam| {
+            let param = syn_generic_to_syn_type_param(&generic)?;
+            let name = param.ident.to_string();
+            let boot_type = bootstrap_args.get(&name);
+            Ok(Argument {
+                name: Some(name.clone()),
+                c_type: None,
+                description: doc_comments
+                    .remove(&name)
+                    .map(|dc| dc.join("\n").trim().to_string()),
+                rust_type: None,
+                generics: boot_type
+                    .map(|bt| Vec::from_iter(bt.generics.0.iter().cloned()))
+                    .unwrap_or_else(Vec::new),
+                hint: boot_type.and_then(|bt| bt.hint.clone()),
+                default: boot_type.and_then(|bt| bt.default.clone()),
+                is_type: true,
+                do_not_convert: false,
+                example: boot_type.and_then(|bt| bt.example.clone()),
+            })
+        })
+        .collect()
+}
+
+fn reconcile_return(
+    bootstrap: Option<BootstrapType>,
+    doc_comment: Vec<String>,
+    output: ReturnType,
+    all_generics: &HashSet<String>,
+) -> Result<Argument> {
+    Ok(Argument {
+        c_type: Some(match bootstrap.as_ref().and_then(|bt| bt.c_type.as_ref()) {
+            Some(ref v) => v.to_string(),
+            None => syn_type_to_c_type(
+                match output {
+                    ReturnType::Default => {
+                        return Err(Error::custom(
+                            "default return types are not supported in bootstrap functions",
+                        )
+                        .with_span(&output))
+                    }
+                    ReturnType::Type(_, ty) => *ty,
+                },
+                &all_generics,
+            )?,
+        }),
+        rust_type: bootstrap.as_ref().and_then(|bs| bs.rust_type.clone()),
+        description: if doc_comment.is_empty() {
+            None
+        } else {
+            Some(doc_comment.join("\n").trim().to_string())
+        },
+        do_not_convert: bootstrap.map(|ret| ret.do_not_convert).unwrap_or(false),
+        ..Default::default()
+    })
+}
 /// extract name from pattern
 fn syn_pat_to_name(pat: Pat) -> Result<String> {
     match pat {

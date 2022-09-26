@@ -18,9 +18,9 @@ pub struct Bootstrap {
     #[darling(default)]
     pub features: Features,
     #[darling(default)]
-    pub generics: BootstrapTypes,
+    pub generics: BootstrapTypeHashMap,
     #[darling(default)]
-    pub arguments: BootstrapTypes,
+    pub arguments: BootstrapTypeHashMap,
     pub derived_types: Option<DerivedTypes>,
     pub returns: Option<BootstrapType>,
 }
@@ -79,9 +79,9 @@ impl FromMeta for Features {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct BootstrapTypes(pub HashMap<String, BootstrapType>);
+pub struct BootstrapTypeHashMap(pub HashMap<String, BootstrapType>);
 
-impl FromMeta for BootstrapTypes {
+impl FromMeta for BootstrapTypeHashMap {
     fn from_list(items: &[NestedMeta]) -> darling::Result<Self> {
         (items.iter())
             .map(|nested| {
@@ -104,7 +104,7 @@ impl FromMeta for BootstrapTypes {
                 }
             })
             .collect::<darling::Result<HashMap<String, BootstrapType>>>()
-            .map(BootstrapTypes)
+            .map(BootstrapTypeHashMap)
     }
 }
 

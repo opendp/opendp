@@ -101,7 +101,7 @@ pub fn proven_get_proof_path(attr_args: AttributeArgs, item: Item) -> Result<Str
     // assumes that proof paths have already been written in the lib's build script
     load_proof_paths()?
         .remove(&name)
-        .ok_or_else(|| Error::custom(format!("failed to find a {name}.tex. {help}")))?
+        .ok_or_else(|| Error::custom(format!("failed to find {name}.tex. {help}")))?
         .ok_or_else(|| Error::custom(format!("more than one file named {name}.tex. {help}")))
 }
 
