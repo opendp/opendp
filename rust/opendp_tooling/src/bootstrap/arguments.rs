@@ -10,6 +10,8 @@ use crate::{RuntimeType, Value};
 
 use super::syn_type_to_runtime_type;
 
+// Arguments to the bootstrap proc-macro
+// The rest of this file is for parsing the arguments to bootstrap(*) into the Bootstrap struct
 #[derive(Debug, FromMeta, Clone)]
 pub struct Bootstrap {
     pub name: Option<String>,

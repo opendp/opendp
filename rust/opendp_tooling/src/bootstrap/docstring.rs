@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, ffi::OsStr, path::PathBuf};
+use std::{collections::HashMap};
 
 use darling::{Error, Result};
 use syn::{Attribute, Lit, Meta, MetaNameValue, Path, PathSegment, ReturnType, Type, TypePath};
@@ -110,88 +110,6 @@ fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Vec
         .collect::<HashMap<String, Vec<String>>>())
 }
 
-pub fn find_relative_proof_path(func_name: &str) -> Option<String> {
-    let src_dir = get_src_dir();
-
-    fn find_absolute_path(
-        file_name: &OsStr,
-        dir: &std::path::Path,
-    ) -> std::io::Result<Option<PathBuf>> {
-        let mut matches = Vec::new();
-        if dir.is_dir() {
-            for entry in std::fs::read_dir(dir)? {
-                let path = entry?.path();
-                if path.is_dir() {
-                    matches.extend(find_absolute_path(file_name, &path)?);
-                } else {
-                    if path.file_name() == Some(file_name) {
-                        matches.push(path);
-                    }
-                };
-            }
-        }
-        if matches.len() > 1 {
-            panic!("multiple matching proofs found. Please specify `proof = \"{{module}}/path/to/proof\"` in the bootstrap attributes.")
-        }
-        Ok(matches.get(0).cloned())
-    }
-
-    find_absolute_path(&OsStr::new(format!("{func_name}.tex").as_str()), &src_dir)
-        .expect("failed to read crate source")
-        // turn into relative PathBuf
-        .map(|pb| {
-            pb.strip_prefix(&src_dir)
-                .expect("failed to strip src_dir from proof path")
-                .to_path_buf()
-                .to_str()
-                .expect("relative proof path is empty")
-                .to_string()
-        })
-}
-
-pub fn get_src_dir() -> PathBuf {
-    let manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR")
-        .expect("Failed to determine location of Cargo.toml.");
-    PathBuf::from(manifest_dir).join("src")
-}
-
-pub fn make_proof_link(relative_path: PathBuf) -> String {
-    // construct absolute path
-    let absolute_path = get_src_dir().join(&relative_path);
-
-    assert!(
-        absolute_path.exists(),
-        "{:?} does not exist!",
-        absolute_path
-    );
-
-    let target = if cfg!(feature = "local") {
-        absolute_path
-            .to_str()
-            .expect("absolute path is empty")
-            .to_string()
-    } else {
-        format!(
-            "https://docs.opendp.org/en/{version}/proofs/{relative_path}",
-            version = get_version(),
-            relative_path = relative_path.display()
-        )
-    };
-
-    format!("[Link to proof.]({})", target)
-}
-
-fn get_version() -> String {
-    let version = env::var("CARGO_PKG_VERSION")
-        .expect("CARGO_PKG_VERSION must be set")
-        .to_string();
-    if version == "0.0.0+development" {
-        "latest".to_string()
-    } else {
-        version
-    }
-}
-
 fn parse_sig_output(output: &ReturnType) -> Result<Option<Vec<String>>> {
     match output {
         ReturnType::Default => Ok(None),
@@ -216,11 +134,10 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<Vec<String>>> {
                 if ab.args.len() != 1 {
                     return Err(Error::custom("Fallible needs one angle-bracketed argument").with_span(&ab.args))
                 }
-                match ab.args.first().unwrap() {
+                match ab.args.first().expect("unreachable due to if statement") {
                     syn::GenericArgument::Type(ty) => ty,
                     arg => return Err(Error::custom("argument to Fallible must to be a type").with_span(&arg))
                 }
-
             },
             arg => return Err(Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)),
         }),

@@ -1,21 +1,26 @@
-use std::{
-    collections::HashMap,
-    env,
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::{collections::HashMap, path::Path, str::FromStr};
 
-use opendp_bootstrap::Function;
+use opendp_tooling::{
+    codegen,
+    proof::{find_proof_paths, get_src_dir, write_proof_paths},
+    Function,
+};
 use proc_macro2::TokenStream;
 use syn::{File, Item, ItemFn};
 
-mod codegen;
-
 fn main() {
+    let src_dir = get_src_dir().unwrap();
+    let proof_paths = find_proof_paths(&src_dir).unwrap();
+
+    // write out a json file containing the proof paths. To be used by the proc macros later
+    write_proof_paths(&proof_paths).unwrap();
+
     // parse crate into module metadata
     // this function returns None if code is malformed/unparseable
-    if let Some(_modules) = parse_crate().expect("io error while parsing opendp") {
-        // generate and write bindings based on collected metadata
+    // if parse_crate returns none, then build script exits without updating bindings
+    // the proc macros will render those errors in a way that integrates better with developer tooling
+    if let Some(_modules) = parse_crate(&src_dir, proof_paths).unwrap() {
+        // generate and write language bindings based on collected metadata
         if cfg!(feature = "bindings-python") {
             codegen::write_bindings(codegen::python::generate_bindings(_modules));
         }
@@ -23,11 +28,10 @@ fn main() {
 }
 
 /// Parses all modules in opendp crate
-fn parse_crate() -> std::io::Result<Option<HashMap<String, Vec<(String, Function)>>>> {
-    let manifest_dir =
-        env::var_os("CARGO_MANIFEST_DIR").expect("Failed to determine location of Cargo.toml.");
-    let src_dir = PathBuf::from(manifest_dir).join("src");
-
+fn parse_crate(
+    src_dir: &Path,
+    proof_paths: HashMap<String, Option<String>>,
+) -> std::io::Result<Option<HashMap<String, Vec<(String, Function)>>>> {
     let mut modules = HashMap::new();
     for entry in std::fs::read_dir(src_dir)? {
         let path = entry?.path();
@@ -40,7 +44,7 @@ fn parse_crate() -> std::io::Result<Option<HashMap<String, Vec<(String, Function
             };
 
         if path.is_dir() {
-            if let Some(module) = parse_file_tree(&path)? {
+            if let Some(module) = parse_file_tree(&path, &proof_paths)? {
                 if !module.is_empty() {
                     // sort module functions
                     let mut module = module.into_iter().collect::<Vec<(String, Function)>>();
@@ -57,7 +61,10 @@ fn parse_crate() -> std::io::Result<Option<HashMap<String, Vec<(String, Function
 }
 
 /// Search for bootstrap macro invocations by recursing over `dir`
-fn parse_file_tree(dir: &Path) -> std::io::Result<Option<Vec<(String, Function)>>> {
+fn parse_file_tree(
+    dir: &Path,
+    proof_paths: &HashMap<String, Option<String>>,
+) -> std::io::Result<Option<Vec<(String, Function)>>> {
     // use here to shadow syn::File
     use std::{fs::File, io::Read};
 
@@ -66,10 +73,10 @@ fn parse_file_tree(dir: &Path) -> std::io::Result<Option<Vec<(String, Function)>
         for entry in std::fs::read_dir(dir)? {
             let path = entry?.path();
             if path.is_dir() {
-                if let Some(parsed) = parse_file_tree(&path)? {
+                if let Some(parsed) = parse_file_tree(&path, &proof_paths)? {
                     matches.extend(parsed);
                 } else {
-                    return Ok(None)
+                    return Ok(None);
                 };
             } else {
                 // skip non-rust files
@@ -79,7 +86,7 @@ fn parse_file_tree(dir: &Path) -> std::io::Result<Option<Vec<(String, Function)>
 
                 let mut contents = String::new();
                 File::open(&path)?.read_to_string(&mut contents)?;
-                if let Some(funcs) = parse_file(contents) {
+                if let Some(funcs) = parse_file(contents, &proof_paths) {
                     matches.extend(funcs);
                 } else {
                     return Ok(None);
@@ -91,7 +98,10 @@ fn parse_file_tree(dir: &Path) -> std::io::Result<Option<Vec<(String, Function)>
 }
 
 /// Search a file for bootstrap macro invocations
-fn parse_file(text: String) -> Option<Vec<(String, Function)>> {
+fn parse_file(
+    text: String,
+    proof_paths: &HashMap<String, Option<String>>,
+) -> Option<Vec<(String, Function)>> {
     // ignore files that fail to parse so as not to break IDE tooling
     let ts = TokenStream::from_str(&text).ok()?;
 
@@ -132,8 +142,8 @@ fn parse_file(text: String) -> Option<Vec<(String, Function)>> {
                 syn::Meta::List(ml) => ml.nested.into_iter().collect(),
                 _ => return None,
             };
-            // use the bootstrap crate to parse a Function 
-            Function::from_ast(attr_args, func).ok()
+            // use the bootstrap crate to parse a Function
+            Function::from_ast(attr_args, func, proof_paths).ok()
         })
         .collect()
 }

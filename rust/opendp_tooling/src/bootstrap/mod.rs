@@ -1,36 +1,39 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use syn::{
     AttributeArgs, FnArg, GenericArgument, GenericParam, ItemFn, Pat, PathArguments, ReturnType,
-    Signature, Type, TypeParam, TypePath, TypeReference, TypePtr,
+    Signature, Type, TypeParam, TypePath, TypePtr, TypeReference,
 };
 
 use crate::{Argument, Function, RuntimeType};
 
-pub mod bootstrap;
+pub mod arguments;
 pub mod docstring;
 
 use darling::{Error, Result};
 
-use crate::parse::{bootstrap::Bootstrap, docstring::Docstring};
-
-use self::docstring::find_relative_proof_path;
+use crate::bootstrap::{arguments::Bootstrap, docstring::Docstring};
 
 impl Function {
-    pub fn from_ast(attr_args: AttributeArgs, item_fn: ItemFn) -> Result<(String, Function)> {
+    pub fn from_ast(
+        attr_args: AttributeArgs,
+        item_fn: ItemFn,
+        proof_paths: &HashMap<String, Option<String>>,
+    ) -> Result<(String, Function)> {
         // Parse the proc bootstrap macro args
         let mut bootstrap = Bootstrap::from_attribute_args(&attr_args)?;
 
         // Parse the function signature
         let ItemFn { attrs, sig, .. } = item_fn;
-        let func_name = bootstrap.name.clone().unwrap_or_else(|| sig.ident.to_string());
+        let func_name = (bootstrap.name.clone()).unwrap_or_else(|| sig.ident.to_string());
 
         // Try to enrich the bootstrap with a proof file
-        if let None = bootstrap.proof {
-            bootstrap.proof = find_relative_proof_path(&func_name);
+        if let (None, Some(proof_path)) = (&bootstrap.proof, proof_paths.get(&func_name)) {
+            bootstrap.proof = Some(proof_path.clone().ok_or_else(|| Error::custom(format!("more than one file named {func_name}.tex. Please specify `proof = \"{{module}}/path/to/proof\"` in the bootstrap attributes.")))?);
         }
 
         // aggregate info from all sources
-        let function = reconcile_function(bootstrap, Docstring::from_attrs(attrs, &sig.output)?, sig)?;
+        let function =
+            reconcile_function(bootstrap, Docstring::from_attrs(attrs, &sig.output)?, sig)?;
 
         Ok((func_name, function))
     }
@@ -65,7 +68,8 @@ pub fn reconcile_function(
                 .clone()
                 .unwrap_or_default()
                 .0
-                .iter().map(|v| v.0.clone()),
+                .iter()
+                .map(|v| v.0.clone()),
         )
         .collect::<HashSet<String>>();
 
@@ -237,7 +241,8 @@ fn syn_type_to_runtime_type(ty: &Type) -> Result<RuntimeType> {
             args: (tuple.elems.iter())
                 .map(|ty| syn_type_to_runtime_type(ty))
                 .collect::<Result<Vec<_>>>()?,
-        }.into(),
+        }
+        .into(),
         Type::Ptr(ptr) => syn_type_to_runtime_type(&*ptr.elem)?,
         t => return Err(Error::custom("unrecognized type for RuntimeType").with_span(t)),
     })
@@ -270,22 +275,28 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
             match segment.ident.to_string() {
                 i if i == "Option" => {
                     let first_arg = if let PathArguments::AngleBracketed(ab) = &segment.arguments {
-                        ab.args.first().ok_or_else(|| Error::custom("Option must have one argument").with_span(&ab))?
+                        ab.args.first().ok_or_else(|| {
+                            Error::custom("Option must have one argument").with_span(&ab)
+                        })?
                     } else {
-                        return Err(Error::custom("Option must have angle brackets").with_span(segment))
+                        return Err(
+                            Error::custom("Option must have angle brackets").with_span(segment)
+                        );
                     };
 
                     let inner_c_type = if let GenericArgument::Type(ty) = first_arg {
                         syn_type_to_c_type(ty.clone(), generics)?
                     } else {
-                        return Err(Error::custom("Option's argument must be a Type").with_span(segment))
+                        return Err(
+                            Error::custom("Option's argument must be a Type").with_span(segment)
+                        );
                     };
                     match inner_c_type.as_str() {
                         "AnyObject *" => "AnyObject *".to_string(),
                         "char *" => "char *".to_string(),
-                        _ => "void *".to_string()
+                        _ => "void *".to_string(),
                     }
-                },
+                }
                 i if i == "String" || i == "c_char" => "AnyObject *".to_string(),
                 i if i == "AnyObject" => "AnyObject *".to_string(),
                 i if i == "Vec" => "AnyObject *".to_string(),
@@ -310,9 +321,12 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "Fallible" || i == "FfiResult" => {
                     let args = match &segment.arguments {
                         PathArguments::AngleBracketed(ref ab) => &ab.args,
-                        args => return Err(Error::custom("Fallible expects one type argument").with_span(&args)),
+                        args => {
+                            return Err(Error::custom("Fallible expects one type argument")
+                                .with_span(&args))
+                        }
                     };
-                    
+
                     if args.len() != 1 {
                         return Err(Error::custom("Fallible expects one argument"));
                     }
@@ -323,12 +337,22 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                     )
                 }
                 i if generics.contains(&i) => "AnyObject *".to_string(),
-                _ => return Err(Error::custom("Unrecognized rust type. Failed to convert to C type.").with_span(segment)),
+                _ => {
+                    return Err(Error::custom(
+                        "Unrecognized rust type. Failed to convert to C type.",
+                    )
+                    .with_span(segment))
+                }
             }
         }
         Type::Tuple(_) => "AnyObject *".to_string(),
-        Type::Reference(TypeReference {elem, ..}) => syn_type_to_c_type(*elem, generics)?,
-        Type::Ptr(TypePtr {elem, ..}) => syn_type_to_c_type(*elem, generics)?,
-        ty => return Err(Error::custom("Unrecognized rust type structure. Failed to convert to C type.").with_span(&ty)),
+        Type::Reference(TypeReference { elem, .. }) => syn_type_to_c_type(*elem, generics)?,
+        Type::Ptr(TypePtr { elem, .. }) => syn_type_to_c_type(*elem, generics)?,
+        ty => {
+            return Err(Error::custom(
+                "Unrecognized rust type structure. Failed to convert to C type.",
+            )
+            .with_span(&ty))
+        }
     })
 }
