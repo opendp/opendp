@@ -6,8 +6,7 @@ from opendp.typing import ChangeOneDistance, VectorDomain, AllDomain
 from opendp.mod import enable_features
 enable_features("contrib")
 
-# This is a short demonstration of opendp in a script.
-# Includes an example of composition.
+# used for testing a successful release
 
 
 def main():

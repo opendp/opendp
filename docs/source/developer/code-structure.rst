@@ -2,7 +2,7 @@
 
 Code Structure
 **************
-Most library contributions will involve the following components:
+Most library contributions involve the following components:
 
 .. contents::
     :local:

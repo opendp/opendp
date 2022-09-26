@@ -26,7 +26,7 @@ Measurement
 -----------
 
 A :py:class:`Measurement <opendp.mod.Measurement>` is a randomized mapping from datasets to outputs of an arbitrary type.
-Lets say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``meas.check(d_in, d_out)``.
+Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``meas.check(d_in, d_out)``.
 If the code snippet evaluates to True, then ``meas`` is ``d_out``-DP on ``d_in``-close inputs,
 or equivalently "(``d_in``, ``d_out``)-close".
 The code snippet simply checks the privacy relation that comes bundled inside ``meas``.
@@ -62,7 +62,7 @@ Transformation
 A :py:class:`Transformation <opendp.mod.Transformation>` is a (deterministic) mapping from datasets to datasets.
 Transformations are used to preprocess and aggregate data before chaining with a measurement.
 
-Similarly to ``meas`` above, let's say we have an arbitrary instance of a Transformation, called ``trans``,
+Similarly to ``meas`` above, say we have an arbitrary instance of a Transformation, called ``trans``,
 and a code snippet ``trans.check(d_in, d_out)``.
 If the code snippet evaluates to True, then ``trans`` is ``d_out``-close on ``d_in``-close inputs,
 or equivalently "(``d_in``, ``d_out``)-close".
@@ -84,45 +84,3 @@ A transformation structure contains the following internal fields:
 :input_metric: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_metric: A :ref:`metric <metrics>` used to measure distance between two members of the output domain.
 :stability_map: A :ref:`map <maps>` that encapsulates the stability characteristics of the function.
-
-.. _constructors:
-
-Constructors and Functions
---------------------------
-
-In OpenDP, Measurements and Transformations are created by calling constructor functions.
-The majority of the library's interface consists of these constructors.
-
-Because Measurements and Transformations are themselves like functions (they can be invoked on an input and return an output),
-you can think of constructors as higher-order functions:
-You call them to produce another function that you will then feed data.
-
-There's a few top-level constructor listings:
-
-* :ref:`combinator-constructors`
-* :ref:`measurement-constructors`
-* :ref:`transformation-constructors`
-
-In this simplified example with the :py:func:`opendp.measurements.make_base_discrete_laplace` constructor, we assume the data was properly preprocessed and aggregated such that the sensitivity (by absolute distance) is at most 1.
-
-.. testsetup::
-
-    from opendp.mod import enable_features
-    enable_features('contrib')
-
-.. doctest::
-
-    >>> from opendp.measurements import make_base_discrete_laplace
-    ...
-    >>> # call the constructor to produce a measurement
-    >>> base_dl = make_base_discrete_laplace(scale=1.0)
-    ...
-    >>> # investigate the privacy relation
-    >>> absolute_distance = 1
-    >>> epsilon = 1.0
-    >>> assert base_dl.check(d_in=absolute_distance, d_out=epsilon)
-    ...
-    >>> # feed some data/invoke the measurement as a function
-    >>> aggregated = 5
-    >>> release = base_dl(aggregated)
-

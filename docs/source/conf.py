@@ -23,6 +23,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx-prompt',
     'sphinx_multiversion',
+    'nbsphinx',
 ]
 
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
@@ -39,6 +40,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenDP'
+html_favicon = u'favicon.ico'
 copyright = u'%d' % datetime.now().year
 
 # The version info for the project you're documenting, acts as replacement for
@@ -46,7 +48,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = open('../../VERSION').read()
+version = open('../../VERSION').readline()
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
@@ -86,6 +88,9 @@ html_theme_options = {
 }
 
 html_theme = 'pydata_sphinx_theme'
+html_css_files = [
+    'css/custom.css',
+]
 
 # See https://pydata-sphinx-theme.readthedocs.io/en/v0.6.3/user_guide/configuring.html#configure-the-sidebar
 # Note: Overridden in the Makefile for local builds. Be sure to update both places.
@@ -128,5 +133,26 @@ html_logo = "_static/images/opendp-logo.png"
 
 rst_prolog = """
 .. |toctitle| replace:: Contents:
-.. |anotherSub| replace:: Yes, there can be multiple.
+"""
+
+github_frag = ''
+binder_frag = ''
+
+if version != "0.0.0+development":
+    branch = f"release/{'.'.join(version.split('.')[:2])}.x"
+
+    github_frag = f'/tree/{branch}'
+    binder_frag = f'/{branch}'
+
+# insert this header on nbsphinx pages to link to binder and github:
+nbsphinx_prolog = fr"""
+{{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}}
+.. raw:: html
+
+    <div class="admonition note">
+      This page was generated from
+      <a class="reference external" href="https://github.com/opendp/opendp{github_frag}/{{{{ docname|e }}}}" target="_blank">{{{{ docname|e }}}}</a>.
+      Interactive online version:
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp{binder_frag}?filepath={{{{ docname|e }}}}" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+    </div>
 """

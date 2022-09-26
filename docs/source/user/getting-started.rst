@@ -125,8 +125,8 @@ What's Next?
 
 Now that you've had a taste of OpenDP, you can start exploring the library in more depth.
 The remainder of this guide will walk you through the concepts that underlie OpenDP,
-starting with its conceptual underpinnings, known as the :doc:`OpenDP Programming Framework <programming-framework>`.
+starting with its conceptual underpinnings, known as the :doc:`OpenDP Programming Framework <programming-framework/index>`.
 
-If you're eager to just jump in with programming, you can look at some of the :doc:`example uses of OpenDP <../examples>`.
+If you're eager to just jump in with programming, you can look at some of the :doc:`example uses of OpenDP <../examples/index>`.
 
 For those who prefer to study reference material, you can consult the :doc:`API Docs <../api/index>`.

@@ -211,7 +211,7 @@ def sanity(venv, version, published=False):
     run_command("Creating venv", f"rm -rf {venv} && python -m venv {venv}")
     package = f"opendp=={version}" if published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
     run_command_with_retries(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
-    run_command("Running test script", f"source {venv}/bin/activate && python python/example/test.py")
+    run_command("Running test script", f"source {venv}/bin/activate && python tools/test.py")
 
 
 def preflight(args):
