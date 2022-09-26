@@ -1,5 +1,8 @@
+#[cfg(feature = "full")]
 pub mod bootstrap;
+#[cfg(feature = "full")]
 pub mod proof;
+#[cfg(feature = "full")]
 pub mod codegen;
 
 // metadata for each function in a module

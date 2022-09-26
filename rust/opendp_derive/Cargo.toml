@@ -10,9 +10,10 @@ proc-macro = true
 
 # we need to reuse the tooling logic in the opendp build script, so it is factored into a separate crate
 [dependencies]
-syn = { version = "1.0", features = ["full", "parsing"] }
-quote = { version = "1.0" }
-opendp_tooling = { path = "../opendp_tooling" }
+syn = { version = "1.0", features = ["full", "parsing"], optional = true }
+quote = { version = "1.0", optional = true  }
+opendp_tooling = { path = "../opendp_tooling", optional = true  }
 
 [features]
+full = ["syn", "quote", "opendp_tooling"]
 local-docs = []
