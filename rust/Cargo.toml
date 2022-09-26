@@ -1,18 +1,36 @@
-[package]
-name = "opendp"
-description = "A library of differential privacy algorithms for the statistical analysis of sensitive private data."
+[workspace.package]
+version = "0.0.0+development"
 license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
-version = "0.0.0+development"
 authors = ["The OpenDP Project <info@opendp.org>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.64.0" # MSRV via `cargo intall msrv && cargo msrv -- cargo check --features=untrusted,bindings-python`
+
+[workspace]
+members = [".", "opendp_derive", "opendp_tooling"]
+
+[workspace.dependencies]
+syn = { version = "1.0", features = ["full", "parsing"] }
+quote = { version = "1.0" }
+proc-macro2 = { version = "1.0" }
+
+[package]
+name = "opendp"
+description = "A library of differential privacy algorithms for the statistical analysis of sensitive private data."
 build = "build/main.rs"
-rust-version = "1.59.0" # MSRV via `cargo intall msrv && cargo msrv -- cargo check --features=untrusted,bindings-python`
+version.workspace = true
+license-file.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-opendp_derive = {path = "opendp_derive"}
+opendp_derive = { path = "opendp_derive" }
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
@@ -28,8 +46,8 @@ vega_lite_4 = { version = "0.6.0", optional = true }
 
 [build-dependencies]
 opendp_tooling = { path = "opendp_tooling", optional = true }
-syn = { version = "1.0", optional = true }
-proc-macro2 = { version = "1.0", optional = true }
+syn = { workspace = true, optional = true }
+proc-macro2 = { workspace = true, optional = true }
 
 [features]
 default = ["use-openssl", "use-mpfr"]
@@ -67,10 +85,3 @@ features = ["untrusted", "ffi"]
 [[bench]]
 name = "discrete_laplace"
 harness = false
-
-[workspace]
-
-members = [
-    "opendp_tooling",
-    "opendp_derive",
-]
