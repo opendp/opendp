@@ -14,10 +14,7 @@ use super::syn_type_to_runtime_type;
 // The rest of this file is for parsing the arguments to bootstrap(*) into the Bootstrap struct
 #[derive(Debug, FromMeta, Clone)]
 pub struct Bootstrap {
-    pub name: Option<String>,
-    #[allow(dead_code)]
-    pub module: Option<String>,
-    pub proof: Option<String>,
+    pub proof_path: Option<String>,
     #[darling(default)]
     pub features: Features,
     #[darling(default)]
@@ -55,11 +52,10 @@ impl FromMeta for DerivedTypes {
                             .with_span(&nested));
                     }
 
-                    let ty =
-                        NewRuntimeType::from_nested_meta(nested.first().ok_or_else(|| {
-                            Error::custom("must have length at least 1").with_span(nested)
-                        })?)?;
-                    Ok((type_name, ty.0))
+                    let ty = RuntimeType::from_nested_meta(nested.first().ok_or_else(|| {
+                        Error::custom("must have length at least 1").with_span(nested)
+                    })?)?;
+                    Ok((type_name, ty))
                 } else {
                     Err(Error::custom("expected metalist in DerivedTypes").with_span(nested))
                 }
@@ -116,68 +112,57 @@ impl FromMeta for BootstrapTypes {
 pub struct BootstrapType {
     pub c_type: Option<String>,
     #[darling(map = "runtimetype_first")]
-    pub rust_type: Option<NewRuntimeType>,
+    pub rust_type: Option<RuntimeType>,
     pub hint: Option<String>,
-    #[darling(default)]
-    pub default: OptionValue,
+    pub default: Option<Value>,
     #[darling(default)]
     pub generics: DefaultGenerics,
     #[darling(default)]
     pub do_not_convert: bool,
     #[darling(map = "runtimetype_first")]
-    pub example: Option<NewRuntimeType>,
+    pub example: Option<RuntimeType>,
 }
 
-#[derive(Debug, Clone)]
-pub struct NewRuntimeType(pub RuntimeType);
-
-#[derive(Debug, Default, Clone)]
-pub struct OptionValue(pub Option<Value>);
-
-impl From<RuntimeType> for NewRuntimeType {
-    fn from(v: RuntimeType) -> Self {
-        NewRuntimeType(v)
-    }
-}
-
-impl FromMeta for OptionValue {
+impl FromMeta for Value {
     fn from_value(value: &syn::Lit) -> darling::Result<Self> {
-        Ok(OptionValue(Some(match value {
+        Ok(match value {
             syn::Lit::Str(str) => Value::String(str.value()),
             syn::Lit::Int(int) => Value::Integer(int.base10_parse::<i64>()?),
             syn::Lit::Float(float) => Value::Float(float.base10_parse::<f64>()?),
             syn::Lit::Bool(bool) => Value::Bool(bool.value),
             lit => return Err(darling::Error::unexpected_lit_type(lit).with_span(value)),
-        })))
+        })
     }
     fn from_list(items: &[NestedMeta]) -> Result<Self> {
         if items.is_empty() {
-            Ok(OptionValue(Some(Value::Null)))
+            Ok(Value::Null)
         } else {
-            Err(Error::custom("option meta list must be empty to denote a null value"))
+            Err(Error::custom(
+                "option meta list must be empty to denote a null value",
+            ))
         }
     }
 }
 
 /// retrieve the first child of the first node
-fn runtimetype_first(v: Option<NewRuntimeType>) -> Option<NewRuntimeType> {
-    v.map(|v| v.0)
-        .map(|v| {
-            match v {
-                RuntimeType::Function { params, .. } => params,
-                RuntimeType::Nest { args, .. } => args,
-                _ => unreachable!(),
-            }
-            .first().cloned().unwrap_or(RuntimeType::None)
-        })
-        .map(NewRuntimeType)
+fn runtimetype_first(v: Option<RuntimeType>) -> Option<RuntimeType> {
+    v.map(|v| {
+        match v {
+            RuntimeType::Function { params, .. } => params,
+            RuntimeType::Nest { args, .. } => args,
+            _ => unreachable!(),
+        }
+        .first()
+        .cloned()
+        .unwrap_or(RuntimeType::None)
+    })
 }
 
-impl FromMeta for NewRuntimeType {
+impl FromMeta for RuntimeType {
     fn from_list(items: &[NestedMeta]) -> Result<Self> {
         match items.len() {
-            0 => Ok(NewRuntimeType(RuntimeType::None)),
-            1 => NewRuntimeType::from_nested_meta(&items[0]),
+            0 => Ok(RuntimeType::None),
+            1 => RuntimeType::from_nested_meta(&items[0]),
             _ => {
                 Err(darling::Error::custom("rust_type given too many arguments")
                     .with_span(&items[1]))
@@ -195,12 +180,11 @@ impl FromMeta for NewRuntimeType {
                     .to_string(),
             )
         };
-        Ok(NewRuntimeType(match item {
+        Ok(match item {
             Meta::List(MetaList { path, nested, .. }) => RuntimeType::Function {
                 function: extract_ident(path)?,
                 params: (nested.iter())
-                    .map(NewRuntimeType::from_nested_meta)
-                    .map(|ort| ort.map(|ort| ort.0))
+                    .map(RuntimeType::from_nested_meta)
                     .collect::<darling::Result<Vec<RuntimeType>>>()?,
             },
             Meta::NameValue(MetaNameValue { path, lit, .. }) => {
@@ -239,7 +223,7 @@ impl FromMeta for NewRuntimeType {
                     Error::custom("paths are invalid arguments to rust_type").with_span(path)
                 )
             }
-        }))
+        })
     }
     fn from_value(value: &Lit) -> Result<Self> {
         match value {

@@ -18,24 +18,15 @@ impl Function {
         attr_args: AttributeArgs,
         item_fn: ItemFn,
         proof_paths: &HashMap<String, Option<String>>,
-    ) -> Result<(String, Function)> {
+    ) -> Result<Function> {
         // Parse the proc bootstrap macro args
-        let mut bootstrap = Bootstrap::from_attribute_args(&attr_args)?;
+        let arguments = Bootstrap::from_attribute_args(&attr_args)?;
 
-        // Parse the function signature
-        let ItemFn { attrs, sig, .. } = item_fn;
-        let func_name = (bootstrap.name.clone()).unwrap_or_else(|| sig.ident.to_string());
-
-        // Try to enrich the bootstrap with a proof file
-        if let (None, Some(proof_path)) = (&bootstrap.proof, proof_paths.get(&func_name)) {
-            bootstrap.proof = Some(proof_path.clone().ok_or_else(|| Error::custom(format!("more than one file named {func_name}.tex. Please specify `proof = \"{{module}}/path/to/proof\"` in the bootstrap attributes.")))?);
-        }
+        // Parse the docstring
+        let docstring = Docstring::from_attrs(item_fn.attrs, &item_fn.sig.output)?;
 
         // aggregate info from all sources
-        let function =
-            reconcile_function(bootstrap, Docstring::from_attrs(attrs, &sig.output)?, sig)?;
-
-        Ok((func_name, function))
+        reconcile_function(arguments, docstring, item_fn.sig, proof_paths)
     }
 }
 
@@ -55,6 +46,7 @@ pub fn reconcile_function(
     bootstrap: Bootstrap,
     mut doc_comments: Docstring,
     signature: Signature,
+    proof_paths: &HashMap<String, Option<String>>,
 ) -> Result<Function> {
     // extract all generics from function
     let all_generics = (signature.generics.params.iter())
@@ -73,14 +65,26 @@ pub fn reconcile_function(
         )
         .collect::<HashSet<String>>();
 
+    let name = signature.ident.to_string();
+
+    let proof_path = match bootstrap.proof_path {
+        Some(proof_path) => Some(proof_path),
+        None => match proof_paths.get(&name) {
+            Some(None) => return Err(Error::custom(format!("more than one file named {name}.tex. Please specify `proof_path = \"{{module}}/path/to/proof.tex\"` in the macro attributes."))),
+            Some(proof_path) => proof_path.clone(),
+            None => None
+        }
+    };
+
     Ok(Function {
+        name,
         features: bootstrap.features.0,
         description: if doc_comments.description.is_empty() {
             None
         } else {
             Some(doc_comments.description.join("\n").trim().to_string())
         },
-        proof: bootstrap.proof,
+        proof_path,
         args: signature
             .inputs
             .into_iter()
@@ -101,7 +105,7 @@ pub fn reconcile_function(
                 let boot_type = bootstrap.arguments.0.get(&name);
 
                 // if rust type is given, use it. Otherwise parse the rust type on the function
-                let rust_type = match boot_type.and_then(|bt| bt.rust_type.clone().map(|rt| rt.0)) {
+                let rust_type = match boot_type.and_then(|bt| bt.rust_type.clone()) {
                     Some(v) => v,
                     None => syn_type_to_runtime_type(&*pat_type.ty)?,
                 };
@@ -120,7 +124,7 @@ pub fn reconcile_function(
                         .remove(&name)
                         .map(|dc| dc.join("\n").trim().to_string()),
                     hint: boot_type.and_then(|bt| bt.hint.clone()),
-                    default: boot_type.and_then(|bt| bt.default.0.clone()),
+                    default: boot_type.and_then(|bt| bt.default.clone()),
                     is_type: false,
                     do_not_convert: boot_type.map(|bt| bt.do_not_convert).unwrap_or(false),
                     example: None,
@@ -143,10 +147,10 @@ pub fn reconcile_function(
                             .map(|bt| Vec::from_iter(bt.generics.0.iter().cloned()))
                             .unwrap_or_else(Vec::new),
                         hint: boot_type.and_then(|bt| bt.hint.clone()),
-                        default: boot_type.and_then(|bt| bt.default.0.clone()),
+                        default: boot_type.and_then(|bt| bt.default.clone()),
                         is_type: true,
                         do_not_convert: false,
-                        example: boot_type.and_then(|bt| bt.example.clone().map(|rt| rt.0)),
+                        example: boot_type.and_then(|bt| bt.example.clone()),
                     })
                 }),
             )
@@ -172,7 +176,7 @@ pub fn reconcile_function(
             rust_type: bootstrap
                 .returns
                 .as_ref()
-                .and_then(|bs| bs.rust_type.clone().map(|rt| rt.0)),
+                .and_then(|bs| bs.rust_type.clone()),
             description: if doc_comments.ret.is_empty() {
                 None
             } else {

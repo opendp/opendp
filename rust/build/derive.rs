@@ -32,7 +32,7 @@ pub fn main() {
 fn parse_crate(
     src_dir: &Path,
     proof_paths: HashMap<String, Option<String>>,
-) -> std::io::Result<Option<HashMap<String, Vec<(String, Function)>>>> {
+) -> std::io::Result<Option<HashMap<String, Vec<Function>>>> {
     let mut modules = HashMap::new();
     for entry in std::fs::read_dir(src_dir)? {
         let path = entry?.path();
@@ -48,8 +48,8 @@ fn parse_crate(
             if let Some(module) = parse_file_tree(&path, &proof_paths)? {
                 if !module.is_empty() {
                     // sort module functions
-                    let mut module = module.into_iter().collect::<Vec<(String, Function)>>();
-                    module.sort_by_key(|(k, _)| k.clone());
+                    let mut module = module.into_iter().collect::<Vec<Function>>();
+                    module.sort_by_key(|func| func.name.clone());
                     modules.insert(module_name, module);
                 }
             } else {
@@ -65,7 +65,7 @@ fn parse_crate(
 fn parse_file_tree(
     dir: &Path,
     proof_paths: &HashMap<String, Option<String>>,
-) -> std::io::Result<Option<Vec<(String, Function)>>> {
+) -> std::io::Result<Option<Vec<Function>>> {
     // use here to shadow syn::File
     use std::{fs::File, io::Read};
 
@@ -102,7 +102,7 @@ fn parse_file_tree(
 fn parse_file(
     text: String,
     proof_paths: &HashMap<String, Option<String>>,
-) -> Option<Vec<(String, Function)>> {
+) -> Option<Vec<Function>> {
     // ignore files that fail to parse so as not to break IDE tooling
     let ts = TokenStream::from_str(&text).ok()?;
 

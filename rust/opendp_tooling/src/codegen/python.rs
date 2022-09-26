@@ -9,7 +9,7 @@ use super::flatten_runtime_type;
 
 /// Top-level function to generate python bindings, including all modules.
 pub fn generate_bindings(
-    modules: HashMap<String, Vec<(String, Function)>>,
+    modules: HashMap<String, Vec<Function>>,
 ) -> HashMap<PathBuf, String> {
     let typemap: HashMap<String, String> =
         serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
@@ -38,19 +38,19 @@ pub fn generate_bindings(
 /// Each call corresponds to one python file.
 fn generate_module(
     module_name: String,
-    module: Vec<(String, Function)>,
+    module: Vec<Function>,
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
     let all = module
         .iter()
-        .map(|(v, _)| format!("    \"{}\"", v))
+        .map(|func| format!("    \"{}\"", func.name))
         .collect::<Vec<_>>()
         .join(",\n");
     let functions = module
         .into_iter()
-        .map(|(func_name, func)| {
-            generate_function(&module_name, &func_name, &func, typemap, hierarchy)
+        .map(|func| {
+            generate_function(&module_name, &func, typemap, hierarchy)
         })
         .collect::<Vec<String>>()
         .join("\n");
@@ -79,12 +79,11 @@ __all__ = [
 
 fn generate_function(
     module_name: &String,
-    func_name: &String,
     func: &Function,
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
-    println!("generating: {}", func_name);
+    println!("generating: {}", func.name);
     let mut args = func
         .args
         .iter()
@@ -111,11 +110,11 @@ def {func_name}(
 {docstring}
 {body}
 "#,
-        func_name = func_name,
+        func_name = func.name,
         args = indent(args),
         sig_return = sig_return,
         docstring = indent(generate_docstring(func, hierarchy)),
-        body = indent(generate_body(module_name, func_name, func, typemap))
+        body = indent(generate_body(module_name, func, typemap))
     )
 }
 
@@ -239,7 +238,6 @@ fn generate_docstring_return_arg(
 ///     makes the call, handles errors, and converts the response to python
 fn generate_body(
     module_name: &String,
-    func_name: &String,
     func: &Function,
     typemap: &HashMap<String, String>,
 ) -> String {
@@ -250,7 +248,7 @@ fn generate_body(
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         data_converter = generate_data_converter(func, typemap),
-        make_call = generate_call(module_name, func_name, func, typemap)
+        make_call = generate_call(module_name, func, typemap)
     )
 }
 
@@ -405,7 +403,6 @@ fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -
 /// - converts the response to python
 fn generate_call(
     module_name: &String,
-    func_name: &String,
     func: &Function,
     typemap: &HashMap<String, String>,
 ) -> String {
@@ -438,7 +435,7 @@ function.restype = {ctype_restype}
 
 return {call}"#,
         module_name = module_name,
-        func_name = func_name,
+        func_name = func.name,
         ctype_args = func
             .args
             .iter()

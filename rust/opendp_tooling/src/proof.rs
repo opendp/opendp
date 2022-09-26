@@ -66,16 +66,6 @@ fn find_unique_file_names_with_extension(
     Ok(())
 }
 
-
-/// Load the proof path for func_name from {OUT_DIR}/proof_paths.json.
-/// Assumes the file was written in the build script.
-/// Has an error message tailored to the bootstrap macro.
-pub fn bootstrap_get_proof_path(func_name: &str) -> Result<Option<String>> {
-    (load_proof_paths()?.get(func_name).cloned())
-        .map(|v| v.ok_or_else(|| Error::custom(format!("more than one file named {func_name}.tex. Please specify `proof = \"{{module}}/path/to/proof\"` in the bootstrap attributes."))))
-        .transpose()
-}
-
 /// retrieve the path to a proof from a #[proven] macro
 pub fn proven_get_proof_path(attr_args: AttributeArgs, item: Item) -> Result<String> {
     if let Some(proof_path) = FromMeta::from_list(&attr_args)? {
