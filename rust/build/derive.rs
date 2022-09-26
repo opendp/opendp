@@ -9,7 +9,7 @@ use opendp_tooling::{
 use proc_macro2::TokenStream;
 use syn::{File, Item, ItemFn};
 
-fn main() {
+pub fn main() {
     let src_dir = get_src_dir().unwrap();
     let proof_paths = find_proof_paths(&src_dir).unwrap();
 

@@ -28,8 +28,7 @@ macro_rules! try_ {
 // When bootstrap runs, it
 // 1. simulates building bindings from foreign languages based on the docstring and function signature
 // 2. inserts a link to a proof into the docstring, if there is one
-#[proc_macro_attribute]
-pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
+pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     let original_input = input.clone();
 
     // parse function
@@ -73,8 +72,7 @@ pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 // When proven runs, it inserts a link to a proof into the docstring, or throws an error if one cannot be found
-#[proc_macro_attribute]
-pub fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
+pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     let original_input = input.clone();
 
     let attrs = parse_macro_input!(attr_args as AttributeArgs);
