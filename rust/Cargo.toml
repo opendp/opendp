@@ -48,15 +48,18 @@ use-system-libs = ["use-mpfr", "gmp-mpfr-sys/use-system-libs"]
 # for plotting in unit tests
 test-plot = ["vega_lite_4"]
 
+# include extern "C" functions in cdylib
 ffi = ["lazy_static"]
-bindings-python = ["ffi"]
+# execute proc macros to insert proof links
 derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
+# generate python language bindings
+bindings-python = ["ffi", "derive"]
 
 [dev-dependencies]
 criterion = "0.4"
 
 [lib]
-crate-type = ["rlib", "dylib"]
+crate-type = ["rlib", "cdylib"]
 
 [package.metadata.docs.rs]
 features = ["untrusted", "ffi"]
