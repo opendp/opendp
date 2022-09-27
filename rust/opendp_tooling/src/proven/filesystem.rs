@@ -49,6 +49,7 @@ fn find_unique_file_names_with_extension(
                 if let Some(file_name) = path.file_stem() {
                     matches
                         .entry(file_name.to_string_lossy().to_string())
+                        // replaces the Option with None, because the name is no longer unique
                         .and_modify(|v| drop(v.take()))
                         .or_insert_with(|| {
                             Some(
