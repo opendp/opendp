@@ -44,7 +44,6 @@ where
 }
 
 #[bootstrap(
-    module = "transformations",
     features("contrib"),
     generics(
         MI(default = "SymmetricDistance"),
