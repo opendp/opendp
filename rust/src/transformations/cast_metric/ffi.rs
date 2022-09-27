@@ -18,7 +18,6 @@ use crate::transformations::cast_metric::traits::{
 };
 
 #[bootstrap(
-    module = "transformations", 
     features("contrib")
 )]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
@@ -55,7 +54,6 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
 }
 
 #[bootstrap(
-    module = "transformations", 
     features("contrib"),
     generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
 )]
@@ -118,7 +116,6 @@ pub extern "C" fn opendp_transformations__make_sized_ordered_random(
 }
 
 #[bootstrap(
-    module = "transformations", 
     features("contrib"),
     generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
 )]
@@ -189,7 +186,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_ordered_random(
 }
 
 
-#[bootstrap(module = "transformations", features("contrib"))]
+#[bootstrap(features("contrib"))]
 /// Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance`
 /// to the respective ordered dataset metric SymmetricDistance with a no-op.
 /// Operates exclusively on VectorDomain<AllDomain<`TA`>>.
@@ -230,7 +227,6 @@ pub extern "C" fn opendp_transformations__make_unordered(
 }
 
 #[bootstrap(
-    module = "transformations", 
     features("contrib"),
     generics(MI(hint = "DatasetMetric", default = "InsertDeleteDistance"))
 )]
@@ -293,7 +289,6 @@ pub extern "C" fn opendp_transformations__make_sized_unordered(
 }
 
 #[bootstrap(
-    module = "transformations", 
     features("contrib"),
     generics(MI(hint = "DatasetMetric", default = "InsertDeleteDistance"))
 )]
@@ -361,7 +356,6 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_unordered(
 }
 
 #[bootstrap(
-    module = "transformations", 
     features("contrib"),
     generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
 )]
@@ -430,7 +424,6 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
 
 
 #[bootstrap(
-    module = "transformations", 
     features("contrib"),
     generics(MI(hint = "DatasetMetric", default = "ChangeOneDistance"))
 )]
