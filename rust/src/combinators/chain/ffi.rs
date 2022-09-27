@@ -7,7 +7,7 @@ use crate::ffi::any::{AnyMeasurement, AnyTransformation};
 
 #[bootstrap(
     features("contrib"),
-    arguments(measurement1(rust_type()), transformation0(rust_type()))
+    arguments(measurement1(rust_type = b"null"), transformation0(rust_type = b"null"))
 )]
 /// Construct the functional composition (`measurement1` ○ `transformation0`).
 /// Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
@@ -34,7 +34,7 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
 
 #[bootstrap(
     features("contrib"),
-    arguments(transformation1(rust_type()), transformation0(rust_type()))
+    arguments(transformation1(rust_type = b"null"), transformation0(rust_type = b"null"))
 )]
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
 /// Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.
@@ -60,7 +60,7 @@ pub extern "C" fn opendp_combinators__make_chain_tt(
 
 #[bootstrap(
     features("contrib"),
-    arguments(transformation1(rust_type()), measurement0(rust_type()))
+    arguments(transformation1(rust_type = b"null"), measurement0(rust_type = b"null"))
 )]
 /// Construct the functional composition (`transformation1` ○ `measurement0`).
 /// Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
