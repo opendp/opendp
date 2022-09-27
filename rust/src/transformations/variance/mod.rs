@@ -18,10 +18,10 @@ use super::{
 #[bootstrap(
     features("contrib"),
     arguments(
-        bounds(rust_type(id="(T, T)")),
+        bounds(rust_type = "(T, T)"),
         ddof(default = 1)),
-    generics(S(default = "Pairwise<T>", generics("T"))),
-    derived_types(T(get_atom_or_infer("S", get_first("bounds"))))
+    generics(S(default = "Pairwise<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the variance of bounded data. 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 

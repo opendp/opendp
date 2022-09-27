@@ -16,7 +16,7 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    generics(T(example(get_first("bounds"))))
+    generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints, 
 /// where all values share the same sign.
@@ -70,7 +70,7 @@ where
 
 #[bootstrap(
     features("contrib"),
-    generics(T(example(get_first("bounds"))))
+    generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints, 
 /// where all values share the same sign.

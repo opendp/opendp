@@ -50,7 +50,7 @@ impl___signed_int_split_sat_sum! { i8 i16 i32 i64 i128 isize }
 
 #[bootstrap(
     features("contrib"),
-    generics(T(example(get_first("bounds"))))
+    generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints. 
 /// Adds the saturating sum of the positives to the saturating sum of the negatives.
@@ -92,7 +92,7 @@ where
 
 #[bootstrap(
     features("contrib"),
-    generics(T(example(get_first("bounds"))))
+    generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints with known dataset size. 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
