@@ -19,8 +19,9 @@ extensions = [
     'sphinx.ext.graphviz',
     'sphinx.ext.ifconfig',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.viewcode',
+    # 'sphinx.ext.viewcode',
     'sphinx.ext.todo',
+    'sphinx.ext.linkcode',
     'sphinx-prompt',
     'sphinx_multiversion',
     'nbsphinx',
@@ -38,6 +39,13 @@ generated_dirs = {
 import pypandoc
 import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
+generated_dirs = {
+    "accuracy", 
+    "combinators", 
+    "core",
+    "measurements", 
+    "transformations", 
+}
 
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
@@ -67,6 +75,57 @@ def docstring(app, what, name, obj, options, lines):
         lines += rst.splitlines()
         lines += [""]
         lines += params.splitlines()
+
+def linkcode_resolve(domain, info):
+    """called by sphinx.ext.viewcode to generate link to source"""
+    if domain != 'py':
+        return None
+    if not info['module']:
+        return None
+    path = info['module'].split(".")
+    if len(path) <= 1:
+        return
+
+    module = path[1]
+    function = info['fullname']
+    if path[1] in generated_dirs:
+        rust_version = "latest" if version == "0.0.0+development" else version
+        return f"https://docs.rs/opendp/{rust_version}/opendp/{module}/fn.{function}.html"
+    else:
+        github_version = "main" if version == "0.0.0+development" else f"release/{'.'.join(version.split('.')[:2])}.x"
+        lines = get_lines(info)
+        if lines:
+            start, end = lines
+            return f"https://github.com/opendp/opendp/blob/{github_version}/python/src/opendp/{module}.py#L{start}-L{end}"
+
+import importlib
+import inspect
+
+def get_lines(info):
+    """retrieve the lines of a function based on the module and function name"""
+    mod = importlib.import_module(info["module"])
+    if "." in info["fullname"]:
+        objname, attrname = info["fullname"].split(".")
+        obj = getattr(mod, objname)
+        try:
+            # object is a method of a class
+            obj = getattr(obj, attrname)
+        except AttributeError:
+            # object is an attribute of a class
+            return None
+    else:
+        obj = getattr(mod, info["fullname"])
+
+    try:
+        file = inspect.getsourcefile(obj)
+        lines = inspect.getsourcelines(obj)
+    except TypeError:
+        # e.g. object is a typing.Union
+        return None
+    file = os.path.relpath(file, os.path.abspath(".."))
+    
+    return lines[1], lines[1] + len(lines[0]) - 1
+
 
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
