@@ -167,6 +167,11 @@ Randomized Response
 -------------------
 These measurements are used to randomize an individual's response to a query. 
 
+.. testsetup::
+
+    from opendp.mod import enable_features
+    enable_features('contrib', 'floating-point')
+
 .. doctest::
 
     >>> from opendp.measurements import make_randomized_response_bool
