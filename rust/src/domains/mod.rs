@@ -25,11 +25,28 @@ macro_rules! type_name {
 }
 pub(crate) use type_name;
 
-/// # Definition
+/// # Proof Definition
 /// `AllDomain(T)` is the domain of all **non-null** values of type `T`.
 /// 
 /// # Example
-/// `AllDomain::<i32>::new()` creates a domain that includes all values `{0, 1, ..., 2^32 - 1}`.
+/// ```
+/// // Create a domain that includes all values `{0, 1, ..., 2^32 - 1}`.
+/// use opendp::domains::AllDomain;
+/// let i32_domain = AllDomain::<i32>::new();
+/// 
+/// // 1 is a member of the i32_domain
+/// use opendp::core::Domain;
+/// assert!(i32_domain.member(&1)?);
+/// 
+/// // Create a domain that includes all non-null 32-bit floats.
+/// let f32_domain = AllDomain::<f32>::new();
+/// 
+/// // 1. is a member of the f32_domain
+/// assert!(f32_domain.member(&1.)?);
+/// // NAN is not a member of the f32_domain
+/// assert!(!f32_domain.member(&f32::NAN)?);
+/// # opendp::error::Fallible::Ok(())
+/// ```
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
 }
@@ -97,7 +114,7 @@ impl<D: Domain> Domain for DataDomain<D> where
     }
 }
 
-/// # Definition
+/// # Proof Definition
 /// `BoundedDomain(lower, upper, T)` is the domain of all **non-null** values of type `T`
 /// between some `lower` bound and `upper` bound.
 /// 
@@ -109,7 +126,19 @@ impl<D: Domain> Domain for DataDomain<D> where
 /// The constructors for this struct return an error if `lower > upper`, or if the bounds both exclude and include a value.
 /// 
 /// # Example
-/// `BoundedDomain::<i32>::new_closed((1, 3))` indicates the set `{1, 2, 3}`.
+/// ```
+/// // Create a domain that includes the values `{1, 2, 3}`.
+/// use opendp::domains::BoundedDomain;
+/// let i32_domain = BoundedDomain::<i32>::new_closed((1, 3))?;
+/// 
+/// // 1 is a member of the i32_domain
+/// use opendp::core::Domain;
+/// assert!(i32_domain.member(&1)?);
+/// 
+/// // 4 is not a member of the i32_domain
+/// assert!(!i32_domain.member(&4)?);
+/// # opendp::error::Fallible::Ok(())
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct BoundedDomain<T: TotalOrd> {
     lower: Bound<T>,
@@ -210,6 +239,11 @@ impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV> where DK::Carrier: Eq 
         Ok(true)
     }
 }
+impl<DK: Domain, DV: Domain> CollectionDomain for MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
+    fn size(v: &Self::Carrier) -> usize {
+        v.len()
+    }
+}
 
 
 /// A Domain that contains vectors of (homogeneous) values.
@@ -247,7 +281,7 @@ impl<D: Domain> Domain for VectorDomain<D> {
 
 /// A Domain that specifies the length of the enclosed domain.
 /// 
-/// # Definition
+/// # Proof Definition
 /// `SizedDomain(inner_domain, size, D)` is the domain of `inner_domain` restricted to only elements with length `size`.
 /// 
 /// # Example
@@ -255,6 +289,23 @@ impl<D: Domain> Domain for VectorDomain<D> {
 /// `inner_domain` indicates the set of all i32 vectors.
 /// 
 /// Then `SizedDomain::new(inner_domain, 3)` indicates the set of all i32 vectors of length 3.
+///
+/// # Example
+/// ```
+/// use opendp::domains::{SizedDomain, VectorDomain};
+/// // Create a domain that includes all i32 vectors.
+/// let vec_domain = VectorDomain::new_all();
+/// // Create a domain that includes all i32 vectors of length 3.
+/// let sized_domain = SizedDomain::new(vec_domain, 3);
+/// 
+/// // vec![1, 2, 3] is a member of the sized_domain
+/// use opendp::core::Domain;
+/// assert!(sized_domain.member(&vec![1i32, 2, 3])?);
+/// 
+/// // vec![1, 2] is not a member of the sized_domain
+/// assert!(!sized_domain.member(&vec![1, 2])?);
+/// # opendp::error::Fallible::Ok(())
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct SizedDomain<D: Domain> {
     pub inner_domain: D,
@@ -270,10 +321,23 @@ impl<D: Domain> Debug for SizedDomain<D> {
         write!(f, "SizedDomain({:?}, size={})", self.inner_domain, self.size)
     }
 }
-impl<D: Domain> Domain for SizedDomain<D> {
+impl<D: CollectionDomain> Domain for SizedDomain<D> {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        if D::size(val) != self.size {
+            return Ok(false)
+        }
         self.inner_domain.member(val)
+    }
+}
+
+pub trait CollectionDomain: Domain {
+    fn size(v: &Self::Carrier) -> usize;
+}
+
+impl<D: Domain> CollectionDomain for VectorDomain<D> {
+    fn size(v: &Self::Carrier) -> usize {
+        v.len()
     }
 }
 
