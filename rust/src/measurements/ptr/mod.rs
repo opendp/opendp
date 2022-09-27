@@ -27,7 +27,7 @@ use super::get_discretization_consts;
     arguments(
         scale(c_type = "void *"),
         threshold(c_type = "void *"),
-        k(default = -1074, rust_type(id = "i32"), c_type = "uint32_t"))
+        k(default = -1074, rust_type = "i32", c_type = "uint32_t"))
 )]
 /// Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
 ///

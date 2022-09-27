@@ -70,11 +70,11 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(
-        scale(rust_type(id = "Q"), c_type = "void *")),
+        scale(rust_type = "Q", c_type = "void *")),
     generics(
         D(default = "AllDomain<int>"),
-        MO(default = "ZeroConcentratedDivergence<Q>", generics("Q"))),
-    derived_types(Q(get_atom_or_infer("MO", "scale")))
+        MO(default = "ZeroConcentratedDivergence<Q>", generics = "Q")),
+    derived_types(Q = "$get_atom_or_infer(MO, scale)")
 )]
 /// Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
 /// 

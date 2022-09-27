@@ -78,11 +78,11 @@ pub fn make_randomized_response_bool<Q>(
 #[bootstrap(
     features("contrib"),
     arguments(
-        categories(rust_type(id = "Vec<T>")),
+        categories(rust_type = "Vec<T>"),
         prob(c_type = "void *"), 
         constant_time(default = false)),
     generics(
-        T(example(get_first("categories"))))
+        T(example = "$get_first(categories)"))
 )]
 /// Make a Measurement that implements randomized response on a categorical value.
 ///
