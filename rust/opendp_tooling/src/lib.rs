@@ -32,9 +32,8 @@ pub struct Argument {
     pub name: Option<String>,
     // c type to translate to/from for FFI. Optional for derived types
     pub c_type: Option<String>,
-    // RuntimeType expressed in terms of rust types with generics.
-    // Includes various RuntimeType constructors
-    pub rust_type: Option<RuntimeType>,
+    // directions to construct a Rust type with generics
+    pub rust_type: Option<TypeRecipe>,
     // type hint- a more abstract type that all potential arguments inherit from
     pub hint: Option<String>,
     // plaintext description of the argument used to generate documentation
@@ -50,21 +49,21 @@ pub struct Argument {
     //  to prevent the returned AnyObject from getting converted back to python
     pub do_not_convert: bool,
     // when is_type, use this as an example to infer the type
-    pub example: Option<RuntimeType>
+    pub example: Option<TypeRecipe>
 }
 
 
-// RuntimeType contains the metadata to generate code that evaluates to a rust type name
+// TypeRecipe contains the metadata to generate code that evaluates to a rust type name
 #[derive(Debug, PartialEq, Clone)]
-pub enum RuntimeType {
-    // reference an existing RuntimeType
+pub enum TypeRecipe {
+    // reference an existing type
     Name(String),
-    // build a higher level RuntimeType
-    Nest { origin: String, args: Vec<RuntimeType> },
+    // build up a rust type from other rust types
+    Nest { origin: String, args: Vec<TypeRecipe> },
     // explicitly absent
     None,
-    // construct the RuntimeType via function call
-    Function { function: String, params: Vec<RuntimeType> },
+    // construct the rust type via function call
+    Function { function: String, params: Vec<TypeRecipe> },
 }
 
 // holds literal values, like for default

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::{Argument, Function, RuntimeType, Value};
+use crate::{Argument, Function, TypeRecipe, Value};
 
 use crate::codegen::indent;
 
-use super::flatten_runtime_type;
+use super::flatten_type_recipe;
 
 /// Top-level function to generate python bindings, including all modules.
 pub fn generate_bindings(modules: HashMap<String, Vec<Function>>) -> HashMap<PathBuf, String> {
@@ -279,7 +279,7 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
     args.iter_mut()
         .filter(|arg| arg.rust_type.is_some())
         .for_each(|arg| {
-            arg.rust_type = Some(flatten_runtime_type(
+            arg.rust_type = Some(flatten_type_recipe(
                 arg.rust_type.as_ref().unwrap(),
                 &func.derived_types,
             ))
@@ -288,10 +288,10 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
     // code generation
     args.iter()
         .filter_map(|arg| match &arg.rust_type {
-            Some(RuntimeType::Name(name)) => (name == type_name).then(|| arg.name()),
-            Some(RuntimeType::Nest { origin, args }) => {
+            Some(TypeRecipe::Name(name)) => (name == type_name).then(|| arg.name()),
+            Some(TypeRecipe::Nest { origin, args }) => {
                 if origin == "Vec" {
-                    if let RuntimeType::Name(arg_name) = &args[0] {
+                    if let TypeRecipe::Name(arg_name) = &args[0] {
                         if arg_name == type_name {
                             Some(format!("get_first({name})", name = arg.name()))
                         } else {
@@ -323,11 +323,9 @@ fn generate_type_arg_formatter(func: &Function) -> String {
                     .collect::<Vec<_>>().join(", "))
             };
             if let Some(example) = generate_public_example(func, type_arg) {
-                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example}{generics})"#,
-                        name = name, example = example, generics = generics)
+                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example}{generics})"#)
             } else {
-                format!(r#"{name} = RuntimeType.parse(type_name={name}{generics})"#,
-                        name = name, generics = generics)
+                format!(r#"{name} = RuntimeType.parse(type_name={name}{generics})"#)
             }
         })
         // additional types that are constructed by introspecting existing types

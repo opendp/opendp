@@ -1,18 +1,18 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use darling::{Error, Result};
 use syn::{Attribute, Lit, Meta, MetaNameValue, Path, PathSegment, ReturnType, Type, TypePath};
 
 #[derive(Debug, Default)]
-pub struct Docstring {
-    pub description: Vec<String>,
-    pub arguments: HashMap<String, Vec<String>>,
-    pub generics: HashMap<String, Vec<String>>,
-    pub ret: Vec<String>,
+pub struct BootstrapDocstring {
+    pub description: Option<String>,
+    pub arguments: HashMap<String, String>,
+    pub generics: HashMap<String, String>,
+    pub returns: Option<String>,
 }
 
-impl Docstring {
-    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType) -> Result<Docstring> {
+impl BootstrapDocstring {
+    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType) -> Result<BootstrapDocstring> {
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
         if let Some(sup_elements) = parse_sig_output(output)? {
@@ -31,8 +31,12 @@ impl Docstring {
         insert_section("Citations");
         insert_section("Supporting Elements");
 
-        Ok(Docstring {
-            description,
+        Ok(BootstrapDocstring {
+            description: if description.is_empty() {
+                None
+            } else {
+                Some(description.join("\n").trim().to_string())
+            },
             arguments: doc_sections
                 .remove("Arguments")
                 .map(parse_docstring_args)
@@ -41,12 +45,14 @@ impl Docstring {
                 .remove("Generics")
                 .map(parse_docstring_args)
                 .unwrap_or_else(HashMap::new),
-            ret: doc_sections.remove("Returns").unwrap_or_else(Vec::new),
+            returns: doc_sections
+                .remove("Returns")
+                .map(|sec| sec.join("\n").trim().to_string()),
         })
     }
 }
 
-fn parse_docstring_args(mut args: Vec<String>) -> HashMap<String, Vec<String>> {
+fn parse_docstring_args(mut args: Vec<String>) -> HashMap<String, String> {
     args.push("* `".to_string());
     args.iter()
         .enumerate()
@@ -64,10 +70,13 @@ fn parse_docstring_args(mut args: Vec<String>) -> HashMap<String, Vec<String>> {
                         .iter()
                         .map(|v| v.trim().to_string()),
                 )
-                .collect::<Vec<String>>();
+                .collect::<Vec<String>>()
+                .join("\n")
+                .trim()
+                .to_string();
             (name, description)
         })
-        .collect::<HashMap<String, Vec<String>>>()
+        .collect::<HashMap<String, String>>()
 }
 
 fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Vec<String>>> {
@@ -132,32 +141,52 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<Vec<String>>> {
         i if i == "Fallible" => parse_supporting_elements(match arguments {
             syn::PathArguments::AngleBracketed(ab) => {
                 if ab.args.len() != 1 {
-                    return Err(Error::custom("Fallible needs one angle-bracketed argument").with_span(&ab.args))
+                    return Err(Error::custom("Fallible needs one angle-bracketed argument")
+                        .with_span(&ab.args));
                 }
                 match ab.args.first().expect("unreachable due to if statement") {
                     syn::GenericArgument::Type(ty) => ty,
-                    arg => return Err(Error::custom("argument to Fallible must to be a type").with_span(&arg))
+                    arg => {
+                        return Err(
+                            Error::custom("argument to Fallible must to be a type").with_span(&arg)
+                        )
+                    }
                 }
-            },
-            arg => return Err(Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)),
+            }
+            arg => {
+                return Err(
+                    Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)
+                )
+            }
         }),
         i if i == "Transformation" || i == "Measurement" => {
             match arguments {
                 syn::PathArguments::AngleBracketed(ab) => {
                     if ab.args.len() != 4 {
-                        return Err(Error::custom(format!("{i} needs four angle-bracketed arguments")).with_span(&ab.args))
+                        return Err(Error::custom(format!(
+                            "{i} needs four angle-bracketed arguments"
+                        ))
+                        .with_span(&ab.args));
                     }
-                    let [input_domain, output_domain, input_metric, output_metmeas] = <[_; 4]>::try_from(ab.args.iter().collect::<Vec<_>>())
-                        .map_err(|_| Error::custom(format!("{i} needs four angle-bracketed arguments")).with_span(&ab.args))?;
-                    
+                    let [input_domain, output_domain, input_metric, output_metmeas] =
+                        <[_; 4]>::try_from(ab.args.iter().collect::<Vec<_>>()).map_err(|_| {
+                            Error::custom(format!("{i} needs four angle-bracketed arguments"))
+                                .with_span(&ab.args)
+                        })?;
+
                     let output_distance = match i {
                         i if i == "Transformation" => "Metric: ",
                         i if i == "Measurement" => "Measure:",
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     };
 
                     // syn doesn't have a pretty printer but we don't need to add a dep...
-                    let pprint = |ty| quote::quote!(#ty).to_string().replace(" ", "").replace(",", ", ");
+                    let pprint = |ty| {
+                        quote::quote!(#ty)
+                            .to_string()
+                            .replace(" ", "")
+                            .replace(",", ", ")
+                    };
 
                     Ok(Some(vec![
                         format!("* Input Domain:   `{}`", pprint(input_domain)),
@@ -165,10 +194,14 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<Vec<String>>> {
                         format!("* Input Metric:   `{}`", pprint(input_metric)),
                         format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
                     ]))
-                },
-                arg => return Err(Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)),
+                }
+                arg => {
+                    return Err(
+                        Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)
+                    )
+                }
             }
         }
-        _ => Ok(None)
+        _ => Ok(None),
     }
 }

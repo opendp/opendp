@@ -3,7 +3,7 @@ use std::fs::{canonicalize, File};
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::{Argument, RuntimeType};
+use crate::{Argument, TypeRecipe};
 
 pub mod python;
 
@@ -29,24 +29,24 @@ pub(crate) fn indent(text: String) -> String {
 
 /// resolve references to derived types
 #[allow(dead_code)]
-fn flatten_runtime_type(runtime_type: &RuntimeType, derived_types: &Vec<Argument>) -> RuntimeType {
+fn flatten_type_recipe(type_recipe: &TypeRecipe, derived_types: &Vec<Argument>) -> TypeRecipe {
     let resolve_name = |name: &String| {
         derived_types
             .iter()
             .find(|derived| derived.name.as_ref().unwrap() == name)
             .map(|derived_type| {
-                flatten_runtime_type(derived_type.rust_type.as_ref().unwrap(), derived_types)
+                flatten_type_recipe(derived_type.rust_type.as_ref().unwrap(), derived_types)
             })
-            .unwrap_or_else(|| runtime_type.clone())
+            .unwrap_or_else(|| type_recipe.clone())
     };
 
-    match runtime_type {
-        RuntimeType::Name(name) => resolve_name(name),
-        RuntimeType::Nest { origin, args } => RuntimeType::Nest {
+    match type_recipe {
+        TypeRecipe::Name(name) => resolve_name(name),
+        TypeRecipe::Nest { origin, args } => TypeRecipe::Nest {
             origin: origin.clone(),
             args: args
                 .iter()
-                .map(|arg| flatten_runtime_type(arg, derived_types))
+                .map(|arg| flatten_type_recipe(arg, derived_types))
                 .collect(),
         },
         other => other.clone(),
@@ -71,7 +71,7 @@ impl Argument {
         if self.is_type {
             return Some("RuntimeTypeDescriptor".to_string())
         }
-        if let Some(RuntimeType::Nest { origin, args }) = &self.rust_type {
+        if let Some(TypeRecipe::Nest { origin, args }) = &self.rust_type {
             if origin == "Tuple" {
                 return Some(format!("Tuple[{}]", vec!["Any"; args.len()].join(", ")))
             }
@@ -128,7 +128,7 @@ impl Argument {
 
 
 
-impl RuntimeType {
+impl TypeRecipe {
     /// translate the abstract derived_types info into python RuntimeType constructors
     pub fn to_python(&self) -> String {
         match self {
