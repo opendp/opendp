@@ -3,12 +3,12 @@ mod ffi;
 
 use crate::core::{Domain, Measurement, Metric, PrivacyMap, Measure};
 use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
-use crate::domains::SizedDomain;
+use crate::domains::{SizedDomain, CollectionDomain};
 use crate::error::Fallible;
 use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P, InfDiv};
 
 pub trait IsSizedDomain: Domain { fn get_size(&self) -> Fallible<usize>; }
-impl<D: Domain> IsSizedDomain for SizedDomain<D> {
+impl<D: CollectionDomain> IsSizedDomain for SizedDomain<D> {
     fn get_size(&self) -> Fallible<usize> { Ok(self.size) }
 }
 
