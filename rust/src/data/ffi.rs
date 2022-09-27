@@ -20,9 +20,9 @@ use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, Ty
 
 #[bootstrap(
     name = "slice_as_object",
-    arguments(raw(rust_type(id = "T"), hint="FfiSlicePtr"), T(c_type = "char *", rust_type())),
+    arguments(raw(rust_type = "T", hint="FfiSlicePtr"), T(c_type = "char *", rust_type = b"null")),
     returns(do_not_convert = true, c_type = "FfiResult<const AnyObject *>"),
-    derived_types(T(parse_or_infer("T", "raw")))
+    derived_types(T = "$parse_or_infer(T, raw)")
 )]
 /// Internal function. Load data from a `slice` into an AnyObject
 /// 
@@ -129,7 +129,7 @@ pub extern "C" fn opendp_data__slice_as_object(raw: *const FfiSlice, T: *const c
 
 #[bootstrap(
     name = "object_type",
-    arguments(this(rust_type())),
+    arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<const char *>")
 )]
 /// Internal function. Retrieve the type descriptor string of an AnyObject.
@@ -145,7 +145,7 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
 
 #[bootstrap(
     name = "object_as_slice",
-    arguments(obj(rust_type())),
+    arguments(obj(rust_type = b"null")),
     returns(do_not_convert = true, c_type = "FfiResult<const FfiSlice *>")
 )]
 /// Internal function. Unload data from an AnyObject into an FfiSlicePtr.
@@ -241,7 +241,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
 #[bootstrap(
     name = "ffislice_of_anyobjectptrs",
-    arguments(raw(rust_type())),
+    arguments(raw(rust_type = b"null")),
     returns(do_not_convert = true))]
 /// Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
 #[no_mangle]
@@ -372,8 +372,8 @@ impl TotalOrd for AnyObject {
 #[bootstrap(
     name = "smd_curve_epsilon",
     arguments(
-        curve(rust_type()),
-        delta(rust_type(get_atom(object_type("curve")))))
+        curve(rust_type = b"null"),
+        delta(rust_type = "$get_atom(object_type(curve))"))
 )]
 /// Internal function. Use an SMDCurve to find epsilon at a given `delta`.
 /// 
@@ -392,7 +392,7 @@ pub extern "C" fn opendp_data__smd_curve_epsilon(curve: *const AnyObject, delta:
 
 #[bootstrap(
     name = "to_string",
-    arguments(this(rust_type())),
+    arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<char *>")
 )]
 /// Internal function. Convert the AnyObject to a string representation.
