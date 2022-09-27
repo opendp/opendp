@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Function, StabilityMap, Transformation},
     metrics::IntDistance,
-    domains::SizedDomain,
+    domains::{SizedDomain, CollectionDomain},
     error::Fallible, 
     traits::samplers::Shuffle,
 };
@@ -93,7 +93,7 @@ pub fn make_metric_unbounded<D, MI>(
     domain: SizedDomain<D>,
 ) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::UnboundedMetric>>
 where
-    D: Domain,
+    D: CollectionDomain,
     D::Carrier: Clone,
     MI: BoundedMetric<Distance = IntDistance>,
 {
@@ -129,7 +129,7 @@ pub fn make_metric_bounded<D, MI>(
     domain: SizedDomain<D>,
 ) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::BoundedMetric>>
 where
-    D: Domain,
+    D: CollectionDomain,
     D::Carrier: Clone,
     MI: UnboundedMetric<Distance = IntDistance>,
 {
