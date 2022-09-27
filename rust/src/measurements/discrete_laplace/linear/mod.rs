@@ -15,12 +15,12 @@ use super::DiscreteLaplaceDomain;
     features("contrib"),
     arguments(
         scale(c_type = "void *"),
-        bounds(rust_type(id = "OptionT"), default())),
+        bounds(rust_type = "OptionT", default = b"null")),
     generics(
         D(default = "AllDomain<int>")),
     derived_types(
-        T(get_atom("D")),
-        OptionT(id = "Option<(T, T)>"))
+        T = "$get_atom(D)",
+        OptionT = "Option<(T, T)>")
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
 /// using a linear-time algorithm on finite data types.
@@ -93,12 +93,12 @@ where
     features("contrib"),
     arguments(
         scale(c_type = "void *"),
-        bounds(rust_type(id = "OptionT"), default())),
+        bounds(rust_type = "OptionT", default = b"null")),
     generics(
         D(default = "AllDomain<int>")),
     derived_types(
-        T(get_atom("D")),
-        OptionT(id = "Option<(T, T)>"))
+        T = "$get_atom(D)",
+        OptionT = "Option<(T, T)>")
 )]
 /// Deprecated. 
 /// Use `make_base_discrete_laplace` instead (more efficient). 
