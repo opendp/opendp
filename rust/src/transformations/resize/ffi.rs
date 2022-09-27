@@ -15,7 +15,6 @@ use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::resize::IsMetricOrdered;
 
 #[bootstrap(
-    module = "transformations",
     features("contrib"),
     generics(
         MI(default = "SymmetricDistance"),
