@@ -14,9 +14,9 @@ use super::UncheckedSum;
 
 #[bootstrap(
     features("contrib"),
-    arguments(bounds(rust_type(id="(T, T)"))),
-    generics(S(default = "Pairwise<T>", generics("T"))),
-    derived_types(T(get_atom_or_infer("S", get_first("bounds"))))
+    arguments(bounds(rust_type = "(T, T)")),
+    generics(S(default = "Pairwise<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of squared deviations of bounded data. 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 

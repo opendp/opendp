@@ -82,7 +82,7 @@ pub extern "C" fn opendp_transformations__make_resize(
     generics(
         MI(default = "SymmetricDistance"),
         MO(default = "SymmetricDistance"),
-        TA(example(get_first("bounds")))
+        TA(example = "$get_first(bounds)")
     )
 )]
 /// Make a Transformation that either truncates or imputes records 

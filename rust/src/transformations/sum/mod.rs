@@ -19,7 +19,7 @@ use crate::transformations::{make_ordered_random, make_unordered};
     features("contrib"),
     generics(
         MI(default = "SymmetricDistance"),
-        T(example(get_first("bounds")))),
+        T(example = "$get_first(bounds)")),
     returns(c_type = "FfiResult<AnyTransformation *>")
 )]
 /// Make a Transformation that computes the sum of bounded data. 
@@ -47,7 +47,7 @@ where
     features("contrib"),
     generics(
         MI(default = "SymmetricDistance"),
-        T(example(get_first("bounds")))),
+        T(example = "$get_first(bounds)")),
     returns(c_type = "FfiResult<AnyTransformation *>")
 )]
 /// Make a Transformation that computes the sum of bounded data with known dataset size. 
