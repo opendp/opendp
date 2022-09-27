@@ -68,7 +68,7 @@ pub fn reconcile_function(
         )
         .collect::<HashSet<String>>();
 
-    let name = signature.ident.to_string();
+    let name = bootstrap.name.unwrap_or_else(|| signature.ident.to_string());
 
     Ok(Function {
         name: name.clone(),

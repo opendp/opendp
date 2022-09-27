@@ -8,9 +8,7 @@ use crate::codegen::indent;
 use super::flatten_runtime_type;
 
 /// Top-level function to generate python bindings, including all modules.
-pub fn generate_bindings(
-    modules: HashMap<String, Vec<Function>>,
-) -> HashMap<PathBuf, String> {
+pub fn generate_bindings(modules: HashMap<String, Vec<Function>>) -> HashMap<PathBuf, String> {
     let typemap: HashMap<String, String> =
         serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
     let hierarchy: HashMap<String, Vec<String>> =
@@ -49,9 +47,7 @@ fn generate_module(
         .join(",\n");
     let functions = module
         .into_iter()
-        .map(|func| {
-            generate_function(&module_name, &func, typemap, hierarchy)
-        })
+        .map(|func| generate_function(&module_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
 
@@ -156,10 +152,11 @@ fn generate_input_argument(
 
 /// generate a docstring for the current function, with the function description, args, and return
 /// in Sphinx format: https://sphinx-rtd-tutorial.readthedocs.io/en/latest/docstrings.html
-fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>) -> String {
-    let description = func
-        .description
-        .as_ref()
+fn generate_docstring(
+    func: &Function,
+    hierarchy: &HashMap<String, Vec<String>>,
+) -> String {
+    let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
 

@@ -1,7 +1,6 @@
 use std::{collections::HashMap, env, ffi::OsStr, path::PathBuf};
 
-use darling::{Error, FromMeta, Result};
-use syn::{AttributeArgs, Item, Type, TypePath};
+use darling::{Error, Result};
 
 /// Traverses the filesystem, starting at src_dir, looking for .tex files.
 /// If more than one file is discovered with the same name, the value becomes None
@@ -66,45 +65,6 @@ fn find_unique_file_names_with_extension(
     Ok(())
 }
 
-/// retrieve the path to a proof from a #[proven] macro
-pub fn proven_get_proof_path(attr_args: AttributeArgs, item: Item) -> Result<String> {
-    if let Some(proof_path) = FromMeta::from_list(&attr_args)? {
-        return Ok(proof_path);
-    }
-
-    // parse function
-    let name = match item {
-        Item::Fn(func) => func.sig.ident.to_string(),
-        Item::Impl(imp) => {
-            let path = match &imp.trait_ {
-                Some(v) => &v.1,
-                None => match &*imp.self_ty {
-                    Type::Path(TypePath { path, .. }) => path,
-                    ty => return Err(Error::custom("failed to parse type").with_span(&ty)),
-                },
-            };
-            (path.segments.last())
-                .ok_or_else(|| {
-                    Error::custom("path must have at least one segment").with_span(&imp.self_ty)
-                })?
-                .ident
-                .to_string()
-        }
-
-        input => {
-            return Err(Error::custom("only functions or impls can be proven").with_span(&input))
-        }
-    };
-
-    let help = "You can specify a path instead: `#[proven(\"{{module}}/path/to/proof.tex\")]`";
-
-    // assumes that proof paths have already been written in the lib's build script
-    load_proof_paths()?
-        .remove(&name)
-        .ok_or_else(|| Error::custom(format!("failed to find {name}.tex. {help}")))?
-        .ok_or_else(|| Error::custom(format!("more than one file named {name}.tex. {help}")))
-}
-
 pub fn get_src_dir() -> Result<PathBuf> {
     let manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR")
         .ok_or_else(|| Error::custom("Failed to determine location of Cargo.toml."))?;
@@ -124,28 +84,19 @@ pub fn make_proof_link(relative_path: PathBuf) -> Result<String> {
         return Err(Error::custom(format!("{absolute_path:?} does not exist!")));
     }
 
-    let target = if cfg!(feature = "local") {
+    let version = env!("CARGO_PKG_VERSION");
+    let target = if version == "0.0.0+development" {
         (absolute_path.to_str())
             .ok_or_else(|| Error::custom("absolute path is empty"))?
             .to_string()
     } else {
+        let docs_url =
+            env::var("OPENDP_DOCS_SITE").unwrap_or_else(|_| "docs.opendp.org".to_string());
         format!(
-            "https://docs.opendp.org/en/{version}/proofs/{relative_path}",
-            version = get_version()?,
+            "https://{docs_url}/en/{version}/proofs/{relative_path}",
             relative_path = relative_path.display()
         )
     };
 
     Ok(format!("[Link to proof.]({target})"))
-}
-
-fn get_version() -> Result<String> {
-    let version = env::var("CARGO_PKG_VERSION")
-        .map_err(|_| Error::custom("CARGO_PKG_VERSION must be set"))?
-        .to_string();
-    Ok(if version == "0.0.0+development" {
-        "latest".to_string()
-    } else {
-        version
-    })
 }

@@ -5,7 +5,7 @@ use syn::{parse_macro_input, AttributeArgs, Item, ItemFn};
 use proc_macro::TokenStream;
 
 use opendp_tooling::{
-    proof::{load_proof_paths, make_proof_link, proven_get_proof_path},
+    proven::{Proven, filesystem::{load_proof_paths, make_proof_link}},
     Function,
 };
 
@@ -68,13 +68,18 @@ pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream 
     let attrs = parse_macro_input!(attr_args as AttributeArgs);
     let item = parse_macro_input!(input as Item);
 
-    let proof_path = try_!(proven_get_proof_path(attrs, item), original_input);
+    let proven = try_!(Proven::from_ast(attrs, item), original_input);
+
+    let proof_path = proven.proof_path.expect("unreachable");
     let proof_link = try_!(make_proof_link(PathBuf::from(proof_path)), original_input);
 
-    let mut output = TokenStream::new();
+    // start with link to proof in documentation
+    let mut output = TokenStream::from(quote::quote!(#[doc = #proof_link]));
 
-    // insert link to proof in documentation
-    output.extend(TokenStream::from(quote::quote!(#[doc = #proof_link])));
+    // insert cfg attributes
+    (proven.features.0.iter())
+        .for_each(|feat| output.extend(TokenStream::from(quote::quote!(#[cfg(feature = #feat)]))));
+
     output.extend(original_input);
     output
 }

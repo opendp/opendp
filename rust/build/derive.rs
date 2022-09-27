@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::Path, str::FromStr};
 
 use opendp_tooling::{
     codegen,
-    proof::{find_proof_paths, get_src_dir, write_proof_paths},
+    proven::filesystem::{find_proof_paths, get_src_dir, write_proof_paths},
     Function,
 };
 use proc_macro2::TokenStream;

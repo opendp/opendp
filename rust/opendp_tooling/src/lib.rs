@@ -1,5 +1,10 @@
+// logic for the bootstrap macro
 pub mod bootstrap;
-pub mod proof;
+
+// logic for the proven macro
+pub mod proven;
+
+// logic for generating bindings from the core structures below
 pub mod codegen;
 
 // metadata for each function in a module
