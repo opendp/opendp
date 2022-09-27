@@ -18,7 +18,7 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    generics(T(example(get_first("bounds"))))
+    generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints. 
 /// The effective range is reduced, as (bounds * size) must not overflow.

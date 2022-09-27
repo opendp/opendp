@@ -19,12 +19,12 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(
-        constant(rust_type(id = "T"), c_type = "void *"), 
-        bounds(rust_type(id = "(T, T)"))),
+        constant(rust_type = "T", c_type = "void *"), 
+        bounds(rust_type = "(T, T)")),
     generics(
-        D(default = "AllDomain<T>", generics("T")),
-        M(default = "AbsoluteDistance<T>", generics("T"))),
-    derived_types(T(get_atom_or_infer("D", "constant")))
+        D(default = "AllDomain<T>", generics = "T"),
+        M(default = "AbsoluteDistance<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(D, constant)")
 )]
 /// Make a transformation that multiplies an aggregate by a constant.
 /// The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
