@@ -15,9 +15,9 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(bounds(rust_type(id="(T, T)"))),
-    generics(S(default = "Pairwise<T>", generics("T"))),
-    derived_types(T(get_atom_or_infer("S", get_first("bounds"))))
+    arguments(bounds(rust_type = "(T, T)")),
+    generics(S(default = "Pairwise<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats. 
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
@@ -74,9 +74,9 @@ where
 
 #[bootstrap(
     features("contrib"),
-    arguments(bounds(rust_type(id="(T, T)"))),
-    generics(S(default = "Pairwise<T>", generics("T"))),
-    derived_types(T(get_atom_or_infer("S", get_first("bounds"))))
+    arguments(bounds(rust_type = "(T, T)")),
+    generics(S(default = "Pairwise<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats with known dataset size. 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 

@@ -13,7 +13,7 @@ use crate::traits::{CheckNull, Float};
 
 #[bootstrap(
     features("contrib"), 
-    generics(TA(example(get_first("bounds"))))
+    generics(TA(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
 /// Operates on `InherentNullDomain<AllDomain<TA>>`
@@ -41,11 +41,20 @@ pub fn make_impute_uniform_float<TA>(
         } else { Ok(*v) })
 }
 
-// utility trait to impute with a constant, regardless of the representation of null
+/// Utility trait to impute with a constant, regardless of the representation of nullity.
 pub trait ImputeConstantDomain: Domain {
+    /// This is the type of `Self::Carrier` after imputation.
+    /// 
+    /// On any type `D` for which the `ImputeConstantDomain` trait is implemented, 
+    /// the syntax `D::Imputed` refers to this associated type.
+    /// For example, consider `D` to be `OptionNullDomain<T>`, the domain of all `Option<T>`.
+    /// The implementation of this trait for `OptionNullDomain<T>` designates that `type Imputed = T`. 
+    /// Thus `OptionNullDomain<T>::Imputed` is `T`.
     type Imputed;
+
+    /// A function that replaces a potentially-null carrier type with a non-null imputed type.
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed;
-    fn new() -> Self;
+    
 }
 // how to impute, when null represented as Option<T>
 impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
@@ -53,7 +62,6 @@ impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         default.as_ref().unwrap_or(constant)
     }
-    fn new() -> Self { OptionNullDomain::new(AllDomain::new()) }
 }
 // how to impute, when null represented as T with internal nullity
 impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> {
@@ -61,14 +69,13 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         if default.is_null() { constant } else { default }
     }
-    fn new() -> Self { InherentNullDomain::new(AllDomain::new()) }
 }
 
 #[bootstrap(
     features("contrib"), 
-    arguments(constant(rust_type(id="TA"), c_type="AnyObject *")),
-    generics(DA(default = "OptionNullDomain<AllDomain<TA>>", generics("TA"))),
-    derived_types(TA(get_atom_or_infer("DA", "constant")))
+    arguments(constant(rust_type = "TA", c_type="AnyObject *")),
+    generics(DA(default = "OptionNullDomain<AllDomain<TA>>", generics = "TA")),
+    derived_types(TA = "$get_atom_or_infer(DA, constant)")
 )]
 /// Make a Transformation that replaces null/None data with `constant`.
 /// By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
@@ -90,38 +97,48 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
 pub fn make_impute_constant<DA>(
     constant: DA::Imputed
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
-    where DA: ImputeConstantDomain,
+    where DA: ImputeConstantDomain + Default,
           DA::Imputed: 'static + Clone + CheckNull,
           DA::Carrier: 'static {
     if constant.is_null() { return fallible!(MakeTransformation, "Constant may not be null.") }
 
     make_row_by_row(
-        DA::new(),
+        DA::default(),
         AllDomain::new(),
         move |v| DA::impute_constant(v, &constant).clone())
 }
 
-// utility trait to standardize a member into an Option, regardless of the representation of null
+/// Utility trait to drop null values from a dataset, regardless of the representation of nullity.
 pub trait DropNullDomain: Domain {
+    /// This is the type of `Self::Carrier` after dropping null.
+    /// 
+    /// On any type `D` for which the `DropNullDomain` trait is implemented, 
+    /// the syntax `D::Imputed` refers to this associated type.
+    /// For example, consider `D` to be `OptionNullDomain<T>`, the domain of all `Option<T>`.
+    /// The implementation of this trait for `DropNullDomain<T>` designates that `type Imputed = T`. 
+    /// Thus `DropNullDomain<T>::Imputed` is `T`.
     type Imputed;
+
+    /// Standardizes `D::Carrier` into an `Option<D::Imputed>`, where `D::Imputed` is never null.
+    /// 
+    /// `Self::Imputed` may have the capacity to represent null (like `f64`), 
+    /// but implementations of this function must guarantee that `Self::Imputed` is never null.
     fn option(value: &Self::Carrier) -> Option<Self::Imputed>;
-    fn new() -> Self;
 }
-// how to standardize into an option, when null represented as Option<T>
+
+/// how to standardize into an option, when null represented as Option<T>
 impl<T: CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() { None } else { value.clone() }
     }
-    fn new() -> Self { OptionNullDomain::new(AllDomain::new()) }
 }
-// how to standardize into an option, when null represented as T with internal nullity
+/// how to standardize into an option, when null represented as T with internal nullity
 impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() { None } else { Some(value.clone()) }
     }
-    fn new() -> Self { InherentNullDomain::new(AllDomain::new()) }
 }
 
 #[bootstrap(features("contrib"))]
@@ -132,9 +149,10 @@ impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>
 /// * `DA` - atomic domain of input data that contains nulls.
 pub fn make_drop_null<DA>(
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
-    where DA: DropNullDomain, DA::Imputed: CheckNull {
+    where DA: DropNullDomain + Default, 
+          DA::Imputed: CheckNull {
     Ok(Transformation::new(
-        VectorDomain::new(DA::new()),
+        VectorDomain::new(DA::default()),
         VectorDomain::new_all(),
         Function::new(|arg: &Vec<DA::Carrier>|
             arg.iter().filter_map(DA::option).collect()),
