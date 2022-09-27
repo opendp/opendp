@@ -38,8 +38,17 @@ use std::fmt::Debug;
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
 pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
+    /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
+    /// 
+    /// On any type `D` for which the `Domain` trait is implemented, 
+    /// the syntax `D::Carrier` refers to this associated type.
+    /// For example, consider `D` to be `AllDomain<T>`, the domain of all non-null values of type `T`.
+    /// The implementation of this trait for `AllDomain<T>` designates that `type Carrier = T`. 
+    /// Thus `AllDomain<T>::Carrier` is `T`.
     type Carrier;
+
     /// Predicate to test an element for membership in the domain.
+    /// Not all possible values of `::Carrier` are a member of the domain.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 

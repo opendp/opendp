@@ -3,6 +3,10 @@
 //! These different versions of [`Domain`] provide a general set of models used throughout OpenDP.
 //! Most of the implementations are generic, with the type parameter setting the underlying [`Domain::Carrier`]
 //! type.
+//! 
+//! A data domain is a representation of the set of values on which the function associated with a transformation or measurement can operate.
+//! Each metric (see [`crate::metrics`]) is associated with certain data domains. 
+//! The [`Domain`] trait is implemented for all domains used in OpenDP.
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -15,13 +19,17 @@ use crate::error::Fallible;
 use crate::traits::{CheckNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
-/// // retrieves the type_name for a given type
+/// retrieves the type_name for a given type
 macro_rules! type_name {
     ($ty:ty) => (std::any::type_name::<$ty>().split("::").last().unwrap_or(""))
 }
 pub(crate) use type_name;
 
-/// A Domain that contains all non-null members of the carrier type.
+/// # Definition
+/// `AllDomain(T)` is the domain of all **non-null** values of type `T`.
+/// 
+/// # Example
+/// `AllDomain::<i32>::new()` creates a domain that includes all values `{0, 1, ..., 2^32 - 1}`.
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
 }
@@ -89,10 +97,21 @@ impl<D: Domain> Domain for DataDomain<D> where
     }
 }
 
-
-/// A Domain that contains all the values bounded by an interval.
+/// # Definition
+/// `BoundedDomain(lower, upper, T)` is the domain of all **non-null** values of type `T`
+/// between some `lower` bound and `upper` bound.
+/// 
+/// # Notes
+/// The bounds may be inclusive, exclusive, or unbounded (for half-open intervals).
+/// For a type `T` to be valid, it must be totally ordered ([`crate::traits::TotalOrd`]).
+/// 
+/// It is impossible to construct an instance of `BoundedDomain` with inconsistent bounds.
+/// The constructors for this struct return an error if `lower > upper`, or if the bounds both exclude and include a value.
+/// 
+/// # Example
+/// `BoundedDomain::<i32>::new_closed((1, 3))` indicates the set `{1, 2, 3}`.
 #[derive(Clone, PartialEq)]
-pub struct BoundedDomain<T> {
+pub struct BoundedDomain<T: TotalOrd> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
@@ -100,6 +119,7 @@ impl<T: TotalOrd> BoundedDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
     }
+    /// Construct a new BoundedDomain with the given bounds.
     pub fn new(bounds: (Bound<T>, Bound<T>)) -> Fallible<Self> {
         let (lower, upper) = bounds;
         fn get<T>(value: &Bound<T>) -> Option<&T> {
@@ -126,7 +146,7 @@ impl<T: TotalOrd> BoundedDomain<T> {
         Ok(BoundedDomain { lower, upper })
     }
 }
-impl<T> Debug for BoundedDomain<T> {
+impl<T: TotalOrd> Debug for BoundedDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "BoundedDomain({})", type_name!(T))
     }
@@ -225,30 +245,49 @@ impl<D: Domain> Domain for VectorDomain<D> {
     }
 }
 
-/// A Domain that specifies the length of the enclosed domain
+/// A Domain that specifies the length of the enclosed domain.
+/// 
+/// # Definition
+/// `SizedDomain(inner_domain, size, D)` is the domain of `inner_domain` restricted to only elements with length `size`.
+/// 
+/// # Example
+/// First let `inner_domain` be `VectorDomain::new(AllDomain::<i32>::new())`. 
+/// `inner_domain` indicates the set of all i32 vectors.
+/// 
+/// Then `SizedDomain::new(inner_domain, 3)` indicates the set of all i32 vectors of length 3.
 #[derive(Clone, PartialEq)]
 pub struct SizedDomain<D: Domain> {
-    pub element_domain: D,
+    pub inner_domain: D,
     pub size: usize
 }
 impl<D: Domain> SizedDomain<D> {
     pub fn new(member_domain: D, size: usize) -> Self {
-        SizedDomain { element_domain: member_domain, size }
+        SizedDomain { inner_domain: member_domain, size }
     }
 }
 impl<D: Domain> Debug for SizedDomain<D> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "SizedDomain({:?}, size={})", self.element_domain, self.size)
+        write!(f, "SizedDomain({:?}, size={})", self.inner_domain, self.size)
     }
 }
 impl<D: Domain> Domain for SizedDomain<D> {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        self.element_domain.member(val)
+        self.inner_domain.member(val)
     }
 }
 
-/// A domain with a built-in representation of nullity, that may take on null values at runtime
+/// `InherentNullDomain(element_domain, D)` is the domain of all values of `element_domain` (of type `D`, a domain) 
+/// unioned with all null members in `D`. 
+/// The nullity of members in `D` is indicated via the trait [`InherentNull`].
+/// 
+/// A domain may have multiple possible null values, 
+/// like in the case of floating-point numbers, which have ~`2^MANTISSA_BITS` null values.
+/// 
+/// Because this domain is defined in terms of a union, 
+/// null values need a conceptual definition of equality to uniquely identify them in a set.
+/// In order to construct a well-defined set of members in the domain, 
+/// we consider null values to have the same identity if their bit representation is equal.
 #[derive(Clone, PartialEq)]
 pub struct InherentNullDomain<D: Domain>
     where D::Carrier: InherentNull {

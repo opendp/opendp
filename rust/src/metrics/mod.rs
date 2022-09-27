@@ -5,7 +5,8 @@ use std::{marker::PhantomData};
 use crate::{core::{DatasetMetric, Metric, SensitivityMetric}, domains::type_name};
 use std::fmt::{Debug, Formatter};
 
-// default type for distances between datasets
+/// The type that represents the distance between datasets.
+/// It is used as the associated [`Metric`]::Distance type for e.g. [`SymmetricDistance`], [`InsertDeleteDistance`], etc.
 pub type IntDistance = u32;
 
 
