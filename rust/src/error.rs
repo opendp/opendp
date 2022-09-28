@@ -1,16 +1,18 @@
+//! Error handling utilities.
+
 use std::fmt;
 use std::fmt::Debug;
 
 use backtrace::Backtrace as _Backtrace;
 
-// create an instance of opendp::Fallible
+/// Create an instance of [`Fallible`]
 #[macro_export]
 macro_rules! fallible {
     ($variant:ident) => (Err(err!($variant)));
     ($variant:ident, $($inner:expr),+) => (Err(err!($variant, $($inner),+)));
 }
-// create an instance of opendp::Error
 // "error" is shadowed, and breaks intellij macro resolution
+/// create an instance of [`Error`]
 #[macro_export]
 macro_rules! err {
     // error without message

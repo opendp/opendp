@@ -23,7 +23,8 @@ mod traits;
 /// | ChangeOneDistance | HammingDistance      |
 /// 
 /// # Generics
-/// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
+/// * `D` - Domain
+/// * `MI` - Input Metric
 pub fn make_ordered_random<D, MI>(
     domain: D,
 ) -> Fallible<Transformation<D, D, MI, MI::OrderedMetric>>
@@ -106,7 +107,6 @@ where
         StabilityMap::new(|d_in| d_in * 2),
     ))
 }
-
 
 /// Make a Transformation that converts the unbounded dataset metric `MI` 
 /// to the respective bounded dataset metric with a no-op. 

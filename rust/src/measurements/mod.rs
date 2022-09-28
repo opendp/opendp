@@ -1,4 +1,4 @@
-//! Various implementations of Measurement.
+//! Various measurement constructors.
 //!
 //! The different [`crate::core::Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.

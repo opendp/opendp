@@ -1,3 +1,5 @@
+//! Various combinator constructors.
+
 #[cfg(feature="contrib")]
 mod amplify;
 #[cfg(feature="contrib")]
