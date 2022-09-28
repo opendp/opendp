@@ -76,44 +76,6 @@ impl<T: CheckNull> Domain for AllDomain<T> {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> { Ok(!val.is_null()) }
 }
 
-/// A Domain that carries an underlying Domain in a Box.
-#[derive(Clone, PartialEq, Debug)]
-pub struct BoxDomain<D: Domain> {
-    element_domain: Box<D>
-}
-impl<D: Domain> BoxDomain<D> {
-    pub fn new(element_domain: Box<D>) -> Self {
-        BoxDomain { element_domain }
-    }
-}
-impl<D: Domain> Domain for BoxDomain<D> {
-    type Carrier = Box<D::Carrier>;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        self.element_domain.member(val)
-    }
-}
-
-
-/// A Domain that unwraps a Data wrapper.
-#[derive(Clone, PartialEq, Debug)]
-pub struct DataDomain<D: Domain> {
-    pub form_domain: D,
-}
-impl<D: Domain> DataDomain<D> {
-    pub fn new(form_domain: D) -> Self {
-        DataDomain { form_domain }
-    }
-}
-impl<D: Domain> Domain for DataDomain<D> where
-    D::Carrier: 'static + Any {
-    type Carrier = Box<dyn Any>;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        let val = val.downcast_ref::<D::Carrier>()
-            .ok_or_else(|| err!(FailedCast, "failed to downcast to carrier type"))?;
-        self.form_domain.member(val)
-    }
-}
-
 /// # Proof Definition
 /// `BoundedDomain(lower, upper, T)` is the domain of all **non-null** values of type `T`
 /// between some `lower` bound and `upper` bound.
@@ -196,23 +158,39 @@ impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
 }
 
 
-/// A Domain that contains pairs of values.
-#[derive(Clone, PartialEq, Debug)]
-pub struct PairDomain<D0: Domain, D1: Domain>(pub D0, pub D1);
-impl<D0: Domain, D1: Domain> PairDomain<D0, D1> {
-    pub fn new(element_domain0: D0, element_domain1: D1) -> Self {
-        PairDomain(element_domain0, element_domain1)
-    }
-}
-impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1> {
-    type Carrier = (D0::Carrier, D1::Carrier);
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        Ok(self.0.member(&val.0)? && self.1.member(&val.1)?)
-    }
-}
-
-
 /// A Domain that contains maps of (homogeneous) values.
+/// 
+/// # Proof Definition
+/// `MapDomain(key_domain, value_domain, DK, DV)` consists of all hashmaps where 
+/// keys are elements of key_domain (of type DK) and
+/// values are elements of value_domain (of type DV).
+/// 
+/// The elements in the DK domain are hashable and have a strict equality operation.
+/// 
+/// # Example
+/// ```
+/// use opendp::domains::{MapDomain, AllDomain};
+/// // Rust infers the type from the context, at compile-time.
+/// // Members of this domain are of type `HashMap<&str, i32>`.
+/// let domain = MapDomain::new(AllDomain::new(), AllDomain::new());
+/// 
+/// use opendp::core::Domain;
+/// use std::collections::HashMap;
+/// 
+/// // create a hashmap we can test with
+/// let hashmap = HashMap::from_iter([("a", 23), ("b", 12)]);
+/// assert!(domain.member(&hashmap)?);
+/// 
+/// // Can build up more complicated domains as needed:
+/// use opendp::domains::{InherentNullDomain, BoundedDomain};
+/// let value_domain = InherentNullDomain::new(BoundedDomain::new_closed((0., 1.))?);
+/// let domain = MapDomain::new(AllDomain::new(), value_domain);
+/// 
+/// // The following is not a member of the hashmap domain, because a key is out-of-range:
+/// let hashmap = HashMap::from_iter([("a", 0.), ("b", 2.)]);
+/// assert!(!domain.member(&hashmap)?);
+/// # opendp::error::Fallible::Ok(())
+/// ```
 #[derive(Clone, PartialEq, Debug)]
 pub struct MapDomain<DK: Domain, DV: Domain> where DK::Carrier: Eq + Hash {
     pub key_domain: DK,
@@ -247,6 +225,28 @@ impl<DK: Domain, DV: Domain> CollectionDomain for MapDomain<DK, DV> where DK::Ca
 
 
 /// A Domain that contains vectors of (homogeneous) values.
+/// 
+/// # Proof Definition
+/// `VectorDomain(inner_domain, D)` is the domain of all vectors of elements drawn from domain `inner_domain`. 
+/// 
+/// # Example
+/// ```
+/// use opendp::domains::{VectorDomain, AllDomain, BoundedDomain};
+/// use opendp::core::Domain;
+/// 
+/// // Represents the domain of all vectors.
+/// let all_domain = VectorDomain::new(AllDomain::new());
+/// assert!(all_domain.member(&vec![1, 2, 3])?);
+/// 
+/// // Represents the domain of all bounded vectors.
+/// let bounded_domain = VectorDomain::new(BoundedDomain::new_closed((-10, 10))?);
+/// 
+/// // vec![0] is a member, but vec![12] is not, because 12 is out of bounds of the inner domain
+/// assert!(bounded_domain.member(&vec![0])?);
+/// assert!(!bounded_domain.member(&vec![12])?);
+/// 
+/// # opendp::error::Fallible::Ok(())
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct VectorDomain<D: Domain> {
     pub element_domain: D,
@@ -341,10 +341,13 @@ impl<D: Domain> CollectionDomain for VectorDomain<D> {
     }
 }
 
+/// # Proof Definition
 /// `InherentNullDomain(element_domain, D)` is the domain of all values of `element_domain` (of type `D`, a domain) 
 /// unioned with all null members in `D`. 
+/// 
 /// The nullity of members in `D` is indicated via the trait [`InherentNull`].
 /// 
+/// # Notes
 /// A domain may have multiple possible null values, 
 /// like in the case of floating-point numbers, which have ~`2^MANTISSA_BITS` null values.
 /// 
@@ -352,6 +355,20 @@ impl<D: Domain> CollectionDomain for VectorDomain<D> {
 /// null values need a conceptual definition of equality to uniquely identify them in a set.
 /// In order to construct a well-defined set of members in the domain, 
 /// we consider null values to have the same identity if their bit representation is equal.
+/// 
+/// # Example
+/// ```
+/// use opendp::domains::{InherentNullDomain, AllDomain};
+/// let all_domain = AllDomain::new();
+/// let null_domain = InherentNullDomain::new(all_domain.clone());
+/// 
+/// use opendp::core::Domain;
+/// // f64 NAN is not a member of all_domain, but is a member of null_domain
+/// assert!(!all_domain.member(&f64::NAN)?);
+/// assert!(null_domain.member(&f64::NAN)?);
+/// 
+/// # opendp::error::Fallible::Ok(())
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct InherentNullDomain<D: Domain>
     where D::Carrier: InherentNull {
@@ -389,9 +406,27 @@ macro_rules! impl_inherent_null_float {
 impl_inherent_null_float!(f64, f32);
 
 /// A domain that represents nullity via the Option type.
-/// The value inside is non-null by definition.
-/// Transformations should not emit data that can take on null-values at runtime.
-/// For example, it is fine to have an OptionDomain<AllDomain<f64>>, but the f64 should never be nan
+/// 
+/// # Proof Definition
+/// `OptionNullDomain(element_domain, D)` is the domain of all values of `element_domain` (of type `D`, a domain) 
+/// wrapped in `Some`, as well as `None`.
+/// 
+/// # Notes
+/// This is used to represent nullity for data types like integers or strings, 
+/// for which all values they take on are non-null.
+/// 
+/// # Example
+/// ```
+/// use opendp::domains::{OptionNullDomain, AllDomain};
+/// let null_domain = OptionNullDomain::new(AllDomain::new());
+/// 
+/// use opendp::core::Domain;
+/// // Some(1) is not a member of all_domain, but is a member of null_domain
+/// assert!(null_domain.member(&Some(1))?);
+/// assert!(null_domain.member(&None)?);
+/// 
+/// # opendp::error::Fallible::Ok(())
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct OptionNullDomain<D: Domain> {
     pub element_domain: D,
@@ -416,4 +451,66 @@ impl<D: Domain> Domain for OptionNullDomain<D> {
             .map(|v| self.element_domain.member(v))
             .unwrap_or(Ok(true))
     }
+}
+
+#[cfg(feature = "contrib")]
+pub use contrib::*;
+
+#[cfg(feature = "contrib")]
+mod contrib {
+    use super::*;
+
+    /// A Domain that contains pairs of values.
+    #[derive(Clone, PartialEq, Debug)]
+    pub struct PairDomain<D0: Domain, D1: Domain>(pub D0, pub D1);
+    impl<D0: Domain, D1: Domain> PairDomain<D0, D1> {
+        pub fn new(element_domain0: D0, element_domain1: D1) -> Self {
+            PairDomain(element_domain0, element_domain1)
+        }
+    }
+    impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1> {
+        type Carrier = (D0::Carrier, D1::Carrier);
+        fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+            Ok(self.0.member(&val.0)? && self.1.member(&val.1)?)
+        }
+    }
+    
+    
+    /// A Domain that carries an underlying Domain in a Box.
+    #[derive(Clone, PartialEq, Debug)]
+    pub struct BoxDomain<D: Domain> {
+        element_domain: Box<D>
+    }
+    impl<D: Domain> BoxDomain<D> {
+        pub fn new(element_domain: Box<D>) -> Self {
+            BoxDomain { element_domain }
+        }
+    }
+    impl<D: Domain> Domain for BoxDomain<D> {
+        type Carrier = Box<D::Carrier>;
+        fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+            self.element_domain.member(val)
+        }
+    }
+    
+    
+    /// A Domain that unwraps a Data wrapper.
+    #[derive(Clone, PartialEq, Debug)]
+    pub struct DataDomain<D: Domain> {
+        pub form_domain: D,
+    }
+    impl<D: Domain> DataDomain<D> {
+        pub fn new(form_domain: D) -> Self {
+            DataDomain { form_domain }
+        }
+    }
+    impl<D: Domain> Domain for DataDomain<D> where
+        D::Carrier: 'static + Any {
+        type Carrier = Box<dyn Any>;
+        fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+            let val = val.downcast_ref::<D::Carrier>()
+                .ok_or_else(|| err!(FailedCast, "failed to downcast to carrier type"))?;
+            self.form_domain.member(val)
+        }
+    }    
 }
