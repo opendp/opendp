@@ -85,6 +85,7 @@ where
 type BoundedSumTrans<MI, T> =
     Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, MI, AbsoluteDistance<T>>;
 
+#[doc(hidden)]
 pub trait MakeBoundedSum<MI: Metric>: Sized + CheckNull + Clone + TotalOrd {
     fn make_bounded_sum(bounds: (Self, Self)) -> Fallible<BoundedSumTrans<MI, Self>>;
 }
@@ -162,6 +163,7 @@ type SizedBoundedSumTrans<MI, T> = Transformation<
     MI,
     AbsoluteDistance<T>,
 >;
+#[doc(hidden)]
 pub trait MakeSizedBoundedSum<MI: Metric>: Sized + CheckNull + Clone + TotalOrd {
     fn make_sized_bounded_sum(
         size: usize,
