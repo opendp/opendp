@@ -19,12 +19,6 @@ use crate::error::Fallible;
 use crate::traits::{CheckNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
-/// retrieves the type_name for a given type
-macro_rules! type_name {
-    ($ty:ty) => (std::any::type_name::<$ty>().split("::").last().unwrap_or(""))
-}
-pub(crate) use type_name;
-
 /// # Proof Definition
 /// `AllDomain(T)` is the domain of all **non-null** values of type `T`.
 /// 
@@ -452,6 +446,12 @@ impl<D: Domain> Domain for OptionNullDomain<D> {
             .unwrap_or(Ok(true))
     }
 }
+
+/// retrieves the type_name for a given type
+macro_rules! type_name {
+    ($ty:ty) => (std::any::type_name::<$ty>().split("::").last().unwrap_or(""))
+}
+pub(crate) use type_name;
 
 #[cfg(feature = "contrib")]
 pub use contrib::*;
