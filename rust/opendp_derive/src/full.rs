@@ -44,8 +44,8 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
     let mut output = TokenStream::new();
 
     let proof_link = try_!(
-        (function.proof_path)
-            .map(|rp| make_proof_link(PathBuf::from(rp)))
+        (function.proof_path.as_ref())
+            .map(|rp| make_proof_link(rp))
             .transpose(),
         original_input
     );
@@ -71,7 +71,7 @@ pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream 
     let proven = try_!(Proven::from_ast(attrs, item), original_input);
 
     let proof_path = proven.proof_path.expect("unreachable");
-    let proof_link = try_!(make_proof_link(PathBuf::from(proof_path)), original_input);
+    let proof_link = try_!(make_proof_link(&proof_path), original_input);
 
     // start with link to proof in documentation
     let mut output = TokenStream::from(quote::quote!(#[doc = #proof_link]));

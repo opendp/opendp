@@ -77,7 +77,8 @@ fn get_out_dir() -> Result<PathBuf> {
     Ok(PathBuf::from(manifest_dir))
 }
 
-pub fn make_proof_link(relative_path: PathBuf) -> Result<String> {
+pub fn make_proof_link(relative_path: &str) -> Result<String> {
+    let relative_path = PathBuf::from(relative_path);
     // construct absolute path
     let absolute_path = get_src_dir()?.join(&relative_path);
 
@@ -99,5 +100,5 @@ pub fn make_proof_link(relative_path: PathBuf) -> Result<String> {
         )
     };
 
-    Ok(format!("[Link to proof.]({target})"))
+    Ok(format!("[(Proof Link)]({target}) "))
 }
