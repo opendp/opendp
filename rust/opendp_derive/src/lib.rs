@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 
-#[cfg(feature = "full")]
-mod full;
+#[cfg(feature = "derive")]
+mod derive;
 
 /// When the opendp crate is compiled with the "derive" feature,
 /// the bootstrap procedural macro is executed the function it decorates before the library is compiled.
@@ -277,25 +277,38 @@ mod full;
 /// This is typically only useful on the innermost structural utilities, 
 /// like when converting from an FfiSlice to an AnyObject or vice versa.
 /// 
-#[cfg(feature = "full")]
+#[cfg(feature = "derive")]
 #[proc_macro_attribute]
 pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
-    full::bootstrap(attr_args, input)
+    derive::bootstrap(attr_args, input)
 }
 
-#[cfg(not(feature = "full"))]
+/// When the "derive" crate feature is not enabled, no work is done, and dependencies are simplified.
+/// 
+#[cfg(not(feature = "derive"))]
 #[proc_macro_attribute]
 pub fn bootstrap(_attr_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
 
-#[cfg(feature = "full")]
+/// This shares the same interface as the bootstrap macro, but only accepts the first two arguments:
+/// proof_link, and features.
+/// 
+/// This macro differs from bootstrap in that it is much simpler, 
+/// and is meant to be used on internal functions that don't get foreign language bindings.
+/// This macro throws a compile error if the proof file cannot be found.
+/// 
+/// This macro can also be affixed on trait and struct impls. 
+/// When used on a trait impl, it looks for `TraitName.tex`, 
+/// and when used on a struct impl, it looks for `StructName.tex`.
+/// 
+#[cfg(feature = "derive")]
 #[proc_macro_attribute]
 pub fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
-    full::proven(attr_args, input)
+    derive::proven(attr_args, input)
 }
 
-#[cfg(not(feature = "full"))]
+#[cfg(not(feature = "derive"))]
 #[proc_macro_attribute]
 pub fn proven(_attr_args: TokenStream, input: TokenStream) -> TokenStream {
     input

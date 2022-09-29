@@ -69,7 +69,7 @@ test-plot = ["vega_lite_4"]
 # include extern "C" functions in cdylib
 ffi = ["lazy_static"]
 # execute proc macros to insert proof links
-derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
+derive = ["opendp_tooling", "opendp_derive/derive", "syn", "proc-macro2"]
 # generate python language bindings
 bindings-python = ["ffi", "derive"]
 
