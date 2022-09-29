@@ -33,8 +33,13 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
 Build OpenDP
 ============
 
-Next, you'll need to build the Rust binaries. 
-This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo.
+Make sure you are on the latest rust version
+
+.. code-block:: bash
+  rustup update
+
+
+Next, you'll need to build the Rust binaries. This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo.
 
 .. code-block:: bash
 
