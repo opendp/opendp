@@ -2,7 +2,7 @@
 \input{../../mod.sty}
 
 \title{\texttt{fn make\_count}}
-\author{S\'ilvia Casacuberta, Grace Tian, Connor Wagaman -- wagaman@college.harvard.edu}
+\author{S\'ilvia Casacuberta, Grace Tian, Connor Wagaman}
 \date{}
 
 \begin{document}
@@ -10,22 +10,11 @@
 \maketitle
 
 \contrib
-Proves soundness of \texttt{fn make\_count} in \asOfCommit{mod.rs}{f5bb719}.
+Proves soundness of \rustdoc{transformations}{fn}{make\_count} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Vetting history}
 \begin{itemize}
     \item \vettingPR{513}
-\end{itemize}
-
-\subsection{Versions of definitions documents}
-\label{sec:versioned-docs}
-
-When looking for definitions for terms that appear in this document, the following versions of the definitions documents should be used.
-
-\begin{itemize}
-    \item \textbf{Pseudocode definitions document:} This proof file uses the version of the pseudocode definitions document available as of September 23, 2021, which can be found at \href{https://github.com/opendp/whitepapers/blob/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{this link} (archived \href{https://web.archive.org/web/20210906201546/https://raw.githubusercontent.com/opendp/whitepapers/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{here}).
-    
-    \item \textbf{Proof definitions document:} This file uses the version of the proof definitions document available as of September 23, 2021, which can be found at \href{https://github.com/opendp/whitepapers/blob/proof-defns/proof-defns/proof_defns.pdf}{this link} (archived \href{https://web.archive.org/web/20210906201056/https://raw.githubusercontent.com/opendp/whitepapers/proof-defns/proof-defns/proof_defns.pdf}{here}). 
 \end{itemize}
 
 \section{Pseudocode}
@@ -35,21 +24,21 @@ When looking for definitions for terms that appear in this document, the followi
 \subsection*{Preconditions}
 \begin{itemize}
 
-    \item \texttt{TIA} (atomic input type) is a type with trait \texttt{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
+    \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits}{trait}{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
     \begin{itemize}
-        \item \texttt{CheckNull} so that \texttt{TIA} is a valid atomic type for \texttt{VectorDomain}
+        \item \rustdoc{traits}{trait}{CheckNull} so that \texttt{TIA} is a valid atomic type for \rustdoc{domains}{struct}{VectorDomain}
     \end{itemize}
 
-    \item \texttt{TO} (output type) is a type with trait \texttt{Number}. \texttt{Number} further implies \texttt{TO} has the trait bounds:
+    \item \texttt{TO} (output type) is a type with trait \rustdoc{traits}{trait}{Number}. \texttt{Number} further implies \texttt{TO} has the trait bounds:
     \begin{itemize}
         \item \texttt{CheckNull} so that \texttt{TO} is a valid atomic type for \texttt{AllDomain}
-        \item \texttt{ExactIntCast<usize>} for casting a vector length index of type \texttt{usize} to \texttt{TO}. \texttt{ExactIntCast} further implies \texttt{TO} has the trait bound:
+        \item \rustdoc{traits}{trait}{ExactIntCast} for casting a vector length index of type \texttt{usize} to \texttt{TO}. \texttt{ExactIntCast} further implies \texttt{TO} has the trait bound:
         \begin{itemize}
-            \item \texttt{ExactIntBounds}, which gives the \texttt{MAX\_CONSECUTIVE} value of type \texttt{TO}
+            \item \rustdoc{traits}{trait}{ExactIntBounds}, which gives the \texttt{MAX\_CONSECUTIVE} value of type \texttt{TO}
         \end{itemize}
         
         \item \texttt{One} provides a way to retrieve \texttt{TO}'s representation of 1
-        \item \texttt{DistanceConstant<IntDistance>} to satisfy the preconditions of \texttt{new\_stability\_map\_from\_constant}
+        \item \rustdoc{traits}{trait}{DistanceConstant} to satisfy the preconditions of \texttt{new\_stability\_map\_from\_constant}
     \end{itemize}
 \end{itemize}
 
@@ -60,8 +49,9 @@ def make_count():
     output_domain = AllDomain(TO) |\label{line:output-domain}|
 
     def function(data: Vec[TIA]) -> TO:|\label{line:TO-output}|
+        size = input_domain.size(data)
         try: |\label{line:try-catch}|
-            return TO.exact_int_cast(len(data))
+            return TO.exact_int_cast(size)
         except FailedCast:
             return TO.MAX_CONSECUTIVE |\label{line:except-return}|
 
@@ -129,8 +119,12 @@ Before proceeding with proving the validity of the stability map, we provide a c
     Recall that the definition of \texttt{SymmetricDistance} states that $h_v(z)$ will return the number of occurrences of value $z$ in vector $v$.
     Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is the sum of the number of occurrences of each unique value; 
     this is equivalent to the total number of items in the vector. 
-    By the definition of \texttt{len} available in the pseudocode definitions document linked in section \ref{sec:versioned-docs}, 
-    then, $\sum_{z\in\mathcal{X}} h_v(z)$ is equivalent to \texttt{len(v)}.
+
+    Since \rustdoc{domains}{trait}{CollectionDomain} is implemented for \texttt{VectorDomain<AllDomain<TIA>>}, 
+    we depend on the correctness of the implementation 
+    Conditioned on the correctness of the implementation of \texttt{CollectionDomain} for \texttt{VectorDomain<AllDomain<TIA>>},
+    the variable \texttt{size} is of type \texttt{usize} containing the number of elements in \texttt{arg}.
+    Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is equivalent to \texttt{size}.
 \end{proof}
 
 \begin{proof} \textbf{(Part 3 -- stability map).} 

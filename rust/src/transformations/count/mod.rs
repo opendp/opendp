@@ -9,7 +9,7 @@ use opendp_derive::bootstrap;
 
 use crate::core::{Function, Metric, StabilityMap, Transformation};
 use crate::metrics::{AbsoluteDistance, SymmetricDistance, LpDistance};
-use crate::domains::{AllDomain, MapDomain, VectorDomain};
+use crate::domains::{AllDomain, MapDomain, VectorDomain, CollectionDomain};
 use crate::error::*;
 use crate::traits::{Number, Hashable, Primitive, Float};
 
@@ -30,8 +30,13 @@ pub fn make_count<TIA, TO>(
         VectorDomain::new_all(),
         AllDomain::new(),
         // think of this as: min(arg.len(), TO::max_value())
-        Function::new(move |arg: &Vec<TIA>|
-            TO::exact_int_cast(arg.len()).unwrap_or(TO::MAX_CONSECUTIVE)),
+        Function::new(move |arg: &Vec<TIA>| {
+            // get size via the CollectionDomain trait
+            let size = VectorDomain::<AllDomain<TIA>>::size(arg);
+            
+            // cast to TO, and if cast fails (due to overflow) fill with largest value
+            TO::exact_int_cast(size).unwrap_or(TO::MAX_CONSECUTIVE)
+        }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one())))
