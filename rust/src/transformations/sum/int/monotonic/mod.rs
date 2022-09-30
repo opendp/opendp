@@ -1,4 +1,4 @@
-use num::Zero;
+
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -6,7 +6,7 @@ use crate::{
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd},
+    traits::Number,
 };
 
 use super::AddIsExact;
@@ -41,13 +41,7 @@ pub fn make_bounded_int_monotonic_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance>
-        + CheckNull
-        + Zero
-        + AlertingAbs
-        + SaturatingAdd
-        + AddIsExact
-        + IsMonotonic,
+    T: Number + AddIsExact + IsMonotonic,
 {
     if !T::is_monotonic(bounds.clone()) {
         return fallible!(
@@ -97,13 +91,7 @@ pub fn make_sized_bounded_int_monotonic_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance>
-        + InfSub
-        + CheckNull
-        + Zero
-        + SaturatingAdd
-        + AddIsExact
-        + IsMonotonic,
+    T: Number + AddIsExact + IsMonotonic,
 {
     if !T::is_monotonic(bounds.clone()) {
         return fallible!(

@@ -7,7 +7,7 @@ use crate::{
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{CheckNull, DistanceConstant, InfDiv, InfSub},
+    traits::Number,
     transformations::CanIntSumOverflow,
 };
 
@@ -45,7 +45,7 @@ pub fn make_sized_bounded_int_checked_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + InfSub + CheckNull + InfDiv + AddIsExact + CanIntSumOverflow,
+    T: Number + AddIsExact + CanIntSumOverflow,
     for<'a> T: Sum<&'a T>,
 {
     if T::int_sum_can_overflow(size, bounds.clone())? {

@@ -11,7 +11,7 @@ use crate::measures::MaxDivergence;
 use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
-use crate::traits::{DistanceConstant, CheckNull, InfCast, CastInternalReal};
+use crate::traits::{DistanceConstant, CheckNull, InfCast};
 use crate::traits::samplers::{fill_bytes, SampleBernoulli};
 use std::collections::hash_map::DefaultHasher;
 
@@ -78,43 +78,48 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
 // Multiplies x with scale/alpha and applies randomized rounding to return an integer
 fn scale_and_round<C, T>(x : C, alpha: T, scale: T) -> Fallible<usize> 
     where C: Integer + ToPrimitive,
-          T: CastInternalReal {
-    let mut scalar = scale.neg_inf_into_internal();
-    scalar.div_assign_round(alpha.inf_into_internal(), Round::Down);
+          T: InfCast<Float>,
+          Float: InfCast<T> {
+    let mut scalar = Float::neg_inf_cast(scale)?;
+    scalar.div_assign_round(Float::inf_cast(alpha)?, Round::Down);
     // Truncate bits that represents values below 2^-53
     scalar.set_prec_round((f64::MANTISSA_DIGITS as i32 - scalar.get_exp().unwrap()).max(1) as u32, Round::Down);
 
     let r = Float::with_val(f64::MANTISSA_DIGITS * 2, x.max(C::zero()).to_u64().unwrap_or_default()) * scalar;
-    let floored = f64::inf_from_internal(r.clone().floor()) as usize;
+    let floored = f64::inf_cast(r.clone().floor())? as usize;
     
-    match bool::sample_bernoulli(f64::inf_from_internal(r.fract()), false)? {
+    match bool::sample_bernoulli(f64::inf_cast(r.fract())?, false)? {
         true => Ok(floored + 1),
         false => Ok(floored)
     }
 }
 
 // Probability of flipping bits = 1 / (alpha + 2)
-fn compute_prob<T: CastInternalReal>(alpha: T) -> f64 {
-    let mut a = alpha.neg_inf_into_internal();
+fn compute_prob<T: InfCast<Float>>(alpha: T) -> f64 where Float: InfCast<T> {
+    let mut a = Float::neg_inf_cast(alpha).expect("impl is infallible");
     a.add_assign_round(2, Round::Down);
     a.recip_round(Round::Up);
     // Round up to preserve privacy
-    f64::inf_from_internal(a)
+    f64::inf_cast(a).expect("impl is infallible")
 }
 
 // Due to privacy concerns the current implementation discards bits with significance less than 2^-52 from scale/alpha
-fn check_parameters<T : CastInternalReal>(alpha: T, scale: T) -> bool {
-    scale.inf_into_internal() * Float::with_val(53, 52).exp2() < alpha.neg_inf_into_internal()
+// Concern (Mike): validate that this constant remains correct when T is parameterized by f32
+fn check_parameters<T: InfCast<Float>>(alpha: T, scale: T) -> bool where Float: InfCast<T> {
+    let scale = Float::inf_cast(scale).expect("impl is infallible");
+    let alpha = Float::neg_inf_cast(alpha).expect("impl is infallible");
+    scale * Float::with_val(53, 52).exp2() < alpha
 }
 
 // Computes the DP projection. This corresponds to Algorithm 4 in the paper
 fn compute_projection<K, C, T>(x: &HashMap<K, C>, h: &HashFunctions<K>, alpha: T, scale: T, s: usize) -> Fallible<BitVector> 
     where C: Clone + Integer + ToPrimitive,
-          T: Clone + CastInternalReal {
+          T: Clone + InfCast<Float>,
+          Float: InfCast<T> {
     let mut z = vec![false; s];
 
     for (k, v) in x.iter() {
-        let round = scale_and_round(v.clone(), alpha, scale)?;
+        let round = scale_and_round(v.clone(), alpha.clone(), scale.clone())?;
         h.iter().take(round).for_each(|f| z[f(k) % s] = true); // ^= true TODO: Hash collisions can be handled using OR or XOR
     }
 
@@ -166,8 +171,9 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + CheckNull,
           C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + ToPrimitive,
-          T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
-          AlpState<K,T> : CheckNull {
+          T: 'static + num::Float + DistanceConstant<T> + InfCast<Float> + InfCast<C>,
+          AlpState<K,T> : CheckNull,
+          Float: InfCast<T> {
     
     if alpha.is_sign_negative() || alpha.is_zero() {
         return fallible!(MakeMeasurement, "alpha must be positive")
@@ -215,8 +221,9 @@ pub fn make_base_alp<K, C, T>(total: usize, size_factor: Option<u32>, alpha: Opt
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + Clone + CheckNull,
           C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
-          T: 'static + num::Float + DistanceConstant<T> + CastInternalReal + InfCast<C>,
-          AlpState<K,T> : CheckNull {
+          T: 'static + num::Float + DistanceConstant<T> + InfCast<Float> + InfCast<C>,
+          AlpState<K,T> : CheckNull,
+          Float: InfCast<T> {
 
     let factor = size_factor.unwrap_or(SIZE_FACTOR_DEFAULT) as f64;
     let alpha = alpha.unwrap_or_else(|| T::from(ALPHA_DEFAULT).unwrap());
