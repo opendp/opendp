@@ -152,7 +152,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = open('../../VERSION').readline()
+version = open('../../VERSION').readline().strip()
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
@@ -239,18 +239,17 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-github_frag = ''
-binder_frag = ''
-
-if version != "0.0.0+development":
+if version == "0.0.0+development":
+    branch = "main"
+else:
     branch = f"release/{'.'.join(version.split('.')[:2])}.x"
 
-    github_frag = f'/tree/{branch}'
-    binder_frag = f'/{branch}'
+github_frag = f'/tree/{branch}'
+binder_frag = f'/{branch}'
 
 # insert this header on nbsphinx pages to link to binder and github:
 nbsphinx_prolog = fr"""
-{{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}}
+{{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
 .. raw:: html
 
     <div class="admonition note">
