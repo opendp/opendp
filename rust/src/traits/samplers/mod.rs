@@ -34,6 +34,11 @@ use crate::error::Fallible;
 #[cfg(any(not(feature="use-mpfr"), not(feature="use-openssl")))]
 use rand::Rng;
 
+/// Fill a byte buffer with random bits.
+/// 
+/// # Proof Definition
+/// For any input `buffer`, fill the `buffer` with random bits, where each bit is an iid draw from Bernoulli(p=0.5).
+/// Return `Err(e)` if there is insufficient system entropy, otherwise return `Ok(())`.
 #[cfg(feature="use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     use openssl::rand::rand_bytes;
@@ -42,6 +47,9 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     } else { Ok(()) }
 }
 
+/// Non-securely fill a byte buffer with random bits.
+/// 
+/// Enable `use-openssl` for a secure implementation.
 #[cfg(not(feature="use-openssl"))]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     if let Err(e) = rand::thread_rng().try_fill(buffer) {
@@ -49,7 +57,9 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     } else { Ok(()) }
 }
 
-pub struct GeneratorOpenDP {
+/// A struct that aids in sampling from [`rug`] and [`rand`].
+pub(crate) struct GeneratorOpenDP {
+    /// If an error happens while sampling, it is packed into this struct and thrown later.
     pub error: Fallible<()>,
 }
 
@@ -99,7 +109,13 @@ impl RngCore for GeneratorOpenDP {
     }
 }
 
+/// Shuffle a mutable reference to a collection.
 pub trait Shuffle {
+    /// # Proof Definition
+    /// For any input `self` of type `Self`, 
+    /// mutate `self` such that the elements within are ordered randomly.
+    /// Returns `Err(e)` if there is insufficient system entropy,
+    /// or `Ok(())` otherwise.
     fn shuffle(&mut self) -> Fallible<()>;
 }
 impl<T> Shuffle for Vec<T> {
