@@ -30,9 +30,9 @@ pub type IntDistance = u32;
 /// # Proof Definition
 /// 
 /// ### `d`-closeness
-/// For any two vectors $`u, v \in \texttt{D}`$ and any $`d`$ of type [`IntDistance`], 
-/// we say that $`u, v`$ are $`d`$-close under the symmetric distance metric 
-/// (abbreviated as $`d_{Sym}`$) whenever 
+/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of type [`IntDistance`], 
+/// we say that $u, v$ are $d$-close under the symmetric distance metric 
+/// (abbreviated as $d_{Sym}$) whenever 
 /// 
 /// ```math
 /// d_{Sym}(u, v) = |MultiSet(u) \Delta MultiSet(v)| \leq d
@@ -79,9 +79,9 @@ impl DatasetMetric for SymmetricDistance {}
 /// # Proof Definition
 /// 
 /// ### `d`-closeness
-/// For any two vectors $`u, v \in \texttt{D}`$ and any $`d`$ of type [`IntDistance`], 
-/// we say that $`u, v`$ are $`d`$-close under the insert-delete distance metric 
-/// (abbreviated as $`d_{ID}`$) whenever 
+/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of type [`IntDistance`], 
+/// we say that $u, v$ are $d$-close under the insert-delete distance metric 
+/// (abbreviated as $d_{ID}$) whenever 
 /// 
 /// ```math
 /// d_{ID}(u, v) \leq d
@@ -129,13 +129,13 @@ impl DatasetMetric for InsertDeleteDistance {}
 /// # Proof Definition
 /// 
 /// ### `d`-closeness
-/// For any two datasets $`u, v \in \texttt{D}`$ and any $`d`$ of type [`IntDistance`], 
-/// we say that $`u, v`$ are $`d`$-close under the change-one distance metric (abbreviated as $`d_{CO}`$) whenever
+/// For any two datasets $u, v \in \texttt{D}$ and any $d$ of type [`IntDistance`], 
+/// we say that $u, v$ are $d$-close under the change-one distance metric (abbreviated as $d_{CO}$) whenever
 /// 
 /// ```math
 /// d_{CO}(u, v) = d_{Sym}(u, v) / 2 \leq d
 /// ```
-/// $`d_{Sym}`$ is in reference to the [`SymmetricDistance`].
+/// $d_{Sym}$ is in reference to the [`SymmetricDistance`].
 /// 
 /// # Note
 /// Since the dataset size is fixed, 
@@ -186,8 +186,8 @@ impl DatasetMetric for ChangeOneDistance {}
 /// # Proof Definition
 /// 
 /// ### `d`-closeness
-/// For any two datasets $`u, v \in \texttt{D}`$ and any $`d`$ of type [`IntDistance`], 
-/// we say that $`u, v`$ are $`d`$-close under the Hamming distance metric (abbreviated as $`d_{Ham}`$) whenever
+/// For any two datasets $u, v \in \texttt{D}$ and any $d$ of type [`IntDistance`], 
+/// we say that $u, v$ are $d$-close under the Hamming distance metric (abbreviated as $d_{Ham}$) whenever
 /// 
 /// ```math
 /// d_{Ham}(u, v) = \#\{i: u_i \neq v_i\} \leq d
@@ -227,19 +227,19 @@ impl Metric for HammingDistance {
 impl DatasetMetric for HammingDistance {}
 
 
-/// The $`L_p`$ distance between two vector-valued aggregates.
+/// The $L_p$ distance between two vector-valued aggregates.
 /// 
 /// # Proof Definition
 /// 
-/// ### `d`-closeness
-/// For any two vectors $`u, v \in \texttt{D}`$ and $`d`$ of generic type $`\texttt{Q}`$, 
-/// we say that $`u, v`$ are $`d`$-close under the the $`L_p`$ distance metric (abbreviated as $`d_{LP}`$) whenever
+/// ### $d$-closeness
+/// For any two vectors $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$, 
+/// we say that $u, v$ are $d$-close under the the $L_p$ distance metric (abbreviated as $d_{LP}$) whenever
 /// 
 /// ```math
 /// d_{LP}(u, v) = \|u_i - v_i\|_p \leq d
 /// ```
 /// 
-/// If $`u`$ and $`v`$ are different lengths, then
+/// If $u$ and $v$ are different lengths, then
 /// ```math
 /// d_{LP}(u, v) = \infty
 /// ```
@@ -271,12 +271,12 @@ impl<const P: usize, Q> Metric for LpDistance<P, Q> {
 }
 impl<const P: usize, Q> SensitivityMetric for LpDistance<P, Q> {}
 
-/// The $`L_1`$ distance between two vector-valued aggregates.
+/// The $L_1$ distance between two vector-valued aggregates.
 /// 
 /// Refer to [`LpDistance`] for details.
 pub type L1Distance<Q> = LpDistance<1, Q>;
 
-/// The $`L_2`$ distance between two vector-valued aggregates.
+/// The $L_2$ distance between two vector-valued aggregates.
 /// 
 /// Refer to [`LpDistance`] for details.
 pub type L2Distance<Q> = LpDistance<2, Q>;
@@ -286,8 +286,8 @@ pub type L2Distance<Q> = LpDistance<2, Q>;
 /// # Proof Definition
 /// 
 /// ### `d`-closeness
-/// For any two scalars $`u, v \in \texttt{D}`$ and $`d`$ of generic type $`\texttt{Q}`$, 
-/// we say that $`u, v`$ are $`d`$-close under the the the absolute distance metric (abbreviated as $`d_{Abs}`$) whenever
+/// For any two scalars $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$, 
+/// we say that $u, v$ are $d$-close under the the the absolute distance metric (abbreviated as $d_{Abs}$) whenever
 /// 
 /// ```math
 /// d_{Abs}(u, v) = |u - v| \leq d
@@ -325,8 +325,8 @@ impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
 /// # Proof Definition
 /// 
 /// ### `d`-closeness
-/// For any two datasets $`u, v \in \texttt{AllDomain<T>}`$ and any $`d`$ of type [`IntDistance`], 
-/// we say that $`u, v`$ are $`d`$-close under the discrete metric (abbreviated as $`d_{Eq}`$) whenever
+/// For any two datasets $u, v \in \texttt{AllDomain<T>}$ and any $d$ of type [`IntDistance`], 
+/// we say that $u, v$ are $d$-close under the discrete metric (abbreviated as $d_{Eq}$) whenever
 /// 
 /// ```math
 /// d_{Eq}(u, v) = \mathbb{1}[u = v] \leq d
