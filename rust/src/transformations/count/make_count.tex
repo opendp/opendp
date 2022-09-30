@@ -80,11 +80,11 @@ def make_count():
 \end{proof}
 
 \begin{proof} \textbf{(Part 2 -- domain-metric compatibility).}
-    Our \texttt{input\_metric} of \texttt{SymmetricDistance} is compatible with any domain of the form \texttt{VectorDomain(inner\_domain)}, 
+    Our \texttt{input\_metric} of \rustdoc{metrics}{struct}{SymmetricDistance} is compatible with any domain of the form \texttt{VectorDomain(inner\_domain)}, 
     and our \texttt{input\_domain} of \\\texttt{VectorDomain(AllDomain(TIA))} is of this form. 
     Therefore our \texttt{input\_domain} and \texttt{input\_metric} are compatible.
 
-    Our \texttt{output\_metric} of \texttt{AbsoluteDistance(TO)} is compatible with any domain of the form \texttt{AllDomain(T)} where \texttt{T} has the trait \texttt{InfSub}, 
+    Our \texttt{output\_metric} of \rustdoc{metrics}{struct}{AbsoluteDistance} is compatible with any domain of the form \texttt{AllDomain(T)} where \texttt{T} has the trait \texttt{InfSub}, 
     and our \texttt{output\_domain} of \texttt{AllDomain(TO)} is of this form and \texttt{TO} has the necessary trait.
     Therefore our \texttt{input\_domain} and \texttt{input\_metric} are compatible.
 \end{proof}
@@ -93,7 +93,8 @@ Before proceeding with proving the validity of the stability map, we provide a c
 
 \begin{lemma}
     \label{dsym-sens}
-    $|\function(u) - \function(v)| \leq |\texttt{len(u)} - \texttt{len(v)}|$.
+    $|\function(u) - \function(v)| \leq |\texttt{len(u)} - \texttt{len(v)}|$, 
+    where \texttt{len} is an alias for \\ \texttt{input\_domain.size}.
 \end{lemma}
 
 \begin{proof}
@@ -128,7 +129,7 @@ Before proceeding with proving the validity of the stability map, we provide a c
 \end{proof}
 
 \begin{proof} \textbf{(Part 3 -- stability map).} 
-    Take any two elements $u, v$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+    Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$, 
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
     Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
     These assumptions are used to establish the following inequality:
@@ -137,10 +138,10 @@ Before proceeding with proving the validity of the stability map, we provide a c
         &= |\sum_{z\in \mathcal{X}} h_{\texttt{u}}(z) - \sum_{z\in \mathcal{X}} h_{\texttt{v}}(z)| &&\text{by } \ref{lemma:len-sum-equiv} \\
         &= |\sum_{z\in \mathcal{X}}\left(h_{\texttt{u}}(z) - h_{\texttt{v}}(z)\right)| &&\text{by algebra} \\
         &\leq \sum_{z\in \mathcal{X}}|h_{\texttt{u}}(z) - h_{\texttt{v}}(z)| &&\text{by triangle inequality} \\
-        &= d_{Sym}(u, v) &&\text{by } \texttt{SymmetricDistance}\\
+        &= d_{Sym}(u, v) &&\text{by } \rustdoc{metrics}{struct}{SymmetricDistance}\\
         &\leq \din &&\text{by the first assumption} \\
-        &\leq \texttt{TO.inf\_cast}(\din) &&\text{by } \texttt{InfCast} \\
-        &\leq \texttt{TO.one().inf\_mul(TO.inf\_cast(\din))} &&\text{by } \texttt{InfMul} \\
+        &\leq \texttt{TO.inf\_cast}(\din) &&\text{by } \rustdoc{traits}{trait}{InfCast} \\
+        &\leq \texttt{TO.one().inf\_mul(TO.inf\_cast(\din))} &&\text{by } \rustdoc{traits}{trait}{InfMul} \\
         &=\texttt{stability\_map}(\din) &&\text{by pseudocode line } \ref{line:stability-map} \\
         &\leq \dout &&\text{by the second assumption}
     \end{align*}
