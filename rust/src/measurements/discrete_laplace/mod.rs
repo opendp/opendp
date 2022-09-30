@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Function, Measurement, SensitivityMetric},
+    core::{Domain, Function, Measurement, Metric},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::MaxDivergence,
@@ -60,7 +60,7 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
 
 #[doc(hidden)]
 pub trait DiscreteLaplaceDomain: MappableDomain + Default {
-    type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
+    type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
 impl<T: Clone + CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;

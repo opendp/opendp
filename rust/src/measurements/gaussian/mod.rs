@@ -2,7 +2,7 @@ use num::Float as _;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measure, Measurement, PrivacyMap, SensitivityMetric},
+    core::{Measure, Measurement, PrivacyMap, Metric},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
@@ -17,7 +17,7 @@ mod ffi;
 
 #[doc(hidden)]
 pub trait GaussianDomain: MappableDomain + Default {
-    type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
+    type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
 impl<T: Clone + CheckNull> GaussianDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
