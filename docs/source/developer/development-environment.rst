@@ -44,9 +44,15 @@ This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
-Substitute ``cargo build`` with ``cargo test``, ``cargo doc`` or ``cargo check`` to test, build Rust documentation, or run a lightweight check that the code is valid.
+Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
 
-In the above command, the features ``untrusted`` and ``bindings-python`` are enabled.
+You can also build the rust documentation directly with:
+
+.. code-block:: bash
+    
+    cargo rustdoc --features untrusted,derive -- --html-in-header opendp_tooling/katex.html
+
+In the above commands, the features ``untrusted``, ``bindings-python`` and ``derive`` are enabled.
 Setting a feature changes how the crate compiles:
 
 
@@ -257,6 +263,26 @@ These tasks can be used to directly build or test OpenDP.
                 ],
                 "group": "build",
                 "label": "rust: cargo test ffi",
+                "presentation": {
+                    "clear": true
+                }
+            },
+            {
+                "type": "cargo",
+                "command": "rustdoc",
+                "problemMatcher": {
+                    "base": "$rustc",
+                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                },
+                "options": {
+                    "cwd": "./rust"
+                },
+                "args": [
+                    "--features", "bindings-python untrusted",
+                    "--", "--html-in-header", "opendp_tooling/katex.html"
+                ],
+                "group": "build",
+                "label": "rust: cargo rustdoc",
                 "presentation": {
                     "clear": true
                 }
