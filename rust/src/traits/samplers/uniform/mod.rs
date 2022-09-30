@@ -12,30 +12,14 @@ use num::One;
 #[cfg(feature="use-mpfr")]
 use rug::rand::ThreadRandState;
 
+/// Sample exactly from the uniform distribution.
 pub trait SampleUniform: Sized {
-
-    /// Returns a random sample from Uniform[0,1).
-    ///
-    /// This algorithm is taken from [Mironov (2012)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.366.5957&rep=rep1&type=pdf)
-    /// and is important for making some of the guarantees in the paper.
-    ///
-    /// The idea behind the uniform sampling is to first sample a "precision band".
-    /// Each band is a range of floating point numbers with the same level of arithmetic precision
-    /// and is situated between powers of two.
-    /// A band is sampled with probability relative to the unit of least precision using the Geometric distribution.
-    /// That is, the uniform sampler will generate the band [1/2,1) with probability 1/2, [1/4,1/2) with probability 1/4,
-    /// and so on.
-    ///
-    /// Once the precision band has been selected, floating numbers numbers are generated uniformly within the band
-    /// by generating a 52-bit mantissa uniformly at random.
-    ///
-    /// # Arguments
-    ///
-    /// `min`: f64 minimum of uniform distribution (inclusive)
-    /// `max`: f64 maximum of uniform distribution (non-inclusive)
-    ///
-    /// # Return
-    /// Random draw from Unif[min, max).
+    /// # Proof Definition
+    /// Return `Err(e)` if there is insufficient system entropy, or
+    /// `Ok(sample)`, where `sample` a draw from Uniform[0,1).
+    /// 
+    /// For non-uniform data types like floats, 
+    /// the probability of sampling each value is proportional to the distance to the next neighboring float.
     ///
     /// # Example
     /// ```
@@ -48,11 +32,25 @@ pub trait SampleUniform: Sized {
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self>;
 }
 
+
 impl<T, B> SampleUniform for T
     where 
         T: SampleMantissa<Bits=B>,
         B: ExactIntCast<usize> + Sub<Output=B> + One,
         usize: ExactIntCast<B> {
+
+    /// This algorithm is taken from [Mironov (2012)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.366.5957&rep=rep1&type=pdf)
+    /// and is important for making some of the guarantees in the paper.
+    ///
+    /// The idea behind the uniform sampling is to first sample a "precision band".
+    /// Each band is a range of floating point numbers with the same level of arithmetic precision
+    /// and is situated between powers of two.
+    /// A band is sampled with probability relative to the unit of least precision using the Geometric distribution.
+    /// That is, the uniform sampler will generate the band [1/2,1) with probability 1/2, [1/4,1/2) with probability 1/4,
+    /// and so on.
+    ///
+    /// Once the precision band has been selected, floating numbers numbers are generated uniformly within the band
+    /// by generating a 52-bit mantissa uniformly at random.
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
         // The unbiased exponent of Uniform([0, 1)) is in 
         //   f64: [-1023, -1]; f32: [-127, -1]
@@ -92,7 +90,12 @@ impl<T, B> SampleUniform for T
     }
 }
 
+/// Sample the mantissa of a uniformly-distributed floating-point number.
 trait SampleMantissa: FloatBits {
+    /// # Proof Definition
+    /// Returns `Err(e)` if there is insufficient system entropy, or
+    /// `Some(sample)`, where `sample` is a bit-vector of zeros, 
+    /// but the last Self::MANTISSA_BITS are iid Bernoulli(p=0.5) draws.
     fn sample_mantissa() -> Fallible<Self::Bits>;
 }
 
@@ -116,14 +119,20 @@ macro_rules! impl_sample_mantissa {
 impl_sample_mantissa!(f64, 0b00001111);
 impl_sample_mantissa!(f32, 0b01111111);
 
-
+/// Sample an integer uniformly over `[Self::MIN, upper]`.
 pub trait SampleUniformInt: Sized {
-    /// sample uniformly from [Self::MIN, Self::MAX]
+    /// # Proof Definition
+    /// Return either `Err(e)` if there is insufficient system entropy,
+    /// or `Some(sample)`, where `sample` is uniformly distributed over `[Self::MIN, Self::MAX]`.
     fn sample_uniform_int() -> Fallible<Self>;
 }
 
+/// Sample an integer uniformly over `[Self::MIN, upper]`
 pub trait SampleUniformIntBelow: Sized {
-    /// sample uniformly from [0, upper)
+    /// # Proof Definition
+    /// For any setting of `upper`, 
+    /// return either `Err(e)` if there is insufficient system entropy,
+    /// or `Some(sample)`, where `sample` is uniformly distributed over `[Self::MIN, upper]`.
     fn sample_uniform_int_below(upper: Self) -> Fallible<Self>;
 }
 

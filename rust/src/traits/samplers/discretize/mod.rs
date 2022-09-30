@@ -9,8 +9,23 @@ use crate::error::Fallible;
 
 use super::sample_discrete_gaussian;
 
+/// Sample from the discrete laplace distribution on $\mathbb{Z} \cdot 2^k$.
+/// 
+/// Implemented for floating-point types f32 and f64.
+/// 
+/// k can be chosen to be very negative, 
+/// to get an arbitrarily fine approximation to continuous laplacian noise.
 pub trait SampleDiscreteLaplaceZ2k: Sized {
     #![allow(non_snake_case)]
+    /// # Proof Definition
+    /// For any setting of the input arguments, return either 
+    /// `Err(e)` if there is insufficient system entropy, or
+    /// `Ok(sample)`, where `sample` is distributed according to a modified discrete_laplace(`shift`, `scale`).
+    /// 
+    /// The modifications to the discrete laplace are as follows:
+    /// - the `shift` is rounded to the nearest multiple of $2^k$
+    /// - the `sample` is rounded to the nearest value of type `Self`.
+    /// - the noise granularity is in increments of $2^k$.
     fn sample_discrete_laplace_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
 }
 
@@ -31,8 +46,23 @@ where
     }
 }
 
+/// Sample from the discrete gaussian distribution on $\mathbb{Z} \cdot 2^k$.
+/// 
+/// Implemented for floating-point types f32 and f64.
+/// 
+/// k can be chosen to be very negative, 
+/// to get an arbitrarily fine approximation to continuous gaussian noise.
 pub trait SampleDiscreteGaussianZ2k: Sized {
     #![allow(non_snake_case)]
+    /// # Proof Definition
+    /// For any setting of the input arguments, return either 
+    /// `Err(e)` if there is insufficient system entropy, or
+    /// `Ok(sample)`, where `sample` is distributed according to a modified discrete_gaussian(`shift`, `scale`).
+    /// 
+    /// The modifications to the discrete gaussian are as follows:
+    /// - the `shift` is rounded to the nearest multiple of $2^k$
+    /// - the `sample` is rounded to the nearest value of type `Self`.
+    /// - the noise granularity is in increments of $2^k$.
     fn sample_discrete_gaussian_Z2k(shift: Self, scale: Self, k: i32) -> Fallible<Self>;
 }
 
@@ -54,7 +84,10 @@ where
 }
 
 
-// find index of nearest multiple of 2^k from x
+/// Find index of nearest multiple of $2^k$ from x.
+/// 
+/// # Proof Definition
+/// For any setting of input arguments, return the integer $argmin_i |i 2^k - x|$.
 fn find_nearest_multiple_of_2k(x: Rational, k: i32) -> Integer {
     // exactly compute shift/2^k and break into fractional parts
     let (sx, sy) = (x >> k).into_numer_denom();
@@ -63,14 +96,23 @@ fn find_nearest_multiple_of_2k(x: Rational, k: i32) -> Integer {
     sx.div_rem_round(sy).0
 }
 
-// exactly multiply x by 2^k
+/// Exactly multiply x by 2^k.
+/// 
+/// This is a postprocessing operation.
 fn x_mul_2k(x: Integer, k: i32) -> Rational {
     Rational::from((x, Integer::one())) << k
 }
 
-
+/// Casting between floating-point and rational values.
 pub trait CastInternalRational {
+    /// # Proof Definition
+    /// For any [`Rational`] `v`, return `out`, the nearest representable value of type `Self`.
+    /// `out` may saturate to +/- infinity.
     fn from_rational(v: Rational) -> Self;
+    /// # Proof Definition
+    /// For any `self` of type `Self`, either return 
+    /// `Err(e)` if `self` is not finite, or
+    /// `Ok(out)`, where `out` is a [`Rational`] that exactly represents `self`.
     fn into_rational(self) -> Fallible<Rational>;
 }
 
