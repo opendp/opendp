@@ -24,21 +24,21 @@ pub trait CheckNull {
 /// TotalOrd shares the same interface as Ord, but with a total_ prefix on methods
 pub trait TotalOrd: PartialOrd + Sized {
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, returns `Ok(out)` or `Err(e)`.
-    /// The implementation returns `Err(e)` if either `v1` or `v2` are null.
-    /// Otherwise `out` is the [`Ordering`] of `v1` and `v2` as defined by [`PartialOrd`].
+    /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `self` or `other` are null.
+    /// Otherwise `out` is the [`Ordering`] of `self` and `other` as defined by [`PartialOrd`].
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering>;
 
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, returns `Ok(out)` or `Err(e)`.
-    /// The implementation returns `Err(e)` if either `v1` or `v2` are null.
-    /// Otherwise returns `Some(out)` where `out` is the greater of `v1` and `v2` as defined by [`PartialOrd`].
+    /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `self` or `other` are null.
+    /// Otherwise returns `Some(out)` where `out` is the greater of `self` and `other` as defined by [`PartialOrd`].
     fn total_max(self, other: Self) -> Fallible<Self> { max_by(self, other, TotalOrd::total_cmp) }
 
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, returns `Ok(out)` or `Err(e)`.
-    /// The implementation returns `Err(e)` if either `v1` or `v2` are null.
-    /// Otherwise returns `Some(out)` where `out` is the lesser of `v1` and `v2` as defined by [`PartialOrd`].
+    /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `self` or `other` are null.
+    /// Otherwise returns `Some(out)` where `out` is the lesser of `self` and `other` as defined by [`PartialOrd`].
     fn total_min(self, other: Self) -> Fallible<Self> { min_by(self, other, TotalOrd::total_cmp) }
 
     /// # Proof Definition

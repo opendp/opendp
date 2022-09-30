@@ -14,8 +14,8 @@ use crate::error::Fallible;
 /// Casting fails for any value not between Self::MIN_CONSECUTIVE and Self::MAX_CONSECUTIVE.
 pub trait ExactIntCast<TI>: Sized + ExactIntBounds {
     /// # Proof Definition
-    /// For any `value` of type `TI`, `Self::exact_int_cast(value)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out = value$.
+    /// For any `v` of type `TI`, `Self::exact_int_cast(value)` either returns `Ok(out)` or `Err(e)`,
+    /// where $out = v$.
     fn exact_int_cast(v: TI) -> Fallible<Self>;
 } 
 
@@ -38,20 +38,20 @@ pub trait ExactIntBounds {
 /// For example, casting a 128_u8 to i8 doesn't saturate to i8::MAX (127), it errors.
 pub trait InfCast<TI>: Sized {
     /// # Proof Definition
-    /// For any `value` of type `TI`, `Self::inf_cast(value)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out \ge value$.
+    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Ok(out)` or `Err(e)`,
+    /// where $out \ge v$.
     fn inf_cast(v: TI) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `value` of type `TI`, `Self::inf_cast(value)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out \le value$.
+    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Ok(out)` or `Err(e)`,
+    /// where $out \le v$.
     fn neg_inf_cast(v: TI) -> Fallible<Self>;
 }
 
 /// Fallible casting where the casted value is rounded to nearest.
 pub trait RoundCast<TI>: Sized {
     /// # Proof Definition
-    /// For any `value` of type `TI`, `Self::inf_cast(value)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out = argmin_{x \in TI} |x - value|$.
+    /// For any `v` of type `TI`, `Self::inf_cast(v)` either returns `Ok(out)` or `Err(e)`,
+    /// where $out = argmin_{x \in TI} |x - v|$.
     fn round_cast(v: TI) -> Fallible<Self>;
 }
 
