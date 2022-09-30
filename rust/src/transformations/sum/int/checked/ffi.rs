@@ -4,11 +4,10 @@ use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
-use crate::metrics::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{CheckNull, DistanceConstant, ExactIntCast, InfDiv, InfSub, AlertingAbs};
+use crate::traits::Number;
 use crate::transformations::make_sized_bounded_int_checked_sum;
 use crate::transformations::sum::int::AddIsExact;
 
@@ -20,14 +19,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_int_checked_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: 'static
-            + DistanceConstant<IntDistance>
-            + ExactIntCast<usize>
-            + AlertingAbs
-            + InfSub
-            + CheckNull
-            + InfDiv
-            + AddIsExact,
+        T: 'static + Number + AddIsExact,
         for<'a> T: Sum<&'a T>,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();

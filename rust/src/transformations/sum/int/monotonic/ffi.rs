@@ -1,15 +1,12 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
-use num::Zero;
-
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
-use crate::metrics::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd};
+use crate::traits::Number;
 use crate::transformations::{
     make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum, AddIsExact, IsMonotonic,
 };
@@ -21,13 +18,7 @@ pub extern "C" fn opendp_transformations__make_bounded_int_monotonic_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance>
-            + CheckNull
-            + Zero
-            + AlertingAbs
-            + SaturatingAdd
-            + AddIsExact
-            + IsMonotonic,
+        T: Number + AddIsExact + IsMonotonic,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_bounded_int_monotonic_sum::<T>(bounds).into_any()
@@ -46,13 +37,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_int_monotonic_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance>
-            + InfSub
-            + CheckNull
-            + Zero
-            + SaturatingAdd
-            + AddIsExact
-            + IsMonotonic,
+        T: Number + AddIsExact + IsMonotonic,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_int_monotonic_sum::<T>(size, bounds).into_any()

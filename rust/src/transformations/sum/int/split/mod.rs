@@ -7,7 +7,7 @@ use crate::{
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd},
+    traits::{Number, SaturatingAdd},
 };
 
 use super::AddIsExact;
@@ -75,8 +75,7 @@ pub fn make_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + SplitSatSum + CheckNull + AlertingAbs + AddIsExact,
-    IntDistance: InfCast<T>,
+    T: Number + SplitSatSum + AddIsExact
 {
     let (lower, upper) = bounds.clone();
 
@@ -120,8 +119,7 @@ pub fn make_sized_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + InfSub + SplitSatSum + CheckNull + AlertingAbs + AddIsExact,
-    IntDistance: InfCast<T>,
+    T: Number + SplitSatSum + AddIsExact
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;

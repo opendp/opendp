@@ -7,16 +7,44 @@ use crate::error::Fallible;
 
 use super::ExactIntCast;
 
-pub trait CheckNull { fn is_null(&self) -> bool; }
+/// Checks if a value is null.
+/// 
+/// Since [`crate::domains::AllDomain`] only includes non-null values,
+/// this trait is necessary for its member check.
+pub trait CheckNull { 
+    /// # Proof Definition
+    /// For any `value` of type `Self`, returns true if is null, otherwise false.
+    fn is_null(&self) -> bool; 
+}
 
 /// TotalOrd is well-defined on types that are Ord on their non-null values.
+/// 
 /// The framework provides a way to ensure values are non-null at runtime.
 /// This trait should only be used when the framework can rely on these assurances.
 /// TotalOrd shares the same interface as Ord, but with a total_ prefix on methods
 pub trait TotalOrd: PartialOrd + Sized {
+    /// # Proof Definition
+    /// For any two values `v1` and `v2` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `v1` or `v2` are null.
+    /// Otherwise `out` is the [`Ordering`] of `v1` and `v2` as defined by [`PartialOrd`].
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering>;
+
+    /// # Proof Definition
+    /// For any two values `v1` and `v2` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `v1` or `v2` are null.
+    /// Otherwise returns `Some(out)` where `out` is the greater of `v1` and `v2` as defined by [`PartialOrd`].
     fn total_max(self, other: Self) -> Fallible<Self> { max_by(self, other, TotalOrd::total_cmp) }
+
+    /// # Proof Definition
+    /// For any two values `v1` and `v2` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `v1` or `v2` are null.
+    /// Otherwise returns `Some(out)` where `out` is the lesser of `v1` and `v2` as defined by [`PartialOrd`].
     fn total_min(self, other: Self) -> Fallible<Self> { min_by(self, other, TotalOrd::total_cmp) }
+
+    /// # Proof Definition
+    /// For any three values `self`, `min` and `max` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if any of `self`, `min` or `max` are null.
+    /// Otherwise returns `Some(out)` where `out` is `min` if $self \lt min$, `max` if $self \gt max$, or else `self`.
     fn total_clamp(self, min: Self, max: Self) -> Fallible<Self> {
         if min > max { return fallible!(FailedFunction, "min cannot be greater than max") }
         Ok(if let Ordering::Less = self.total_cmp(&min)? {
@@ -28,54 +56,109 @@ pub trait TotalOrd: PartialOrd + Sized {
         })
     }
 
+    /// # Proof Definition
+    /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `self` or `other` are null.
+    /// Otherwise returns `Ok(out)` where `out` is true if $self \lt other$.
     fn total_lt(&self, other: &Self) -> Fallible<bool> {
         Ok(self.total_cmp(other)?.is_lt())
     }
 
+    /// # Proof Definition
+    /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `self` or `other` are null.
+    /// Otherwise returns `Ok(out)` where `out` is true if $self \le other$.
     fn total_le(&self, other: &Self) -> Fallible<bool> {
         Ok(self.total_cmp(other)?.is_le())
     }
 
+    /// # Proof Definition
+    /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `self` or `other` are null.
+    /// Otherwise returns `Ok(out)` where `out` is true if $self \gt other$.
     fn total_gt(&self, other: &Self) -> Fallible<bool> {
         Ok(self.total_cmp(other)?.is_gt())
     }
 
+    /// # Proof Definition
+    /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// The implementation returns `Err(e)` if either `self` or `other` are null.
+    /// Otherwise returns `Ok(out)` where `out` is true if $self \ge other$.
     fn total_ge(&self, other: &Self) -> Fallible<bool> {
         Ok(self.total_cmp(other)?.is_ge())
     }
 }
 
 
+/// Bitwise consts and decompositions for float types.
 pub trait FloatBits: Copy + Sized + ExactIntCast<Self::Bits> {
+
+    /// # Proof Definition
+    /// An associated type that captures the bit representation of Self.
     type Bits: Copy + One + Zero + Eq
     + Shr<Output=Self::Bits> + Shl<Output=Self::Bits>
     + BitAnd<Output=Self::Bits> + BitOr<Output=Self::Bits> + Sub<Output=Self::Bits> + From<bool>;
-    // Number of bits in exponent
+    /// # Proof Definition
+    /// A constant equal to the number of bits in exponent.
     const EXPONENT_BITS: Self::Bits;
-    // Number of bits in mantissa, equal to Self::MANTISSA_DIGITS - 1
+    /// # Proof Definition
+    /// A constant equal to the number of bits in mantissa.
+    /// 
+    /// # Note
+    /// This should be equal to Self::MANTISSA_DIGITS - 1, because of the implied leading bit.
     const MANTISSA_BITS: Self::Bits;
-    // Bias correction of the exponent
+
+    /// # Proof Definition
+    /// A constant equal to the bias correction of the exponent.
     const EXPONENT_BIAS: Self::Bits;
 
+    /// # Proof Definition
+    /// For any `self` of type `Self`, returns true if `self` is positive, otherwise false.
     fn sign(self) -> bool {
         !(self.to_bits() & (Self::Bits::one() << (Self::EXPONENT_BITS + Self::MANTISSA_BITS))).is_zero()
     }
+    
+    /// # Proof Definition
+    /// For any `self` of type `Self`, returns the bits representing the exponent, without bias correction.
     fn raw_exponent(self) -> Self::Bits {
+        // (shift the exponent to the rightmost bits) & (mask away everything but the trailing EXPONENT_BITS)
         (self.to_bits() >> Self::MANTISSA_BITS) & ((Self::Bits::one() << Self::EXPONENT_BITS) - Self::Bits::one())
     }
+
+    /// # Proof Definition
+    /// For any `self` of type `Self`, returns the bits representing the mantissa.
     fn mantissa(self) -> Self::Bits {
+        // (bits) & (mask away everything but the trailing MANTISSA_BITS)
         self.to_bits() & ((Self::Bits::one() << Self::MANTISSA_BITS) - Self::Bits::one())
     }
+
+    /// # Proof Definition
+    /// For any set of arguments, returns the corresponding floating-point number according to IEEE-754.
+    /// 
+    /// # Notes
+    /// Assumes that the bits to the left of the bit range of the raw_exponent and mantissa are not set.
     fn from_raw_components(sign: bool, raw_exponent: Self::Bits, mantissa: Self::Bits) -> Self {
+        // shift the sign to the leading bit
         let sign = Self::Bits::from(sign) << (Self::EXPONENT_BITS + Self::MANTISSA_BITS);
+        // shift the exponent to the next EXPONENT_BITS
         let raw_exponent = raw_exponent << Self::MANTISSA_BITS;
 
+        // mantissa is already in place, bit-or them together
         Self::from_bits(sign | raw_exponent | mantissa)
     }
+
+    /// # Proof Definition
+    /// For any `self` of type `Self`, decomposes the type into the sign, raw exponent and mantissa.
     fn to_raw_components(self) -> (bool, Self::Bits, Self::Bits) {
         (self.sign(), self.raw_exponent(), self.mantissa())
     }
+
+    /// # Proof Definition
+    /// For any `self` of type `Self`, retrieves the corresponding bit representation.
     fn to_bits(self) -> Self::Bits;
+    
+    /// # Proof Definition
+    /// For any `bits` of the associated `Bits` type, returns the floating-point number corresponding to `bits`.
     fn from_bits(bits: Self::Bits) -> Self;
 }
 
