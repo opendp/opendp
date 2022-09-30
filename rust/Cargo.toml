@@ -81,6 +81,10 @@ crate-type = ["rlib", "cdylib"]
 
 [package.metadata.docs.rs]
 features = ["untrusted", "ffi"]
+rustdoc-args = [
+    "--html-in-header",
+    ".cargo/registry/src/github.com-1ecc6299db9ec823/opendp_tooling-0.6.0/katex.html",
+]
 
 [[bench]]
 name = "discrete_laplace"
