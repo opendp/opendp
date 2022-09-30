@@ -68,7 +68,7 @@ pub trait AlertingMul: Sized {
 /// 
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
-/// use opendp::traits::AlertingMul;
+/// use opendp::traits::AlertingDiv;
 /// assert!(1u8.alerting_div(&0).is_err());
 /// ```
 pub trait AlertingDiv: Sized {
