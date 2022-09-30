@@ -164,7 +164,7 @@ mod tests {
     use crate::domains::VectorDomain;
     use crate::error::*;
     use crate::measurements::*;
-    use crate::poly::PolyDomain;
+    use crate::domains::PolyDomain;
     use crate::transformations::*;
 
     use super::*;

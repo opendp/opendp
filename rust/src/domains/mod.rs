@@ -19,6 +19,11 @@ use crate::error::Fallible;
 use crate::traits::{CheckNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
+#[cfg(feature="contrib")]
+mod poly;
+#[cfg(feature="contrib")]
+pub use poly::*;
+
 /// # Proof Definition
 /// `AllDomain(T)` is the domain of all **non-null** values of type `T`.
 /// 
