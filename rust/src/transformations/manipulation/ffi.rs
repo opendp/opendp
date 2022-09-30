@@ -8,11 +8,11 @@ use crate::core::{DatasetMetric, SensitivityMetric, Transformation, Metric, Doma
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance};
-use crate::domains::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::traits::{CheckNull, DistanceConstant, Primitive};
+use crate::traits::{CheckNull, InherentNull, DistanceConstant, Primitive};
 use crate::transformations::{make_is_equal, make_is_null};
 
 

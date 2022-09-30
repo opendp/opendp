@@ -4,12 +4,12 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Transformation, Function, StabilityMap};
-use crate::domains::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain, InherentNull};
+use crate::domains::{AllDomain, InherentNullDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::traits::samplers::SampleUniform;
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 use crate::metrics::SymmetricDistance;
-use crate::traits::{CheckNull, Float};
+use crate::traits::{CheckNull, InherentNull, Float};
 
 #[bootstrap(
     features("contrib"), 
@@ -49,9 +49,16 @@ pub trait ImputeConstantDomain: Domain {
     /// For example, consider `D` to be `OptionNullDomain<T>`, the domain of all `Option<T>`.
     /// The implementation of this trait for `OptionNullDomain<T>` designates that `type Imputed = T`. 
     /// Thus `OptionNullDomain<T>::Imputed` is `T`.
+    /// 
+    /// # Proof Definition
+    /// `Self::Imputed` can represent the set of possible output values after imputation.
     type Imputed;
 
     /// A function that replaces a potentially-null carrier type with a non-null imputed type.
+    /// 
+    /// # Proof Definition
+    /// For any setting of the input parameters, where `constant` is non-null,
+    /// the function returns a non-null value.
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed;
     
 }

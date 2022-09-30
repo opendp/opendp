@@ -365,39 +365,30 @@ impl<D: Domain> CollectionDomain for VectorDomain<D> {
 /// ```
 #[derive(Clone, PartialEq)]
 pub struct InherentNullDomain<D: Domain>
-    where D::Carrier: InherentNull {
+    where D::Carrier: CheckNull {
     pub element_domain: D,
 }
 impl<D: Domain + Default> Default for InherentNullDomain<D>
-    where D::Carrier: InherentNull {
+    where D::Carrier: CheckNull {
     fn default() -> Self { Self::new(D::default()) }
 }
-impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
+impl<D: Domain> InherentNullDomain<D> where D::Carrier: CheckNull {
     pub fn new(member_domain: D) -> Self {
         InherentNullDomain { element_domain: member_domain }
     }
 }
-impl<D: Domain> Debug for InherentNullDomain<D> where D::Carrier: InherentNull {
+impl<D: Domain> Debug for InherentNullDomain<D> where D::Carrier: CheckNull {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "InherentNullDomain({:?})", self.element_domain)
     }
 }
-impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull {
+impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: CheckNull {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         if val.is_null() {return Ok(true)}
         self.element_domain.member(val)
     }
 }
-pub trait InherentNull: CheckNull {
-    const NULL: Self;
-}
-macro_rules! impl_inherent_null_float {
-    ($($ty:ty),+) => ($(impl InherentNull for $ty {
-        const NULL: Self = Self::NAN;
-    })+)
-}
-impl_inherent_null_float!(f64, f32);
 
 /// A domain that represents nullity via the Option type.
 /// 
