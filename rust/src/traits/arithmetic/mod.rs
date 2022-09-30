@@ -17,6 +17,8 @@ use rug::Float;
 /// assert!(i8::MIN.alerting_abs().is_err());
 /// ```
 pub trait AlertingAbs: Sized {
+    /// # Proof Definition
+    /// For any `self` of type `Self`, returns `Ok(out)` where $out = |self|$ or `Err(e)`.
     fn alerting_abs(&self) -> Fallible<Self>;
 }
 
@@ -28,7 +30,9 @@ pub trait AlertingAbs: Sized {
 /// assert!(i8::MAX.alerting_add(&1).is_err());
 /// ```
 pub trait AlertingAdd: Sized {
-    /// Returns `Ok(self + v)` if the result does not overflow, else `Err(Error)`
+    /// # Proof Definition
+    /// For any `self` and `v` of type `Self`,
+    /// returns `Ok(self + v)` if the result does not overflow, else `Err(e)`
     fn alerting_add(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -40,7 +44,9 @@ pub trait AlertingAdd: Sized {
 /// assert!(i8::MIN.alerting_sub(&1).is_err());
 /// ```
 pub trait AlertingSub: Sized {
-    /// Returns `Ok(self - v)` if the result does not overflow, else `Err(Error)`
+    /// # Proof Definition
+    /// For any `self` and `v` of type `Self`,
+    /// returns `Ok(self - v)` if the result does not overflow, else `Err(e)`
     fn alerting_sub(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -52,7 +58,9 @@ pub trait AlertingSub: Sized {
 /// assert!(i8::MAX.alerting_mul(&2).is_err());
 /// ```
 pub trait AlertingMul: Sized {
-    /// Returns `Ok(self * v)` if the result does not overflow, else `Err(Error)`
+    /// # Proof Definition
+    /// For any `self` and `v` of type `Self`,
+    /// returns `Ok(self * v)` if the result does not overflow, else `Err(e)`
     fn alerting_mul(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -64,7 +72,9 @@ pub trait AlertingMul: Sized {
 /// assert!(1u8.alerting_div(&0).is_err());
 /// ```
 pub trait AlertingDiv: Sized {
-    /// Returns `Ok(self / v)` if the result does not overflow, else `Err(Error)`
+    /// # Proof Definition
+    /// For any `self` and `v` of type `Self`,
+    /// returns `Ok(self / v)` if the result does not overflow, else `Err(e)`
     fn alerting_div(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -77,7 +87,9 @@ pub trait AlertingDiv: Sized {
 /// assert!(2u8.alerting_pow(&8).is_err());
 /// ```
 pub trait AlertingPow: Sized {
-    /// Returns `Ok(self^v)` if the result does not overflow, else `Err(Error)`
+    /// # Proof Definition
+    /// For any `self` and `v` of type `Self`,
+    /// returns `Ok(self^v)` if the result does not overflow, else `Err(e)`
     fn alerting_pow(&self, p: &Self) -> Fallible<Self>;
 }
 
@@ -89,7 +101,9 @@ pub trait AlertingPow: Sized {
 /// assert_eq!(i8::MAX.saturating_add(i8::MAX), i8::MAX);
 /// ```
 pub trait SaturatingAdd: Sized {
-    /// Returns `self + v`, saturating at the relevant high or low boundary of the type.
+    /// # Proof Definition
+    /// For any `self` and `v` of type `Self`,
+    /// returns `self + v`, saturating at the relevant high or low boundary of the type.
     fn saturating_add(&self, v: &Self) -> Self;
 }
 
@@ -101,7 +115,9 @@ pub trait SaturatingAdd: Sized {
 /// assert_eq!(i8::MAX.saturating_mul(2), i8::MAX);
 /// ```
 pub trait SaturatingMul: Sized {
-    /// Returns `self * v`, saturating at the relevant high or low boundary of the type.
+    /// # Proof Definition
+    /// For any `self` and `v` of type `Self`,
+    /// returns `self * v`, saturating at the relevant high or low boundary of the type.
     fn saturating_mul(&self, v: &Self) -> Self;
 }
 
@@ -110,14 +126,14 @@ pub trait SaturatingMul: Sized {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfExp: Sized {
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.inf_exp()` either returns `Ok(out)`, 
-    /// where $out \ge \exp(value)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.inf_exp()` either returns `Ok(out)`, 
+    /// where $out \ge \exp(self)$, or `Err(e)`.
     fn inf_exp(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.neg_inf_exp()` either returns `Ok(out)`, 
-    /// where $out \le \exp(value)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.neg_inf_exp()` either returns `Ok(out)`, 
+    /// where $out \le \exp(self)$, or `Err(e)`.
     fn neg_inf_exp(self) -> Fallible<Self>;
 }
 
@@ -126,14 +142,14 @@ pub trait InfExp: Sized {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfLn: Sized {
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.inf_ln()` either returns `Ok(out)`, 
-    /// where $out \ge \ln(value)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.inf_ln()` either returns `Ok(out)`, 
+    /// where $out \ge \ln(self)$, or `Err(e)`.
     fn inf_ln(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.neg_inf_ln()` either returns `Ok(out)`, 
-    /// where $out \le \ln(value)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.neg_inf_ln()` either returns `Ok(out)`, 
+    /// where $out \le \ln(self)$, or `Err(e)`.
     fn neg_inf_ln(self) -> Fallible<Self>;
 }
 
@@ -142,14 +158,14 @@ pub trait InfLn: Sized {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfLog2: Sized {
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.inf_log2()` either returns `Ok(out)`, 
-    /// where $out \ge \log_2(value)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.inf_log2()` either returns `Ok(out)`, 
+    /// where $out \ge \log_2(self)$, or `Err(e)`.
     fn inf_log2(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.neg_inf_log2()` either returns `Ok(out)`, 
-    /// where $out \le \log_2(value)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.neg_inf_log2()` either returns `Ok(out)`, 
+    /// where $out \le \log_2(self)$, or `Err(e)`.
     fn neg_inf_log2(self) -> Fallible<Self>;
 }
 
@@ -158,14 +174,14 @@ pub trait InfLog2: Sized {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfSqrt: Sized {
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.inf_log2()` either returns `Ok(out)`, 
-    /// where $out \ge \sqrt{value}$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.inf_log2()` either returns `Ok(out)`, 
+    /// where $out \ge \sqrt{self}$, or `Err(e)`.
     fn inf_sqrt(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.neg_inf_log2()` either returns `Ok(out)`, 
-    /// where $out \le \sqrt{value}$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.neg_inf_log2()` either returns `Ok(out)`, 
+    /// where $out \le \sqrt{self}$, or `Err(e)`.
     fn neg_inf_sqrt(self) -> Fallible<Self>;
 }
 
@@ -174,14 +190,14 @@ pub trait InfSqrt: Sized {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfPow: Sized + AlertingPow {
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.inf_pow(v2)` either returns `Ok(out)`, 
-    /// where $out \ge v1^{v2}$, or `Err(e)`.
+    /// For any two values `self` and `p` of type `Self`, 
+    /// `self.inf_pow(p)` either returns `Ok(out)`, 
+    /// where $out \ge self^{p}$, or `Err(e)`.
     fn inf_pow(&self, p: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.neginf_pow(v2)` either returns `Ok(out)`, 
-    /// where $out \le v1^{v2}$, or `Err(e)`.
+    /// For any two values `self` and `p` of type `Self`, 
+    /// `self.neg_inf_pow(p)` either returns `Ok(out)`, 
+    /// where $out \le self^{p}$, or `Err(e)`.
     fn neg_inf_pow(&self, p: &Self) -> Fallible<Self>;
 }
 
@@ -190,14 +206,14 @@ pub trait InfPow: Sized + AlertingPow {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfAdd: Sized + AlertingAdd {
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.inf_add(v2)` either returns `Ok(out)`, 
-    /// where $out \ge v1 + v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.inf_add(v)` either returns `Ok(out)`, 
+    /// where $out \ge self + v$, or `Err(e)`.
     fn inf_add(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.neg_inf_add(v2)` either returns `Ok(out)`, 
-    /// where $out \le v1 + v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.neg_inf_add(v)` either returns `Ok(out)`, 
+    /// where $out \le self + v$, or `Err(e)`.
     fn neg_inf_add(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -206,14 +222,14 @@ pub trait InfAdd: Sized + AlertingAdd {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfSub: Sized + AlertingSub {
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.inf_sub(v2)` either returns `Ok(out)`, 
-    /// where $out \ge v1 - v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.inf_sub(v)` either returns `Ok(out)`, 
+    /// where $out \ge self - v$, or `Err(e)`.
     fn inf_sub(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.neg_inf_sub(v2)` either returns `Ok(out)`, 
-    /// where $out \le v1 - v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.neg_inf_sub(v)` either returns `Ok(out)`, 
+    /// where $out \le self - v$, or `Err(e)`.
     fn neg_inf_sub(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -222,14 +238,14 @@ pub trait InfSub: Sized + AlertingSub {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfMul: Sized + AlertingMul {
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.inf_mul(v2)` either returns `Ok(out)`, 
-    /// where $out \ge v1 \cdot v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.inf_mul(v)` either returns `Ok(out)`, 
+    /// where $out \ge self \cdot v$, or `Err(e)`.
     fn inf_mul(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.neg_inf_mul(v2)` either returns `Ok(out)`, 
-    /// where $out \le v1 \cdot v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.neg_inf_mul(v)` either returns `Ok(out)`, 
+    /// where $out \le self \cdot v$, or `Err(e)`.
     fn neg_inf_mul(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -238,14 +254,14 @@ pub trait InfMul: Sized + AlertingMul {
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfDiv: Sized + AlertingDiv {
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.inf_div(v2)` either returns `Ok(out)`, 
-    /// where $out \ge v1 / v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.inf_div(v)` either returns `Ok(out)`, 
+    /// where $out \ge self / v$, or `Err(e)`.
     fn inf_div(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `v1` and `v2` of type `Self`, 
-    /// `v1.neg_inf_div(v2)` either returns `Ok(out)`, 
-    /// where $out \le v1 / v2$, or `Err(e)`.
+    /// For any two values `self` and `v` of type `Self`, 
+    /// `self.neg_inf_div(v)` either returns `Ok(out)`, 
+    /// where $out \le self / v$, or `Err(e)`.
     fn neg_inf_div(&self, v: &Self) -> Fallible<Self>;
 }
 
@@ -255,28 +271,28 @@ pub trait InfDiv: Sized + AlertingDiv {
  /// This provides more numerical stability than computing the quantity outright.
 pub trait InfExpM1: Sized {
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.inf_exp_m1()` either returns `Ok(out)`, 
-    /// where $out \ge \exp(value) - 1$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.inf_exp_m1()` either returns `Ok(out)`, 
+    /// where $out \ge \exp(self) - 1$, or `Err(e)`.
     fn inf_exp_m1(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.neg_inf_exp_m1()` either returns `Ok(out)`, 
-    /// where $out \le \exp(value) - 1$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.neg_inf_exp_m1()` either returns `Ok(out)`, 
+    /// where $out \le \exp(self) - 1$, or `Err(e)`.
     fn neg_inf_exp_m1(self) -> Fallible<Self>;
 }
 
  /// Fallible logarithm of the (argument plus one) with specified rounding.
  pub trait InfLn1P: Sized {
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.inf_ln_1p()` either returns `Ok(out)`, 
-    /// where $out \ge \ln(value + 1)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.inf_ln_1p()` either returns `Ok(out)`, 
+    /// where $out \ge \ln(self + 1)$, or `Err(e)`.
     fn inf_ln_1p(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `value` of type `Self`, 
-    /// `value.neg_inf_ln_1p()` either returns `Ok(out)`, 
-    /// where $out \le \ln(value + 1)$, or `Err(e)`.
+    /// For any `self` of type `Self`, 
+    /// `self.neg_inf_ln_1p()` either returns `Ok(out)`, 
+    /// where $out \le \ln(self + 1)$, or `Err(e)`.
     fn neg_inf_ln_1p(self) -> Fallible<Self>;
 }
 
