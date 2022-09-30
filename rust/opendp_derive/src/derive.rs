@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use syn::{parse_macro_input, AttributeArgs, Item, ItemFn};
 
 use proc_macro::TokenStream;
