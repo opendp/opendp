@@ -100,6 +100,9 @@ impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
 }
 
 /// A representation of the distance between two elements in a set.
+/// 
+/// # Proof Definition
+/// A type `Self` has an implementation for `Metric` if an only if it can represent a metric for quantifying distances between values in a set. 
 pub trait Metric: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
@@ -107,6 +110,10 @@ pub trait Metric: Default + Clone + PartialEq + Debug {
 }
 
 /// A representation of the distance between two distributions.
+/// 
+/// # Proof Definition
+/// A type `Self` has an implementation for `Measure` if an only if it can represent a measure for quantifying distances between distributions. 
+
 pub trait Measure: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
@@ -120,6 +127,7 @@ pub trait Measure: Default + Clone + PartialEq + Debug {
 pub trait DatasetMetric: Metric<Distance=IntDistance> {}
 
 /// An indicator trait that is only implemented for statistic distances.
+/// 
 /// # Proof Definition
 /// To be a sensitivity metric, a metric must be well-defined on domains representing aggregates.
 pub trait SensitivityMetric: Metric {}
@@ -206,6 +214,15 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 
 
 /// A randomized mechanism with certain privacy characteristics.
+/// 
+/// The trait bounds provided by the rust type system guarantee that:
+/// * `input_domain` and `output_domain` are valid domains
+/// * `input_metric` is a valid metric
+/// * `output_measure` is a valid measure
+/// 
+/// It is, however, left to constructors to prove that:
+/// * `input_metric` is compatible with `input_domain`
+/// * `privacy_map` is a mapping from the input metric to the output measure
 #[derive(Clone)]
 pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
@@ -250,6 +267,15 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
 }
 
 /// A data transformation with certain stability characteristics.
+/// 
+/// The trait bounds provided by the rust type system guarantee that:
+/// * `input_domain` and `output_domain` are valid domains
+/// * `input_metric` and `output_metric` are valid metrics
+/// 
+/// It is, however, left to constructors to prove that:
+/// * metrics are compatible with domains
+/// * `function` is a mapping from the input domain to the output domain
+/// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
 pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,

@@ -5,9 +5,9 @@ use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
 use crate::metrics::SymmetricDistance;
-use crate::domains::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{RoundCast, CheckNull};
+use crate::traits::{RoundCast, CheckNull, InherentNull};
 use crate::transformations::make_row_by_row;
 
 #[bootstrap(features("contrib"))]
