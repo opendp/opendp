@@ -14,12 +14,14 @@ pub trait SampleGeometric<P>: Sized {
     /// # Proof Definition
     /// Sample from the censored geometric distribution with parameter `prob`.
     /// If `trials` is None, there are no timing protections, and the support is:
-    /// 
+    /// ```text
     ///     [Self::MIN, Self::MAX]
+    /// ```
     /// 
     /// If `trials` is Some, execution runs in constant time, and the support is
-    /// 
+    /// ```text
     ///     [Self::MIN, Self::MAX] ∩ {shift ±= {0, 1, 2, ..., `trials`}}
+    /// ```
     ///
     /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
     ///

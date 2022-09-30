@@ -13,7 +13,7 @@
 
 use std::{marker::PhantomData};
 
-use crate::{core::{DatasetMetric, Metric, SensitivityMetric}, domains::type_name};
+use crate::{core::Metric, domains::type_name};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -64,9 +64,6 @@ impl Metric for SymmetricDistance {
     type Distance = IntDistance;
 }
 
-impl DatasetMetric for SymmetricDistance {}
-
-
 /// The smallest number of insertions or deletions to make two datasets equivalent.
 /// 
 /// An *insertion* to a dataset is an addition of an element at a specific index,
@@ -113,8 +110,6 @@ impl Debug for InsertDeleteDistance {
 impl Metric for InsertDeleteDistance {
     type Distance = IntDistance;
 }
-
-impl DatasetMetric for InsertDeleteDistance {}
 
 
 /// The smallest number of changes to make two equal-length datasets equivalent.
@@ -172,8 +167,6 @@ impl Metric for ChangeOneDistance {
     type Distance = IntDistance;
 }
 
-impl DatasetMetric for ChangeOneDistance {}
-
 /// The number of elements that differ between two equal-length datasets.
 /// 
 /// This metric is sensitive to data ordering.
@@ -224,9 +217,6 @@ impl Metric for HammingDistance {
     type Distance = IntDistance;
 }
 
-impl DatasetMetric for HammingDistance {}
-
-
 /// The $L_p$ distance between two vector-valued aggregates.
 /// 
 /// # Proof Definition
@@ -269,7 +259,6 @@ impl<const P: usize, Q> Debug for LpDistance<P, Q> {
 impl<const P: usize, Q> Metric for LpDistance<P, Q> {
     type Distance = Q;
 }
-impl<const P: usize, Q> SensitivityMetric for LpDistance<P, Q> {}
 
 /// The $L_1$ distance between two vector-valued aggregates.
 /// 
@@ -315,7 +304,6 @@ impl<Q> Debug for AbsoluteDistance<Q> {
 impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
-impl<Q> SensitivityMetric for AbsoluteDistance<Q> {}
 
 /// Indicates if two elements are equal to each other.
 /// 

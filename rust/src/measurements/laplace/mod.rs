@@ -4,7 +4,7 @@ mod ffi;
 use num::{Zero, Float as _};
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, PrivacyMap, SensitivityMetric};
+use crate::core::{Measurement, PrivacyMap, Metric};
 use crate::measures::MaxDivergence;
 use crate::metrics::{L1Distance, AbsoluteDistance};
 use crate::domains::{AllDomain, VectorDomain};
@@ -16,7 +16,7 @@ use super::MappableDomain;
 
 #[doc(hidden)]
 pub trait LaplaceDomain: MappableDomain + Default {
-    type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
+    type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
 impl<T: Clone + CheckNull> LaplaceDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;

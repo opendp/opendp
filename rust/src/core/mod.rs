@@ -27,7 +27,6 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
-use crate::metrics::IntDistance;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
@@ -119,19 +118,6 @@ pub trait Measure: Default + Clone + PartialEq + Debug {
     /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
     type Distance;
 }
-
-/// An indicator trait that is only implemented for dataset distances.
-/// 
-/// # Proof Definition
-/// To be a dataset metric, a metric must be well-defined on domains containing datasets, and the distance type must be [`IntDistance`].
-pub trait DatasetMetric: Metric<Distance=IntDistance> {}
-
-/// An indicator trait that is only implemented for statistic distances.
-/// 
-/// # Proof Definition
-/// To be a sensitivity metric, a metric must be well-defined on domains representing aggregates.
-pub trait SensitivityMetric: Metric {}
-
 
 /// A map evaluating the privacy of a [`Measurement`].
 ///
