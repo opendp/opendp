@@ -4,10 +4,10 @@ use std::os::raw::c_char;
 use num::One;
 use opendp_derive::bootstrap;
 
-use crate::core::{DatasetMetric, SensitivityMetric, Transformation, Metric, Domain};
+use crate::core::{Transformation, Metric, Domain};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::error::Fallible;
-use crate::metrics::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance};
+use crate::metrics::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance, IntDistance};
 use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
@@ -51,7 +51,7 @@ pub extern "C" fn opendp_transformations__make_identity(
                 _ => return err!(FFI, "In FFI, make_identity's VectorDomain may only contain AllDomain<_>").into()
             };
             fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
-                where M: 'static + DatasetMetric,
+                where M: 'static + Metric<Distance=IntDistance>,
                       T: 'static + Clone + CheckNull {
                 make_identity::<VectorDomain<AllDomain<T>>, M>().into_any()
             }
@@ -69,7 +69,7 @@ pub extern "C" fn opendp_transformations__make_identity(
             fn monomorphize<T>(M: Type) -> FfiResult<*mut AnyTransformation>
                 where T: 'static + DistanceConstant<T> + CheckNull + One + Clone {
                 fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
-                    where M: 'static + SensitivityMetric,
+                    where M: 'static + Metric,
                           M::Distance: CheckNull + DistanceConstant<M::Distance> + One + Clone {
                     make_identity::<AllDomain<M::Distance>, M>().into_any()
                 }

@@ -1,10 +1,6 @@
 //! Various combinator constructors.
 
-<<<<<<< HEAD
 #[cfg(all(feature="contrib", feature="honest-but-curious"))]
-=======
-#[cfg(feature="contrib")]
->>>>>>> 8c8e2833ec (add measures and metrics)
 mod amplify;
 #[cfg(all(feature="contrib", feature="honest-but-curious"))]
 pub use crate::combinators::amplify::*;

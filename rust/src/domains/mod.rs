@@ -339,7 +339,7 @@ impl<D: Domain> CollectionDomain for VectorDomain<D> {
 /// `InherentNullDomain(element_domain, D)` is the domain of all values of `element_domain` (of type `D`, a domain) 
 /// unioned with all null members in `D`. 
 /// 
-/// The nullity of members in `D` is indicated via the trait [`InherentNull`].
+/// The nullity of members in `D` is indicated via the trait [`crate::traits::InherentNull`].
 /// 
 /// # Notes
 /// A domain may have multiple possible null values, 
