@@ -10,12 +10,11 @@ use crate::error::Fallible;
 // https://docs.google.com/spreadsheets/d/1DJohiOI3EVHjwj8g4IEdFZVf7MMyFk_4oaSyjTfkO_0/edit?usp=sharing
 
 /// Fallible casting where the casted value is exactly equal to the original value.
-/// 
-/// Casting fails for any value not between Self::MIN_CONSECUTIVE and Self::MAX_CONSECUTIVE.
 pub trait ExactIntCast<TI>: Sized + ExactIntBounds {
     /// # Proof Definition
-    /// For any `v` of type `TI`, `Self::exact_int_cast(value)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out = v$.
+    /// For any `v` of type `TI`, `Self::exact_int_cast(value)` either
+    /// returns `Err(e)` if `v` is smaller than `Self::MIN_CONSECUTIVE` or greater than `Self::MAX_CONSECUTIVE`,
+    /// or `Ok(out)` where $out = v$.
     fn exact_int_cast(v: TI) -> Fallible<Self>;
 } 
 
