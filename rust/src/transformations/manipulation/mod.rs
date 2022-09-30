@@ -52,7 +52,7 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
 /// Constructs a [`Transformation`] representing the identity function.
 pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
     where D: Domain, D::Carrier: Clone,
-          M: Metric, M::Distance: DistanceConstant<M::Distance> + One {
+          M: Metric, M::Distance: DistanceConstant<M::Distance> + One + Clone {
     Ok(Transformation::new(
         domain.clone(),
         domain,
