@@ -36,6 +36,9 @@ use std::fmt::Debug;
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
+/// 
+/// # Proof Definition
+/// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain
 pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
     /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
@@ -45,10 +48,22 @@ pub trait Domain: Clone + PartialEq + Debug {
     /// For example, consider `D` to be `AllDomain<T>`, the domain of all non-null values of type `T`.
     /// The implementation of this trait for `AllDomain<T>` designates that `type Carrier = T`. 
     /// Thus `AllDomain<T>::Carrier` is `T`.
+    /// 
+    /// # Proof Definition
+    /// `Self::Carrier` can represent all values in the set described by `Self`.
     type Carrier;
 
     /// Predicate to test an element for membership in the domain.
     /// Not all possible values of `::Carrier` are a member of the domain.
+    /// 
+    /// # Proof Definition
+    /// For all settings of the input parameters, 
+    /// returns `Err(e)` if the member check failed,
+    /// or `Ok(out)`, where `out` is true if `val` is a member of `self`, otherwise false.
+    /// 
+    /// # Notes
+    /// It generally suffices to treat `Err(e)` as if `val` is not a member of the domain.
+    /// It can be useful, however, to see richer debug information via `e` in the event of a failure.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
@@ -86,18 +101,27 @@ impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
 
 /// A representation of the distance between two elements in a set.
 pub trait Metric: Default + Clone + PartialEq + Debug {
+    /// # Proof Definition
+    /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
     type Distance;
 }
 
 /// A representation of the distance between two distributions.
 pub trait Measure: Default + Clone + PartialEq + Debug {
+    /// # Proof Definition
+    /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
     type Distance;
 }
 
 /// An indicator trait that is only implemented for dataset distances.
+/// 
+/// # Proof Definition
+/// To be a dataset metric, a metric must be well-defined on domains containing datasets, and the distance type must be [`IntDistance`].
 pub trait DatasetMetric: Metric<Distance=IntDistance> {}
 
 /// An indicator trait that is only implemented for statistic distances.
+/// # Proof Definition
+/// To be a sensitivity metric, a metric must be well-defined on domains representing aggregates.
 pub trait SensitivityMetric: Metric {}
 
 
