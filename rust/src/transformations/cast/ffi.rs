@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::InherentNull;
+use crate::traits::InherentNull;
 use crate::err;
 use crate::ffi::any::AnyTransformation;
 use crate::ffi::util::Type;

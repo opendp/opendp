@@ -1,4 +1,3 @@
-use crate::domains::InherentNull;
 use crate::metrics::IntDistance;
 use num::{One, Zero};
 use std::hash::Hash;

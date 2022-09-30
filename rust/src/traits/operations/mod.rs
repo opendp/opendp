@@ -17,6 +17,13 @@ pub trait CheckNull {
     fn is_null(&self) -> bool; 
 }
 
+/// Defines an example null value inherent to `Self`.
+pub trait InherentNull: CheckNull {
+    /// # Proof Definition
+    /// NULL is a constant such that `Self::is_null(Self::NULL)` is true.
+    const NULL: Self;
+}
+
 /// TotalOrd is well-defined on types that are Ord on their non-null values.
 /// 
 /// The framework provides a way to ensure values are non-null at runtime.
@@ -201,6 +208,14 @@ impl CheckNull for rug::Integer {
         false
     }
 }
+
+// TRAIT InherentNull
+macro_rules! impl_inherent_null_float {
+    ($($ty:ty),+) => ($(impl InherentNull for $ty {
+        const NULL: Self = Self::NAN;
+    })+)
+}
+impl_inherent_null_float!(f64, f32);
 
 // TRAIT TotalOrd
 macro_rules! impl_total_ord_for_ord {
