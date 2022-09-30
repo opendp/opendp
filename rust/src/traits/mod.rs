@@ -229,7 +229,7 @@ impl<T> Integer for T where T: Number + Hashable {}
 /// # Example
 /// ```
 /// use opendp::traits::Float;
-/// fn test_func<T: Integer>(value: T) {
+/// fn test_func<T: Float>(value: T) {
 ///     // can be debugged, as Integer inherits all traits from Primitive:
 ///     println!("{value:?}");
 /// 
