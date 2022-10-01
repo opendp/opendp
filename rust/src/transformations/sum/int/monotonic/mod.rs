@@ -117,6 +117,7 @@ where
     ))
 }
 
+#[doc(hidden)]
 /// Checks if two elements of type T have the same sign
 pub trait IsMonotonic: Sized {
     fn is_monotonic(bounds: (Self, Self)) -> bool;

@@ -9,6 +9,7 @@ use crate::traits::samplers::Shuffle;
 use crate::traits::CheckNull;
 use std::cmp::Ordering;
 
+#[doc(hidden)]
 pub trait IsMetricOrdered: Metric {
     const ORDERED: bool;
 }
