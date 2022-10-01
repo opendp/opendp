@@ -1,3 +1,5 @@
+//! Traits for sampling from probability distributions.
+
 mod bernoulli;
 pub use bernoulli::*;
 
