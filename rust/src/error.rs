@@ -12,7 +12,7 @@ macro_rules! fallible {
     ($variant:ident, $($inner:expr),+) => (Err(err!($variant, $($inner),+)));
 }
 // "error" is shadowed, and breaks intellij macro resolution
-/// create an instance of [`Error`]
+/// Create an instance of [`Error`]
 #[macro_export]
 macro_rules! err {
     // error without message
