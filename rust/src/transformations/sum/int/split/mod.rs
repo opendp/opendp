@@ -94,6 +94,7 @@ where
     generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints with known dataset size. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// Adds the saturating sum of the positives to the saturating sum of the negatives.
 /// 

@@ -27,6 +27,7 @@ mod ffi;
     derived_types(T = "$get_atom_or_infer(D, constant)")
 )]
 /// Make a transformation that multiplies an aggregate by a constant.
+/// 
 /// The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
 /// 
 /// # Arguments

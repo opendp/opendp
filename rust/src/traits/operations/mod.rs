@@ -240,14 +240,14 @@ macro_rules! impl_total_ord_for_float {
 }
 impl_total_ord_for_float!(f64, f32);
 
-pub fn max_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
+fn max_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
     compare(&v1, &v2).map(|cmp| match cmp {
         Ordering::Less | Ordering::Equal => v2,
         Ordering::Greater => v1,
     })
 }
 
-pub fn min_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
+fn min_by<T, F: FnOnce(&T, &T) -> Fallible<Ordering>>(v1: T, v2: T, compare: F) -> Fallible<T> {
     compare(&v1, &v2).map(|cmp| match cmp {
         Ordering::Less | Ordering::Equal => v1,
         Ordering::Greater => v2,

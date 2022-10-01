@@ -1,3 +1,5 @@
+//! Traits that enable building stable and private algorithms.
+
 use crate::metrics::IntDistance;
 use num::{One, Zero};
 use std::hash::Hash;
@@ -18,6 +20,7 @@ pub use operations::*;
 pub mod samplers;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
+/// 
 /// Encapsulates the necessary traits for the new_from_constant method on maps.
 /// Making a map from a constant has the general form:
 /// 
