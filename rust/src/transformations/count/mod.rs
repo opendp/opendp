@@ -63,6 +63,7 @@ pub fn make_count_distinct<TIA, TO>(
         StabilityMap::new_from_constant(TO::one())))
 }
 
+#[doc(hidden)]
 pub trait CountByCategoriesConstant<QO> {
     fn get_stability_constant() -> QO;
 }
@@ -134,6 +135,7 @@ pub fn make_count_by_categories<MO, TIA, TOA>(
         StabilityMap::new_from_constant(MO::get_stability_constant())))
 }
 
+#[doc(hidden)]
 pub trait CountByConstant<QO> {
     fn get_stability_constant() -> Fallible<QO>;
 }

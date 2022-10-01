@@ -49,6 +49,7 @@ where
     )
 }
 
+#[doc(hidden)]
 pub enum Interpolation {
     Nearest,
     Linear,

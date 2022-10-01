@@ -153,6 +153,7 @@ where
     ))
 }
 
+#[doc(hidden)]
 pub trait UncheckedSum: SumRelaxation + CanFloatSumOverflow {
     fn unchecked_sum(arg: &[Self::Item]) -> Self::Item;
 }
@@ -175,7 +176,7 @@ impl<T: Float> UncheckedSum for Pairwise<T> {
     }
 }
 
-
+#[doc(hidden)]
 pub trait CanFloatSumOverflow: SumRelaxation {
     fn float_sum_can_overflow(size: usize, bounds: (Self::Item, Self::Item)) -> Fallible<bool>;
 }
