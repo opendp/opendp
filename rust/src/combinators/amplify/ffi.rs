@@ -60,12 +60,15 @@ impl IsSizedDomain for AnyDomain {
     }
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(features("contrib", "honest-but-curious"))]
 /// Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
 /// This measurement does not perform any sampling. 
 /// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
 /// 
 /// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
+/// 
+/// Protected by the "honest-but-curious" feature flag 
+/// because a dishonest adversary could set the population size to be arbitrarily large.
 /// 
 /// # Arguments
 /// * `measurement` - the computation to amplify
