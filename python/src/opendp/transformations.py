@@ -153,6 +153,7 @@ def make_bounded_float_checked_sum(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -207,6 +208,7 @@ def make_bounded_float_ordered_sum(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats. 
+    
     You may need to use `make_ordered_random` to impose an ordering on the data.
     The utility loss from overestimating the `size_limit` is small.
     
@@ -1270,6 +1272,7 @@ def make_impute_constant(
     DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<TA>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
+    
     By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
     Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
     that have an inherent representation of nullity, like floats.
@@ -1322,6 +1325,7 @@ def make_impute_uniform_float(
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
+    
     Operates on `InherentNullDomain<AllDomain<TA>>`
     
     
@@ -1485,6 +1489,7 @@ def make_lipschitz_float_mul(
     M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
 ) -> Transformation:
     """Make a transformation that multiplies an aggregate by a constant.
+    
     The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
     
     
@@ -1646,7 +1651,7 @@ def make_ordered_random(
     TA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
-    to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
+    to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutatation.
     Operates exclusively on VectorDomain<AllDomain<`TA`>>.
     The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
     
@@ -1840,6 +1845,7 @@ def make_sized_bounded_float_checked_sum(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
     
@@ -1893,6 +1899,7 @@ def make_sized_bounded_float_ordered_sum(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
@@ -2049,6 +2056,7 @@ def make_sized_bounded_int_ordered_sum(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded ints with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
@@ -2101,6 +2109,7 @@ def make_sized_bounded_int_split_sum(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded ints with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
@@ -2154,6 +2163,7 @@ def make_sized_bounded_mean(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the mean of bounded data.
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -2261,6 +2271,7 @@ def make_sized_bounded_sum(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -2309,6 +2320,7 @@ def make_sized_bounded_sum_of_squared_deviations(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of squared deviations of bounded data. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -2420,6 +2432,7 @@ def make_sized_bounded_variance(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the variance of bounded data. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -2733,6 +2746,7 @@ def make_unclamp(
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that unclamps numeric data in Vec<`T`>.
+    
     Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
     
     
