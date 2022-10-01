@@ -155,6 +155,7 @@ where
     ))
 }
 
+#[doc(hidden)]
 pub trait SaturatingSum: SumRelaxation {
     fn saturating_sum(arg: &[Self::Item]) -> Self::Item;
 }

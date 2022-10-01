@@ -15,6 +15,7 @@ use super::AddIsExact;
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[doc(hidden)]
 pub trait SplitSatSum: Sized {
     /// Method which takes an iterator and generates `Self` from the elements by
     /// "summing up" the items.
