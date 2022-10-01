@@ -19,6 +19,7 @@ use super::UncheckedSum;
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of squared deviations of bounded data. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 

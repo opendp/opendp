@@ -21,7 +21,7 @@ use crate::transformations::cast_metric::traits::{
     features("contrib")
 )]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
-/// to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
+/// to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutatation.
 /// Operates exclusively on VectorDomain<AllDomain<`TA`>>.
 ///
 /// The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.

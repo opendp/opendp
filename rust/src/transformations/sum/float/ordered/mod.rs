@@ -20,6 +20,7 @@ mod ffi;
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats. 
+/// 
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
 /// The utility loss from overestimating the `size_limit` is small.
 /// 
@@ -79,6 +80,7 @@ where
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats with known dataset size. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
 /// 

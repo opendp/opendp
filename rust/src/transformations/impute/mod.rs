@@ -16,6 +16,7 @@ use crate::traits::{CheckNull, InherentNull, Float};
     generics(TA(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
+/// 
 /// Operates on `InherentNullDomain<AllDomain<TA>>`
 /// 
 /// # Arguments
@@ -85,6 +86,7 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
     derived_types(TA = "$get_atom_or_infer(DA, constant)")
 )]
 /// Make a Transformation that replaces null/None data with `constant`.
+/// 
 /// By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
 /// Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
 /// that have an inherent representation of nullity, like floats.

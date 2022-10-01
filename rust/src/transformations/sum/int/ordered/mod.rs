@@ -59,6 +59,7 @@ where
     generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints with known dataset size. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
 /// 

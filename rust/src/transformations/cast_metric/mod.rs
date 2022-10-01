@@ -15,7 +15,7 @@ mod ffi;
 mod traits;
 
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
-/// to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
+/// to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutatation.
 ///
 /// The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
 ///

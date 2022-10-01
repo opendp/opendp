@@ -23,6 +23,7 @@ mod ffi;
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded data with known dataset size. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 
@@ -94,6 +95,7 @@ where
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats with known dataset size. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
 /// 
 /// # Citations
@@ -238,7 +240,7 @@ impl<T: Float> CanFloatSumOverflow for Pairwise<T> {
     }
 }
 
-pub fn round_up_to_nearest_power_of_two<T>(x: T) -> Fallible<T>
+fn round_up_to_nearest_power_of_two<T>(x: T) -> Fallible<T>
 where
     T: ExactIntCast<T::Bits> + Float,
 {
