@@ -12,6 +12,11 @@
 \contrib
 Proves soundness of \rustdoc{transformations}{fn}{make\_count} in \asOfCommit{mod.rs}{f5bb719}.
 
+\texttt{make\_count} returns a Transformation that computes a count of the number of records in a vector.
+The length of the vector, of type \texttt{usize}, is exactly casted to a user specified output type \texttt{TO}.
+If the length is too large to be represented exactly by \texttt{TO}, 
+the cast saturates at the maximum value of type \texttt{TO}.
+
 \section{Vetting history}
 \begin{itemize}
     \item \vettingPR{513}
@@ -26,11 +31,12 @@ Proves soundness of \rustdoc{transformations}{fn}{make\_count} in \asOfCommit{mo
 
     \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits}{trait}{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
     \begin{itemize}
-        \item \rustdoc{traits}{trait}{CheckNull} so that \texttt{TIA} is a valid atomic type for \rustdoc{domains}{struct}{VectorDomain}
+        \item \rustdoc{traits}{trait}{CheckNull} so that \texttt{TIA} is a valid atomic type for \rustdoc{domains}{struct}{AllDomain}
     \end{itemize}
 
     \item \texttt{TO} (output type) is a type with trait \rustdoc{traits}{trait}{Number}. \texttt{Number} further implies \texttt{TO} has the trait bounds:
     \begin{itemize}
+        \item \rustdoc{traits}{trait}{InfSub} so that the output domain is compatible with the output metric
         \item \texttt{CheckNull} so that \texttt{TO} is a valid atomic type for \texttt{AllDomain}
         \item \rustdoc{traits}{trait}{ExactIntCast} for casting a vector length index of type \texttt{usize} to \texttt{TO}. \texttt{ExactIntCast} further implies \texttt{TO} has the trait bound:
         \begin{itemize}
@@ -49,9 +55,9 @@ def make_count():
     output_domain = AllDomain(TO) |\label{line:output-domain}|
 
     def function(data: Vec[TIA]) -> TO:|\label{line:TO-output}|
-        size = input_domain.size(data)
+        size = input_domain.size(data) |\label{line:size}|
         try: |\label{line:try-catch}|
-            return TO.exact_int_cast(size)
+            return TO.exact_int_cast(size) |\label{line:exact-int-cast}|
         except FailedCast:
             return TO.MAX_CONSECUTIVE |\label{line:except-return}|
 
@@ -98,8 +104,10 @@ Before proceeding with proving the validity of the stability map, we provide a c
 \end{lemma}
 
 \begin{proof}
-    In line \ref{line:try-catch}, we know the argument to \texttt{TO.exact\_int\_cast} is non-negative and integral.
-    Therefore, by the definition of \texttt{ExactIntCast}, the invocation of \texttt{TO.exact\_int\_cast} can only fail if the argument is greater than \texttt{TO.MAX\_CONSECUTIVE}.
+    By \rustdoc{domains}{trait}{CollectionDomain}, we know \texttt{size} on line \ref{line:size} is of type \texttt{usize}, 
+    so it is non-negative and integral.
+    Therefore, by the definition of \texttt{ExactIntCast}, 
+    the invocation of \texttt{TO.exact\_int\_cast} on line \ref{line:exact-int-cast} can only fail if the argument is greater than \texttt{TO.MAX\_CONSECUTIVE}.
     In this case, the value is replaced with \texttt{TO.MAX\_CONSECUTIVE}.
     Therefore, $\function(u) = min(\texttt{len(u)}, c)$, where $c = \texttt{TO.MAX\_CONSECUTIVE}$.
     We use this equality to prove the lemma:
