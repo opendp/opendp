@@ -78,11 +78,6 @@ def test_make_basic_composition_leak():
 
 def test_make_basic_composition_approx():
     from opendp.combinators import make_basic_composition, make_zCDP_to_approxDP, make_fix_delta
-    composed_curve = make_basic_composition([
-        make_zCDP_to_approxDP(make_base_gaussian(1.))
-    ] * 2)
-    print(composed_curve.map(1.).epsilon(delta=1e-6))
-
     composed_fixed = make_basic_composition([
         make_fix_delta(make_zCDP_to_approxDP(make_base_gaussian(1.)), 1e-7)
     ] * 2)

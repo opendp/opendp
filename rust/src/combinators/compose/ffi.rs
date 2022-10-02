@@ -6,7 +6,7 @@ use crate::{
     ffi::{
         any::{AnyMeasurement, AnyObject, IntoAnyMeasurementOutExt, Downcast, AnyMeasure},
         util::{AnyMeasurementPtr, TypeContents, Type},
-    }, error::Fallible, traits::InfAdd, measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence, SMDCurve, SmoothedMaxDivergence},
+    }, error::Fallible, traits::InfAdd, measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
 use super::BasicCompositionMeasure;
@@ -78,17 +78,6 @@ impl BasicCompositionMeasure for AnyMeasure {
                     unreachable!()
                 }
             }
-            TypeContents::GENERIC { name, .. } if name == "SmoothedMaxDivergence" => {
-                fn monomorphize<Q: 'static + InfAdd + Zero + Clone>(
-                    self_: &AnyMeasure, d_i: Vec<AnyObject>
-                ) -> Fallible<AnyObject> {
-                    self_.downcast_ref::<SmoothedMaxDivergence<Q>>()?.compose(d_i.iter()
-                        .map(|d_i| d_i.downcast_ref::<SMDCurve<Q>>().map(Clone::clone))
-                        .collect::<Fallible<Vec<SMDCurve<Q>>>>()?).map(AnyObject::new)
-                }
-                let Q = try_!(self.distance_type.get_atom());
-                dispatch!(monomorphize, [(Q, @floats)], (self, d_i))
-            },
             _ => err!(FFI, "unrecognized metric: {}", self.type_.descriptor).into()
         }
     }

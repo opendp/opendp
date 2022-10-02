@@ -8,7 +8,7 @@ use crate::{
     domains::VectorDomain,
     error::Fallible,
     measures::{
-        FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
+        FixedSmoothedMaxDivergence, MaxDivergence,
         ZeroConcentratedDivergence,
     },
     traits::InfAdd,
@@ -94,15 +94,6 @@ pub trait BasicCompositionMeasure: Measure {
 impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
-    }
-}
-
-impl<Q: 'static + InfAdd + Zero + Clone> BasicCompositionMeasure for SmoothedMaxDivergence<Q> {
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        Ok(SMDCurve::new(move |delta: &Q| {
-            d_i.iter()
-                .try_fold(Q::zero(), |sum, curve| sum.inf_add(&curve.epsilon(delta)?))
-        }))
     }
 }
 
