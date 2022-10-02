@@ -22,4 +22,3 @@ opendp_tooling = { path = "../opendp_tooling", optional = true  }
 
 [features]
 derive = ["syn", "quote", "opendp_tooling"]
-local-docs = []

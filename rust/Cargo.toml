@@ -54,8 +54,6 @@ proc-macro2 = { workspace = true, optional = true }
 [features]
 default = ["use-openssl", "use-mpfr"]
 
-local-docs = ["opendp_derive/local-docs"]
-
 floating-point = []
 contrib = []
 untrusted = ["floating-point", "contrib"]

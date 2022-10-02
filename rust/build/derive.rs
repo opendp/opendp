@@ -1,7 +1,7 @@
-
 use std::{collections::HashMap, path::Path, str::FromStr};
 
 use opendp_tooling::{
+    bootstrap::docstring::{get_proof_path, insert_proof_attribute},
     codegen,
     proven::filesystem::{find_proof_paths, get_src_dir, write_proof_paths},
     Function,
@@ -131,20 +131,26 @@ fn parse_file(
         // ignore the function if it doesn't have a bootstrap proc macro invocation
         .filter(|func| (func.attrs.iter()).any(|attr| path_is_eq(&attr.path, "bootstrap")))
         // attempt to parse and simulate the proc macro on the function
-        .map(|mut func| {
+        .map(|mut item_fn| {
             // extract the bootstrap attribute
-            let idx = (func.attrs.iter())
+            let idx = (item_fn.attrs.iter())
                 .position(|attr| path_is_eq(&attr.path, "bootstrap"))
                 .expect("bootstrap attr always exists because of filter");
-            let bootstrap_attr = func.attrs.remove(idx);
+            let bootstrap_attr = item_fn.attrs.remove(idx);
 
             // parse args to the bootstrap macro
             let attr_args = match bootstrap_attr.parse_meta().ok()? {
                 syn::Meta::List(ml) => ml.nested.into_iter().collect(),
                 _ => return None,
             };
+
+            // mutate the docstring to add a proof path
+            if let Some(proof_path) = get_proof_path(&attr_args, &item_fn, &proof_paths).ok()? {
+                insert_proof_attribute(&mut item_fn.attrs, proof_path).ok()?;
+            }
+
             // use the bootstrap crate to parse a Function
-            Function::from_ast(attr_args, func, proof_paths).ok()
+            Function::from_ast(attr_args, item_fn).ok()
         })
         .collect()
 }

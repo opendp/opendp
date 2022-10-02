@@ -1,7 +1,16 @@
 use std::collections::HashMap;
 
 use darling::{Error, Result};
-use syn::{Attribute, Lit, Meta, MetaNameValue, Path, PathSegment, ReturnType, Type, TypePath};
+use proc_macro2::{TokenStream, Spacing, TokenTree, Punct, Literal};
+use quote::format_ident;
+use syn::{
+    Attribute, AttributeArgs, Lit, Meta, MetaNameValue, Path, PathSegment, ReturnType, Type,
+    TypePath, AttrStyle, ItemFn,
+};
+
+use crate::proven::filesystem::make_proof_link;
+
+use super::arguments::BootstrapArguments;
 
 #[derive(Debug, Default)]
 pub struct BootstrapDocstring {
@@ -19,17 +28,18 @@ impl BootstrapDocstring {
             doc_sections.insert("Supporting Elements".to_string(), sup_elements);
         }
 
-        let mut description = doc_sections.remove("Description").unwrap_or_else(Vec::new);
+        let mut description = Vec::from_iter(doc_sections.remove("Description"));
 
         let mut insert_section = |section_name: &str| {
             doc_sections.remove(section_name).map(|section| {
                 description.push(format!("\n**{section_name}:**\n"));
-                description.extend(section)
+                description.push(section)
             })
         };
         // can add more sections here...
         insert_section("Citations");
         insert_section("Supporting Elements");
+        insert_section("Proof Definition");
 
         Ok(BootstrapDocstring {
             description: if description.is_empty() {
@@ -47,12 +57,13 @@ impl BootstrapDocstring {
                 .unwrap_or_else(HashMap::new),
             returns: doc_sections
                 .remove("Returns")
-                .map(|sec| sec.join("\n").trim().to_string()),
+                .map(|sec| sec),
         })
     }
 }
 
-fn parse_docstring_args(mut args: Vec<String>) -> HashMap<String, String> {
+fn parse_docstring_args(args: String) -> HashMap<String, String> {
+    let mut args = args.split("\n").map(ToString::to_string).collect::<Vec<_>>();
     args.push("* `".to_string());
     args.iter()
         .enumerate()
@@ -79,19 +90,10 @@ fn parse_docstring_args(mut args: Vec<String>) -> HashMap<String, String> {
         .collect::<HashMap<String, String>>()
 }
 
-fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Vec<String>>> {
+fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, String>> {
     let mut docstrings = (attrs.into_iter())
         .filter(|v| v.path.get_ident().map(ToString::to_string).as_deref() == Some("doc"))
-        .map(|v| {
-            if let Meta::NameValue(MetaNameValue {
-                lit: Lit::Str(v), ..
-            }) = v.parse_meta()?
-            {
-                Ok(v.value())
-            } else {
-                Err(Error::custom("doc attribute must have string literal").with_span(&v))
-            }
-        })
+        .map(parse_doc_attribute)
         .collect::<Result<Vec<_>>>()?
         .into_iter()
         .filter_map(|v| v.starts_with(" ").then(|| v[1..].to_string()))
@@ -113,20 +115,20 @@ fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Vec
                     .strip_prefix("# ")
                     .expect("won't panic (because of filter)")
                     .to_string(),
-                docstrings[window[0] + 1..window[1]].to_vec(),
+                docstrings[window[0] + 1..window[1]].to_vec().join("\n").trim().to_string(),
             )
         })
-        .collect::<HashMap<String, Vec<String>>>())
+        .collect())
 }
 
-fn parse_sig_output(output: &ReturnType) -> Result<Option<Vec<String>>> {
+fn parse_sig_output(output: &ReturnType) -> Result<Option<String>> {
     match output {
         ReturnType::Default => Ok(None),
         ReturnType::Type(_, ty) => parse_supporting_elements(&*ty),
     }
 }
 
-fn parse_supporting_elements(ty: &Type) -> Result<Option<Vec<String>>> {
+fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
     let PathSegment { ident, arguments } = match &ty {
         syn::Type::Path(TypePath {
             path: Path { segments, .. },
@@ -193,7 +195,7 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<Vec<String>>> {
                         format!("* Output Domain:  `{}`", pprint(output_domain)),
                         format!("* Input Metric:   `{}`", pprint(input_metric)),
                         format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
-                    ]))
+                    ].join("\n")))
                 }
                 arg => {
                     return Err(
@@ -203,5 +205,89 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<Vec<String>>> {
             }
         }
         _ => Ok(None),
+    }
+}
+
+/// extract the string inside a doc comment attribute
+fn parse_doc_attribute(attr: Attribute) -> Result<String> {
+    match attr.parse_meta()? {
+        Meta::NameValue(MetaNameValue {
+            lit: Lit::Str(v), ..
+        }) => Ok(v.value()),
+        _ => Err(Error::custom("doc attribute must be a string literal").with_span(&attr)),
+    }
+}
+
+/// Obtain a relative path to a proof, given all available information
+pub fn get_proof_path(
+    attr_args: &AttributeArgs, 
+    item_fn: &ItemFn, 
+    proof_paths: &HashMap<String, Option<String>>
+) -> Result<Option<String>> {
+
+    let BootstrapArguments {
+        name,
+        proof_path,
+        unproven,
+        ..
+    } = BootstrapArguments::from_attribute_args(&attr_args)?;
+
+    let name = name.unwrap_or_else(|| item_fn.sig.ident.to_string());
+    if unproven && proof_path.is_some() {
+        return Err(Error::custom("proof_path is invalid when unproven"))
+    }
+    Ok(match proof_path {
+        Some(proof_path) => Some(proof_path),
+        None => match proof_paths.get(&name) {
+            Some(None) => return Err(Error::custom(format!("more than one file named {name}.tex. Please specify `proof_path = \"{{module}}/path/to/proof.tex\"` in the macro arguments."))),
+            Some(proof_path) => proof_path.clone(),
+            None => None
+        }
+    })
+}
+
+/// add attributes containing the proof link
+pub fn insert_proof_attribute(
+    attributes: &mut Vec<Attribute>,
+    proof_path: String
+) -> Result<()> {
+    let proof_link = format!(" {}", make_proof_link(&proof_path)?);
+    
+    let position = (attributes.iter())
+        .position(|attr| {
+            if attr.path.get_ident().map(ToString::to_string).as_deref() != Some("doc") {
+                return false;
+            }
+            if let Ok(comment) = parse_doc_attribute(attr.clone()) {
+                comment.starts_with(" # Proof Definition")
+            } else {
+                false
+            }
+        })
+        // point to the next line after the header, if found
+        .map(|i| i + 1)
+        // insert a header to the end, if not found
+        .unwrap_or_else(|| {
+            attributes.push(new_comment_attribute(" "));
+            attributes.push(new_comment_attribute(" # Proof Definition"));
+            attributes.len()
+        });
+
+    attributes.insert(position, new_comment_attribute(&proof_link));
+
+    Ok(())
+}
+
+/// construct an attribute representing a documentation comment
+fn new_comment_attribute(comment: &str) -> Attribute {
+    Attribute {
+        pound_token: Default::default(),
+        style: AttrStyle::Outer,
+        bracket_token: Default::default(),
+        path: Path::from(format_ident!("doc")),
+        tokens: TokenStream::from_iter([
+            TokenTree::Punct(Punct::new('=', Spacing::Alone)),
+            TokenTree::Literal(Literal::string(comment)),
+        ].into_iter()),
     }
 }

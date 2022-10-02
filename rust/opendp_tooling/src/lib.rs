@@ -13,8 +13,6 @@ pub struct Function {
     pub name: String,
     // plaintext description of the function used to generate documentation
     pub description: Option<String>,
-    // relative path to the location of the DP proof for the function
-    pub proof_path: Option<String>,
     // required feature flags to execute function
     pub features: Vec<String>,
     // arguments and generics

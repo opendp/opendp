@@ -7,7 +7,7 @@ pub mod arguments;
 pub mod docstring;
 pub mod signature;
 
-use darling::{Error, Result};
+use darling::Result;
 
 use crate::bootstrap::{arguments::BootstrapArguments, docstring::BootstrapDocstring};
 
@@ -20,18 +20,18 @@ impl Function {
     pub fn from_ast(
         attr_args: AttributeArgs,
         item_fn: ItemFn,
-        proof_paths: &HashMap<String, Option<String>>,
     ) -> Result<Function> {
         // Parse the proc bootstrap macro args
         let arguments = BootstrapArguments::from_attribute_args(&attr_args)?;
 
+        // Parse the signature
+        let signature = BootstrapSignature::from_syn(item_fn.sig.clone())?;
+
         // Parse the docstring
         let docstring = BootstrapDocstring::from_attrs(item_fn.attrs, &item_fn.sig.output)?;
 
-        let signature = BootstrapSignature::from_syn(item_fn.sig)?;
-
         // aggregate info from all sources
-        reconcile_function(arguments, docstring, signature, proof_paths)
+        reconcile_function(arguments, docstring, signature)
     }
 }
 
@@ -39,14 +39,12 @@ pub fn reconcile_function(
     mut bootstrap: BootstrapArguments,
     mut doc_comments: BootstrapDocstring,
     signature: BootstrapSignature,
-    proof_paths: &HashMap<String, Option<String>>,
 ) -> Result<Function> {
     let name = bootstrap.name.unwrap_or(signature.name);
     Ok(Function {
         name: name.clone(),
         features: bootstrap.features.0,
         description: doc_comments.description,
-        proof_path: reconcile_proof_path(bootstrap.proof_path, &name, proof_paths)?,
         args: reconcile_arguments(
             &mut bootstrap.arguments.0,
             &mut doc_comments.arguments,
@@ -75,21 +73,6 @@ pub fn reconcile_function(
                 ..Default::default()
             })
             .collect(),
-    })
-}
-
-fn reconcile_proof_path(
-    bootstrap: Option<String>,
-    name: &str,
-    proof_paths: &HashMap<String, Option<String>>,
-) -> Result<Option<String>> {
-    Ok(match bootstrap {
-        Some(proof_path) => Some(proof_path),
-        None => match proof_paths.get(name) {
-            Some(None) => return Err(Error::custom(format!("more than one file named {name}.tex. Please specify `proof_path = \"{{module}}/path/to/proof.tex\"` in the macro attributes."))),
-            Some(proof_path) => proof_path.clone(),
-            None => None
-        }
     })
 }
 

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::proven::filesystem::make_proof_link;
 use crate::{Argument, Function, TypeRecipe, Value};
 
 use crate::codegen::indent;
@@ -160,12 +159,6 @@ fn generate_docstring(
     let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
         .unwrap_or_else(String::new);
-
-    let proof_link = if let Some(proof_path) = &func.proof_path {
-        make_proof_link(proof_path).unwrap()
-    } else {
-        String::new()
-    };
     
     let doc_args = func
         .args
@@ -185,7 +178,7 @@ fn generate_docstring(
     );
 
     format!(
-        r#""""{proof_link}{description}
+        r#""""{description}
 {doc_args}{ret_arg}
 {raises}
 """"#,

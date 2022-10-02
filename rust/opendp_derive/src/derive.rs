@@ -1,9 +1,11 @@
+use quote::ToTokens;
 use syn::{parse_macro_input, AttributeArgs, Item, ItemFn};
 
 use proc_macro::TokenStream;
 
 use opendp_tooling::{
-    proven::{Proven, filesystem::{load_proof_paths, make_proof_link}},
+    bootstrap::docstring::{get_proof_path, insert_proof_attribute},
+    proven::{filesystem::load_proof_paths, Proven},
     Function,
 };
 
@@ -29,33 +31,34 @@ macro_rules! try_ {
 pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     let original_input = input.clone();
 
-    // prepare to build function
+    // parse the inputs
     let attr_args = parse_macro_input!(attr_args as AttributeArgs);
-    let item_fn = parse_macro_input!(input as ItemFn);
+    let mut item_fn = parse_macro_input!(input as ItemFn);
     let proof_paths = load_proof_paths().unwrap_or_default();
 
+    // mutate the docstring to add a proof path
+    if let Some(proof_path) = try_!(
+        get_proof_path(&attr_args, &item_fn, &proof_paths),
+        original_input
+    ) {
+        try_!(
+            insert_proof_attribute(&mut item_fn.attrs, proof_path),
+            original_input
+        );
+    }
+
     let function = try_!(
-        Function::from_ast(attr_args, item_fn, &proof_paths),
+        Function::from_ast(attr_args, item_fn.clone()),
         original_input
     );
 
     let mut output = TokenStream::new();
 
-    let proof_link = try_!(
-        (function.proof_path.as_ref())
-            .map(|rp| make_proof_link(rp))
-            .transpose(),
-        original_input
-    );
-
-    // insert link to proof in documentation if it exists
-    proof_link.map(|link| output.extend(TokenStream::from(quote::quote!(#[doc = #link]))));
-
     // insert cfg attributes
     (function.features.iter())
         .for_each(|feat| output.extend(TokenStream::from(quote::quote!(#[cfg(feature = #feat)]))));
 
-    output.extend(original_input);
+    output.extend(TokenStream::from(item_fn.to_token_stream()));
     output
 }
 
@@ -64,20 +67,26 @@ pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream 
     let original_input = input.clone();
 
     let attrs = parse_macro_input!(attr_args as AttributeArgs);
-    let item = parse_macro_input!(input as Item);
+    let mut item = parse_macro_input!(input as Item);
 
-    let proven = try_!(Proven::from_ast(attrs, item), original_input);
+    let proven = try_!(Proven::from_ast(attrs, item.clone()), original_input);
 
     let proof_path = proven.proof_path.expect("unreachable");
-    let proof_link = try_!(make_proof_link(&proof_path), original_input);
 
-    // start with link to proof in documentation
-    let mut output = TokenStream::from(quote::quote!(#[doc = #proof_link]));
+    let attrs = match &mut item {
+        Item::Fn(item_fn) => &mut item_fn.attrs,
+        Item::Impl(item_impl) => &mut item_impl.attrs,
+        _ => unreachable!(),
+    };
+    // mutate the docstring to add a proof path
+    try_!(insert_proof_attribute(attrs, proof_path), original_input);
+
+    let mut output = TokenStream::new();
 
     // insert cfg attributes
     (proven.features.0.iter())
         .for_each(|feat| output.extend(TokenStream::from(quote::quote!(#[cfg(feature = #feat)]))));
 
-    output.extend(original_input);
+    output.extend(TokenStream::from(item.to_token_stream()));
     output
 }
