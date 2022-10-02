@@ -2,9 +2,9 @@ import pytest
 from opendp.mod import enable_features
 from opendp.measurements import *
 from opendp.transformations import *
-from opendp.typing import AllDomain, L1Distance, VectorDomain, ZeroConcentratedDivergence
+from opendp.typing import AllDomain, VectorDomain, ZeroConcentratedDivergence
 
-enable_features("floating-point", "contrib")
+enable_features("floating-point", "contrib", "honest-but-curious")
 
 
 def test_amplification():

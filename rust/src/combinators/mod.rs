@@ -1,8 +1,8 @@
 //! Various combinator constructors.
 
-#[cfg(feature="contrib")]
+#[cfg(all(feature="contrib", feature="honest-but-curious"))]
 mod amplify;
-#[cfg(feature="contrib")]
+#[cfg(all(feature="contrib", feature="honest-but-curious"))]
 pub use crate::combinators::amplify::*;
 
 #[cfg(feature="contrib")]
