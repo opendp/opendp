@@ -1,7 +1,7 @@
 .. testsetup::
 
     from opendp.mod import enable_features
-    enable_features('contrib', 'floating-point')
+    enable_features('contrib', 'floating-point', 'honest-but-curious')
 
 .. _combinator-constructors:
 
