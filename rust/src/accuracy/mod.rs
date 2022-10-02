@@ -293,7 +293,7 @@ pub mod test {
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_gaussian_scale(accuracy as f64, theoretical_alpha)?;
         println!("scale: {}", scale);
-        let base_dg = make_base_discrete_gaussian::<AllDomain<i8>, ZeroConcentratedDivergence<f64>>(scale)?;
+        let base_dg = make_base_discrete_gaussian::<AllDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dg.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
