@@ -72,7 +72,6 @@ def choose_branching_factor(
     """Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
     that minimizes error in cdf and quantile estimates based on b-ary trees.
     
-    
     **Citations:**
     
     * [QYL13 Understanding Hierarchical Methods for Differentially Private Histograms](http://www.vldb.org/pvldb/vol6/p1954-qardaji.pdf)
@@ -105,7 +104,6 @@ def make_b_ary_tree(
 ) -> Transformation:
     """Expand a vector of counts into a b-ary tree of counts, 
     where each branch is the sum of its `b` immediate children.
-    
     
     **Supporting Elements:**
     
@@ -156,12 +154,10 @@ def make_bounded_float_checked_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -210,12 +206,10 @@ def make_bounded_float_ordered_sum(
     You may need to use `make_ordered_random` to impose an ordering on the data.
     The utility loss from overestimating the `size_limit` is small.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -262,12 +256,10 @@ def make_bounded_int_monotonic_sum(
     """Make a Transformation that computes the sum of bounded ints, 
     where all values share the same sign.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -309,12 +301,10 @@ def make_bounded_int_ordered_sum(
     """Make a Transformation that computes the sum of bounded ints.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -356,12 +346,10 @@ def make_bounded_int_split_sum(
     """Make a Transformation that computes the sum of bounded ints. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -406,7 +394,6 @@ def make_bounded_resize(
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records 
     with `constant` in a Vec<`TA`> to match a provided `size`.
-    
     
     **Supporting Elements:**
     
@@ -463,7 +450,6 @@ def make_bounded_sum(
     """Make a Transformation that computes the sum of bounded data. 
     Use `make_clamp` to bound data.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
@@ -506,7 +492,6 @@ def make_cast(
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
     Failure to parse results in None, else Some<TOA>.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TIA>>`
@@ -547,7 +532,6 @@ def make_cast_default(
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
     If the cast fails, fill with default.
-    
     
     **Supporting Elements:**
     
@@ -590,7 +574,6 @@ def make_cast_inherent(
     """Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. 
     If cast fails, fill with `TO`'s null value.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TIA>>`
@@ -630,7 +613,6 @@ def make_cdf(
 ) -> Transformation:
     """Postprocess a noisy array of float summary counts into a cumulative distribution.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TA>>`
@@ -668,7 +650,6 @@ def make_clamp(
     """Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
     If datum is less than lower, let datum be lower. 
     If datum is greater than upper, let datum be upper.
-    
     
     **Supporting Elements:**
     
@@ -717,11 +698,9 @@ def make_consistent_b_ary_tree(
     The output remains consistent even when leaf nodes are missing.
     This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
     
-    
     **Citations:**
     
     * [HRMS09 Boosting the Accuracy of Differentially Private Histograms Through Consistency, section 4.1](https://arxiv.org/pdf/0904.0942.pdf)
-    
     
     **Supporting Elements:**
     
@@ -766,11 +745,9 @@ def make_count(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of records in data.
     
-    
     **Citations:**
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
-    
     
     **Supporting Elements:**
     
@@ -814,11 +791,9 @@ def make_count_by(
     """Make a Transformation that computes the count of each unique value in data. 
     This assumes that the category set is unknown.
     
-    
     **Citations:**
     
     * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
-    
     
     **Supporting Elements:**
     
@@ -869,12 +844,10 @@ def make_count_by_categories(
     """Make a Transformation that computes the number of times each category appears in the data. 
     This assumes that the category set is known.
     
-    
     **Citations:**
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
-    
     
     **Supporting Elements:**
     
@@ -927,11 +900,9 @@ def make_count_distinct(
 ) -> Transformation:
     """Make a Transformation that computes a count of the number of unique, distinct records in data.
     
-    
     **Citations:**
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
-    
     
     **Supporting Elements:**
     
@@ -972,7 +943,6 @@ def make_create_dataframe(
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that constructs a dataframe from a `Vec<Vec<String>>` (a vector of records).
-    
     
     **Supporting Elements:**
     
@@ -1015,7 +985,6 @@ def make_df_cast_default(
 ) -> Transformation:
     """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. 
     If cast fails, fill with default.
-    
     
     **Supporting Elements:**
     
@@ -1066,7 +1035,6 @@ def make_df_is_equal(
 ) -> Transformation:
     """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `DataFrameDomain<TK>`
@@ -1113,7 +1081,6 @@ def make_drop_null(
     """Make a Transformation that drops null values.
     `DA` is one of `OptionNullDomain<AllDomain<TA>>` or `InherentNullDomain<AllDomain<TA>>`.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<DA>`
@@ -1149,7 +1116,6 @@ def make_find(
     TIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Find the index of a data value in a set of categories.
-    
     
     **Supporting Elements:**
     
@@ -1190,7 +1156,6 @@ def make_find_bin(
 ) -> Transformation:
     """Make a transformation that finds the bin index in a monotonically increasing vector of edges.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TIA>>`
@@ -1229,7 +1194,6 @@ def make_identity(
     M: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation representing the identity function.
-    
     
     **Supporting Elements:**
     
@@ -1281,7 +1245,6 @@ def make_impute_constant(
     | NullableDomain<AllDomain<T>> | Vec<T>         | Vec<T>      |
     ```
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<DA>`
@@ -1324,7 +1287,6 @@ def make_impute_uniform_float(
     """Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
     Operates on `InherentNullDomain<AllDomain<TA>>`
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<InherentNullDomain<AllDomain<TA>>>`
@@ -1364,7 +1326,6 @@ def make_index(
     TOA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a transformation that treats each element as an index into a vector of categories.
-    
     
     **Supporting Elements:**
     
@@ -1408,7 +1369,6 @@ def make_is_equal(
 ) -> Transformation:
     """Make a Transformation that checks if each element is equal to `value`.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TIA>>`
@@ -1446,7 +1406,6 @@ def make_is_null(
     DIA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that checks if each element in a vector is null.
-    
     
     **Supporting Elements:**
     
@@ -1486,7 +1445,6 @@ def make_lipschitz_float_mul(
 ) -> Transformation:
     """Make a transformation that multiplies an aggregate by a constant.
     The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
-    
     
     **Supporting Elements:**
     
@@ -1604,7 +1562,6 @@ def make_metric_unbounded(
     | HammingDistance   | InsertDeleteDistance |
     ```
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TA>>>`
@@ -1689,7 +1646,6 @@ def make_quantiles_from_counts(
 ) -> Transformation:
     """Postprocess a noisy array of summary counts into quantiles.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TA>>`
@@ -1743,7 +1699,6 @@ def make_resize(
     """Make a Transformation that either truncates or imputes records 
     with `constant` in a Vec<`TA`> to match a provided `size`.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TA>>`
@@ -1796,7 +1751,6 @@ def make_select_column(
 ) -> Transformation:
     """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `DataFrameDomain<K>`
@@ -1842,12 +1796,10 @@ def make_sized_bounded_float_checked_sum(
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -1896,12 +1848,10 @@ def make_sized_bounded_float_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -1949,12 +1899,10 @@ def make_sized_bounded_int_checked_sum(
     """Make a Transformation that computes the sum of bounded ints. 
     The effective range is reduced, as (bounds * size) must not overflow.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -2000,12 +1948,10 @@ def make_sized_bounded_int_monotonic_sum(
     """Make a Transformation that computes the sum of bounded ints, 
     where all values share the same sign.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -2052,12 +1998,10 @@ def make_sized_bounded_int_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -2104,12 +2048,10 @@ def make_sized_bounded_int_split_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -2213,7 +2155,6 @@ def make_sized_bounded_ordered_random(
     | ChangeOneDistance | HammingDistance      |
     ```
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<TA>>>`
@@ -2264,7 +2205,6 @@ def make_sized_bounded_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
@@ -2312,12 +2252,10 @@ def make_sized_bounded_sum_of_squared_deviations(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-    
     
     **Supporting Elements:**
     
@@ -2423,11 +2361,9 @@ def make_sized_bounded_variance(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
-    
     **Citations:**
     
     * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
-    
     
     **Supporting Elements:**
     
@@ -2484,7 +2420,6 @@ def make_sized_ordered_random(
     | SymmetricDistance | InsertDeleteDistance |
     | ChangeOneDistance | HammingDistance      |
     ```
-    
     
     **Supporting Elements:**
     
@@ -2583,7 +2518,6 @@ def make_split_dataframe(
     """Make a Transformation that splits each record in a String into a `Vec<Vec<String>>`,
     and loads the resulting table into a dataframe keyed by `col_names`.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `AllDomain<String>`
@@ -2655,7 +2589,6 @@ def make_split_records(
 ) -> Transformation:
     """Make a Transformation that splits each record in a `Vec<String>` into a `Vec<Vec<String>>`.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<String>>`
@@ -2690,7 +2623,6 @@ def make_subset_by(
     TK: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that subsets a dataframe by a boolean column.
-    
     
     **Supporting Elements:**
     
@@ -2734,7 +2666,6 @@ def make_unclamp(
 ) -> Transformation:
     """Make a Transformation that unclamps numeric data in Vec<`T`>.
     Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
-    
     
     **Supporting Elements:**
     
@@ -2782,7 +2713,6 @@ def make_unordered(
     | -------------------- | -------------------- |
     | InsertDeleteDistance | SymmetricDistance    |
     ```
-    
     
     **Supporting Elements:**
     
