@@ -9,7 +9,7 @@ use std::str::Utf8Error;
 
 use crate::{err, fallible};
 use crate::metrics::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, InsertDeleteDistance, HammingDistance};
-use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
+use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, SMDCurve, FixedSmoothedMaxDivergence};
 use crate::error::*;
 use crate::ffi::any::AnyObject;
 use crate::domains::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
@@ -248,7 +248,11 @@ lazy_static! {
             // measures
             type_vec![MaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![SmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![FixedSmoothedMaxDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![ZeroConcentratedDivergence, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+
+            // measure distances
+            type_vec![SMDCurve, <f32, f64>],
         ].into_iter().flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len());
