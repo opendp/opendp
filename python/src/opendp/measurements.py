@@ -33,7 +33,6 @@ def make_base_discrete_gaussian(
     | VectorDomain<AllDomain<T>> | Vec<T>     | L2Distance<T>        |
     ```
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `D`
@@ -94,7 +93,6 @@ def make_base_discrete_laplace(
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
     * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `D`
@@ -147,11 +145,9 @@ def make_base_discrete_laplace_cks20(
     | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
     ```
     
-    
     **Citations:**
     
     * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
-    
     
     **Supporting Elements:**
     
@@ -207,11 +203,9 @@ def make_base_discrete_laplace_linear(
     | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
     ```
     
-    
     **Citations:**
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
-    
     
     **Supporting Elements:**
     
@@ -274,7 +268,6 @@ def make_base_gaussian(
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
     
-    
     **Supporting Elements:**
     
     * Input Domain:   `D`
@@ -326,7 +319,6 @@ def make_base_geometric(
     """Deprecated. 
     Use `make_base_discrete_laplace` instead (more efficient). 
     `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
-    
     
     **Supporting Elements:**
     
@@ -387,7 +379,6 @@ def make_base_laplace(
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
-    
     
     **Supporting Elements:**
     
