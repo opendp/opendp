@@ -157,6 +157,13 @@ If your dataset is a simple sample from a larger population,
 you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator:
 :func:`opendp.combinators.make_population_amplification`.
 
+The amplifier requires a looser trust model, as the population size can be set arbitrarily.
+
+.. doctest::
+
+    enable_features("honest-but-curious")
+
+
 In order to demonstrate this API, we'll first create a measurement with a sized input domain.
 The resulting measurement expects the size of the input dataset to be 10.
 

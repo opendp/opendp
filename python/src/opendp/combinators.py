@@ -179,6 +179,9 @@ def make_population_amplification(
     
     The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
     
+    Protected by the "honest-but-curious" feature flag 
+    because a dishonest adversary could set the population size to be arbitrarily large.
+    
     :param measurement: the computation to amplify
     :type measurement: Measurement
     :param population_size: the size of the population from which the input dataset is a simple sample
@@ -188,7 +191,7 @@ def make_population_amplification(
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    assert_features("contrib")
+    assert_features("contrib", "honest-but-curious")
     
     # No type arguments to standardize.
     # Convert arguments to c types.
