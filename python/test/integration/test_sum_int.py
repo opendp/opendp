@@ -1,4 +1,5 @@
 from opendp.transformations import *
+from opendp.measurements import *
 from opendp.mod import enable_features
 import pytest
 
@@ -36,3 +37,10 @@ def test_make_bounded_int_split_sum():
 def test_make_sized_bounded_int_split_sum():
     sum_trans = make_sized_bounded_int_split_sum(3, (0, 10))
     assert sum_trans([1, 2, 4]) == 7
+
+
+def test_make_discrete_gaussian_sum():
+    meas_dg_sum = make_sized_bounded_int_split_sum(3, (0, 10)) >> make_base_discrete_gaussian(2.)
+
+    print(meas_dg_sum([1, 2, 4]))
+    assert meas_dg_sum.check(3, 12.5)

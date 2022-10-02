@@ -21,7 +21,8 @@ __all__ = [
 def make_base_discrete_gaussian(
     scale,
     D: RuntimeTypeDescriptor = "AllDomain<int>",
-    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<Q>"
+    MO: RuntimeTypeDescriptor = "ZeroConcentratedDivergence<QO>",
+    QI: RuntimeTypeDescriptor = "int"
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
     
@@ -44,6 +45,8 @@ def make_base_discrete_gaussian(
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
+    :param QI: Input distance. The type of sensitivities. Can be any integer or float.
+    :type QI: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -53,21 +56,23 @@ def make_base_discrete_gaussian(
     
     # Standardize type arguments.
     D = RuntimeType.parse(type_name=D)
-    MO = RuntimeType.parse(type_name=MO, generics=["Q"])
-    Q = get_atom_or_infer(MO, scale)
-    MO = MO.substitute(Q=Q)
+    MO = RuntimeType.parse(type_name=MO, generics=["QO"])
+    QI = RuntimeType.parse(type_name=QI)
+    QO = get_atom_or_infer(MO, scale)
+    MO = MO.substitute(QO=QO)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=Q)
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
     D = py_to_c(D, c_type=ctypes.c_char_p)
     MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    QI = py_to_c(QI, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_measurements__make_base_discrete_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D, MO), Measurement))
+    return c_to_py(unwrap(function(scale, D, MO, QI), Measurement))
 
 
 def make_base_discrete_laplace(
