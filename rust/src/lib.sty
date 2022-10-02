@@ -80,6 +80,28 @@
 \makeatother
 \newcommand{\rustdoc}[3]{\href{https://docs.rs/opendp/\OpenDPVersion/opendp/#1/#2.#3.html}{\texttt{#3}}}
 
+
+% alternative rustdoc macro that links local file paths
+% doesn't work! canonical paths in latex links are busted, and opening file links is inconsistent across pdf viewers
+% \makeatletter
+% \ifnum\pdf@shellescape=1
+%   % get version
+%   \immediate\write18{[ ! -f out/version.txt ] && mkdir -p out && head -n 1 `git rev-parse --show-toplevel`/VERSION | sed "s|0.0.0+development|latest|g" > out/version.txt}
+%   % construct base path
+%   \immediate\write18{[ ! -f out/base.txt ] && ([ -z `printenv OPENDP_LOCAL_DOCS_URI` ] 
+%     && echo https://docs.rs/opendp/`cat out/version.txt`/opendp 
+%     || echo `printenv OPENDP_LOCAL_DOCS_URI`/rust/target/doc/opendp
+%   ) > out/base.txt}
+
+%   %     ...and then retrieve the base by loading the temp file
+%   \CatchFileDef\OpenDPBase{out/base.txt}{\endlinechar=-1}
+% \else
+%   % if shell commands are not enabled, just claim latest
+%   \newcommand{\OpenDPBase}{https://docs.rs/opendp/latest/opendp}
+% \fi
+% \makeatother
+% \newcommand{\rustdoc}[3]{\href{\OpenDPBase/#1/#2.#3.html}{\texttt{#3}}}
+
 % minted (pseudocode)
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
