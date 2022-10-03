@@ -51,6 +51,7 @@ This will compile a debug build of the OpenDP shared library, placing it in the 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
 
 In the above commands, the features ``untrusted`` and ``bindings-python`` are enabled.
+
 Setting a feature changes how the crate compiles:
 
 
