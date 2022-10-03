@@ -50,7 +50,7 @@ You can also build the rust documentation directly with:
 
 .. code-block:: bash
     
-    cargo rustdoc --features untrusted,derive -- --html-in-header opendp_tooling/katex.html
+    cargo rustdoc --features untrusted,derive -- --html-in-header opendp_tooling/katex.html --document-private-items
 
 In the above commands, the features ``untrusted``, ``bindings-python`` and ``derive`` are enabled.
 Setting a feature changes how the crate compiles:
@@ -277,7 +277,7 @@ These tasks can be used to directly build or test OpenDP.
                 },
                 "args": [
                     "--features", "bindings-python untrusted",
-                    "--", "--html-in-header", "opendp_tooling/katex.html"
+                    "--", "--html-in-header", "opendp_tooling/katex.html", "--document-private-items"
                 ],
                 "group": "build",
                 "label": "rust: cargo rustdoc",
