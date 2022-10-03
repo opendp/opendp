@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
 use darling::{Error, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
@@ -21,7 +21,7 @@ pub struct BootstrapDocstring {
 }
 
 impl BootstrapDocstring {
-    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType) -> Result<BootstrapDocstring> {
+    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType, path: Option<(&str, &str)>) -> Result<BootstrapDocstring> {
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
         if let Some(sup_elements) = parse_sig_output(output)? {
@@ -30,6 +30,12 @@ impl BootstrapDocstring {
 
         let mut description = Vec::from_iter(doc_sections.remove("Description"));
 
+        // add a link to rust documentation (with a gap line)
+        if let Some((module, name)) = &path {
+            description.push(String::new());
+            description.push(make_rustdoc_link(module, name)?)
+        }
+        
         let mut add_section_to_description = |section_name: &str| {
             doc_sections.remove(section_name).map(|section| {
                 description.push(format!("\n**{section_name}:**\n"));
@@ -327,4 +333,23 @@ fn new_comment_attribute(comment: &str) -> Attribute {
             .into_iter(),
         ),
     }
+}
+
+
+pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
+    
+    // link from foreign library docs to rust docs
+    let proof_uri = if let Ok(local_uri) = std::env::var("OPENDP_LOCAL_DOCS_URI") {
+        format!("{local_uri}/rust/target/doc")
+    } else {
+        // find the version
+        let mut version = env!("CARGO_PKG_VERSION");
+        if version == "0.0.0+development" {
+            version = "latest";
+        };
+
+        format!("https://docs.rs/opendp/{version}")
+    };
+
+    Ok(format!("[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"))
 }
