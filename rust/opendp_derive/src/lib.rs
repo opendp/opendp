@@ -68,7 +68,7 @@ mod full;
 /// # Arguments, Generics and Return
 /// You can pass additional metadata that is specific to each argument or generic.
 /// 
-/// ```
+/// ```no_run
 /// #[bootstrap(
 ///     // can specify multiple. Everything is optional
 ///     arguments(my_arg1(default = "example"), my_arg2(hint = "int")),
