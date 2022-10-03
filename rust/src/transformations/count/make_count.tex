@@ -17,16 +17,12 @@ The length of the vector, of type \texttt{usize}, is exactly casted to a user sp
 If the length is too large to be represented exactly by \texttt{TO}, 
 the cast saturates at the maximum value of type \texttt{TO}.
 
-\section{Vetting history}
+\subsection*{Vetting History}
 \begin{itemize}
     \item \vettingPR{513}
 \end{itemize}
 
-\section{Pseudocode}
-
-\label{sec:pseudocode}
-
-\subsection*{Preconditions}
+\section{Preconditions}
 \begin{itemize}
 
     \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits}{trait}{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
@@ -48,7 +44,7 @@ the cast saturates at the maximum value of type \texttt{TO}.
     \end{itemize}
 \end{itemize}
 
-\subsection*{Implementation}
+\section{Pseudocode}
 \begin{lstlisting}[language = Python, escapechar=|]
 def make_count():
     input_domain = VectorDomain(AllDomain(TIA))
@@ -71,12 +67,10 @@ def make_count():
         input_metric, output_metric, stability_map)
 \end{lstlisting}
 
-\subsection*{Postcondition}
-\texttt{make\_count} raises an exception or returns a valid \texttt{Transformation}.
+\section{Postcondition}
+\validTransformation{\texttt{(TIA, TO)}}{\texttt{make\_count}}
 
-\section{Proof}
-
-\transformationTheorem{\texttt{(TIA, TO)}}{\texttt{make\_count}}
+\subsection*{Proofs}
 
 \begin{proof} \textbf{(Part 1 -- appropriate output domain).}
     The \texttt{output\_domain} is \texttt{AllDomain(TO)}, so it is sufficient to show that \texttt{function} always returns non-null values of type \texttt{TO}.
