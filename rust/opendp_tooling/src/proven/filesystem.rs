@@ -78,16 +78,23 @@ fn get_out_dir() -> Result<PathBuf> {
 }
 
 pub fn make_proof_link(relative_path: &str) -> Result<String> {
-    let relative_path = PathBuf::from(relative_path);
+    let mut relative_path = PathBuf::from(relative_path);
     // construct absolute path
     let absolute_path = get_src_dir()?.join(&relative_path);
 
     if !absolute_path.exists() {
         return Err(Error::custom(format!("{absolute_path:?} does not exist!")));
     }
+
+    // link to the pdf, not the tex
+    relative_path.set_extension("pdf");
     
     // link from sphinx and rustdoc to latex
     let proof_uri = if let Ok(local_uri) = env::var("OPENDP_LOCAL_DOCS_URI") {
+        // insert /out into path, because local builds stick pdfs in /out
+        let dirs = relative_path.parent().unwrap();
+        relative_path = dirs.join("out").join(relative_path.file_name().unwrap());
+
         format!("{local_uri}/rust/src")
     } else {
         // find the docs uri
