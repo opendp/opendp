@@ -1,5 +1,5 @@
 \documentclass{article}
-\input{../../../mod.sty}
+\input{../../../lib.sty}
 
 \title{\texttt{fn sample\_discrete\_gaussian}}
 \author{Michael Shoemate}
@@ -11,16 +11,16 @@
 Proves soundness of \texttt{fn sample\_discrete\_gaussian} in \asOfCommit{mod.rs}{0be3ab3e6}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.3}{subsection 5.3} of \cite{CKS20}.
 
-\section{Vetting history}
+\subsection*{Vetting history}
 \begin{itemize}
     \item \vettingPR{519}
 \end{itemize}
 
-\section{Pseudocode}
-\subsubsection*{Precondition}
+\section{Hoare Triple}
+\subsection*{Precondition}
 $\texttt{scale} \in \mathbb{Q} \land \texttt{scale} \geq 0$
 
-\subsubsection*{Implementation}        
+\subsection*{Implementation}        
 \begin{lstlisting}[language=Python]
 def sample_discrete_gaussian(scale) -> int:
     if scale == 0:
@@ -37,7 +37,7 @@ def sample_discrete_gaussian(scale) -> int:
             return candidate
 \end{lstlisting}
 
-\subsubsection*{Postcondition}
+\subsection*{Postcondition}
 \texttt{sample\_discrete\_gaussian} returns an integer sample from $\mathcal{N}_\mathbb{Z}(0, scale^2)$, or an error propagated from \texttt{sample\_discrete\_laplace} or \texttt{sample\_bernoulli\_exp}.
 
 \section{Proof}

@@ -1,5 +1,5 @@
 \documentclass{article}
-\input{../../../mod.sty}
+\input{../../../lib.sty}
 
 \title{\texttt{fn sample\_bernoulli\_exp}}
 \author{Michael Shoemate}
@@ -8,50 +8,78 @@
 \maketitle
 
 \contrib
-Proves soundness of \texttt{fn sample\_bernoulli\_exp} in \asOfCommit{mod.rs}{0be3ab3e6}.
+Proves soundness of \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp} in \asOfCommit{mod.rs}{0be3ab3e6}.
+
+\texttt{fn sample\_bernoulli\_exp} returns a sample from the $Bernoulli(exp(-x))$ distribution for some rational, non-negative, finite \texttt{x}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.1}{subsection 5.1} of \cite{CKS20}.
 
-\section{Vetting history}
+\section*{Vetting history}
 \begin{itemize}
     \item \vettingPR{519}
 \end{itemize}
 
-\section{Pseudocode}
-\subsubsection*{Precondition}
+\section{Hoare Triple}
+\subsection*{Precondition}
 $\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
 
-\subsubsection*{Implementation}        
-\begin{lstlisting}[language=Python]
+\subsection*{Pseudocode}        
+\begin{lstlisting}[language=Python, escapechar=|]
 def sample_bernoulli_exp(x) -> bool:
     while x >= 1:
-        if sample_bernoulli_exp1(1):
+        if sample_bernoulli_exp1(1):  |\label{line:B_i}|
             x -= 1
         else: 
             return False
-    return sample_bernoulli_exp1(x)
+    return sample_bernoulli_exp1(x)   |\label{line:C}|
 \end{lstlisting}
 
-\subsubsection*{Postcondition}
-\texttt{sample\_bernoulli\_exp} returns a boolean sample from $Bernoulli(exp(-x))$, or an error propagated from \texttt{sample\_bernoulli\_exp1}.
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameters \texttt{x} such that the given preconditions hold, \\
+\texttt{sample\_bernoulli\_exp} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $Bernoulli(exp(-x))$.
 
 \section{Proof}
+Assume the preconditions are met.
 
-Let $r$ be the return value of \texttt{sample\_bernoulli\_exp(x)}, assuming the preconditions are met, and the function does not return an error.
-
-\begin{theorem}
-$r$ is a realization of $R \sim Bernoulli(exp(-x))$, where $x \in \mathbb{Q}$ and $x > 0$ \cite{CKS20}.
-\end{theorem}
+\begin{lemma}
+    \label{err-e}
+    \texttt{sample\_bernoulli\_exp} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
 
 \begin{proof}
-Let $B_i \sim Bernoulli(exp(-1))$ be the sequence of booleans returned from \texttt{sample\_bernoulli\_exp1(1)}, and $C \sim Bernoulli(exp(-(x - \lfloor x \rfloor)))$.
-The function only returns $\top$ if $B_i = \top$ for all $i$ and $C = \top$.
+    In all invocations of \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp1}, the argument passed satisfies its definition preconditions, 
+    by the preconditions on \texttt{x} and function logic.
+    Thus, by its definition, \texttt{sample\_bernoulli\_exp1} only returns an error when there is a lack of system entropy.
+    The only source of errors in \texttt{sample\_bernoulli\_exp} is from the invocation of \texttt{sample\_bernoulli\_exp1}.
+    Therefore \texttt{sample\_bernoulli\_exp} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{proof}
 
-\begin{align*}
-    P[R = \top] &= P[B_1 = B_2 = ... = B_{\lfloor x \rfloor} = C = \top] \\
-    &= \prod_{i=1}^{\lfloor x \rfloor} P[B_i = \top] P[C = \top] && \text{All $B_i$ are independent.} \\
-    &= exp(-1)^{\lfloor x \rfloor} exp(\lfloor x \rfloor - x) \\
-    &= exp(-x)
-\end{align*}
+\begin{lemma}
+    \label{ok-out}
+    \texttt{out} is distributed as $Bernoulli(exp(-x))$.
+\end{lemma}
+
+\begin{proof}
+    For $0 \le i \le \lfloor x \rfloor$, let $b_i$ denote the $i^{th}$ outcome of \texttt{sample\_bernoulli\_exp1} on line \ref{line:B_i}.
+    By the definition of \texttt{sample\_bernoulli\_exp1}, under the established conditions and preconditions,
+    each $B_i$ is distributed as $Bernoulli(exp(-1))$.
+    Let $c$ denote the outcome of \texttt{sample\_bernoulli\_exp1} on line \ref{line:C}. 
+    Similarly as before, $C$ is distributed $Bernoulli(exp(-(x - \lfloor x \rfloor)))$.
+
+    \begin{align*}
+        P[\texttt{out} = \top] &= P[B_1 = B_2 = ... = B_{\lfloor x \rfloor} = C = \top] && \text{\texttt{out} is only $\top$ if $\forall i$, $B_i = \top$ and $C = \top$} \\
+        &= \prod_{i=1}^{\lfloor x \rfloor} P[B_i = \top] P[C = \top] && \text{all $B_i$ and $C$ are independent} \\
+        &= exp(-1)^{\lfloor x \rfloor} exp(\lfloor x \rfloor - x) \\
+        &= exp(-x)
+    \end{align*}
+
+    Therefore, \texttt{out} is distributed as $Bernoulli(exp(-x))$.
+\end{proof}
+
+
+\begin{proof}
+    \ref{postcondition} holds by \ref{err-e} and \ref{ok-out}.
 \end{proof}
 
 \bibliographystyle{alpha}
