@@ -61,12 +61,11 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
 /// to the respective ordered dataset metric by assigning a random permutatation.
 /// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 ///
-/// ```text
 /// | `MI`              | output metric        |
 /// | ----------------- | -------------------- |
 /// | SymmetricDistance | InsertDeleteDistance |
 /// | ChangeOneDistance | HammingDistance      |
-/// ```
+/// 
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -123,12 +122,11 @@ pub extern "C" fn opendp_transformations__make_sized_ordered_random(
 /// to the respective ordered dataset metric by assigning a random permutatation.
 /// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
 ///
-/// ```text
 /// | `MI`              | output metric        |
 /// | ----------------- | -------------------- |
 /// | SymmetricDistance | InsertDeleteDistance |
 /// | ChangeOneDistance | HammingDistance      |
-/// ```
+/// 
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -193,11 +191,10 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_ordered_random(
 ///
 /// The dataset metric is not generic over HammingDistance because the dataset size is unknown.
 /// 
-/// ```text
 /// | input metric         | output metric        |
 /// | -------------------- | -------------------- |
 /// | InsertDeleteDistance | SymmetricDistance    |
-/// ```
+/// 
 /// 
 /// # Generics
 /// * `TA` - Atomic Type.
@@ -234,12 +231,10 @@ pub extern "C" fn opendp_transformations__make_unordered(
 /// to the respective unordered dataset metric via a no-op.
 /// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 ///
-/// ```text
 /// | `MI`                 | output metric      |
 /// | -------------------- | ------------------ |
 /// | InsertDeleteDistance | SymmetricDistance  |
 /// | HammingDistance      | ChangeOneDistance  |
-/// ```
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -296,12 +291,10 @@ pub extern "C" fn opendp_transformations__make_sized_unordered(
 /// to the respective unordered dataset metric via a no-op.
 /// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
 ///
-/// ```text
 /// | `MI`                 | output metric      |
 /// | -------------------- | ------------------ |
 /// | InsertDeleteDistance | SymmetricDistance  |
 /// | HammingDistance      | ChangeOneDistance  |
-/// ```
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -368,12 +361,10 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_unordered(
 /// 
 /// While it is valid to operate with bounded data, there is no constructor for it in Python.
 /// 
-/// ```text
 /// | `MI`                 | output metric     |
 /// | -------------------- | ----------------- |
 /// | SymmetricDistance    | ChangeOneDistance |
 /// | InsertDeleteDistance | HammingDistance   |
-/// ```
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -431,12 +422,10 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
 /// to the respective unbounded dataset metric with a no-op. 
 /// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 /// 
-/// ```text
 /// | `MI`              | output metric        |
 /// | ----------------- | -------------------- |
 /// | ChangeOneDistance | SymmetricDistance    |
 /// | HammingDistance   | InsertDeleteDistance |
-/// ```
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.

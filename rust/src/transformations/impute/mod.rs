@@ -82,12 +82,10 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
 /// Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
 /// that have an inherent representation of nullity, like floats.
 /// 
-/// ```text
-/// | Input Domain `DI`            |  Input Type    | Output Type |
-/// | ---------------------------- | -------------- | ----------- |
-/// | AllDomain<Option<T>>         | Vec<Option<T>> | Vec<T>      |
-/// | NullableDomain<AllDomain<T>> | Vec<T>         | Vec<T>      |
-/// ```
+/// | Input Domain `DI`              |  Input Type      | Output Type   |
+/// | ------------------------------ | ---------------- | ------------- |
+/// | AllDomain<Option<`T`>>         | Vec<Option<`T`>> | Vec<`T`>      |
+/// | NullableDomain<AllDomain<`T`>> | Vec<`T`>         | Vec<`T`>      |
 /// 
 /// # Arguments
 /// * `constant` - Value to replace nulls with.
