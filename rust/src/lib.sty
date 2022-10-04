@@ -25,12 +25,15 @@
   linkbordercolor={0 0 1}
 }
 
-% \contrib macro to indicate inclusion in "contrib"
+% \contrib macro to indicate inclusion in "contrib".
 \usepackage{tcolorbox}
 \newtcolorbox{contrib_box}{colback=red!5!white,colframe=red!75!black}
 \newcommand{\contrib}{{\begin{contrib_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{contrib_box}}} 
 
-% asOfCommit macro to version a code dependency
+% asOfCommit macro to version a code dependency. Arguments:
+%    #1: relative path to file you are dependent on
+%    #2: commit hash it was last edited. If outdated, this should be the second hash in the footnoote. Otherwise,
+%            git log -n 1 --pretty=format:%h -- path/to/file.rs
 \makeatletter
 \ifnum\pdf@shellescape=1
    % "private" command that builds a link to a blob
@@ -62,10 +65,11 @@
 \fi
 \makeatother
 
-% \vettingPR macro to link a PR
+% \vettingPR macro to link a PR. Arguments:
+%    #1: PR number
 \newcommand{\vettingPR}[1]{\href{https://github.com/opendp/opendp/pull/#1}{Pull Request \##1}}
 
-% \rustdoc macro to get library version
+% \OpenDPVersion macro to get library version. Mainly used for \rustdoc
 \makeatletter
 \ifnum\pdf@shellescape=1
   % latex macro expansion has a separate phase for \input evaluation
@@ -78,7 +82,17 @@
   \newcommand{\OpenDPVersion}{latest}
 \fi
 \makeatother
-\newcommand{\rustdoc}[3]{\href{https://docs.rs/opendp/\OpenDPVersion/opendp/#1/#2.#3.html}{\texttt{#3}}}
+
+% for links to rustdoc items in OpenDP. Arguments:
+%    #1: path to item, and designation as trait, struct, fn, etc.
+%    #2: item name
+\newcommand{\rustdoc}[2]{\href{https://docs.rs/opendp/\OpenDPVersion/opendp/#1.#2.html}{\texttt{#2}}}
+
+% for links to external dependencies. Arguments:
+%    #1: crate name
+%    #2: path to item, and designation as trait, struct, fn, etc.
+%    #3: item name
+\newcommand{\docsrs}[3]{\href{https://docs.rs/#1/latest/#1/#2.#3.html}{\texttt{#3}}}
 
 % minted (pseudocode)
 \definecolor{codegreen}{rgb}{0,0.6,0}
