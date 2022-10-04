@@ -14,8 +14,13 @@ use self::traits::{
 mod ffi;
 mod traits;
 
-/// Make a Transformation that converts the unordered dataset metric `MI` 
-/// to the respective ordered dataset metric MI::OrderedMetric by assigning a random permutatation.
+/// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
+/// to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutatation.
+///
+/// | `MI`                 | `MI::OrderedMetric`  |
+/// | -------------------- | -------------------- |
+/// | SymmetricDistance    | InsertDeleteDistance |
+/// | ChangeOneDistance    | HammingDistance      |
 /// 
 /// # Generics
 /// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
@@ -41,6 +46,18 @@ where
     ))
 }
 
+
+/// Make a Transformation that converts the ordered dataset metric
+/// to the respective ordered dataset metric with a no-op.
+/// 
+/// | `MI`                 | `MI::UnorderedMetric` |
+/// | -------------------- | --------------------- |
+/// | InsertDeleteDistance | SymmetricDistance     |
+/// | HammingDistance      | ChangeOneDistance     |
+/// 
+/// # Generics
+/// * `D` - Domain
+/// * `MI` - Input Metric
 pub fn make_unordered<D, MI>(domain: D) -> Fallible<Transformation<D, D, MI, MI::UnorderedMetric>>
 where
     D: Domain,
@@ -57,6 +74,21 @@ where
     ))
 }
 
+
+/// Make a Transformation that converts the bounded dataset metric `MI` 
+/// to the respective unbounded dataset metric with a no-op. 
+/// 
+/// | `MI`              | output metric        |
+/// | ----------------- | -------------------- |
+/// | ChangeOneDistance | SymmetricDistance    |
+/// | HammingDistance   | InsertDeleteDistance |
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// 
+/// # Generics
+/// * `D` - Domain. The function is a no-op so input and output domains are the same.
+/// * `MI` - Input Metric.
 pub fn make_metric_unbounded<D, MI>(
     domain: SizedDomain<D>,
 ) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::UnboundedMetric>>
@@ -75,6 +107,25 @@ where
     ))
 }
 
+
+/// Make a Transformation that converts the unbounded dataset metric `MI` 
+/// to the respective bounded dataset metric with a no-op. 
+/// 
+/// Operates exclusively on SizedDomain<D>.
+/// The constructor enforces that the input domain has known size, 
+/// because it must have known size to be valid under a bounded dataset metric.
+/// 
+/// | `MI`                 | output metric     |
+/// | -------------------- | ----------------- |
+/// | SymmetricDistance    | ChangeOneDistance |
+/// | InsertDeleteDistance | HammingDistance   |
+///
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// 
+/// # Generics
+/// * `D` - Domain
+/// * `MI` - Input Metric
 pub fn make_metric_bounded<D, MI>(
     domain: SizedDomain<D>,
 ) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::BoundedMetric>>
