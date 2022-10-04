@@ -94,9 +94,9 @@ fn sample_bernoulli_exp(mut x: Rational) -> Fallible<bool> {
 /// Sample exactly from the geometric distribution (slow). 
 /// 
 /// # Proof Definition
-/// For any `x` that is a non-negative rational number,
-/// return `Ok(out)` where `out` is a sample from a geometric(1-exp(-x)) distribution,
-/// or `Err(e)`, due to a lack of system entropy.
+/// For any non-negative rational `x`,
+/// `sample_geometric_exp_slow` either returns `Err(e)` due to a lack of system entropy,
+/// or `Ok(out)`, where `out` is distributed as $Geometric(1 - exp(-x))$.
 fn sample_geometric_exp_slow(x: Rational) -> Fallible<Integer> {
     let mut k = 0.into();
     loop {
@@ -112,9 +112,9 @@ fn sample_geometric_exp_slow(x: Rational) -> Fallible<Integer> {
 /// Sample exactly from the geometric distribution (fast). 
 /// 
 /// # Proof Definition
-/// For any `x` that is a non-negative rational number,
-/// return `Ok(out)` where `out` is a sample from a geometric(1-exp(-x)) distribution,
-/// or `Err(e)`, due to a lack of system entropy.
+/// For any non-negative rational `x`,
+/// `sample_geometric_exp_fast` either returns `Err(e)` due to a lack of system entropy,
+/// or `Ok(out)`, where `out` is distributed as $Geometric(1 - exp(-x))$.
 fn sample_geometric_exp_fast(x: Rational) -> Fallible<Integer> {
     if x.is_zero() {
         return Ok(0.into());
