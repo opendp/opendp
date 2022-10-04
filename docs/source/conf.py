@@ -27,31 +27,46 @@ extensions = [
 ]
 
 # convert markdown to rst when rendering with sphinx
-import commonmark
+
+generated_dirs = {
+    "accuracy", 
+    "combinators", 
+    "core",
+    "measurements", 
+    "transformations", 
+}
+import pypandoc
 import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
-    if len(path) > 1 and path[1] in {
-        "accuracy", 
-        "combinators", 
-        "core",
-        "measurements", 
-        "transformations", 
-    }:
-        ast = commonmark.Parser().parse('\n'.join(lines))
-        rst = commonmark.ReStructuredTextRenderer().render(ast)
 
+    if len(path) > 1 and path[1] in generated_dirs:
+        description = []
+        params = []
+        found_param = False
+        for line in lines:
+            found_param |= line.startswith(":")
+            if found_param:
+                params.append(line.replace("`", "``"))
+            else:
+                description.append(line)
+        
+        rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')                
+        params = "\n".join(params)
+        
         # allow sphinx notation to pass through
         indexes = set()
-        for match in py_attr_re.finditer(rst):
+        for match in py_attr_re.finditer(params):
             a, b = match.span(1)
             indexes |= {a, b - 1}
-        rst = "".join(l for i, l in enumerate(rst) if i not in indexes)
+        params = "".join(l for i, l in enumerate(params) if i not in indexes)
 
         lines.clear()
         lines += rst.splitlines()
+        lines += [""]
+        lines += params.splitlines()
 
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
