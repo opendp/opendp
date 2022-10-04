@@ -1238,12 +1238,10 @@ def make_impute_constant(
     Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
     that have an inherent representation of nullity, like floats.
     
-    ```text
-    | Input Domain `DI`            |  Input Type    | Output Type |
-    | ---------------------------- | -------------- | ----------- |
-    | AllDomain<Option<T>>         | Vec<Option<T>> | Vec<T>      |
-    | NullableDomain<AllDomain<T>> | Vec<T>         | Vec<T>      |
-    ```
+    | Input Domain `DI`              |  Input Type      | Output Type   |
+    | ------------------------------ | ---------------- | ------------- |
+    | AllDomain<Option<`T`>>         | Vec<Option<`T`>> | Vec<`T`>      |
+    | NullableDomain<AllDomain<`T`>> | Vec<`T`>         | Vec<`T`>      |
     
     **Supporting Elements:**
     
@@ -1502,12 +1500,10 @@ def make_metric_bounded(
     
     While it is valid to operate with bounded data, there is no constructor for it in Python.
     
-    ```text
     | `MI`                 | output metric     |
     | -------------------- | ----------------- |
     | SymmetricDistance    | ChangeOneDistance |
     | InsertDeleteDistance | HammingDistance   |
-    ```
     
     **Supporting Elements:**
     
@@ -1555,12 +1551,10 @@ def make_metric_unbounded(
     to the respective unbounded dataset metric with a no-op. 
     Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
     
-    ```text
     | `MI`              | output metric        |
     | ----------------- | -------------------- |
     | ChangeOneDistance | SymmetricDistance    |
     | HammingDistance   | InsertDeleteDistance |
-    ```
     
     **Supporting Elements:**
     
@@ -2148,12 +2142,10 @@ def make_sized_bounded_ordered_random(
     """Make a Transformation that converts the unordered dataset metric `MI`
     to the respective ordered dataset metric by assigning a random permutatation.
     Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
-    ```text
     | `MI`              | output metric        |
     | ----------------- | -------------------- |
     | SymmetricDistance | InsertDeleteDistance |
     | ChangeOneDistance | HammingDistance      |
-    ```
     
     **Supporting Elements:**
     
@@ -2304,12 +2296,10 @@ def make_sized_bounded_unordered(
     """Make a Transformation that converts the ordered dataset metric `MI`
     to the respective unordered dataset metric via a no-op.
     Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
-    ```text
     | `MI`                 | output metric      |
     | -------------------- | ------------------ |
     | InsertDeleteDistance | SymmetricDistance  |
     | HammingDistance      | ChangeOneDistance  |
-    ```
     
     **Supporting Elements:**
     
@@ -2414,12 +2404,10 @@ def make_sized_ordered_random(
     """Make a Transformation that converts the unordered dataset metric `MI`
     to the respective ordered dataset metric by assigning a random permutatation.
     Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
-    ```text
     | `MI`              | output metric        |
     | ----------------- | -------------------- |
     | SymmetricDistance | InsertDeleteDistance |
     | ChangeOneDistance | HammingDistance      |
-    ```
     
     **Supporting Elements:**
     
@@ -2466,12 +2454,10 @@ def make_sized_unordered(
     """Make a Transformation that converts the ordered dataset metric `MI`
     to the respective unordered dataset metric via a no-op.
     Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
-    ```text
     | `MI`                 | output metric      |
     | -------------------- | ------------------ |
     | InsertDeleteDistance | SymmetricDistance  |
     | HammingDistance      | ChangeOneDistance  |
-    ```
     
     **Supporting Elements:**
     
@@ -2708,11 +2694,9 @@ def make_unordered(
     Operates exclusively on VectorDomain<AllDomain<`TA`>>.
     The dataset metric is not generic over HammingDistance because the dataset size is unknown.
     
-    ```text
     | input metric         | output metric        |
     | -------------------- | -------------------- |
     | InsertDeleteDistance | SymmetricDistance    |
-    ```
     
     **Supporting Elements:**
     
