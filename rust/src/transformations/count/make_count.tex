@@ -10,7 +10,7 @@
 \maketitle
 
 \contrib
-Proves soundness of \rustdoc{transformations}{fn}{make\_count} in \asOfCommit{mod.rs}{f5bb719}.
+Proves soundness of \rustdoc{transformations/fn}{make\_count} in \asOfCommit{mod.rs}{f5bb719}.
 
 \texttt{make\_count} returns a Transformation that computes a count of the number of records in a vector.
 The length of the vector, of type \texttt{usize}, is exactly casted to a user specified output type \texttt{TO}.
@@ -25,22 +25,22 @@ the cast saturates at the maximum value of type \texttt{TO}.
 \section{Preconditions}
 \begin{itemize}
 
-    \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits}{trait}{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
+    \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits/trait}{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
     \begin{itemize}
-        \item \rustdoc{traits}{trait}{CheckNull} so that \texttt{TIA} is a valid atomic type for \rustdoc{domains}{struct}{AllDomain}
+        \item \rustdoc{traits/trait}{CheckNull} so that \texttt{TIA} is a valid atomic type for \rustdoc{domains/struct}{AllDomain}
     \end{itemize}
 
-    \item \texttt{TO} (output type) is a type with trait \rustdoc{traits}{trait}{Number}. \texttt{Number} further implies \texttt{TO} has the trait bounds:
+    \item \texttt{TO} (output type) is a type with trait \rustdoc{traits/trait}{Number}. \texttt{Number} further implies \texttt{TO} has the trait bounds:
     \begin{itemize}
-        \item \rustdoc{traits}{trait}{InfSub} so that the output domain is compatible with the output metric
+        \item \rustdoc{traits/trait}{InfSub} so that the output domain is compatible with the output metric
         \item \texttt{CheckNull} so that \texttt{TO} is a valid atomic type for \texttt{AllDomain}
-        \item \rustdoc{traits}{trait}{ExactIntCast} for casting a vector length index of type \texttt{usize} to \texttt{TO}. \texttt{ExactIntCast} further implies \texttt{TO} has the trait bound:
+        \item \rustdoc{traits/trait}{ExactIntCast} for casting a vector length index of type \texttt{usize} to \texttt{TO}. \texttt{ExactIntCast} further implies \texttt{TO} has the trait bound:
         \begin{itemize}
-            \item \rustdoc{traits}{trait}{ExactIntBounds}, which gives the \texttt{MAX\_CONSECUTIVE} value of type \texttt{TO}
+            \item \rustdoc{traits/trait}{ExactIntBounds}, which gives the \texttt{MAX\_CONSECUTIVE} value of type \texttt{TO}
         \end{itemize}
         
         \item \texttt{One} provides a way to retrieve \texttt{TO}'s representation of 1
-        \item \rustdoc{traits}{trait}{DistanceConstant} to satisfy the preconditions of \texttt{new\_stability\_map\_from\_constant}
+        \item \rustdoc{traits/trait}{DistanceConstant} to satisfy the preconditions of \texttt{new\_stability\_map\_from\_constant}
     \end{itemize}
 \end{itemize}
 
@@ -80,11 +80,11 @@ def make_count():
 \end{proof}
 
 \begin{proof} \textbf{(Part 2 -- domain-metric compatibility).}
-    Our \texttt{input\_metric} of \rustdoc{metrics}{struct}{SymmetricDistance} is compatible with any domain of the form \texttt{VectorDomain(inner\_domain)}, 
+    Our \texttt{input\_metric} of \rustdoc{metrics/struct}{SymmetricDistance} is compatible with any domain of the form \texttt{VectorDomain(inner\_domain)}, 
     and our \texttt{input\_domain} of \\\texttt{VectorDomain(AllDomain(TIA))} is of this form. 
     Therefore our \texttt{input\_domain} and \texttt{input\_metric} are compatible.
 
-    Our \texttt{output\_metric} of \rustdoc{metrics}{struct}{AbsoluteDistance} is compatible with any domain of the form \texttt{AllDomain(T)} where \texttt{T} has the trait \texttt{InfSub}, 
+    Our \texttt{output\_metric} of \rustdoc{metrics/struct}{AbsoluteDistance} is compatible with any domain of the form \texttt{AllDomain(T)} where \texttt{T} has the trait \texttt{InfSub}, 
     and our \texttt{output\_domain} of \texttt{AllDomain(TO)} is of this form and \texttt{TO} has the necessary trait.
     Therefore our \texttt{input\_domain} and \texttt{input\_metric} are compatible.
 \end{proof}
@@ -98,7 +98,7 @@ Before proceeding with proving the validity of the stability map, we provide a c
 \end{lemma}
 
 \begin{proof}
-    By \rustdoc{domains}{trait}{CollectionDomain}, we know \texttt{size} on line \ref{line:size} is of type \texttt{usize}, 
+    By \rustdoc{domains/trait}{CollectionDomain}, we know \texttt{size} on line \ref{line:size} is of type \texttt{usize}, 
     so it is non-negative and integral.
     Therefore, by the definition of \texttt{ExactIntCast}, 
     the invocation of \texttt{TO.exact\_int\_cast} on line \ref{line:exact-int-cast} can only fail if the argument is greater than \texttt{TO.MAX\_CONSECUTIVE}.
@@ -123,7 +123,7 @@ Before proceeding with proving the validity of the stability map, we provide a c
     Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is the sum of the number of occurrences of each unique value; 
     this is equivalent to the total number of items in the vector. 
 
-    Since \rustdoc{domains}{trait}{CollectionDomain} is implemented for \texttt{VectorDomain<AllDomain<TIA>>}, 
+    Since \rustdoc{domains/trait}{CollectionDomain} is implemented for \texttt{VectorDomain<AllDomain<TIA>>}, 
     we depend on the correctness of the implementation 
     Conditioned on the correctness of the implementation of \texttt{CollectionDomain} for \texttt{VectorDomain<AllDomain<TIA>>},
     the variable \texttt{size} is of type \texttt{usize} containing the number of elements in \texttt{arg}.
@@ -140,10 +140,10 @@ Before proceeding with proving the validity of the stability map, we provide a c
         &= |\sum_{z\in \mathcal{X}} h_{\texttt{u}}(z) - \sum_{z\in \mathcal{X}} h_{\texttt{v}}(z)| &&\text{by } \ref{lemma:len-sum-equiv} \\
         &= |\sum_{z\in \mathcal{X}}\left(h_{\texttt{u}}(z) - h_{\texttt{v}}(z)\right)| &&\text{by algebra} \\
         &\leq \sum_{z\in \mathcal{X}}|h_{\texttt{u}}(z) - h_{\texttt{v}}(z)| &&\text{by triangle inequality} \\
-        &= d_{Sym}(u, v) &&\text{by } \rustdoc{metrics}{struct}{SymmetricDistance}\\
+        &= d_{Sym}(u, v) &&\text{by } \rustdoc{metrics/struct}{SymmetricDistance}\\
         &\leq \din &&\text{by the first assumption} \\
-        &\leq \texttt{TO.inf\_cast}(\din) &&\text{by } \rustdoc{traits}{trait}{InfCast} \\
-        &\leq \texttt{TO.one().inf\_mul(TO.inf\_cast(\din))} &&\text{by } \rustdoc{traits}{trait}{InfMul} \\
+        &\leq \texttt{TO.inf\_cast}(\din) &&\text{by } \rustdoc{traits/trait}{InfCast} \\
+        &\leq \texttt{TO.one().inf\_mul(TO.inf\_cast(\din))} &&\text{by } \rustdoc{traits/trait}{InfMul} \\
         &=\texttt{stability\_map}(\din) &&\text{by pseudocode line } \ref{line:stability-map} \\
         &\leq \dout &&\text{by the second assumption}
     \end{align*}
