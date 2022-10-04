@@ -21,7 +21,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 \subsection*{Preconditions}
 \begin{itemize}
     \item $\texttt{x}$ is of type $\texttt{Rational}$ and $x \in [0, 1]$
-    \item \rustdoc{traits/samplers/bernoulli}{trait}{SampleBernoulli} is implemented for $\texttt{Rational}$ probabilities
+    \item \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli} is implemented for $\texttt{Rational}$ probabilities
 \end{itemize}
 
 
@@ -51,7 +51,7 @@ Assume the preconditions are met.
 \end{lemma}
 
 \begin{proof}
-    In all usages of \rustdoc{traits/samplers/bernoulli}{trait}{SampleBernoulli}, the argument passed satisfies its definition preconditions, 
+    In all usages of \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}, the argument passed satisfies its definition preconditions, 
     by the preconditions on \texttt{x} and function logic.
     Thus, by its definition, \texttt{sample\_bernoulli} only returns an error when there is a lack of system entropy.
     The only source of errors in \texttt{sample\_bernoulli\_exp1} is from the invocation of \texttt{sample\_bernoulli}.
