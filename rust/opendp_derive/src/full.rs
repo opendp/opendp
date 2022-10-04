@@ -66,20 +66,20 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
 pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     let original_input = input.clone();
 
-    let attrs = parse_macro_input!(attr_args as AttributeArgs);
+    let attr_args = parse_macro_input!(attr_args as AttributeArgs);
     let mut item = parse_macro_input!(input as Item);
 
-    let proven = try_!(Proven::from_ast(attrs, item.clone()), original_input);
+    let proven = try_!(Proven::from_ast(attr_args, item.clone()), original_input);
 
     let proof_path = proven.proof_path.expect("unreachable");
 
-    let attrs = match &mut item {
+    let attr_docs = match &mut item {
         Item::Fn(item_fn) => &mut item_fn.attrs,
         Item::Impl(item_impl) => &mut item_impl.attrs,
         _ => unreachable!(),
     };
     // mutate the docstring to add a proof path
-    try_!(insert_proof_attribute(attrs, proof_path), original_input);
+    try_!(insert_proof_attribute(attr_docs, proof_path), original_input);
 
     let mut output = TokenStream::new();
 

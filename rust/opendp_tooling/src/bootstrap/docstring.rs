@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use darling::{Error, Result};
-use proc_macro2::{TokenStream, Spacing, TokenTree, Punct, Literal};
+use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
 use quote::format_ident;
 use syn::{
-    Attribute, AttributeArgs, Lit, Meta, MetaNameValue, Path, PathSegment, ReturnType, Type,
-    TypePath, AttrStyle, ItemFn,
+    AttrStyle, Attribute, AttributeArgs, ItemFn, Lit, Meta, MetaNameValue, Path, PathSegment,
+    ReturnType, Type, TypePath,
 };
 
 use crate::proven::filesystem::make_proof_link;
@@ -30,16 +30,16 @@ impl BootstrapDocstring {
 
         let mut description = Vec::from_iter(doc_sections.remove("Description"));
 
-        let mut insert_section = |section_name: &str| {
+        let mut add_section_to_description = |section_name: &str| {
             doc_sections.remove(section_name).map(|section| {
                 description.push(format!("\n**{section_name}:**\n"));
                 description.push(section)
             })
         };
         // can add more sections here...
-        insert_section("Citations");
-        insert_section("Supporting Elements");
-        insert_section("Proof Definition");
+        add_section_to_description("Citations");
+        add_section_to_description("Supporting Elements");
+        add_section_to_description("Proof Definition");
 
         Ok(BootstrapDocstring {
             description: if description.is_empty() {
@@ -55,25 +55,48 @@ impl BootstrapDocstring {
                 .remove("Generics")
                 .map(parse_docstring_args)
                 .unwrap_or_else(HashMap::new),
-            returns: doc_sections
-                .remove("Returns")
-                .map(|sec| sec),
+            returns: doc_sections.remove("Returns"),
         })
     }
 }
 
+/// Parses a section that is delimited by bullets into a hashmap.
+/// 
+/// The keys are the arg names and values are the descriptions.
+/// 
+/// # Example
+/// 
+/// ```text
+/// # Arguments
+/// * `a` - a description for argument a
+/// * `b` - a description for argument b
+///         ...multiple lines of description
+/// * `c` - a description for argument c
+/// ```
+/// 
 fn parse_docstring_args(args: String) -> HashMap<String, String> {
-    let mut args = args.split("\n").map(ToString::to_string).collect::<Vec<_>>();
+    // split by newlines
+    let mut args = args
+        .split("\n")
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    
+    // add a trailing delimiter so that we can use .windows
     args.push("* `".to_string());
-    args.iter()
-        .enumerate()
+
+    // find the row indexes where each argument starts
+    (args.iter().enumerate())
         .filter_map(|(i, v)| v.starts_with("* `").then(|| i))
         .collect::<Vec<usize>>()
+        // each window corresponds to the documentation for one argument
         .windows(2)
         .map(|window| {
+            // split the variable name from the first line
             let mut splitter = args[window[0]].splitn(2, " - ").map(str::to_string);
             let name = splitter.next().unwrap();
             let name = name[3..name.len() - 1].to_string();
+
+            // retrieve the rest of the first line, as well as any other lines, trim all, and join them together with newlines
             let description = vec![splitter.next().unwrap_or_else(String::new)]
                 .into_iter()
                 .chain(
@@ -90,6 +113,9 @@ fn parse_docstring_args(args: String) -> HashMap<String, String> {
         .collect::<HashMap<String, String>>()
 }
 
+/// Break a vector of syn Attributes into a hashmap.
+/// 
+/// Keys represent section names, and values are the text under the section
 fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, String>> {
     let mut docstrings = (attrs.into_iter())
         .filter(|v| v.path.get_ident().map(ToString::to_string).as_deref() == Some("doc"))
@@ -115,12 +141,17 @@ fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Str
                     .strip_prefix("# ")
                     .expect("won't panic (because of filter)")
                     .to_string(),
-                docstrings[window[0] + 1..window[1]].to_vec().join("\n").trim().to_string(),
+                docstrings[window[0] + 1..window[1]]
+                    .to_vec()
+                    .join("\n")
+                    .trim()
+                    .to_string(),
             )
         })
         .collect())
 }
 
+/// Parses the return type into a markdown-formatted summary
 fn parse_sig_output(output: &ReturnType) -> Result<Option<String>> {
     match output {
         ReturnType::Default => Ok(None),
@@ -190,12 +221,15 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                             .replace(",", ", ")
                     };
 
-                    Ok(Some(vec![
-                        format!("* Input Domain:   `{}`", pprint(input_domain)),
-                        format!("* Output Domain:  `{}`", pprint(output_domain)),
-                        format!("* Input Metric:   `{}`", pprint(input_metric)),
-                        format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
-                    ].join("\n")))
+                    Ok(Some(
+                        vec![
+                            format!("* Input Domain:   `{}`", pprint(input_domain)),
+                            format!("* Output Domain:  `{}`", pprint(output_domain)),
+                            format!("* Input Metric:   `{}`", pprint(input_metric)),
+                            format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
+                        ]
+                        .join("\n"),
+                    ))
                 }
                 arg => {
                     return Err(
@@ -220,11 +254,10 @@ fn parse_doc_attribute(attr: Attribute) -> Result<String> {
 
 /// Obtain a relative path to a proof, given all available information
 pub fn get_proof_path(
-    attr_args: &AttributeArgs, 
-    item_fn: &ItemFn, 
-    proof_paths: &HashMap<String, Option<String>>
+    attr_args: &AttributeArgs,
+    item_fn: &ItemFn,
+    proof_paths: &HashMap<String, Option<String>>,
 ) -> Result<Option<String>> {
-
     let BootstrapArguments {
         name,
         proof_path,
@@ -234,7 +267,7 @@ pub fn get_proof_path(
 
     let name = name.unwrap_or_else(|| item_fn.sig.ident.to_string());
     if unproven && proof_path.is_some() {
-        return Err(Error::custom("proof_path is invalid when unproven"))
+        return Err(Error::custom("proof_path is invalid when unproven"));
     }
     Ok(match proof_path {
         Some(proof_path) => Some(proof_path),
@@ -247,12 +280,9 @@ pub fn get_proof_path(
 }
 
 /// add attributes containing the proof link
-pub fn insert_proof_attribute(
-    attributes: &mut Vec<Attribute>,
-    proof_path: String
-) -> Result<()> {
+pub fn insert_proof_attribute(attributes: &mut Vec<Attribute>, proof_path: String) -> Result<()> {
     let proof_link = format!(" {}", make_proof_link(&proof_path)?);
-    
+
     let position = (attributes.iter())
         .position(|attr| {
             if attr.path.get_ident().map(ToString::to_string).as_deref() != Some("doc") {
@@ -285,9 +315,12 @@ fn new_comment_attribute(comment: &str) -> Attribute {
         style: AttrStyle::Outer,
         bracket_token: Default::default(),
         path: Path::from(format_ident!("doc")),
-        tokens: TokenStream::from_iter([
-            TokenTree::Punct(Punct::new('=', Spacing::Alone)),
-            TokenTree::Literal(Literal::string(comment)),
-        ].into_iter()),
+        tokens: TokenStream::from_iter(
+            [
+                TokenTree::Punct(Punct::new('=', Spacing::Alone)),
+                TokenTree::Literal(Literal::string(comment)),
+            ]
+            .into_iter(),
+        ),
     }
 }

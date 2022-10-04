@@ -7,20 +7,17 @@ pub mod arguments;
 pub mod docstring;
 pub mod signature;
 
-use darling::Result;
+use darling::{Result, Error};
 
 use crate::bootstrap::{arguments::BootstrapArguments, docstring::BootstrapDocstring};
 
 use self::{
-    arguments::BootType,
-    signature::{BootstrapSignature, BootSigArgType},
+    arguments::{BootType, DerivedTypes},
+    signature::{BootSigArgType, BootstrapSignature},
 };
 
 impl Function {
-    pub fn from_ast(
-        attr_args: AttributeArgs,
-        item_fn: ItemFn,
-    ) -> Result<Function> {
+    pub fn from_ast(attr_args: AttributeArgs, item_fn: ItemFn) -> Result<Function> {
         // Parse the proc bootstrap macro args
         let arguments = BootstrapArguments::from_attribute_args(&attr_args)?;
 
@@ -62,17 +59,7 @@ pub fn reconcile_function(
             doc_comments.returns,
             signature.output_c_type,
         )?,
-        derived_types: bootstrap
-            .derived_types
-            .map(|dt| dt.0)
-            .unwrap_or_default()
-            .into_iter()
-            .map(|(name, rt)| Argument {
-                name: Some(name),
-                rust_type: Some(rt),
-                ..Default::default()
-            })
-            .collect(),
+        derived_types: reconcile_derived_types(bootstrap.derived_types),
     })
 }
 
@@ -118,6 +105,9 @@ fn reconcile_generics(
     (generics.into_iter())
         .map(|name| {
             let boot_type = bootstrap_args.remove(&name).unwrap_or_default();
+            if boot_type.c_type.is_some() {
+                return Err(Error::custom("c_type should not be specified on generics"))
+            }
             Ok(Argument {
                 name: Some(name.clone()),
                 description: doc_comments.remove(&name),
@@ -149,4 +139,17 @@ fn reconcile_return(
         do_not_convert: boot_type.do_not_convert,
         ..Default::default()
     })
+}
+
+fn reconcile_derived_types(derived_types: Option<DerivedTypes>) -> Vec<Argument> {
+    derived_types
+        .map(|dt| dt.0)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|(name, rt)| Argument {
+            name: Some(name),
+            rust_type: Some(rt),
+            ..Default::default()
+        })
+        .collect()
 }

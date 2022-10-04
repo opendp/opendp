@@ -1,10 +1,10 @@
 use proc_macro::TokenStream;
 
 #[cfg(feature = "derive")]
-mod derive;
+mod full;
 
 /// When the opendp crate is compiled with the "derive" feature,
-/// the bootstrap procedural macro is executed the function it decorates before the library is compiled.
+/// the bootstrap procedural macro is executed on the function it decorates, before the library is compiled.
 /// 
 /// We use this to insert a link to the proof in the documentation of the function, if an adjacent proof exists.
 /// 
@@ -135,7 +135,7 @@ mod derive;
 /// ```
 /// In the generated code, the type argument T becomes optional.
 /// If T is not set, T is inferred from the output of the "$" macro-- inferred from the first bound.
-/// The generated code will run a function, get_first, that has been defined locally in the bindings language.
+/// The generated code will run a function, `get_first`, that has been defined locally in the bindings language.
 /// 
 /// You can specify a null default value with the byte-string literal `b"null"`.
 /// 
@@ -252,7 +252,7 @@ mod derive;
 /// as generics are just type information, passed as a string.
 /// 
 /// ## Hints
-/// This is afflicted by some Python-only syntax.
+/// This metadata contains a fair amount of Python-only syntax.
 /// It is added as a type hint to the argument in Python.
 /// ```no_run
 /// #[bootstrap(
@@ -280,7 +280,7 @@ mod derive;
 #[cfg(feature = "derive")]
 #[proc_macro_attribute]
 pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
-    derive::bootstrap(attr_args, input)
+    full::bootstrap(attr_args, input)
 }
 
 /// When the "derive" crate feature is not enabled, no work is done, and dependencies are simplified.
@@ -305,7 +305,7 @@ pub fn bootstrap(_attr_args: TokenStream, input: TokenStream) -> TokenStream {
 #[cfg(feature = "derive")]
 #[proc_macro_attribute]
 pub fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
-    derive::proven(attr_args, input)
+    full::proven(attr_args, input)
 }
 
 #[cfg(not(feature = "derive"))]

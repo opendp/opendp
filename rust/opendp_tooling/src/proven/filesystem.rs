@@ -108,5 +108,5 @@ pub fn make_proof_link(relative_path: &str) -> Result<String> {
         relative_path = relative_path.display()
     );
 
-    Ok(format!("[Link to proof document.]({target}) "))
+    Ok(format!("[(Proof Document)]({target}) "))
 }

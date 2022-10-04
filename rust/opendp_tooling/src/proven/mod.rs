@@ -14,6 +14,7 @@ pub struct Proven {
 }
 
 impl Proven {
+    // assumes that proof paths have already been written in the lib's build script
     pub fn from_ast(
         attr_args: AttributeArgs,
         item: Item,
@@ -49,8 +50,12 @@ impl Proven {
         };
     
         let help = "You can specify a path instead: `#[proven(proof_path = \"{{module}}/path/to/proof.tex\")]`";
-    
-        // assumes that proof paths have already been written in the lib's build script
+
+        // we have a hashmap of options. So retrieving a the value at a key gives you an Option<Option<String>>:
+        //    None              no path was found
+        //    Some(None) means  more than one path was found
+        //    Some(Some(path))  one unique path was found
+        
         proven.proof_path = Some(load_proof_paths()?
             .remove(&name)
             .ok_or_else(|| Error::custom(format!("failed to find {name}.tex. {help}")))?
