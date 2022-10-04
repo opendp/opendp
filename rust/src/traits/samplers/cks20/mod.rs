@@ -169,10 +169,10 @@ pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
 /// Sample exactly from the discrete gaussian distribution with arbitrary precision.
 /// # Proof Definition
 /// For any `scale` that is a non-negative rational number,
-/// return `Ok(x)` where `x` is a sample from the discrete_gaussian(scale) distribution,
-/// or `Err(e)`, due to lack of system entropy.
+/// `sample_discrete_gaussian` either returns `Err(e)` due to a lack of system entropy,
+/// or `Ok(out)`, where `out` is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
 /// 
-/// Specifically, the probability of returning any `x` of type [`rug::Integer`] is
+/// Specifically, the probability of returning any `out` of type [`rug::Integer`] is
 /// ```math
 /// \forall x \in \mathbb{Z} \quad  
 /// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}} \quad 
