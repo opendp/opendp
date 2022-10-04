@@ -79,12 +79,11 @@ where
 /// Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
 /// 
 /// Set `D` to change the input data type and input metric:
-/// ```text
-/// | `D`                        | input type | `D::InputMetric`     |
-/// | -------------------------- | ---------- | -------------------- |
-/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-/// | VectorDomain<AllDomain<T>> | Vec<T>     | L2Distance<T>        |
-/// ```
+/// 
+/// | `D`                          | input type   | `D::InputMetric`        |
+/// | ---------------------------- | ------------ | ----------------------- |
+/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`QI`>  |
+/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L2Distance<`QI`>        |
 /// 
 /// # Arguments
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.

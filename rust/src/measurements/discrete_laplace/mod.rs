@@ -77,12 +77,11 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
 /// 
 /// Set `D` to change the input data type and input metric:
-/// ```text
-/// | `D`                        | input type | `D::InputMetric`     |
-/// | -------------------------- | ---------- | -------------------- |
-/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-/// | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-/// ```
+/// 
+/// | `D`                          | input type   | `D::InputMetric`       |
+/// | ---------------------------- | ------------ | ---------------------- |
+/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
 /// 
 /// This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
 ///

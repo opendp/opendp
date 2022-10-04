@@ -27,12 +27,12 @@ use super::DiscreteLaplaceDomain;
 /// 
 /// This algorithm can be executed in constant time if bounds are passed.
 /// Set `D` to change the input data type and input metric:
-/// ```text
-/// | `D`                        | input type | `D::InputMetric`     |
-/// | -------------------------- | ---------- | -------------------- |
-/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-/// | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-/// ```
+///
+/// | `D`                          | input type   | `D::InputMetric`       |
+/// | ---------------------------- | ------------ | ---------------------- |
+/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+///
 /// 
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)

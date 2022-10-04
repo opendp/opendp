@@ -26,12 +26,11 @@ def make_base_discrete_gaussian(
     """Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
-    ```text
-    | `D`                        | input type | `D::InputMetric`     |
-    | -------------------------- | ---------- | -------------------- |
-    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-    | VectorDomain<AllDomain<T>> | Vec<T>     | L2Distance<T>        |
-    ```
+    
+    | `D`                          | input type   | `D::InputMetric`        |
+    | ---------------------------- | ------------ | ----------------------- |
+    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`QI`>  |
+    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L2Distance<`QI`>        |
     
     **Supporting Elements:**
     
@@ -79,12 +78,11 @@ def make_base_discrete_laplace(
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
-    ```text
-    | `D`                        | input type | `D::InputMetric`     |
-    | -------------------------- | ---------- | -------------------- |
-    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-    ```
+    
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
@@ -138,12 +136,10 @@ def make_base_discrete_laplace_cks20(
     using an efficient algorithm on rational bignums.
     
     Set `D` to change the input data type and input metric:
-    ```text
-    | `D`                        | input type | `D::InputMetric`     |
-    | -------------------------- | ---------- | -------------------- |
-    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-    ```
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
     
     **Citations:**
     
@@ -196,12 +192,10 @@ def make_base_discrete_laplace_linear(
     
     This algorithm can be executed in constant time if bounds are passed.
     Set `D` to change the input data type and input metric:
-    ```text
-    | `D`                        | input type | `D::InputMetric`     |
-    | -------------------------- | ---------- | -------------------- |
-    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-    ```
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
     
     **Citations:**
     
@@ -257,12 +251,10 @@ def make_base_gaussian(
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
-    ```text
-    | `D`                        | input type | `D::InputMetric`     |
-    | -------------------------- | ---------- | -------------------- |
-    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-    | VectorDomain<AllDomain<T>> | Vec<T>     | L2Distance<T>        |
-    ```
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L2Distance<`T`>        |
     
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
@@ -369,12 +361,12 @@ def make_base_laplace(
     """Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
     
     Set `D` to change the input data type and input metric:
-    ```text
-    | `D`                        | input type | `D::InputMetric`     |
-    | -------------------------- | ---------- | -------------------- |
-    | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-    | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-    ```
+    
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+    
     
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 

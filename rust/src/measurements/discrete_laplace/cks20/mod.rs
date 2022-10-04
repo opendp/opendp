@@ -25,12 +25,11 @@ mod ffi;
 /// using an efficient algorithm on rational bignums.
 /// 
 /// Set `D` to change the input data type and input metric:
-/// ```text
-/// | `D`                        | input type | `D::InputMetric`     |
-/// | -------------------------- | ---------- | -------------------- |
-/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-/// | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-/// ```
+///
+/// | `D`                          | input type   | `D::InputMetric`       |
+/// | ---------------------------- | ------------ | ---------------------- |
+/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
 /// 
 /// # Citations
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)

@@ -37,12 +37,12 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
 /// Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
 /// 
 /// Set `D` to change the input data type and input metric:
-/// ```text
-/// | `D`                        | input type | `D::InputMetric`     |
-/// | -------------------------- | ---------- | -------------------- |
-/// | AllDomain<T> (default)     | T          | AbsoluteDistance<T>  |
-/// | VectorDomain<AllDomain<T>> | Vec<T>     | L1Distance<T>        |
-/// ```
+/// 
+/// | `D`                          | input type   | `D::InputMetric`       |
+/// | ---------------------------- | ------------ | ---------------------- |
+/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
+/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+/// 
 /// 
 /// This function takes a noise granularity in terms of 2^k. 
 /// Larger granularities are more computationally efficient, but have a looser privacy map. 
