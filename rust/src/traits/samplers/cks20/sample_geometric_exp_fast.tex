@@ -26,7 +26,7 @@ def sample_geometric_exp_fast(x) -> int:
     if x == 0:
         return 0
     
-    s, t = into_numer_denom(x)
+    s, t = Rational.into_numer_denom(x)
     
     while True:
         u = Integer.sample_uniform_int_below(t) |\label{line:U}|
@@ -53,11 +53,11 @@ Assume the preconditions are met.
 \end{lemma}
 
 \begin{proof}
-    Since \texttt{x} is rational, there exists some non-negative integer $s$ and positive integer $t$ such that $x = s/t$,
-    so \texttt{into\_numer\_denom} is infallible.
-    Since $t$ is a positive integer, the preconditions on \rustdoc{traits/samplers/uniform}{trait}{SampleUniformIntBelow} are met, 
+    \texttt{x} is of type \docsrs{rug}{struct}{Rational}, there exists some non-negative integer $s$ and positive integer $t$ such that $x = s/t$.
+    This is why \texttt{Rational.into\_numer\_denom} is infallible.
+    Since $t$ is a positive integer, the preconditions on \rustdoc{traits/samplers/uniform/trait}{SampleUniformIntBelow} are met, 
     \texttt{sample\_uniform\_int\_below} can only return an error due to lack of system entropy, and $u$ is a non-negative integer.
-    Similarly, the preconditions on \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp} and \rustdoc{traits/samplers/cks20}{fn}{sample\_geometric\_exp\_slow} are met,
+    Similarly, the preconditions on \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} and \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_slow} are met,
     and their definitions guarantee an error is only returned due to lack of system entropy.
     The only source of errors is from the invocation of these functions,
     therefore \texttt{sample\_geometric\_exp\_fast} only returns \texttt{Err(e)} when there is a lack of system entropy.
@@ -129,9 +129,9 @@ We now establish some lemmas that will be useful in proving the distribution of 
 \end{lemma}
 
 \begin{proof}
-    As shown in \ref{err-e}, the preconditions for \rustdoc{traits/samplers/uniform}{trait}{SampleUniformIntBelow} on line \ref{line:U},
-    \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp} on line \ref{line:D},
-    and \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp\_slow} on line \ref{line:V} are met.
+    As shown in \ref{err-e}, the preconditions for \rustdoc{traits/samplers/uniform/trait}{SampleUniformIntBelow} on line \ref{line:U},
+    \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} on line \ref{line:D},
+    and \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp\_slow} on line \ref{line:V} are met.
     Therefore, \texttt{u}, \texttt{d} and \texttt{v} follow the distributions necessary to apply \ref{geom_1_t}.
     By \ref{geom_1_t}, $\mathtt{z}$ is a realization of $Z \sim Geometric(1 - exp(-1/t)$. 
     Since \texttt{z} is a realization of $Z \sim Geometric(1 - exp(-1/t))$, 
