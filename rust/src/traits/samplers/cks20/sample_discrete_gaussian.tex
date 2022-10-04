@@ -62,8 +62,8 @@ or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{N}_\mathbb{Z
 
 \begin{proof}
     By the non-negativity precondition on \texttt{scale}, \texttt{t} on line \ref{line:t} is non-negative, 
-    so the precondition on \rustdoc{traits/samplers/cks20}{fn}{sample\_discrete\_laplace} is met.
-    Similarly, since \texttt{bias} on line \ref{line:bias} is non-negative, the preconditions on \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp} are met.
+    so the precondition on \rustdoc{traits/samplers/cks20/fn}{sample\_discrete\_laplace} is met.
+    Similarly, since \texttt{bias} on line \ref{line:bias} is non-negative, the preconditions on \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} are met.
     By the definitions of \texttt{sample\_discrete\_laplace} and \texttt{sample\_bernoulli\_exp}, an error is only returned when there is a lack of system entropy.
     The only source of errors in \texttt{sample\_discrete\_gaussian} is from the invocation of these functions,
     therefore \texttt{sample\_discrete\_gaussian} only returns \texttt{Err(e)} when there is a lack of system entropy.

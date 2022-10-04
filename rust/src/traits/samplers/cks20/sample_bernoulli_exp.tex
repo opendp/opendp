@@ -8,7 +8,7 @@
 \maketitle
 
 \contrib
-Proves soundness of \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp} in \asOfCommit{mod.rs}{0be3ab3e6}.
+Proves soundness of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} in \asOfCommit{mod.rs}{0be3ab3e6}.
 
 \texttt{fn sample\_bernoulli\_exp} returns a sample from the $Bernoulli(exp(-x))$ distribution for some rational, non-negative, finite \texttt{x}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.1}{subsection 5.1} of \cite{CKS20}.
@@ -48,7 +48,7 @@ Assume the preconditions are met.
 \end{lemma}
 
 \begin{proof}
-    In all invocations of \rustdoc{traits/samplers/cks20}{fn}{sample\_bernoulli\_exp1}, the argument passed satisfies its definition preconditions, 
+    In all invocations of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp1}, the argument passed satisfies its definition preconditions, 
     by the preconditions on \texttt{x} and function logic.
     Thus, by its definition, \texttt{sample\_bernoulli\_exp1} only returns an error when there is a lack of system entropy.
     The only source of errors in \texttt{sample\_bernoulli\_exp} is from the invocation of \texttt{sample\_bernoulli\_exp1}.
