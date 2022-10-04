@@ -40,7 +40,7 @@ def sample_discrete_gaussian(scale) -> int:
 \subsection*{Postcondition}
 \label{postcondition}
 For any setting of the input parameter \texttt{scale} such that the given preconditions hold, \\
-\texttt{sample\_bernoulli\_exp1} either returns \texttt{Err(e)} due to a lack of system entropy,
+\texttt{sample\_discrete\_gaussian} either returns \texttt{Err(e)} due to a lack of system entropy,
 or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
 
 \section{Proof}
@@ -102,8 +102,7 @@ We now show that conditioning $Y$ on the success of $C$ gives the desired output
     \end{align*}
 \end{proof}
 
-\begin{lemma}
-    \label{ok-out}
+\begin{lemma}\label{ok-out}
     If the outcome of \texttt{sample\_discrete\_gaussian} is \texttt{Ok(out)}, 
     then \texttt{out} is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
 \end{lemma}
