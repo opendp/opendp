@@ -17,7 +17,7 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Cache Rust dependencies
         uses: actions/cache@v2
@@ -39,7 +39,7 @@ jobs:
         run: cargo test --verbose --features untrusted,ffi
 
       - name: Upload libs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: libs
           path: rust/target/debug/libopendp.so
@@ -61,7 +61,7 @@ jobs:
         python-version: [3.7]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -101,7 +101,7 @@ jobs:
           path: python/src/opendp/
 
       - name: Download libs
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: libs
           path: python/src/opendp/lib
@@ -130,7 +130,7 @@ jobs:
         python-version: [3.7]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
