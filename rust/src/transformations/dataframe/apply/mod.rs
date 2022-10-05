@@ -54,6 +54,14 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
 /// Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. 
 /// If cast fails, fill with default.
 /// 
+/// 
+/// | `TIA`  | `TIA::default()` |
+/// | ------ | ---------------- |
+/// | float  | `0.`             |
+/// | int    | `0`              |
+/// | string | `""`             |
+/// | bool   | `false`          | 
+/// 
 /// # Arguments
 /// * `column_name` - column name to be transformed
 /// 
@@ -75,11 +83,11 @@ where
 }
 
 #[bootstrap(features("contrib"))]
-/// Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`
+/// Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
 /// 
 /// # Arguments
 /// * `column_name` - Column name to be transformed
-/// * `value - Value to check for equality
+/// * `value` - Value to check for equality
 /// 
 /// # Generics
 /// * `TK` - Type of the column name

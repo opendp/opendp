@@ -20,8 +20,8 @@ use crate::traits::{Number, Hashable, Primitive, Float};
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 /// 
 /// # Generics
-/// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-/// * `TOA` - Output Type. Must be numeric.
+/// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
+/// * `TO` - Output Type. Must be numeric.
 pub fn make_count<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Primitive,
@@ -46,7 +46,7 @@ pub fn make_count<TIA, TO>(
 /// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
-/// * `TOA` - Output Type. Must be numeric.
+/// * `TO` - Output Type. Must be numeric.
 pub fn make_count_distinct<TIA, TO>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, AllDomain<TO>, SymmetricDistance, AbsoluteDistance<TO>>>
     where TIA: Hashable,
@@ -91,7 +91,7 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 /// 
 /// # Generics
 /// * `MO` - Output Metric.
-/// * `TIA` - Atomic Input Type that is categorical/hashable. Input data must be Vec<TIA>
+/// * `TIA` - Atomic Input Type that is categorical/hashable. Input data must be `Vec<TIA>`
 /// * `TOA` - Atomic Output Type that is numeric.
 /// 
 /// # Returns
@@ -157,8 +157,8 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// 
 /// # Generics
 /// * `MO` - Output Metric.
-/// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
-/// * `TV - Type of Value. Express counts in terms of this integral type.
+/// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be `Vec<TK>`.
+/// * `TV` - Type of Value. Express counts in terms of this integral type.
 /// 
 /// # Returns
 /// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).

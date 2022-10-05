@@ -19,9 +19,22 @@ mod ffi;
     generics(S(default = "Pairwise<T>", generics = "T")),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
-/// Make a Transformation that computes the sum of bounded floats. 
+/// Make a Transformation that computes the sum of bounded floats with known ordering. 
+/// 
+/// Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
 /// The utility loss from overestimating the `size_limit` is small.
+/// 
+/// | S (summation algorithm) | input type     |
+/// | ----------------------- | -------------- |
+/// | `Sequential<S::Item>`   | `Vec<S::Item>` |
+/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+/// 
+/// `S::Item` is the type of all of the following: 
+/// each bound, each element in the input data, the output data, and the output sensitivity.
+/// 
+/// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+/// set `S` to `Pairwise<f32>`.
 /// 
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
@@ -32,7 +45,7 @@ mod ffi;
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+/// * `S` - Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 pub fn make_bounded_float_ordered_sum<S>(
     size_limit: usize,
     bounds: (S::Item, S::Item),
@@ -78,9 +91,22 @@ where
     generics(S(default = "Pairwise<T>", generics = "T")),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
-/// Make a Transformation that computes the sum of bounded floats with known dataset size. 
+/// Make a Transformation that computes the sum of bounded floats with known ordering and dataset size. 
+/// 
+/// Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
+/// 
+/// | S (summation algorithm) | input type     |
+/// | ----------------------- | -------------- |
+/// | `Sequential<S::Item>`   | `Vec<S::Item>` |
+/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+/// 
+/// `S::Item` is the type of all of the following: 
+/// each bound, each element in the input data, the output data, and the output sensitivity.
+/// 
+/// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+/// set `S` to `Pairwise<f32>`.
 /// 
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
@@ -91,7 +117,7 @@ where
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+/// * `S` - Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 pub fn make_sized_bounded_float_ordered_sum<S>(
     size: usize,
     bounds: (S::Item, S::Item),

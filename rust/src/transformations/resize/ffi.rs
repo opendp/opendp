@@ -22,7 +22,7 @@ use crate::transformations::resize::IsMetricOrdered;
     )
 )]
 /// Make a Transformation that either truncates or imputes records 
-/// with `constant` in a Vec<`TA`> to match a provided `size`.
+/// with `constant` in a `Vec<TA>` to match a provided `size`.
 /// 
 /// # Arguments
 /// * `size` - Number of records in output data.
@@ -31,7 +31,7 @@ use crate::transformations::resize::IsMetricOrdered;
 /// # Generics
 /// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 /// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// * `TA` - Atomic type. If not passed, TA is inferred from the lower bound
+/// * `TA` - Atomic type. If not passed, `TA` is inferred from the lower bound
 /// 
 /// # Returns
 /// A vector of the same type `TA`, but with the provided `size`.
@@ -86,7 +86,7 @@ pub extern "C" fn opendp_transformations__make_resize(
     )
 )]
 /// Make a Transformation that either truncates or imputes records 
-/// with `constant` in a Vec<`TA`> to match a provided `size`.
+/// with `constant` in a `Vec<TA>` to match a provided `size`.
 /// 
 /// # Arguments
 /// * `size` - Number of records in output data.
@@ -96,7 +96,7 @@ pub extern "C" fn opendp_transformations__make_resize(
 /// # Generics
 /// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 /// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// * `TA` - Atomic type. If not passed, TA is inferred from the lower bound
+/// * `TA` - Atomic type. If not passed, `TA` is inferred from the lower bound
 /// 
 /// # Returns
 /// A vector of the same type `TA`, but with the provided `size`.

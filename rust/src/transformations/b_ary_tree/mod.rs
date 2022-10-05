@@ -25,7 +25,7 @@ use opendp_derive::bootstrap;
 /// * `branching_factor` - The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
 /// 
 /// # Generics
-/// * `M` - Metric. Must be L1Distance<Q> or L2Distance<Q>
+/// * `M` - Metric. Must be `L1Distance<Q>` or `L2Distance<Q>`
 /// * `TA` - Atomic Type of the input data.
 pub fn make_b_ary_tree<M, TA>(
     leaf_count: usize,
