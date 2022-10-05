@@ -34,8 +34,8 @@ mod ffi;
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
 /// 
 /// # Generics
-/// * `D` - Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>
-/// * `M` - Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>
+/// * `D` - Domain of the function. Must be `AllDomain<T>` or `VectorDomain<AllDomain<T>>`
+/// * `M` - Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
 pub fn make_lipschitz_float_mul<D, M>(
     constant: D::Atom,
     bounds: (D::Atom, D::Atom),

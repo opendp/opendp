@@ -26,6 +26,17 @@ mod ffi;
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
 /// 
+/// | S (summation algorithm) | input type     |
+/// | ----------------------- | -------------- |
+/// | `Sequential<S::Item>`   | `Vec<S::Item>` |
+/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+/// 
+/// `S::Item` is the type of all of the following: 
+/// each bound, each element in the input data, the output data, and the output sensitivity.
+/// 
+/// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+/// set `S` to `Pairwise<f32>`.
+/// 
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
@@ -35,7 +46,7 @@ mod ffi;
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+/// * `S` - Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 pub fn make_bounded_float_checked_sum<S>(
     size_limit: usize,
     bounds: (S::Item, S::Item),
@@ -96,6 +107,17 @@ where
 /// Make a Transformation that computes the sum of bounded floats with known dataset size. 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
 /// 
+/// | S (summation algorithm) | input type     |
+/// | ----------------------- | -------------- |
+/// | `Sequential<S::Item>`   | `Vec<S::Item>` |
+/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+/// 
+/// `S::Item` is the type of all of the following: 
+/// each bound, each element in the input data, the output data, and the output sensitivity.
+/// 
+/// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+/// set `S` to `Pairwise<f32>`.
+/// 
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
@@ -105,7 +127,7 @@ where
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// 
 /// # Generics
-/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+/// * `S` - Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 pub fn make_sized_bounded_float_checked_sum<S>(
     size: usize,
     bounds: (S::Item, S::Item),

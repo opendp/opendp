@@ -12,7 +12,9 @@ use crate::transformations::make_row_by_row;
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
-/// Failure to parse results in None, else Some<TOA>.
+/// For each element, failure to parse results in `None`, else `Some(out)`.
+/// 
+/// Can be chained with `make_impute_constant` or `make_drop_null` to handle nullity.
 /// 
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
@@ -28,7 +30,15 @@ pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<T
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
-/// If the cast fails, fill with default.
+/// Any element that fails to cast is filled with default.
+/// 
+/// 
+/// | `TIA`  | `TIA::default()` |
+/// | ------ | ---------------- |
+/// | float  | `0.`             |
+/// | int    | `0`              |
+/// | string | `""`             |
+/// | bool   | `false`          | 
 /// 
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
@@ -42,8 +52,12 @@ pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<All
 }
 
 #[bootstrap(features("contrib"))]
-/// Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. 
-/// If cast fails, fill with `TO`'s null value.
+/// Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`. 
+/// If cast fails, fill with `TOA`'s null value.
+/// 
+/// | `TIA`  | `TIA::default()` |
+/// | ------ | ---------------- |
+/// | float  | NaN              |
 /// 
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from

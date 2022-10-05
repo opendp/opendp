@@ -16,7 +16,8 @@ use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
     features("contrib"),
     generics(TA(example = "$get_first(bounds)"))
 )]
-/// Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
+/// Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
+/// 
 /// If datum is less than lower, let datum be lower. 
 /// If datum is greater than upper, let datum be upper.
 /// 
@@ -39,7 +40,8 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
     arguments(bounds(rust_type = "(TA, TA)")),
     generics(TA(example = "$get_first(bounds)")),
 )]
-/// Make a Transformation that unclamps numeric data in Vec<`T`>.
+/// Make a Transformation that unclamps numeric data in `Vec<T>`.
+/// 
 /// Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
 /// 
 /// # Arguments
