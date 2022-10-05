@@ -40,8 +40,8 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
 /// 
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
 /// 
 /// 
 /// This function takes a noise granularity in terms of 2^k. 
@@ -50,7 +50,7 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
 /// 
 /// # Arguments
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-/// * `k` - The noise granularity.
+/// * `k` - The noise granularity in terms of 2^k. 
 /// 
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`

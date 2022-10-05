@@ -35,7 +35,7 @@ use crate::traits::{Hashable, Float};
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
 /// # Arguments
-/// * `prob` - Probability of returning the correct answer. Must be in [0.5, 1)
+/// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1)`
 /// * `constant_time` - Set to true to enable constant time. Slower.
 /// 
 /// # Generics
@@ -88,7 +88,7 @@ pub fn make_randomized_response_bool<Q>(
 ///
 /// # Arguments
 /// * `categories` - Set of valid outcomes
-/// * `prob` - Probability of returning the correct answer. Must be in [1/num_categories, 1)
+/// * `prob` - Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
 /// * `constant_time` - Set to true to enable constant time. Slower.
 /// 
 /// # Generics

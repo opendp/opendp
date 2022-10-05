@@ -29,8 +29,8 @@ def make_base_discrete_gaussian(
     
     | `D`                          | input type   | `D::InputMetric`        |
     | ---------------------------- | ------------ | ----------------------- |
-    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`QI`>  |
-    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L2Distance<`QI`>        |
+    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
+    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
     
     **Supporting Elements:**
     
@@ -42,11 +42,11 @@ def make_base_discrete_gaussian(
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
     :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param MO: Output measure. The only valid measure is ZeroConcentratedDivergence<Q>, but Q can be f32 or f64
+    :param MO: Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -81,8 +81,8 @@ def make_base_discrete_laplace(
     
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
@@ -101,11 +101,11 @@ def make_base_discrete_laplace(
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
     :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param QO: Data type of the output distance and scale.
+    :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -136,10 +136,11 @@ def make_base_discrete_laplace_cks20(
     using an efficient algorithm on rational bignums.
     
     Set `D` to change the input data type and input metric:
+    
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     **Citations:**
     
@@ -158,8 +159,8 @@ def make_base_discrete_laplace_cks20(
     :param QO: Data type of the output distance and scale.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -192,10 +193,11 @@ def make_base_discrete_laplace_linear(
     
     This algorithm can be executed in constant time if bounds are passed.
     Set `D` to change the input data type and input metric:
+    
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     **Citations:**
     
@@ -216,8 +218,8 @@ def make_base_discrete_laplace_linear(
     :param QO: Data type of the scale and output distance.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -251,10 +253,11 @@ def make_base_gaussian(
     """Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
     
     Set `D` to change the input data type and input metric:
+    
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L2Distance<`T`>        |
+    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
     
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
@@ -268,15 +271,15 @@ def make_base_gaussian(
     * Output Measure: `MO`
     
     :param scale: Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-    :param k: The noise granularity.
+    :param k: The noise granularity in terms of 2^k.
     :type k: int
     :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
     :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param MO: Output Measure. The only valid measure is ZeroConcentratedDivergence<T>.
+    :param MO: Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
     :type MO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -327,8 +330,8 @@ def make_base_geometric(
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -364,8 +367,8 @@ def make_base_laplace(
     
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
-    | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-    | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+    | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     
     This function takes a noise granularity in terms of 2^k. 
@@ -380,13 +383,13 @@ def make_base_laplace(
     * Output Measure: `MaxDivergence<D::Atom>`
     
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param k: The noise granularity.
+    :param k: The noise granularity in terms of 2^k.
     :type k: int
     :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -437,8 +440,8 @@ def make_base_ptr(
     :param TV: Type of Value. Must be float.
     :type TV: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib", "floating-point")
@@ -480,7 +483,7 @@ def make_randomized_response(
     
     :param categories: Set of valid outcomes
     :type categories: Any
-    :param prob: Probability of returning the correct answer. Must be in [1/num_categories, 1)
+    :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
     :param T: Data type of a category.
@@ -488,8 +491,8 @@ def make_randomized_response(
     :param Q: Data type of probability and output distance.
     :type Q: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -527,14 +530,14 @@ def make_randomized_response_bool(
     * Input Metric:   `DiscreteDistance`
     * Output Measure: `MaxDivergence<Q>`
     
-    :param prob: Probability of returning the correct answer. Must be in [0.5, 1)
+    :param prob: Probability of returning the correct answer. Must be in `[0.5, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
     :param Q: Data type of probability and output distance.
     :type Q: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")

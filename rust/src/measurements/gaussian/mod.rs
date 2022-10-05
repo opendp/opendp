@@ -69,11 +69,11 @@ where
 /// 
 /// Set `D` to change the input data type and input metric:
 ///
+/// 
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L2Distance<`T`>        |
-///
+/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
 /// 
 /// This function takes a noise granularity in terms of 2^k. 
 /// Larger granularities are more computationally efficient, but have a looser privacy map. 
@@ -81,11 +81,11 @@ where
 /// 
 /// # Arguments
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-/// * `k` - The noise granularity.
+/// * `k` - The noise granularity in terms of 2^k. 
 /// 
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
-/// * `MO` - Output Measure. The only valid measure is ZeroConcentratedDivergence<T>.
+/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MO>>
 where
     D: GaussianDomain,

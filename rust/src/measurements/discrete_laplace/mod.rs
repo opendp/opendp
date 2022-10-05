@@ -80,8 +80,8 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
 /// 
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
 /// 
 /// This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
 ///
@@ -94,7 +94,7 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
 /// 
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
-/// * `QO` - Data type of the output distance and scale.
+/// * `QO` - Data type of the output distance and scale. `f32` or `f64`.
 #[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,

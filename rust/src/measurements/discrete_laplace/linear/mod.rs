@@ -28,10 +28,11 @@ use super::DiscreteLaplaceDomain;
 /// This algorithm can be executed in constant time if bounds are passed.
 /// Set `D` to change the input data type and input metric:
 ///
+/// 
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | AllDomain<`T`> (default)     | `T`          | AbsoluteDistance<`T`>  |
-/// | VectorDomain<AllDomain<`T`>> | Vec<`T`>     | L1Distance<`T`>        |
+/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
 ///
 /// 
 /// # Citations
