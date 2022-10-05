@@ -44,6 +44,11 @@ jobs:
           name: libs
           path: rust/target/debug/libopendp.so
 
+      - name: Upload bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
   python-test:
     needs: rust-build-and-test
@@ -94,6 +99,12 @@ jobs:
         with:
           name: libs
           path: python/src/opendp/lib
+      
+      - name: Download bindings
+        uses: actions/download-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Install package
         run: python -m pip install -e .

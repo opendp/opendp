@@ -26,6 +26,9 @@ jobs:
         with:
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
+        
+      - name: Build python bindings
+        run: cargo check --verbose --features untrusted,bindings-python
 
       - name: Collect file listing
         id: "collect"
