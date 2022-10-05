@@ -8,7 +8,7 @@ use super::{DataFrameDomain, DataFrame};
 mod ffi;
 
 #[bootstrap(features("contrib"))]
-/// Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.
+/// Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
 /// 
 /// # Arguments
 /// * `key` - categorical/hashable data type of the key/column name

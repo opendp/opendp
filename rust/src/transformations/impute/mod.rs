@@ -15,8 +15,7 @@ use crate::traits::{CheckNull, Float};
     features("contrib"), 
     generics(TA(example = "$get_first(bounds)"))
 )]
-/// Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
-/// Operates on `InherentNullDomain<AllDomain<TA>>`
+/// Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
 /// 
 /// # Arguments
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
@@ -74,36 +73,36 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
 #[bootstrap(
     features("contrib"), 
     arguments(constant(rust_type = "TA", c_type="AnyObject *")),
-    generics(DA(default = "OptionNullDomain<AllDomain<TA>>", generics = "TA")),
-    derived_types(TA = "$get_atom_or_infer(DA, constant)")
+    generics(DIA(default = "OptionNullDomain<AllDomain<TA>>", generics = "TA")),
+    derived_types(TA = "$get_atom_or_infer(DIA, constant)")
 )]
 /// Make a Transformation that replaces null/None data with `constant`.
 /// By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
 /// Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
 /// that have an inherent representation of nullity, like floats.
 /// 
-/// | Input Domain `DI`              |  Input Type      | Output Type   |
-/// | ------------------------------ | ---------------- | ------------- |
-/// | AllDomain<Option<`T`>>         | Vec<Option<`T`>> | Vec<`T`>      |
-/// | NullableDomain<AllDomain<`T`>> | Vec<`T`>         | Vec<`T`>      |
+/// | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
+/// | ----------------------------------- | ----------------- | -------------- |
+/// | `OptionNullDomain<AllDomain<TA>>`   | `Vec<Option<TA>>` | `TA`           |
+/// | `InherentNullDomain<AllDomain<TA>>` | `Vec<TA>`         | `TA`           |
 /// 
 /// # Arguments
 /// * `constant` - Value to replace nulls with.
 /// 
 /// # Generics
-/// * `DA` - Atomic Domain of data being imputed.
-pub fn make_impute_constant<DA>(
-    constant: DA::Imputed
-) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
-    where DA: ImputeConstantDomain + Default,
-          DA::Imputed: 'static + Clone + CheckNull,
-          DA::Carrier: 'static {
+/// * `DIA` - Atomic Input Domain of data being imputed.
+pub fn make_impute_constant<DIA>(
+    constant: DIA::Imputed
+) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AllDomain<DIA::Imputed>>, SymmetricDistance, SymmetricDistance>>
+    where DIA: ImputeConstantDomain + Default,
+          DIA::Imputed: 'static + Clone + CheckNull,
+          DIA::Carrier: 'static {
     if constant.is_null() { return fallible!(MakeTransformation, "Constant may not be null.") }
 
     make_row_by_row(
-        DA::default(),
+        DIA::default(),
         AllDomain::new(),
-        move |v| DA::impute_constant(v, &constant).clone())
+        move |v| DIA::impute_constant(v, &constant).clone())
 }
 
 /// Utility trait to drop null values from a dataset, regardless of the representation of nullity.
@@ -141,7 +140,12 @@ impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that drops null values.
-/// `DA` is one of `OptionNullDomain<AllDomain<TA>>` or `InherentNullDomain<AllDomain<TA>>`.
+/// 
+/// 
+/// | `DA`                                | `DA::Imputed` |
+/// | ----------------------------------- | ------------- |
+/// | `OptionNullDomain<AllDomain<TA>>`   | `TA`          |
+/// | `InherentNullDomain<AllDomain<TA>>` | `TA`          |
 /// 
 /// # Generics
 /// * `DA` - atomic domain of input data that contains nulls.

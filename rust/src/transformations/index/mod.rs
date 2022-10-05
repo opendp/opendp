@@ -16,6 +16,10 @@ use crate::transformations::make_row_by_row;
 #[bootstrap(features("contrib"))]
 /// Find the index of a data value in a set of categories.
 /// 
+/// For each value in the input vector, finds the index of the value in `categories`.
+/// If an index is found, returns `Some(index)`, else `None`.
+/// Chain with `make_impute_constant` or `make_drop_null` to handle nullity.
+/// 
 /// # Arguments
 /// * `categories` - The set of categories to find indexes from.
 /// 
@@ -40,6 +44,14 @@ pub fn make_find<TIA>(
 
 #[bootstrap(features("contrib"))]
 /// Make a transformation that finds the bin index in a monotonically increasing vector of edges.
+/// 
+/// For each value in the input vector, finds the index of the bin the value falls into.
+/// `edges` splits the entire range of `TIA` into bins. 
+/// The first bin at index zero ranges from negative infinity to the first edge, non-inclusive.
+/// The last bin at index `edges.len()` ranges from the last bin, inclusive, to positive infinity.
+/// 
+/// To be valid, `edges` must be unique and ordered.
+/// `edges` are left inclusive, right exclusive.
 /// 
 /// # Arguments
 /// * `edges` - The set of edges to split bins by.
@@ -68,7 +80,7 @@ pub fn make_find_bin<TIA>(
 /// * `null` - Category to return if the index is out-of-range of the category set.
 /// 
 /// # Generics
-/// * `TIA` - Atomic Output Type. Output data will be Vec<TIA>.
+/// * `TOA` - Atomic Output Type. Output data will be `Vec<TOA>`.
 pub fn make_index<TOA>(
     categories: Vec<TOA>, null: TOA
 ) -> Fallible<Transformation<VectorDomain<AllDomain<usize>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>

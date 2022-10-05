@@ -25,7 +25,7 @@ mod ffi;
 /// * [HRMS09 Boosting the Accuracy of Differentially Private Histograms Through Consistency, section 4.1](https://arxiv.org/pdf/0904.0942.pdf)
 /// 
 /// # Arguments
-/// * `branching factor` - the maximum number of children
+/// * `branching_factor` - the maximum number of children
 /// 
 /// # Generics
 /// * `TIA` - Atomic type of the input data. Should be an integer type.

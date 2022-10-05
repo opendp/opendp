@@ -21,10 +21,10 @@ use crate::transformations::cast_metric::traits::{
     features("contrib")
 )]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
-/// to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
-/// Operates exclusively on VectorDomain<AllDomain<`TA`>>.
-///
-/// The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
+/// to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
+/// 
+/// The input metric is not generic because the only other dataset metric `ChangeOneDistance` 
+/// is not valid due to the dataset size being unknown.
 ///
 /// # Generics
 /// * `TA` - Atomic Type.
@@ -58,10 +58,10 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
     generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
 )]
 /// Make a Transformation that converts the unordered dataset metric `MI`
-/// to the respective ordered dataset metric by assigning a random permutatation.
-/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
+/// to the respective ordered dataset metric by assigning a random permutation.
 ///
-/// | `MI`              | output metric        |
+/// 
+/// | `MI`              | `MI::OrderedMetric`  |
 /// | ----------------- | -------------------- |
 /// | SymmetricDistance | InsertDeleteDistance |
 /// | ChangeOneDistance | HammingDistance      |
@@ -119,14 +119,12 @@ pub extern "C" fn opendp_transformations__make_sized_ordered_random(
     generics(MI(hint = "DatasetMetric", default = "SymmetricDistance"))
 )]
 /// Make a Transformation that converts the unordered dataset metric `MI`
-/// to the respective ordered dataset metric by assigning a random permutatation.
-/// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
-///
-/// | `MI`              | output metric        |
+/// to the respective ordered dataset metric by assigning a random permutation.
+/// 
+/// | `MI`              | `MI::OrderedMetric`  |
 /// | ----------------- | -------------------- |
 /// | SymmetricDistance | InsertDeleteDistance |
 /// | ChangeOneDistance | HammingDistance      |
-/// 
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -187,14 +185,8 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_ordered_random(
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance`
 /// to the respective ordered dataset metric SymmetricDistance with a no-op.
-/// Operates exclusively on VectorDomain<AllDomain<`TA`>>.
 ///
-/// The dataset metric is not generic over HammingDistance because the dataset size is unknown.
-/// 
-/// | input metric         | output metric        |
-/// | -------------------- | -------------------- |
-/// | InsertDeleteDistance | SymmetricDistance    |
-/// 
+/// The input metric cannot be bounded (HammingDistance) because the dataset size is unknown.
 /// 
 /// # Generics
 /// * `TA` - Atomic Type.
@@ -229,12 +221,12 @@ pub extern "C" fn opendp_transformations__make_unordered(
 )]
 /// Make a Transformation that converts the ordered dataset metric `MI`
 /// to the respective unordered dataset metric via a no-op.
-/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 ///
-/// | `MI`                 | output metric      |
-/// | -------------------- | ------------------ |
-/// | InsertDeleteDistance | SymmetricDistance  |
-/// | HammingDistance      | ChangeOneDistance  |
+/// 
+/// | `MI`                 | `MI::OrderedMetric` |
+/// | -------------------- | ------------------- |
+/// | InsertDeleteDistance | SymmetricDistance   |
+/// | HammingDistance      | ChangeOneDistance   |
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -289,12 +281,12 @@ pub extern "C" fn opendp_transformations__make_sized_unordered(
 )]
 /// Make a Transformation that converts the ordered dataset metric `MI`
 /// to the respective unordered dataset metric via a no-op.
-/// Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
 ///
-/// | `MI`                 | output metric      |
-/// | -------------------- | ------------------ |
-/// | InsertDeleteDistance | SymmetricDistance  |
-/// | HammingDistance      | ChangeOneDistance  |
+/// 
+/// | `MI`                 | `MI::UnorderedMetric` |
+/// | -------------------- | --------------------- |
+/// | InsertDeleteDistance | SymmetricDistance     |
+/// | HammingDistance      | ChangeOneDistance     |
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -355,16 +347,15 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_unordered(
 /// Make a Transformation that converts the unbounded dataset metric `MI` 
 /// to the respective bounded dataset metric with a no-op. 
 /// 
-/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 /// The constructor enforces that the input domain has known size, 
 /// because it must have known size to be valid under a bounded dataset metric.
 /// 
 /// While it is valid to operate with bounded data, there is no constructor for it in Python.
 /// 
-/// | `MI`                 | output metric     |
-/// | -------------------- | ----------------- |
-/// | SymmetricDistance    | ChangeOneDistance |
-/// | InsertDeleteDistance | HammingDistance   |
+/// | `MI`                 | `MI::BoundedMetric` |
+/// | -------------------- | ------------------- |
+/// | SymmetricDistance    | ChangeOneDistance   |
+/// | InsertDeleteDistance | HammingDistance     |
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
@@ -420,12 +411,11 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
 )]
 /// Make a Transformation that converts the bounded dataset metric `MI` 
 /// to the respective unbounded dataset metric with a no-op. 
-/// Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
 /// 
-/// | `MI`              | output metric        |
-/// | ----------------- | -------------------- |
-/// | ChangeOneDistance | SymmetricDistance    |
-/// | HammingDistance   | InsertDeleteDistance |
+/// | `MI`              | `MI::UnboundedMetric` |
+/// | ----------------- | --------------------- |
+/// | ChangeOneDistance | SymmetricDistance     |
+/// | HammingDistance   | InsertDeleteDistance  |
 /// 
 /// # Arguments
 /// * `size` - Number of records in input data.

@@ -21,6 +21,17 @@ use super::UncheckedSum;
 /// Make a Transformation that computes the sum of squared deviations of bounded data. 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
 /// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+///
+/// | S (summation algorithm) | input type     |
+/// | ----------------------- | -------------- |
+/// | `Sequential<S::Item>`   | `Vec<S::Item>` |
+/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+/// 
+/// `S::Item` is the type of all of the following: 
+/// each bound, each element in the input data, the output data, and the output sensitivity.
+/// 
+/// For example, to construct a transformation that computes the SSD of `f32` half-precision floats,
+/// set `S` to `Pairwise<f32>`.
 /// 
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)

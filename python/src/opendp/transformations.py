@@ -79,8 +79,8 @@ def choose_branching_factor(
     :param size_guess: A guess at the size of your dataset.
     :type size_guess: int
     :rtype: int
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     """
     assert_features("contrib")
     
@@ -116,13 +116,13 @@ def make_b_ary_tree(
     :type leaf_count: int
     :param branching_factor: The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
     :type branching_factor: int
-    :param M: Metric. Must be L1Distance<Q> or L2Distance<Q>
+    :param M: Metric. Must be `L1Distance<Q>` or `L2Distance<Q>`
     :type M: :py:ref:`RuntimeTypeDescriptor`
     :param TA: Atomic Type of the input data.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -154,6 +154,17 @@ def make_bounded_float_checked_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    
+    `S::Item` is the type of all of the following: 
+    each bound, each element in the input data, the output data, and the output sensitivity.
+    
+    For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+    set `S` to `Pairwise<f32>`.
+    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
@@ -170,11 +181,11 @@ def make_bounded_float_checked_sum(
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -202,9 +213,22 @@ def make_bounded_float_ordered_sum(
     bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats. 
+    """Make a Transformation that computes the sum of bounded floats with known ordering. 
+    
+    Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     The utility loss from overestimating the `size_limit` is small.
+    
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    
+    `S::Item` is the type of all of the following: 
+    each bound, each element in the input data, the output data, and the output sensitivity.
+    
+    For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+    set `S` to `Pairwise<f32>`.
     
     **Citations:**
     
@@ -222,11 +246,11 @@ def make_bounded_float_ordered_sum(
     :type size_limit: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -273,8 +297,8 @@ def make_bounded_int_monotonic_sum(
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -318,8 +342,8 @@ def make_bounded_int_ordered_sum(
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -363,8 +387,8 @@ def make_bounded_int_split_sum(
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -393,7 +417,7 @@ def make_bounded_resize(
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records 
-    with `constant` in a Vec<`TA`> to match a provided `size`.
+    with `constant` in a `Vec<TA>` to match a provided `size`.
     
     **Supporting Elements:**
     
@@ -411,12 +435,12 @@ def make_bounded_resize(
     :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MO: :py:ref:`RuntimeTypeDescriptor`
-    :param TA: Atomic type. If not passed, TA is inferred from the lower bound
+    :param TA: Atomic type. If not passed, `TA` is inferred from the lower bound
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -462,8 +486,8 @@ def make_bounded_sum(
     :param T: Atomic Input Type and Output Type.
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -490,7 +514,9 @@ def make_cast(
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
-    Failure to parse results in None, else Some<TOA>.
+    For each element, failure to parse results in `None`, else `Some(out)`.
+    
+    Can be chained with `make_impute_constant` or `make_drop_null` to handle nullity.
     
     **Supporting Elements:**
     
@@ -504,8 +530,8 @@ def make_cast(
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -531,7 +557,15 @@ def make_cast_default(
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
-    If the cast fails, fill with default.
+    Any element that fails to cast is filled with default.
+    
+    
+    | `TIA`  | `TIA::default()` |
+    | ------ | ---------------- |
+    | float  | `0.`             |
+    | int    | `0`              |
+    | string | `""`             |
+    | bool   | `false`          |
     
     **Supporting Elements:**
     
@@ -545,8 +579,8 @@ def make_cast_default(
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -571,8 +605,12 @@ def make_cast_inherent(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TI` to a type that can represent nullity `TO`. 
-    If cast fails, fill with `TO`'s null value.
+    """Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`. 
+    If cast fails, fill with `TOA`'s null value.
+    
+    | `TIA`  | `TIA::default()` |
+    | ------ | ---------------- |
+    | float  | NaN              |
     
     **Supporting Elements:**
     
@@ -586,8 +624,8 @@ def make_cast_inherent(
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -623,8 +661,8 @@ def make_cdf(
     :param TA: Atomic Type. One of `f32` or `f64`
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -647,7 +685,8 @@ def make_clamp(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that clamps numeric data in Vec<`T`> to `bounds`.
+    """Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
+    
     If datum is less than lower, let datum be lower. 
     If datum is greater than upper, let datum be upper.
     
@@ -663,8 +702,8 @@ def make_clamp(
     :param TA: Atomic Type
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -709,15 +748,15 @@ def make_consistent_b_ary_tree(
     * Input Metric:   `AgnosticMetric`
     * Output Metric:  `AgnosticMetric`
     
-    :param branching_factor: 
+    :param branching_factor: the maximum number of children
     :type branching_factor: int
     :param TIA: Atomic type of the input data. Should be an integer type.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic type of the output data. Should be a float type.
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -756,13 +795,13 @@ def make_count(
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<TO>`
     
-    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+    :param TIA: Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
-    :param TO: 
+    :param TO: Output Type. Must be numeric.
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -804,14 +843,14 @@ def make_count_by(
     
     :param MO: Output Metric.
     :type MO: SensitivityMetric
-    :param TK: Type of Key. Categorical/hashable input data type. Input data must be Vec<TK>.
+    :param TK: Type of Key. Categorical/hashable input data type. Input data must be `Vec<TK>`.
     :type TK: :py:ref:`RuntimeTypeDescriptor`
-    :param TV: 
+    :param TV: Type of Value. Express counts in terms of this integral type.
     :type TV: :py:ref:`RuntimeTypeDescriptor`
     :return: The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -862,14 +901,14 @@ def make_count_by_categories(
     :type null_category: bool
     :param MO: Output Metric.
     :type MO: SensitivityMetric
-    :param TIA: Atomic Input Type that is categorical/hashable. Input data must be Vec<TIA>
+    :param TIA: Atomic Input Type that is categorical/hashable. Input data must be `Vec<TIA>`
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type that is numeric.
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :return: The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -913,11 +952,11 @@ def make_count_distinct(
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
-    :param TO: 
+    :param TO: Output Type. Must be numeric.
     :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -956,8 +995,8 @@ def make_create_dataframe(
     :param K: categorical/hashable data type of column names
     :type K: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -986,6 +1025,14 @@ def make_df_cast_default(
     """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. 
     If cast fails, fill with default.
     
+    
+    | `TIA`  | `TIA::default()` |
+    | ------ | ---------------- |
+    | float  | `0.`             |
+    | int    | `0`              |
+    | string | `""`             |
+    | bool   | `false`          |
+    
     **Supporting Elements:**
     
     * Input Domain:   `DataFrameDomain<TK>`
@@ -1002,8 +1049,8 @@ def make_df_cast_default(
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1033,7 +1080,7 @@ def make_df_is_equal(
     TK: RuntimeTypeDescriptor = None,
     TIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`
+    """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
     
     **Supporting Elements:**
     
@@ -1044,15 +1091,15 @@ def make_df_is_equal(
     
     :param column_name: Column name to be transformed
     :type column_name: Any
-    :param value: 
+    :param value: Value to check for equality
     :type value: Any
     :param TK: Type of the column name
     :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1079,7 +1126,12 @@ def make_drop_null(
     DA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that drops null values.
-    `DA` is one of `OptionNullDomain<AllDomain<TA>>` or `InherentNullDomain<AllDomain<TA>>`.
+    
+    
+    | `DA`                                | `DA::Imputed` |
+    | ----------------------------------- | ------------- |
+    | `OptionNullDomain<AllDomain<TA>>`   | `TA`          |
+    | `InherentNullDomain<AllDomain<TA>>` | `TA`          |
     
     **Supporting Elements:**
     
@@ -1091,8 +1143,8 @@ def make_drop_null(
     :param DA: atomic domain of input data that contains nulls.
     :type DA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1117,6 +1169,10 @@ def make_find(
 ) -> Transformation:
     """Find the index of a data value in a set of categories.
     
+    For each value in the input vector, finds the index of the value in `categories`.
+    If an index is found, returns `Some(index)`, else `None`.
+    Chain with `make_impute_constant` or `make_drop_null` to handle nullity.
+    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TIA>>`
@@ -1129,8 +1185,8 @@ def make_find(
     :param TIA: Atomic Input Type that is categorical/hashable
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1156,6 +1212,14 @@ def make_find_bin(
 ) -> Transformation:
     """Make a transformation that finds the bin index in a monotonically increasing vector of edges.
     
+    For each value in the input vector, finds the index of the bin the value falls into.
+    `edges` splits the entire range of `TIA` into bins. 
+    The first bin at index zero ranges from negative infinity to the first edge, non-inclusive.
+    The last bin at index `edges.len()` ranges from the last bin, inclusive, to positive infinity.
+    
+    To be valid, `edges` must be unique and ordered.
+    `edges` are left inclusive, right exclusive.
+    
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<AllDomain<TIA>>`
@@ -1168,8 +1232,8 @@ def make_find_bin(
     :param TIA: Atomic Input Type that is numeric
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1207,8 +1271,8 @@ def make_identity(
     :param M: Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
     :type M: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1231,59 +1295,58 @@ def make_identity(
 
 def make_impute_constant(
     constant: Any,
-    DA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<TA>>"
+    DIA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<TA>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
     By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
     Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
     that have an inherent representation of nullity, like floats.
     
-    | Input Domain `DI`              |  Input Type      | Output Type   |
-    | ------------------------------ | ---------------- | ------------- |
-    | AllDomain<Option<`T`>>         | Vec<Option<`T`>> | Vec<`T`>      |
-    | NullableDomain<AllDomain<`T`>> | Vec<`T`>         | Vec<`T`>      |
+    | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
+    | ----------------------------------- | ----------------- | -------------- |
+    | `OptionNullDomain<AllDomain<TA>>`   | `Vec<Option<TA>>` | `TA`           |
+    | `InherentNullDomain<AllDomain<TA>>` | `Vec<TA>`         | `TA`           |
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<DA>`
-    * Output Domain:  `VectorDomain<AllDomain<DA::Imputed>>`
+    * Input Domain:   `VectorDomain<DIA>`
+    * Output Domain:  `VectorDomain<AllDomain<DIA::Imputed>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
     :param constant: Value to replace nulls with.
     :type constant: Any
-    :param DA: Atomic Domain of data being imputed.
-    :type DA: :py:ref:`RuntimeTypeDescriptor`
+    :param DIA: Atomic Input Domain of data being imputed.
+    :type DIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
     
     # Standardize type arguments.
-    DA = RuntimeType.parse(type_name=DA, generics=["TA"])
-    TA = get_atom_or_infer(DA, constant)
-    DA = DA.substitute(TA=TA)
+    DIA = RuntimeType.parse(type_name=DIA, generics=["TA"])
+    TA = get_atom_or_infer(DIA, constant)
+    DIA = DIA.substitute(TA=TA)
     
     # Convert arguments to c types.
     constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=TA)
-    DA = py_to_c(DA, c_type=ctypes.c_char_p)
+    DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_transformations__make_impute_constant
     function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(constant, DA), Transformation))
+    return c_to_py(unwrap(function(constant, DIA), Transformation))
 
 
 def make_impute_uniform_float(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that replaces NaN values in Vec<`TA`> with uniformly distributed floats within `bounds`.
-    Operates on `InherentNullDomain<AllDomain<TA>>`
+    """Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
     
     **Supporting Elements:**
     
@@ -1297,8 +1360,8 @@ def make_impute_uniform_float(
     :param TA: Atomic Type of data being imputed. One of `f32` or `f64`
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1336,11 +1399,11 @@ def make_index(
     :type categories: Any
     :param null: Category to return if the index is out-of-range of the category set.
     :type null: Any
-    :param TOA: 
+    :param TOA: Atomic Output Type. Output data will be `Vec<TOA>`.
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1379,8 +1442,8 @@ def make_is_equal(
     :param TIA: Atomic Input Type. Type of elements in the input vector
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1415,8 +1478,8 @@ def make_is_null(
     :param DIA: Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
     :type DIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1454,13 +1517,13 @@ def make_lipschitz_float_mul(
     :param constant: The constant to multiply aggregates by.
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param D: Domain of the function. Must be AllDomain<T> or VectorDomain<AllDomain<T>>
+    :param D: Domain of the function. Must be `AllDomain<T>` or `VectorDomain<AllDomain<T>>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param M: Metric. Must be AbsoluteDistance<T>, L1Distance<T> or L2Distance<T>
+    :param M: Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
     :type M: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1494,16 +1557,15 @@ def make_metric_bounded(
     """Make a Transformation that converts the unbounded dataset metric `MI` 
     to the respective bounded dataset metric with a no-op. 
     
-    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
     The constructor enforces that the input domain has known size, 
     because it must have known size to be valid under a bounded dataset metric.
     
     While it is valid to operate with bounded data, there is no constructor for it in Python.
     
-    | `MI`                 | output metric     |
-    | -------------------- | ----------------- |
-    | SymmetricDistance    | ChangeOneDistance |
-    | InsertDeleteDistance | HammingDistance   |
+    | `MI`                 | `MI::BoundedMetric` |
+    | -------------------- | ------------------- |
+    | SymmetricDistance    | ChangeOneDistance   |
+    | InsertDeleteDistance | HammingDistance     |
     
     **Supporting Elements:**
     
@@ -1519,8 +1581,8 @@ def make_metric_bounded(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1549,12 +1611,11 @@ def make_metric_unbounded(
 ) -> Transformation:
     """Make a Transformation that converts the bounded dataset metric `MI` 
     to the respective unbounded dataset metric with a no-op. 
-    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
     
-    | `MI`              | output metric        |
-    | ----------------- | -------------------- |
-    | ChangeOneDistance | SymmetricDistance    |
-    | HammingDistance   | InsertDeleteDistance |
+    | `MI`              | `MI::UnboundedMetric` |
+    | ----------------- | --------------------- |
+    | ChangeOneDistance | SymmetricDistance     |
+    | HammingDistance   | InsertDeleteDistance  |
     
     **Supporting Elements:**
     
@@ -1570,8 +1631,8 @@ def make_metric_unbounded(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1597,9 +1658,10 @@ def make_ordered_random(
     TA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
-    to the respective ordered dataset metric InsertDeleteDistance by assigning a random permutatation.
-    Operates exclusively on VectorDomain<AllDomain<`TA`>>.
-    The dataset metric is not generic over ChangeOneDistance because the dataset size is unknown.
+    to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
+    
+    The input metric is not generic because the only other dataset metric `ChangeOneDistance` 
+    is not valid due to the dataset size being unknown.
     
     **Supporting Elements:**
     
@@ -1611,8 +1673,8 @@ def make_ordered_random(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1658,8 +1720,8 @@ def make_quantiles_from_counts(
     :param F: Float type of the alpha argument. One of `f32` or `f64`
     :type F: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1691,7 +1753,7 @@ def make_resize(
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that either truncates or imputes records 
-    with `constant` in a Vec<`TA`> to match a provided `size`.
+    with `constant` in a `Vec<TA>` to match a provided `size`.
     
     **Supporting Elements:**
     
@@ -1708,12 +1770,12 @@ def make_resize(
     :type MI: :py:ref:`RuntimeTypeDescriptor`
     :param MO: Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
     :type MO: :py:ref:`RuntimeTypeDescriptor`
-    :param TA: Atomic type. If not passed, TA is inferred from the lower bound
+    :param TA: Atomic type. If not passed, `TA` is inferred from the lower bound
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :return: A vector of the same type `TA`, but with the provided `size`.
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1743,7 +1805,7 @@ def make_select_column(
     TOA: RuntimeTypeDescriptor,
     K: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that retrieves the column `key` from a dataframe as Vec<`TOA`>.
+    """Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
     
     **Supporting Elements:**
     
@@ -1759,8 +1821,8 @@ def make_select_column(
     :param TOA: Atomic Output Type to downcast vector to
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1790,6 +1852,17 @@ def make_sized_bounded_float_checked_sum(
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    
+    `S::Item` is the type of all of the following: 
+    each bound, each element in the input data, the output data, and the output sensitivity.
+    
+    For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+    set `S` to `Pairwise<f32>`.
+    
     **Citations:**
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
@@ -1806,11 +1879,11 @@ def make_sized_bounded_float_checked_sum(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1838,9 +1911,22 @@ def make_sized_bounded_float_ordered_sum(
     bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with known dataset size. 
+    """Make a Transformation that computes the sum of bounded floats with known ordering and dataset size. 
+    
+    Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
+    
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    
+    `S::Item` is the type of all of the following: 
+    each bound, each element in the input data, the output data, and the output sensitivity.
+    
+    For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
+    set `S` to `Pairwise<f32>`.
     
     **Citations:**
     
@@ -1858,11 +1944,11 @@ def make_sized_bounded_float_ordered_sum(
     :type size: int
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
-    :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+    :param S: Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1912,8 +1998,8 @@ def make_sized_bounded_int_checked_sum(
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -1961,8 +2047,8 @@ def make_sized_bounded_int_monotonic_sum(
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2011,8 +2097,8 @@ def make_sized_bounded_int_ordered_sum(
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2061,8 +2147,8 @@ def make_sized_bounded_int_split_sum(
     :param T: Atomic Input Type and Output Type
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2109,8 +2195,8 @@ def make_sized_bounded_mean(
     :param T: Atomic Input Type and Output Type.
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2140,9 +2226,9 @@ def make_sized_bounded_ordered_random(
     MI: DatasetMetric = "SymmetricDistance"
 ) -> Transformation:
     """Make a Transformation that converts the unordered dataset metric `MI`
-    to the respective ordered dataset metric by assigning a random permutatation.
-    Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
-    | `MI`              | output metric        |
+    to the respective ordered dataset metric by assigning a random permutation.
+    
+    | `MI`              | `MI::OrderedMetric`  |
     | ----------------- | -------------------- |
     | SymmetricDistance | InsertDeleteDistance |
     | ChangeOneDistance | HammingDistance      |
@@ -2163,8 +2249,8 @@ def make_sized_bounded_ordered_random(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2211,8 +2297,8 @@ def make_sized_bounded_sum(
     :param T: Atomic Input Type and Output Type.
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2243,6 +2329,16 @@ def make_sized_bounded_sum_of_squared_deviations(
     """Make a Transformation that computes the sum of squared deviations of bounded data. 
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+    
+    `S::Item` is the type of all of the following: 
+    each bound, each element in the input data, the output data, and the output sensitivity.
+    
+    For example, to construct a transformation that computes the SSD of `f32` half-precision floats,
+    set `S` to `Pairwise<f32>`.
     
     **Citations:**
     
@@ -2263,8 +2359,8 @@ def make_sized_bounded_sum_of_squared_deviations(
     :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2295,11 +2391,11 @@ def make_sized_bounded_unordered(
 ) -> Transformation:
     """Make a Transformation that converts the ordered dataset metric `MI`
     to the respective unordered dataset metric via a no-op.
-    Operates exclusively on SizedDomain<VectorDomain<BoundedDomain<`TA`>>>.
-    | `MI`                 | output metric      |
-    | -------------------- | ------------------ |
-    | InsertDeleteDistance | SymmetricDistance  |
-    | HammingDistance      | ChangeOneDistance  |
+    
+    | `MI`                 | `MI::UnorderedMetric` |
+    | -------------------- | --------------------- |
+    | InsertDeleteDistance | SymmetricDistance     |
+    | HammingDistance      | ChangeOneDistance     |
     
     **Supporting Elements:**
     
@@ -2317,8 +2413,8 @@ def make_sized_bounded_unordered(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2371,8 +2467,8 @@ def make_sized_bounded_variance(
     :param S: Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
     :type S: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2402,9 +2498,9 @@ def make_sized_ordered_random(
     MI: DatasetMetric = "SymmetricDistance"
 ) -> Transformation:
     """Make a Transformation that converts the unordered dataset metric `MI`
-    to the respective ordered dataset metric by assigning a random permutatation.
-    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
-    | `MI`              | output metric        |
+    to the respective ordered dataset metric by assigning a random permutation.
+    
+    | `MI`              | `MI::OrderedMetric`  |
     | ----------------- | -------------------- |
     | SymmetricDistance | InsertDeleteDistance |
     | ChangeOneDistance | HammingDistance      |
@@ -2423,8 +2519,8 @@ def make_sized_ordered_random(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2453,11 +2549,11 @@ def make_sized_unordered(
 ) -> Transformation:
     """Make a Transformation that converts the ordered dataset metric `MI`
     to the respective unordered dataset metric via a no-op.
-    Operates exclusively on SizedDomain<VectorDomain<AllDomain<`TA`>>>.
-    | `MI`                 | output metric      |
-    | -------------------- | ------------------ |
-    | InsertDeleteDistance | SymmetricDistance  |
-    | HammingDistance      | ChangeOneDistance  |
+    
+    | `MI`                 | `MI::OrderedMetric` |
+    | -------------------- | ------------------- |
+    | InsertDeleteDistance | SymmetricDistance   |
+    | HammingDistance      | ChangeOneDistance   |
     
     **Supporting Elements:**
     
@@ -2473,8 +2569,8 @@ def make_sized_unordered(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2518,8 +2614,8 @@ def make_split_dataframe(
     :param K: categorical/hashable data type of column names
     :type K: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2554,8 +2650,8 @@ def make_split_lines(
     
     
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2585,8 +2681,8 @@ def make_split_records(
     :param separator: The token(s) that separate entries in each record.
     :type separator: str
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2624,8 +2720,8 @@ def make_subset_by(
     :param TK: Type of the column name
     :type TK: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2650,7 +2746,8 @@ def make_unclamp(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that unclamps numeric data in Vec<`T`>.
+    """Make a Transformation that unclamps numeric data in `Vec<T>`.
+    
     Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
     
     **Supporting Elements:**
@@ -2665,8 +2762,8 @@ def make_unclamp(
     :param TA: Atomic Type
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -2691,12 +2788,7 @@ def make_unordered(
 ) -> Transformation:
     """Make a Transformation that converts the ordered dataset metric `InsertDeleteDistance`
     to the respective ordered dataset metric SymmetricDistance with a no-op.
-    Operates exclusively on VectorDomain<AllDomain<`TA`>>.
-    The dataset metric is not generic over HammingDistance because the dataset size is unknown.
-    
-    | input metric         | output metric        |
-    | -------------------- | -------------------- |
-    | InsertDeleteDistance | SymmetricDistance    |
+    The input metric cannot be bounded (HammingDistance) because the dataset size is unknown.
     
     **Supporting Elements:**
     
@@ -2708,8 +2800,8 @@ def make_unordered(
     :param TA: Atomic Type.
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
