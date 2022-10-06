@@ -9,7 +9,7 @@ env:
 
 jobs:
   credential-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Check if user is an administrator
         uses: lannonbr/repo-permission-check-action@2.0.0
