@@ -13,5 +13,6 @@ If your focus is using OpenDP to build your own applications, please consult the
    development-environment
    code-structure
    rust-initiation
+   proof-initiation
    developer-faq
    maintainer-notes
