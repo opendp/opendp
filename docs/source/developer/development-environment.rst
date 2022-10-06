@@ -2,11 +2,15 @@
 
 Development Environment
 =======================
+The first task to tackle is setting up the development environment.
 
 Follow the steps below to get an OpenDP development environment set up, including the ability to run tests in both Rust and Python.
 
 * Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
 * Install `Python version 3.7 or higher <https://www.python.org>`_.
+
+If you have already installed Rust, make sure that you have installed a version at least as new as the `rust-version` specified in 
+[rust/Cargo.toml](https://github.com/opendp/opendp/blob/main/rust/Cargo.toml).
 
 
 Clone the OpenDP Repo
@@ -31,7 +35,7 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
 
 
 Build OpenDP
-============
+------------
 
 Next, you'll need to build the Rust binaries. 
 This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo.
@@ -94,10 +98,15 @@ In contrast to debug builds, release builds are located in ``opendp/rust/target/
 To use a release-mode binary from the Python bindings, 
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
-If you run into compilation problems, please contact us!
-We also have a :ref:`developer-faq` with some common issues. 
+If you run into problems, please contact us!
 
 .. note::
+
+    You may encounter the following build error on Windows:
+
+    .. code-block:: bash
+
+        thread 'main' panicked at 'Program failed with code 2: "make" "-j" "12" "check"'
 
     There is a more involved `setup guide <https://github.com/opendp/opendp/tree/main/rust/windows>`_ for Windows users.
     You can compromise to simple and vulnerable builds instead, by adding the ``--no-default-features`` flag to cargo commands.
@@ -160,20 +169,16 @@ This is just a quick overview of building OpenDP.
 If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
 Documentation
-=============
+-------------
 
-The source for this documentation website can be found in the "docs" directory at https://github.com/opendp/opendp
-
-Building the Docs
------------------
-
-The docs are built using Sphinx and the steps are listed in the README in the "docs" directory.
+The source for this documentation website can be found in the "docs" directory at https://github.com/opendp/opendp.
+The docs are built using Sphinx and the steps to build it are listed in the README in the "docs" directory.
 
 
 Developer Tooling
-=================
+-----------------
 
-There are many development environments that work with Rust. Here are a few:
+There are many development environments that work with Rust and LaTex. Here are a few:
 
 * `VS Code <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_
 * `Intellij IDEA <https://plugins.jetbrains.com/plugin/8182-rust>`_

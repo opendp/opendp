@@ -30,7 +30,6 @@ and make a case for why this constructor should be added to the library.
 * Is it unique and does it have reasonable utility?
 * If it has a similar behavior as another constructor, can you show that it has greater utility or useful trade-offs?
 
-Once you get feedback, you can move on to the :ref:`contribution-process`.
 
 Resolve an Issue
 ----------------
@@ -39,7 +38,6 @@ Take a look through `the issue board <https://github.com/opendp/opendp/issues>`_
 Once you find an issue you can tackle, comment on the issue to claim it.
 Feel free to ask clarifying questions!
 
-You can follow the :ref:`contribution-process` from here on.
 
 Write Documentation
 -------------------
@@ -48,12 +46,11 @@ There are many forms of documentation!
 
 * Python docstrings and type hints
 * Long-form sphinx documentation `located here <https://github.com/opendp/opendp/tree/main/docs>`_
-* Expanding `Rustdocs <https://docs.rs/opendp/0.2.1/opendp/>`_ on core library modules (`example <https://github.com/opendp/opendp/blob/main/rust/opendp/src/lib.rs#L1>`_), structures and constructors
+* Expanding `Rustdocs <https://docs.rs/opendp/0.2.1/opendp/>`_ on core library modules (`example <https://github.com/opendp/opendp/blob/main/rust/src/lib.rs#L1>`_), structures and constructors
 * Notebooks and example applications
 
 Please `open a new issue <https://github.com/opendp/opendp/issues/new?template=new-contribution.md>`__ to take ownership of a piece of documentation.
 
-You can follow the :ref:`contribution-process` from here on.
 
 Add Tests
 ---------
@@ -72,7 +69,6 @@ There are also classes of tests that we are completely missing:
 
 Please `open a new issue <https://github.com/opendp/opendp/issues/new?template=new-contribution.md>`__ to communicate what you are planning to work on.
 
-You can follow the :ref:`contribution-process` from here on.
 
 Review Pull Requests
 --------------------
