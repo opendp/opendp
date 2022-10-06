@@ -41,13 +41,9 @@ Documentation for past releases are available in the drop down on the left panel
   :titlesonly:
   :maxdepth: 3
 
-  more
-
-.. toctree::
-  :glob:
-  :titlesonly:
-  :maxdepth: 3
-
+  developer/index
+  resources/index
+  opendp-commons/index
   contact
 
 This is version |version| of the guides, last built on |today|.

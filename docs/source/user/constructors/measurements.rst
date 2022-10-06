@@ -47,11 +47,11 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
    * - :func:`opendp.measurements.make_base_discrete_laplace`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace`
      - ``VectorDomain<AllDomain<T>>``
      - ``L1Distance<T>``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_laplace`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
@@ -84,19 +84,19 @@ In addition, the linear-time algorithm supports a constant-time execution mode i
    * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
      - ``VectorDomain<AllDomain<T>>``
      - ``L1Distance<T>``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
      - ``VectorDomain<AllDomain<T>>``
      - ``L1Distance<T>``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``
 
 .. raw:: html
 
@@ -119,12 +119,12 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Output Measure
    * - :func:`opendp.measurements.make_base_discrete_gaussian`
      - ``AllDomain<T>``
-     - ``AbsoluteDistance<T>``
-     - ``ZeroConcentratedDivergence<T>``
+     - ``AbsoluteDistance<QI>``
+     - ``ZeroConcentratedDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_gaussian`
      - ``VectorDomain<AllDomain<T>>``
-     - ``L2Distance<T>``
-     - ``ZeroConcentratedDivergence<T>``
+     - ``L2Distance<QI>``
+     - ``ZeroConcentratedDivergence<QO>``
    * - :func:`opendp.measurements.make_base_gaussian`
      - ``AllDomain<T>``
      - ``AbsoluteDistance<T>``
@@ -155,13 +155,13 @@ The stability histogram is used to release a category set and frequency counts, 
      - Input Metric
      - Output Metric/Measure
    * - :func:`opendp.transformations.make_count_by`
-     - ``VectorDomain<BoundedDomain<TI>>``
+     - ``VectorDomain<BoundedDomain<TK>>``
      - ``SymmetricDistance``
-     - ``L1Distance<TO>``
+     - ``L1Distance<TV>``
    * - :func:`opendp.measurements.make_base_ptr`
-     - ``MapDomain<AllDomain<TIA>, AllDomain<TOA>>``
-     - ``L1Distance<T>``
-     - ``SmoothedMaxDivergence<T>``
+     - ``MapDomain<AllDomain<TK>, AllDomain<TV>>``
+     - ``L1Distance<TV>``
+     - ``SmoothedMaxDivergence<TV>``
 
 Randomized Response
 -------------------
@@ -189,8 +189,8 @@ These measurements are used to randomize an individual's response to a query.
    * - :func:`opendp.measurements.make_randomized_response_bool`
      - ``AllDomain<bool>``
      - ``DiscreteDistance``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_randomized_response`
      - ``AllDomain<T>``
      - ``DiscreteDistance``
-     - ``MaxDivergence<T>``
+     - ``MaxDivergence<QO>``

@@ -15,18 +15,18 @@ use crate::traits::{Float, Hashable};
 pub extern "C" fn opendp_measurements__make_randomized_response_bool(
     prob: *const c_void,
     constant_time: c_bool,
-    Q: *const c_char,
+    QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<Q>(prob: *const c_void, constant_time: bool) -> FfiResult<*mut AnyMeasurement>
-        where bool: SampleBernoulli<Q>,
-              Q: Float {
-        let prob = *try_as_ref!(prob as *const Q);
-        make_randomized_response_bool::<Q>(prob, constant_time).into_any()
+    fn monomorphize<QO>(prob: *const c_void, constant_time: bool) -> FfiResult<*mut AnyMeasurement>
+        where bool: SampleBernoulli<QO>,
+              QO: Float {
+        let prob = *try_as_ref!(prob as *const QO);
+        make_randomized_response_bool::<QO>(prob, constant_time).into_any()
     }
-    let Q = try_!(Type::try_from(Q));
+    let QO = try_!(Type::try_from(QO));
     let constant_time = to_bool(constant_time);
     dispatch!(monomorphize, [
-        (Q, @floats)
+        (QO, @floats)
     ], (prob, constant_time))
 }
 
@@ -37,26 +37,26 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
     prob: *const c_void,
     constant_time: c_bool,
     T: *const c_char,
-    Q: *const c_char,
+    QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<T, Q>(
+    fn monomorphize<T, QO>(
         categories: *const AnyObject, prob: *const c_void,
         constant_time: bool,
     ) -> FfiResult<*mut AnyMeasurement>
         where T: Hashable,
-              bool: SampleBernoulli<Q>,
-              Q: Float {
+              bool: SampleBernoulli<QO>,
+              QO: Float {
         let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<T>>()).clone();
-        let prob = *try_as_ref!(prob as *const Q);
-        make_randomized_response::<T, Q>(
+        let prob = *try_as_ref!(prob as *const QO);
+        make_randomized_response::<T, QO>(
             HashSet::from_iter(categories.into_iter()),
             prob, constant_time).into_any()
     }
     let T = try_!(Type::try_from(T));
-    let Q = try_!(Type::try_from(Q));
+    let QO = try_!(Type::try_from(QO));
     let constant_time = to_bool(constant_time);
     dispatch!(monomorphize, [
         (T, @hashable),
-        (Q, @floats)
+        (QO, @floats)
     ], (categories, prob, constant_time))
 }

@@ -6,13 +6,14 @@ This guide is directed towards people interested in participating in OpenDP deve
 If your focus is using OpenDP to build your own applications, please consult the :doc:`../user/index`.
 
 .. toctree::
+   :glob:
+   :titlesonly:
+   :maxdepth: 3
 
    getting-involved
+   development-environment
+   proof-initiation
+   rust-initiation
    contribution-process
    cla
-   development-environment
-   code-structure
-   rust-initiation
-   proof-initiation
-   developer-faq
    maintainer-notes
