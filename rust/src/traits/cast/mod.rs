@@ -150,6 +150,9 @@ impl<T> InfCast<T> for T {
     fn inf_cast(v: T) -> Fallible<Self> {
         Ok(v)
     }
+    fn neg_inf_cast(v: T) -> Fallible<Self> {
+        Ok(v)
+    }
 }
 macro_rules! impl_inf_cast_none {
     ($ti:ty, $to:ty) => ()
