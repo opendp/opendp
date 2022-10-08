@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::{AllDomain, VectorDomain},
@@ -11,6 +13,22 @@ use super::check_parameters;
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[bootstrap(
+    features("contrib", "floating-point"),
+    generics(TIA(default = "int"), TOA(default = "float"))
+)]
+/// Make a lipschitz transformation from a vector of predicate sums on known-length stratified datasets to a proportion.
+/// 
+/// # Arguments 
+/// * `strat_sizes` - A vector of sizes of stratified populations.
+/// * `sample_sizes` - A vector of sizes of sampled datasets in each stratification.
+/// 
+/// # Generics 
+/// * `TIA` - Atomic Input Type. An integer type.
+/// * `TOA` - Atomic Output Type. One of `f32` or `f64`
+/// 
+/// # Returns
+/// A transformation that emits a sample mean estimate.
 pub fn make_lipschitz_sized_proportion_ci_mean<TIA: Integer, TOA: Float>(
     strat_sizes: Vec<usize>,
     sample_sizes: Vec<usize>,
@@ -70,6 +88,23 @@ where
     ))
 }
 
+#[bootstrap(
+    features("contrib", "floating-point"),
+    generics(TIA(default = "int"), TOA(default = "float"))
+)]
+/// Make a lipschitz transformation from a vector of predicate sums on known-length stratified datasets to a proportion.
+/// 
+/// # Arguments 
+/// * `strat_sizes` - A vector of sizes of stratified populations.
+/// * `sample_sizes` - A vector of sizes of sampled datasets in each stratification.
+/// * `mean_scale` - Gaussian noise scale used to privatize the mean estimate.
+/// 
+/// # Generics 
+/// * `TIA` - Atomic Input Type. An integer type.
+/// * `TOA` - Atomic Output Type. One of `f32` or `f64`
+/// 
+/// # Returns
+/// A transformation that emits a sample variance estimate.
 pub fn make_lipschitz_sized_proportion_ci_variance<TIA: Integer, TOA: Float>(
     strat_sizes: Vec<usize>,
     sample_sizes: Vec<usize>,
