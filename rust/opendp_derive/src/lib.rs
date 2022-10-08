@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 
-#[cfg(feature = "derive")]
+#[cfg(feature = "full")]
 mod full;
 
 /// When the opendp crate is compiled with the "derive" feature,
@@ -277,7 +277,7 @@ mod full;
 /// This is typically only useful on the innermost structural utilities, 
 /// like when converting from an FfiSlice to an AnyObject or vice versa.
 /// 
-#[cfg(feature = "derive")]
+#[cfg(feature = "full")]
 #[proc_macro_attribute]
 pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     full::bootstrap(attr_args, input)
@@ -285,7 +285,7 @@ pub fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// When the "derive" crate feature is not enabled, no work is done, and dependencies are simplified.
 /// 
-#[cfg(not(feature = "derive"))]
+#[cfg(not(feature = "full"))]
 #[proc_macro_attribute]
 pub fn bootstrap(_attr_args: TokenStream, input: TokenStream) -> TokenStream {
     input
@@ -302,13 +302,13 @@ pub fn bootstrap(_attr_args: TokenStream, input: TokenStream) -> TokenStream {
 /// When used on a trait impl, it looks for `TraitName.tex`, 
 /// and when used on a struct impl, it looks for `StructName.tex`.
 /// 
-#[cfg(feature = "derive")]
+#[cfg(feature = "full")]
 #[proc_macro_attribute]
 pub fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     full::proven(attr_args, input)
 }
 
-#[cfg(not(feature = "derive"))]
+#[cfg(not(feature = "full"))]
 #[proc_macro_attribute]
 pub fn proven(_attr_args: TokenStream, input: TokenStream) -> TokenStream {
     input
