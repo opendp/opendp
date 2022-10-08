@@ -1,5 +1,7 @@
 use std::convert::TryFrom;
 
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Function, Postprocessor},
     domains::{AllDomain, VectorDomain},
@@ -12,6 +14,24 @@ use super::check_parameters;
 #[cfg(feature="ffi")]
 mod ffi;
 
+#[bootstrap(
+    features("contrib", "floating-point"),
+    arguments(scale(c_type = "void *")),
+    generics(TA(default = "float"))
+)]
+/// Make a postprocessing transformation from a vector of noisy predicate sums 
+/// on known-length stratified datasets to a proportion mean and variance.
+/// 
+/// # Arguments 
+/// * `strat_sizes` - A vector of sizes of stratified populations.
+/// * `sample_sizes` - A vector of sizes of sampled datasets in each stratification.
+/// * `scale` - Gaussian noise scale used to privatize the mean estimate.
+/// 
+/// # Generics 
+/// * `TA` - Atomic data type. One of `f32` or `f64`
+/// 
+/// # Returns
+/// A postprocessor that emits sample mean and variance estimates.
 pub fn make_postprocess_sized_proportion_ci<TA>(
     strat_sizes: Vec<usize>,
     sample_sizes: Vec<usize>,
@@ -69,6 +89,24 @@ where
     )
 }
 
+#[bootstrap(
+    features("contrib", "floating-point"),
+    arguments(sum_scale(c_type = "void *"), size_scale(c_type = "void *")),
+    generics(TA(default = "float"))
+)]
+/// Make a postprocessing transformation from vectors of noisy predicate sums and counts 
+/// on stratified datasets to a proportion mean and variance.
+/// 
+/// # Arguments 
+/// * `strat_sizes` - A vector of sizes of stratified populations.
+/// * `sum_scale` - Gaussian noise scale used to privatize the sum estimate.
+/// * `size_scale` - Gaussian noise scale used to privatize the count estimate.
+/// 
+/// # Generics 
+/// * `TA` - Atomic data type. One of `f32` or `f64`
+/// 
+/// # Returns
+/// A postprocessor that emits sample mean and variance estimates.
 pub fn make_postprocess_proportion_ci<TA>(
     strat_sizes: Vec<usize>,
     sum_scale: TA,
