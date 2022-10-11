@@ -4,17 +4,20 @@ use crate::{
     core::{FfiResult, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::ZeroConcentratedDivergence,
+    measures::MaxDivergence,
     traits::Float,
 };
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    dependencies("$get_dependencies(measurement)")
+)]
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
+/// is casted from `MaxDivergence<QO>` to `FixedSmoothedMaxDivergence<QO>`.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
-fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
+fn make_pureDP_to_fixed_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
     
     fn monomorphize<QO: Float>(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let AnyMeasurement {
@@ -31,13 +34,13 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
             output_domain,
             function,
             input_metric,
-            output_measure: try_!(output_measure.downcast::<ZeroConcentratedDivergence<QO>>()),
+            output_measure: try_!(output_measure.downcast::<MaxDivergence<QO>>()),
             privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 privacy_map.eval(d_in)?.downcast::<QO>()
             }),
         };
     
-        let measurement = super::make_zCDP_to_approxDP(measurement)?;
+        let measurement = super::make_pureDP_to_fixed_approxDP(measurement)?;
     
         let Measurement {
             input_domain,
@@ -68,9 +71,9 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_combinators__make_zCDP_to_approxDP(
+pub extern "C" fn opendp_combinators__make_pureDP_to_fixed_approxDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {
     // run combinator on measurement
-    FfiResult::from(make_zCDP_to_approxDP(try_as_ref!(measurement)))
+    FfiResult::from(make_pureDP_to_fixed_approxDP(try_as_ref!(measurement)))
 }

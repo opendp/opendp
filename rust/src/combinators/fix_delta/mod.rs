@@ -7,7 +7,7 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
-/// Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
+/// Fix the delta parameter in the privacy map of a `measurement` with a `SmoothedMaxDivergence` output measure.
 /// 
 /// # Arguments
 /// * `measurement` - a measurement with a privacy curve to be fixed

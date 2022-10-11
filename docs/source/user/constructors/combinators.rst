@@ -109,16 +109,46 @@ Thus the privacy map simply sums the constituent output distances.
     >>> noisy_sum_pair.map(1)
     2.0
 
-This combinator can compose Measurements with `ZeroConcentratedDivergence`, `MaxDivergence` and `FixedSmoothedMaxDivergence` output measures.
+This combinator can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures.
 
 .. _measure-casting:
 
 Measure Casting
 ---------------
+These combinators are used to cast the output measure of a Measurement.
 
-There are two combinators for casting the output measure of a Measurement. 
-The first is used for casting an output measure from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`:
-:func:`opendp.combinators.make_zCDP_to_approxDP`.
+.. list-table::
+   :header-rows: 1
+
+   * - Input Measure
+     - Output Measure
+     - Constructor
+   * - ``MaxDivergence<Q>``
+     - ``FixedSmoothedMaxDivergence<Q>``
+     - :func:`opendp.combinators.make_pureDP_to_fixed_approxDP`
+   * - ``ZeroConcentratedDivergence<Q>``
+     - ``SmoothedMaxDivergence<Q>``
+     - :func:`opendp.combinators.make_zCDP_to_approxDP`
+   * - ``SmoothedMaxDivergence<Q>``
+     - ``FixedSmoothedMaxDivergence<Q>``
+     - :func:`opendp.combinators.make_fix_delta`
+
+:func:`opendp.combinators.make_pureDP_to_fixed_approxDP` is used for casting an output measure from ``MaxDivergence`` to ``FixedSmoothedMaxDivergence``.
+This is useful if you want to compose pure-DP measurements with approximate-DP measurements.
+
+.. doctest::
+
+    >>> from opendp.measurements import make_base_laplace
+    >>> from opendp.combinators import make_pureDP_to_fixed_approxDP
+    >>> meas_pureDP = make_base_laplace(scale=10.)
+    >>> # convert the output measure to `FixedSmoothedMaxDivergence`
+    >>> meas_fixed_approxDP = make_pureDP_to_fixed_approxDP(meas_pureDP)
+    ...
+    >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
+    >>> meas_approxDP.map(d_in=1.)
+    (.01, 0.)
+
+:func:`opendp.combinators.make_zCDP_to_approxDP` is used for casting an output measure from ``ZeroConcentratedDivergence`` to ``SmoothedMaxDivergence``.
 
 .. doctest::
 
@@ -133,9 +163,8 @@ The first is used for casting an output measure from `ZeroConcentratedDivergence
     >>> curve.epsilon(delta=1e-6)
     11.688596249354896
 
-The second is used for fixing the delta parameter in the curve. 
-This changes the output measure from `SmoothedMaxDivergence` to `FixedSmoothedMaxDivergence`:
-:func:`opendp.combinators.make_fix_delta`.
+:func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``FixedSmoothedMaxDivergence``.
+It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``FixedSmoothedMaxDivergence`` measurements.
 
 .. doctest::
 
@@ -147,7 +176,7 @@ This changes the output measure from `SmoothedMaxDivergence` to `FixedSmoothedMa
     >>> meas_fixed_approxDP.map(d_in=1.)
     (13.3861046488579, 1e-08)
 
-These combinators allow you to convert output distances in terms of ρ-zCDP to ε(δ)-approxDP, and then to (ε, δ)-approxDP.
+These last two combinators allow you to convert output distances in terms of ρ-zCDP to ε(δ)-approxDP, and then to (ε, δ)-approxDP.
 
 
 Amplification
