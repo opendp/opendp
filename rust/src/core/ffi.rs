@@ -5,10 +5,14 @@ use std::os::raw::c_char;
 
 use opendp_derive::bootstrap;
 
+use crate::core::{Domain, Metric, Measure};
+use crate::domains::{AllDomain, VectorDomain};
+use crate::measures::MaxDivergence;
+use crate::metrics::SymmetricDistance;
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
-use crate::ffi::util::{self, c_bool};
+use crate::ffi::util::{self, c_bool, Type};
 use crate::ffi::util::into_c_char_p;
 
 #[repr(C)]
@@ -144,7 +148,6 @@ impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible
     }
 }
 
-#[cfg(test)]
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
         let variant = util::to_str(val.variant).unwrap_assert("variants do not contain null bytes");
@@ -170,7 +173,6 @@ impl From<FfiError> for Error {
     }
 }
 
-#[cfg(test)]
 impl<T> From<FfiResult<*mut T>> for Fallible<T> {
     fn from(result: FfiResult<*mut T>) -> Self {
         match result {
@@ -451,6 +453,84 @@ pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMea
 pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.output_measure.distance_type.descriptor.to_string())))
+}
+
+#[bootstrap(
+    name = "domain_carrier_type",
+    arguments(D(c_type = "char *", rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the carrier type associated with a domain descriptor
+/// 
+/// # Arguments
+/// * `D` - The domain to get the carrier type from.
+#[no_mangle]
+pub extern "C" fn opendp_core__domain_carrier_type(D: *const c_char) -> FfiResult<*mut c_char> {
+    let D = try_!(Type::try_from(D));
+
+    fn monomorphize<D: 'static + Domain>() -> Fallible<Type> {
+        Ok(Type::of::<D::Carrier>())
+    }
+    let T = try_!(dispatch!(monomorphize, [
+        (D, [AllDomain<i32>, VectorDomain<AllDomain<i32>>, AllDomain<f64>, VectorDomain<AllDomain<f64>>])
+    ], ()));
+    
+    match into_c_char_p(T.to_string()) {
+        Ok(v) => FfiResult::Ok(v),
+        Err(e) => e.into(),
+    }
+}
+
+#[bootstrap(
+    name = "metric_distance_type",
+    arguments(M(c_type = "char *", rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the distance type associated with a metric descriptor
+/// 
+/// # Arguments
+/// * `M` - The metric to get the distance type from.
+#[no_mangle]
+pub extern "C" fn opendp_core__metric_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
+    let M = try_!(Type::try_from(M));
+
+    fn monomorphize<M: 'static + Metric>() -> Fallible<Type> {
+        Ok(Type::of::<M::Distance>())
+    }
+    let Q = try_!(dispatch!(monomorphize, [
+        (M, [SymmetricDistance])
+    ], ()));
+
+    match into_c_char_p(Q.to_string()) {
+        Ok(v) => FfiResult::Ok(v),
+        Err(e) => e.into(),
+    }
+}
+
+#[bootstrap(
+    name = "measure_distance_type",
+    arguments(M(c_type = "char *", rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the distance type associated with a measure descriptor
+/// 
+/// # Arguments
+/// * `M` - The measure to get the distance type from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measure_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
+    let M = try_!(Type::try_from(M));
+
+    fn monomorphize<M: 'static + Measure>() -> Fallible<Type> {
+        Ok(Type::of::<M::Distance>())
+    }
+    let Q = try_!(dispatch!(monomorphize, [
+        (M, [MaxDivergence<f64>])
+    ], ()));
+
+    match into_c_char_p(Q.to_string()) {
+        Ok(v) => FfiResult::Ok(v),
+        Err(e) => e.into(),
+    }
 }
 
 
