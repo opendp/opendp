@@ -1,3 +1,4 @@
+from opendp.combinators import *
 import pytest
 from opendp.mod import enable_features
 from opendp.measurements import *
@@ -9,7 +10,6 @@ enable_features("floating-point", "contrib", "honest-but-curious")
 
 def test_amplification():
     from opendp.transformations import make_sized_bounded_mean
-    from opendp.combinators import make_population_amplification
 
     meas = make_sized_bounded_mean(size=10, bounds=(0., 10.)) >> make_base_laplace(scale=0.5)
 
@@ -22,8 +22,6 @@ def test_amplification():
 
 
 def test_fix_delta():
-    from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
-
     base_gaussian = make_zCDP_to_approxDP(make_base_gaussian(10.))
     print(base_gaussian.map(1.).epsilon(1e-6))
     fixed_base_gaussian = make_fix_delta(base_gaussian, 1e-6)
@@ -32,7 +30,6 @@ def test_fix_delta():
 
 
 def test_make_basic_composition():
-    from opendp.combinators import make_basic_composition
     composed = make_basic_composition([
         make_count(TIA=int, TO=int) >> make_basic_composition([
             make_base_discrete_laplace(scale=2.), 
@@ -59,7 +56,6 @@ def test_make_basic_composition():
 
 @pytest.mark.skip(reason="long-running process to detect potential memory leaks")
 def test_make_basic_composition_leak():
-    from opendp.combinators import make_basic_composition
 
     # choose a vector-valued mechanism that should run quickly for large inputs
     # we want to add as little noise as possible, so that execution time is small
@@ -77,7 +73,6 @@ def test_make_basic_composition_leak():
     
 
 def test_make_basic_composition_approx():
-    from opendp.combinators import make_basic_composition, make_zCDP_to_approxDP, make_fix_delta
     composed_fixed = make_basic_composition([
         make_fix_delta(make_zCDP_to_approxDP(make_base_gaussian(1.)), 1e-7)
     ] * 2)
@@ -85,8 +80,6 @@ def test_make_basic_composition_approx():
 
 
 def test_cast_zcdp_approxdp():
-    from opendp.combinators import make_zCDP_to_approxDP
-
     base_gaussian = make_base_gaussian(10., MO=ZeroConcentratedDivergence[float])
 
     print(base_gaussian.map(1.))
@@ -95,6 +88,14 @@ def test_cast_zcdp_approxdp():
 
     print(smd_gaussian.map(1.).epsilon(1e-6))
     
-if __name__ == "__main__":
-    test_make_basic_composition_approx()
 
+def test_make_pureDP_to_fixed_approxDP():
+    meas = make_basic_composition([
+        make_pureDP_to_fixed_approxDP(make_base_laplace(10.)),
+        make_fix_delta(make_zCDP_to_approxDP(make_base_gaussian(10.)), delta=1e-6)
+    ])
+
+    print(meas.map(1.))
+
+if __name__ == "__main__":
+    test_make_pureDP_to_fixed_approxDP()
