@@ -127,6 +127,9 @@ These combinators are used to cast the output measure of a Measurement.
    * - ``MaxDivergence<Q>``
      - ``FixedSmoothedMaxDivergence<Q>``
      - :func:`opendp.combinators.make_pureDP_to_fixed_approxDP`
+   * - ``MaxDivergence<Q>``
+     - ``ZeroConcentratedDivergence<Q>``
+     - :func:`opendp.combinators.make_pureDP_to_zCDP`
    * - ``ZeroConcentratedDivergence<Q>``
      - ``SmoothedMaxDivergence<Q>``
      - :func:`opendp.combinators.make_zCDP_to_approxDP`
@@ -148,6 +151,9 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
     >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
     >>> meas_fixed_approxDP.map(d_in=1.)
     (0.1, 0.0)
+
+Similarly, :func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an output measure from ``MaxDivergence`` to ``ZeroConcentratedDivergence``.
+
 
 :func:`opendp.combinators.make_zCDP_to_approxDP` is used for casting an output measure from ``ZeroConcentratedDivergence`` to ``SmoothedMaxDivergence``.
 
