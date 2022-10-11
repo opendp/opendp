@@ -126,6 +126,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
+
     def __del__(self):
         try:
             from opendp.core import _measurement_free
@@ -259,6 +263,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         from opendp.core import transformation_input_carrier_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
+
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
     def __del__(self):
         try:

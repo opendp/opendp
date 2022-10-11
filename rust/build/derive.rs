@@ -152,7 +152,7 @@ fn parse_file(
             }
 
             // use the bootstrap crate to parse a Function
-            Function::from_ast(attr_args, item_fn, Some(module_name)).ok()
+            Some(Function::from_ast(attr_args, item_fn, Some(module_name)).unwrap())
         })
         .collect()
 }
