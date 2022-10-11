@@ -2,7 +2,7 @@
 
     from typing import List
     from opendp.mod import enable_features
-    enable_features('contrib', 'floating-point', 'honest-but-curious')
+    enable_features('contrib', 'floating-point')
 
 .. _combinator-constructors:
 
@@ -197,7 +197,7 @@ The amplifier requires a looser trust model, as the population size can be set a
 
 .. doctest::
 
-    enable_features("honest-but-curious")
+    >>> enable_features("honest-but-curious")
 
 
 In order to demonstrate this API, we'll first create a measurement with a sized input domain.
@@ -257,47 +257,51 @@ This requires a looser trust model, as we cannot verify any correctness properti
 
 .. doctest::
 
-    enable_features("honest-but-curious")
+    >>> enable_features("honest-but-curious")
 
 In this example, we mock the typical API of the OpenDP library:
 
 .. doctest::
 
-    def make_repeat(multiplicity):
-        """Constructs a Transformation that duplicates each record `multiplicity` times"""
-        def function(arg: List[int]) -> List[int]:
-            return arg * multiplicity
-
-        def stability_map(d_in: int) -> int:
-            # if a user could influence at most `d_in` records before, 
-            # they can now influence `d_in` * `multiplicity` records
-            return d_in * multiplicity
-
-        return make_custom_transformation_with_defaults(
-            function,
-            stability_map,
-            DI=VectorDomain[AllDomain[int]],
-            DO=VectorDomain[AllDomain[int]],
-            MI=SymmetricDistance,
-            MO=SymmetricDistance,
-        )
+    >>> from opendp.combinators import make_default_transformation
+    >>> from opendp.typing import *
+    ...
+    >>> def make_repeat(multiplicity):
+    ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
+    ...     def function(arg: List[int]) -> List[int]:
+    ...         return arg * multiplicity
+    ... 
+    ...     def stability_map(d_in: int) -> int:
+    ...         # if a user could influence at most `d_in` records before, 
+    ...         # they can now influence `d_in` * `multiplicity` records
+    ...         return d_in * multiplicity
+    ...
+    ...     return make_default_transformation(
+    ...         function,
+    ...         stability_map,
+    ...         DI=VectorDomain[AllDomain[int]],
+    ...         DO=VectorDomain[AllDomain[int]],
+    ...         MI=SymmetricDistance,
+    ...         MO=SymmetricDistance,
+    ...     )
     
 The resulting Transformation may be used interchangeably with those constructed via the library:
 
 .. doctest::
 
-    from opendp.transformations import *
-    from opendp.measurements import make_base_discrete_laplace
-    trans = (
-        make_cast_default(TIA=str, TOA=int)
-        >> make_duplicate(2)  # our custom transformation
-        >> make_clamp((1, 2))
-        >> make_bounded_sum((1, 2))
-        >> make_base_discrete_laplace(1.0)
-    )
-
-    print(trans(["0", "1", "2", "3"]))
-    print(trans.map(1))
+    >>> from opendp.transformations import *
+    >>> from opendp.measurements import make_base_discrete_laplace
+    >>> trans = (
+    ...     make_cast_default(TIA=str, TOA=int)
+    ...     >> make_repeat(2)  # our custom transformation
+    ...     >> make_clamp((1, 2))
+    ...     >> make_bounded_sum((1, 2))
+    ...     >> make_base_discrete_laplace(1.0)
+    ... )
+    ...
+    >>> release = trans(["0", "1", "2", "3"])
+    >>> trans.map(1) # computes epsilon
+    4.0
 
 The same holds for measurements and postprocessors.
-You can even mix in computational primitives from other DP libraries!
+You can even mix computational primitives from other DP libraries!
