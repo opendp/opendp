@@ -1,1 +1,1 @@
-mod ffi;
+pub(crate) mod ffi;

@@ -163,7 +163,8 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                         _ => "void *".to_string(),
                     }
                 }
-                i if i == "String" || i == "c_char" => "AnyObject *".to_string(),
+                i if i == "String" => "AnyObject *".to_string(),
+                i if i == "c_char" => "char *".to_string(),
                 i if i == "AnyObject" => "AnyObject *".to_string(),
                 i if i == "Vec" => "AnyObject *".to_string(),
                 i if i == "HashSet" => "AnyObject *".to_string(),
