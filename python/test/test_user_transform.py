@@ -86,7 +86,7 @@ def test_make_custom_postprocessor_with_defaults():
 
 
 if __name__ == "__main__":
-    # test_make_custom_transformation_with_defaults()
-    # test_make_custom_transformation_error()
-    # test_make_custom_measurement_with_defaults()
+    test_make_custom_transformation_with_defaults()
+    test_make_custom_transformation_error()
+    test_make_custom_measurement_with_defaults()
     test_make_custom_postprocessor_with_defaults()
