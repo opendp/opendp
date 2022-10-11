@@ -5,10 +5,7 @@ use std::os::raw::c_char;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Metric, Measure};
-use crate::domains::{AllDomain, VectorDomain};
-use crate::measures::MaxDivergence;
-use crate::metrics::SymmetricDistance;
+use crate::combinators::ffi::{default_domain, default_metric, default_measure};
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
@@ -467,14 +464,7 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMe
 #[no_mangle]
 pub extern "C" fn opendp_core__domain_carrier_type(D: *const c_char) -> FfiResult<*mut c_char> {
     let D = try_!(Type::try_from(D));
-
-    fn monomorphize<D: 'static + Domain>() -> Fallible<Type> {
-        Ok(Type::of::<D::Carrier>())
-    }
-    let T = try_!(dispatch!(monomorphize, [
-        (D, [AllDomain<i32>, VectorDomain<AllDomain<i32>>, AllDomain<f64>, VectorDomain<AllDomain<f64>>])
-    ], ()));
-    
+    let T = try_!(default_domain(D)).carrier_type.to_string();
     match into_c_char_p(T.to_string()) {
         Ok(v) => FfiResult::Ok(v),
         Err(e) => e.into(),
@@ -493,14 +483,7 @@ pub extern "C" fn opendp_core__domain_carrier_type(D: *const c_char) -> FfiResul
 #[no_mangle]
 pub extern "C" fn opendp_core__metric_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
     let M = try_!(Type::try_from(M));
-
-    fn monomorphize<M: 'static + Metric>() -> Fallible<Type> {
-        Ok(Type::of::<M::Distance>())
-    }
-    let Q = try_!(dispatch!(monomorphize, [
-        (M, [SymmetricDistance])
-    ], ()));
-
+    let Q = try_!(default_metric(M)).distance_type.to_string();
     match into_c_char_p(Q.to_string()) {
         Ok(v) => FfiResult::Ok(v),
         Err(e) => e.into(),
@@ -519,14 +502,7 @@ pub extern "C" fn opendp_core__metric_distance_type(M: *const c_char) -> FfiResu
 #[no_mangle]
 pub extern "C" fn opendp_core__measure_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
     let M = try_!(Type::try_from(M));
-
-    fn monomorphize<M: 'static + Measure>() -> Fallible<Type> {
-        Ok(Type::of::<M::Distance>())
-    }
-    let Q = try_!(dispatch!(monomorphize, [
-        (M, [MaxDivergence<f64>])
-    ], ()));
-
+    let Q = try_!(default_measure(M)).distance_type.to_string();
     match into_c_char_p(Q.to_string()) {
         Ok(v) => FfiResult::Ok(v),
         Err(e) => e.into(),
