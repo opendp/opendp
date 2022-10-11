@@ -363,11 +363,13 @@ fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -
     let data_converter: String = func
         .args
         .iter()
-        .filter(|arg| !arg.do_not_convert)
         .map(|arg| {
+            let name = arg.name();
+            if arg.do_not_convert {
+                return format!("c_{name} = {name}")
+            };
             format!(
-                r#"{name} = py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
-                name = arg.name(),
+                r#"c_{name} = py_to_c({name}, c_type={c_type}{rust_type_arg})"#,
                 c_type = arg.python_origin_ctype(typemap),
                 rust_type_arg = arg
                     .rust_type
@@ -407,8 +409,7 @@ fn generate_call(
         args = func
             .args
             .iter()
-            // .chain(func.type_args.iter())
-            .map(|arg| arg.name())
+            .map(|arg| format!("c_{}", arg.name()))
             .collect::<Vec<_>>()
             .join(", ")
     );
