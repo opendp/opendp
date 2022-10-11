@@ -96,3 +96,15 @@ def test_make_pureDP_to_fixed_approxDP():
     ])
 
     print(meas.map(1.))
+
+
+def test_make_pureDP_to_zCDP():
+    meas = make_basic_composition([
+        make_pureDP_to_zCDP(make_base_laplace(10.)),
+        make_base_gaussian(10.)
+    ])
+
+    print(meas.map(1.))
+
+if __name__ == "__main__":
+    test_make_pureDP_to_fixed_approxDP()
