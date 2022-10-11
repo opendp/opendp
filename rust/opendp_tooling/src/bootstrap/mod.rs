@@ -65,6 +65,7 @@ pub fn reconcile_function(
             signature.output_c_type,
         )?,
         derived_types: reconcile_derived_types(bootstrap.derived_types),
+        dependencies: bootstrap.dependencies.0,
     })
 }
 

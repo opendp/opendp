@@ -239,10 +239,13 @@ fn generate_body(
     format!(
         r#"{flag_checker}{type_arg_formatter}
 {data_converter}
-{make_call}"#,
+{make_call}
+{set_dependencies}
+return output"#,
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         data_converter = generate_data_converter(func, typemap),
+        set_dependencies = set_dependencies(&func.dependencies),
         make_call = generate_call(module_name, func, typemap)
     )
 }
@@ -400,7 +403,7 @@ fn generate_call(
     typemap: &HashMap<String, String>,
 ) -> String {
     let mut call = format!(
-        r#"function({args})"#,
+        r#"lib_function({args})"#,
         args = func
             .args
             .iter()
@@ -422,11 +425,11 @@ fn generate_call(
     }
     format!(
         r#"# Call library function.
-function = lib.opendp_{module_name}__{func_name}
-function.argtypes = [{ctype_args}]
-function.restype = {ctype_restype}
+lib_function = lib.opendp_{module_name}__{func_name}
+lib_function.argtypes = [{ctype_args}]
+lib_function.restype = {ctype_restype}
 
-return {call}"#,
+output = {call}"#,
         module_name = module_name,
         func_name = func.name,
         ctype_args = func
@@ -438,4 +441,16 @@ return {call}"#,
         ctype_restype = ctype_restype,
         call = call
     )
+}
+
+
+fn set_dependencies(
+    dependencies: &Vec<TypeRecipe>
+) -> String {
+    if dependencies.is_empty() {
+        String::new()
+    } else {
+        let dependencies = dependencies.iter().map(|dep| dep.to_python()).collect::<Vec<String>>().join(", ");
+        format!("output._depends_on({dependencies})")
+    }
 }
