@@ -158,11 +158,13 @@ If your dataset is a simple sample from a larger population,
 you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator:
 :func:`opendp.combinators.make_population_amplification`.
 
-The amplifier requires a looser trust model, as the population size can be set arbitrarily.
+.. note::
 
-.. doctest::
+    The amplifier requires a looser trust model, as the population size can be set arbitrarily.
 
-    >>> enable_features("honest-but-curious")
+    .. doctest::
+
+        >>> enable_features("honest-but-curious")
 
 
 In order to demonstrate this API, we'll first create a measurement with a sized input domain.
@@ -202,27 +204,34 @@ User-Defined Callbacks
 ----------------------
 
 It is possible to construct Transformations, Measurements and Postprocessors on your own via Python functions.
-This API is currently limited to domains that have a notion of a default value. 
-That is, ``SizedDomain`` and ``BoundedDomain``, which require runtime arguments to construct, are not currently supported.
 
 .. list-table::
    :header-rows: 1
 
    * - Component
-     - Function
+     - Constructor
    * - Transformation
-     - :func:`make_default_transformation <opendp.combinators.make_default_transformation>`
+     - :func:`opendp.combinators.make_default_transformation`
    * - Measurement
-     - :func:`make_default_measurement <opendp.combinators.make_default_measurement>`
+     - :func:`opendp.combinators.make_default_measurement`
    * - Postprocessor
-     - :func:`make_default_postprocessor <opendp.combinators.make_default_postprocessor>`
+     - :func:`opendp.combinators.make_default_postprocessor`
 
+.. note::
 
-This requires a looser trust model, as we cannot verify any correctness properties of user-defined functions.
+    This API is currently limited to domains that have a default. 
+    Domains that carry state do not have a default:
+    ``SizedDomain`` carries a size parameter, and ``BoundedDomain`` carries bounds, so they are not currently supported.
+    The output domain of ``make_basic_composition`` suffers from the same issue.
+    This restriction may be lifted after `#232 <https://github.com/opendp/opendp/issues/232>`_.
 
-.. doctest::
+.. note::
 
-    >>> enable_features("honest-but-curious")
+    This requires a looser trust model, as we cannot verify any correctness properties of user-defined functions.
+
+    .. doctest::
+
+        >>> enable_features("honest-but-curious")
 
 In this example, we mock the typical API of the OpenDP library:
 
