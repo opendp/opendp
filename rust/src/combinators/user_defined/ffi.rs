@@ -27,7 +27,7 @@ type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObje
         MI(c_type = "char *", rust_type = b"null"),
         MO(c_type = "char *", rust_type = b"null"),
     ),
-    dependencies("function", "stability_map")
+    dependencies("c_function", "c_stability_map")
 )]
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_custom_transformation_with_defaults(
@@ -88,7 +88,7 @@ pub extern "C" fn opendp_combinators__make_custom_transformation_with_defaults(
         MI(c_type = "char *", rust_type = b"null"),
         MO(c_type = "char *", rust_type = b"null"),
     ),
-    dependencies("function", "privacy_map")
+    dependencies("c_function", "c_privacy_map")
 )]
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_custom_measurement_with_defaults(
@@ -146,7 +146,7 @@ pub extern "C" fn opendp_combinators__make_custom_measurement_with_defaults(
         DI(c_type = "char *", rust_type = b"null"),
         DO(c_type = "char *", rust_type = b"null"),
     ),
-    dependencies("function")
+    dependencies("c_function")
 )]
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_custom_postprocessor_with_defaults(
