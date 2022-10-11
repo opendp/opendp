@@ -17,7 +17,7 @@ def make_duplicate(multiplicity, raises=False):
     def stability_map(d_in):
         return d_in * multiplicity
 
-    return make_custom_transformation_with_defaults(
+    return make_default_transformation(
         function,
         stability_map,
         DI=VectorDomain[AllDomain[i32]],
@@ -26,7 +26,7 @@ def make_duplicate(multiplicity, raises=False):
         MO=SymmetricDistance,
     )
 
-def test_make_custom_transformation_with_defaults():
+def test_make_default_transformation():
     trans = (
         make_cast_default(TIA=str, TOA=int)
         >> make_duplicate(2)
@@ -53,7 +53,7 @@ def make_constant_mechanism(constant):
     def stability_map(_d_in):
         return 0.
 
-    return make_custom_measurement_with_defaults(
+    return make_default_measurement(
         function,
         stability_map,
         DI=AllDomain[i32],
@@ -62,7 +62,7 @@ def make_constant_mechanism(constant):
         MO=MaxDivergence[f64],
     )
 
-def test_make_custom_measurement_with_defaults():
+def test_make_default_measurement():
     mech = make_constant_mechanism(23)
     print(mech(1))
 
@@ -74,19 +74,19 @@ def make_postprocess_frac():
     def function(arg):
         return arg[0] / arg[1]
 
-    return make_custom_postprocessor_with_defaults(
+    return make_default_postprocessor(
         function,
         DI=VectorDomain[AllDomain[f64]],
         DO=AllDomain[f64],
     )
 
-def test_make_custom_postprocessor_with_defaults():
+def test_make_default_postprocessor():
     mech = make_postprocess_frac()
     print(mech([12., 100.]))
 
 
 if __name__ == "__main__":
-    test_make_custom_transformation_with_defaults()
+    test_make_default_transformation()
     test_make_custom_transformation_error()
-    test_make_custom_measurement_with_defaults()
-    test_make_custom_postprocessor_with_defaults()
+    test_make_default_measurement()
+    test_make_default_postprocessor()
