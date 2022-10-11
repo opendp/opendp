@@ -116,13 +116,38 @@ pub(crate) fn default_measure(M: Type) -> Fallible<AnyMeasure> {
     arguments(
         function(rust_type = "$domain_carrier_type(DO)"),
         stability_map(rust_type = "$metric_distance_type(MO)"),
-        DI(rust_type = b"null"),
-        DO(rust_type = b"null"),
-        MI(rust_type = b"null"),
-        MO(rust_type = b"null"),
+        DI(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
+        DO(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
+        MI(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
+        MO(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
     ),
     dependencies("c_function", "c_stability_map")
 )]
+/// Construct a Transformation from user-defined callbacks.
+/// 
+/// **Supported Domains:**
+/// 
+/// * `VectorDomain<AllDomain<_>>`
+/// * `AllDomain<_>`
+/// 
+/// **Supported Metrics:**
+/// 
+/// * `SymmetricDistance`
+/// * `InsertDeleteDistance`
+/// * `ChangeOneDistance`
+/// * `HammingDistance`
+/// * `DiscreteDistance`
+/// * `AbsoluteDistance<_>`
+/// * `L1Distance<_>`
+/// * `L2Distance<_>`
+/// 
+/// # Arguments
+/// * `function` - A function mapping data from `DI` to `DO`.
+/// * `stability_map` - A function mapping distances from `MI` to `MO`.
+/// * `DI` - Input Domain. See Supported Domains
+/// * `DO` - Output Domain. See Supported Domains
+/// * `MI` - Input Metric. See Supported Metrics
+/// * `MO` - Output Metric. See Supported Metrics
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_custom_transformation_with_defaults(
     function: CallbackFn,
@@ -153,13 +178,44 @@ pub extern "C" fn opendp_combinators__make_custom_transformation_with_defaults(
     arguments(
         function(rust_type = "$domain_carrier_type(DO)"),
         privacy_map(rust_type = "$measure_distance_type(MO)"),
-        DI(rust_type = b"null"),
-        DO(rust_type = b"null"),
-        MI(rust_type = b"null"),
-        MO(rust_type = b"null"),
+        DI(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
+        DO(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
+        MI(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
+        MO(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
     ),
     dependencies("c_function", "c_privacy_map")
 )]
+/// Construct a Measurement from user-defined callbacks.
+/// 
+/// **Supported Domains:**
+/// 
+/// * `VectorDomain<AllDomain<_>>`
+/// * `AllDomain<_>`
+/// 
+/// **Supported Metrics:**
+/// 
+/// * `SymmetricDistance`
+/// * `InsertDeleteDistance`
+/// * `ChangeOneDistance`
+/// * `HammingDistance`
+/// * `DiscreteDistance`
+/// * `AbsoluteDistance<_>`
+/// * `L1Distance<_>`
+/// * `L2Distance<_>`
+/// 
+/// **Supported Measures:**
+/// 
+/// * `MaxDivergence<_>`
+/// * `FixedSmoothedMaxDivergence<_>`
+/// * `ZeroConcentratedDivergence<_>`
+/// 
+/// # Arguments
+/// * `function` - A function mapping data from `DI` to `DO`.
+/// * `privacy_map` - A function mapping distances from `MI` to `MO`.
+/// * `DI` - Input Domain. See Supported Domains
+/// * `DO` - Output Domain. See Supported Domains
+/// * `MI` - Input Metric. See Supported Metrics
+/// * `MO` - Output Measure. See Supported Measures
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_custom_measurement_with_defaults(
     function: CallbackFn,
@@ -189,11 +245,22 @@ pub extern "C" fn opendp_combinators__make_custom_measurement_with_defaults(
     features("contrib"),
     arguments(
         function(rust_type = "$domain_carrier_type(DO)"),
-        DI(rust_type = b"null"),
-        DO(rust_type = b"null"),
+        DI(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
+        DO(rust_type = b"null", hint = "RuntimeTypeDescriptor"),
     ),
     dependencies("c_function")
 )]
+/// Construct a Postprocessor from user-defined callbacks.
+/// 
+/// **Supported Domains:**
+/// 
+/// * `VectorDomain<AllDomain<_>>`
+/// * `AllDomain<_>`
+/// 
+/// # Arguments
+/// * `function` - A function mapping data from `DI` to `DO`.
+/// * `DI` - Input Domain. See Supported Domains
+/// * `DO` - Output Domain. See Supported Domains
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_custom_postprocessor_with_defaults(
     function: CallbackFn,

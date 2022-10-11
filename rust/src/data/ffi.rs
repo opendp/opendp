@@ -403,12 +403,13 @@ pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*m
         FfiResult::Ok)
 }
 
-/// Internal function. Convert the AnyObject to a string representation.
+/// wrap an AnyObject in an FfiResult::Ok(this)
 #[no_mangle]
 pub extern "C" fn ffiresult_ok(this: *const AnyObject) -> *const FfiResult<*const AnyObject> {
     util::into_raw(FfiResult::Ok(this))
 }
 
+/// construct an FfiResult::Err(e)
 #[no_mangle]
 pub extern "C" fn ffiresult_err(
     message: *mut c_char, 
