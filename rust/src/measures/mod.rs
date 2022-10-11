@@ -30,10 +30,15 @@ use crate::{error::Fallible, core::Measure, domains::type_name};
 /// ```math
 /// D_{\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S]}{\Pr[M(v) \in S]} \Big] \leq d.
 /// ```
-#[derive(Clone)]
 pub struct MaxDivergence<Q>(PhantomData<Q>);
 impl<Q> Default for MaxDivergence<Q> {
     fn default() -> Self {
+        MaxDivergence(PhantomData)
+    }
+}
+
+impl<Q> Clone for MaxDivergence<Q> {
+    fn clone(&self) -> Self {
         MaxDivergence(PhantomData)
     }
 }
@@ -50,7 +55,7 @@ impl<Q> Debug for MaxDivergence<Q> {
     }
 }
 
-impl<Q: Clone> Measure for MaxDivergence<Q> {
+impl<Q> Measure for MaxDivergence<Q> {
     type Distance = Q;
 }
 
@@ -72,11 +77,15 @@ impl<Q: Clone> Measure for MaxDivergence<Q> {
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
 /// ```
-#[derive(Clone)]
 pub struct SmoothedMaxDivergence<Q>(PhantomData<Q>);
 
 impl<Q> Default for SmoothedMaxDivergence<Q> {
     fn default() -> Self {
+        SmoothedMaxDivergence(PhantomData)
+    }
+}
+impl<Q> Clone for SmoothedMaxDivergence<Q> {
+    fn clone(&self) -> Self {
         SmoothedMaxDivergence(PhantomData)
     }
 }
@@ -92,7 +101,7 @@ impl<Q> Debug for SmoothedMaxDivergence<Q> {
     }
 }
 
-impl<Q: Clone> Measure for SmoothedMaxDivergence<Q> {
+impl<Q> Measure for SmoothedMaxDivergence<Q> {
     type Distance = SMDCurve<Q>;
 }
 
@@ -134,11 +143,15 @@ impl<Q> SMDCurve<Q> {
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
 /// ```
-#[derive(Clone)]
 pub struct FixedSmoothedMaxDivergence<Q>(PhantomData<Q>);
 
 impl<Q> Default for FixedSmoothedMaxDivergence<Q> {
     fn default() -> Self {
+        FixedSmoothedMaxDivergence(PhantomData)
+    }
+}
+impl<Q> Clone for FixedSmoothedMaxDivergence<Q> {
+    fn clone(&self) -> Self {
         FixedSmoothedMaxDivergence(PhantomData)
     }
 }
@@ -155,7 +168,7 @@ impl<Q> Debug for FixedSmoothedMaxDivergence<Q> {
     }
 }
 
-impl<Q: Clone> Measure for FixedSmoothedMaxDivergence<Q> {
+impl<Q> Measure for FixedSmoothedMaxDivergence<Q> {
     type Distance = (Q, Q);
 }
 
@@ -175,10 +188,14 @@ impl<Q: Clone> Measure for FixedSmoothedMaxDivergence<Q> {
 /// D_{\alpha}(P \| Q) = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Q} \Big[\ln \left( \dfrac{P(x)}{Q(x)} \right)^\alpha \Big] \leq d \alpha.
 /// ```
 /// for all possible choices of $\alpha \in (1, \infty)$.
-#[derive(Clone)]
 pub struct ZeroConcentratedDivergence<Q>(PhantomData<Q>);
 impl<Q> Default for ZeroConcentratedDivergence<Q> {
     fn default() -> Self {
+        ZeroConcentratedDivergence(PhantomData)
+    }
+}
+impl<Q> Clone for ZeroConcentratedDivergence<Q> {
+    fn clone(&self) -> Self {
         ZeroConcentratedDivergence(PhantomData)
     }
 }
@@ -195,6 +212,6 @@ impl<Q> Debug for ZeroConcentratedDivergence<Q> {
     }
 }
 
-impl<Q: Clone> Measure for ZeroConcentratedDivergence<Q> {
+impl<Q> Measure for ZeroConcentratedDivergence<Q> {
     type Distance = Q;
 }
