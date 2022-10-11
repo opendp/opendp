@@ -145,8 +145,8 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
     >>> meas_fixed_approxDP = make_pureDP_to_fixed_approxDP(meas_pureDP)
     ...
     >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
-    >>> meas_approxDP.map(d_in=1.)
-    (.01, 0.)
+    >>> meas_fixed_approxDP.map(d_in=1.)
+    (0.1, 0.0)
 
 :func:`opendp.combinators.make_zCDP_to_approxDP` is used for casting an output measure from ``ZeroConcentratedDivergence`` to ``SmoothedMaxDivergence``.
 
