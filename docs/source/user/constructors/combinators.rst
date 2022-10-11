@@ -1,5 +1,6 @@
 .. testsetup::
 
+    from typing import List
     from opendp.mod import enable_features
     enable_features('contrib', 'floating-point', 'honest-but-curious')
 
@@ -230,3 +231,73 @@ is a simple sample of individuals from a theoretical larger dataset that capture
     >>> assert amplified.check(2, .4941)
 
 The efficacy of this combinator improves as n gets larger.
+
+
+User-Defined Callbacks
+----------------------
+
+It is possible to construct Transformations, Measurements and Postprocessors on your own via Python functions.
+This API is currently limited to domains that have a notion of a default value. 
+That is, ``SizedDomain`` and ``BoundedDomain``, which require runtime arguments to construct, are not currently supported.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Component
+     - Function
+   * - Transformation
+     - :func:`make_default_transformation <opendp.combinators.make_default_transformation>`
+   * - Measurement
+     - :func:`make_default_measurement <opendp.combinators.make_default_measurement>`
+   * - Postprocessor
+     - :func:`make_default_postprocessor <opendp.combinators.make_default_postprocessor>`
+
+
+This requires a looser trust model, as we cannot verify any correctness properties of user-defined functions.
+
+.. doctest::
+
+    enable_features("honest-but-curious")
+
+In this example, we mock the typical API of the OpenDP library:
+
+.. doctest::
+
+    def make_repeat(multiplicity):
+        """Constructs a Transformation that duplicates each record `multiplicity` times"""
+        def function(arg: List[int]) -> List[int]:
+            return arg * multiplicity
+
+        def stability_map(d_in: int) -> int:
+            # if a user could influence at most `d_in` records before, 
+            # they can now influence `d_in` * `multiplicity` records
+            return d_in * multiplicity
+
+        return make_custom_transformation_with_defaults(
+            function,
+            stability_map,
+            DI=VectorDomain[AllDomain[int]],
+            DO=VectorDomain[AllDomain[int]],
+            MI=SymmetricDistance,
+            MO=SymmetricDistance,
+        )
+    
+The resulting Transformation may be used interchangeably with those constructed via the library:
+
+.. doctest::
+
+    from opendp.transformations import *
+    from opendp.measurements import make_base_discrete_laplace
+    trans = (
+        make_cast_default(TIA=str, TOA=int)
+        >> make_duplicate(2)  # our custom transformation
+        >> make_clamp((1, 2))
+        >> make_bounded_sum((1, 2))
+        >> make_base_discrete_laplace(1.0)
+    )
+
+    print(trans(["0", "1", "2", "3"]))
+    print(trans.map(1))
+
+The same holds for measurements and postprocessors.
+You can even mix in computational primitives from other DP libraries!
