@@ -20,6 +20,7 @@ Python Notebooks
 ----------------
 
 .. toctree::
+  :titlesonly:
 
   pums-data-analysis
   attacks/index
