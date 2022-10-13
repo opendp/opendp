@@ -12,17 +12,19 @@ This document contains materials associated with \rustdoc{accuracy/fn}{accuracy\
 By \rustdoc{accuracy/fn}{discrete\_laplacian\_scale\_to\_accuracy}, 
 the relationship between $\alpha$, $a$ and $scale$, is:
 
-\begin{align*}
-    1 - \alpha = \frac{\sum_{y=0}^{a - 1} (1 + 1[y = 0]) e^{-(y/s)^2/2}}{\sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2}}
-\end{align*}
+\begin{equation*}
+    \alpha = 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
+\end{equation*}
 
-There unfortunately isn't a closed-form expression for s.
-The algorithm conducts a binary search, 
-with an upper bound provided by \rustdoc{accuracy/fn}{accuracy\_to\_laplacian\_scale}, 
-to find the smallest $s$ such that
+A closed-form expression for s doesn't exist, 
+so we use a numerical approach by a binary search.
 
-\begin{align*}
-    1 - \alpha \ge \frac{\sum_{y=0}^{a - 1} (1 + 1[y = 0]) e^{-(y/s)^2/2}}{\sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2}}
-\end{align*}
+The upper bound is provided by \rustdoc{accuracy/fn}{accuracy\_to\_laplacian\_scale}.
+
+The binary search finds the smallest $s$ such that
+
+\begin{equation*}
+    \alpha \le 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
+\end{equation*}
 
 \end{document}
