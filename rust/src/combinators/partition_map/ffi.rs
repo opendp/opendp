@@ -14,7 +14,10 @@ use crate::{
 
 use super::ParallelCompositionMeasure;
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(transformations(rust_type = "Vec<AnyTransformationPtr>"))
+)]
 /// Construct the parallel execution of [`transformation0`, `transformation1`, ...]. Returns a Transformation.
 /// 
 /// # Arguments
@@ -26,7 +29,7 @@ fn make_parallel_transformation(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_parallel_transformation(
+pub extern "C" fn opendp_combinators__make_parallel_transformation(
     transformations: *const AnyObject,
 ) -> FfiResult<*mut AnyTransformation> {
     let trans_ptrs =
@@ -47,7 +50,10 @@ pub extern "C" fn opendp_comb__make_parallel_transformation(
     )).into()
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(measurements(rust_type = "Vec<AnyMeasurementPtr>"))
+)]
 /// Construct the parallel composition of [`measurement0`, `measurement1`, ...]. Returns a Measurement.
 /// 
 /// # Arguments
@@ -83,7 +89,7 @@ impl ParallelCompositionMeasure for AnyMeasure {
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_parallel_composition(
+pub extern "C" fn opendp_combinators__make_parallel_composition(
     measurements: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let meas_ptrs =
