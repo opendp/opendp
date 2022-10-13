@@ -94,4 +94,4 @@ survey["family_history"] = survey.family_history.map(binary_dict)
 survey["remote_work"] = survey.remote_work.map(binary_dict)
 
 # save the preprocessed data
-survey.to_csv('data.csv', index=False, header=False)
+survey.to_csv('data.csv', index=False)
