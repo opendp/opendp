@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_trans__make_partition_by(
+pub extern "C" fn opendp_transformations__make_partition_by(
     identifier_column: *const AnyObject,
     partition_keys: *const AnyObject,
     keep_columns: *const AnyObject,

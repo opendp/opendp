@@ -105,7 +105,7 @@ def test_make_pureDP_to_zCDP():
 
     print(meas.map(1.))
 
-def test_make_map_partitions_trans():
+def test_make_parallel_transformation():
     from opendp.combinators import make_parallel_transformation, make_parallel_composition
 
     meas = make_split_dataframe(
@@ -135,9 +135,8 @@ def test_make_map_partitions_trans():
     # release noisy sums!
     print(meas(data))
 
-
 # 2-way partitioning!
-def test_make_map_partitions_nested():
+def test_make_map_parallel_composition():
     from opendp.combinators import make_parallel_composition
 
     meas = make_split_dataframe(
@@ -176,4 +175,4 @@ def test_make_map_partitions_nested():
 
 
 if __name__ == "__main__":
-    test_make_map_partitions_nested()
+    test_make_map_parallel_composition()
