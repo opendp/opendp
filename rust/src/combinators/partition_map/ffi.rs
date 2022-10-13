@@ -19,14 +19,14 @@ use super::ParallelCompositionMeasure;
 /// 
 /// # Arguments
 /// * `transformations` - A list of transformations to apply, one to each element.
-fn make_partition_map_trans(
+fn make_parallel_transformation(
     transformations: Vec<&AnyTransformation>,
 ) -> Fallible<Transformation<ProductDomain<AnyDomain>, ProductDomain<AnyDomain>, ProductMetric<AnyMetric>, ProductMetric<AnyMetric>>> {
-    super::make_partition_map_trans(transformations)
+    super::make_parallel_transformation(transformations)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_partition_map_trans(
+pub extern "C" fn opendp_comb__make_parallel_transformation(
     transformations: *const AnyObject,
 ) -> FfiResult<*mut AnyTransformation> {
     let trans_ptrs =
@@ -35,7 +35,7 @@ pub extern "C" fn opendp_comb__make_partition_map_trans(
     let transformations: Vec<&AnyTransformation> =
         try_!(trans_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
 
-    let trans = try_!(make_partition_map_trans(transformations));
+    let trans = try_!(make_parallel_transformation(transformations));
 
     Ok(Transformation::new(
         AnyDomain::new(trans.input_domain),
@@ -51,11 +51,11 @@ pub extern "C" fn opendp_comb__make_partition_map_trans(
 /// Construct the parallel composition of [`measurement0`, `measurement1`, ...]. Returns a Measurement.
 /// 
 /// # Arguments
-/// * `measurements` - A list of measuerements to apply, one to each element.
-fn make_partition_map_meas(
+/// * `measurements` - A list of measurements to apply, one to each element.
+fn make_parallel_composition(
     measurements: Vec<&AnyMeasurement>,
 ) -> Fallible<Measurement<ProductDomain<AnyDomain>, ProductDomain<AnyDomain>, ProductMetric<AnyMetric>, AnyMeasure>> {
-    super::make_partition_map_meas(measurements)
+    super::make_parallel_composition(measurements)
 }
 
 impl ParallelCompositionMeasure for AnyMeasure {
@@ -83,7 +83,7 @@ impl ParallelCompositionMeasure for AnyMeasure {
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_comb__make_partition_map_meas(
+pub extern "C" fn opendp_comb__make_parallel_composition(
     measurements: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let meas_ptrs =
@@ -92,7 +92,7 @@ pub extern "C" fn opendp_comb__make_partition_map_meas(
     let measurements: Vec<&AnyMeasurement> =
         try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
 
-    let meas = try_!(make_partition_map_meas(measurements));
+    let meas = try_!(make_parallel_composition(measurements));
     let privacy_map = meas.privacy_map;
 
     // don't wrap the input metric, output measure and privacy map!

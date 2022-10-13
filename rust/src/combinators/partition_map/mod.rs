@@ -14,7 +14,7 @@ mod ffi;
 /// 
 /// # Arguments
 /// * `transformations` - A list of transformations to apply, one to each element.
-pub fn make_partition_map_trans<DI, DO, MI, MO>(
+pub fn make_parallel_transformation<DI, DO, MI, MO>(
     transformations: Vec<&Transformation<DI, DO, MI, MO>>,
 ) -> Fallible<Transformation<ProductDomain<DI>, ProductDomain<DO>, ProductMetric<MI>, ProductMetric<MO>>>
 where
@@ -132,8 +132,8 @@ impl<Q> ParallelCompositionMeasure for ZeroConcentratedDivergence<Q>
 /// Construct the parallel composition of [`measurement0`, `measurement1`, ...]. Returns a Measurement.
 /// 
 /// # Arguments
-/// * `measurements` - A list of measuerements to apply, one to each element.
-pub fn make_partition_map_meas<DI, DO, MI, MO>(
+/// * `measurements` - A list of measurements to apply, one to each element.
+pub fn make_parallel_composition<DI, DO, MI, MO>(
     measurements: Vec<&Measurement<DI, DO, MI, MO>>,
 ) -> Fallible<Measurement<ProductDomain<DI>, ProductDomain<DO>, ProductMetric<MI>, MO>>
 where
