@@ -1,0 +1,22 @@
+\documentclass{article}
+\input{../lib.sty}
+
+\title{\texttt{fn accuracy\_to\_discrete\_gaussian\_scale}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+This document contains materials associated with \rustdoc{accuracy/fn}{accuracy\_to\_discrete\_gaussian\_scale}.
+
+By \rustdoc{accuracy/fn}{discrete\_gaussian\_scale\_to\_accuracy}, 
+the relationship between $\alpha$, $a$ and $scale$, is:
+
+\begin{equation*}
+    \alpha = 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
+\end{equation*}
+
+There unfortunately isn't a closed-form expression for s.
+The algorithm conducts a binary search, 
+with an upper bound provided by \rustdoc{accuracy/fn}{accuracy\_to\_laplacian\_scale}.
+\end{document}

@@ -116,7 +116,7 @@ pub fn accuracy_to_discrete_laplacian_scale<T: Float + Zero + One + Debug>(accur
             return Ok(s_max)
         }
 
-        if discrete_laplacian_scale_to_accuracy(s_mid, alpha)?.floor() >= accuracy {
+        if discrete_laplacian_scale_to_accuracy(s_mid, alpha)? >= accuracy {
             s_max = s_mid;
         } else {
             s_min = s_mid;
