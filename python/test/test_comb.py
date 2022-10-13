@@ -106,7 +106,7 @@ def test_make_pureDP_to_zCDP():
     print(meas.map(1.))
 
 def test_make_map_partitions_trans():
-    from opendp.combinators import make_partition_map_trans, make_partition_map_meas
+    from opendp.combinators import make_parallel_transformation, make_parallel_composition
 
     meas = make_split_dataframe(
         separator=",", 
@@ -115,11 +115,11 @@ def test_make_map_partitions_trans():
         identifier_column="strat id",
         partition_keys=list(map(str, range(4))),
         keep_columns=["values"],
-    ) >> make_partition_map_trans([
+    ) >> make_parallel_transformation([
         make_select_column("values", TOA=str) >> 
         make_cast_default(TIA=str, TOA=int) >> 
         make_clamp((0, 1))
-    ] * 4) >> make_partition_map_meas([
+    ] * 4) >> make_parallel_composition([
         make_bounded_sum((0, 1)) >>
         make_base_geometric(1.)
     ] * 4)
@@ -138,7 +138,7 @@ def test_make_map_partitions_trans():
 
 # 2-way partitioning!
 def test_make_map_partitions_nested():
-    from opendp.combinators import make_partition_map_meas
+    from opendp.combinators import make_parallel_composition
 
     meas = make_split_dataframe(
         separator=",", 
@@ -148,12 +148,12 @@ def test_make_map_partitions_nested():
         partition_keys=list(map(str, range(4))),
         null_partition=True,
         keep_columns=["strat id 2", "values"],
-    ) >> make_partition_map_meas([
+    ) >> make_parallel_composition([
         make_partition_by(
             identifier_column="strat id 2",
             partition_keys=list(map(str, range(4))),
             keep_columns=["values"],
-        ) >> make_partition_map_meas([
+        ) >> make_parallel_composition([
             make_select_column("values", TOA=str) >> 
             make_cast_default(TIA=str, TOA=int) >> 
             make_clamp((0, 1)) >>
