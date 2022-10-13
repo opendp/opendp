@@ -1,0 +1,26 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn discrete\_laplacian\_scale\_to\_accuracy}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\begin{align*}
+    \alpha &= P[Y \ge a] \\
+    &= 1 - P[Y < a] \\
+    &= 1 - \sum_{y=0}^{a - 1} g(y) \\
+    &= 1 - \frac{1 - e^{-1/s}}{1 + e^{-1/s}} \left(1 + 2\sum_{y=0}^{a - 1} e^{-y/s}\right) \\
+    &= 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
+\end{align*}
+
+\begin{align*}
+    \alpha &= 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1} \\
+    \alpha (e^{1/s} + 1) / 2 &= e^{(1 - a)/s} \\
+    1 - s \cdot ln(\alpha (e^{1/s} + 1) / 2) &= a \\
+    s \cdot ln(2 / (\alpha (e^{1/s} + 1))) + 1 &= a
+\end{align*}
+
+
+\end{document}
