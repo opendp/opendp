@@ -23,9 +23,9 @@ Python Notebooks
   :titlesonly:
 
   pums-data-analysis
+  mental-health-in-tech
   attacks/index
-  unknown-dataset-size
-  histograms
+  tutorials/index
 
 
 Rust Examples

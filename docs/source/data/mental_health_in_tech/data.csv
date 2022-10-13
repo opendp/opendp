@@ -1,4 +1,3 @@
-Timestamp,Age,Gender,Country,state,self_employed,family_history,treatment,work_interfere,no_employees,remote_work,tech_company,benefits,care_options,wellness_program,seek_help,anonymity,leave,mental_health_consequence,phys_health_consequence,coworkers,supervisor,mental_health_interview,phys_health_interview,mental_vs_physical,obs_consequence,comments,age,gender,country
 2014-08-27 11:29:31,37,Female,United States,IL,,0,1,Often,6-25,0,Yes,Yes,Not sure,No,Yes,Yes,Somewhat easy,No,No,Some of them,Yes,No,Maybe,Yes,No,,1,2,1
 2014-08-27 11:29:37,44,M,United States,IN,,0,0,Rarely,More than 1000,0,No,Don't know,No,Don't know,Don't know,Don't know,Don't know,Maybe,No,No,No,No,No,Don't know,No,,2,1,1
 2014-08-27 11:29:44,32,Male,Canada,,,0,0,Rarely,6-25,0,Yes,No,No,No,No,Don't know,Somewhat difficult,No,No,Yes,Yes,Yes,Yes,No,No,,1,1,3
