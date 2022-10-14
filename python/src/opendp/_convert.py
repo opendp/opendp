@@ -42,7 +42,6 @@ INT_SIZES = {
 
 def check_c_int_cast(v, type_name):
     lower, upper = INT_SIZES[type_name]
-    print(lower, v, upper)
     if not (lower <= v <= upper):
         raise ValueError(f"value is not representable by {type_name}")
 
