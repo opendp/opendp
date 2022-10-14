@@ -130,7 +130,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         try:
             from opendp.core import _measurement_free
             _measurement_free(self)
-        except ImportError:
+        except Exception:
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
@@ -264,7 +264,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         try:
             from opendp.core import _transformation_free
             _transformation_free(self)
-        except ImportError:
+        except Exception:
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 

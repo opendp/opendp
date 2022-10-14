@@ -102,7 +102,7 @@ where
 {
     type Atom = T;
     fn transform(constant: &T, &(lower, upper): &(T, T), v: &T) -> Fallible<T> {
-        Ok(constant.total_clamp(lower, upper)?.saturating_mul(v))
+        Ok(v.total_clamp(lower, upper)?.saturating_mul(constant))
     }
 }
 
