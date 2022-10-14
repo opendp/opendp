@@ -18,12 +18,14 @@ use std::collections::hash_map::DefaultHasher;
 const ALPHA_DEFAULT : u32 = 4;
 const SIZE_FACTOR_DEFAULT : u32 = 50;
 
-// Implementation of a mechanism for representing sparse integer queries e.g. a sparse histogram.
-// The mechanism was introduced in the paper:
-// "Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access"
-// Available here: arxiv.org/abs/2106.10068
+/// Implementation of a mechanism for representing sparse integer queries e.g. a sparse histogram.
+/// The mechanism was introduced in the paper:
+/// 
+/// "Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access"
+/// 
+/// Available here: arxiv.org/abs/2106.10068
 
-// Input domain. The mechanism is designed for settings where the domain of K is huge.
+/// Input domain. The mechanism is designed for settings where the domain of K is huge.
 type SparseDomain<K, C> = MapDomain<AllDomain<K>, AllDomain<C>>;
 
 // Types used to store the DP projection.
@@ -149,9 +151,12 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
 
 /// Measurement to compute a DP projection of bounded sparse data. 
 /// 
-/// See arxiv.org/abs/2106.10068 (Algorithm 4).
 /// This function allows the user to create custom hash functions. The mechanism provides no utility guarantees 
 /// if hash functions are chosen poorly. It is recommended to use make_base_alp.
+/// 
+/// # Citations
+/// * [ALP21 Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access](https://arxiv.org/abs/2106.10068)
+///   Algorithm 4
 /// 
 /// # Arguments
 /// * `alpha` - Parameter used for scaling and determining p in randomized response step. The default value is 4.
@@ -197,10 +202,13 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
 
 /// Measurement to compute a DP projection of bounded sparse data. 
 /// 
-/// See arxiv.org/abs/2106.10068 (Algorithm 4).
 /// The size of the projection is O(total * size_factor * scale / alpha).
 /// The evaluation time of post-processing is O(beta * scale / alpha). 
 ///
+/// # Citations
+/// * [ALP21 Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access](https://arxiv.org/abs/2106.10068)
+///   Algorithm 4
+/// 
 /// # Arguments
 /// * `total` - Estimate or true value of the sum of all values in the input. 
 /// This should be an upper bound if the true total is private.
@@ -233,9 +241,10 @@ pub fn make_base_alp<K, C, T>(total: usize, size_factor: Option<u32>, alpha: Opt
     make_base_alp_with_hashers(alpha, scale, 1 << exp, h)
 }
 
-/// Wrap the AlpState in a Queryable object
-/// The Queryable object works similar to a dictionary
-/// Note that the access time is O(state.h.len())
+/// Wrap the AlpState in a Queryable object.
+/// 
+/// The Queryable object works similar to a dictionary.
+/// Note that the access time is O(state.h.len()).
 pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T>
     where T: num::Float {
     Queryable::new(

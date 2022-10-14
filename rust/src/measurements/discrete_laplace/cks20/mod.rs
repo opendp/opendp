@@ -93,11 +93,10 @@ where
 /// 
 /// Set `D` to change the input data type and input metric:
 ///
-/// 
-/// | `D`                              | input type   | `D::InputMetric`          |
-/// | -------------------------------- | ------------ | ------------------------- |
-/// | AllDomain<Integer> (default)     | Integer      | AbsoluteDistance<Integer> |
-/// | VectorDomain<AllDomain<Integer>> | Vec<Integer> | L1Distance<Integer>       |
+/// | `D`                                | input type     | `D::InputMetric`            |
+/// | ---------------------------------- | -------------- | --------------------------- |
+/// | `AllDomain<Integer>` (default)     | `Integer`      | `AbsoluteDistance<Integer>` |
+/// | `VectorDomain<AllDomain<Integer>>` | `Vec<Integer>` | `L1Distance<Integer>`       |
 /// 
 /// # Citations
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
