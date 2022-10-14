@@ -24,8 +24,8 @@ def accuracy_to_gaussian_scale(
     :param T: Data type of `accuracy` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -57,8 +57,8 @@ def accuracy_to_laplacian_scale(
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :return: Laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
     :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -89,8 +89,8 @@ def gaussian_scale_to_accuracy(
     :param T: Data type of `scale` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
@@ -121,8 +121,8 @@ def laplacian_scale_to_accuracy(
     :param T: Data type of `scale` and `alpha`
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Any
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # Standardize type arguments.
