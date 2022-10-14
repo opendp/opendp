@@ -27,8 +27,8 @@ def make_basic_composition(
     :param measurements: A vector of Measurements to compose.
     :type measurements: Any
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -57,8 +57,8 @@ def make_chain_mt(
     :param transformation0: inner transformation
     :type transformation0: Transformation
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -89,8 +89,8 @@ def make_chain_tm(
     :param measurement0: inner measurement/mechanism
     :type measurement0: Measurement
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -120,8 +120,8 @@ def make_chain_tt(
     :param transformation0: inner transformation
     :type transformation0: Transformation
     :rtype: Transformation
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -150,8 +150,8 @@ def make_fix_delta(
     :param delta: parameter to fix the privacy curve with
     :type delta: Any
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -184,8 +184,8 @@ def make_population_amplification(
     :param population_size: the size of the population from which the input dataset is a simple sample
     :type population_size: int
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
@@ -212,8 +212,8 @@ def make_zCDP_to_approxDP(
     :param measurement: a measurement with a privacy curve to be casted
     :type measurement: Measurement
     :rtype: Measurement
-    :raises AssertionError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type-argument fails to parse
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
