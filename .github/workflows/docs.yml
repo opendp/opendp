@@ -42,14 +42,14 @@ jobs:
           tex="${files//'%'/'%25'}"
           tex="${tex//$'\n'/'%0A'}"
           tex="${tex//$'\r'/'%0D'}"
-          echo "::set-output name=tex::$tex"
+          echo "tex=$tex" >> $GITHUB_OUTPUT
 
           # escape list of .pdf files
           pdf="${files//$'.tex'/.pdf}"
           pdf="${pdf//'%'/'%25'}"
           pdf="${pdf//$'\n'/'%0A'}"
           pdf="${pdf//$'\r'/'%0D'}"
-          echo "::set-output name=pdf::$pdf"
+          echo "pdf=$pdf" >> $GITHUB_OUTPUT
 
           # name the version
           version=$(cat VERSION)
@@ -58,7 +58,7 @@ jobs:
           else
               version="v$version"
           fi
-          echo "::set-output name=version::$pdf"
+          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Compile LaTeX documents
         uses: xu-cheng/latex-action@v2
