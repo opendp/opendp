@@ -40,11 +40,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_variance(
             make_sized_bounded_variance::<S>(size, bounds, ddof).into_any()
         }
         let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
-        // println!("S: {:?} {}", S, S.to_string());
-        // let S_p = TypeId::of::<Pairwise<T>>();
-        // println!("{:?} == {:?} -> {}", &S.id, S_p, S.id == S_p);
-        dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], 
-        (size, bounds, ddof))
+        dispatch!(monomorphize2, [(S, [Sequential<T>, Pairwise<T>])], (size, bounds, ddof))
     }
     let size = size as usize;
     let ddof = ddof as usize;

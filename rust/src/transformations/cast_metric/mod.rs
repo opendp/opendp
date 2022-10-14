@@ -47,7 +47,7 @@ where
 }
 
 
-/// Make a Transformation that converts the ordered dataset metric
+/// Make a Transformation that converts the ordered dataset metric `MI`
 /// to the respective ordered dataset metric with a no-op.
 /// 
 /// | `MI`                 | `MI::UnorderedMetric` |
