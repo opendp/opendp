@@ -65,8 +65,10 @@ Setting a feature changes how the crate compiles:
      - Enables untrusted features ``contrib`` and ``floating-point``.
    * - ``contrib``
      - Enable to include constructors that have not passed the vetting process.
+   * - ``honest-but-curious``
+     - Enable to include constructors that are only private if the constructor arguments are honest.
    * - ``floating-point``
-     - Enable to include measurements with floating-point vulnerabilities.
+     - Enable to include transformations/measurements with floating-point vulnerabilities.
    * - ``bindings-python``
      - Enables the ``ffi`` and ``derive`` feature and regenerates sources in the Python package.
    * - ``ffi``
