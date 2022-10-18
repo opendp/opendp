@@ -5,7 +5,7 @@ use crate::{
     core::FfiResult,
     ffi::{
         any::{AnyMeasurement, AnyObject, IntoAnyMeasurementOutExt, Downcast, AnyMeasure},
-        util::{AnyMeasurementPtr, TypeContents, Type},
+        util::AnyMeasurementPtr,
     }, error::Fallible, traits::InfAdd, measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
@@ -42,44 +42,24 @@ pub extern "C" fn opendp_combinators__make_basic_composition(
 
 impl BasicCompositionMeasure for AnyMeasure {
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        match self.type_.contents {
-            TypeContents::GENERIC { name, .. } if ["MaxDivergence", "ZeroConcentratedDivergence"].contains(&name) => {
-                fn monomorphize<Q: 'static + Clone + InfAdd + Zero>(
-                    self_: &AnyMeasure, d_i: Vec<AnyObject>
-                ) -> Fallible<AnyObject> {
-        
-                    fn monomorphize2<M: 'static + BasicCompositionMeasure>(
-                        self_: &AnyMeasure, d_i: Vec<AnyObject>
-                    ) -> Fallible<AnyObject>
-                        where M::Distance: Clone {
-                        self_.downcast_ref::<M>()?.compose(d_i.iter()
-                            .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
-                            .collect::<Fallible<Vec<M::Distance>>>()?).map(AnyObject::new)
-                    }
-                    dispatch!(monomorphize2, [
-                        (self_.type_, [MaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
-                    ], (self_, d_i))
-                }
-
-                dispatch!(monomorphize, [(self.distance_type, @floats)], (self, d_i))
+        fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
+            self_: &AnyMeasure, d_i: Vec<AnyObject>
+        ) -> Fallible<AnyObject> {
+            fn monomorphize2<M: 'static + BasicCompositionMeasure>(
+                self_: &AnyMeasure, d_i: Vec<AnyObject>
+            ) -> Fallible<AnyObject>
+                where M::Distance: Clone {
+                self_.downcast_ref::<M>()?.compose(d_i.iter()
+                    .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
+                    .collect::<Fallible<Vec<M::Distance>>>()?).map(AnyObject::new)
             }
-            TypeContents::GENERIC { name, .. } if name == "FixedSmoothedMaxDivergence" => {
-                fn monomorphize<Q: 'static + InfAdd + Zero + Clone>(
-                    self_: &AnyMeasure, d_i: Vec<AnyObject>
-                ) -> Fallible<AnyObject> {
-                    self_.downcast_ref::<FixedSmoothedMaxDivergence<Q>>()?.compose(d_i.iter()
-                        .map(|d_i| d_i.downcast_ref::<(Q, Q)>().map(Clone::clone))
-                        .collect::<Fallible<Vec<(Q, Q)>>>()?).map(AnyObject::new)
-                }
-                if let TypeContents::TUPLE(types) = &self.distance_type.contents {
-                    let Q = try_!(Type::of_id(&types[0]));
-                    dispatch!(monomorphize, [(Q, @floats)], (self, d_i))
-                } else {
-                    unreachable!()
-                }
-            }
-            _ => err!(FFI, "unrecognized metric: {}", self.type_.descriptor).into()
+            dispatch!(monomorphize2, [
+                (self_.type_, [MaxDivergence<Q>, FixedSmoothedMaxDivergence<Q>, ZeroConcentratedDivergence<Q>])
+            ], (self_, d_i))
         }
+
+        let Q_Atom = try_!(self.type_.get_atom());
+        dispatch!(monomorphize1, [(Q_Atom, @floats)], (self, d_i))
     }
 }
 
