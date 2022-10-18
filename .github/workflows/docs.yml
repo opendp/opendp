@@ -31,14 +31,11 @@ jobs:
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
         
-      - name: Build python bindings
-        run: cargo check --manifest-path=rust/Cargo.toml --verbose --features untrusted,bindings-python
-
       - name: Collect file listing
         id: "collect"
         run: |
           shopt -s globstar
-          files=$(echo **/*.tex)
+          files=(**/*.tex)
 
           echo "files: $files"
           # escape list of .tex files
@@ -88,6 +85,9 @@ jobs:
           artifacts-dir: release/${{ steps.collect.outputs.version }}
           inter-link: false
           post-comment: false
+
+      - name: Build python bindings
+        run: cargo check --manifest-path=rust/Cargo.toml --verbose --features untrusted,bindings-python
 
       - name: Build docs site
         run: |
