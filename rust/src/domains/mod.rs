@@ -16,13 +16,22 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::traits::{CheckNull, TotalOrd, InherentNull, CollectionSize};
+use crate::interactive::Queryable;
+use crate::traits::{CheckNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
 #[cfg(feature="contrib")]
 mod poly;
 #[cfg(feature="contrib")]
 pub use poly::*;
+
+pub type QueryableDomain<S, Q, A> = AllDomain<Queryable<S, Q, A>>;
+
+pub struct Hookable<S, L> {
+    pub inner: S,
+    pub listener: Option<Box<dyn Fn(&L, bool) -> Fallible<bool>>>
+}
+
 
 /// # Proof Definition
 /// `AllDomain(T)` is the domain of all **non-null** values of type `T`.
