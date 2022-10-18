@@ -12,6 +12,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
+use crate::interactive::Queryable;
 use crate::traits::{CheckNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
@@ -20,6 +21,14 @@ macro_rules! type_name {
     ($ty:ty) => (std::any::type_name::<$ty>().split("::").last().unwrap_or(""))
 }
 pub(crate) use type_name;
+
+pub type QueryableDomain<S, Q, A> = AllDomain<Queryable<S, Q, A>>;
+
+pub struct Hookable<S, L> {
+    pub inner: S,
+    pub listener: Option<Box<dyn Fn(&L, bool) -> Fallible<bool>>>
+}
+
 
 /// A Domain that contains all non-null members of the carrier type.
 pub struct AllDomain<T> {
