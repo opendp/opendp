@@ -126,3 +126,15 @@ def test_numpy_trans():
     from opendp.mod import enable_features
     enable_features("contrib")
     assert make_bounded_sum(bounds=(0, 10))(np.array([1, 2, 3], dtype=np.int32)) == 6
+
+
+def test_overflow():
+    import pytest
+    with pytest.raises(ValueError):
+        py_to_c(-1, AnyObjectPtr, u8)
+
+    with pytest.raises(ValueError):
+        py_to_c(256, AnyObjectPtr, u8)
+  
+    with pytest.raises(ValueError):
+        py_to_c(-129, AnyObjectPtr, i8)

@@ -27,6 +27,24 @@ ATOM_MAP = {
     'AnyTransformationPtr': Transformation,
 }
 
+def c_int_limits(type_name):
+    c_int_type = ATOM_MAP[type_name]
+    signed = c_int_type(-1).value < c_int_type(0).value
+    bit_size = ctypes.sizeof(c_int_type) * 8
+    signed_limit = 2 ** (bit_size - 1)
+    return (-signed_limit, signed_limit - 1) if signed else (0, 2 * signed_limit - 1)
+
+INT_SIZES = {
+    ty: c_int_limits(ty) for ty in (
+        'u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize',
+    )
+}
+
+def check_c_int_cast(v, type_name):
+    lower, upper = INT_SIZES[type_name]
+    if not (lower <= v <= upper):
+        raise ValueError(f"value is not representable by {type_name}")
+
 
 def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     """Map from Python `value` to ctypes `c_type`.
@@ -58,6 +76,8 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
         rust_type = str(type_name)
         if rust_type in ATOM_MAP:
+            if rust_type in INT_SIZES:
+                check_c_int_cast(value, rust_type)
             return ctypes.byref(ATOM_MAP[rust_type](value))
 
         if rust_type == "String":
@@ -183,6 +203,8 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
     if np is not None and isinstance(val, np.ndarray):
         val = val.item()
+    if type_name in INT_SIZES:
+        check_c_int_cast(val, type_name)
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     return _wrap_in_slice(ctypes.pointer(ATOM_MAP[type_name](val)), 1)
 
@@ -236,6 +258,10 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         if inner_type_name not in equivalence_class:
             raise TypeError("Data cannot be represented by the suggested type_name")
 
+    if inner_type_name in INT_SIZES:
+        for elem in val:
+            check_c_int_cast(elem, inner_type_name)
+
     array = (ATOM_MAP[inner_type_name] * len(val))(*val)
     return _wrap_in_slice(array, len(val))
 
@@ -286,7 +312,10 @@ def _tuple_to_slice(val: Tuple[Any, ...], type_name: RuntimeType) -> FfiSlicePtr
         equivalence_class = ATOM_EQUIVALENCE_CLASSES[str(RuntimeType.infer(v))]
         if inner_type_name not in equivalence_class:
             raise TypeError("Data cannot be represented by the suggested type_name")
-
+        
+        if inner_type_name in INT_SIZES:
+            check_c_int_cast(v, inner_type_name)
+    
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)
         for v, name in zip(val, inner_type_names))
