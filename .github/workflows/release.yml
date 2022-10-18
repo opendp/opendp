@@ -9,7 +9,7 @@ env:
 
 jobs:
   credential-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Check if user is an administrator
         uses: lannonbr/repo-permission-check-action@2.0.0
@@ -68,7 +68,7 @@ jobs:
         run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
 
       - name: Upload .dll
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: lib_dll
           path: rust/target/release/opendp.dll
@@ -100,7 +100,8 @@ jobs:
           CC: clang -target x86_64-apple-darwin
 
       - name: Create Rust build for macos aarch64 (no tests)
-        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES"
+        # include python bindings generation to get updated links in python codegen
+        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
         env:
           CC: clang -target aarch64-apple-darwin
 
@@ -114,10 +115,17 @@ jobs:
               -output rust/target/release/libopendp.dylib -create
 
       - name: Upload .dylib
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: lib_dylib
           path: rust/target/release/libopendp.dylib
+
+      # need to upload at least one set up updated bindings
+      - name: Upload bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
 
   python-pre-publish-linux:
@@ -146,7 +154,7 @@ jobs:
         run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -f \"$FEATURES\""
 
       - name: Upload .so
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: lib_so
           path: rust/target/release/libopendp.so
@@ -171,22 +179,28 @@ jobs:
         run: mkdir -p rust/target/release
 
       - name: Download windows lib
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: lib_dll
           path: rust/target/release
 
       - name: Download macos lib
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: lib_dylib
           path: rust/target/release
 
       - name: Download linux lib
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: lib_so
           path: rust/target/release
+      
+      - name: Download bindings
+        uses: actions/download-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
 
       - name: Create Python package
         run: bash tools/python_build.sh -i

@@ -23,8 +23,26 @@ def rust(args):
     log(f"*** PUBLISHING RUST LIBRARY ***")
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     run_command("Logging into crates.io", f"cargo login")
-    dry_run_arg = " --dry-run" if args.dry_run else ""
-    run_command("Publishing opendp crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/Cargo.toml")
+    
+    if args.dry_run:
+        raise NotImplementedError("dry runs aren't supported on workspaces")
+
+    import toml
+    # write the version into the opendp crate dependencies
+    opendp_toml = toml.load('rust/Cargo.toml')
+    version = opendp_toml['workspace']['package']['version']
+    opendp_toml['dependencies']['opendp_derive']['version'] = version
+    opendp_toml['build-dependencies']['opendp_tooling']['version'] = version
+    toml.dump('rust/Cargo.toml', opendp_toml)
+
+    # write the version into the derive crate dependencies
+    opendp_derive_toml = toml.load('rust/opendp_derive/Cargo.toml')
+    opendp_derive_toml['dependencies']['opendp_tooling']['version'] = version
+    toml.dump('rust/opendp_derive/Cargo.toml', opendp_toml)
+
+    run_command("Publishing opendp_tooling crate", f"cargo publish --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
+    run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
+    run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
 
 
 def python(args):

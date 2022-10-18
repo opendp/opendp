@@ -2,6 +2,7 @@
 mod ffi;
 
 use num::{Float as _, Zero};
+use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
@@ -14,6 +15,28 @@ use super::{
     LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, UncheckedSum,
 };
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        bounds(rust_type = "(T, T)"),
+        ddof(default = 1)),
+    generics(S(default = "Pairwise<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
+)]
+/// Make a Transformation that computes the variance of bounded data. 
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
+/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+/// 
+/// # Citations
+/// * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// * `ddof` - Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.
+/// 
+/// # Generics
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_sized_bounded_variance<S>(
     size: usize,
     bounds: (S::Item, S::Item),

@@ -4,6 +4,8 @@ mod ffi;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
+use opendp_derive::bootstrap;
+
 use crate::core::Transformation;
 use crate::metrics::SymmetricDistance;
 use crate::domains::{AllDomain, VectorDomain, OptionNullDomain};
@@ -11,6 +13,18 @@ use crate::error::Fallible;
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::make_row_by_row;
 
+#[bootstrap(features("contrib"))]
+/// Find the index of a data value in a set of categories.
+/// 
+/// For each value in the input vector, finds the index of the value in `categories`.
+/// If an index is found, returns `Some(index)`, else `None`.
+/// Chain with `make_impute_constant` or `make_drop_null` to handle nullity.
+/// 
+/// # Arguments
+/// * `categories` - The set of categories to find indexes from.
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type that is categorical/hashable
 pub fn make_find<TIA>(
     categories: Vec<TIA>
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<OptionNullDomain<AllDomain<usize>>>, SymmetricDistance, SymmetricDistance>>
@@ -28,6 +42,22 @@ pub fn make_find<TIA>(
         move |v| indexes.get(v).cloned())
 }
 
+#[bootstrap(features("contrib"))]
+/// Make a transformation that finds the bin index in a monotonically increasing vector of edges.
+/// 
+/// For each value in the input vector, finds the index of the bin the value falls into.
+/// `edges` splits the entire range of `TIA` into bins. 
+/// The first bin at index zero ranges from negative infinity to the first edge, non-inclusive.
+/// The last bin at index `edges.len()` ranges from the last bin, inclusive, to positive infinity.
+/// 
+/// To be valid, `edges` must be unique and ordered.
+/// `edges` are left inclusive, right exclusive.
+/// 
+/// # Arguments
+/// * `edges` - The set of edges to split bins by.
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type that is numeric
 pub fn make_find_bin<TIA>(
     edges: Vec<TIA>
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<usize>>, SymmetricDistance, SymmetricDistance>>
@@ -42,6 +72,15 @@ pub fn make_find_bin<TIA>(
             .unwrap_or(edges.len()))
 }
 
+#[bootstrap(features("contrib"))]
+/// Make a transformation that treats each element as an index into a vector of categories.
+/// 
+/// # Arguments
+/// * `categories` - The set of categories to index into.
+/// * `null` - Category to return if the index is out-of-range of the category set.
+/// 
+/// # Generics
+/// * `TOA` - Atomic Output Type. Output data will be `Vec<TOA>`.
 pub fn make_index<TOA>(
     categories: Vec<TOA>, null: TOA
 ) -> Fallible<Transformation<VectorDomain<AllDomain<usize>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>

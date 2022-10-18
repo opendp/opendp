@@ -68,9 +68,11 @@ Setting a feature changes how the crate compiles:
    * - ``floating-point``
      - Enable to include measurements with floating-point vulnerabilities.
    * - ``bindings-python``
-     - Enables the ``ffi`` feature and regenerates sources in the Python package.
+     - Enables the ``ffi`` and ``derive`` feature and regenerates sources in the Python package.
    * - ``ffi``
      - Enable to include C foreign function interfaces.
+   * - ``derive``
+     - Enable to embed links to proofs in the documentation.
    * - ``use-system-libs``
      - Enable to use the system installation of MPFR.
    * - ``use-mpfr``

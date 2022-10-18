@@ -5,7 +5,7 @@ on:
 
 jobs:
   pre-latex-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -38,7 +38,7 @@ jobs:
   latex-build:
     needs: [pre-latex-build]
     if: ${{ needs.pre-latex-build.outputs.tex != '' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

@@ -121,7 +121,7 @@ def test_split_lines__cast__impute():
 def test_inherent_cast__impute():
     from opendp.transformations import make_split_lines, make_cast_inherent, make_impute_constant
     cast = make_split_lines() >> make_cast_inherent(TIA=str, TOA=float)
-    constant = cast >> make_impute_constant(constant=9., DA=InherentNullDomain[AllDomain[float]])
+    constant = cast >> make_impute_constant(constant=9., DIA=InherentNullDomain[AllDomain[float]])
 
     assert constant("a\n23.23\n12") == [9., 23.23, 12.]
     assert constant.check(1, 1)
@@ -280,7 +280,7 @@ def test_count_by_categories_str():
 def test_indexing():
     from opendp.transformations import make_find, make_impute_constant, make_find_bin, make_index
 
-    find = make_find(categories=["1", "3", "4"]) >> make_impute_constant(3, DA=OptionNullDomain[AllDomain["usize"]])
+    find = make_find(categories=["1", "3", "4"]) >> make_impute_constant(3, DIA=OptionNullDomain[AllDomain["usize"]])
     assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
     assert find.check(1, 1)
 

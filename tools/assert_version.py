@@ -14,7 +14,7 @@ assert config['metadata']['version'] == version, \
 
 # check that opendp crate version is set properly
 opendp_toml = toml.load('rust/Cargo.toml')
-assert opendp_toml['package']['version'] == version, \
+assert opendp_toml['workspace']['package']['version'] == version, \
     "rust/Cargo.toml crate version is incorrect"
 
 print("All version numbers are synchronized")

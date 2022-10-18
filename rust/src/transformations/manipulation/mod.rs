@@ -2,6 +2,7 @@
 mod ffi;
 
 use num::One;
+use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Function, Metric, StabilityMap, Transformation, DatasetMetric};
 use crate::error::*;
@@ -61,8 +62,14 @@ pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D
         StabilityMap::new_from_constant(M::Distance::one())))
 }
 
-/// A [`Transformation`] that checks equality elementwise with `value`.
-/// Maps a Vec<TIA> -> Vec<bool>
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that checks if each element is equal to `value`.
+/// 
+/// # Arguments
+/// * `value` - value to check against
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type. Type of elements in the input vector
 pub fn make_is_equal<TIA>(
     value: TIA
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
@@ -73,6 +80,11 @@ pub fn make_is_equal<TIA>(
         move |v| v == &value)
 }
 
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that checks if each element in a vector is null.
+/// 
+/// # Generics
+/// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
 pub fn make_is_null<DIA>() -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
     where DIA: Domain + Default,
           DIA::Carrier: 'static + CheckNull {

@@ -4,3 +4,5 @@ git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
 pydata-sphinx-theme
 nbsphinx
 ipython  # for notebook syntax highlighting in docs
+pandoc
+pypandoc

@@ -30,12 +30,12 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_impute_constant(
     constant: *const AnyObject,
-    DA: *const c_char,
+    DIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let DA = try_!(Type::try_from(DA));
-    let TA = try_!(DA.get_atom());
+    let DIA = try_!(Type::try_from(DIA));
+    let TA = try_!(DIA.get_atom());
 
-    match &DA.contents {
+    match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
             fn monomorphize<TA>(
                 constant: *const AnyObject
