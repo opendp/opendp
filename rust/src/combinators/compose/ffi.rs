@@ -1,4 +1,5 @@
 use num::Zero;
+use opendp_derive::bootstrap;
 
 use crate::{
     core::FfiResult,
@@ -8,7 +9,22 @@ use crate::{
     }, error::Fallible, traits::InfAdd, measures::{MaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
-use super::{make_basic_composition, BasicCompositionMeasure};
+use super::BasicCompositionMeasure;
+
+#[bootstrap(
+    features("contrib"),
+    arguments(measurements(rust_type = "Vec<AnyMeasurementPtr>"))
+)]
+/// Construct the DP composition [`measurement0`, `measurement1`, ...]. 
+/// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
+/// 
+/// All metrics and domains must be equivalent, except for the output domain.
+/// 
+/// # Arguments
+/// * `measurements` - A vector of Measurements to compose.
+fn make_basic_composition(measurements: Vec<&AnyMeasurement>) -> Fallible<AnyMeasurement> {
+    super::make_basic_composition(measurements).map(IntoAnyMeasurementOutExt::into_any_out)
+}
 
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_basic_composition(
@@ -20,7 +36,6 @@ pub extern "C" fn opendp_combinators__make_basic_composition(
         try_!(meas_ptrs.iter().map(|ptr| Ok(try_as_ref!(*ptr))).collect());
 
     make_basic_composition(measurements)
-        .map(IntoAnyMeasurementOutExt::into_any_out)
         .into()
 }
 

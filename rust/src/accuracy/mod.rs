@@ -4,12 +4,22 @@ mod ffi;
 use std::f64::consts::SQRT_2;
 
 use num::{Float, One, Zero};
+use opendp_derive::bootstrap;
 use statrs::function::erf::erf_inv;
 
 use crate::error::Fallible;
 use crate::traits::InfCast;
 use std::fmt::Debug;
 
+#[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+/// 
+/// # Arguments
+/// * `scale` - Laplacian noise scale.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `scale` and `alpha`
 pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(scale: T, alpha: T) -> Fallible<T> {
     if scale.is_sign_negative() {
         return fallible!(InvalidDistance, "scale may not be negative")
@@ -20,6 +30,18 @@ pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(scale: T, alph
     Ok(scale * alpha.recip().ln())
 }
 
+#[bootstrap(arguments(accuracy(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a desired `accuracy` (tolerance) into a laplacian noise scale at a statistical significance level `alpha`.
+/// 
+/// # Arguments
+/// * `accuracy` - Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `accuracy` and `alpha`
+/// 
+/// # Returns
+/// Laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
 pub fn accuracy_to_laplacian_scale<T: Float + Zero + One + Debug>(accuracy: T, alpha: T) -> Fallible<T> {
     if accuracy.is_sign_negative() {
         return fallible!(InvalidDistance, "accuracy may not be negative")
@@ -30,6 +52,15 @@ pub fn accuracy_to_laplacian_scale<T: Float + Zero + One + Debug>(accuracy: T, a
     Ok(accuracy / alpha.recip().ln())
 }
 
+#[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+/// 
+/// # Arguments
+/// * `scale` - Gaussian noise scale.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `scale` and `alpha`
 pub fn gaussian_scale_to_accuracy<T>(scale: T, alpha: T) -> Fallible<T>
     where f64: InfCast<T>, T: InfCast<f64> {
     let scale = f64::inf_cast(scale)?;
@@ -43,6 +74,15 @@ pub fn gaussian_scale_to_accuracy<T>(scale: T, alpha: T) -> Fallible<T>
     T::inf_cast(scale * SQRT_2 * erf_inv(1. - alpha))
 }
 
+#[bootstrap(arguments(accuracy(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.
+/// 
+/// # Arguments
+/// * `accuracy` - Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `accuracy` and `alpha`
 pub fn accuracy_to_gaussian_scale<T>(accuracy: T, alpha: T) -> Fallible<T>
     where f64: InfCast<T>, T: InfCast<f64> {
     let accuracy = f64::inf_cast(accuracy)?;
