@@ -7,6 +7,8 @@ on:
     workflows: ["Sync Branches"]
     types: [completed]
 
+  pull_request:
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -132,12 +134,12 @@ jobs:
           # discard unused pdfs
           rm -r artifacts
 
-      - name: Push docs to gh-pages branch
-        #if: success() && github.ref == 'refs/heads/main'
-        run: |
-          git add --all --force
-          echo "Push docs to gh-pages branch"
-          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
-          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
-          git push --force origin gh-pages
-        continue-on-error: true
+      # - name: Push docs to gh-pages branch
+      #   #if: success() && github.ref == 'refs/heads/main'
+      #   run: |
+      #     git add --all --force
+      #     echo "Push docs to gh-pages branch"
+      #     git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+      #     git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+      #     git push --force origin gh-pages
+      #   continue-on-error: true
