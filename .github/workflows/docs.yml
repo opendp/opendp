@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
         
       - name: Build python bindings
-        run: cargo check --verbose --features untrusted,bindings-python
+        run: cargo check --manifest-path=rust/Cargo.toml --verbose --features untrusted,bindings-python
 
       - name: Collect file listing
         id: "collect"
