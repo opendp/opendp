@@ -34,7 +34,7 @@ jobs:
       - name: Collect file listing
         id: "collect"
         run: |
-          shopt -s globstar
+          shopt -s globstar nullglob
           files=(**/*.tex)
 
           echo "files: $files"
