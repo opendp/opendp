@@ -1,6 +1,8 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
+use opendp_derive::bootstrap;
+
 use crate::core::Transformation;
 use crate::metrics::SymmetricDistance;
 use crate::domains::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain, VectorDomain};
@@ -8,8 +10,15 @@ use crate::error::Fallible;
 use crate::traits::{RoundCast, CheckNull};
 use crate::transformations::make_row_by_row;
 
-/// A [`Transformation`] that casts elements between types
-/// Maps a Vec<TIA> -> Vec<Option<TOA>>
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
+/// For each element, failure to parse results in `None`, else `Some(out)`.
+/// 
+/// Can be chained with `make_impute_constant` or `make_drop_null` to handle nullity.
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type to cast from
+/// * `TOA` - Atomic Output Type to cast into
 pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<OptionNullDomain<AllDomain<TOA>>>, SymmetricDistance, SymmetricDistance>>
     where TIA: 'static + Clone + CheckNull, TOA: 'static + RoundCast<TIA> + CheckNull {
     make_row_by_row(
@@ -19,8 +28,21 @@ pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<T
             .and_then(|v| if v.is_null() {None} else {Some(v)}))
 }
 
-/// A [`Transformation`] that casts elements between types. Fills with TO::default if parsing fails.
-/// Maps a Vec<TIA> -> Vec<TOA>
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
+/// Any element that fails to cast is filled with default.
+/// 
+/// 
+/// | `TIA`  | `TIA::default()` |
+/// | ------ | ---------------- |
+/// | float  | `0.`             |
+/// | int    | `0`              |
+/// | string | `""`             |
+/// | bool   | `false`          | 
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type to cast from
+/// * `TOA` - Atomic Output Type to cast into
 pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
     where TIA: 'static + Clone + CheckNull, TOA: 'static + RoundCast<TIA> + Default + CheckNull {
     make_row_by_row(
@@ -29,8 +51,17 @@ pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<All
         |v| TOA::round_cast(v.clone()).unwrap_or_default())
 }
 
-/// A [`Transformation`] that casts elements to a type that has an inherent representation of nullity.
-/// Maps a Vec<TIA> -> Vec<TOA>
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`. 
+/// If cast fails, fill with `TOA`'s null value.
+/// 
+/// | `TIA`  | `TIA::default()` |
+/// | ------ | ---------------- |
+/// | float  | NaN              |
+/// 
+/// # Generics
+/// * `TIA` - Atomic Input Type to cast from
+/// * `TOA` - Atomic Output Type to cast into
 pub fn make_cast_inherent<TIA, TOA>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<InherentNullDomain<AllDomain<TOA>>>, SymmetricDistance, SymmetricDistance>>
     where TIA: 'static + Clone + CheckNull, TOA: 'static + RoundCast<TIA> + InherentNull + CheckNull {

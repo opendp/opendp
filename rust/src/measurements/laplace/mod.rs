@@ -2,6 +2,7 @@
 mod ffi;
 
 use num::{Zero, Float as _};
+use opendp_derive::bootstrap;
 
 use crate::core::{Measurement, PrivacyMap, SensitivityMetric};
 use crate::measures::MaxDivergence;
@@ -12,6 +13,8 @@ use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
 use crate::traits::{InfDiv, Float, InfAdd, ExactIntCast, FloatBits, CheckNull};
 
 use super::MappableDomain;
+
+#[doc(hidden)]
 pub trait LaplaceDomain: MappableDomain + Default {
     type InputMetric: SensitivityMetric<Distance = Self::Atom> + Default;
 }
@@ -22,6 +25,35 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        scale(rust_type = "T", c_type = "void *"),
+        k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
+    generics(
+        D(default = "AllDomain<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(D, scale)")
+)]
+/// Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
+/// 
+/// Set `D` to change the input data type and input metric:
+/// 
+/// | `D`                          | input type   | `D::InputMetric`       |
+/// | ---------------------------- | ------------ | ---------------------- |
+/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// 
+/// 
+/// This function takes a noise granularity in terms of 2^k. 
+/// Larger granularities are more computationally efficient, but have a looser privacy map. 
+/// If k is not set, k defaults to the smallest granularity.
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// * `k` - The noise granularity in terms of 2^k. 
+/// 
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
           D::Atom: Float + SampleDiscreteLaplaceZ2k,

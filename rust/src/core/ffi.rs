@@ -3,6 +3,8 @@ use std::ffi::{c_void, CStr};
 use std::fmt::{Debug, Formatter};
 use std::os::raw::c_char;
 
+use opendp_derive::bootstrap;
+
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
@@ -178,12 +180,31 @@ impl<T> From<FfiResult<*mut T>> for Fallible<T> {
     }
 }
 
+#[bootstrap(
+    name = "_error_free",
+    arguments(this(c_type = "FfiError *", do_not_convert = true, hint = "FfiError"))
+)]
+/// Internal function. Free the memory associated with `error`.
+/// 
+/// # Returns
+/// A boolean, where true indicates successful free
 #[no_mangle]
 #[must_use]
 pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
     util::into_owned(this).is_ok()
 }
 
+#[bootstrap(
+    name = "transformation_map",
+    arguments(
+        transformation(rust_type = b"null"),
+        distance_in(rust_type = "$transformation_input_distance_type(transformation)"))
+)]
+/// Use the `transformation` to map a given `d_in` to `d_out`.
+/// 
+/// # Arguments
+/// * `transformation` - Transformation to check the map distances with.
+/// * `distance_in` - Distance in terms of the input metric.
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_map(
     transformation: *const AnyTransformation,
@@ -195,6 +216,24 @@ pub extern "C" fn opendp_core__transformation_map(
     distance_out.into()
 }
 
+#[bootstrap(
+    name = "transformation_check",
+    arguments(
+        transformation(rust_type = b"null"),
+        distance_in(rust_type = "$transformation_input_distance_type(transformation)"),
+        distance_out(rust_type = "$transformation_output_distance_type(transformation)"),
+    ),
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
+)]
+/// Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
+/// 
+/// # Arguments
+/// * `measurement` - Measurement to check the privacy relation of.
+/// * `d_in` - Distance in terms of the input metric.
+/// * `d_out` - Distance in terms of the output metric.
+/// 
+/// # Returns
+/// True indicates that the relation passed at the given distance.
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_check(
     transformation: *const AnyTransformation,
@@ -208,6 +247,19 @@ pub extern "C" fn opendp_core__transformation_check(
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
+#[bootstrap(
+    name = "measurement_map",
+    arguments(
+        measurement(rust_type = b"null"),
+        distance_in(rust_type = "$measurement_input_distance_type(measurement)"),
+        distance_out(rust_type = "$measurement_output_distance_type(measurement)"),
+    )
+)]
+/// Use the `measurement` to map a given `d_in` to `d_out`.
+/// 
+/// # Arguments
+/// * `measurement` - Measurement to check the map distances with.
+/// * `distance_in` - Distance in terms of the input metric.
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_map(
     measurement: *const AnyMeasurement,
@@ -219,6 +271,24 @@ pub extern "C" fn opendp_core__measurement_map(
     distance_out.into()
 }
 
+#[bootstrap(
+    name = "measurement_check",
+    arguments(
+        measurement(rust_type = b"null"),
+        distance_in(rust_type = "$measurement_input_distance_type(measurement)"),
+        distance_out(rust_type = "$measurement_output_distance_type(measurement)"),
+    ),
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
+)]
+/// Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
+/// 
+/// # Arguments
+/// * `measurement` - Measurement to check the privacy relation of.
+/// * `d_in` - Distance in terms of the input metric.
+/// * `d_out` - Distance in terms of the output metric.
+/// 
+/// # Returns
+/// True indicates that the relation passed at the given distance.
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_check(
     measurement: *const AnyMeasurement,
@@ -232,6 +302,19 @@ pub extern "C" fn opendp_core__measurement_check(
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
+
+#[bootstrap(
+    name = "measurement_invoke",
+    arguments(
+        this(rust_type = b"null"),
+        arg(rust_type = "$measurement_input_carrier_type(this)")
+    )
+)]
+/// Invoke the `measurement` with `arg`. Returns a differentially private release.
+/// 
+/// # Arguments
+/// * `this` - Measurement to invoke.
+/// * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_invoke(this: *const AnyMeasurement, arg: *const AnyObject) -> FfiResult<*mut AnyObject> {
     let this = try_as_ref!(this);
@@ -239,11 +322,29 @@ pub extern "C" fn opendp_core__measurement_invoke(this: *const AnyMeasurement, a
     this.invoke(arg).into()
 }
 
+#[bootstrap(
+    name = "_measurement_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`.
 #[no_mangle]
 pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(
+    name = "transformation_invoke",
+    arguments(
+        this(rust_type = b"null"),
+        arg(rust_type = "$transformation_input_carrier_type(this)")
+    )
+)]
+/// Invoke the `transformation` with `arg`. Returns a differentially private release.
+/// 
+/// # Arguments
+/// * `this` - Transformation to invoke.
+/// * `arg` - Input data to supply to the transformation. A member of the transformation's input domain.
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformation, arg: *const AnyObject) -> FfiResult<*mut AnyObject> {
     let this = try_as_ref!(this);
@@ -251,41 +352,101 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformat
     this.invoke(arg).into()
 }
 
+#[bootstrap(
+    name = "_transformation_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`.
 #[no_mangle]
 pub extern "C" fn opendp_core___transformation_free(this: *mut AnyTransformation) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(
+    name = "transformation_input_carrier_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the input (carrier) data type of `this`.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the type from.
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_input_carrier_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
 }
 
+#[bootstrap(
+    name = "measurement_input_carrier_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the input (carrier) data type of `this`.
+/// 
+/// # Arguments
+/// * `this` - The measurement to retrieve the type from.
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_input_carrier_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.input_domain.carrier_type.descriptor.to_string())))
 }
 
+#[bootstrap(
+    name = "transformation_input_distance_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the input distance type of `transformation`.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the type from.
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_input_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
 }
 
+#[bootstrap(
+    name = "transformation_output_distance_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the output distance type of `transformation`.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the type from.
 #[no_mangle]
 pub extern "C" fn opendp_core__transformation_output_distance_type(this: *mut AnyTransformation) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.output_metric.distance_type.descriptor.to_string())))
 }
 
+#[bootstrap(
+    name = "measurement_input_distance_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the input distance type of `measurement`.
+/// 
+/// # Arguments
+/// * `this` - The measurement to retrieve the type from.
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.input_metric.distance_type.descriptor.to_string())))
 }
 
+#[bootstrap(
+    name = "measurement_output_distance_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the output distance type of `measurement`.
+/// 
+/// # Arguments
+/// * `this` - The measurement to retrieve the type from.
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);

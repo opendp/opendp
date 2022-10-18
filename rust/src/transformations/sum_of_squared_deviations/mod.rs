@@ -2,6 +2,7 @@
 mod ffi;
 
 use num::{Float as _, One, Zero};
+use opendp_derive::bootstrap;
 
 use crate::core::{Function, StabilityMap, Transformation};
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
@@ -11,6 +12,37 @@ use crate::traits::{ExactIntCast, InfAdd, InfCast, InfDiv, InfMul, InfSub, Float
 
 use super::UncheckedSum;
 
+#[bootstrap(
+    features("contrib"),
+    arguments(bounds(rust_type = "(T, T)")),
+    generics(S(default = "Pairwise<T>", generics = "T")),
+    derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
+)]
+/// Make a Transformation that computes the sum of squared deviations of bounded data. 
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
+/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+///
+/// | S (summation algorithm) | input type     |
+/// | ----------------------- | -------------- |
+/// | `Sequential<S::Item>`   | `Vec<S::Item>` |
+/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
+/// 
+/// `S::Item` is the type of all of the following: 
+/// each bound, each element in the input data, the output data, and the output sensitivity.
+/// 
+/// For example, to construct a transformation that computes the SSD of `f32` half-precision floats,
+/// set `S` to `Pairwise<f32>`.
+/// 
+/// # Citations
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+/// 
+/// # Arguments
+/// * `size` - Number of records in input data.
+/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
+/// 
+/// # Generics
+/// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
 pub fn make_sized_bounded_sum_of_squared_deviations<S>(
     size: usize,
     bounds: (S::Item, S::Item),

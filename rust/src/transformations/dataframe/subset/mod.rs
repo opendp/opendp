@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Function, StabilityMap, Transformation},
     error::Fallible,
@@ -10,6 +12,15 @@ use super::{DataFrame, DataFrameDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that subsets a dataframe by a boolean column.
+/// 
+/// # Arguments
+/// * `indicator_column` - name of the boolean column that indicates inclusion in the subset
+/// * `keep_columns` - list of column names to apply subset to
+/// 
+/// # Generics
+/// * `TK` - Type of the column name
 pub fn make_subset_by<TK: Hashable>(
     indicator_column: TK,
     keep_columns: Vec<TK>,

@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 
 use az::{SaturatingAs, SaturatingCast};
 use num::{traits::Pow, Float as _, Zero};
+use opendp_derive::bootstrap;
 use rug::{Integer, Rational};
 
 use crate::{
@@ -18,6 +19,7 @@ mod ffi;
 
 use super::MappableDomain;
 
+#[doc(hidden)]
 pub trait DiscreteGaussianDomain<Q>: MappableDomain + Default {
     type InputMetric: SensitivityMetric<Distance = Q> + Default;
 }
@@ -28,6 +30,7 @@ impl<T: Clone + CheckNull, Q> DiscreteGaussianDomain<Q> for VectorDomain<AllDoma
     type InputMetric = L2Distance<Q>;
 }
 
+#[doc(hidden)]
 pub trait DiscreteGaussianMeasure<DI>: Measure + Default
 where
     DI: DiscreteGaussianDomain<Self::Atom>,
@@ -64,6 +67,31 @@ where
     }
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        scale(rust_type = "Q", c_type = "void *")),
+    generics(
+        D(default = "AllDomain<int>"),
+        MO(default = "ZeroConcentratedDivergence<Q>", generics = "Q")),
+    derived_types(Q = "$get_atom_or_infer(MO, scale)")
+)]
+/// Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
+/// 
+/// Set `D` to change the input data type and input metric:
+/// 
+/// | `D`                          | input type   | `D::InputMetric`        |
+/// | ---------------------------- | ------------ | ----------------------- |
+/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
+/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
+/// * `k` - The noise granularity in terms of 2^k. 
+/// 
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
+/// * `MO` - Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
 pub fn make_base_discrete_gaussian<D, MO>(
     scale: MO::Atom,
 ) -> Fallible<Measurement<D, D, D::InputMetric, MO>>

@@ -1,26 +1,26 @@
 #[cfg(feature="contrib")]
-pub mod amplify;
+mod amplify;
 #[cfg(feature="contrib")]
 pub use crate::combinators::amplify::*;
 
 #[cfg(feature="contrib")]
-pub mod chain;
+mod chain;
 #[cfg(feature="contrib")]
 pub use crate::combinators::chain::*;
 
 #[cfg(feature="contrib")]
-pub mod compose;
+mod compose;
 #[cfg(feature="contrib")]
 pub use crate::combinators::compose::*;
 
 #[cfg(feature="contrib")]
-pub mod measure_cast;
+mod measure_cast;
 #[cfg(feature="contrib")]
 pub use crate::combinators::measure_cast::*;
 
 
 #[cfg(feature="contrib")]
-pub mod fix_delta;
+mod fix_delta;
 #[cfg(feature="contrib")]
 pub use crate::combinators::fix_delta::*;
 

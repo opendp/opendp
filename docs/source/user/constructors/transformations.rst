@@ -200,7 +200,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
     >>> finder = (
     ...     make_find(categories=["A", "B", "C"]) >>
     ...     # impute any input datum that are not a part of the categories list as 3
-    ...     make_impute_constant(3, DA=OptionNullDomain[AllDomain["usize"]])
+    ...     make_impute_constant(3, DIA=OptionNullDomain[AllDomain["usize"]])
     ... )
     >>> finder(["A", "B", "C", "A", "D"])
     [0, 1, 2, 0, 3]

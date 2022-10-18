@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 
 use az::{SaturatingAs, SaturatingCast};
+use opendp_derive::bootstrap;
 use rug::{Complete, Integer, Rational};
 
 use crate::{
@@ -15,6 +16,31 @@ use super::DiscreteLaplaceDomain;
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[bootstrap(
+    features("contrib"),
+    arguments(scale(c_type = "void *")),
+    generics(D(default = "AllDomain<int>"))
+)]
+/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+/// using an efficient algorithm on rational bignums.
+/// 
+/// Set `D` to change the input data type and input metric:
+///
+/// 
+/// | `D`                          | input type   | `D::InputMetric`       |
+/// | ---------------------------- | ------------ | ---------------------- |
+/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// 
+/// # Citations
+/// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// 
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `QO` - Data type of the output distance and scale.
 pub fn make_base_discrete_laplace_cks20<D, QO>(
     scale: QO,
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
@@ -62,7 +88,24 @@ where
     ))
 }
 
-
+/// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+/// directly using bignum types from [`rug`].
+/// 
+/// Set `D` to change the input data type and input metric:
+///
+/// | `D`                                | input type     | `D::InputMetric`            |
+/// | ---------------------------------- | -------------- | --------------------------- |
+/// | `AllDomain<Integer>` (default)     | `Integer`      | `AbsoluteDistance<Integer>` |
+/// | `VectorDomain<AllDomain<Integer>>` | `Vec<Integer>` | `L1Distance<Integer>`       |
+/// 
+/// # Citations
+/// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
+/// 
+/// # Arguments
+/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
+/// 
+/// # Generics
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<Integer>>` or `AllDomain<Integer>`
 pub fn make_base_discrete_laplace_cks20_rug<D>(
     scale: Rational,
 ) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<Rational>>>

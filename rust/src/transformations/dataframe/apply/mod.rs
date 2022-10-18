@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Function, StabilityMap, Transformation},
     data::Column,
@@ -13,6 +15,7 @@ use super::{DataFrame, DataFrameDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
+/// Internal function to map a transformation onto a column of a dataframe.
 fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive>(
     column_name: K,
     transformation: Transformation<
@@ -47,27 +50,56 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
     ))
 }
 
-pub fn make_df_cast_default<K, TIA, TOA>(
-    column_name: K,
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. 
+/// If cast fails, fill with default.
+/// 
+/// 
+/// | `TIA`  | `TIA::default()` |
+/// | ------ | ---------------- |
+/// | float  | `0.`             |
+/// | int    | `0`              |
+/// | string | `""`             |
+/// | bool   | `false`          | 
+/// 
+/// # Arguments
+/// * `column_name` - column name to be transformed
+/// 
+/// # Generics
+/// * `TK` - Type of the column name
+/// * `TIA` - Atomic Input Type to cast from
+/// * `TOA` - Atomic Output Type to cast into
+pub fn make_df_cast_default<TK, TIA, TOA>(
+    column_name: TK,
 ) -> Fallible<
-    Transformation<DataFrameDomain<K>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
+    Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
 >
 where
-    K: Hashable,
+    TK: Hashable,
     TIA: Primitive,
     TOA: Primitive + RoundCast<TIA>,
 {
     make_apply_transformation_dataframe(column_name, make_cast_default::<TIA, TOA>()?)
 }
 
-pub fn make_df_is_equal<K, TIA>(
-    column_name: K,
+#[bootstrap(features("contrib"))]
+/// Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
+/// 
+/// # Arguments
+/// * `column_name` - Column name to be transformed
+/// * `value` - Value to check for equality
+/// 
+/// # Generics
+/// * `TK` - Type of the column name
+/// * `TIA` - Atomic Input Type to cast from
+pub fn make_df_is_equal<TK, TIA>(
+    column_name: TK,
     value: TIA,
 ) -> Fallible<
-    Transformation<DataFrameDomain<K>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
+    Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
 >
 where
-    K: Hashable,
+    TK: Hashable,
     TIA: Primitive,
 {
     make_apply_transformation_dataframe(column_name, make_is_equal(value)?)

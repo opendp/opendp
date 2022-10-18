@@ -63,28 +63,6 @@ impl Type {
     pub fn of_id(id: &TypeId) -> Fallible<Self> {
         TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse, "unrecognized type id"))
     }
-
-    // Hacky special entry point for composition.
-    pub fn new_box_pair(type0: &Type, type1: &Type) -> Self {
-        #[allow(clippy::unnecessary_wraps)]
-        fn monomorphize<T0: 'static, T1: 'static>(type0: &Type, type1: &Type) -> Fallible<Type> {
-            let id = TypeId::of::<(Box<T0>, Box<T1>)>();
-            let descriptor = format!("(Box<{}>, Box<{}>)", type0.descriptor, type1.descriptor);
-            // Hacky way to get &'static str from String.
-            let descriptor = Box::leak(descriptor.into_boxed_str());
-            let contents = TypeContents::TUPLE(vec![TypeId::of::<Box<T0>>(), TypeId::of::<Box<T1>>()]);
-            Ok(Type::new(id, descriptor, contents))
-        }
-        dispatch!(
-            monomorphize,
-            // FIXME: The Box<f64> entries are here for demo use.
-            [
-                (type0, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)]),
-                (type1, [bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64, String, (Box<f64>, Box<f64>)])
-            ],
-            (type0, type1)
-        ).unwrap()
-    }
 }
 
 impl Type {
