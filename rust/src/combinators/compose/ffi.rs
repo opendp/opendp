@@ -45,7 +45,6 @@ impl BasicCompositionMeasure for AnyMeasure {
         fn monomorphize1<Q: 'static + Clone + InfAdd + Zero>(
             self_: &AnyMeasure, d_i: Vec<AnyObject>
         ) -> Fallible<AnyObject> {
-
             fn monomorphize2<M: 'static + BasicCompositionMeasure>(
                 self_: &AnyMeasure, d_i: Vec<AnyObject>
             ) -> Fallible<AnyObject>
@@ -59,7 +58,8 @@ impl BasicCompositionMeasure for AnyMeasure {
             ], (self_, d_i))
         }
 
-        dispatch!(monomorphize1, [(self.distance_type, @floats)], (self, d_i))
+        let Q_Atom = try_!(self.type_.get_atom());
+        dispatch!(monomorphize1, [(Q_Atom, @floats)], (self, d_i))
     }
 }
 

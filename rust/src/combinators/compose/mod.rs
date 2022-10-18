@@ -5,25 +5,28 @@ use num::Zero;
 
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
-    measures::{FixedSmoothedMaxDivergence, ZeroConcentratedDivergence, MaxDivergence},
     domains::VectorDomain,
     error::Fallible,
+    measures::{
+        FixedSmoothedMaxDivergence, MaxDivergence,
+        ZeroConcentratedDivergence,
+    },
     traits::InfAdd,
 };
 
-/// Construct the DP composition [`measurement0`, `measurement1`, ...]. 
+/// Construct the DP composition [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
-/// 
+///
 /// Aside from sharing the same type, each output domain need not be equivalent.
-/// This is useful when converting types to PolyDomain, 
+/// This is useful when converting types to PolyDomain,
 /// which can enable composition over non-homogeneous measurements.
-/// 
+///
 /// # Arguments
 /// * `measurements` - A vector of Measurements to compose. All DI, MI, MO must be equivalent.
-/// 
+///
 /// # Generics
 /// * `DI` - Input Domain.
-/// * `DO` - Output Domain. 
+/// * `DO` - Output Domain.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
 pub fn make_basic_composition<DI, DO, MI, MO>(
@@ -76,8 +79,7 @@ where
         output_measure.clone(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             output_measure.compose(
-                maps
-                    .iter()
+                maps.iter()
                     .map(|map| map.eval(d_in))
                     .collect::<Fallible<_>>()?,
             )
@@ -95,9 +97,7 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for MaxDivergence<Q> {
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure
-    for FixedSmoothedMaxDivergence<Q>
-{
+impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for FixedSmoothedMaxDivergence<Q> {
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter()
             .try_fold((Q::zero(), Q::zero()), |(e1, d1), (e2, d2)| {
@@ -106,9 +106,7 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure
     }
 }
 
-impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure
-    for ZeroConcentratedDivergence<Q>
-{
+impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDivergence<Q> {
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(Q::zero(), |sum, d_i| sum.inf_add(d_i))
     }
@@ -117,12 +115,12 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure
 // UNIT TESTS
 #[cfg(test)]
 mod tests {
-    use crate::domains::AllDomain;
     use crate::core::*;
-    use crate::metrics::L1Distance;
-    use crate::measures::MaxDivergence;
+    use crate::domains::AllDomain;
     use crate::error::ExplainUnwrap;
     use crate::measurements::make_base_laplace;
+    use crate::measures::MaxDivergence;
+    use crate::metrics::L1Distance;
 
     use super::*;
 
@@ -156,9 +154,7 @@ mod tests {
             output_measure1,
             privacy_map1,
         );
-        let composition =
-            make_basic_composition(vec![&measurement0, &measurement1])
-                .unwrap_test();
+        let composition = make_basic_composition(vec![&measurement0, &measurement1]).unwrap_test();
         let arg = 99;
         let ret = composition.invoke(&arg).unwrap_test();
         assert_eq!(ret, vec![100_f64, 98_f64]);
@@ -174,7 +170,7 @@ mod tests {
 
         assert_eq!(ret.len(), 2);
         println!("return: {:?}", ret);
-        
+
         assert!(composition.check(&1., &2.)?);
         assert!(!composition.check(&1., &1.9999)?);
         Ok(())
