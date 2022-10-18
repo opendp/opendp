@@ -40,10 +40,12 @@ jobs:
           shopt -s globstar
           files=$(echo **/*.tex)
 
+          echo "files: $files"
           # escape list of .tex files
           tex="${files//'%'/'%25'}"
           tex="${tex//$'\n'/'%0A'}"
           tex="${tex//$'\r'/'%0D'}"
+          echo "tex: $tex"
           echo "tex=$tex" >> $GITHUB_OUTPUT
 
           # escape list of .pdf files
