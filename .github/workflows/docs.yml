@@ -109,8 +109,13 @@ jobs:
           git fetch
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
           git config --global user.name "$GITHUB_ACTOR"
-          git checkout gh-pages
-          rm -rf *
+
+          # create brand new history each time
+          git branch -D gh-pages
+          git checkout --orphan gh-pages
+          
+          # sudo to have sufficient permission to delete files created by the docker user while compiling .tex
+          sudo rm -rf *
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
