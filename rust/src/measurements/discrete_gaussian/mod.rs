@@ -21,7 +21,7 @@ use super::MappableDomain;
 
 #[doc(hidden)]
 pub trait DiscreteGaussianDomain<QI>: MappableDomain + Default {
-    type InputMetric: Metric<Distance = Q> + Default;
+    type InputMetric: Metric<Distance = QI> + Default;
 }
 impl<T: Clone + CheckNull, QI> DiscreteGaussianDomain<QI> for AllDomain<T> {
     type InputMetric = AbsoluteDistance<QI>;
