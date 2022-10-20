@@ -12,6 +12,7 @@ __all__ = [
     "make_chain_tt",
     "make_fix_delta",
     "make_population_amplification",
+    "make_pureDP_to_fixed_approxDP",
     "make_zCDP_to_approxDP"
 ]
 
@@ -218,6 +219,37 @@ def make_population_amplification(
     return c_to_py(unwrap(function(measurement, population_size), Measurement))
 
 
+def make_pureDP_to_fixed_approxDP(
+    measurement: Measurement
+) -> Measurement:
+    """Constructs a new output measurement where the output measure
+    is casted from `MaxDivergence<QO>` to `FixedSmoothedMaxDivergence<QO>`.
+    
+    [make_pureDP_to_fixed_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_pureDP_to_fixed_approxDP.html)
+    
+    :param measurement: a measurement with a privacy measure to be casted
+    :type measurement: Measurement
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_pureDP_to_fixed_approxDP
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_measurement), Measurement))
+    output._depends_on(get_dependencies(measurement))
+    return output
+
+
 def make_zCDP_to_approxDP(
     measurement: Measurement
 ) -> Measurement:
@@ -226,7 +258,7 @@ def make_zCDP_to_approxDP(
     
     [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_zCDP_to_approxDP.html)
     
-    :param measurement: a measurement with a privacy curve to be casted
+    :param measurement: a measurement with a privacy measure to be casted
     :type measurement: Measurement
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
