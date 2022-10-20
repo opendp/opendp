@@ -91,7 +91,6 @@ pub fn make_proof_link(relative_path: &str) -> Result<String> {
 
     // link from sphinx and rustdoc to latex
     let proof_uri = if let Ok(sphinx_port) = env::var("OPENDP_SPHINX_PORT") {
-        println!("sphinx port is set");
         format!("http://localhost:{sphinx_port}")
     } else {
         // find the docs uri
@@ -106,10 +105,7 @@ pub fn make_proof_link(relative_path: &str) -> Result<String> {
 
         format!("{docs_uri}/en/{version}")
     };
-
-    println!("{proof_uri}");
     
-
     Ok(format!(
         "[(Proof Document)]({proof_uri}/proofs/{relative_path}) ",
         relative_path = relative_path.display()
