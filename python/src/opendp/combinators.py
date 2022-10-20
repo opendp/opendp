@@ -24,6 +24,8 @@ def make_basic_composition(
     
     All metrics and domains must be equivalent, except for the output domain.
     
+    [make_basic_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_basic_composition.html)
+    
     :param measurements: A vector of Measurements to compose.
     :type measurements: Any
     :rtype: Measurement
@@ -51,6 +53,8 @@ def make_chain_mt(
 ) -> Measurement:
     """Construct the functional composition (`measurement1` ○ `transformation0`).
     Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
+    
+    [make_chain_mt in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_mt.html)
     
     :param measurement1: outer mechanism
     :type measurement1: Measurement
@@ -84,6 +88,8 @@ def make_chain_tm(
     Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
     Used to represent non-interactive postprocessing.
     
+    [make_chain_tm in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_tm.html)
+    
     :param transformation1: outer postprocessing transformation
     :type transformation1: Transformation
     :param measurement0: inner measurement/mechanism
@@ -115,6 +121,8 @@ def make_chain_tt(
     """Construct the functional composition (`transformation1` ○ `transformation0`).
     Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.
     
+    [make_chain_tt in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_tt.html)
+    
     :param transformation1: outer transformation
     :type transformation1: Transformation
     :param transformation0: inner transformation
@@ -144,6 +152,8 @@ def make_fix_delta(
     delta: Any
 ) -> Measurement:
     """Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
+    
+    [make_fix_delta in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_fix_delta.html)
     
     :param measurement: a measurement with a privacy curve to be fixed
     :type measurement: Measurement
@@ -182,6 +192,8 @@ def make_population_amplification(
     Protected by the "honest-but-curious" feature flag 
     because a dishonest adversary could set the population size to be arbitrarily large.
     
+    [make_population_amplification in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_population_amplification.html)
+    
     :param measurement: the computation to amplify
     :type measurement: Measurement
     :param population_size: the size of the population from which the input dataset is a simple sample
@@ -211,6 +223,8 @@ def make_zCDP_to_approxDP(
 ) -> Measurement:
     """Constructs a new output measurement where the output measure
     is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
+    
+    [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_zCDP_to_approxDP.html)
     
     :param measurement: a measurement with a privacy curve to be casted
     :type measurement: Measurement

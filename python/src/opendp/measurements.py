@@ -33,6 +33,8 @@ def make_base_discrete_gaussian(
     | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
     | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
     
+    [make_base_discrete_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html)
+    
     **Supporting Elements:**
     
     * Input Domain:   `D`
@@ -91,6 +93,8 @@ def make_base_discrete_laplace(
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
+    [make_base_discrete_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace.html)
+    
     **Citations:**
     
     * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
@@ -146,6 +150,8 @@ def make_base_discrete_laplace_cks20(
     | ---------------------------- | ------------ | ---------------------- |
     | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
     | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    
+    [make_base_discrete_laplace_cks20 in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_cks20.html)
     
     **Citations:**
     
@@ -203,6 +209,8 @@ def make_base_discrete_laplace_linear(
     | ---------------------------- | ------------ | ---------------------- |
     | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
     | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    
+    [make_base_discrete_laplace_linear in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_linear.html)
     
     **Citations:**
     
@@ -268,6 +276,8 @@ def make_base_gaussian(
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
     
+    [make_base_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_gaussian.html)
+    
     **Supporting Elements:**
     
     * Input Domain:   `D`
@@ -319,6 +329,8 @@ def make_base_geometric(
     """Deprecated. 
     Use `make_base_discrete_laplace` instead (more efficient). 
     `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
+    
+    [make_base_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_geometric.html)
     
     **Supporting Elements:**
     
@@ -380,6 +392,8 @@ def make_base_laplace(
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
     
+    [make_base_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace.html)
+    
     **Supporting Elements:**
     
     * Input Domain:   `D`
@@ -428,6 +442,8 @@ def make_base_ptr(
     This function takes a noise granularity in terms of 2^k. 
     Larger granularities are more computationally efficient, but have a looser privacy map. 
     If k is not set, k defaults to the smallest granularity.
+    
+    [make_base_ptr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_ptr.html)
     
     **Supporting Elements:**
     
@@ -479,6 +495,8 @@ def make_randomized_response(
 ) -> Measurement:
     """Make a Measurement that implements randomized response on a categorical value.
     
+    [make_randomized_response in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_randomized_response.html)
+    
     **Supporting Elements:**
     
     * Input Domain:   `AllDomain<T>`
@@ -527,6 +545,8 @@ def make_randomized_response_bool(
     Q: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that implements randomized response on a boolean value.
+    
+    [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_randomized_response_bool.html)
     
     **Supporting Elements:**
     

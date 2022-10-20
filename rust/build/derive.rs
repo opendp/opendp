@@ -10,6 +10,13 @@ use proc_macro2::TokenStream;
 use syn::{File, Item, ItemFn};
 
 pub fn main() {
+    // rebuild if link paths change
+    println!("cargo:rerun-if-env-changed=OPENDP_SPHINX_PORT");
+    println!("cargo:rerun-if-env-changed=OPENDP_RUSTDOC_PORT");
+    
+    println!("cargo:rerun-if-env-changed=OPENDP_REMOTE_SPHINX_URI");
+    println!("cargo:rerun-if-env-changed=OPENDP_REMOTE_RUSTDOC_URI");
+
     let src_dir = get_src_dir().unwrap();
     let proof_paths = find_proof_paths(&src_dir).unwrap();
 
@@ -45,7 +52,7 @@ fn parse_crate(
             };
 
         if path.is_dir() {
-            if let Some(module) = parse_file_tree(&path, &proof_paths)? {
+            if let Some(module) = parse_file_tree(&path, &proof_paths, &module_name)? {
                 if !module.is_empty() {
                     // sort module functions
                     let mut module = module.into_iter().collect::<Vec<Function>>();
@@ -65,6 +72,7 @@ fn parse_crate(
 fn parse_file_tree(
     dir: &Path,
     proof_paths: &HashMap<String, Option<String>>,
+    module_name: &str
 ) -> std::io::Result<Option<Vec<Function>>> {
     // use here to shadow syn::File
     use std::{fs::File, io::Read};
@@ -74,7 +82,7 @@ fn parse_file_tree(
         for entry in std::fs::read_dir(dir)? {
             let path = entry?.path();
             if path.is_dir() {
-                if let Some(parsed) = parse_file_tree(&path, &proof_paths)? {
+                if let Some(parsed) = parse_file_tree(&path, &proof_paths, &module_name)? {
                     matches.extend(parsed);
                 } else {
                     return Ok(None);
@@ -87,7 +95,7 @@ fn parse_file_tree(
 
                 let mut contents = String::new();
                 File::open(&path)?.read_to_string(&mut contents)?;
-                if let Some(funcs) = parse_file(contents, &proof_paths) {
+                if let Some(funcs) = parse_file(contents, &proof_paths, module_name) {
                     matches.extend(funcs);
                 } else {
                     return Ok(None);
@@ -102,6 +110,7 @@ fn parse_file_tree(
 fn parse_file(
     text: String,
     proof_paths: &HashMap<String, Option<String>>,
+    module_name: &str,
 ) -> Option<Vec<Function>> {
     // ignore files that fail to parse so as not to break IDE tooling
     let ts = TokenStream::from_str(&text).ok()?;
@@ -150,7 +159,7 @@ fn parse_file(
             }
 
             // use the bootstrap crate to parse a Function
-            Function::from_ast(attr_args, item_fn).ok()
+            Function::from_ast(attr_args, item_fn, Some(module_name)).ok()
         })
         .collect()
 }

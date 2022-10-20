@@ -19,6 +19,8 @@ def accuracy_to_gaussian_scale(
 ) -> Any:
     """Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.
     
+    [accuracy_to_gaussian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_gaussian_scale.html)
+    
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
     :param T: Data type of `accuracy` and `alpha`
@@ -50,6 +52,8 @@ def accuracy_to_laplacian_scale(
     T: RuntimeTypeDescriptor = None
 ) -> Any:
     """Convert a desired `accuracy` (tolerance) into a laplacian noise scale at a statistical significance level `alpha`.
+    
+    [accuracy_to_laplacian_scale in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.accuracy_to_laplacian_scale.html)
     
     :param accuracy: Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
@@ -84,6 +88,8 @@ def gaussian_scale_to_accuracy(
 ) -> Any:
     """Convert a gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
     
+    [gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.gaussian_scale_to_accuracy.html)
+    
     :param scale: Gaussian noise scale.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
     :param T: Data type of `scale` and `alpha`
@@ -115,6 +121,8 @@ def laplacian_scale_to_accuracy(
     T: RuntimeTypeDescriptor = None
 ) -> Any:
     """Convert a laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+    
+    [laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.laplacian_scale_to_accuracy.html)
     
     :param scale: Laplacian noise scale.
     :param alpha: Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].

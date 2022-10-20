@@ -17,7 +17,11 @@ use self::{
 };
 
 impl Function {
-    pub fn from_ast(attr_args: AttributeArgs, item_fn: ItemFn) -> Result<Function> {
+    pub fn from_ast(
+        attr_args: AttributeArgs,
+        item_fn: ItemFn,
+        module: Option<&str>
+    ) -> Result<Function> {
         // Parse the proc bootstrap macro args
         let arguments = BootstrapArguments::from_attribute_args(&attr_args)?;
 
@@ -25,7 +29,8 @@ impl Function {
         let signature = BootstrapSignature::from_syn(item_fn.sig.clone())?;
 
         // Parse the docstring
-        let docstring = BootstrapDocstring::from_attrs(item_fn.attrs, &item_fn.sig.output)?;
+        let path = module.map(|m| (m, arguments.name.as_ref().unwrap_or(&signature.name).as_str()));
+        let docstring = BootstrapDocstring::from_attrs(item_fn.attrs, &item_fn.sig.output, path)?;
 
         // aggregate info from all sources
         reconcile_function(arguments, docstring, signature)

@@ -48,7 +48,7 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
     }
 
     let function = try_!(
-        Function::from_ast(attr_args, item_fn.clone()),
+        Function::from_ast(attr_args, item_fn.clone(), None),
         original_input
     );
 

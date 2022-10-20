@@ -78,21 +78,24 @@ fn get_out_dir() -> Result<PathBuf> {
 }
 
 pub fn make_proof_link(relative_path: &str) -> Result<String> {
-    let relative_path = PathBuf::from(relative_path);
+    let mut relative_path = PathBuf::from(relative_path);
     // construct absolute path
     let absolute_path = get_src_dir()?.join(&relative_path);
 
     if !absolute_path.exists() {
         return Err(Error::custom(format!("{absolute_path:?} does not exist!")));
     }
-    
+
+    // link to the pdf, not the tex
+    relative_path.set_extension("pdf");
+
     // link from sphinx and rustdoc to latex
-    let proof_uri = if let Ok(local_uri) = env::var("OPENDP_LOCAL_DOCS_URI") {
-        format!("{local_uri}/rust/src")
+    let proof_uri = if let Ok(sphinx_port) = env::var("OPENDP_SPHINX_PORT") {
+        format!("http://localhost:{sphinx_port}")
     } else {
         // find the docs uri
-        let docs_uri = env::var("OPENDP_REMOTE_DOCS_URI")
-        .unwrap_or_else(|_| "https://docs.opendp.org".to_string());
+        let docs_uri = env::var("OPENDP_REMOTE_SPHINX_URI")
+            .unwrap_or_else(|_| "https://docs.opendp.org".to_string());
 
         // find the version
         let mut version = env!("CARGO_PKG_VERSION");
@@ -100,13 +103,11 @@ pub fn make_proof_link(relative_path: &str) -> Result<String> {
             version = "latest";
         };
 
-        format!("{docs_uri}/en/{version}/proofs")
+        format!("{docs_uri}/en/{version}")
     };
-
-    let target = format!(
-        "{proof_uri}/{relative_path}",
+    
+    Ok(format!(
+        "[(Proof Document)]({proof_uri}/proofs/{relative_path}) ",
         relative_path = relative_path.display()
-    );
-
-    Ok(format!("[(Proof Document)]({target}) "))
+    ))
 }

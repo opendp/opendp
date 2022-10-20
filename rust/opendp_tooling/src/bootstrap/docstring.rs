@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, env};
 
 use darling::{Error, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
@@ -21,7 +21,7 @@ pub struct BootstrapDocstring {
 }
 
 impl BootstrapDocstring {
-    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType) -> Result<BootstrapDocstring> {
+    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType, path: Option<(&str, &str)>) -> Result<BootstrapDocstring> {
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
         if let Some(sup_elements) = parse_sig_output(output)? {
@@ -30,6 +30,12 @@ impl BootstrapDocstring {
 
         let mut description = Vec::from_iter(doc_sections.remove("Description"));
 
+        // add a link to rust documentation (with a gap line)
+        if let Some((module, name)) = &path {
+            description.push(String::new());
+            description.push(make_rustdoc_link(module, name)?)
+        }
+        
         let mut add_section_to_description = |section_name: &str| {
             doc_sections.remove(section_name).map(|section| {
                 description.push(format!("\n**{section_name}:**\n"));
@@ -192,26 +198,19 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                 )
             }
         }),
-        i if i == "Transformation" || i == "Measurement" => {
+        i if i == "Transformation" || i == "Measurement" || i == "Postprocessor" => {
             match arguments {
                 syn::PathArguments::AngleBracketed(ab) => {
-                    if ab.args.len() != 4 {
+                    let num_args = if i == "Postprocessor" { 2 } else { 4 };
+
+                    if ab.args.len() != num_args {
                         return Err(Error::custom(format!(
-                            "{i} needs four angle-bracketed arguments"
+                            "{i} needs {num_args} angle-bracketed arguments"
                         ))
                         .with_span(&ab.args));
                     }
-                    let [input_domain, output_domain, input_metric, output_metmeas] =
-                        <[_; 4]>::try_from(ab.args.iter().collect::<Vec<_>>()).map_err(|_| {
-                            Error::custom(format!("{i} needs four angle-bracketed arguments"))
-                                .with_span(&ab.args)
-                        })?;
 
-                    let output_distance = match i {
-                        i if i == "Transformation" => "Metric: ",
-                        i if i == "Measurement" => "Measure:",
-                        _ => unreachable!(),
-                    };
+                    let [input_domain, output_domain] = [&ab.args[0], &ab.args[1]];
 
                     // syn doesn't have a pretty printer but we don't need to add a dep...
                     let pprint = |ty| {
@@ -221,15 +220,26 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                             .replace(",", ", ")
                     };
 
-                    Ok(Some(
-                        vec![
-                            format!("* Input Domain:   `{}`", pprint(input_domain)),
-                            format!("* Output Domain:  `{}`", pprint(output_domain)),
+                    let mut lines = vec![
+                        format!("* Input Domain:   `{}`", pprint(input_domain)),
+                        format!("* Output Domain:  `{}`", pprint(output_domain)),
+                    ];
+
+                    if i != "Postprocessor" {
+
+                        let output_distance = match i {
+                            i if i == "Transformation" => "Metric: ",
+                            i if i == "Measurement" => "Measure:",
+                            _ => unreachable!(),
+                        };
+                        let [input_metric, output_metmeas] = [&ab.args[2], &ab.args[3]];
+                        lines.extend([
                             format!("* Input Metric:   `{}`", pprint(input_metric)),
                             format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
-                        ]
-                        .join("\n"),
-                    ))
+                        ]);
+                    }
+
+                    Ok(Some(lines.join("\n")))
                 }
                 arg => {
                     return Err(
@@ -323,4 +333,27 @@ fn new_comment_attribute(comment: &str) -> Attribute {
             .into_iter(),
         ),
     }
+}
+
+
+pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
+    
+    // link from foreign library docs to rust docs
+    let proof_uri = if let Ok(rustdoc_port) = std::env::var("OPENDP_RUSTDOC_PORT") {
+        format!("http://localhost:{rustdoc_port}")
+    } else {
+        // find the docs uri
+        let docs_uri = env::var("OPENDP_REMOTE_RUSTDOC_URI")
+            .unwrap_or_else(|_| "https://docs.rs".to_string());
+    
+        // find the version
+        let mut version = env!("CARGO_PKG_VERSION");
+        if version == "0.0.0+development" {
+            version = "latest";
+        };
+
+        format!("{docs_uri}/opendp/{version}")
+    };
+
+    Ok(format!("[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"))
 }

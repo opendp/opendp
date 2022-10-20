@@ -38,6 +38,13 @@ generated_dirs = {
 import pypandoc
 import re
 py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
+generated_dirs = {
+    "accuracy", 
+    "combinators", 
+    "core",
+    "measurements", 
+    "transformations", 
+}
 
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
@@ -93,7 +100,7 @@ copyright = u'%d' % datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = open('../../VERSION').readline()
+version = open('../../VERSION').readline().strip()
 # The full version, including alpha/beta/rc tags.
 #release = ''
 
@@ -164,7 +171,7 @@ smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
 sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
-rustdoc_cmd = '(cd ../rust && cargo doc --no-deps --target-dir ../docs/source/api/rust)'
+rustdoc_cmd = '(cd ../rust && cargo rustdoc --no-deps --target-dir ../docs/source/api/rust -- --html-in-header opendp_tooling/katex.html)'
 # Building the Rust docs locally takes forever, and is only necessary for latest branch (releases are automatically published to https://docs.rs).
 # TODO: Figure out how to use locally generated Rust docs for latest branch only.
 #smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd, rustdoc_cmd])
@@ -180,18 +187,17 @@ rst_prolog = """
 .. |toctitle| replace:: Contents:
 """
 
-github_frag = ''
-binder_frag = ''
-
-if version != "0.0.0+development":
+if version == "0.0.0+development":
+    branch = "main"
+else:
     branch = f"release/{'.'.join(version.split('.')[:2])}.x"
 
-    github_frag = f'/tree/{branch}'
-    binder_frag = f'/{branch}'
+github_frag = f'/tree/{branch}'
+binder_frag = f'/{branch}'
 
 # insert this header on nbsphinx pages to link to binder and github:
 nbsphinx_prolog = fr"""
-{{% set docname = 'docs/' + env.doc2path(env.docname, base=None) %}}
+{{% set docname = 'docs/source/' + env.doc2path(env.docname, base=None) %}}
 .. raw:: html
 
     <div class="admonition note">
