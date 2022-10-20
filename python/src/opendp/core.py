@@ -8,12 +8,15 @@ __all__ = [
     "_error_free",
     "_measurement_free",
     "_transformation_free",
+    "domain_carrier_type",
+    "measure_distance_type",
     "measurement_check",
     "measurement_input_carrier_type",
     "measurement_input_distance_type",
     "measurement_invoke",
     "measurement_map",
     "measurement_output_distance_type",
+    "metric_distance_type",
     "transformation_check",
     "transformation_input_carrier_type",
     "transformation_input_distance_type",
@@ -38,13 +41,17 @@ def _error_free(
     :raises UnknownTypeError: if a type argument fails to parse
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_core___error_free
-    function.argtypes = [ctypes.POINTER(FfiError)]
-    function.restype = ctypes.c_bool
+    # Convert arguments to c types.
+    c_this = this
     
-    return c_to_py(function(this))
+    # Call library function.
+    lib_function = lib.opendp_core___error_free
+    lib_function.argtypes = [ctypes.POINTER(FfiError)]
+    lib_function.restype = ctypes.c_bool
+    
+    output = c_to_py(lib_function(c_this))
+    
+    return output
 
 
 def _measurement_free(
@@ -61,13 +68,17 @@ def _measurement_free(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_core___measurement_free
-    function.argtypes = [Measurement]
-    function.restype = FfiResult
+    # Convert arguments to c types.
+    c_this = this
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    # Call library function.
+    lib_function = lib.opendp_core___measurement_free
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 def _transformation_free(
@@ -84,13 +95,73 @@ def _transformation_free(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_core___transformation_free
-    function.argtypes = [Transformation]
-    function.restype = FfiResult
+    # Convert arguments to c types.
+    c_this = this
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    # Call library function.
+    lib_function = lib.opendp_core___transformation_free
+    lib_function.argtypes = [Transformation]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
+
+
+def domain_carrier_type(
+    D: str
+) -> str:
+    """Get the carrier type associated with a domain descriptor
+    
+    [domain_carrier_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.domain_carrier_type.html)
+    
+    :param D: The domain to get the carrier type from.
+    :type D: str
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_D = py_to_c(D, c_type=ctypes.c_char_p, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__domain_carrier_type
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_D), ctypes.c_char_p))
+    
+    return output
+
+
+def measure_distance_type(
+    M: str
+) -> str:
+    """Get the distance type associated with a measure descriptor
+    
+    [measure_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measure_distance_type.html)
+    
+    :param M: The measure to get the distance type from.
+    :type M: str
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_M = py_to_c(M, c_type=ctypes.c_char_p, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__measure_distance_type
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_M), ctypes.c_char_p))
+    
+    return output
 
 
 def measurement_check(
@@ -115,16 +186,18 @@ def measurement_check(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement, type_name=None)
-    distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=measurement_input_distance_type(measurement))
-    distance_out = py_to_c(distance_out, c_type=AnyObjectPtr, type_name=measurement_output_distance_type(measurement))
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=None)
+    c_distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=measurement_input_distance_type(measurement))
+    c_distance_out = py_to_c(distance_out, c_type=AnyObjectPtr, type_name=measurement_output_distance_type(measurement))
     
     # Call library function.
-    function = lib.opendp_core__measurement_check
-    function.argtypes = [Measurement, AnyObjectPtr, AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__measurement_check
+    lib_function.argtypes = [Measurement, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(measurement, distance_in, distance_out), BoolPtr))
+    output = c_to_py(unwrap(lib_function(c_measurement, c_distance_in, c_distance_out), BoolPtr))
+    
+    return output
 
 
 def measurement_input_carrier_type(
@@ -143,14 +216,16 @@ def measurement_input_carrier_type(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Measurement, type_name=None)
+    c_this = py_to_c(this, c_type=Measurement, type_name=None)
     
     # Call library function.
-    function = lib.opendp_core__measurement_input_carrier_type
-    function.argtypes = [Measurement]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__measurement_input_carrier_type
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
 
 
 def measurement_input_distance_type(
@@ -169,14 +244,16 @@ def measurement_input_distance_type(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Measurement, type_name=None)
+    c_this = py_to_c(this, c_type=Measurement, type_name=None)
     
     # Call library function.
-    function = lib.opendp_core__measurement_input_distance_type
-    function.argtypes = [Measurement]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__measurement_input_distance_type
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
 
 
 def measurement_invoke(
@@ -198,15 +275,17 @@ def measurement_invoke(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Measurement, type_name=None)
-    arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=measurement_input_carrier_type(this))
+    c_this = py_to_c(this, c_type=Measurement, type_name=None)
+    c_arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=measurement_input_carrier_type(this))
     
     # Call library function.
-    function = lib.opendp_core__measurement_invoke
-    function.argtypes = [Measurement, AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__measurement_invoke
+    lib_function.argtypes = [Measurement, AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this, arg), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_this, c_arg), AnyObjectPtr))
+    
+    return output
 
 
 def measurement_map(
@@ -228,15 +307,17 @@ def measurement_map(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement, type_name=None)
-    distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=measurement_input_distance_type(measurement))
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=None)
+    c_distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=measurement_input_distance_type(measurement))
     
     # Call library function.
-    function = lib.opendp_core__measurement_map
-    function.argtypes = [Measurement, AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__measurement_map
+    lib_function.argtypes = [Measurement, AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(measurement, distance_in), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_measurement, c_distance_in), AnyObjectPtr))
+    
+    return output
 
 
 def measurement_output_distance_type(
@@ -255,14 +336,44 @@ def measurement_output_distance_type(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Measurement, type_name=None)
+    c_this = py_to_c(this, c_type=Measurement, type_name=None)
     
     # Call library function.
-    function = lib.opendp_core__measurement_output_distance_type
-    function.argtypes = [Measurement]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__measurement_output_distance_type
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
+
+
+def metric_distance_type(
+    M: str
+) -> str:
+    """Get the distance type associated with a metric descriptor
+    
+    [metric_distance_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.metric_distance_type.html)
+    
+    :param M: The metric to get the distance type from.
+    :type M: str
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_M = py_to_c(M, c_type=ctypes.c_char_p, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__metric_distance_type
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_M), ctypes.c_char_p))
+    
+    return output
 
 
 def transformation_check(
@@ -287,16 +398,18 @@ def transformation_check(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    transformation = py_to_c(transformation, c_type=Transformation, type_name=None)
-    distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=transformation_input_distance_type(transformation))
-    distance_out = py_to_c(distance_out, c_type=AnyObjectPtr, type_name=transformation_output_distance_type(transformation))
+    c_transformation = py_to_c(transformation, c_type=Transformation, type_name=None)
+    c_distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=transformation_input_distance_type(transformation))
+    c_distance_out = py_to_c(distance_out, c_type=AnyObjectPtr, type_name=transformation_output_distance_type(transformation))
     
     # Call library function.
-    function = lib.opendp_core__transformation_check
-    function.argtypes = [Transformation, AnyObjectPtr, AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__transformation_check
+    lib_function.argtypes = [Transformation, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(transformation, distance_in, distance_out), BoolPtr))
+    output = c_to_py(unwrap(lib_function(c_transformation, c_distance_in, c_distance_out), BoolPtr))
+    
+    return output
 
 
 def transformation_input_carrier_type(
@@ -315,14 +428,16 @@ def transformation_input_carrier_type(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Transformation, type_name=None)
+    c_this = py_to_c(this, c_type=Transformation, type_name=None)
     
     # Call library function.
-    function = lib.opendp_core__transformation_input_carrier_type
-    function.argtypes = [Transformation]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__transformation_input_carrier_type
+    lib_function.argtypes = [Transformation]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
 
 
 def transformation_input_distance_type(
@@ -341,14 +456,16 @@ def transformation_input_distance_type(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Transformation, type_name=None)
+    c_this = py_to_c(this, c_type=Transformation, type_name=None)
     
     # Call library function.
-    function = lib.opendp_core__transformation_input_distance_type
-    function.argtypes = [Transformation]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__transformation_input_distance_type
+    lib_function.argtypes = [Transformation]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
 
 
 def transformation_invoke(
@@ -370,15 +487,17 @@ def transformation_invoke(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Transformation, type_name=None)
-    arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=transformation_input_carrier_type(this))
+    c_this = py_to_c(this, c_type=Transformation, type_name=None)
+    c_arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=transformation_input_carrier_type(this))
     
     # Call library function.
-    function = lib.opendp_core__transformation_invoke
-    function.argtypes = [Transformation, AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__transformation_invoke
+    lib_function.argtypes = [Transformation, AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this, arg), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_this, c_arg), AnyObjectPtr))
+    
+    return output
 
 
 def transformation_map(
@@ -400,15 +519,17 @@ def transformation_map(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    transformation = py_to_c(transformation, c_type=Transformation, type_name=None)
-    distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=transformation_input_distance_type(transformation))
+    c_transformation = py_to_c(transformation, c_type=Transformation, type_name=None)
+    c_distance_in = py_to_c(distance_in, c_type=AnyObjectPtr, type_name=transformation_input_distance_type(transformation))
     
     # Call library function.
-    function = lib.opendp_core__transformation_map
-    function.argtypes = [Transformation, AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__transformation_map
+    lib_function.argtypes = [Transformation, AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(transformation, distance_in), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_transformation, c_distance_in), AnyObjectPtr))
+    
+    return output
 
 
 def transformation_output_distance_type(
@@ -427,11 +548,13 @@ def transformation_output_distance_type(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=Transformation, type_name=None)
+    c_this = py_to_c(this, c_type=Transformation, type_name=None)
     
     # Call library function.
-    function = lib.opendp_core__transformation_output_distance_type
-    function.argtypes = [Transformation]
-    function.restype = FfiResult
+    lib_function = lib.opendp_core__transformation_output_distance_type
+    lib_function.argtypes = [Transformation]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
