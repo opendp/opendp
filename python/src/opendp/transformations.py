@@ -37,9 +37,13 @@ __all__ = [
     "make_is_equal",
     "make_is_null",
     "make_lipschitz_float_mul",
+    "make_lipschitz_sized_proportion_ci_mean",
+    "make_lipschitz_sized_proportion_ci_variance",
     "make_metric_bounded",
     "make_metric_unbounded",
     "make_ordered_random",
+    "make_postprocess_proportion_ci",
+    "make_postprocess_sized_proportion_ci",
     "make_quantiles_from_counts",
     "make_resize",
     "make_select_column",
@@ -1620,6 +1624,112 @@ def make_lipschitz_float_mul(
     return c_to_py(unwrap(function(constant, bounds, D, M), Transformation))
 
 
+def make_lipschitz_sized_proportion_ci_mean(
+    strat_sizes: Any,
+    sample_sizes: Any,
+    TIA: RuntimeTypeDescriptor = "int",
+    TOA: RuntimeTypeDescriptor = "float"
+) -> Transformation:
+    """Make a lipschitz transformation from a vector of predicate sums on known-length stratified datasets to a proportion.
+    
+    [make_lipschitz_sized_proportion_ci_mean in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_lipschitz_sized_proportion_ci_mean.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `AllDomain<TOA>`
+    * Input Metric:   `L1Distance<TIA>`
+    * Output Metric:  `AbsoluteDistance<TOA>`
+    
+    :param strat_sizes: 
+    :type strat_sizes: Any
+    :param sample_sizes: 
+    :type sample_sizes: Any
+    :param TIA: 
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: 
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :return: A transformation that emits a sample mean estimate.
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "floating-point")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse(type_name=TIA)
+    TOA = RuntimeType.parse(type_name=TOA)
+    
+    # Convert arguments to c types.
+    strat_sizes = py_to_c(strat_sizes, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[usize]))
+    sample_sizes = py_to_c(sample_sizes, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[usize]))
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_lipschitz_sized_proportion_ci_mean
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(strat_sizes, sample_sizes, TIA, TOA), Transformation))
+
+
+def make_lipschitz_sized_proportion_ci_variance(
+    strat_sizes: Any,
+    sample_sizes: Any,
+    mean_scale: Any,
+    TIA: RuntimeTypeDescriptor = "int",
+    TOA: RuntimeTypeDescriptor = "float"
+) -> Transformation:
+    """Make a lipschitz transformation from a vector of predicate sums on known-length stratified datasets to a proportion.
+    
+    [make_lipschitz_sized_proportion_ci_variance in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_lipschitz_sized_proportion_ci_variance.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `AllDomain<TOA>`
+    * Input Metric:   `L1Distance<TIA>`
+    * Output Metric:  `AbsoluteDistance<TOA>`
+    
+    :param strat_sizes: 
+    :type strat_sizes: Any
+    :param sample_sizes: 
+    :type sample_sizes: Any
+    :param mean_scale: 
+    :type mean_scale: Any
+    :param TIA: 
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: 
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :return: A transformation that emits a sample variance estimate.
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "floating-point")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse(type_name=TIA)
+    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=mean_scale)
+    
+    # Convert arguments to c types.
+    strat_sizes = py_to_c(strat_sizes, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[usize]))
+    sample_sizes = py_to_c(sample_sizes, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[usize]))
+    mean_scale = py_to_c(mean_scale, c_type=AnyObjectPtr, type_name=TOA)
+    TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_lipschitz_sized_proportion_ci_variance
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(strat_sizes, sample_sizes, mean_scale, TIA, TOA), Transformation))
+
+
 def make_metric_bounded(
     size: int,
     TA: RuntimeTypeDescriptor,
@@ -1768,6 +1878,101 @@ def make_ordered_random(
     function.restype = FfiResult
     
     return c_to_py(unwrap(function(TA), Transformation))
+
+
+def make_postprocess_proportion_ci(
+    strat_sizes: Any,
+    sum_scale,
+    size_scale,
+    TA: RuntimeTypeDescriptor = "float"
+) -> Transformation:
+    """Make a postprocessing transformation from vectors of noisy predicate sums and counts 
+    on stratified datasets to a proportion mean and variance.
+    
+    [make_postprocess_proportion_ci in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_postprocess_proportion_ci.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<VectorDomain<AllDomain<TA>>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    
+    :param strat_sizes: 
+    :type strat_sizes: Any
+    :param sum_scale: 
+    :param size_scale: 
+    :param TA: 
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :return: A postprocessor that emits sample mean and variance estimates.
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "floating-point")
+    
+    # Standardize type arguments.
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=sum_scale)
+    
+    # Convert arguments to c types.
+    strat_sizes = py_to_c(strat_sizes, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[usize]))
+    sum_scale = py_to_c(sum_scale, c_type=ctypes.c_void_p, type_name=TA)
+    size_scale = py_to_c(size_scale, c_type=ctypes.c_void_p, type_name=TA)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_postprocess_proportion_ci
+    function.argtypes = [AnyObjectPtr, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(strat_sizes, sum_scale, size_scale, TA), Transformation))
+
+
+def make_postprocess_sized_proportion_ci(
+    strat_sizes: Any,
+    sample_sizes: Any,
+    scale,
+    TA: RuntimeTypeDescriptor = "float"
+) -> Transformation:
+    """Make a postprocessing transformation from a vector of noisy predicate sums 
+    on known-length stratified datasets to a proportion mean and variance.
+    
+    [make_postprocess_sized_proportion_ci in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_postprocess_sized_proportion_ci.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    
+    :param strat_sizes: 
+    :type strat_sizes: Any
+    :param sample_sizes: 
+    :type sample_sizes: Any
+    :param scale: 
+    :param TA: 
+    :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :return: A postprocessor that emits sample mean and variance estimates.
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "floating-point")
+    
+    # Standardize type arguments.
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=scale)
+    
+    # Convert arguments to c types.
+    strat_sizes = py_to_c(strat_sizes, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[usize]))
+    sample_sizes = py_to_c(sample_sizes, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[usize]))
+    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TA)
+    TA = py_to_c(TA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    function = lib.opendp_transformations__make_postprocess_sized_proportion_ci
+    function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_void_p, ctypes.c_char_p]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(strat_sizes, sample_sizes, scale, TA), Transformation))
 
 
 def make_quantiles_from_counts(
