@@ -10,9 +10,7 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 
 ## [0.6.0] - 2022-10-20
-[0.5.0]: https://github.com/opendp/opendp/compare/v0.6.0...v0.7.0
-
-Focuses on documentation and internal changes to facilitate proof-writing.
+[0.6.0]: https://github.com/opendp/opendp/compare/v0.5.0...v0.6.0
 
 ### Added
 - restructured and expanded documentation on docs.opendp.org
