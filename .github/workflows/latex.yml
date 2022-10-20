@@ -22,11 +22,13 @@ jobs:
           echo "tex<<EOF" >> $GITHUB_OUTPUT
           echo "$tex" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-
+    
           # construct list of .pdf files
           echo "pdf<<EOF" >> $GITHUB_OUTPUT
           echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "$files"
 
     outputs:
      tex: ${{ steps.diffs.outputs.tex }}
