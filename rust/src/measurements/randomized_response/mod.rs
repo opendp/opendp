@@ -39,23 +39,23 @@ use crate::traits::{Hashable, Float};
 /// * `constant_time` - Set to true to enable constant time. Slower.
 /// 
 /// # Generics
-/// * `Q` - Data type of probability and output distance.
-pub fn make_randomized_response_bool<Q>(
-    prob: Q,
+/// * `QO` - Data type of probability and output distance.
+pub fn make_randomized_response_bool<QO>(
+    prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, DiscreteDistance, MaxDivergence<Q>>>
-    where bool: SampleBernoulli<Q>,
-          Q: Float {
+) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, DiscreteDistance, MaxDivergence<QO>>>
+    where bool: SampleBernoulli<QO>,
+          QO: Float {
 
     // number of categories t is 2, and probability is bounded below by 1/t
-    if !(Q::exact_int_cast(2)?.recip()..Q::one()).contains(&prob) {
+    if !(QO::exact_int_cast(2)?.recip()..QO::one()).contains(&prob) {
         return fallible!(MakeTransformation, "probability must be within [0.5, 1)");
     }
 
     // d_out = min(d_in, 1) * ln(p / p')
     //             where p' = 1 - p
     //       = min(d_in, 1) * ln(p / (1 - p))
-    let privacy_constant = prob.inf_div(&Q::one().neg_inf_sub(&prob)?)?.inf_ln()?;
+    let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
     Ok(Measurement::new(
         AllDomain::new(),
@@ -67,7 +67,7 @@ pub fn make_randomized_response_bool<Q>(
         MaxDivergence::default(),
         PrivacyMap::new(move |d_in| {
             if *d_in == 0 {
-                Q::zero()
+                QO::zero()
             } else {
                 privacy_constant
             }
@@ -93,15 +93,15 @@ pub fn make_randomized_response_bool<Q>(
 /// 
 /// # Generics
 /// * `T` - Data type of a category.
-/// * `Q` - Data type of probability and output distance.
-pub fn make_randomized_response<T, Q>(
+/// * `QO` - Data type of probability and output distance.
+pub fn make_randomized_response<T, QO>(
     categories: HashSet<T>,
-    prob: Q,
+    prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, DiscreteDistance, MaxDivergence<Q>>>
+) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, DiscreteDistance, MaxDivergence<QO>>>
     where T: Hashable,
-          bool: SampleBernoulli<Q>,
-          Q: Float {
+          bool: SampleBernoulli<QO>,
+          QO: Float {
 
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
@@ -110,9 +110,9 @@ pub fn make_randomized_response<T, Q>(
             "length of categories must be at least two"
         );
     }
-    let num_categories = Q::exact_int_cast(categories.len())?;
+    let num_categories = QO::exact_int_cast(categories.len())?;
 
-    if !(num_categories.recip()..Q::one()).contains(&prob) {
+    if !(num_categories.recip()..QO::one()).contains(&prob) {
         return fallible!(
             MakeTransformation,
             "probability must be within [1/num_categories, 1)"
@@ -125,8 +125,8 @@ pub fn make_randomized_response<T, Q>(
     //              where t  = num_categories
     //       = min(d_in, 1) * (p / (1 - p) * (t - 1)).ln()
     let privacy_constant = prob
-        .inf_div(&Q::one().neg_inf_sub(&prob)?)?
-        .inf_mul(&num_categories.inf_sub(&Q::one())?)?
+        .inf_div(&QO::one().neg_inf_sub(&prob)?)?
+        .inf_mul(&num_categories.inf_sub(&QO::one())?)?
         .inf_ln()?;
 
     Ok(Measurement::new(
@@ -158,7 +158,7 @@ pub fn make_randomized_response<T, Q>(
         MaxDivergence::default(),
         PrivacyMap::new(move |d_in| {
             if *d_in == 0 {
-                Q::zero()
+                QO::zero()
             } else {
                 privacy_constant
             }

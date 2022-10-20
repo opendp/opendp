@@ -22,9 +22,6 @@
 //! out-of-the-box to assemble DP applications.
 //! * Facilities for extending OpenDP with new algorithms, privacy models, etc.
 //!
-//! In addition, there's a companion crate, opendp-ffi, which provides FFI wrappers for opendp functionality.
-//! This can be used to implement bindings in languages other than Rust.
-//!
 //! # User Guide
 //!
 //! A more thorough User Guide [can be found on the docs website](https://docs.opendp.org/en/stable/user/index.html).
@@ -88,23 +85,21 @@
 //! example().unwrap();
 //! ```
 //!
-//! # Contributor Guide
+//! # Developer Guide
 //!
-//! Contributions to OpenDP typically take the form of what we call "constructors."
-//! A constructor is a function that returns a [`Measurement`] or [`Transformation`].
-//!
-//! Before you submit your PR, please review the [Contribution Process](https://docs.opendp.org/en/latest/developer/contribution-process.html).
-//!
+//! A more thorough Developer Guide [can be found on the docs website](https://docs.opendp.org/en/stable/developer/index.html).
+//! 
 //! ## Adding Constructors
 //!
-//! Measurement constructors go in the module [`crate::measurements`], and Transformation constructors
-//! in the module [`crate::transformations`].
+//! Measurement constructors go in the module [`crate::measurements`],
+//! Transformation constructors in the module [`crate::transformations`], and
+//! Combinator constructors in the module [`crate::combinators`].
 //!
 //! There are two code steps to adding a constructor function: Writing the function itself, and adding the FFI wrapper.
 //!
 //! ### Writing Constructors
 //!
-//! Constructors are functions that take configuration parameters and return an appropriately configured [`Measurement`] or [`Transformation`].
+//! Constructors are functions that take some parameters and return a valid [`Measurement`] or [`Transformation`].
 //! They typically follow a common pattern:
 //! 1. Choose the appropriate input and output [`Domain`].
 //! 2. Write a closure that implements the [`Function`].

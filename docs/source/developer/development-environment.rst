@@ -2,11 +2,15 @@
 
 Development Environment
 =======================
+The first task to tackle is setting up the development environment.
 
 Follow the steps below to get an OpenDP development environment set up, including the ability to run tests in both Rust and Python.
 
 * Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
 * Install `Python version 3.7 or higher <https://www.python.org>`_.
+
+If you have already installed Rust, make sure that you have installed a version at least as new as the `rust-version` specified in 
+[rust/Cargo.toml](https://github.com/opendp/opendp/blob/main/rust/Cargo.toml).
 
 
 Clone the OpenDP Repo
@@ -31,7 +35,7 @@ If you have not `set up SSH <https://docs.github.com/en/authentication/connectin
 
 
 Build OpenDP
-============
+------------
 
 Next, you'll need to build the Rust binaries. 
 This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo.
@@ -94,10 +98,15 @@ In contrast to debug builds, release builds are located in ``opendp/rust/target/
 To use a release-mode binary from the Python bindings, 
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
-If you run into compilation problems, please contact us!
-We also have a :ref:`developer-faq` with some common issues. 
+If you run into problems, please contact us!
 
 .. note::
+
+    You may encounter the following build error on Windows:
+
+    .. code-block:: bash
+
+        thread 'main' panicked at 'Program failed with code 2: "make" "-j" "12" "check"'
 
     There is a more involved `setup guide <https://github.com/opendp/opendp/tree/main/rust/windows>`_ for Windows users.
     You can compromise to simple and vulnerable builds instead, by adding the ``--no-default-features`` flag to cargo commands.
@@ -135,7 +144,10 @@ Change to the ``python`` directory, install dependencies, and then install the P
     pip install flake8 pytest
     pip install -e .
 
-The `-e` flag is significant! It stands for "editable", meaning you only have to run this command once.
+The `-e` flag is significant! 
+It stands for "editable", meaning you only have to run this command once.
+That is, you do not need to reinstall the OpenDP Python package if changes are made in the ``/python/src`` folder or to the library binary,
+but you should restart the Python interpreter or kernel.
 At this point, you should be able use OpenDP as a locally installed package. 
 
 
@@ -160,20 +172,16 @@ This is just a quick overview of building OpenDP.
 If you're interested in porting OpenDP to a different platform, we'd be delighted to get your help; please :doc:`contact us <../contact>`!
 
 Documentation
-=============
+-------------
 
-The source for this documentation website can be found in the "docs" directory at https://github.com/opendp/opendp
-
-Building the Docs
------------------
-
-The docs are built using Sphinx and the steps are listed in the README in the "docs" directory.
+The source for this documentation website can be found in the "docs" directory at https://github.com/opendp/opendp.
+The docs are built using Sphinx and the steps to build it are listed in the README in the "docs" directory.
 
 
 Developer Tooling
-=================
+-----------------
 
-There are many development environments that work with Rust. Here are a few:
+There are many development environments that work with Rust and LaTex. Here are a few:
 
 * `VS Code <https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer>`_
 * `Intellij IDEA <https://plugins.jetbrains.com/plugin/8182-rust>`_
@@ -188,7 +196,7 @@ A few notes on VS Code:
 * Open ``rust-analyzer``'s extension settings, search "features" and add ``"untrusted", "bindings-python"``
 * Look for ``Problems`` in the bottom panel for live compilation errors as you work
 * Other useful extensions are "Better Toml", "crates" and "LaTex Workshop"
-* Starter json configurations:
+* Starter tasks and LaTex Workshop settings:
 
 .. raw:: html
 
@@ -206,19 +214,24 @@ These tasks can be used to directly build or test OpenDP.
         "tasks": [
             {
                 "type": "cargo",
-                "command": "build",
+                "command": "check",
                 "problemMatcher": {
                     "base": "$rustc",
-                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                    "fileLocation": [
+                        "autodetect",
+                        "${workspaceFolder}/rust"
+                    ]
                 },
                 "options": {
                     "cwd": "./rust"
                 },
                 "args": [
-                    "--features", "untrusted"
+                    "--features",
+                    "untrusted"
                 ],
                 "group": "build",
-                "label": "rust: cargo build",
+                "label": "cargo check --features untrusted",
+                "detail": "    gives more detailed compiler errors than problems tab",
                 "presentation": {
                     "clear": true
                 }
@@ -228,16 +241,21 @@ These tasks can be used to directly build or test OpenDP.
                 "command": "build",
                 "problemMatcher": {
                     "base": "$rustc",
-                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                    "fileLocation": [
+                        "autodetect",
+                        "${workspaceFolder}/rust"
+                    ]
                 },
                 "options": {
                     "cwd": "./rust"
                 },
                 "args": [
-                    "--features", "bindings-python untrusted"
+                    "--features",
+                    "untrusted bindings-python"
                 ],
                 "group": "build",
-                "label": "rust: cargo build ffi",
+                "label": "cargo build --features untrusted,bindings-python",
+                "detail": "    run before testing in Python",
                 "presentation": {
                     "clear": true
                 }
@@ -247,16 +265,96 @@ These tasks can be used to directly build or test OpenDP.
                 "command": "test",
                 "problemMatcher": {
                     "base": "$rustc",
-                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                    "fileLocation": [
+                        "autodetect",
+                        "${workspaceFolder}/rust"
+                    ]
                 },
                 "options": {
                     "cwd": "./rust"
                 },
                 "args": [
-                    "--features", "bindings-python untrusted"
+                    "--no-default-features",
+                    "--features",
+                    "bindings-python untrusted"
                 ],
                 "group": "build",
-                "label": "rust: cargo test ffi",
+                "label": "cargo test --no-default-features --features untrusted,bindings-python",
+                "detail": "    test a build without GMP/MPFR/OpenSSL (Windows)",
+                "presentation": {
+                    "clear": true
+                }
+            },
+            {
+                "type": "cargo",
+                "command": "test",
+                "problemMatcher": {
+                    "base": "$rustc",
+                    "fileLocation": [
+                        "autodetect",
+                        "${workspaceFolder}/rust"
+                    ]
+                },
+                "options": {
+                    "cwd": "./rust"
+                },
+                "args": [
+                    "--features",
+                    "bindings-python untrusted"
+                ],
+                "group": "build",
+                "label": "cargo test --features untrusted,ffi",
+                "detail": "    run all Rust tests, including ffi",
+                "presentation": {
+                    "clear": true
+                }
+            },
+            {
+                "type": "cargo",
+                "command": "clippy",
+                "problemMatcher": {
+                    "base": "$rustc",
+                    "fileLocation": [
+                        "autodetect",
+                        "${workspaceFolder}/rust"
+                    ],
+                    "source": "clippy"
+                },
+                "options": {
+                    "cwd": "./rust"
+                },
+                "args": [
+                    "--features",
+                    "bindings-python untrusted"
+                ],
+                "group": "build",
+                "label": "cargo clippy --features ffi",
+                "detail": "    more detailed linting and style suggestions",
+                "presentation": {
+                    "clear": true
+                }
+            },
+            {
+                "type": "cargo",
+                "command": "rustdoc",
+                "problemMatcher": {
+                    "base": "$rustc",
+                    "fileLocation": [
+                        "autodetect",
+                        "${workspaceFolder}/rust"
+                    ]
+                },
+                "options": {
+                    "cwd": "./rust"
+                },
+                "args": [
+                    "--open",
+                    "--features", "derive untrusted",
+                    "--", "--html-in-header", "opendp_tooling/katex.html", "--document-private-items"
+                ],
+                "group": "build",
+                "label": "cargo rustdoc",
+                "detail": "    build rust documentation (and open)",
                 "presentation": {
                     "clear": true
                 }
@@ -286,7 +384,7 @@ These tasks can be used to directly build or test OpenDP.
 
 
 Starter ``/.vscode/settings.json``. 
-These settings configure LaTex Workshop to write .pdfs and auxiliary files to ``./out/``.
+These settings configure LaTex Workshop to write .pdfs and auxiliary files to ``./out/``, which is ``.gitignored``.
 
 .. code-block:: json
 

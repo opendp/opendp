@@ -2,6 +2,9 @@ User Guide
 ==========
 
 .. toctree::
+   :glob:
+   :titlesonly:
+   :maxdepth: 3
 
    intro
    limitations
