@@ -12,8 +12,8 @@ If your focus is using OpenDP to build your own applications, please consult the
 
    getting-involved
    development-environment
-   proof-initiation
    rust-initiation
+   proof-initiation
    contribution-process
    cla
    maintainer-notes
