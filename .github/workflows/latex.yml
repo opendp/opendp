@@ -16,6 +16,7 @@ jobs:
         id: "diffs"
         run: |
           files=$(git --no-pager diff --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
+          chmod +x ./tools/write_github_output_paths.sh
           echo $files | xargs --null ./tools/write_github_output_paths.sh
 
     outputs:

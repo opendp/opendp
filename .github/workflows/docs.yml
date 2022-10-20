@@ -36,6 +36,7 @@ jobs:
         run: |
           shopt -s globstar nullglob
           files=(**/*.tex)
+          chmod +x ./tools/write_github_output_paths.sh
           echo $files | xargs --null ./tools/write_github_output_paths.sh
 
           # name the version
