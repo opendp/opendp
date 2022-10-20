@@ -109,7 +109,6 @@ jobs:
           git config --global user.name "$GITHUB_ACTOR"
 
           # create brand new history each time
-          git branch -D gh-pages
           git checkout --orphan gh-pages
           
           # sudo to have sufficient permission to delete files created by the docker user while compiling .tex
