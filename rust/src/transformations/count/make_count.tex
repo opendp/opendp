@@ -22,7 +22,8 @@ the cast saturates at the maximum value of type \texttt{TO}.
     \item \vettingPR{513}
 \end{itemize}
 
-\section{Preconditions}
+\section{Hoare Triple}
+\subsection*{Precondition}
 \begin{itemize}
 
     \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits/trait}{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
@@ -44,7 +45,7 @@ the cast saturates at the maximum value of type \texttt{TO}.
     \end{itemize}
 \end{itemize}
 
-\section{Pseudocode}
+\subsection*{Pseudocode}
 \begin{lstlisting}[language = Python, escapechar=|]
 def make_count():
     input_domain = VectorDomain(AllDomain(TIA))
@@ -67,10 +68,10 @@ def make_count():
         input_metric, output_metric, stability_map)
 \end{lstlisting}
 
-\section{Postcondition}
+\subsection*{Postcondition}
 \validTransformation{\texttt{(TIA, TO)}}{\texttt{make\_count}}
 
-\subsection*{Proofs}
+\section{Proofs}
 
 \begin{proof} \textbf{(Part 1 -- appropriate output domain).}
     The \texttt{output\_domain} is \texttt{AllDomain(TO)}, so it is sufficient to show that \texttt{function} always returns non-null values of type \texttt{TO}.
