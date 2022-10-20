@@ -21,7 +21,7 @@ jobs:
           # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           # construct list of .tex files
           echo "tex<<EOF" >> $GITHUB_OUTPUT
-          echo "$tex" >> $GITHUB_OUTPUT
+          echo "$files" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
     
           # construct list of .pdf files
