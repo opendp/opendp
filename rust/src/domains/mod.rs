@@ -16,7 +16,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::traits::{CheckNull, TotalOrd};
+use crate::traits::{CheckNull, TotalOrd, InherentNull};
 use std::fmt::{Debug, Formatter};
 
 #[cfg(feature="contrib")]
@@ -370,24 +370,24 @@ impl<D: Domain> CollectionDomain for VectorDomain<D> {
 /// ```
 #[derive(Clone, PartialEq)]
 pub struct InherentNullDomain<D: Domain>
-    where D::Carrier: CheckNull {
+    where D::Carrier: InherentNull {
     pub element_domain: D,
 }
 impl<D: Domain + Default> Default for InherentNullDomain<D>
-    where D::Carrier: CheckNull {
+    where D::Carrier: InherentNull {
     fn default() -> Self { Self::new(D::default()) }
 }
-impl<D: Domain> InherentNullDomain<D> where D::Carrier: CheckNull {
+impl<D: Domain> InherentNullDomain<D> where D::Carrier: InherentNull {
     pub fn new(member_domain: D) -> Self {
         InherentNullDomain { element_domain: member_domain }
     }
 }
-impl<D: Domain> Debug for InherentNullDomain<D> where D::Carrier: CheckNull {
+impl<D: Domain> Debug for InherentNullDomain<D> where D::Carrier: InherentNull {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "InherentNullDomain({:?})", self.element_domain)
     }
 }
-impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: CheckNull {
+impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         if val.is_null() {return Ok(true)}
