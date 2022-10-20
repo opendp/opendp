@@ -6,7 +6,6 @@ on:
       - main
       - release/*
   pull_request:
-  workflow_dispatch:
 
 jobs:
   rust-build-and-test:
