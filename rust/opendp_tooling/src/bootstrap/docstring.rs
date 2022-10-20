@@ -339,8 +339,8 @@ fn new_comment_attribute(comment: &str) -> Attribute {
 pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
     
     // link from foreign library docs to rust docs
-    let proof_uri = if let Ok(local_uri) = std::env::var("OPENDP_LOCAL_DOCS_URI") {
-        format!("{local_uri}/rust/target/doc")
+    let proof_uri = if let Ok(rustdoc_port) = std::env::var("OPENDP_RUSTDOC_PORT") {
+        format!("http://localhost:{rustdoc_port}")
     } else {
         // find the version
         let mut version = env!("CARGO_PKG_VERSION");

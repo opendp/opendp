@@ -16,19 +16,7 @@ jobs:
         id: "diffs"
         run: |
           files=$(git --no-pager diff --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
-
-          # construct list of .tex files
-          tex="${files//'%'/'%25'}"
-          tex="${tex//$'\n'/'%0A'}"
-          tex="${tex//$'\r'/'%0D'}"
-          echo "tex=$tex" >> $GITHUB_OUTPUT
-
-          # construct list of .pdf files
-          pdf="${files//$'.tex'/.pdf}"
-          pdf="${pdf//'%'/'%25'}"
-          pdf="${pdf//$'\n'/'%0A'}"
-          pdf="${pdf//$'\r'/'%0D'}"
-          echo "pdf=$pdf" >> $GITHUB_OUTPUT
+          echo $files | xargs --null ./tools/write_github_output_paths.sh
 
     outputs:
      tex: ${{ steps.diffs.outputs.tex }}

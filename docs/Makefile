@@ -34,6 +34,9 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
+html-rustdoc:
+	cd ../rust && cargo rustdoc --features untrusted,derive -- --html-in-header opendp_tooling/katex.html --document-private-items
+
 doctest: doctest-rust doctest-python
 	@echo
 	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
@@ -51,3 +54,40 @@ versions:
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 	cp redirect.html $(BUILDDIR)/html/index.html
 	@echo "Redirect page copied into $(BUILDDIR)/html."
+
+latex:
+	rm -rf build/html/proofs
+	@for file in `find ../rust/src -type f -name "*.tex"`; do \
+		[ -f "$$file" ] || break; \
+		echo test "$$file"; \
+		(cd `dirname $$file` && mkdir -p out && pdflatex --output-directory=out --shell-escape `basename $$file`); \
+		output_path=`dirname "$$file"`/out/`basename "$${file%.tex}.pdf"`; \
+		target_path=$(BUILDDIR)/html/proofs/`echo $${file%.tex}.pdf | sed 's|../rust/src/||'`; \
+		mkdir -p `dirname "$$target_path"`; \
+		cp "$$output_path" "$$target_path"; \
+	done
+
+sphinx-server:
+	@if [[ -z "${OPENDP_SPHINX_PORT}" ]]; then \
+		echo "OPENDP_SPHINX_PORT must be set!"; \
+		exit 1; \
+	fi
+	@kill -9 `lsof -ti:${OPENDP_SPHINX_PORT}` 2> /dev/null || true
+	@echo Starting Sphinx at: http://localhost:${OPENDP_SPHINX_PORT}
+	@python3 -m http.server ${OPENDP_SPHINX_PORT} --directory build/html
+
+rustdoc-server:
+	@if [[ -z "${OPENDP_RUSTDOC_PORT}" ]]; then \
+		echo "OPENDP_RUSTDOC_PORT must be set!"; \
+		exit 1; \
+	fi
+	@kill -9 `lsof -ti:${OPENDP_RUSTDOC_PORT}` 2> /dev/null || true
+	@echo Starting Rustdoc at: http://localhost:${OPENDP_RUSTDOC_PORT}/opendp
+	@python3 -m http.server ${OPENDP_RUSTDOC_PORT} --directory ../rust/target/doc/
+
+server:
+	@echo "quit server with CTRL-C"
+	@make sphinx-server &
+	@sleep 0.5 && echo
+	@make rustdoc-server
+	@wait

@@ -46,13 +46,7 @@ This will compile a debug build of the OpenDP shared library, placing it in the 
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to run a lightweight check that the code is valid.
 
-You can also build the rust documentation directly with:
-
-.. code-block:: bash
-    
-    cargo rustdoc --features untrusted,derive -- --html-in-header opendp_tooling/katex.html --document-private-items
-
-In the above commands, the features ``untrusted``, ``bindings-python`` and ``derive`` are enabled.
+In the above commands, the features ``untrusted`` and ``bindings-python`` are enabled.
 Setting a feature changes how the crate compiles:
 
 
@@ -278,7 +272,7 @@ These tasks can be used to directly build or test OpenDP.
                     "cwd": "./rust"
                 },
                 "args": [
-                    "--features", "bindings-python untrusted",
+                    "--features", "derive untrusted",
                     "--", "--html-in-header", "opendp_tooling/katex.html", "--document-private-items"
                 ],
                 "group": "build",
@@ -291,13 +285,20 @@ These tasks can be used to directly build or test OpenDP.
     }
 
 
-Starter `settings.json` for LaTex Workshop. 
-Access this file through the LaTex Workshop extension settings.
-This configuration emits outputs into ``./out/``
+Starter ``/.vscode/settings.json``. 
+These settings set ports for locally-hosted documentation, 
+and configures LaTex Workshop to write .pdfs and auxiliary files to ``./out/``.
 
 .. code-block:: json
 
     {
+        "rust-analyzer.linkedProjects": [
+            "./rust/Cargo.toml"
+        ],
+        "rust-analyzer.cargo.extraEnv": {
+            "OPENDP_SPHINX_PORT": "8020",
+            "OPENDP_RUSTDOC_PORT": "8021"
+        },
         "latex-workshop.latex.outDir": "%DIR%/out/",
         "latex-workshop.latex.recipes": [
             {
@@ -312,14 +313,14 @@ This configuration emits outputs into ``./out/``
                 "name": "latexmk",
                 "command": "latexmk",
                 "args": [
-                    "-synctex=1",
-                    "-interaction=nonstopmode",
-                    "-file-line-error",
-                    "-recorder",
-                    "-pdf",
+                    "--synctex=1",
+                    "--interaction=nonstopmode",
+                    "--file-line-error",
+                    "--recorder",
+                    "--pdf",
                     "--shell-escape",
-                    "-aux-directory=out",
-                    "-output-directory=out",
+                    "--aux-directory=out",
+                    "--output-directory=out",
                     "%DOC%"
                 ]
             },
@@ -327,11 +328,12 @@ This configuration emits outputs into ``./out/``
                 "name": "pdflatex",
                 "command": "pdflatex",
                 "args": [
-                    "-synctex=1",
-                    "-interaction=nonstopmode",
-                    "-file-line-error",
-                    "-aux-directory=out",
-                    "-output-directory=out",
+                    "--synctex=1",
+                    "--interaction=nonstopmode",
+                    "--file-line-error",
+                    "--aux-directory=out",
+                    "--output-directory=out",
+                    "--shell-escape",
                     "%DOC%"
                 ]
             }

@@ -90,12 +90,8 @@ pub fn make_proof_link(relative_path: &str) -> Result<String> {
     relative_path.set_extension("pdf");
     
     // link from sphinx and rustdoc to latex
-    let proof_uri = if let Ok(local_uri) = env::var("OPENDP_LOCAL_DOCS_URI") {
-        // insert /out into path, because local builds stick pdfs in /out
-        let dirs = relative_path.parent().unwrap();
-        relative_path = dirs.join("out").join(relative_path.file_name().unwrap());
-
-        format!("{local_uri}/rust/src")
+    let proof_uri = if let Ok(sphinx_port) = env::var("OPENDP_SPHINX_PORT") {
+        format!("http://localhost:{sphinx_port}/proofs")
     } else {
         // find the docs uri
         let docs_uri = env::var("OPENDP_REMOTE_DOCS_URI")

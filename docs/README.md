@@ -20,11 +20,47 @@ make html
 open build/html/index.html
 ```
 
-To make html and run Python doctests:
+Make Sphinx html:
+```shell
+make html
+```
 
+Make html and run Python doctests:
 ```shell
 make doctest-python
 ```
+
+Make rust html:
+```shell
+make html-rustdoc
+```
+The output is located in `../rust/target/doc`.
+
+## Simulating documentation sites locally
+It is possible to fully simulate all developer documentation locally, 
+with functioning links across documentation sites and proofs.
+
+If the following environment variables are set, Sphinx and Rustdoc will build with links to locally-hosted docs:
+```shell
+export OPENDP_SPHINX_PORT=8020;
+export OPENDP_RUSTDOC_PORT=8021;
+```
+
+Build all .tex files and copy them into the Sphinx documentation site:
+```shell
+make latex
+```
+
+Start two servers that host a local Sphinx docs site and local Rustdoc site:
+```shell
+make server
+```
+
+Putting these commands together, to update all docs sites and proofs, run:
+```shell
+make html html-rustdoc latex
+```
+Changes should automatically manifest without restarting the server.
 
 ## Deployment
 
