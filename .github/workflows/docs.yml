@@ -42,7 +42,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
           # construct list of .pdf files
-          echo "tex<<EOF" >> $GITHUB_OUTPUT
+          echo "pdf<<EOF" >> $GITHUB_OUTPUT
           echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
