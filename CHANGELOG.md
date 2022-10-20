@@ -9,6 +9,42 @@ Please keep this up to date, following the [instructions](#instructions) below.
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
 
+## [0.6.0] - 2022-10-20
+[0.5.0]: https://github.com/opendp/opendp/compare/v0.6.0...v0.7.0
+
+Focuses on documentation and internal changes to facilitate proof-writing.
+
+### Added
+- restructured and expanded documentation on docs.opendp.org
+    - moved notebooks into the documentation site
+    - updated developer documentation and added introductions to Rust and proof-writing
+- much more thorough API documentation and links to corresponding Rust documentation
+- documentation throughout the Rust library, as well as proof definition stubs
+- `make_b_ary_tree` Lipschitz transformation. Use in conjunction with:
+    - `make_consistent_b_ary_tree` to retrieve consistent leaf node counts
+    - `make_quantiles_from_counts` to retrieve quantile estimates
+    - `make_cdf` to estimate a discretized cumulative distribution function
+- `make_subset_by`, `make_df_is_equal` and `make_df_cast_default` transformations 
+    - used for simple dataframe subsetting
+- `make_chain_tm` combinator for postprocessing
+- updates for proof-writing:
+    - `rust/src/lib.sty` contains a collection of latex macros to aid in cross-linking and maintenance
+    - see the proof-writing section of the developer documentation
+    - PRs with .tex proof documents are rendered by a bot
+    - documentation will now embed links to proof documents that are adjacent to source files
+    - proof documents are automatically hosted and versioned on docs.opendp.org
+
+### Changed
+- renamed `meas` to `measurements`, `trans` to `transformations` and `comb` to `combinators`
+- added an `honest-but-curious` feature flag to `make_population_amplification`
+
+### Fixed
+- python bindings check that C integers do not overflow
+- fixed clamping behaviour on `make_lipschitz_float_mul`
+- let the type of the sensitivty supplied to `make_base_discrete_gaussian` vary according to type `QI`
+- fix FFI dispatch in fixed approximate DP composition
+
+
 ## [0.5.0] - 2022-08-23
 [0.5.0]: https://github.com/opendp/opendp/compare/v0.4.0...v0.5.0
 
