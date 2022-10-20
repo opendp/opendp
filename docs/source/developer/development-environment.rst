@@ -286,8 +286,7 @@ These tasks can be used to directly build or test OpenDP.
 
 
 Starter ``/.vscode/settings.json``. 
-These settings set ports for locally-hosted documentation, 
-and configures LaTex Workshop to write .pdfs and auxiliary files to ``./out/``.
+These settings configure LaTex Workshop to write .pdfs and auxiliary files to ``./out/``.
 
 .. code-block:: json
 
@@ -296,8 +295,8 @@ and configures LaTex Workshop to write .pdfs and auxiliary files to ``./out/``.
             "./rust/Cargo.toml"
         ],
         "rust-analyzer.cargo.extraEnv": {
-            "OPENDP_SPHINX_PORT": "8020",
-            "OPENDP_RUSTDOC_PORT": "8021"
+            "OPENDP_SPHINX_PORTx": "8020",
+            "OPENDP_RUSTDOC_PORTx": "8021"
         },
         "latex-workshop.latex.outDir": "%DIR%/out/",
         "latex-workshop.latex.recipes": [

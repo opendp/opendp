@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::{collections::HashMap, env};
 
 use darling::{Error, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
@@ -342,13 +342,17 @@ pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
     let proof_uri = if let Ok(rustdoc_port) = std::env::var("OPENDP_RUSTDOC_PORT") {
         format!("http://localhost:{rustdoc_port}")
     } else {
+        // find the docs uri
+        let docs_uri = env::var("OPENDP_REMOTE_RUSTDOC_URI")
+            .unwrap_or_else(|_| "https://docs.rs".to_string());
+    
         // find the version
         let mut version = env!("CARGO_PKG_VERSION");
         if version == "0.0.0+development" {
             version = "latest";
         };
 
-        format!("https://docs.rs/opendp/{version}")
+        format!("{docs_uri}/opendp/{version}")
     };
 
     Ok(format!("[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"))

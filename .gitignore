@@ -152,12 +152,12 @@ Cargo.lock
 
 .DS_Store
 
-python/src/opendp/_data.py
-python/src/opendp/accuracy.py
-python/src/opendp/combinators.py
-python/src/opendp/core.py
-python/src/opendp/measurements.py
-python/src/opendp/transformations.py
+# python/src/opendp/_data.py
+# python/src/opendp/accuracy.py
+# python/src/opendp/combinators.py
+# python/src/opendp/core.py
+# python/src/opendp/measurements.py
+# python/src/opendp/transformations.py
 
 /data_censored/
 
