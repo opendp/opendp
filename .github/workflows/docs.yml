@@ -84,9 +84,6 @@ jobs:
           inter-link: false
           post-comment: false
 
-      - name: Build python bindings
-        run: cargo check --manifest-path=rust/Cargo.toml --verbose --features untrusted,bindings-python
-
       - name: Build docs site
         run: |
           sudo apt-get install -y pandoc

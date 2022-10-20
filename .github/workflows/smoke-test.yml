@@ -44,12 +44,6 @@ jobs:
           name: libs
           path: rust/target/debug/libopendp.so
 
-      - name: Upload bindings
-        uses: actions/upload-artifact@v3
-        with:
-          name: python_bindings
-          path: python/src/opendp/
-
   python-test:
     needs: rust-build-and-test
     runs-on: ubuntu-22.04
@@ -93,12 +87,6 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      
-      - name: Download bindings
-        uses: actions/download-artifact@v3
-        with:
-          name: python_bindings
-          path: python/src/opendp/
 
       - name: Download libs
         uses: actions/download-artifact@v3
@@ -153,12 +141,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install flake8 pytest nbmake pytest-xdist
           python -m pip install -r requirements_notebooks.txt
-
-      - name: Download bindings
-        uses: actions/download-artifact@v3
-        with:
-          name: python_bindings
-          path: python/src/opendp/
 
       - name: Download libs
         uses: actions/download-artifact@v3
