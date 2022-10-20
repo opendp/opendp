@@ -39,7 +39,7 @@ Please keep this up to date, following the [instructions](#instructions) below.
 ### Fixed
 - python bindings check that C integers do not overflow
 - fixed clamping behaviour on `make_lipschitz_float_mul`
-- let the type of the sensitivty supplied to `make_base_discrete_gaussian` vary according to type `QI`
+- let the type of the sensitivity supplied to `make_base_discrete_gaussian` vary according to type `QI`
 - fix FFI dispatch in fixed approximate DP composition
 
 
