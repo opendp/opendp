@@ -14,6 +14,8 @@ __all__ = [
     "make_default_postprocessor",
     "make_default_transformation",
     "make_fix_delta",
+    "make_parallel_composition",
+    "make_parallel_transformation",
     "make_population_amplification",
     "make_pureDP_to_fixed_approxDP",
     "make_pureDP_to_zCDP",
@@ -367,6 +369,80 @@ def make_fix_delta(
     
     output = c_to_py(unwrap(lib_function(c_measurement, c_delta), Measurement))
     output._depends_on(get_dependencies(measurement))
+    return output
+
+
+def make_parallel_composition(
+    measurements: Any
+) -> Measurement:
+    """Construct the parallel composition of [`measurement0`, `measurement1`, ...]. Returns a Measurement.
+    
+    [make_parallel_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_parallel_composition.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ProductDomain<AnyDomain>`
+    * Output Domain:  `ProductDomain<AnyDomain>`
+    * Input Metric:   `ProductMetric<AnyMetric>`
+    * Output Measure: `AnyMeasure`
+    
+    :param measurements: A list of measurements to apply, one to each element.
+    :type measurements: Any
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_measurements = py_to_c(measurements, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyMeasurementPtr]))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_parallel_composition
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_measurements), Measurement))
+    
+    return output
+
+
+def make_parallel_transformation(
+    transformations: Any
+) -> Transformation:
+    """Construct the parallel execution of [`transformation0`, `transformation1`, ...]. Returns a Transformation.
+    
+    [make_parallel_transformation in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_parallel_transformation.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `ProductDomain<AnyDomain>`
+    * Output Domain:  `ProductDomain<AnyDomain>`
+    * Input Metric:   `ProductMetric<AnyMetric>`
+    * Output Metric:  `ProductMetric<AnyMetric>`
+    
+    :param transformations: A list of transformations to apply, one to each element.
+    :type transformations: Any
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_transformations = py_to_c(transformations, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyTransformationPtr]))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_parallel_transformation
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_transformations), Transformation))
+    
     return output
 
 

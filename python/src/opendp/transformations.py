@@ -42,6 +42,7 @@ __all__ = [
     "make_metric_bounded",
     "make_metric_unbounded",
     "make_ordered_random",
+    "make_partition_by",
     "make_postprocess_proportion_ci",
     "make_postprocess_sized_proportion_ci",
     "make_quantiles_from_counts",
@@ -1950,6 +1951,66 @@ def make_ordered_random(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_TA), Transformation))
+    
+    return output
+
+
+def make_partition_by(
+    identifier_column: Any,
+    partition_keys: Any,
+    keep_columns: Any,
+    null_partition: bool = False,
+    TK: RuntimeTypeDescriptor = "String",
+    TV: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Make a Transformation that partitions a dataframe by a given column.
+    
+    [make_partition_by in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_partition_by.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `DataFrameDomain<TK>`
+    * Output Domain:  `ProductDomain<DataFrameDomain<TK>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `ProductMetric<SymmetricDistance>`
+    
+    :param identifier_column: Name of column to split dataframe by.
+    :type identifier_column: Any
+    :param partition_keys: Unique values in the `identifier_column` column.
+    :type partition_keys: Any
+    :param keep_columns: Columns to keep in the partitioned dataframes.
+    :type keep_columns: Any
+    :param null_partition: Whether to include a trailing null partition for rows that were not in the `partition_keys`
+    :type null_partition: bool
+    :param TK: Type of column names.
+    :type TK: :py:ref:`RuntimeTypeDescriptor`
+    :param TV: Type of values in the identifier column.
+    :type TV: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=identifier_column)
+    TV = RuntimeType.parse_or_infer(type_name=TV, public_example=get_first(partition_keys))
+    
+    # Convert arguments to c types.
+    c_identifier_column = py_to_c(identifier_column, c_type=AnyObjectPtr, type_name=TK)
+    c_partition_keys = py_to_c(partition_keys, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TV]))
+    c_keep_columns = py_to_c(keep_columns, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TK]))
+    c_null_partition = py_to_c(null_partition, c_type=ctypes.c_bool, type_name=bool)
+    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    c_TV = py_to_c(TV, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_partition_by
+    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, AnyObjectPtr, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_identifier_column, c_partition_keys, c_keep_columns, c_null_partition, c_TK, c_TV), Transformation))
     
     return output
 
