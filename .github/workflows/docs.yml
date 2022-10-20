@@ -36,8 +36,19 @@ jobs:
         run: |
           shopt -s globstar nullglob
           files=(**/*.tex)
-          chmod +x ./tools/write_github_output_paths.sh
-          echo $files | xargs --null ./tools/write_github_output_paths.sh
+          
+          # construct list of .tex files
+          tex="${files//'%'/'%25'}"
+          tex="${tex//$'\n'/'%0A'}"
+          tex="${tex//$'\r'/'%0D'}"
+          echo "tex=$tex" >> $GITHUB_OUTPUT
+
+          # construct list of .pdf files
+          pdf="${files//$'.tex'/.pdf}"
+          pdf="${pdf//'%'/'%25'}"
+          pdf="${pdf//$'\n'/'%0A'}"
+          pdf="${pdf//$'\r'/'%0D'}"
+          echo "pdf=$pdf" >> $GITHUB_OUTPUT
 
           # name the version
           version=$(cat VERSION)
