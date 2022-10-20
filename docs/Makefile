@@ -27,6 +27,7 @@ clean:
 	rm -rf $(BUILDDIR)/* source/api/python source/api/rust
 
 html:
+	cargo check --manifest-path=../rust/Cargo.toml --features=untrusted,bindings-python
 	$(SPHINXAPIDOC) -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
 	# TODO: Figure out how to link locally generated Rust docs into sphinx structure.
 	# 	cd ../rust && $(CARGO) doc --no-deps --target-dir ../docs/source/api/rust
@@ -60,7 +61,8 @@ latex:
 	@for file in `find ../rust/src -type f -name "*.tex"`; do \
 		[ -f "$$file" ] || break; \
 		echo test "$$file"; \
-		(cd `dirname $$file` && mkdir -p out && pdflatex --output-directory=out --shell-escape `basename $$file`); \
+		# switch to dir && out folder must exist && prevent stale links && build latex  \
+		(cd `dirname $$file` && mkdir -p out && rm -f out/rustdoc.txt && pdflatex --output-directory=out --shell-escape `basename $$file`); \
 		output_path=`dirname "$$file"`/out/`basename "$${file%.tex}.pdf"`; \
 		target_path=$(BUILDDIR)/html/proofs/`echo $${file%.tex}.pdf | sed 's|../rust/src/||'`; \
 		mkdir -p `dirname "$$target_path"`; \

@@ -10,6 +10,13 @@ use proc_macro2::TokenStream;
 use syn::{File, Item, ItemFn};
 
 pub fn main() {
+    // rebuild if link paths change
+    println!("cargo:rerun-if-env-changed=OPENDP_SPHINX_PORT");
+    println!("cargo:rerun-if-env-changed=OPENDP_RUSTDOC_PORT");
+    
+    println!("cargo:rerun-if-env-changed=OPENDP_REMOTE_SPHINX_URI");
+    println!("cargo:rerun-if-env-changed=OPENDP_REMOTE_RUSTDOC_URI");
+
     let src_dir = get_src_dir().unwrap();
     let proof_paths = find_proof_paths(&src_dir).unwrap();
 
