@@ -12,7 +12,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::Queryable;
+use crate::interactive::{Queryable, Query};
 use crate::traits::{CheckNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
@@ -24,9 +24,15 @@ pub(crate) use type_name;
 
 pub type QueryableDomain<S, Q, A> = AllDomain<Queryable<S, Q, A>>;
 
-pub struct Hookable<S, L> {
+pub struct Hook<S, L> {
     pub inner: S,
     pub listener: Option<Box<dyn Fn(&L, bool) -> Fallible<bool>>>
+}
+
+impl<S, L> Hook<S, L> {
+    pub fn new_queryable<Q, A>(state: S, transition: impl Fn(S, &dyn Query<Q>) -> (S, A)) -> Queryable<Hook<S, L>, Q, A> {
+        unimplemented!()
+    }
 }
 
 

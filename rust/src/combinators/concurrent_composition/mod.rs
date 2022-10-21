@@ -1,12 +1,12 @@
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
-    domains::{QueryableDomain, Hookable, AllDomain},
+    domains::{QueryableDomain, Hook, AllDomain},
     error::Fallible,
     interactive::Queryable,
     traits::{InfAdd, TotalOrd},
 };
 
-pub fn make_concurrent_composition_naive<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
+pub fn make_concurrent_composition_simple<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
@@ -70,7 +70,13 @@ where
     ))
 }
 
-type CCQuery<DI, S, Q, A, MI, MO> = Measurement<DI, AllDomain<Queryable<Hookable<S, <MO as Measure>::Distance>, Q, A>>, MI, MO>;
+struct CheckDescendantChange<Q> {
+    index: usize,
+    new_privacy_loss: Q,
+    commit: bool,
+}
+
+type CCQuery<DI, S, Q, A, MI, MO> = Measurement<DI, AllDomain<Queryable<Hook<S, <MO as Measure>::Distance>, Q, A>>, MI, MO>;
 
 pub fn make_concurrent_composition<DI: Domain, S, Q, A, MI: Metric, MO: Measure>(
     input_domain: DI,
@@ -82,9 +88,9 @@ pub fn make_concurrent_composition<DI: Domain, S, Q, A, MI: Metric, MO: Measure>
     Measurement<
         DI,
         QueryableDomain<
-            Vec<MO::Distance>, 
+            Hook<Vec<MO::Distance>, MO::Distance>, 
             CCQuery<DI, S, Q, A, MI, MO>, 
-            Queryable<Hookable<S, MO::Distance>, Q, A>
+            Queryable<Hook<S, MO::Distance>, Q, A>
         >,
         MI,
         MO,
@@ -120,13 +126,11 @@ where
                     if !q.check(&d_in, &d_out)? {
                         return fallible!(FailedFunction, "insufficient budget for query");
                     }
-
                     let a = q.invoke(&arg)?;
-
                     Ok((s, a))
                 }
             );
-            Queryable::new(state, transition)
+            Hook::new_queryable(state, transition)
         })),
         input_metric,
         output_measure,

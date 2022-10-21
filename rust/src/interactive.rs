@@ -14,7 +14,13 @@ pub struct Queryable<S, Q, A> {
     state: Option<S>,
     /// The transition function of the Queryable. Takes the current state and a query, returns
     /// the new state and the answer.
-    transition: Rc<dyn Fn(S, &Q) -> Fallible<(S, A)>>,
+    transition: Rc<dyn Fn(S, &dyn Query<Q>) -> Fallible<(S, A)>>,
+}
+
+pub trait Query<Q> {
+    fn as_Q(&self) -> &Q {
+        self
+    }
 }
 
 impl<S, Q, A> Queryable<S, Q, A> {
@@ -27,7 +33,7 @@ impl<S, Q, A> Queryable<S, Q, A> {
     }
 
     /// Evaluates a query.
-    pub fn eval(&mut self, query: &Q) -> Fallible<A> {
+    pub fn eval(&mut self, query: &dyn Query<Q>) -> Fallible<A> {
         // Take temporary ownership of the state from this struct.
         let state = self
             .state
