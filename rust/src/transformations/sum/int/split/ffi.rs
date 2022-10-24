@@ -3,11 +3,10 @@ use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 
-use crate::metrics::IntDistance;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub};
+use crate::traits::Number;
 use crate::transformations::{
     make_bounded_int_split_sum, make_sized_bounded_int_split_sum, AddIsExact, SplitSatSum,
 };
@@ -19,8 +18,7 @@ pub extern "C" fn opendp_transformations__make_bounded_int_split_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance> + SplitSatSum + CheckNull + AlertingAbs + AddIsExact,
-        IntDistance: InfCast<T>,
+        T: Number + SplitSatSum + AddIsExact
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_bounded_int_split_sum::<T>(bounds).into_any()
@@ -39,13 +37,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_int_split_sum(
 ) -> FfiResult<*mut AnyTransformation> {
     fn monomorphize<T>(size: usize, bounds: *const AnyObject) -> FfiResult<*mut AnyTransformation>
     where
-        T: DistanceConstant<IntDistance>
-            + InfSub
-            + SplitSatSum
-            + CheckNull
-            + AlertingAbs
-            + AddIsExact,
-        IntDistance: InfCast<T>,
+        T: Number + SplitSatSum + AddIsExact
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>()).clone();
         make_sized_bounded_int_split_sum::<T>(size, bounds).into_any()

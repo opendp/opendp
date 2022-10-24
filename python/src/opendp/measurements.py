@@ -491,7 +491,7 @@ def make_randomized_response(
     prob,
     constant_time: bool = False,
     T: RuntimeTypeDescriptor = None,
-    Q: RuntimeTypeDescriptor = None
+    QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that implements randomized response on a categorical value.
     
@@ -502,7 +502,7 @@ def make_randomized_response(
     * Input Domain:   `AllDomain<T>`
     * Output Domain:  `AllDomain<T>`
     * Input Metric:   `DiscreteDistance`
-    * Output Measure: `MaxDivergence<Q>`
+    * Output Measure: `MaxDivergence<QO>`
     
     :param categories: Set of valid outcomes
     :type categories: Any
@@ -511,8 +511,8 @@ def make_randomized_response(
     :type constant_time: bool
     :param T: Data type of a category.
     :type T: :py:ref:`RuntimeTypeDescriptor`
-    :param Q: Data type of probability and output distance.
-    :type Q: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Data type of probability and output distance.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -522,27 +522,27 @@ def make_randomized_response(
     
     # Standardize type arguments.
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(categories))
-    Q = RuntimeType.parse_or_infer(type_name=Q, public_example=prob)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=prob)
     
     # Convert arguments to c types.
     categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[T]))
-    prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=Q)
+    prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=QO)
     constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
     T = py_to_c(T, c_type=ctypes.c_char_p)
-    Q = py_to_c(Q, c_type=ctypes.c_char_p)
+    QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_measurements__make_randomized_response
     function.argtypes = [AnyObjectPtr, ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(categories, prob, constant_time, T, Q), Measurement))
+    return c_to_py(unwrap(function(categories, prob, constant_time, T, QO), Measurement))
 
 
 def make_randomized_response_bool(
     prob,
     constant_time: bool = False,
-    Q: RuntimeTypeDescriptor = None
+    QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that implements randomized response on a boolean value.
     
@@ -553,13 +553,13 @@ def make_randomized_response_bool(
     * Input Domain:   `AllDomain<bool>`
     * Output Domain:  `AllDomain<bool>`
     * Input Metric:   `DiscreteDistance`
-    * Output Measure: `MaxDivergence<Q>`
+    * Output Measure: `MaxDivergence<QO>`
     
     :param prob: Probability of returning the correct answer. Must be in `[0.5, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool
-    :param Q: Data type of probability and output distance.
-    :type Q: :py:ref:`RuntimeTypeDescriptor`
+    :param QO: Data type of probability and output distance.
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -568,16 +568,16 @@ def make_randomized_response_bool(
     assert_features("contrib")
     
     # Standardize type arguments.
-    Q = RuntimeType.parse_or_infer(type_name=Q, public_example=prob)
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=prob)
     
     # Convert arguments to c types.
-    prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=Q)
+    prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=QO)
     constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
-    Q = py_to_c(Q, c_type=ctypes.c_char_p)
+    QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     function = lib.opendp_measurements__make_randomized_response_bool
     function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p]
     function.restype = FfiResult
     
-    return c_to_py(unwrap(function(prob, constant_time, Q), Measurement))
+    return c_to_py(unwrap(function(prob, constant_time, QO), Measurement))

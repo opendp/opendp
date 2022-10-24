@@ -6,7 +6,7 @@ use opendp_derive::bootstrap;
 use rug::{Integer, Rational};
 
 use crate::{
-    core::{Measure, Measurement, PrivacyMap, SensitivityMetric},
+    core::{Measure, Measurement, PrivacyMap, Metric},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
@@ -21,7 +21,7 @@ use super::MappableDomain;
 
 #[doc(hidden)]
 pub trait DiscreteGaussianDomain<QI>: MappableDomain + Default {
-    type InputMetric: SensitivityMetric<Distance = QI> + Default;
+    type InputMetric: Metric<Distance = QI> + Default;
 }
 impl<T: Clone + CheckNull, QI> DiscreteGaussianDomain<QI> for AllDomain<T> {
     type InputMetric = AbsoluteDistance<QI>;

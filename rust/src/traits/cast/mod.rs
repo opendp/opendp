@@ -5,54 +5,54 @@ use num::{NumCast, One, Zero};
 use rug::Float;
 
 use crate::error::Fallible;
-#[cfg(feature="use-mpfr")]
-use crate::traits::FloatBits;
 
 // general overview of casters:
 // https://docs.google.com/spreadsheets/d/1DJohiOI3EVHjwj8g4IEdFZVf7MMyFk_4oaSyjTfkO_0/edit?usp=sharing
 
-/// Fallible casting where the casted value is equal to the original value.
-/// Casting fails for any value not between Self::MIN_CONSECUTIVE and Self::MAX_CONSECUTIVE.
+/// Fallible casting where the casted value is exactly equal to the original value.
 pub trait ExactIntCast<TI>: Sized + ExactIntBounds {
+    /// # Proof Definition
+    /// For any `v` of type `TI`, `Self::exact_int_cast(value)` either
+    /// returns `Err(e)` if `v` is smaller than `Self::MIN_CONSECUTIVE` or greater than `Self::MAX_CONSECUTIVE`,
+    /// or `Ok(out)` where $out = v$.
     fn exact_int_cast(v: TI) -> Fallible<Self>;
 } 
 
+/// Consts representing the maximum and minimum finite consecutive values.
+/// 
+/// This is also implemented for floats, 
+/// as neighboring floating point values may differ by more than 1 when the mantissa is exhausted.
 pub trait ExactIntBounds {
+    /// # Proof Definition
+    /// `Self::MAX_CONSECUTIVE` is the largest integer-consecutive finite value that can be represented by `Self`.
     const MAX_CONSECUTIVE: Self;
+    /// # Proof Definition
+    /// `Self::MIN_CONSECUTIVE` is the smallest integer-consecutive finite value that can be represented by `Self`.
     const MIN_CONSECUTIVE: Self;
 }
 
 /// Fallible casting where the casted value rounds towards infinity.
+/// 
 /// This preserves the invariant that the casted value is gte the original value.
 /// For example, casting a 128_u8 to i8 doesn't saturate to i8::MAX (127), it errors.
 pub trait InfCast<TI>: Sized {
+    /// # Proof Definition
+    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Err(e)`,
+    /// or `Ok(out)` where $out \ge v$.
     fn inf_cast(v: TI) -> Fallible<Self>;
+    /// # Proof Definition
+    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Err(e)`,
+    /// or `Ok(out)` where $out \le v$.
+    fn neg_inf_cast(v: TI) -> Fallible<Self>;
 }
 
+/// Fallible casting where the casted value is rounded to nearest.
 pub trait RoundCast<TI>: Sized {
+    /// # Proof Definition
+    /// For any `v` of type `TI`, `Self::inf_cast(v)` either returns `Err(e)`, 
+    /// or `Ok(out)` where $out = argmin_{x \in TI} |x - v|$.
     fn round_cast(v: TI) -> Fallible<Self>;
 }
-
-#[cfg(feature = "use-mpfr")]
-pub trait CastInternalReal: FloatBits + Sized {
-    // Number of digits in the mantissa.
-    // MANTISSA_DIGITS == MANTISSA_BITS + 1 because of implicit bit
-    const MANTISSA_DIGITS: u32;
-    fn inf_from_internal(v: Float) -> Self;
-    fn neg_inf_from_internal(v: Float) -> Self;
-    fn inf_into_internal(self) -> Float;
-    fn neg_inf_into_internal(self) -> Float;
-}
-
-#[cfg(not(feature = "use-mpfr"))]
-pub trait CastInternalReal {
-    const MANTISSA_DIGITS: u32;
-    fn inf_from_internal(v: Self) -> Self;
-    fn neg_inf_from_internal(v: Self) -> Self;
-    fn inf_into_internal(self) -> Self;
-    fn neg_inf_into_internal(self) -> Self;
-}
-
 
 macro_rules! cartesian {
     // base case
@@ -149,6 +149,7 @@ impl_exact_int_cast_try_from!(isize, usize);
 macro_rules! impl_inf_cast_exact {
     ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
         fn inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
+        fn neg_inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
     })
 }
 cartesian!([u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize], impl_inf_cast_exact);
@@ -158,6 +159,7 @@ macro_rules! impl_inf_cast_from {
     ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
         #[inline]
         fn inf_cast(v: $ti) -> Fallible<Self> { Ok(From::from(v)) }
+        fn neg_inf_cast(v: $ti) -> Fallible<Self> { Ok(From::from(v)) }
     })
 }
 
@@ -184,14 +186,24 @@ macro_rules! impl_inf_cast_int_float {
         impl InfCast<$int> for $float {
             fn inf_cast(v_int: $int) -> Fallible<Self> {
                 use rug::{Float, float::Round};
-                let float = Float::with_val_round(<$float>::MANTISSA_DIGITS, v_int, Round::Up).0;
-                Ok(<$float>::inf_from_internal(float))
+                let float = Float::with_val_round(Self::MANTISSA_DIGITS, v_int, Round::Up).0;
+                Self::inf_cast(float)
+            }
+            fn neg_inf_cast(v_int: $int) -> Fallible<Self> {
+                use rug::{Float, float::Round};
+                let float = Float::with_val_round(Self::MANTISSA_DIGITS, v_int, Round::Down).0;
+                Self::neg_inf_cast(float)
             }
         }
+        // cast from int to float with controlled rounding, or fail
         #[cfg(not(feature="use-mpfr"))]
         impl InfCast<$int> for $float {
             fn inf_cast(v_int: $int) -> Fallible<Self> {
-                <$float>::round_cast(v_int)
+                // defer to exact int cast implementation
+                Self::exact_int_cast(v_int)
+            }
+            fn neg_inf_cast(v_int: $int) -> Fallible<Self> {
+                Self::exact_int_cast(v_int)
             }
         }
     )
@@ -206,6 +218,7 @@ impl_inf_cast_from!(i32, f64);
 
 impl_inf_cast_from!(f32, f32);
 impl_inf_cast_from!(f32, f64);
+
 impl InfCast<f64> for f32 {
     fn inf_cast(vf64: f64) -> Fallible<Self> {
         if vf64.is_nan() { return Ok(f32::NAN) }
@@ -224,6 +237,24 @@ impl InfCast<f64> for f32 {
         }
         Ok(vf32)
     }
+
+    fn neg_inf_cast(vf64: f64) -> Fallible<Self> {
+        if vf64.is_nan() { return Ok(f32::NAN) }
+        // cast with rounding towards nearest, ties toward even
+        // https://doc.rust-lang.org/reference/expressions/operator-expr.html#semantics
+        let vf32 = vf64 as f32;
+
+        // if nearest was toward inf, then perturb one step towards -inf
+        // +/- zero always evaluates to false
+        if vf64 < vf32 as f64 {
+            return Ok(f32::from_bits(if vf32.is_sign_negative() {
+                vf32.to_bits() + 1
+            } else {
+                vf32.to_bits() - 1
+            }))
+        }
+        Ok(vf32)
+    }
 }
 impl_inf_cast_from!(f64, f64);
 
@@ -231,6 +262,15 @@ macro_rules! impl_inf_cast_float_int {
     ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
         fn inf_cast(mut v: $ti) -> Fallible<Self> {
             v = v.ceil();
+            if Self::MIN as $ti > v || Self::MAX as $ti < v {
+                fallible!(FailedCast, "Failed to cast float to int. Float value is outside of range.")
+            } else {
+                Ok(v as Self)
+            }
+        }
+
+        fn neg_inf_cast(mut v: $ti) -> Fallible<Self> {
+            v = v.floor();
             if Self::MIN as $ti > v || Self::MAX as $ti < v {
                 fallible!(FailedCast, "Failed to cast float to int. Float value is outside of range.")
             } else {
@@ -349,53 +389,45 @@ impl RoundCast<String> for bool { fn round_cast(v: String) -> Fallible<Self> { O
 impl RoundCast<bool> for String { fn round_cast(v: bool) -> Fallible<Self> { Ok(v.to_string()) } }
 
 #[cfg(feature = "use-mpfr")]
-impl CastInternalReal for f64 {
-    const MANTISSA_DIGITS: u32 = Self::MANTISSA_DIGITS;
-    fn inf_from_internal(v: Float) -> Self {
-        v.to_f64_round(rug::float::Round::Up)
+impl InfCast<f32> for Float {
+    fn inf_cast(v: f32) -> Fallible<Self> {
+        Ok(Float::with_val_round(f32::MANTISSA_DIGITS, v, rug::float::Round::Up).0)
     }
-    fn neg_inf_from_internal(v: Float) -> Self {
-        v.to_f64_round(rug::float::Round::Down)
-    }
-    fn inf_into_internal(self) -> Float {
-        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Up).0
-    }
-    fn neg_inf_into_internal(self) -> Float {
-        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Down).0 
+
+    fn neg_inf_cast(v: f32) -> Fallible<Self> {
+        Ok(Float::with_val_round(f32::MANTISSA_DIGITS, v, rug::float::Round::Down).0)
     }
 }
 
 #[cfg(feature = "use-mpfr")]
-impl CastInternalReal for f32 {
-    const MANTISSA_DIGITS: u32 = Self::MANTISSA_DIGITS;
-    fn inf_from_internal(v: Float) -> Self {
-        v.to_f32_round(rug::float::Round::Up)
+impl InfCast<f64> for Float {
+    fn inf_cast(v: f64) -> Fallible<Self> {
+        Ok(Float::with_val_round(f64::MANTISSA_DIGITS, v, rug::float::Round::Up).0)
     }
-    fn neg_inf_from_internal(v: Float) -> Self {
-        v.to_f32_round(rug::float::Round::Down)
-    }
-    fn inf_into_internal(self) -> Float { 
-        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Up).0
-    }
-    fn neg_inf_into_internal(self) -> Float { 
-        rug::Float::with_val_round(Self::MANTISSA_DIGITS, self, rug::float::Round::Down).0
+
+    fn neg_inf_cast(v: f64) -> Fallible<Self> {
+        Ok(Float::with_val_round(f64::MANTISSA_DIGITS, v, rug::float::Round::Down).0)
     }
 }
 
-#[cfg(not(feature = "use-mpfr"))]
-impl CastInternalReal for f64 {
-    const MANTISSA_DIGITS: u32 = Self::MANTISSA_DIGITS;
-    fn inf_from_internal(v: f64) -> Self { v }
-    fn neg_inf_from_internal(v: f64) -> Self { v }
-    fn inf_into_internal(self) -> Self { self }
-    fn neg_inf_into_internal(self) -> Self { self }
+#[cfg(feature = "use-mpfr")]
+impl InfCast<Float> for f32 {
+    fn inf_cast(v: Float) -> Fallible<Self> {
+        Ok(v.to_f32_round(rug::float::Round::Up))
+    }
+
+    fn neg_inf_cast(v: Float) -> Fallible<Self> {
+        Ok(v.to_f32_round(rug::float::Round::Down))
+    }
 }
 
-#[cfg(not(feature = "use-mpfr"))]
-impl CastInternalReal for f32 {
-    const MANTISSA_DIGITS: u32 = Self::MANTISSA_DIGITS;
-    fn inf_from_internal(v: f32) -> Self { v }
-    fn neg_inf_from_internal(v: f32) -> Self { v }
-    fn inf_into_internal(self) -> Self { self }
-    fn neg_inf_into_internal(self) -> Self { self }
+#[cfg(feature = "use-mpfr")]
+impl InfCast<Float> for f64 {
+    fn inf_cast(v: Float) -> Fallible<Self> {
+        Ok(v.to_f64_round(rug::float::Round::Up))
+    }
+
+    fn neg_inf_cast(v: Float) -> Fallible<Self> {
+        Ok(v.to_f64_round(rug::float::Round::Down))
+    }
 }

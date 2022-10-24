@@ -1,3 +1,5 @@
+//! Convert between noise scales and accuracies.
+
 #[cfg(feature="ffi")]
 mod ffi;
 

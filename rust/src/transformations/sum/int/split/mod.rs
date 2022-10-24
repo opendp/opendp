@@ -7,7 +7,7 @@ use crate::{
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfCast, InfSub, SaturatingAdd},
+    traits::{Number, SaturatingAdd},
 };
 
 use super::AddIsExact;
@@ -15,6 +15,7 @@ use super::AddIsExact;
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[doc(hidden)]
 pub trait SplitSatSum: Sized {
     /// Method which takes an iterator and generates `Self` from the elements by
     /// "summing up" the items.
@@ -75,8 +76,7 @@ pub fn make_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + SplitSatSum + CheckNull + AlertingAbs + AddIsExact,
-    IntDistance: InfCast<T>,
+    T: Number + SplitSatSum + AddIsExact
 {
     let (lower, upper) = bounds.clone();
 
@@ -95,6 +95,7 @@ where
     generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints with known dataset size. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// Adds the saturating sum of the positives to the saturating sum of the negatives.
 /// 
@@ -120,8 +121,7 @@ pub fn make_sized_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + InfSub + SplitSatSum + CheckNull + AlertingAbs + AddIsExact,
-    IntDistance: InfCast<T>,
+    T: Number + SplitSatSum + AddIsExact
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;

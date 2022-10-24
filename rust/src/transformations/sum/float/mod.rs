@@ -11,12 +11,14 @@ use crate::{
     traits::{Float, InfAdd},
 };
 
-// Marker type to represent sequential, or recursive summation
+/// Marker type to represent sequential, or recursive summation
 pub struct Sequential<T>(PhantomData<T>);
 
-// Marker type to represent pairwise, or cascading summation
+
+/// Marker type to represent pairwise, or cascading summation
 pub struct Pairwise<T>(PhantomData<T>);
 
+#[doc(hidden)]
 pub trait SumRelaxation {
     type Item: Float;
     fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item>;

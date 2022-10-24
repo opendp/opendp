@@ -10,7 +10,11 @@ use super::{fill_bytes, sample_geometric_buffer};
 #[cfg(feature = "use-mpfr")]
 use super::SampleUniformIntBelow;
 
+/// Sample from `Bernoulli(p=0.5)`.
 pub trait SampleStandardBernoulli: Sized {
+    /// # Proof Definition
+    /// Return `Err(e)` if there is insufficient system entropy, or
+    /// `Ok(sample)`, where `sample` is a draw from `Bernoulli(p=0.5)`.
     fn sample_standard_bernoulli() -> Fallible<Self>;
 }
 impl SampleStandardBernoulli for bool {
@@ -21,39 +25,45 @@ impl SampleStandardBernoulli for bool {
     }
 }
 
+/// Sample a single bit with arbitrary probability of success.
+///
+/// # Arguments
+/// * `prob`- The desired probability of success (bit = 1).
+/// * `constant_time` - Whether or not to enforce the algorithm to run in constant time
+///
+/// # Return
+/// A true boolean with probability "prob".
+///
+/// # Examples
+///
+/// ```
+/// // returns a true with Pr(bit = 1) = 0.7
+/// use opendp::traits::samplers::SampleBernoulli;
+/// let n = bool::sample_bernoulli(0.7, false);
+/// # use opendp::error::ExplainUnwrap;
+/// # n.unwrap_test();
+/// ```
+/// ```should_panic
+/// // fails because 1.3 not a valid probability
+/// use opendp::traits::samplers::SampleBernoulli;
+/// let n = bool::sample_bernoulli(1.3, false);
+/// # use opendp::error::ExplainUnwrap;
+/// # n.unwrap_test();
+/// ```
+/// ```should_panic
+/// // fails because -0.3 is not a valid probability
+/// use opendp::traits::samplers::SampleBernoulli;
+/// let n = bool::sample_bernoulli(-0.3, false);
+/// # use opendp::error::ExplainUnwrap;
+/// # n.unwrap_test();
+/// ```
 pub trait SampleBernoulli<T>: Sized {
-    /// Sample a single bit with arbitrary probability of success
-    ///
-    /// # Arguments
-    /// * `prob`- The desired probability of success (bit = 1).
-    /// * `constant_time` - Whether or not to enforce the algorithm to run in constant time
-    ///
-    /// # Return
-    /// A true boolean with probability "prob"
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// // returns a true with Pr(bit = 1) = 0.7
-    /// use opendp::traits::samplers::SampleBernoulli;
-    /// let n = bool::sample_bernoulli(0.7, false);
-    /// # use opendp::error::ExplainUnwrap;
-    /// # n.unwrap_test();
-    /// ```
-    /// ```should_panic
-    /// // fails because 1.3 not a valid probability
-    /// use opendp::traits::samplers::SampleBernoulli;
-    /// let n = bool::sample_bernoulli(1.3, false);
-    /// # use opendp::error::ExplainUnwrap;
-    /// # n.unwrap_test();
-    /// ```
-    /// ```should_panic
-    /// // fails because -0.3 is not a valid probability
-    /// use opendp::traits::samplers::SampleBernoulli;
-    /// let n = bool::sample_bernoulli(-0.3, false);
-    /// # use opendp::error::ExplainUnwrap;
-    /// # n.unwrap_test();
-    /// ```
+    /// # Proof Definition
+    /// For any setting of `prob`, returns `Ok(out)`, 
+    /// where `out` is a sample from the Bernoulli(prob) distribution, 
+    /// or `Err(e)` if there is not enough system entropy.
+    /// 
+    /// If `constant_time` is set, the algorithm should also run in constant time.
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self>;
 }
 

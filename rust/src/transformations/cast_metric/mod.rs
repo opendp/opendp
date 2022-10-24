@@ -1,9 +1,9 @@
 use crate::{
     core::{Domain, Function, StabilityMap, Transformation},
     metrics::IntDistance,
-    domains::SizedDomain,
+    domains::{SizedDomain},
     error::Fallible, 
-    traits::samplers::Shuffle,
+    traits::{samplers::Shuffle, CollectionSize},
 };
 
 use self::traits::{
@@ -23,7 +23,8 @@ mod traits;
 /// | ChangeOneDistance | HammingDistance      |
 /// 
 /// # Generics
-/// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
+/// * `D` - Domain
+/// * `MI` - Input Metric
 pub fn make_ordered_random<D, MI>(
     domain: D,
 ) -> Fallible<Transformation<D, D, MI, MI::OrderedMetric>>
@@ -94,7 +95,7 @@ pub fn make_metric_unbounded<D, MI>(
 ) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::UnboundedMetric>>
 where
     D: Domain,
-    D::Carrier: Clone,
+    D::Carrier: Clone + CollectionSize,
     MI: BoundedMetric<Distance = IntDistance>,
 {
     Ok(Transformation::new(
@@ -106,7 +107,6 @@ where
         StabilityMap::new(|d_in| d_in * 2),
     ))
 }
-
 
 /// Make a Transformation that converts the unbounded dataset metric `MI` 
 /// to the respective bounded dataset metric with a no-op. 
@@ -130,7 +130,7 @@ pub fn make_metric_bounded<D, MI>(
 ) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::BoundedMetric>>
 where
     D: Domain,
-    D::Carrier: Clone,
+    D::Carrier: Clone + CollectionSize,
     MI: UnboundedMetric<Distance = IntDistance>,
 {
     Ok(Transformation::new(

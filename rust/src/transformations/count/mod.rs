@@ -7,7 +7,7 @@ use std::collections::hash_map::Entry;
 use num::One;
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, SensitivityMetric, StabilityMap, Transformation};
+use crate::core::{Function, Metric, StabilityMap, Transformation};
 use crate::metrics::{AbsoluteDistance, SymmetricDistance, LpDistance};
 use crate::domains::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
@@ -63,6 +63,7 @@ pub fn make_count_distinct<TIA, TO>(
         StabilityMap::new_from_constant(TO::one())))
 }
 
+#[doc(hidden)]
 pub trait CountByCategoriesConstant<QO> {
     fn get_stability_constant() -> QO;
 }
@@ -100,7 +101,7 @@ pub fn make_count_by_categories<MO, TIA, TOA>(
     categories: Vec<TIA>,
     null_category: bool
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, MO>>
-    where MO: CountByCategoriesConstant<MO::Distance> + SensitivityMetric,
+    where MO: CountByCategoriesConstant<MO::Distance> + Metric,
           MO::Distance: Number,
           TIA: Hashable,
           TOA: Number {
@@ -134,6 +135,7 @@ pub fn make_count_by_categories<MO, TIA, TOA>(
         StabilityMap::new_from_constant(MO::get_stability_constant())))
 }
 
+#[doc(hidden)]
 pub trait CountByConstant<QO> {
     fn get_stability_constant() -> Fallible<QO>;
 }
@@ -164,7 +166,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
 pub fn make_count_by<MO, TK, TV>(
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TK>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, SymmetricDistance, MO>>
-    where MO: CountByConstant<MO::Distance> + SensitivityMetric,
+    where MO: CountByConstant<MO::Distance> + Metric,
           MO::Distance: Float,
           TK: Hashable,
           TV: Number {

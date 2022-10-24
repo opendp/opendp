@@ -2,12 +2,12 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AllDomain, InherentNull, InherentNullDomain, OptionNullDomain};
+use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::traits::samplers::SampleUniform;
-use crate::traits::{CheckNull, Float};
+use crate::traits::{CheckNull, InherentNull, Float};
 use crate::transformations::{DropNullDomain, ImputeConstantDomain, make_drop_null, make_impute_constant, make_impute_uniform_float};
 
 #[no_mangle]

@@ -27,7 +27,6 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
-use crate::metrics::IntDistance;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
@@ -36,10 +35,34 @@ use std::fmt::Debug;
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
+/// 
+/// # Proof Definition
+/// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain.
 pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
+    /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
+    /// 
+    /// On any type `D` for which the `Domain` trait is implemented, 
+    /// the syntax `D::Carrier` refers to this associated type.
+    /// For example, consider `D` to be `AllDomain<T>`, the domain of all non-null values of type `T`.
+    /// The implementation of this trait for `AllDomain<T>` designates that `type Carrier = T`. 
+    /// Thus `AllDomain<T>::Carrier` is `T`.
+    /// 
+    /// # Proof Definition
+    /// `Self::Carrier` can represent all values in the set described by `Self`.
     type Carrier;
+
     /// Predicate to test an element for membership in the domain.
+    /// Not all possible values of `::Carrier` are a member of the domain.
+    /// 
+    /// # Proof Definition
+    /// For all settings of the input parameters, 
+    /// returns `Err(e)` if the member check failed,
+    /// or `Ok(out)`, where `out` is true if `val` is a member of `self`, otherwise false.
+    /// 
+    /// # Notes
+    /// It generally suffices to treat `Err(e)` as if `val` is not a member of the domain.
+    /// It can be useful, however, to see richer debug information via `e` in the event of a failure.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
@@ -76,21 +99,25 @@ impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
 }
 
 /// A representation of the distance between two elements in a set.
+/// 
+/// # Proof Definition
+/// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set. 
 pub trait Metric: Default + Clone + PartialEq + Debug {
+    /// # Proof Definition
+    /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
     type Distance;
 }
 
 /// A representation of the distance between two distributions.
+/// 
+/// # Proof Definition
+/// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions. 
+
 pub trait Measure: Default + Clone + PartialEq + Debug {
+    /// # Proof Definition
+    /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
     type Distance;
 }
-
-/// An indicator trait that is only implemented for dataset distances.
-pub trait DatasetMetric: Metric<Distance=IntDistance> {}
-
-/// An indicator trait that is only implemented for statistic distances.
-pub trait SensitivityMetric: Metric {}
-
 
 /// A map evaluating the privacy of a [`Measurement`].
 ///
@@ -173,6 +200,15 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 
 
 /// A randomized mechanism with certain privacy characteristics.
+/// 
+/// The trait bounds provided by the Rust type system guarantee that:
+/// * `input_domain` and `output_domain` are valid domains
+/// * `input_metric` is a valid metric
+/// * `output_measure` is a valid measure
+/// 
+/// It is, however, left to constructor functions to prove that:
+/// * `input_metric` is compatible with `input_domain`
+/// * `privacy_map` is a mapping from the input metric to the output measure
 #[derive(Clone)]
 pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
@@ -217,6 +253,15 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
 }
 
 /// A data transformation with certain stability characteristics.
+/// 
+/// The trait bounds provided by the Rust type system guarantee that:
+/// * `input_domain` and `output_domain` are valid domains
+/// * `input_metric` and `output_metric` are valid metrics
+/// 
+/// It is, however, left to constructor functions to prove that:
+/// * metrics are compatible with domains
+/// * `function` is a mapping from the input domain to the output domain
+/// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
 pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,

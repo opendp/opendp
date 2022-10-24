@@ -4,11 +4,11 @@ mod ffi;
 use num::One;
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Function, Metric, StabilityMap, Transformation, DatasetMetric};
+use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
 use crate::error::*;
 use crate::traits::{DistanceConstant, CheckNull};
 use crate::domains::{VectorDomain, AllDomain};
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{SymmetricDistance, IntDistance};
 
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -19,7 +19,7 @@ pub(crate) fn make_row_by_row<DIA, DOA, M>(
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
           DIA::Carrier: 'static,
-          M: DatasetMetric {
+          M: Metric<Distance=IntDistance> {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
         VectorDomain::new(atom_output_domain),
@@ -38,7 +38,7 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
           DIA::Carrier: 'static,
-          M: DatasetMetric {
+          M: Metric<Distance=IntDistance> {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
         VectorDomain::new(atom_output_domain),
@@ -52,7 +52,7 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
 /// Constructs a [`Transformation`] representing the identity function.
 pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
     where D: Domain, D::Carrier: Clone,
-          M: Metric, M::Distance: DistanceConstant<M::Distance> + One {
+          M: Metric, M::Distance: DistanceConstant<M::Distance> + One + Clone {
     Ok(Transformation::new(
         domain.clone(),
         domain,

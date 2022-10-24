@@ -1,4 +1,3 @@
-use num::Zero;
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -6,7 +5,7 @@ use crate::{
     metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{AlertingAbs, CheckNull, DistanceConstant, InfSub, SaturatingAdd},
+    traits::Number,
 };
 
 use super::AddIsExact;
@@ -42,7 +41,7 @@ pub fn make_bounded_int_ordered_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + CheckNull + Zero + AlertingAbs + SaturatingAdd + AddIsExact,
+    T: Number + AddIsExact,
 {
     let (lower, upper) = bounds.clone();
     Ok(Transformation::new(
@@ -60,6 +59,7 @@ where
     generics(T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the sum of bounded ints with known dataset size. 
+/// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
 /// 
@@ -85,7 +85,7 @@ pub fn make_sized_bounded_int_ordered_sum<T>(
     >,
 >
 where
-    T: DistanceConstant<IntDistance> + InfSub + CheckNull + Zero + SaturatingAdd + AddIsExact,
+    T: Number + AddIsExact,
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;

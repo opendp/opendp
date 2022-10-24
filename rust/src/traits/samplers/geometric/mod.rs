@@ -9,12 +9,19 @@ use crate::{
 
 use super::{fill_bytes, SampleBernoulli, SampleStandardBernoulli};
 
+/// Sample from the censored geometric distribution.
 pub trait SampleGeometric<P>: Sized {
+    /// # Proof Definition
     /// Sample from the censored geometric distribution with parameter `prob`.
     /// If `trials` is None, there are no timing protections, and the support is:
+    /// ```text
     ///     [Self::MIN, Self::MAX]
+    /// ```
+    /// 
     /// If `trials` is Some, execution runs in constant time, and the support is
-    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {0, 1, 2, ..., `trials`}}
+    /// ```text
+    ///     [Self::MIN, Self::MAX] ∩ {shift ± {0, 1, 2, ..., trials}}
+    /// ```
     ///
     /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
     ///
@@ -95,12 +102,19 @@ where
     }
 }
 
+/// Sample from the censored two-sided geometric distribution.
 pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
+    /// # Proof Definition
     /// Sample from the censored two-sided geometric distribution with parameter `scale`.
     /// If `bounds` is None, there are no timing protections, and the support is:
+    /// ```text
     ///     [Self::MIN, Self::MAX]
+    /// ```
+    /// 
     /// If `bounds` is Some, execution runs in constant time, and the support is
-    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    /// ```text
+    ///     [Self::MIN, Self::MAX] ∩ {shift ± {1, 2, 3, ..., trials}}
+    /// ```
     ///
     /// Tail probabilities accumulate at the extrema of the support.
     ///
@@ -189,8 +203,20 @@ where
     }
 }
 
-/// Internal function. Returns a sample from the Geometric(p=0.5) distribution.
+/// Sample from a specific discrete/geometric distribution.
+/// 
+/// Used for exact bernoulli samples.
+/// 
+/// # Proof Definition
+/// For any setting of the input arguments, return 
+/// `Err(e)` if there is insufficient system entropy, or
+/// `Ok(sample)` where `sample` is from a discrete distribution.
+/// 
+/// `sample` is either 
+/// `None` with probability $2^{-buffer_len * 8}$, or
+/// `Some(geo)` where `geo` is a sample from the Geometric(p=0.5) distribution.
 ///
+/// # Notes
 /// The algorithm generates B * 8 bits at random and returns
 /// - Some(index of the first set bit)
 /// - None (if all bits are 0)

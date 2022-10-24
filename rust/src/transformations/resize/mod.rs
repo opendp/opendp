@@ -9,6 +9,7 @@ use crate::traits::samplers::Shuffle;
 use crate::traits::CheckNull;
 use std::cmp::Ordering;
 
+#[doc(hidden)]
 pub trait IsMetricOrdered: Metric {
     const ORDERED: bool;
 }
@@ -19,6 +20,21 @@ impl IsMetricOrdered for InsertDeleteDistance {
     const ORDERED: bool = true;
 }
 
+/// Make a Transformation that either truncates or imputes records 
+/// with `constant` to match a provided `size`.
+/// 
+/// # Arguments
+/// * `size` - Number of records in output data.
+/// * `atom_domain` - Domain of elements.
+/// * `constant` - Value to impute with.
+/// 
+/// # Generics
+/// * `DA` - Atomic Domain.
+/// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
+/// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
+/// 
+/// # Returns
+/// A vector of the same type `TA`, but with the provided `size`.
 pub fn make_resize<DA, MI, MO>(
     size: usize,
     atom_domain: DA,

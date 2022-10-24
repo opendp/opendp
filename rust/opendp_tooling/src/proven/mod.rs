@@ -10,6 +10,7 @@ pub mod filesystem;
 #[derive(FromMeta)]
 pub struct Proven {
     pub proof_path: Option<String>,
+    #[darling(default)]
     pub features: Features
 }
 

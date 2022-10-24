@@ -173,8 +173,6 @@ pub mod data;
 #[cfg(feature="contrib")]
 pub mod interactive;
 pub mod measurements;
-#[cfg(feature="contrib")]
-pub mod poly;
 pub mod traits;
 pub mod transformations;
 pub mod combinators;

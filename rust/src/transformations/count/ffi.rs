@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use crate::core::SensitivityMetric;
+use crate::core::Metric;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::metrics::{L1Distance, L2Distance};
 use crate::err;
@@ -65,7 +65,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             categories: *const AnyObject, 
             null_category: bool
         ) -> FfiResult<*mut AnyTransformation>
-            where MO: 'static + SensitivityMetric + CountByCategoriesConstant<MO::Distance>,
+            where MO: 'static + Metric + CountByCategoriesConstant<MO::Distance>,
                   MO::Distance: Number,
                   TI: Hashable,
                   TO: Number {
@@ -97,7 +97,7 @@ pub extern "C" fn opendp_transformations__make_count_by(
     ) -> FfiResult<*mut AnyTransformation>
         where QO: Float {
         fn monomorphize2<MO, TK, TV>() -> FfiResult<*mut AnyTransformation>
-            where MO: 'static + SensitivityMetric + CountByConstant<MO::Distance>,
+            where MO: 'static + Metric + CountByConstant<MO::Distance>,
                   MO::Distance: Float,
                   TK: Hashable,
                   TV: Number {

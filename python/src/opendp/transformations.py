@@ -155,6 +155,7 @@ def make_bounded_float_checked_sum(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -827,10 +828,6 @@ def make_count(
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<TO>`
     
-    **Proof Definition:**
-    
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/transformations/count/make_count.pdf)
-    
     :param TIA: Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TO: Output Type. Must be numeric.
@@ -1354,6 +1351,7 @@ def make_impute_constant(
     DIA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<TA>>"
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
+    
     By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
     Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
     that have an inherent representation of nullity, like floats.
@@ -1571,6 +1569,7 @@ def make_lipschitz_float_mul(
     M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
 ) -> Transformation:
     """Make a transformation that multiplies an aggregate by a constant.
+    
     The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
     
     [make_lipschitz_float_mul in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_lipschitz_float_mul.html)
@@ -1930,6 +1929,7 @@ def make_sized_bounded_float_checked_sum(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded floats with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
     | S (summation algorithm) | input type     |
@@ -2163,6 +2163,7 @@ def make_sized_bounded_int_ordered_sum(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded ints with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
@@ -2215,6 +2216,7 @@ def make_sized_bounded_int_split_sum(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded ints with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
@@ -2268,6 +2270,7 @@ def make_sized_bounded_mean(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the mean of bounded data.
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -2376,6 +2379,7 @@ def make_sized_bounded_sum(
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
@@ -2425,6 +2429,7 @@ def make_sized_bounded_sum_of_squared_deviations(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the sum of squared deviations of bounded data. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     | S (summation algorithm) | input type     |
@@ -2546,6 +2551,7 @@ def make_sized_bounded_variance(
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
     """Make a Transformation that computes the variance of bounded data. 
+    
     This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
     Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
     
