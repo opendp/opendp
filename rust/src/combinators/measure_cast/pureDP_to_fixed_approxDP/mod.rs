@@ -1,31 +1,27 @@
 use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
-    measures::{SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence},
+    measures::{MaxDivergence, FixedSmoothedMaxDivergence},
     traits::Float,
 };
-
-use self::cks20::cdp_epsilon;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-mod cks20;
-
-/// Constructs a new output measurement where the output measure 
-/// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
-/// 
+/// Constructs a new output measurement where the output measure
+/// is casted from `MaxDivergence<QO>` to `FixedSmoothedMaxDivergence<QO>`.
+///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
-/// 
+///
 /// # Generics
 /// * `DI` - Input Domain
 /// * `DO` - Output Domain
 /// * `MI` - Input Metric
 /// * `QO` - Output distance type. One of `f32` or `f64`.
-pub fn make_zCDP_to_approxDP<DI, DO, MI, QO>(
-    meas: Measurement<DI, DO, MI, ZeroConcentratedDivergence<QO>>,
-) -> Fallible<Measurement<DI, DO, MI, SmoothedMaxDivergence<QO>>>
+pub fn make_pureDP_to_fixed_approxDP<DI, DO, MI, QO>(
+    meas: Measurement<DI, DO, MI, MaxDivergence<QO>>,
+) -> Fallible<Measurement<DI, DO, MI, FixedSmoothedMaxDivergence<QO>>>
 where
     DI: Domain,
     DO: Domain,
@@ -46,13 +42,9 @@ where
         output_domain,
         function,
         input_metric,
-        SmoothedMaxDivergence::default(),
+        FixedSmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            let rho = privacy_map.eval(d_in)?;
-            if rho.is_sign_negative() {
-                return fallible!(FailedRelation, "rho must be non-negative");
-            }
-            Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
+            privacy_map.eval(d_in).map(|eps| (eps, QO::zero()))
         }),
     ))
 }
