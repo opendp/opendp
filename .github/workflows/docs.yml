@@ -119,10 +119,11 @@ jobs:
         run: |
           # copy each folder over
           for folder in en/*; do
-            source=artifacts/release/$folder
-            target=en/$folder/proofs
+            source=artifacts/release/$(basename $folder)
+            target=$folder/proofs
 
             if [ -d "$source" ]; then
+              echo "copying"
               mkdir -p "$target";
               mv "$source" "$target";
             fi;
