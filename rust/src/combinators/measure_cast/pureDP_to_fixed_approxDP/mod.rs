@@ -12,7 +12,7 @@ mod ffi;
 /// is casted from `MaxDivergence<QO>` to `FixedSmoothedMaxDivergence<QO>`.
 ///
 /// # Arguments
-/// * `meas` - a measurement with a privacy curve to be casted
+/// * `meas` - a measurement with a privacy measure to be casted
 ///
 /// # Generics
 /// * `DI` - Input Domain

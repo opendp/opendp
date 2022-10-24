@@ -96,6 +96,3 @@ def test_make_pureDP_to_fixed_approxDP():
     ])
 
     print(meas.map(1.))
-
-if __name__ == "__main__":
-    test_make_pureDP_to_fixed_approxDP()

@@ -16,7 +16,7 @@ mod cks20;
 /// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
 /// 
 /// # Arguments
-/// * `meas` - a measurement with a privacy curve to be casted
+/// * `meas` - a measurement with a privacy measure to be casted
 /// 
 /// # Generics
 /// * `DI` - Input Domain
