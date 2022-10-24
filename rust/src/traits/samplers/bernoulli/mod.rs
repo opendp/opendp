@@ -14,7 +14,7 @@ use super::SampleUniformIntBelow;
 pub trait SampleStandardBernoulli: Sized {
     /// # Proof Definition
     /// Return `Err(e)` if there is insufficient system entropy, or
-    /// `Ok(sample)`, where `sample` a draw from `Bernoulli(p=0.5)`.
+    /// `Ok(sample)`, where `sample` is a draw from `Bernoulli(p=0.5)`.
     fn sample_standard_bernoulli() -> Fallible<Self>;
 }
 impl SampleStandardBernoulli for bool {
@@ -25,14 +25,14 @@ impl SampleStandardBernoulli for bool {
     }
 }
 
-/// Sample a single bit with arbitrary probability of success
+/// Sample a single bit with arbitrary probability of success.
 ///
 /// # Arguments
 /// * `prob`- The desired probability of success (bit = 1).
 /// * `constant_time` - Whether or not to enforce the algorithm to run in constant time
 ///
 /// # Return
-/// A true boolean with probability "prob"
+/// A true boolean with probability "prob".
 ///
 /// # Examples
 ///

@@ -4,7 +4,7 @@ pub trait FiniteBounds {
     /// `Self::MAX_FINITE` is the largest permissible finite value that can be represented by `Self`.
     const MAX_FINITE: Self;
     /// # Proof Definition
-    /// `Self::MAX_FINITE` is the smallest permissible finite value that can be represented by `Self`.
+    /// `Self::MIN_FINITE` is the smallest permissible finite value that can be represented by `Self`.
     const MIN_FINITE: Self;
 }
 macro_rules! impl_finite_bounds {

@@ -25,7 +25,7 @@ use crate::{error::Fallible, core::Measure, domains::type_name};
 /// 
 /// ### `d`-closeness
 /// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$, 
-/// we say that $u, v$ are $d$-close under the max divergence measure (abbreviated as $D_{\infty}$) whenever
+/// we say that $M(u), M(v)$ are $d$-close under the max divergence measure (abbreviated as $D_{\infty}$) whenever
 /// 
 /// ```math
 /// D_{\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S]}{\Pr[M(v) \in S]} \Big] \leq d.
@@ -67,7 +67,7 @@ impl<Q: Clone> Measure for MaxDivergence<Q> {
 /// ### `d`-closeness
 /// For any two vectors $u, v \in \texttt{D}$ 
 /// and any choice of $\epsilon, \delta$ such that $\epsilon \ge d(\delta)$, 
-/// we say that $u, v$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
+/// we say that $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
 /// 
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
@@ -129,7 +129,7 @@ impl<Q> SMDCurve<Q> {
 /// ### `d`-closeness
 /// For any two vectors $u, v \in \texttt{D}$ and any $d$ of type $(\texttt{Q}, \texttt{Q})$,
 /// where $d = (\epsilon, \delta)$,
-/// we say that $u, v$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
+/// we say that $M(u), M(v)$ are $d$-close under the smoothed max divergence measure (abbreviated as $D_{S\infty}$) whenever
 /// 
 /// ```math
 /// D_{S\infty}(M(u) \| M(v)) = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[M(u) \in S] + \delta}{\Pr[M(v) \in S]} \Big] \leq \epsilon.
@@ -169,7 +169,7 @@ impl<Q: Clone> Measure for FixedSmoothedMaxDivergence<Q> {
 /// ### `d`-closeness
 /// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$, 
 /// define $P$ and $Q$ to be the distributions of $M(u)$ and $M(v)$.
-/// We say that $u, v$ are $d$-close under the alpha-renyi divergence measure (abbreviated as $D_{\alpha}$) whenever
+/// We say that $u, v$ are $d$-close under the alpha-Renyi divergence measure (abbreviated as $D_{\alpha}$) whenever
 /// 
 /// ```math
 /// D_{\alpha}(P \| Q) = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Q} \Big[\ln \left( \dfrac{P(x)}{Q(x)} \right)^\alpha \Big] \leq d \alpha.

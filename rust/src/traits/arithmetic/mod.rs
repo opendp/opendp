@@ -282,7 +282,7 @@ pub trait InfExpM1: Sized {
     fn neg_inf_exp_m1(self) -> Fallible<Self>;
 }
 
- /// Fallible logarithm of the (argument plus one) with specified rounding.
+ /// Fallible logarithm of the argument plus one with specified rounding.
  pub trait InfLn1P: Sized {
     /// # Proof Definition
     /// For any `self` of type `Self`, 

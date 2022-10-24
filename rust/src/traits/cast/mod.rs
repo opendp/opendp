@@ -27,7 +27,7 @@ pub trait ExactIntBounds {
     /// `Self::MAX_CONSECUTIVE` is the largest integer-consecutive finite value that can be represented by `Self`.
     const MAX_CONSECUTIVE: Self;
     /// # Proof Definition
-    /// `Self::MAX_CONSECUTIVE` is the smallest integer-consecutive finite value that can be represented by `Self`.
+    /// `Self::MIN_CONSECUTIVE` is the smallest integer-consecutive finite value that can be represented by `Self`.
     const MIN_CONSECUTIVE: Self;
 }
 
@@ -37,20 +37,20 @@ pub trait ExactIntBounds {
 /// For example, casting a 128_u8 to i8 doesn't saturate to i8::MAX (127), it errors.
 pub trait InfCast<TI>: Sized {
     /// # Proof Definition
-    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out \ge v$.
+    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Err(e)`,
+    /// or `Ok(out)` where $out \ge v$.
     fn inf_cast(v: TI) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out \le v$.
+    /// For any `v` of type `TI`, `Self::inf_cast(value)` either returns `Err(e)`,
+    /// or `Ok(out)` where $out \le v$.
     fn neg_inf_cast(v: TI) -> Fallible<Self>;
 }
 
 /// Fallible casting where the casted value is rounded to nearest.
 pub trait RoundCast<TI>: Sized {
     /// # Proof Definition
-    /// For any `v` of type `TI`, `Self::inf_cast(v)` either returns `Ok(out)` or `Err(e)`,
-    /// where $out = argmin_{x \in TI} |x - v|$.
+    /// For any `v` of type `TI`, `Self::inf_cast(v)` either returns `Err(e)`, 
+    /// or `Ok(out)` where $out = argmin_{x \in TI} |x - v|$.
     fn round_cast(v: TI) -> Fallible<Self>;
 }
 

@@ -20,7 +20,7 @@ pub trait SampleGeometric<P>: Sized {
     /// 
     /// If `trials` is Some, execution runs in constant time, and the support is
     /// ```text
-    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {0, 1, 2, ..., `trials`}}
+    ///     [Self::MIN, Self::MAX] ∩ {shift ± {0, 1, 2, ..., trials}}
     /// ```
     ///
     /// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
@@ -107,9 +107,14 @@ pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
     /// # Proof Definition
     /// Sample from the censored two-sided geometric distribution with parameter `scale`.
     /// If `bounds` is None, there are no timing protections, and the support is:
+    /// ```text
     ///     [Self::MIN, Self::MAX]
+    /// ```
+    /// 
     /// If `bounds` is Some, execution runs in constant time, and the support is
-    ///     [Self::MIN, Self::MAX] ∩ {shift ±= {1, 2, 3, ..., `trials`}}
+    /// ```text
+    ///     [Self::MIN, Self::MAX] ∩ {shift ± {1, 2, 3, ..., trials}}
+    /// ```
     ///
     /// Tail probabilities accumulate at the extrema of the support.
     ///

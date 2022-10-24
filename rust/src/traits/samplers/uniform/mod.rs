@@ -16,7 +16,7 @@ use rug::rand::ThreadRandState;
 pub trait SampleUniform: Sized {
     /// # Proof Definition
     /// Return `Err(e)` if there is insufficient system entropy, or
-    /// `Ok(sample)`, where `sample` a draw from Uniform[0,1).
+    /// `Ok(sample)`, where `sample` is a draw from Uniform[0,1).
     /// 
     /// For non-uniform data types like floats, 
     /// the probability of sampling each value is proportional to the distance to the next neighboring float.
@@ -33,24 +33,24 @@ pub trait SampleUniform: Sized {
 }
 
 
+/// This algorithm is taken from [Mironov (2012)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.366.5957&rep=rep1&type=pdf)
+/// and is important for making some of the guarantees in the paper.
+///
+/// The idea behind the uniform sampling is to first sample a "precision band".
+/// Each band is a range of floating point numbers with the same level of arithmetic precision
+/// and is situated between powers of two.
+/// A band is sampled with probability relative to the unit of least precision using the Geometric distribution.
+/// That is, the uniform sampler will generate the band [1/2,1) with probability 1/2, [1/4,1/2) with probability 1/4,
+/// and so on.
+///
+/// Once the precision band has been selected, floating numbers numbers are generated uniformly within the band
+/// by generating a 52-bit mantissa uniformly at random.
 impl<T, B> SampleUniform for T
     where 
         T: SampleMantissa<Bits=B>,
         B: ExactIntCast<usize> + Sub<Output=B> + One,
         usize: ExactIntCast<B> {
 
-    /// This algorithm is taken from [Mironov (2012)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.366.5957&rep=rep1&type=pdf)
-    /// and is important for making some of the guarantees in the paper.
-    ///
-    /// The idea behind the uniform sampling is to first sample a "precision band".
-    /// Each band is a range of floating point numbers with the same level of arithmetic precision
-    /// and is situated between powers of two.
-    /// A band is sampled with probability relative to the unit of least precision using the Geometric distribution.
-    /// That is, the uniform sampler will generate the band [1/2,1) with probability 1/2, [1/4,1/2) with probability 1/4,
-    /// and so on.
-    ///
-    /// Once the precision band has been selected, floating numbers numbers are generated uniformly within the band
-    /// by generating a 52-bit mantissa uniformly at random.
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
         // The unbiased exponent of Uniform([0, 1)) is in 
         //   f64: [-1023, -1]; f32: [-127, -1]
@@ -119,7 +119,7 @@ macro_rules! impl_sample_mantissa {
 impl_sample_mantissa!(f64, 0b00001111);
 impl_sample_mantissa!(f32, 0b01111111);
 
-/// Sample an integer uniformly over `[Self::MIN, upper]`.
+/// Sample an integer uniformly over `[Self::MIN, Self::MAX]`.
 pub trait SampleUniformInt: Sized {
     /// # Proof Definition
     /// Return either `Err(e)` if there is insufficient system entropy,

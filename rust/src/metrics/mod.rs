@@ -35,7 +35,7 @@ pub type IntDistance = u32;
 /// (abbreviated as $d_{Sym}$) whenever 
 /// 
 /// ```math
-/// d_{Sym}(u, v) = |MultiSet(u) \Delta MultiSet(v)| \leq d
+/// d_{Sym}(u, v) = |u \Delta v| \leq d
 /// ```
 /// # Note
 /// The distance type is hard-coded as [`IntDistance`], 
@@ -45,6 +45,8 @@ pub type IntDistance = u32;
 /// 
 /// * `VectorDomain<D>` for any valid `D`
 /// * `SizedDomain<VectorDomain<D>>` for any valid `D`
+/// 
+/// When this metric is paired with a `VectorDomain`, we instead consider the multisets corresponding to $u, v \in \texttt{D}$.
 #[derive(Clone)]
 pub struct SymmetricDistance;
 
@@ -270,7 +272,7 @@ pub type L1Distance<Q> = LpDistance<1, Q>;
 /// Refer to [`LpDistance`] for details.
 pub type L2Distance<Q> = LpDistance<2, Q>;
 
-/// The absolute distance between two vector-valued aggregates.
+/// The absolute distance between two scalar-valued aggregates.
 /// 
 /// # Proof Definition
 /// 
@@ -313,7 +315,7 @@ impl<Q> Metric for AbsoluteDistance<Q> {
 /// # Proof Definition
 /// 
 /// ### `d`-closeness
-/// For any two datasets $u, v \in \texttt{AllDomain<T>}$ and any $d$ of type [`IntDistance`], 
+/// For any two datasets $u, v \in$ `AllDomain<T>` and any $d$ of type [`IntDistance`], 
 /// we say that $u, v$ are $d$-close under the discrete metric (abbreviated as $d_{Eq}$) whenever
 /// 
 /// ```math

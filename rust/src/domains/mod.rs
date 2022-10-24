@@ -90,14 +90,14 @@ impl<T: CheckNull> Domain for AllDomain<T> {
 /// ```
 /// // Create a domain that includes the values `{1, 2, 3}`.
 /// use opendp::domains::BoundedDomain;
-/// let i32_domain = BoundedDomain::<i32>::new_closed((1, 3))?;
+/// let i32_bounded_domain = BoundedDomain::<i32>::new_closed((1, 3))?;
 /// 
 /// // 1 is a member of the i32_domain
 /// use opendp::core::Domain;
-/// assert!(i32_domain.member(&1)?);
+/// assert!(i32_bounded_domain.member(&1)?);
 /// 
 /// // 4 is not a member of the i32_domain
-/// assert!(!i32_domain.member(&4)?);
+/// assert!(!i32_bounded_domain.member(&4)?);
 /// # opendp::error::Fallible::Ok(())
 /// ```
 #[derive(Clone, PartialEq)]
@@ -185,7 +185,7 @@ impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
 /// let value_domain = InherentNullDomain::new(BoundedDomain::new_closed((0., 1.))?);
 /// let domain = MapDomain::new(AllDomain::new(), value_domain);
 /// 
-/// // The following is not a member of the hashmap domain, because a key is out-of-range:
+/// // The following is not a member of the hashmap domain, because a value is out-of-range:
 /// let hashmap = HashMap::from_iter([("a", 0.), ("b", 2.)]);
 /// assert!(!domain.member(&hashmap)?);
 /// # opendp::error::Fallible::Ok(())
@@ -281,7 +281,7 @@ impl<D: Domain> Domain for VectorDomain<D> {
 /// A Domain that specifies the length of the enclosed domain.
 /// 
 /// # Proof Definition
-/// `SizedDomain(inner_domain, size, D)` is the domain of `inner_domain` restricted to only elements with length `size`.
+/// `SizedDomain(inner_domain, size, D)` is the domain of `inner_domain` restricted to only elements with size `size`.
 /// 
 /// # Example
 /// First let `inner_domain` be `VectorDomain::new(AllDomain::<i32>::new())`. 
@@ -411,7 +411,6 @@ impl<D: Domain> Domain for InherentNullDomain<D> where D::Carrier: InherentNull 
 /// let null_domain = OptionNullDomain::new(AllDomain::new());
 /// 
 /// use opendp::core::Domain;
-/// // Some(1) is not a member of all_domain, but is a member of null_domain
 /// assert!(null_domain.member(&Some(1))?);
 /// assert!(null_domain.member(&None)?);
 /// 

@@ -37,7 +37,7 @@ use std::fmt::Debug;
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
 /// 
 /// # Proof Definition
-/// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain
+/// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain.
 pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
     /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
@@ -101,7 +101,7 @@ impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
 /// A representation of the distance between two elements in a set.
 /// 
 /// # Proof Definition
-/// A type `Self` has an implementation for `Metric` if an only if it can represent a metric for quantifying distances between values in a set. 
+/// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set. 
 pub trait Metric: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
@@ -111,7 +111,7 @@ pub trait Metric: Default + Clone + PartialEq + Debug {
 /// A representation of the distance between two distributions.
 /// 
 /// # Proof Definition
-/// A type `Self` has an implementation for `Measure` if an only if it can represent a measure for quantifying distances between distributions. 
+/// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions. 
 
 pub trait Measure: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
@@ -201,12 +201,12 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 
 /// A randomized mechanism with certain privacy characteristics.
 /// 
-/// The trait bounds provided by the rust type system guarantee that:
+/// The trait bounds provided by the Rust type system guarantee that:
 /// * `input_domain` and `output_domain` are valid domains
 /// * `input_metric` is a valid metric
 /// * `output_measure` is a valid measure
 /// 
-/// It is, however, left to constructors to prove that:
+/// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
 #[derive(Clone)]
@@ -254,11 +254,11 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
 
 /// A data transformation with certain stability characteristics.
 /// 
-/// The trait bounds provided by the rust type system guarantee that:
+/// The trait bounds provided by the Rust type system guarantee that:
 /// * `input_domain` and `output_domain` are valid domains
 /// * `input_metric` and `output_metric` are valid metrics
 /// 
-/// It is, however, left to constructors to prove that:
+/// It is, however, left to constructor functions to prove that:
 /// * metrics are compatible with domains
 /// * `function` is a mapping from the input domain to the output domain
 /// * `stability_map` is a mapping from the input metric to the output metric
