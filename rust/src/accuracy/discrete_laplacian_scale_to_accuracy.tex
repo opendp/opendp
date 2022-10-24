@@ -30,7 +30,7 @@ This document contains materials associated with \rustdoc{accuracy/fn}{discrete\
 Consider that the distribution of $(X - z) \sim \mathcal{L}_\mathbb{Z}(0, s)$.
 Then the PMF of $Y$ is:
 \begin{equation}
-    \forall y \ge 0 \qquad g(y) = (1 + 1[y = 0]) \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-y/s}
+    \forall y \ge 0 \qquad g(y) = (1 + 1[y \ne 0]) \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-y/s}
 \end{equation}
 
 The purpose of the indicator function is to avoid double-counting zero.

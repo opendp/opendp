@@ -271,14 +271,20 @@ pub mod test {
     #[test]
     fn test_comparison() -> Fallible<()> {
         let alpha = 0.05;
-
         let scale = 20.;
-        println!("cont accuracy: {}", laplacian_scale_to_accuracy(scale, alpha)?);
-        println!("disc accuracy: {}", discrete_laplacian_scale_to_accuracy(scale, alpha)?);
-
         let accuracy = 20.;
-        println!("cont scale: {}", accuracy_to_laplacian_scale(accuracy, alpha)?);
-        println!("disc scale: {}", accuracy_to_discrete_laplacian_scale(accuracy, alpha)?);
+
+        println!("lap cont accuracy: {}", laplacian_scale_to_accuracy(scale, alpha)?);
+        println!("lap disc accuracy: {}", discrete_laplacian_scale_to_accuracy(scale, alpha)?);
+
+        println!("lap cont scale: {}", accuracy_to_laplacian_scale(accuracy, alpha)?);
+        println!("lap disc scale: {}", accuracy_to_discrete_laplacian_scale(accuracy, alpha)?);
+
+        println!("gauss cont accuracy: {}", gaussian_scale_to_accuracy(scale, alpha)?);
+        println!("gauss disc accuracy: {}", discrete_gaussian_scale_to_accuracy(scale, alpha)?);
+
+        println!("gauss cont scale: {}", accuracy_to_gaussian_scale(accuracy, alpha)?);
+        println!("gauss disc scale: {}", accuracy_to_discrete_gaussian_scale(accuracy, alpha)?);
         Ok(())
     }
 
@@ -410,7 +416,7 @@ pub mod test {
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
         let base_laplace = make_base_laplace::<AllDomain<f64>>(scale, Some(-100))?;
-        let n = 500_000;
+        let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
             .count() as f64 / n as f64;
@@ -468,7 +474,7 @@ pub mod test {
 
         println!("scale: {}", scale);
         let base_dg = make_base_discrete_gaussian::<AllDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(scale)?;
-        let n = 500_000;
+        let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dg.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
             .count() as f64 / n as f64;

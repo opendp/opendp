@@ -22,7 +22,7 @@ This document contains materials associated with \rustdoc{accuracy/fn}{discrete\
     For any $\texttt{scale} \ge 0$ denoted $s$, when $X \sim \mathcal{N}_\mathbb{Z}(z, s)$, 
     \begin{equation}
         a = argmin_i \left[(1 - \alpha) \cdot \sum_{y\in \mathbb{Z}} e^{-(y/s)^2/2} 
-        \le \sum_{x=0}^{i - 1} (1 + 1[x=0]) e^{-(x/s)^2/2} \right]
+        \le \sum_{x=0}^{i - 1} (1 + 1[x \ne 0]) e^{-(x/s)^2/2} \right]
     \end{equation}
 
     That is, the accuracy is the smallest $i$ such that the inequality holds.
@@ -33,7 +33,7 @@ This document contains materials associated with \rustdoc{accuracy/fn}{discrete\
 Consider that the distribution of $(X - z) \sim \mathcal{N}_\mathbb{Z}(0, s)$.
 Then the PMF of $Y$ is:
 \begin{equation}
-    \forall y \ge 0 \qquad g(y) = \frac{(1 + 1[y = 0]) e^{-(y/s)^2/2}}{\sum_{y \in \mathbb{Z}} e^{-(y/s)^2/2} }
+    \forall y \ge 0 \qquad g(y) = \frac{(1 + 1[y \ne 0]) e^{-(y/s)^2/2}}{\sum_{y \in \mathbb{Z}} e^{-(y/s)^2/2} }
 \end{equation}
 
 The purpose of the indicator function is to avoid double-counting zero.
@@ -43,12 +43,12 @@ Now derive an expression for $\alpha$:
     \alpha &= P[Y \ge a] \\
     &= 1 - P[Y < a] \\
     &= 1 - \sum_{y=0}^{a - 1} g(y) && \text{where $g(y)$ is the distribution of Y} \\
-    &= 1 - \sum_{y=0}^{a - 1} \frac{(1 + 1[y = 0]) e^{-(y/s)^2/2}}{\sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} }
+    &= 1 - \sum_{y=0}^{a - 1} \frac{(1 + 1[y \ne 0]) e^{-(y/s)^2/2}}{\sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} }
 \end{align*}
 
 Reorder terms:
 \begin{align*}
-    (1 - \alpha) \sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} = \sum_{y=0}^{a - 1} (1 + 1[y = 0]) e^{-(y/s)^2/2}
+    (1 - \alpha) \sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} = \sum_{y=0}^{a - 1} (1 + 1[y \ne 0]) e^{-(y/s)^2/2}
 \end{align*}
 
 The accuracy is the smallest $a$ for which the right term is greater than or equal to the left term.

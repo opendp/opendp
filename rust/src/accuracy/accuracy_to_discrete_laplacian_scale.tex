@@ -16,10 +16,10 @@ the relationship between $\alpha$, $a$ and $scale$, is:
     \alpha = 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
 \end{equation*}
 
-A closed-form expression for s doesn't exist, 
+A closed-form expression for $s$ doesn't exist, 
 so we use a numerical approach by a binary search.
 
-The upper bound is provided by \rustdoc{accuracy/fn}{accuracy\_to\_laplacian\_scale}.
+A loose upper bound is provided by \rustdoc{accuracy/fn}{accuracy\_to\_laplacian\_scale}.
 
 The binary search finds the smallest $s$ such that
 
