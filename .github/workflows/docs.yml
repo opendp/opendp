@@ -119,7 +119,7 @@ jobs:
         run: |
           # copy each folder over
           for folder in en/*; do
-            source=artifacts/release/$(basename $folder)
+            source=$GITHUB_WORKSPACE/artifacts/release/$(basename $folder)
             target=$folder/proofs
 
             if [ -d "$source" ]; then
