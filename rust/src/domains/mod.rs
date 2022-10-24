@@ -27,14 +27,23 @@ pub use poly::*;
 
 pub type QueryableDomain<S, Q, A> = AllDomain<Queryable<S, Q, A>>;
 
-pub struct Hook<S, L> {
+pub struct Hook<'a, S, L> {
     pub inner: S,
-    pub listener: Option<Box<dyn Fn(&L, bool) -> Fallible<bool>>>
+    pub listener: Box<dyn Fn(&L, bool) -> Fallible<bool> + 'a>
 }
 
-impl<S, L> Hook<S, L> {
-    pub fn new_queryable<Q, A>(state: S, transition: impl Fn(S, &dyn Query<Q>) -> (S, A)) -> Queryable<Hook<S, L>, Q, A> {
-        unimplemented!()
+impl<'a, S, L> Hook<'a, S, L> {
+    pub fn new_queryable<Q, A>(state: S, transition: impl Fn(S, &dyn Query<Q>) -> (S, A) + 'a) -> Queryable<Hook<'a, S, L>, Q, A> {
+        let listener = |v: &L, b: bool| {
+            Ok(true)
+        };
+        Queryable {
+            state: Some(Hook {
+                inner: state,
+                listener: Box::new(listener)
+            }),
+            transition: transition
+        }
     }
 }
 

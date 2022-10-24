@@ -210,7 +210,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
 #[derive(Clone)]
-pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+pub struct MeasurementBase<DI: Domain, DO: Domain, MI: Metric, MO: Measure, const INTERACTIVE: bool> {
     pub input_domain: DI,
     pub output_domain: DO,
     pub function: Function<DI, DO>,
@@ -218,6 +218,8 @@ pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub output_measure: MO,
     pub privacy_map: PrivacyMap<MI, MO>,
 }
+
+pub type Measurement<DI, DO, MI, MO> = MeasurementBase<DI, DO, MI, MO, false>;
 
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
     pub fn new(
