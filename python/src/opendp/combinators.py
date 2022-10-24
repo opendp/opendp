@@ -13,6 +13,7 @@ __all__ = [
     "make_fix_delta",
     "make_population_amplification",
     "make_pureDP_to_fixed_approxDP",
+    "make_pureDP_to_zCDP",
     "make_zCDP_to_approxDP"
 ]
 
@@ -242,6 +243,39 @@ def make_pureDP_to_fixed_approxDP(
     
     # Call library function.
     function = lib.opendp_combinators__make_pureDP_to_fixed_approxDP
+    function.argtypes = [Measurement]
+    function.restype = FfiResult
+    
+    return c_to_py(unwrap(function(measurement), Measurement))
+
+
+def make_pureDP_to_zCDP(
+    measurement: Measurement
+) -> Measurement:
+    """Constructs a new output measurement where the output measure
+    is casted from `MaxDivergence<QO>` to `ZeroConcentratedDivergence<QO>`.
+    
+    [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_pureDP_to_zCDP.html)
+    
+    **Citations:**
+    
+    - [BS16 Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds](https://arxiv.org/pdf/1605.02065.pdf#subsection.3.1)
+    
+    :param measurement: a measurement with a privacy measure to be casted
+    :type measurement: Measurement
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    
+    # Call library function.
+    function = lib.opendp_combinators__make_pureDP_to_zCDP
     function.argtypes = [Measurement]
     function.restype = FfiResult
     
