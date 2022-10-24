@@ -123,7 +123,6 @@ jobs:
             target=$folder/proofs
 
             if [ -d "$source" ]; then
-              echo "copying"
               mkdir -p "$target";
               mv "$source" "$target";
             fi;
