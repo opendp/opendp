@@ -11,21 +11,20 @@ use crate::traits::CheckNull;
 pub struct Queryable<S, Q, A> {
     /// The state of the Queryable. It is wrapped in an option so that ownership can be moved out
     /// temporarily, during transitions.
-    state: Option<S>,
+    pub state: Option<S>,
     /// The transition function of the Queryable. Takes the current state and a query, returns
     /// the new state and the answer.
-    transition: Rc<dyn Fn(S, &dyn Query<Q>) -> Fallible<(S, A)>>,
+    pub transition: Rc<dyn Fn(S, &dyn Query<Q>) -> Fallible<(S, A)>>,
 }
 
 pub trait Query<Q> {
-    fn as_Q(&self) -> &Q {
-        self
-    }
+}
+impl<Q> Query<Q> for Q {
 }
 
 impl<S, Q, A> Queryable<S, Q, A> {
     /// Constructs a Queryable with initial state and transition function.
-    pub fn new(initial: S, transition: impl Fn(S, &Q) -> Fallible<(S, A)> + 'static) -> Self {
+    pub fn new(initial: S, transition: impl Fn(S, &dyn Query<Q>) -> Fallible<(S, A)> + 'static) -> Self {
         Queryable {
             state: Some(initial),
             transition: Rc::new(transition),
@@ -49,7 +48,7 @@ impl<S, Q, A> Queryable<S, Q, A> {
 
 impl<S, Q> Queryable<S, Q, Box<dyn Any>> {
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
+    pub fn eval_poly<A: 'static>(&mut self, query: &dyn Query<Q>) -> Fallible<A> {
         self.eval(query)?
             .downcast()
             .map_err(|_| err!(FailedCast))
