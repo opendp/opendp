@@ -8,10 +8,7 @@ use crate::{
     traits::Float,
 };
 
-#[bootstrap(
-    features("contrib"),
-    dependencies("$get_dependencies(measurement)")
-)]
+#[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
 /// is casted from `MaxDivergence<QO>` to `FixedSmoothedMaxDivergence<QO>`.
 ///
