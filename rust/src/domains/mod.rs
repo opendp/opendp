@@ -16,7 +16,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::traits::{CheckNull, TotalOrd, InherentNull};
+use crate::traits::{CheckNull, TotalOrd, InherentNull, CollectionSize};
 use std::fmt::{Debug, Formatter};
 
 #[cfg(feature="contrib")]
@@ -216,11 +216,6 @@ impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV> where DK::Carrier: Eq 
         Ok(true)
     }
 }
-impl<DK: Domain, DV: Domain> CollectionDomain for MapDomain<DK, DV> where DK::Carrier: Eq + Hash {
-    fn size(v: &Self::Carrier) -> usize {
-        v.len()
-    }
-}
 
 
 /// A Domain that contains vectors of (homogeneous) values.
@@ -320,23 +315,13 @@ impl<D: Domain> Debug for SizedDomain<D> {
         write!(f, "SizedDomain({:?}, size={})", self.inner_domain, self.size)
     }
 }
-impl<D: CollectionDomain> Domain for SizedDomain<D> {
+impl<D: Domain> Domain for SizedDomain<D> where D::Carrier: CollectionSize {
     type Carrier = D::Carrier;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        if D::size(val) != self.size {
+        if val.size() != self.size {
             return Ok(false)
         }
         self.inner_domain.member(val)
-    }
-}
-
-pub trait CollectionDomain: Domain {
-    fn size(v: &Self::Carrier) -> usize;
-}
-
-impl<D: Domain> CollectionDomain for VectorDomain<D> {
-    fn size(v: &Self::Carrier) -> usize {
-        v.len()
     }
 }
 

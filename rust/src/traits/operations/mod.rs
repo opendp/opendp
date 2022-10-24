@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::ops::{BitAnd, Shl, Shr, Sub, BitOr};
 
 use num::{One, Zero};
@@ -6,6 +7,15 @@ use num::{One, Zero};
 use crate::error::Fallible;
 
 use super::ExactIntCast;
+
+/// Returns the length of self, where self is a collection. 
+/// 
+/// Self is commonly a `Vec` or `HashMap`.
+pub trait CollectionSize {
+    /// # Proof Definition
+    /// For any `value` of type `Self`, returns the size of the collection.
+    fn size(&self) -> usize;
+}
 
 /// Checks if a value is null.
 /// 
@@ -167,6 +177,18 @@ pub trait FloatBits: Copy + Sized + ExactIntCast<Self::Bits> {
     /// # Proof Definition
     /// For any `bits` of the associated `Bits` type, returns the floating-point number corresponding to `bits`.
     fn from_bits(bits: Self::Bits) -> Self;
+}
+
+impl<T> CollectionSize for Vec<T> {
+    fn size(&self) -> usize {
+        self.len()
+    }
+}
+
+impl<K, V> CollectionSize for HashMap<K, V> {
+    fn size(&self) -> usize {
+        self.len()
+    }
 }
 
 
