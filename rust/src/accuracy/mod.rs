@@ -14,7 +14,7 @@ use crate::traits::InfCast;
 use std::fmt::Debug;
 
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
-/// Convert a laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+/// Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 /// 
 /// # Arguments
 /// * `scale` - Laplacian noise scale.
@@ -32,8 +32,42 @@ pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(scale: T, alph
     Ok(scale * alpha.recip().ln())
 }
 
+#[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a discrete Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+/// 
+/// $\alpha = P[Y \ge accuracy]$, where $Y = |X - z|$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
+/// That is, $X$ is a discrete Laplace random variable and $Y$ is the distribution of the errors.
+/// 
+/// This function returns a float accuracy. 
+/// You can take the floor without affecting the coverage probability.
+/// 
+/// # Arguments
+/// * `scale` - Discrete Laplacian noise scale.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `scale` and `alpha`
+pub fn discrete_laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(scale: T, alpha: T) -> Fallible<T> {
+    if scale.is_sign_negative() {
+        return fallible!(InvalidDistance, "scale may not be negative")
+    }
+    if alpha <= T::zero() || T::one() < alpha {
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]")
+    }
+
+    let _1 = T::one();
+    let _2 = _1 + _1;
+
+    // somewhere between 1 and 2
+    // term = 2 / (exp(1/scale) + 1)
+    let term = _2 / (scale.recip().exp() + _1);
+
+    // scale * ln(1/α * term) + 1
+    Ok(scale * (alpha.recip() * term).ln() + _1)
+}
+
 #[bootstrap(arguments(accuracy(c_type = "void *"), alpha(c_type = "void *")))]
-/// Convert a desired `accuracy` (tolerance) into a laplacian noise scale at a statistical significance level `alpha`.
+/// Convert a desired `accuracy` (tolerance) into a Laplacian noise scale at a statistical significance level `alpha`.
 /// 
 /// # Arguments
 /// * `accuracy` - Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
@@ -52,6 +86,42 @@ pub fn accuracy_to_laplacian_scale<T: Float + Zero + One + Debug>(accuracy: T, a
         return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)")
     }
     Ok(accuracy / alpha.recip().ln())
+}
+
+#[bootstrap(arguments(accuracy(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a desired `accuracy` (tolerance) into a discrete Laplacian noise scale at a statistical significance level `alpha`.
+/// 
+/// # Arguments
+/// * `accuracy` - Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `accuracy` and `alpha`
+/// 
+/// # Returns
+/// Discrete laplacian noise scale that meets the `accuracy` requirement at a given level-`alpha`.
+pub fn accuracy_to_discrete_laplacian_scale<T: Float + Zero + One + Debug>(accuracy: T, alpha: T) -> Fallible<T> {
+    // the continuous laplacian scale is an upper bound
+    let mut s_max = accuracy_to_laplacian_scale(accuracy, alpha)?;
+    let mut s_min = T::zero();
+
+    let _2 = T::one() + T::one();
+
+    // run binary search to find ideal scale
+    loop {
+        let diff = s_max - s_min;
+        let s_mid = s_min + diff / _2;
+
+        if s_mid == s_max || s_mid == s_min {
+            return Ok(s_max)
+        }
+
+        if discrete_laplacian_scale_to_accuracy(s_mid, alpha)? >= accuracy {
+            s_max = s_mid;
+        } else {
+            s_min = s_mid;
+        }
+    }
 }
 
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
@@ -76,6 +146,36 @@ pub fn gaussian_scale_to_accuracy<T>(scale: T, alpha: T) -> Fallible<T>
     T::inf_cast(scale * SQRT_2 * erf_inv(1. - alpha))
 }
 
+
+#[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a discrete gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
+/// 
+/// # Arguments
+/// * `scale` - Gaussian noise scale.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `scale` and `alpha`
+pub fn discrete_gaussian_scale_to_accuracy<T>(scale: T, alpha: T) -> Fallible<T>
+    where f64: InfCast<T>, T: InfCast<f64> {
+    let scale = f64::inf_cast(scale)?;
+    let alpha = f64::inf_cast(alpha)?;
+    
+    let mut total = (1. - alpha) * dg_normalization_term(scale);
+    let mut i = 0;
+    total -= dg_pdf(i, scale);
+    while total.is_sign_positive() {
+        i += 1;
+        let dens = 2. * dg_pdf(i, scale);
+        if dens.is_zero() {
+            return fallible!(FailedFunction, "could not determine accuracy");
+        }
+        total -= dens;
+    }
+    T::inf_cast((i + 1) as f64)
+}
+
+
 #[bootstrap(arguments(accuracy(c_type = "void *"), alpha(c_type = "void *")))]
 /// Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.
 /// 
@@ -99,6 +199,64 @@ pub fn accuracy_to_gaussian_scale<T>(accuracy: T, alpha: T) -> Fallible<T>
 }
 
 
+#[bootstrap(arguments(accuracy(c_type = "void *"), alpha(c_type = "void *")))]
+/// Convert a desired `accuracy` (tolerance) into a discrete gaussian noise scale at a statistical significance level `alpha`.
+/// 
+/// # Arguments
+/// * `accuracy` - Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
+/// * `alpha` - Statistical significance, level-`alpha`, or (1. - `alpha`)100% confidence. Must be within (0, 1].
+/// 
+/// # Generics
+/// * `T` - Data type of `accuracy` and `alpha`
+pub fn accuracy_to_discrete_gaussian_scale<T>(accuracy: T, alpha: T) -> Fallible<T>
+    where f64: InfCast<T>, T: InfCast<f64> {
+    let accuracy = f64::inf_cast(accuracy)?;
+    let alpha = f64::inf_cast(alpha)?;
+
+    fn exponential_sum(x: i32, scale: f64) -> f64 {
+        (1..x).fold(dg_pdf(0, scale), |sum, i| sum + 2. * dg_pdf(i, scale))
+    }
+
+    let mut s_max: f64 = accuracy_to_gaussian_scale::<f64>(accuracy, alpha)?;
+    let mut s_min = 0.;
+
+    // run binary search to find ideal scale
+    loop {
+        let diff = s_max - s_min;
+        let s_mid = s_min + diff / 2.;
+
+        if s_mid == s_max || s_mid == s_min {
+            return T::inf_cast(s_max)
+        }
+
+        let success_prob = exponential_sum(accuracy as i32, s_mid) / dg_normalization_term(s_mid);
+        if 1. - alpha > success_prob {
+            s_max = s_mid;
+        } else {
+            s_min = s_mid;
+        }
+    }
+}
+
+
+fn dg_pdf(x: i32, scale: f64) -> f64 {
+    (-(x as f64 / scale).powi(2) / 2.).exp()
+}
+
+fn dg_normalization_term(scale: f64) -> f64 {
+    let mut i = 0;
+    let mut total = dg_pdf(i, scale);
+    loop {
+        i += 1;
+        let density_i = 2. * dg_pdf(i, scale);
+        if density_i.is_zero() {
+            return total
+        }
+        total += density_i;
+    }
+}
+
+
 #[cfg(all(test, feature="untrusted"))]
 pub mod test {
     use std::fmt::Debug;
@@ -109,6 +267,38 @@ pub mod test {
     use crate::error::ExplainUnwrap;
     use crate::domains::AllDomain;
     use crate::measures::ZeroConcentratedDivergence;
+
+    #[test]
+    fn test_comparison() -> Fallible<()> {
+        let alpha = 0.05;
+        let scale = 20.;
+        let accuracy = 20.;
+
+        let c_acc = laplacian_scale_to_accuracy(scale, alpha)?;
+        let d_acc = discrete_laplacian_scale_to_accuracy(scale, alpha)?;
+        assert!(c_acc < d_acc);
+        println!("lap cont accuracy: {}", c_acc);
+        println!("lap disc accuracy: {}", d_acc);
+
+        let c_scale = accuracy_to_laplacian_scale(accuracy, alpha)?;
+        let d_scale = accuracy_to_discrete_laplacian_scale(accuracy, alpha)?;
+        assert!(c_scale > d_scale);
+        println!("lap cont scale: {}", c_scale);
+        println!("lap disc scale: {}", d_scale);
+
+        let c_acc = gaussian_scale_to_accuracy(scale, alpha)?;
+        let d_acc = discrete_gaussian_scale_to_accuracy(scale, alpha)?;
+        assert!(c_acc < d_acc);
+        println!("gauss cont accuracy: {}", c_acc);
+        println!("gauss disc accuracy: {}", d_acc);
+
+        let c_scale = accuracy_to_gaussian_scale(accuracy, alpha)?;
+        let d_scale = accuracy_to_discrete_gaussian_scale(accuracy, alpha)?;
+        assert!(c_scale > d_scale);
+        println!("gauss cont scale: {}", c_scale);
+        println!("gauss disc scale: {}", d_scale);
+        Ok(())
+    }
 
     fn print_statement<T: Copy + Debug + One + From<i8> + Sub<Output=T> + Mul<Output=T>>(dist: &str, scale: T, accuracy: T, alpha: T) {
         let _100 = T::from(100);
@@ -237,7 +427,7 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
-        let base_laplace = make_base_laplace::<AllDomain<f64>>(scale, None)?;
+        let base_laplace = make_base_laplace::<AllDomain<f64>>(scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
@@ -255,7 +445,7 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-        let base_gaussian = make_base_gaussian::<AllDomain<f64>, ZeroConcentratedDivergence<_>>(scale, None)?;
+        let base_gaussian = make_base_gaussian::<AllDomain<f64>, ZeroConcentratedDivergence<_>>(scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)
@@ -272,8 +462,8 @@ pub mod test {
     pub fn test_empirical_discrete_laplace_accuracy() -> Fallible<()> {
         let accuracy = 25;
         let theoretical_alpha = 0.05;
-        let scale = accuracy_to_laplacian_scale(accuracy as f64, theoretical_alpha)?;
-        println!("scale: {}", scale);
+        let scale = accuracy_to_discrete_laplacian_scale(accuracy as f64, theoretical_alpha)?;
+        println!("scale: {scale}");
         let base_dl = make_base_discrete_laplace::<AllDomain<i8>, f64>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
@@ -291,7 +481,9 @@ pub mod test {
     pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
         let accuracy = 25;
         let theoretical_alpha = 0.05;
-        let scale = accuracy_to_gaussian_scale(accuracy as f64, theoretical_alpha)?;
+        let scale = accuracy_to_discrete_gaussian_scale(accuracy as f64, theoretical_alpha)?;
+        // let scale = 12.503562372734077;
+
         println!("scale: {}", scale);
         let base_dg = make_base_discrete_gaussian::<AllDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(scale)?;
         let n = 50_000;
