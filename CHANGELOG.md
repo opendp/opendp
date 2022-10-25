@@ -39,14 +39,14 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - An initial proof for `make_count` (by @silviacasac, @cwagaman @gracetian6).
 
 ### Changed
-- renamed `meas` to `measurements`, `trans` to `transformations` and `comb` to `combinators`
-- added an `honest-but-curious` feature flag to `make_population_amplification`
+- Renamed `meas` to `measurements`, `trans` to `transformations` and `comb` to `combinators`
+- Added an `honest-but-curious` feature flag to `make_population_amplification`
 
 ### Fixed
-- python bindings check that C integers do not overflow
-- fixed clamping behaviour on `make_lipschitz_float_mul`
-- let the type of the sensitivity supplied to `make_base_discrete_gaussian` vary according to type `QI`
-- fix FFI dispatch in fixed approximate DP composition
+- Python bindings check that C integers do not overflow
+- Fixed clamping behaviour on `make_lipschitz_float_mul`
+- Let the type of the sensitivity supplied to `make_base_discrete_gaussian` vary according to type `QI`
+- Fix FFI dispatch in fixed approximate DP composition
 
 
 ## [0.5.0] - 2022-08-23
