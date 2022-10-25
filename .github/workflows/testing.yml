@@ -69,6 +69,11 @@ jobs:
             source=$GITHUB_WORKSPACE/artifacts/release/$(basename $folder)
             target=$folder/proofs
 
+            echo iteration
+            echo $folder
+            echo $source
+            echo $target
+
             if [ -d "$source" ]; then
               mkdir -p "$target";
               mv "$source" "$target";
