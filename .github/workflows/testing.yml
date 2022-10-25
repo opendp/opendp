@@ -58,7 +58,7 @@ jobs:
       - name: Checkout artifacts
         uses: actions/checkout@v3
         with:
-          path: artifacts
+          path: ./artifacts
       
       - name: Populate docs site with pdfs
         run: |
@@ -66,7 +66,7 @@ jobs:
           # copy each folder over
           for folder in en/*; do
 
-            source=$GITHUB_WORKSPACE/artifacts/release/$(basename $folder)
+            source=artifacts/release/$(basename $folder)
             target=$folder/proofs
 
             echo iteration
@@ -75,6 +75,7 @@ jobs:
             echo $target
 
             if [ -d "$source" ]; then
+              echo copying
               mkdir -p "$target";
               mv "$source" "$target";
             fi;
