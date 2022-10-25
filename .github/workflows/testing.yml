@@ -57,6 +57,7 @@ jobs:
       
       - name: Checkout artifacts
         uses: actions/checkout@v3
+        repository: 'opendp/artifacts'
         with:
           path: ./artifacts
       
@@ -67,6 +68,7 @@ jobs:
 
           echo "artifacts dir"
           ls artifacts
+
           # copy each folder over
           for folder in en/*; do
 
