@@ -32,8 +32,7 @@ jobs:
       - name: Collect file listing
         id: "collect"
         run: |
-          shopt -s globstar nullglob
-          files=(**/*.tex)
+          files=$(find . -type f -name "*.tex")
 
           # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           # construct list of .tex files
@@ -113,18 +112,19 @@ jobs:
       - name: Checkout artifacts
         uses: actions/checkout@v3
         with:
-          path: artifacts
+          repository: 'opendp/artifacts'
+          path: ./artifacts
       
       - name: Populate docs site with pdfs
         run: |
           # copy each folder over
           for folder in en/*; do
-            source=$GITHUB_WORKSPACE/artifacts/release/$(basename $folder)
+            source=artifacts/release/$(basename $folder)
             target=$folder/proofs
 
             if [ -d "$source" ]; then
               mkdir -p "$target";
-              mv "$source" "$target";
+              mv "$source"/* "$target";
             fi;
           done
           

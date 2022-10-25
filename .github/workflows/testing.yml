@@ -103,13 +103,7 @@ jobs:
             source=artifacts/release/$(basename $folder)
             target=$folder/proofs
 
-            echo iteration
-            echo $folder
-            echo $source
-            echo $target
-
             if [ -d "$source" ]; then
-              echo copying
               mkdir -p "$target";
               mv "$source"/* "$target";
             fi;
