@@ -830,7 +830,7 @@ def make_count(
     
     **Proof Definition:**
     
-    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/transformations/count/make_count.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/count/make_count.pdf)
     
     :param TIA: Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
