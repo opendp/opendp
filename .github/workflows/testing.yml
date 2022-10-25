@@ -62,7 +62,11 @@ jobs:
       
       - name: Populate docs site with pdfs
         run: |
+          echo "current dir"
           ls
+
+          echo "artifacts dir"
+          ls artifacts
           # copy each folder over
           for folder in en/*; do
 
