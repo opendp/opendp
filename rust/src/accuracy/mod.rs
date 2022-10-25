@@ -274,17 +274,29 @@ pub mod test {
         let scale = 20.;
         let accuracy = 20.;
 
-        println!("lap cont accuracy: {}", laplacian_scale_to_accuracy(scale, alpha)?);
-        println!("lap disc accuracy: {}", discrete_laplacian_scale_to_accuracy(scale, alpha)?);
+        let c_acc = laplacian_scale_to_accuracy(scale, alpha)?;
+        let d_acc = discrete_laplacian_scale_to_accuracy(scale, alpha)?;
+        assert!(c_acc < d_acc);
+        println!("lap cont accuracy: {}", c_acc);
+        println!("lap disc accuracy: {}", d_acc);
 
-        println!("lap cont scale: {}", accuracy_to_laplacian_scale(accuracy, alpha)?);
-        println!("lap disc scale: {}", accuracy_to_discrete_laplacian_scale(accuracy, alpha)?);
+        let c_scale = accuracy_to_laplacian_scale(accuracy, alpha)?;
+        let d_scale = accuracy_to_discrete_laplacian_scale(accuracy, alpha)?;
+        assert!(c_scale > d_scale);
+        println!("lap cont scale: {}", c_scale);
+        println!("lap disc scale: {}", d_scale);
 
-        println!("gauss cont accuracy: {}", gaussian_scale_to_accuracy(scale, alpha)?);
-        println!("gauss disc accuracy: {}", discrete_gaussian_scale_to_accuracy(scale, alpha)?);
+        let c_acc = gaussian_scale_to_accuracy(scale, alpha)?;
+        let d_acc = discrete_gaussian_scale_to_accuracy(scale, alpha)?;
+        assert!(c_acc < d_acc);
+        println!("gauss cont accuracy: {}", c_acc);
+        println!("gauss disc accuracy: {}", d_acc);
 
-        println!("gauss cont scale: {}", accuracy_to_gaussian_scale(accuracy, alpha)?);
-        println!("gauss disc scale: {}", accuracy_to_discrete_gaussian_scale(accuracy, alpha)?);
+        let c_scale = accuracy_to_gaussian_scale(accuracy, alpha)?;
+        let d_scale = accuracy_to_discrete_gaussian_scale(accuracy, alpha)?;
+        assert!(c_scale > d_scale);
+        println!("gauss cont scale: {}", c_scale);
+        println!("gauss disc scale: {}", d_scale);
         Ok(())
     }
 
