@@ -9,15 +9,20 @@ Please keep this up to date, following the [instructions](#instructions) below.
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
 
-## [0.6.0] - 2022-10-20
-[0.6.0]: https://github.com/opendp/opendp/compare/v0.5.0...v0.6.0
-
 ### Added
-- restructured and expanded documentation on docs.opendp.org
-    - moved notebooks into the documentation site
-    - updated developer documentation and added introductions to Rust and proof-writing
-- much more thorough API documentation and links to corresponding Rust documentation
-- documentation throughout the Rust library, as well as proof definition stubs
+- Restructured and expanded documentation on docs.opendp.org
+    - Moved notebooks into the documentation site
+    - Updated developer documentation and added introductions to Rust and proof-writing
+- Much more thorough API documentation and links to corresponding Rust documentation
+- Documentation throughout the Rust library, as well as proof definition stubs
+- Additional combinators for converting the privacy measure
+    - `make_pureDP_to_fixed_approxDP` to convert ε to (ε, 0)-approx DP
+    - `make_pureDP_to_zCDP` to convert ε to ρ
+- Additional accuracy functions for discrete noise mechanisms
+    - `discrete_laplacian_scale_to_accuracy`
+    - `discrete_gaussian_scale_to_accuracy`
+    - `accuracy_to_discrete_laplacian_scale`
+    - `accuracy_to_discrete_gaussian_scale`
 - `make_b_ary_tree` Lipschitz transformation. Use in conjunction with:
     - `make_consistent_b_ary_tree` to retrieve consistent leaf node counts
     - `make_quantiles_from_counts` to retrieve quantile estimates
@@ -25,12 +30,13 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - `make_subset_by`, `make_df_is_equal` and `make_df_cast_default` transformations 
     - used for simple dataframe subsetting
 - `make_chain_tm` combinator for postprocessing
-- updates for proof-writing:
+- Updates for proof-writing:
     - `rust/src/lib.sty` contains a collection of latex macros to aid in cross-linking and maintenance
-    - see the proof-writing section of the developer documentation
+    - See the proof-writing section of the developer documentation
     - PRs with .tex proof documents are rendered by a bot
-    - documentation will now embed links to proof documents that are adjacent to source files
-    - proof documents are automatically hosted and versioned on docs.opendp.org
+    - Documentation will now embed links to proof documents that are adjacent to source files
+    - Proof documents are automatically hosted and versioned on docs.opendp.org
+- An initial proof for `make_count` (by @silviacasac, @cwagaman @gracetian6).
 
 ### Changed
 - renamed `meas` to `measurements`, `trans` to `transformations` and `comb` to `combinators`
