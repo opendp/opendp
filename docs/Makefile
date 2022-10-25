@@ -63,7 +63,7 @@ latex:
 		# switch to dir && out folder must exist && prevent stale links && build latex  \
 		(cd `dirname $$file` && mkdir -p out && rm -f out/rustdoc.txt && pdflatex --output-directory=out --shell-escape `basename $$file`); \
 		output_path=`dirname "$$file"`/out/`basename "$${file%.tex}.pdf"`; \
-		target_path=$(BUILDDIR)/html/proofs/`echo $${file%.tex}.pdf | sed 's|../rust/src/||'`; \
+		target_path=$(BUILDDIR)/html/proofs/`echo $${file%.tex}.pdf | sed 's|../rust/src/|rust/src/|'`; \
 		mkdir -p `dirname "$$target_path"`; \
 		cp "$$output_path" "$$target_path"; \
 	done

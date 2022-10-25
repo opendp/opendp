@@ -107,7 +107,7 @@ pub fn make_proof_link(relative_path: &str) -> Result<String> {
     };
     
     Ok(format!(
-        "[(Proof Document)]({proof_uri}/proofs/{relative_path}) ",
+        "[(Proof Document)]({proof_uri}/proofs/rust/src/{relative_path}) ",
         relative_path = relative_path.display()
     ))
 }
