@@ -1,0 +1,1192 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>OpenDP Rust Initiation &#8212; OpenDP</title>
+  <script>
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+
+  
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/6.1.2/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'developer/rust-initiation';</script>
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="OpenDP Proof Initiation" href="proof-initiation.html" />
+    <link rel="prev" title="Development Environment" href="development-environment.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="docsearch:language" content="en">
+  </head>
+  
+  
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="180" data-default-mode="">
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__primary" id="__primary">
+  <label class="overlay overlay-primary" for="__primary"></label>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__secondary" id="__secondary">
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+      
+<form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+  </div>
+
+  
+  <nav class="bd-header navbar navbar-expand-lg bd-navbar" id="navbar-main"><div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+      <span class="fa-solid fa-bars"></span>
+  </label>
+  <div id="navbar-start">
+    
+    
+  
+
+
+<a class="navbar-brand logo" href="../index.html">
+
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <img src="../_static/opendp-logo.png" class="logo__image only-light" alt="Logo image">
+    <img src="../_static/opendp-logo.png" class="logo__image only-dark" alt="Logo image">
+  
+  
+</a>
+    
+  </div>
+
+  
+  <div class="col-lg-9 navbar-header-items">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../user/index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../examples/index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../api/index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      <div class="navbar-end-item navbar-end__search-button-container">
+        
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+
+
+  
+  <div class="search-button-container--mobile">
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+  </div>
+
+  
+  <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+  </label>
+  
+
+</div>
+  </nav>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../user/index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../examples/index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../api/index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+      </div>
+    
+
+    
+    
+    <div class="sidebar-header-items__end">
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  
+  <div class="sidebar-start-items sidebar-primary__section">
+    <div class="sidebar-start-items__item">
+<form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+    <div class="sidebar-start-items__item"><nav class="bd-links" id="bd-docs-nav" aria-label="Section navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">
+    Section Navigation
+  </p>
+  <div class="bd-toc-item navbar-nav">
+    <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="getting-involved.html">Getting Involved</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development-environment.html">Development Environment</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">OpenDP Rust Initiation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="proof-initiation.html">OpenDP Proof Initiation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contribution-process.html">Contribution Process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cla.html">Contributor License Agreement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="maintainer-notes.html">Maintainer Notes</a></li>
+</ul>
+
+  </div>
+</nav>
+    </div>
+    <div class="sidebar-start-items__item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="rust-initiation.html" style="font-weight: bold">latest</a></li>
+    <li><a href="../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../v0.5.0-rc.1/index.html" style="font-weight: normal">v0.5.0-rc.1</a></li>
+    <li><a href="../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+
+    </div>
+  </div>
+  
+
+  
+  <div class="sidebar-end-items sidebar-primary__section">
+    <div class="sidebar-end-items__item">
+    </div>
+  </div>
+
+      </div>
+      <main class="bd-main">
+        
+        
+        <div class="bd-content">
+          <div class="bd-article-container">
+            
+            <div class="bd-header-article">
+                
+            </div>
+            
+            
+            <article class="bd-article" role="main">
+              
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt .copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+.jp-RenderedHTMLCommon table,
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.jp-RenderedHTMLCommon thead,
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+.jp-RenderedHTMLCommon tr,
+.jp-RenderedHTMLCommon th,
+.jp-RenderedHTMLCommon td,
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+.jp-RenderedHTMLCommon th,
+div.rendered_html th {
+  font-weight: bold;
+}
+.jp-RenderedHTMLCommon tbody tr:nth-child(odd),
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+.jp-RenderedHTMLCommon tbody tr:hover,
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="admonition note">
+  This page was generated from
+  <a class="reference external" href="https://github.com/opendp/opendp/tree/main/docs/source/developer/rust-initiation.ipynb" target="_blank">docs/source/developer/rust-initiation.ipynb</a>.
+  Interactive online version:
+  <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/main?filepath=docs/source/developer/rust-initiation.ipynb" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+</div><section id="OpenDP-Rust-Initiation">
+<h1>OpenDP Rust Initiation<a class="headerlink" href="#OpenDP-Rust-Initiation" title="Permalink to this heading">#</a></h1>
+<p>This notebook is an introduction to the Rust internals of the OpenDP framework. I’m assuming you have already read about the programming framework in the user guide, and you have some familiarity with the library interfaces.</p>
+<p>If you have not worked with Rust before, <a class="reference external" href="https://doc.rust-lang.org/stable/book/ch01-00-getting-started.html">a great place to get started is the Rust book</a>. This notebook will also reference sections of the Rust book that surface commonly in the OpenDP library.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># we&#39;ll use this Python snip to demonstrate concepts later...</span>
+<span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">enable_features</span>
+<span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_cast_default</span>
+<span class="n">default_cast_trans</span> <span class="o">=</span> <span class="n">make_cast_default</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Transformation-Structure">
+<h2>Transformation Structure<a class="headerlink" href="#Transformation-Structure" title="Permalink to this heading">#</a></h2>
+<p>The following snip is the definition of a Transformation, from <a class="reference external" href="https://github.com/opendp/opendp/blob/main/rust/src/core/mod.rs">rust/src/core/mod.rs</a>. Transformations are structs (<a class="reference external" href="https://doc.rust-lang.org/stable/book/ch05-00-structs.html">see chapter 5</a>).</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="nc">Transformation</span><span class="o">&lt;</span><span class="n">DI</span>: <span class="nc">Domain</span><span class="p">,</span><span class="w"> </span><span class="n">DO</span>: <span class="nc">Domain</span><span class="p">,</span><span class="w"> </span><span class="n">MI</span>: <span class="nc">Metric</span><span class="p">,</span><span class="w"> </span><span class="n">MO</span>: <span class="nc">Metric</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">input_domain</span>: <span class="nc">DI</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">output_domain</span>: <span class="nc">DO</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">function</span>: <span class="nc">Function</span><span class="o">&lt;</span><span class="n">DI</span><span class="p">,</span><span class="w"> </span><span class="n">DO</span><span class="o">&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">input_metric</span>: <span class="nc">MI</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">output_metric</span>: <span class="nc">MO</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">stability_relation</span>: <span class="nc">StabilityRelation</span><span class="o">&lt;</span><span class="n">MI</span><span class="p">,</span><span class="w"> </span><span class="n">MO</span><span class="o">&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>This struct has four generics (<a class="reference external" href="https://doc.rust-lang.org/stable/book/ch10-00-generics.html">see chapter 10.1</a>):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>- DI for input domain
+- DO for output domain
+- MI for input metric
+- MO for output metric
+</pre></div>
+</div>
+<p>A generic is a type that has not yet been explicitly determined. These generics let us build transformations out of many different types.</p>
+<p>Notice that each of these generics are marked as either <code class="docutils literal notranslate"><span class="pre">Domain</span></code> or <code class="docutils literal notranslate"><span class="pre">Metric</span></code>. These are called “trait bounds” (<a class="reference external" href="https://doc.rust-lang.org/stable/book/ch10-02-traits.html#trait-bound-syntax">see chapter 10.2</a>).</p>
+<p><code class="docutils literal notranslate"><span class="pre">Domain</span></code> and <code class="docutils literal notranslate"><span class="pre">Metric</span></code> are both traits. Trait bounds constrain the set of possible types that a generic may take on. In this case, <code class="docutils literal notranslate"><span class="pre">DI:</span> <span class="pre">Domain</span></code> indicates that <code class="docutils literal notranslate"><span class="pre">DI</span></code> may be any type that has the <code class="docutils literal notranslate"><span class="pre">Domain</span></code> trait implemented for it. There is a reasonably small set of types that satisfy these trait bounds.</p>
+<p>We now take a closer look at each of the struct members.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="o">..</span><span class="p">.</span><span class="w"></span>
+<span class="k">pub</span><span class="w"> </span><span class="n">input_domain</span>: <span class="nc">DI</span><span class="p">,</span><span class="w"></span>
+<span class="k">pub</span><span class="w"> </span><span class="n">output_domain</span>: <span class="nc">DO</span><span class="p">,</span><span class="w"></span>
+<span class="o">..</span><span class="p">.</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The input and output domains strictly define the set of permissible input and output values. Examples of metrics are <code class="docutils literal notranslate"><span class="pre">AllDomain</span></code>, <code class="docutils literal notranslate"><span class="pre">VectorDomain</span></code>, <code class="docutils literal notranslate"><span class="pre">MapDomain</span></code> and <code class="docutils literal notranslate"><span class="pre">DataFrameDomain</span></code>. When you attempt to chain any two transformations, the output domain of the first transformation must match the input domain of the second transformation (<a class="reference external" href="https://doc.rust-lang.org/std/cmp/trait.PartialEq.html">via the PartialEq trait</a>). The resulting chained transformation contains the input domain of the
+first transformation, the output domain of the second transformation, as well as the functional composition of the two functions.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="o">..</span><span class="p">.</span><span class="w"></span>
+<span class="k">pub</span><span class="w"> </span><span class="n">function</span>: <span class="nc">Function</span><span class="o">&lt;</span><span class="n">DI</span><span class="p">,</span><span class="w"> </span><span class="n">DO</span><span class="o">&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="o">..</span><span class="p">.</span><span class="w"></span>
+</pre></div>
+</div>
+<p>We wrap the closure in a <code class="docutils literal notranslate"><span class="pre">Function</span></code> struct that is generic over the input domain and output domain. The definition of this struct <a class="reference external" href="https://github.com/opendp/opendp/blob/main/rust/src/core/mod.rs">is in the same file</a>.</p>
+<p>When we invoke the following transformation:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">default_cast_trans</span><span class="p">([</span><span class="s2">&quot;null&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span> <span class="s2">&quot;456&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[0, 0, 2, 456]
+</pre></div></div>
+</div>
+<ol class="arabic simple">
+<li><p>the Python data structure is translated into a low-level C representation and then into a Rust representation</p></li>
+<li><p>the Rust <code class="docutils literal notranslate"><span class="pre">function</span></code> is evaluated on a Rust <code class="docutils literal notranslate"><span class="pre">Vec&lt;String&gt;</span></code></p></li>
+<li><p>the result is shipped back out to familiar Python data structures</p></li>
+</ol>
+<p>We also have input and output metrics.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="o">..</span><span class="p">.</span><span class="w"></span>
+<span class="k">pub</span><span class="w"> </span><span class="n">input_metric</span>: <span class="nc">MI</span><span class="p">,</span><span class="w"></span>
+<span class="k">pub</span><span class="w"> </span><span class="n">output_metric</span>: <span class="nc">MO</span><span class="p">,</span><span class="w"></span>
+<span class="o">..</span><span class="p">.</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Examples of metrics are <code class="docutils literal notranslate"><span class="pre">HammingDistance</span></code>, <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code>, <code class="docutils literal notranslate"><span class="pre">AbsoluteDistance</span></code> and <code class="docutils literal notranslate"><span class="pre">L1Distance</span></code>. They behave in the same way that the input and output domains do when chaining. Finally, the stability map.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="o">..</span><span class="p">.</span><span class="w"></span>
+<span class="k">pub</span><span class="w"> </span><span class="n">stability_map</span>: <span class="nc">StabilityMap</span><span class="o">&lt;</span><span class="n">MI</span><span class="p">,</span><span class="w"> </span><span class="n">MO</span><span class="o">&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="o">..</span><span class="p">.</span><span class="w"></span>
+</pre></div>
+</div>
+<p>It is a function that takes in an input distance, in the respective metric space, and returns the smallest acceptable output distance in terms of the output metric. The definition of this struct <a class="reference external" href="https://github.com/opendp/opendp/blob/main/rust/src/core/mod.rs">is also in the same file</a>.</p>
+<p>Invoking this function triggers a similar process as the function did:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">default_cast_trans</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+3
+</pre></div></div>
+</div>
+<p>When any two compatible transformations are chained, the resulting transformation contains a functional composition of the relations.</p>
+<p>Ultimately, all pieces are used to construct the new transformation:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>input</p></th>
+<th class="head"><p>chaining</p></th>
+<th class="head"><p>output</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>input_domain_1</p></td>
+<td><p>output_domain_1 == input_domain_2</p></td>
+<td><p>output_domain_2</p></td>
+</tr>
+<tr class="row-odd"><td><p>function_1</p></td>
+<td><p>composed with</p></td>
+<td><p>function_2</p></td>
+</tr>
+<tr class="row-even"><td><p>input_metric_1</p></td>
+<td><p>output_metric_1 == input_metric_2</p></td>
+<td><p>output_metric_2</p></td>
+</tr>
+<tr class="row-odd"><td><p>stability_relation_1</p></td>
+<td><p>composed with</p></td>
+<td><p>stability_relation_2</p></td>
+</tr>
+</tbody>
+</table>
+<p>As you’ve seen above, when we want to create a transformation, we use “constructor” functions. These are, by convention, prefixed with <code class="docutils literal notranslate"><span class="pre">make_</span></code>.</p>
+</section>
+<section id="Example-Transformation-Constructor">
+<h2>Example Transformation Constructor<a class="headerlink" href="#Example-Transformation-Constructor" title="Permalink to this heading">#</a></h2>
+<p>An example implementation of the casting transformation constructor is provided. I’ll break it down into three parts.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="c1">// 1.</span>
+<span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">make_cast_default</span><span class="o">&lt;</span><span class="n">TIA</span><span class="p">,</span><span class="w"> </span><span class="n">TOA</span><span class="o">&gt;</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span>-&gt; <span class="nc">Fallible</span><span class="o">&lt;</span><span class="w"></span>
+<span class="w">        </span><span class="n">Transformation</span><span class="o">&lt;</span><span class="w"></span>
+<span class="w">            </span><span class="n">VectorDomain</span><span class="o">&lt;</span><span class="n">AllDomain</span><span class="o">&lt;</span><span class="n">TIA</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">VectorDomain</span><span class="o">&lt;</span><span class="n">AllDomain</span><span class="o">&lt;</span><span class="n">TOA</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">SymmetricDistance</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">SymmetricDistance</span><span class="o">&gt;&gt;</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// 2.</span>
+<span class="w">    </span><span class="k">where</span><span class="w"> </span><span class="n">TIA</span>: <span class="o">&#39;</span><span class="nb">static</span> <span class="o">+</span><span class="w"> </span><span class="nb">Clone</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">CheckNull</span><span class="p">,</span><span class="w"></span>
+<span class="w">          </span><span class="n">TOA</span>: <span class="o">&#39;</span><span class="nb">static</span> <span class="o">+</span><span class="w"> </span><span class="n">RoundCast</span><span class="o">&lt;</span><span class="n">TIA</span><span class="o">&gt;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Default</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">CheckNull</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+
+<span class="w">    </span><span class="c1">// 3.</span>
+<span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="n">Transformation</span>::<span class="n">new</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="n">VectorDomain</span>::<span class="n">new</span><span class="p">(</span><span class="n">AllDomain</span>::<span class="n">new</span><span class="p">()),</span><span class="w"></span>
+<span class="w">        </span><span class="n">VectorDomain</span>::<span class="n">new</span><span class="p">(</span><span class="n">AllDomain</span>::<span class="n">new</span><span class="p">()),</span><span class="w"></span>
+<span class="w">        </span><span class="n">Function</span>::<span class="n">new</span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="o">|</span><span class="n">arg</span>: <span class="kp">&amp;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">TIA</span><span class="o">&gt;|</span><span class="w"></span>
+<span class="w">            </span><span class="n">arg</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">TOA</span>::<span class="n">round_cast</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">clone</span><span class="p">()).</span><span class="n">unwrap_or_default</span><span class="p">()).</span><span class="n">collect</span><span class="p">()),</span><span class="w"></span>
+<span class="w">        </span><span class="n">SymmetricDistance</span>::<span class="n">new</span><span class="p">(),</span><span class="w"></span>
+<span class="w">        </span><span class="n">SymmetricDistance</span>::<span class="n">new</span><span class="p">(),</span><span class="w"></span>
+<span class="w">        </span><span class="n">StabilityRelation</span>::<span class="n">new_from_constant</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The first part is the function signature:</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="k">pub</span><span class="w"> </span><span class="k">fn</span> <span class="nf">make_cast_default</span><span class="o">&lt;</span><span class="n">TIA</span><span class="p">,</span><span class="w"> </span><span class="n">TOA</span><span class="o">&gt;</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span>-&gt; <span class="nc">Fallible</span><span class="o">&lt;</span><span class="w"></span>
+<span class="w">        </span><span class="n">Transformation</span><span class="o">&lt;</span><span class="w"></span>
+<span class="w">            </span><span class="n">VectorDomain</span><span class="o">&lt;</span><span class="n">AllDomain</span><span class="o">&lt;</span><span class="n">TIA</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">VectorDomain</span><span class="o">&lt;</span><span class="n">AllDomain</span><span class="o">&lt;</span><span class="n">TOA</span><span class="o">&gt;&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">SymmetricDistance</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">SymmetricDistance</span><span class="o">&gt;&gt;</span><span class="w"></span>
+<span class="w">    </span><span class="o">..</span><span class="p">.</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Most of the signature consists of types. Rust is strictly typed, so the code needs to be very explicit about what the type of the constructor function’s inputs and outputs are.</p>
+<p>This is a generic function with two type arguments <code class="docutils literal notranslate"><span class="pre">TIA</span></code> and <code class="docutils literal notranslate"><span class="pre">TOA</span></code>, standing for “atomic input type” and “atomic output type”. This function doesn’t take any concrete arguments <code class="docutils literal notranslate"><span class="pre">()</span></code>.</p>
+<p>The constructor returns a fallible transformation. The last two lines specify the types of the input/output domains/metrics, that is, what <code class="docutils literal notranslate"><span class="pre">DI</span></code>, <code class="docutils literal notranslate"><span class="pre">DO</span></code>, <code class="docutils literal notranslate"><span class="pre">MI</span></code> and <code class="docutils literal notranslate"><span class="pre">MO</span></code> (from the definition of a Transformation) are.</p>
+<p>The second part is the where clause:</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="o">..</span><span class="p">.</span><span class="w"></span>
+<span class="k">where</span><span class="w"> </span><span class="n">TIA</span>: <span class="o">&#39;</span><span class="nb">static</span> <span class="o">+</span><span class="w"> </span><span class="nb">Clone</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">CheckNull</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">TOA</span>: <span class="o">&#39;</span><span class="nb">static</span> <span class="o">+</span><span class="w"> </span><span class="n">RoundCast</span><span class="o">&lt;</span><span class="n">TIA</span><span class="o">&gt;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">Default</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">CheckNull</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="o">..</span><span class="p">.</span><span class="w"></span>
+</pre></div>
+</div>
+<p>A where clause is another, equivalent way of listing trait bounds on generics. You can interpret this as, “the compiler will enforce that <code class="docutils literal notranslate"><span class="pre">TIA</span></code> must be some type that has the <code class="docutils literal notranslate"><span class="pre">Clone</span></code> and <code class="docutils literal notranslate"><span class="pre">CheckNull</span></code> traits. In other words, while I don’t specify what <code class="docutils literal notranslate"><span class="pre">TIA</span></code> must be up-front, I can bound what type it may be to types that are cloneable and have some concept of null-checking. <code class="docutils literal notranslate"><span class="pre">TOA</span></code>, in particular, has a <code class="docutils literal notranslate"><span class="pre">RoundCast</span></code> trait, which can be used to cast from type <code class="docutils literal notranslate"><span class="pre">TIA</span></code> to <code class="docutils literal notranslate"><span class="pre">TOA</span></code>. For now,
+please feel free to ignore the <code class="docutils literal notranslate"><span class="pre">'static</span></code> trait bounds.</p>
+<p>The final part is the function body, which creates and implicitly returns a Transformation struct.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="o">..</span><span class="p">.</span><span class="w"></span>
+<span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="n">Transformation</span>::<span class="n">new</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="n">VectorDomain</span>::<span class="n">new</span><span class="p">(</span><span class="n">AllDomain</span>::<span class="n">new</span><span class="p">()),</span><span class="w"></span>
+<span class="w">        </span><span class="n">VectorDomain</span>::<span class="n">new</span><span class="p">(</span><span class="n">AllDomain</span>::<span class="n">new</span><span class="p">()),</span><span class="w"></span>
+<span class="w">        </span><span class="n">Function</span>::<span class="n">new</span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="o">|</span><span class="n">arg</span>: <span class="kp">&amp;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">TIA</span><span class="o">&gt;|</span><span class="w"></span>
+<span class="w">            </span><span class="n">arg</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">TOA</span>::<span class="n">round_cast</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">clone</span><span class="p">()).</span><span class="n">unwrap_or_default</span><span class="p">()).</span><span class="n">collect</span><span class="p">()),</span><span class="w"></span>
+<span class="w">        </span><span class="n">SymmetricDistance</span>::<span class="n">new</span><span class="p">(),</span><span class="w"></span>
+<span class="w">        </span><span class="n">SymmetricDistance</span>::<span class="n">new</span><span class="p">(),</span><span class="w"></span>
+<span class="w">        </span><span class="n">StabilityRelation</span>::<span class="n">new_from_constant</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Each argument corresponds to a struct member. To make the <code class="docutils literal notranslate"><span class="pre">Function</span></code>, we use a useful shorthand to create an anonymous closure (a function) (<a class="reference external" href="https://doc.rust-lang.org/stable/book/ch13-01-closures.html">see chapter 13.1</a>). For example, <code class="docutils literal notranslate"><span class="pre">|a,</span> <span class="pre">b|</span> <span class="pre">a</span> <span class="pre">+</span> <span class="pre">b</span></code>. takes two arguments, <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code>. The function body is <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">+</span> <span class="pre">b</span></code>.</p>
+<p>This closure casts the data by iterating over each record <code class="docutils literal notranslate"><span class="pre">v</span></code>, casting, and replacing nulls with the default value for the type (<a class="reference external" href="https://doc.rust-lang.org/stable/book/ch13-02-iterators.html">see chapter 13.2</a>).</p>
+<p>We also take advantage of a convenient constructor for building <code class="docutils literal notranslate"><span class="pre">c</span></code>-stable relations. Since the cast function is row-by-row, it is 1-stable.</p>
+</section>
+<section id="Measurement-Structure">
+<h2>Measurement Structure<a class="headerlink" href="#Measurement-Structure" title="Permalink to this heading">#</a></h2>
+<p>Measurements are very similar to Transformations, with two key differences.</p>
+<div class="highlight-rust notranslate"><div class="highlight"><pre><span></span><span class="k">pub</span><span class="w"> </span><span class="k">struct</span> <span class="nc">Measurement</span><span class="o">&lt;</span><span class="n">DI</span>: <span class="nc">Domain</span><span class="p">,</span><span class="w"> </span><span class="n">DO</span>: <span class="nc">Domain</span><span class="p">,</span><span class="w"> </span><span class="n">MI</span>: <span class="nc">Metric</span><span class="p">,</span><span class="w"> </span><span class="n">MO</span>: <span class="nc">Measure</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">input_domain</span>: <span class="nc">DI</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">output_domain</span>: <span class="nc">DO</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">function</span>: <span class="nc">Function</span><span class="o">&lt;</span><span class="n">DI</span><span class="p">,</span><span class="w"> </span><span class="n">DO</span><span class="o">&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">input_metric</span>: <span class="nc">MI</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">output_measure</span>: <span class="nc">MO</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">privacy_map</span>: <span class="nc">PrivacyMap</span><span class="o">&lt;</span><span class="n">MI</span><span class="p">,</span><span class="w"> </span><span class="n">MO</span><span class="o">&gt;</span><span class="p">,</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>First, the <code class="docutils literal notranslate"><span class="pre">output_metric</span></code> is replaced with an <code class="docutils literal notranslate"><span class="pre">output_measure</span></code>, as distances in the output space are measured in terms of divergences between probability distributions.</p>
+<p>Second, the name of the map has changed from a stability map to a privacy map. This is because the relation between distances now carries meaning with respect to privacy.</p>
+</section>
+<section id="Developer-Loop">
+<h2>Developer Loop<a class="headerlink" href="#Developer-Loop" title="Permalink to this heading">#</a></h2>
+<p>When writing code:</p>
+<ol class="arabic simple">
+<li><p>Make a change to the Rust source.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">cargo</span> <span class="pre">check</span> <span class="pre">--features</span> <span class="pre">untrusted</span></code> to do a quick check for compiler errors. A properly configured development environment will automatically run this command for you and highlight your code.</p></li>
+<li><p>Read the compiler errors and iterate. Rust errors usually provide helpful explanations.</p></li>
+</ol>
+<p>When testing code in Rust, a properly configured development environment will mark up <code class="docutils literal notranslate"><span class="pre">#[test]</span></code> annotations with a button to execute the test.</p>
+<p>When testing code in Python, run <code class="docutils literal notranslate"><span class="pre">cargo</span> <span class="pre">build</span> <span class="pre">--features</span> <span class="pre">untrusted,bindings-python</span></code> to update the binary. You’ll need to restart the Python interpreter or kernel for changes to appear. All folders named <code class="docutils literal notranslate"><span class="pre">out</span></code> are .gitignored, so they’re a great place to throw scratch work that you don’t want to commit.</p>
+<p>If you are writing a new function, you’ll need to write FFI bindings (<code class="docutils literal notranslate"><span class="pre">./ffi.rs</span></code>) and decorate the function with the <code class="docutils literal notranslate"><span class="pre">bootstrap</span></code> macro before you can access the function from Python. Please don’t hesitate to ask for help!</p>
+</section>
+<section id="Next-Steps">
+<h2>Next Steps<a class="headerlink" href="#Next-Steps" title="Permalink to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>If you are adding a new file, please place your code inside a <code class="docutils literal notranslate"><span class="pre">mod.rs</span></code> file in a new folder. This is to give room to place the proof file adjacent to the implementation.</p></li>
+<li><p>Please accompany your sources with a testing module at the end of the file. Test modules are also a great way to play with your constructor before the FFI bindings are available.</p></li>
+<li><p>Please format your code nicely (rustfmt), add documentation, and comment meaningfully!</p></li>
+</ol>
+<p>The other constructor functions in the library are great to use as a reference. It’s likely you have more questions — this short guide could never possibly be complete. If you’d like to get more involved in OpenDP development, don’t hesitate to send a message and we’ll help get you bootstrapped!</p>
+</section>
+</section>
+
+
+            </article>
+            
+            
+            
+            <footer class="bd-footer-article">
+                <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+  <a class='left-prev' id="prev-link" href="development-environment.html" title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+          <p class="prev-next-subtitle">previous</p>
+          <p class="prev-next-title">Development Environment</p>
+      </div>
+  </a>
+  <a class='right-next' id="next-link" href="proof-initiation.html" title="next page">
+  <div class="prev-next-info">
+      <p class="prev-next-subtitle">next</p>
+      <p class="prev-next-title">OpenDP Proof Initiation</p>
+  </div>
+  <i class="fa-solid fa-angle-right"></i>
+  </a>
+</div>
+            </footer>
+            
+          </div>
+          
+          
+          
+            <div class="bd-sidebar-secondary bd-toc">
+              
+<div class="toc-item">
+  
+<div class="tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+</div>
+<nav id="bd-toc-nav" class="page-toc">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Transformation-Structure">
+   Transformation Structure
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Example-Transformation-Constructor">
+   Example Transformation Constructor
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Measurement-Structure">
+   Measurement Structure
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Developer-Loop">
+   Developer Loop
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Next-Steps">
+   Next Steps
+  </a>
+ </li>
+</ul>
+
+</nav>
+</div>
+
+<div class="toc-item">
+  
+<div id="searchbox"></div>
+</div>
+
+<div class="toc-item">
+  
+</div>
+
+<div class="toc-item">
+  
+<div class="tocsection sourcelink">
+    <a href="../_sources/developer/rust-initiation.ipynb.txt">
+        <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+</div>
+
+</div>
+
+            </div>
+          
+          
+        </div>
+        <footer class="bd-footer-content">
+          <div class="bd-footer-content__inner">
+            
+          </div>
+        </footer>
+        
+      </main>
+    </div>
+  </div>
+
+  
+    
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536"></script>
+
+  <footer class="bd-footer"><div class="bd-footer__inner container">
+  
+  <div class="footer-item">
+    
+<p class="copyright">
+
+    &copy; Copyright 2022.<br>
+
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+<p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.1.1.<br>
+</p>
+
+  </div>
+  
+</div>
+  </footer>
+  </body>
+</html>

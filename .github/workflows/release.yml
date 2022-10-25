@@ -1,0 +1,232 @@
+name: Release
+on:
+  release:
+    types:
+      - published
+env:
+  FEATURES: untrusted,ffi
+
+
+jobs:
+  credential-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check if user is an administrator
+        uses: lannonbr/repo-permission-check-action@2.0.0
+        with:
+          permission: admin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+          cache: pip
+
+      - name: Assert version
+        run: |
+          pip install -r tools/requirements-assert_version.txt
+          python tools/assert_version.py
+
+
+  python-pre-publish-windows:
+    runs-on: windows-latest
+    needs: credential-check
+    env:
+      MSYS: winsymlinks:nativestrict
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          path-type: inherit
+          install: m4
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~\.cargo\bin
+            ~\.cargo\registry\index
+            ~\.cargo\registry\cache
+            ~\.cargo\git\db
+            ~\AppData\Local\gmp-mpfr-sys
+            rust\target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for windows
+        run: bash tools/rust_build.sh -i -r -t -f "$FEATURES"
+
+      - name: Upload .dll
+        uses: actions/upload-artifact@v3
+        with:
+          name: lib_dll
+          path: rust/target/release/opendp.dll
+
+
+  python-pre-publish-mac:
+    runs-on: macos-11
+    needs: credential-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/Library/Caches/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for macos x86_64
+        run: bash tools/rust_build.sh -i -r -t -g x86_64-apple-darwin -f "$FEATURES"
+        env:
+          CC: clang -target x86_64-apple-darwin
+
+      - name: Create Rust build for macos aarch64 (no tests)
+        # include python bindings generation to get updated links in python codegen
+        run: bash tools/rust_build.sh -i -r -g aarch64-apple-darwin -f "$FEATURES,bindings-python"
+        env:
+          CC: clang -target aarch64-apple-darwin
+
+      - name: Create universal binary of Rust build for macos
+        # https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary#Update-the-Architecture-List-of-Custom-Makefiles
+        run: |
+          mkdir -p rust/target/release
+          lipo \
+              rust/target/x86_64-apple-darwin/release/libopendp.dylib \
+              rust/target/aarch64-apple-darwin/release/libopendp.dylib \
+              -output rust/target/release/libopendp.dylib -create
+
+      - name: Upload .dylib
+        uses: actions/upload-artifact@v3
+        with:
+          name: lib_dylib
+          path: rust/target/release/libopendp.dylib
+
+      # need to upload at least one set up updated bindings
+      - name: Upload bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+
+  python-pre-publish-linux:
+    runs-on: ubuntu-20.04
+    needs: credential-check
+    env:
+      DOCKER_IMAGE: quay.io/pypa/manylinux2010_x86_64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cache/gmp-mpfr-sys
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Create Rust build for linux
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -t -f \"$FEATURES\""
+
+      - name: Upload .so
+        uses: actions/upload-artifact@v3
+        with:
+          name: lib_so
+          path: rust/target/release/libopendp.so
+
+
+  python-publish:
+    runs-on: ubuntu-20.04
+    needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
+    env:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+          cache: pip
+
+      - name: Prepare for libs
+        run: mkdir -p rust/target/release
+
+      - name: Download windows lib
+        uses: actions/download-artifact@v3
+        with:
+          name: lib_dll
+          path: rust/target/release
+
+      - name: Download macos lib
+        uses: actions/download-artifact@v3
+        with:
+          name: lib_dylib
+          path: rust/target/release
+
+      - name: Download linux lib
+        uses: actions/download-artifact@v3
+        with:
+          name: lib_so
+          path: rust/target/release
+      
+      - name: Download bindings
+        uses: actions/download-artifact@v3
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Create Python package
+        run: bash tools/python_build.sh -i
+
+      - name: Publish Python package
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py python
+
+
+  rust-publish:
+    runs-on: ubuntu-20.04
+    needs: credential-check
+    env:
+      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+          cache: pip
+
+      - name: Publish Rust crate
+        run: |
+          pip install -r tools/requirements-publish_tool.txt
+          python tools/publish_tool.py rust

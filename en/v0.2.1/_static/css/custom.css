@@ -1,0 +1,9 @@
+div.bd-sidebar {
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+/* invert the opendp logo in dark mode */
+.logo__image.only-dark {
+    filter: invert();
+}

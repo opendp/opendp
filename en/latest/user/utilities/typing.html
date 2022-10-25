@@ -1,0 +1,805 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Typing &#8212; OpenDP</title>
+  <script>
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+
+  
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536">
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user/utilities/typing';</script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Accuracy" href="accuracy/index.html" />
+    <link rel="prev" title="Utilities" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="docsearch:language" content="en">
+  </head>
+  
+  
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="180" data-default-mode="">
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__primary" id="__primary">
+  <label class="overlay overlay-primary" for="__primary"></label>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__secondary" id="__secondary">
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+      
+<form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+  </div>
+
+  
+  <nav class="bd-header navbar navbar-expand-lg bd-navbar" id="navbar-main"><div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+      <span class="fa-solid fa-bars"></span>
+  </label>
+  <div id="navbar-start">
+    
+    
+  
+
+
+<a class="navbar-brand logo" href="../../index.html">
+
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="Logo image">
+    <img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="Logo image">
+  
+  
+</a>
+    
+  </div>
+
+  
+  <div class="col-lg-9 navbar-header-items">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="../index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../examples/index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../api/index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../developer/index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      <div class="navbar-end-item navbar-end__search-button-container">
+        
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+
+
+  
+  <div class="search-button-container--mobile">
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+  </div>
+
+  
+  <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+  </label>
+  
+
+</div>
+  </nav>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="../index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../examples/index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../api/index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../developer/index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+      </div>
+    
+
+    
+    
+    <div class="sidebar-header-items__end">
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  
+  <div class="sidebar-start-items sidebar-primary__section">
+    <div class="sidebar-start-items__item">
+<form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+    <div class="sidebar-start-items__item"><nav class="bd-links" id="bd-docs-nav" aria-label="Section navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">
+    Section Navigation
+  </p>
+  <div class="bd-toc-item navbar-nav">
+    <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../programming-framework/index.html">Programming Framework</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../programming-framework/supporting-elements.html">Supporting Elements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../programming-framework/a-framework-to-understand-dp.html">A Framework to Understand DP</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../constructors/index.html">Constructors</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../constructors/transformations.html">Transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../constructors/measurements.html">Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../constructors/combinators.html">Combinators</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Utilities</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-3"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Typing</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="accuracy/index.html">Accuracy</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-4"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="accuracy/accuracy-pitfalls.html">Accuracy: Pitfalls and Edge Cases</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="parameter-search.html">Parameter Search</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../putting-it-together.html">Putting It Together</a></li>
+</ul>
+
+  </div>
+</nav>
+    </div>
+    <div class="sidebar-start-items__item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="typing.html" style="font-weight: bold">latest</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.5.0-rc.1/index.html" style="font-weight: normal">v0.5.0-rc.1</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+
+    </div>
+  </div>
+  
+
+  
+  <div class="sidebar-end-items sidebar-primary__section">
+    <div class="sidebar-end-items__item">
+    </div>
+  </div>
+
+      </div>
+      <main class="bd-main">
+        
+        
+        <div class="bd-content">
+          <div class="bd-article-container">
+            
+            <div class="bd-header-article">
+                
+            </div>
+            
+            
+            <article class="bd-article" role="main">
+              
+  <section id="typing">
+<h1>Typing<a class="headerlink" href="#typing" title="Permalink to this heading">#</a></h1>
+<p>OpenDP computations are always strict about the types being used.
+Integers and floats are never treated interchangeably and there is never implicit casting between types.
+In fact, OpenDP is particular about the bit-depth of data types, as it can impact the choice of constants in the privacy analysis.</p>
+<section id="type-argument">
+<span id="runtimetypedescriptor"></span><h2>Type Argument<a class="headerlink" href="#type-argument" title="Permalink to this heading">#</a></h2>
+<p>You can explicitly set the types that a transformation or measurement work with via type arguments in the constructor.
+Each constructor has its own set of permissible types, based on the type of computation it is performing.
+For instance, the clamp constructor accepts any numerical type for its type argument <cite>TA</cite>:</p>
+<div class="highlight-pycon3 notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_clamp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clamper</span> <span class="o">=</span> <span class="n">make_clamp</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">TA</span><span class="o">=</span><span class="n">i32</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Many of the API docs indicate that parameters like <cite>TIA</cite> or <cite>D</cite> are type arguments.
+When you want to describe the type of a domain, metric, measure, or other elements, you can do so via a type descriptor.
+The canonical form is a literal string, like <code class="docutils literal notranslate"><span class="pre">&quot;i32&quot;</span></code> to denote that the type should be a 32-bit integer,
+or <code class="docutils literal notranslate"><span class="pre">&quot;SymmetricDistance&quot;</span></code> to denote the type of a metric.
+These arguments accept any of the following, depending on the context:</p>
+<ul class="simple">
+<li><p>string</p></li>
+<li><p>Python type (like <cite>float</cite> or <cite>bool</cite>)</p></li>
+<li><p>Python typing module annotation (like <cite>List[str]</cite>)</p></li>
+<li><p><a class="reference internal" href="../../api/python/opendp.typing.html#module-opendp.typing" title="opendp.typing"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.typing</span></code></a> (mimics Python type annotations for OpenDP types)</p></li>
+</ul>
+<p>In addition, there is a common pattern to the naming of type arguments.</p>
+<ul class="simple">
+<li><p><cite>D</cite> for Domain</p></li>
+<li><p><cite>M</cite> for Metric or Measure</p></li>
+<li><p><cite>T</cite> for the type of members of a domain</p></li>
+<li><p><cite>Q</cite> for the type of distances in a metric or measure</p></li>
+</ul>
+<p>There are additional modifiers:</p>
+<ul class="simple">
+<li><p><cite>I</cite> for Input</p></li>
+<li><p><cite>O</cite> for Output</p></li>
+<li><p><cite>A</cite> for Atomic, the smallest type. <cite>i32</cite> is the atomic type of <cite>Vec&lt;i32&gt;</cite></p></li>
+</ul>
+<p>Some examples being:</p>
+<ul class="simple">
+<li><p><cite>TA</cite> for the atomic type. <cite>float</cite> could be the TA for a float <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_clamp" title="opendp.transformations.make_clamp"><code class="xref py py-func docutils literal notranslate"><span class="pre">clamp</span> <span class="pre">transformation</span></code></a>.</p></li>
+<li><p><cite>TIA</cite> for Atomic Input Type. <cite>str</cite> could be the TIA for a <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_count" title="opendp.transformations.make_count"><code class="xref py py-func docutils literal notranslate"><span class="pre">count</span> <span class="pre">transformation</span></code></a>.</p></li>
+<li><p><cite>MO</cite> for Output Metric. <cite>AbsoluteDistance[int]</cite> could be the MO for a <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_count_by_categories" title="opendp.transformations.make_count_by_categories"><code class="xref py py-func docutils literal notranslate"><span class="pre">histogram</span> <span class="pre">transformation</span></code></a>.</p></li>
+<li><p><cite>QO</cite> for Output distance. <cite>float</cite> could be the QO for a <a class="reference internal" href="../../api/python/opendp.measurements.html#opendp.measurements.make_base_discrete_laplace" title="opendp.measurements.make_base_discrete_laplace"><code class="xref py py-func docutils literal notranslate"><span class="pre">discrete</span> <span class="pre">laplace</span> <span class="pre">measurement</span></code></a>.</p></li>
+</ul>
+<p>The API docs should also include explanations in most contexts.</p>
+</section>
+<section id="supported-types">
+<h2>Supported Types<a class="headerlink" href="#supported-types" title="Permalink to this heading">#</a></h2>
+<p>OpenDP supports the following atomic data types:</p>
+<ul class="simple">
+<li><p>i8 (8-bit signed integer)</p></li>
+<li><p>i16 (16-bit signed integer)</p></li>
+<li><p>i32</p></li>
+<li><p>i64</p></li>
+<li><p>i128</p></li>
+<li><p>u8 (8-bit unsigned integer)</p></li>
+<li><p>u16 (16-bit unsigned integer)</p></li>
+<li><p>u32</p></li>
+<li><p>u64</p></li>
+<li><p>u128</p></li>
+<li><p>f32 (32-bit single-precision float)</p></li>
+<li><p>f64 (64-bit double-precision float)</p></li>
+<li><p>String</p></li>
+<li><p>bool</p></li>
+</ul>
+<p>Some types are parameterized by another type, like:</p>
+<ul class="simple">
+<li><p>AllDomain</p></li>
+<li><p>VectorDomain</p></li>
+<li><p>AbsoluteDistance</p></li>
+<li><p>L1Distance</p></li>
+<li><p>L2Distance</p></li>
+</ul>
+<p>Examples of these types include:</p>
+<ul class="simple">
+<li><p>AllDomain[bool]</p></li>
+<li><p>VectorDomain[AllDomain[f32]]</p></li>
+<li><p>L1Distance[u128]</p></li>
+</ul>
+<p>The docstrings on the constructor APIs should typically guide you as to what types are permissible.
+If you aren’t familiar with these concepts, it may help to review <a class="reference internal" href="../programming-framework/supporting-elements.html#domains"><span class="std std-ref">Domains</span></a> and <a class="reference internal" href="../programming-framework/supporting-elements.html#metrics"><span class="std std-ref">Metrics</span></a>.</p>
+</section>
+<section id="type-aliases">
+<h2>Type Aliases<a class="headerlink" href="#type-aliases" title="Permalink to this heading">#</a></h2>
+<p>It can be more convenient to denote types in terms of Python types, so we’ve added some aliases for Python types.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Python Type Alias</p></th>
+<th class="head"><p>Default Rust Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">f64</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">int</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">i32</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">str</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">String</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bool</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>You can change the default type for floats and ints via <a class="reference internal" href="../../api/python/opendp.typing.html#opendp.typing.set_default_float_type" title="opendp.typing.set_default_float_type"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.typing.set_default_float_type()</span></code></a> and <a class="reference internal" href="../../api/python/opendp.typing.html#opendp.typing.set_default_int_type" title="opendp.typing.set_default_int_type"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.typing.set_default_int_type()</span></code></a>, respectively.
+These functions make it easy to set the default bit depth throughout your code, all at once.</p>
+<p>This can be particularly useful when working with NumPy arrays which default to <cite>i64</cite>, or when working with deep learning libraries that default to single-precision floats.</p>
+</section>
+</section>
+
+
+            </article>
+            
+            
+            
+            <footer class="bd-footer-article">
+                <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+  <a class='left-prev' id="prev-link" href="index.html" title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+          <p class="prev-next-subtitle">previous</p>
+          <p class="prev-next-title">Utilities</p>
+      </div>
+  </a>
+  <a class='right-next' id="next-link" href="accuracy/index.html" title="next page">
+  <div class="prev-next-info">
+      <p class="prev-next-subtitle">next</p>
+      <p class="prev-next-title">Accuracy</p>
+  </div>
+  <i class="fa-solid fa-angle-right"></i>
+  </a>
+</div>
+            </footer>
+            
+          </div>
+          
+          
+          
+            <div class="bd-sidebar-secondary bd-toc">
+              
+<div class="toc-item">
+  
+<div class="tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+</div>
+<nav id="bd-toc-nav" class="page-toc">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#type-argument">
+   Type Argument
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#supported-types">
+   Supported Types
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#type-aliases">
+   Type Aliases
+  </a>
+ </li>
+</ul>
+
+</nav>
+</div>
+
+<div class="toc-item">
+  
+<div id="searchbox"></div>
+</div>
+
+<div class="toc-item">
+  
+</div>
+
+<div class="toc-item">
+  
+<div class="tocsection sourcelink">
+    <a href="../../_sources/user/utilities/typing.rst.txt">
+        <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+</div>
+
+</div>
+
+            </div>
+          
+          
+        </div>
+        <footer class="bd-footer-content">
+          <div class="bd-footer-content__inner">
+            
+          </div>
+        </footer>
+        
+      </main>
+    </div>
+  </div>
+
+  
+    
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536"></script>
+
+  <footer class="bd-footer"><div class="bd-footer__inner container">
+  
+  <div class="footer-item">
+    
+<p class="copyright">
+
+    &copy; Copyright 2022.<br>
+
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+<p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.1.1.<br>
+</p>
+
+  </div>
+  
+</div>
+  </footer>
+  </body>
+</html>

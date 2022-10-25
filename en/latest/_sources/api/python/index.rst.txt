@@ -1,0 +1,21 @@
+..
+  Template for sphinx-apidoc. This is customized to remove the boilerplate text,
+  and to change the heading level for the second section. (The default template
+  uses the top heading level for the second section, which causes problems when
+  included in the parent toc.)
+
+Python API Documentation
+========================
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Contents:
+
+   opendp
+
+
+Indexes
+-------
+
+* :ref:`genindex`
+* :ref:`modindex`

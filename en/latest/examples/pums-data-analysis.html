@@ -1,0 +1,1518 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Example Data Analysis &#8212; OpenDP</title>
+  <script>
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+
+  
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/6.1.2/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/pums-data-analysis';</script>
+    <link rel="shortcut icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Attacks" href="attacks/index.html" />
+    <link rel="prev" title="Examples" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="docsearch:language" content="en">
+  </head>
+  
+  
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="180" data-default-mode="">
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__primary" id="__primary">
+  <label class="overlay overlay-primary" for="__primary"></label>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__secondary" id="__secondary">
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+      
+<form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+  </div>
+
+  
+  <nav class="bd-header navbar navbar-expand-lg bd-navbar" id="navbar-main"><div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+      <span class="fa-solid fa-bars"></span>
+  </label>
+  <div id="navbar-start">
+    
+    
+  
+
+
+<a class="navbar-brand logo" href="../index.html">
+
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <img src="../_static/opendp-logo.png" class="logo__image only-light" alt="Logo image">
+    <img src="../_static/opendp-logo.png" class="logo__image only-dark" alt="Logo image">
+  
+  
+</a>
+    
+  </div>
+
+  
+  <div class="col-lg-9 navbar-header-items">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../user/index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../api/index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../developer/index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      <div class="navbar-end-item navbar-end__search-button-container">
+        
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+
+
+  
+  <div class="search-button-container--mobile">
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+  </div>
+
+  
+  <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+  </label>
+  
+
+</div>
+  </nav>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../user/index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../api/index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../developer/index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+      </div>
+    
+
+    
+    
+    <div class="sidebar-header-items__end">
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  
+  <div class="sidebar-start-items sidebar-primary__section">
+    <div class="sidebar-start-items__item">
+<form class="bd-search d-flex align-items-center" action="../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+    <div class="sidebar-start-items__item"><nav class="bd-links" id="bd-docs-nav" aria-label="Section navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">
+    Section Navigation
+  </p>
+  <div class="bd-toc-item navbar-nav">
+    <ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Example Data Analysis</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="attacks/index.html">Attacks</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="attacks/differencing.html">Differencing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="attacks/membership.html">Membership</a></li>
+<li class="toctree-l2"><a class="reference internal" href="attacks/reconstruction.html">Reconstruction</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="unknown-dataset-size.html">Working with Unknown Dataset Sizes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="histograms.html">Privatizing Histograms</a></li>
+</ul>
+
+  </div>
+</nav>
+    </div>
+    <div class="sidebar-start-items__item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="pums-data-analysis.html" style="font-weight: bold">latest</a></li>
+    <li><a href="../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../v0.5.0-rc.1/index.html" style="font-weight: normal">v0.5.0-rc.1</a></li>
+    <li><a href="../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+
+    </div>
+  </div>
+  
+
+  
+  <div class="sidebar-end-items sidebar-primary__section">
+    <div class="sidebar-end-items__item">
+    </div>
+  </div>
+
+      </div>
+      <main class="bd-main">
+        
+        
+        <div class="bd-content">
+          <div class="bd-article-container">
+            
+            <div class="bd-header-article">
+                
+            </div>
+            
+            
+            <article class="bd-article" role="main">
+              
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt .copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+.jp-RenderedHTMLCommon table,
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.jp-RenderedHTMLCommon thead,
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+.jp-RenderedHTMLCommon tr,
+.jp-RenderedHTMLCommon th,
+.jp-RenderedHTMLCommon td,
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+.jp-RenderedHTMLCommon th,
+div.rendered_html th {
+  font-weight: bold;
+}
+.jp-RenderedHTMLCommon tbody tr:nth-child(odd),
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+.jp-RenderedHTMLCommon tbody tr:hover,
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="admonition note">
+  This page was generated from
+  <a class="reference external" href="https://github.com/opendp/opendp/tree/main/docs/source/examples/pums-data-analysis.ipynb" target="_blank">docs/source/examples/pums-data-analysis.ipynb</a>.
+  Interactive online version:
+  <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/opendp/opendp/main?filepath=docs/source/examples/pums-data-analysis.ipynb" target="_blank"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+</div><section id="Example-Data-Analysis">
+<h1>Example Data Analysis<a class="headerlink" href="#Example-Data-Analysis" title="Permalink to this heading">#</a></h1>
+<p>In this notebook we use OpenDP to conduct a brief data analysis of a PUMS microdata sample from the US Census Bureau. The data consists of demographic information of 1000 individuals. Each individual in the dataset contributes at most one row.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># the greatest number of records that any one individual can influence in the dataset</span>
+<span class="n">max_influence</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<p>We now establish what is considered “public knowledge” about the data.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># establish public information</span>
+<span class="n">col_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;sex&quot;</span><span class="p">,</span> <span class="s2">&quot;educ&quot;</span><span class="p">,</span> <span class="s2">&quot;race&quot;</span><span class="p">,</span> <span class="s2">&quot;income&quot;</span><span class="p">,</span> <span class="s2">&quot;married&quot;</span><span class="p">]</span>
+<span class="c1"># we can also reasonably intuit that age and income will be numeric,</span>
+<span class="c1">#     as well as bounds for them, without looking at the data</span>
+<span class="n">age_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">income_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">150_000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The vetting process is currently underway for the code in the OpenDP Library. Any constructors that have not been vetted may still be accessed if you opt-in to “contrib”.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">enable_features</span>
+<span class="n">enable_features</span><span class="p">(</span><span class="s1">&#39;contrib&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Working-with-CSV-data">
+<h2>Working with CSV data<a class="headerlink" href="#Working-with-CSV-data" title="Permalink to this heading">#</a></h2>
+<p>Let’s examine how we can process csv data with Transformations.</p>
+<p>I’m going to pull a few constructors from the <a class="reference external" href="https://docs.opendp.org/en/stable/user/transformation-constructors.html#dataframe">Dataframes section in the user guide</a>.</p>
+<p>We start with <code class="docutils literal notranslate"><span class="pre">make_split_dataframe</span></code> to parse one large string containing all the csv data into a dataframe. <code class="docutils literal notranslate"><span class="pre">make_split_dataframe</span></code> expects us to pass column names, which we can grab out of the public information. <code class="docutils literal notranslate"><span class="pre">make_select_column</span></code> will then index into the dataframe to pull out a column where the elements have a given type <code class="docutils literal notranslate"><span class="pre">TOA</span></code>. The <code class="docutils literal notranslate"><span class="pre">TOA</span></code> argument won’t cast for you; the casting comes later!</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_split_dataframe</span><span class="p">,</span> <span class="n">make_select_column</span>
+<span class="n">income_preprocessor</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="c1"># Convert data into a dataframe where columns are of type Vec&lt;str&gt;</span>
+    <span class="n">make_split_dataframe</span><span class="p">(</span><span class="n">separator</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">col_names</span><span class="o">=</span><span class="n">col_names</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Selects a column of df, Vec&lt;str&gt;</span>
+    <span class="n">make_select_column</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;income&quot;</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>For the sake of exposition, we’re going to go ahead and load up the data.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[37]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="n">data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;..&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;PUMS_california_demographics_1000&#39;</span><span class="p">,</span> <span class="s1">&#39;data.csv&#39;</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">input_file</span><span class="p">:</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">input_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[:</span><span class="mi">6</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+59,1,9,1,0,1
+31,0,1,3,17000,0
+36,1,11,1,0,1
+54,1,11,1,9100,1
+39,0,5,3,37000,0
+34,0,9,1,0,1
+</pre></div></div>
+</div>
+<p>As we can see from the first few rows, it is intentional that there are no column names in the data. If your data has column names, you will want to strip them out before passing data into your function.</p>
+<p>Now if you run the transformation on the data, you will get a list of incomes as strings. I’ve limited the output to just the first few income values.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[38]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">transformed</span> <span class="o">=</span> <span class="n">income_preprocessor</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">transformed</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">transformed</span><span class="p">[:</span><span class="mi">6</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;class &#39;list&#39;&gt;
+[&#39;0&#39;, &#39;17000&#39;, &#39;0&#39;, &#39;9100&#39;, &#39;37000&#39;, &#39;0&#39;]
+</pre></div></div>
+</div>
+</section>
+<section id="Casting">
+<h2>Casting<a class="headerlink" href="#Casting" title="Permalink to this heading">#</a></h2>
+<p>Income doesn’t make sense as a string for our purposes, so we can just extend the previous preprocessor to also cast and impute.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[39]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_cast</span><span class="p">,</span> <span class="n">make_impute_constant</span>
+
+<span class="c1"># make a transformation that casts from a vector of strings to a vector of ints</span>
+<span class="n">cast_str_int</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="c1"># Cast Vec&lt;str&gt; to Vec&lt;Option&lt;int&gt;&gt;</span>
+    <span class="n">make_cast</span><span class="p">(</span><span class="n">TIA</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Replace any elements that failed to parse with 0, emitting a Vec&lt;int&gt;</span>
+    <span class="n">make_impute_constant</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># replace the previous preprocessor: extend it with the caster</span>
+<span class="n">income_preprocessor</span> <span class="o">=</span> <span class="n">income_preprocessor</span> <span class="o">&gt;&gt;</span> <span class="n">cast_str_int</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">income_preprocessor</span><span class="p">(</span><span class="n">data</span><span class="p">)[:</span><span class="mi">6</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[0, 17000, 0, 9100, 37000, 0]
+</pre></div></div>
+</div>
+<p>Great! Now we have integer income data from our CSV. A quick aside, keep in mind that we can invoke transformations on almost anything to do some testing. For example, we still have a handle on <code class="docutils literal notranslate"><span class="pre">cast_str_int</span></code>, don’t we?</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cast_str_int</span><span class="p">([</span><span class="s2">&quot;null&quot;</span><span class="p">,</span> <span class="s2">&quot;1.&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[40]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[0, 0, 2]
+</pre></div></div>
+</div>
+</section>
+<section id="Private-Count">
+<h2>Private Count<a class="headerlink" href="#Private-Count" title="Permalink to this heading">#</a></h2>
+<p>Time to compute our first aggregate statistic. Suppose we want to know the number of records in the dataset.</p>
+<p>We can use the <a class="reference external" href="https://docs.opendp.org/en/stable/user/transformation-constructors.html#aggregators">list of aggregators</a> in the Transformation Constructors section of the user guide to find <code class="docutils literal notranslate"><span class="pre">make_count</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_count</span>
+<span class="n">count</span> <span class="o">=</span> <span class="n">income_preprocessor</span> <span class="o">&gt;&gt;</span> <span class="n">make_count</span><span class="p">(</span><span class="n">TIA</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="c1"># NOT a DP release!</span>
+<span class="n">count_response</span> <span class="o">=</span> <span class="n">count</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Be careful! <code class="docutils literal notranslate"><span class="pre">count</span></code> is still only a transformation, so the output in <code class="docutils literal notranslate"><span class="pre">count_response</span></code> is not a differentially private release. You will need to chain with a measurement to create a differentially private release.</p>
+<p>We use <code class="docutils literal notranslate"><span class="pre">make_base_discrete_laplace</span></code> below, because it has an integer support. Notice that we now import from <code class="docutils literal notranslate"><span class="pre">opendp.measurements</span></code>, and the resulting <code class="docutils literal notranslate"><span class="pre">type(dp_count)</span></code> is <code class="docutils literal notranslate"><span class="pre">Measurement</span></code>. This tells us that the output will be a differentially private release.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[42]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">make_base_discrete_laplace</span>
+<span class="n">dp_count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_discrete_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In any realistic situation, you would likely want to estimate the budget utilization before you make a release. Use a search utility to quantify the privacy expenditure of this release.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">binary_search</span>
+
+<span class="c1"># estimate the budget...</span>
+<span class="n">epsilon</span> <span class="o">=</span> <span class="n">binary_search</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">eps</span><span class="p">:</span> <span class="n">dp_count</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">max_influence</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="n">eps</span><span class="p">),</span>
+    <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">100.</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP count budget:&quot;</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+
+<span class="c1"># ...and then release</span>
+<span class="n">count_release</span> <span class="o">=</span> <span class="n">dp_count</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP count:&quot;</span><span class="p">,</span> <span class="n">count_release</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP count budget: 1.0
+DP count: 999
+</pre></div></div>
+</div>
+</section>
+<section id="Private-Sum">
+<h2>Private Sum<a class="headerlink" href="#Private-Sum" title="Permalink to this heading">#</a></h2>
+<p>Suppose we want to know the total income of our dataset. First, take a look at <a class="reference external" href="https://docs.opendp.org/en/stable/user/transformation-constructors.html#aggregators">the list of aggregators</a>. <code class="docutils literal notranslate"><span class="pre">make_bounded_sum</span></code> seems to meet our requirements. As indicated by the function’s API documentation, it expects bounded data, so we’ll also need to chain the transformation from <code class="docutils literal notranslate"><span class="pre">make_clamp</span></code> with the <code class="docutils literal notranslate"><span class="pre">income_preprocessor</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[44]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_clamp</span><span class="p">,</span> <span class="n">make_bounded_sum</span>
+<span class="n">bounded_income_sum</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">income_preprocessor</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Clamp income values</span>
+    <span class="n">make_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">income_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># These bounds must be identical to the clamp bounds, otherwise chaining will fail</span>
+    <span class="n">make_bounded_sum</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">income_bounds</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>In this example, instead of just passing a scale into <code class="docutils literal notranslate"><span class="pre">make_base_discrete_laplace</span></code>, I want whatever scale will make my measurement 1-epsilon DP. Again, I can use a search utility to find such a scale.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[45]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">binary_search_param</span>
+
+<span class="n">discovered_scale</span> <span class="o">=</span> <span class="n">binary_search_param</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">bounded_income_sum</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_discrete_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+    <span class="n">d_in</span><span class="o">=</span><span class="n">max_influence</span><span class="p">,</span>
+    <span class="n">d_out</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+
+<span class="n">dp_sum</span> <span class="o">=</span> <span class="n">bounded_income_sum</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_discrete_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">discovered_scale</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Or more succinctly…</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[46]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">binary_search_chain</span>
+
+<span class="n">dp_sum</span> <span class="o">=</span> <span class="n">binary_search_chain</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">bounded_income_sum</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_discrete_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+    <span class="n">d_in</span><span class="o">=</span><span class="n">max_influence</span><span class="p">,</span>
+    <span class="n">d_out</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+
+<span class="c1"># ...and make our 1-epsilon DP release</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP sum:&quot;</span><span class="p">,</span> <span class="n">dp_sum</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP sum: 30162185
+</pre></div></div>
+</div>
+</section>
+<section id="Private-Mean">
+<h2>Private Mean<a class="headerlink" href="#Private-Mean" title="Permalink to this heading">#</a></h2>
+<p>We may be more interested in the mean age. Just like before, we reference the docs to find <code class="docutils literal notranslate"><span class="pre">make_sized_bounded_mean</span></code>. The name of the constructor indicates that it expects sized, bounded data, and the docstring points us toward preprocessors we can use.</p>
+<p>Sized data is data that has a known number of rows. The constructor enforces this requirement because knowledge of the dataset size was necessary to establish the privacy proof.</p>
+<p>Luckily, we’ve already made a DP release of the number of rows in the dataset, which we can reuse as an argument here.</p>
+<p>Putting the previous sections together, our bounded mean age is:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[47]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_cast_default</span><span class="p">,</span> <span class="n">make_bounded_resize</span><span class="p">,</span> <span class="n">make_sized_bounded_mean</span>
+<span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">OpenDPException</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">mean_age_preprocessor</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="c1"># Convert data into a dataframe of string columns</span>
+        <span class="n">make_split_dataframe</span><span class="p">(</span><span class="n">separator</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">col_names</span><span class="o">=</span><span class="n">col_names</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="c1"># Selects a column of df, Vec&lt;str&gt;</span>
+        <span class="n">make_select_column</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="c1"># Cast the column as Vec&lt;float&gt;, and fill nulls with the default value, 0.</span>
+        <span class="n">make_cast_default</span><span class="p">(</span><span class="n">TIA</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="c1"># Clamp age values</span>
+        <span class="n">make_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">age_bounds</span><span class="p">)</span>
+    <span class="p">)</span>
+<span class="k">except</span> <span class="n">OpenDPException</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">err</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Intermediate domains don&#39;t match.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Intermediate domains don&#39;t match. See https://github.com/opendp/opendp/discussions/297
+    output_domain: VectorDomain(AllDomain(f64))
+    input_domain:  VectorDomain(AllDomain(i32))
+
+</pre></div></div>
+</div>
+<p>Wait a second! The intermediate domains don’t match? In this case, we casted to float-valued data, but <code class="docutils literal notranslate"><span class="pre">make_clamp</span></code> was built with integer-valued bounds, so the clamp is expecting integer data. Therefore, the output of the cast is not a valid input to the clamp. We can fix this by adjusting the bounds and trying again.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[48]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">float_age_bounds</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">age_bounds</span><span class="p">))</span>
+
+<span class="n">mean_age_preprocessor</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="c1"># Convert data into a dataframe of string columns</span>
+    <span class="n">make_split_dataframe</span><span class="p">(</span><span class="n">separator</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">col_names</span><span class="o">=</span><span class="n">col_names</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Selects a column of df, Vec&lt;str&gt;</span>
+    <span class="n">make_select_column</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Cast the column as Vec&lt;float&gt;, and fill nulls with the default value, 0.</span>
+    <span class="n">make_cast_default</span><span class="p">(</span><span class="n">TIA</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Clamp age values</span>
+    <span class="n">make_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">float_age_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Resize the dataset to length `count_release`.</span>
+    <span class="c1">#     If there are fewer than `count_release` rows in the data, fill with a constant of 20.</span>
+    <span class="c1">#     If there are more than `count_release` rows in the data, only keep `count_release` rows</span>
+    <span class="n">make_bounded_resize</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">count_release</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">float_age_bounds</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="mf">20.</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Compute the mean</span>
+    <span class="n">make_sized_bounded_mean</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">count_release</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">float_age_bounds</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>I stopped just short of chaining with a measurement because we’re working with float data. There are some extra considerations to take in mind with floating-point data, which are <a class="reference external" href="https://docs.opendp.org/en/latest/user/measurement-constructors.html#floating-point">covered in the user guide</a>.</p>
+<p>With the assumption that you understand the ramifications, I’ll go ahead and finish the query.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[49]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">make_base_laplace</span>
+<span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">enable_features</span>
+<span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;floating-point&quot;</span><span class="p">)</span>
+<span class="c1"># add laplace noise</span>
+<span class="n">dp_mean</span> <span class="o">=</span> <span class="n">mean_age_preprocessor</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+<span class="n">mean_release</span> <span class="o">=</span> <span class="n">dp_mean</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP mean:&quot;</span><span class="p">,</span> <span class="n">mean_release</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP mean: 45.10625466380808
+</pre></div></div>
+</div>
+<p>Depending on your use-case, you may find greater utility separately releasing a DP sum and a DP count, and then postprocessing them into the mean. In the above mean example, you could even take advantage of this to avoid using floating-point numbers.</p>
+</section>
+<section id="Zero-Concentrated-Differential-Privacy">
+<h2>Zero-Concentrated Differential Privacy<a class="headerlink" href="#Zero-Concentrated-Differential-Privacy" title="Permalink to this heading">#</a></h2>
+<p>In this example, I chain with the gaussian mechanism instead, with a budget of .05 rho.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[50]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">make_base_gaussian</span>
+
+<span class="n">variance</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="c1"># Convert data into a dataframe of string columns</span>
+    <span class="n">make_split_dataframe</span><span class="p">(</span><span class="n">separator</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">col_names</span><span class="o">=</span><span class="n">col_names</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Selects a column of df, Vec&lt;str&gt;</span>
+    <span class="n">make_select_column</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Cast the column as Vec&lt;float&gt;, and fill nulls with the default value, 0.</span>
+    <span class="n">make_cast_default</span><span class="p">(</span><span class="n">TIA</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">TOA</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Clamp age values</span>
+    <span class="n">make_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">float_age_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Resize the dataset to length `count_release`.</span>
+    <span class="n">make_bounded_resize</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">count_release</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">float_age_bounds</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="mf">20.</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Compute the mean</span>
+    <span class="n">make_sized_bounded_mean</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">count_release</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">float_age_bounds</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="n">dp_variance</span> <span class="o">=</span> <span class="n">binary_search_chain</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">variance</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_gaussian</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+    <span class="n">d_in</span><span class="o">=</span><span class="n">max_influence</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="mf">.05</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP variance:&quot;</span><span class="p">,</span> <span class="n">dp_variance</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP variance: 44.5986145355549
+</pre></div></div>
+</div>
+</section>
+<section id="Measure-Casting">
+<h2>Measure Casting<a class="headerlink" href="#Measure-Casting" title="Permalink to this heading">#</a></h2>
+<p>In the previous example, we have a privacy parameter in terms of rho. We can use <code class="docutils literal notranslate"><span class="pre">make_zCDP_to_approxDP</span></code> to convert the distance type to an ε(δ) pareto-curve.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[51]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="n">make_fix_delta</span><span class="p">,</span> <span class="n">make_zCDP_to_approxDP</span>
+
+<span class="n">app_dp_variance</span> <span class="o">=</span> <span class="n">make_zCDP_to_approxDP</span><span class="p">(</span><span class="n">dp_variance</span><span class="p">)</span>
+<span class="c1"># evaluate the privacy map to get a curve</span>
+<span class="n">curve</span> <span class="o">=</span> <span class="n">app_dp_variance</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_influence</span><span class="p">)</span>
+<span class="c1"># solve for epsilon when delta is fixed</span>
+<span class="n">curve</span><span class="o">.</span><span class="n">epsilon</span><span class="p">(</span><span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[51]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1.6194085342284823
+</pre></div></div>
+</div>
+<p>We can use <code class="docutils literal notranslate"><span class="pre">make_fix_delta</span></code> to emit (ε, δ) pairs instead:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[52]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="n">make_fix_delta</span>
+<span class="n">fixed_app_dp_variance</span> <span class="o">=</span> <span class="n">make_fix_delta</span><span class="p">(</span><span class="n">app_dp_variance</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">)</span>
+<span class="n">fixed_app_dp_variance</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_influence</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[52]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(1.6194085342284823, 1e-07)
+</pre></div></div>
+</div>
+<p>This can be used in conjunction with the binary search utilities to solve for a scale parameter:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[53]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">budget</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1e-7</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">make_dp_variance</span><span class="p">(</span><span class="n">scale</span><span class="p">):</span>
+    <span class="n">adp</span> <span class="o">=</span> <span class="n">make_zCDP_to_approxDP</span><span class="p">(</span><span class="n">make_base_gaussian</span><span class="p">(</span><span class="n">scale</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">variance</span> <span class="o">&gt;&gt;</span>  <span class="n">make_fix_delta</span><span class="p">(</span><span class="n">adp</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">budget</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="n">dp_variance_lte_budget</span> <span class="o">=</span> <span class="n">binary_search_chain</span><span class="p">(</span>
+    <span class="n">make_dp_variance</span><span class="p">,</span>
+    <span class="n">d_in</span><span class="o">=</span><span class="n">max_influence</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="n">budget</span><span class="p">)</span>
+
+<span class="c1"># we know this measurement is calibrated to be lte budget</span>
+<span class="k">assert</span> <span class="n">dp_variance_lte_budget</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">max_influence</span><span class="p">,</span> <span class="n">budget</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Composition">
+<h2>Composition<a class="headerlink" href="#Composition" title="Permalink to this heading">#</a></h2>
+<p>We can compose multiple measurements into one measurement with <code class="docutils literal notranslate"><span class="pre">make_basic_composition</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="n">make_basic_composition</span>
+
+<span class="n">composed</span> <span class="o">=</span> <span class="n">make_basic_composition</span><span class="p">([</span><span class="n">dp_sum</span><span class="p">,</span> <span class="n">dp_mean</span><span class="p">])</span>
+
+<span class="n">composed</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[30292669, 44.980434787860254]
+</pre></div></div>
+</div>
+<p>In order to compose, all measurements must share the same input domain, input metric and output measure. We can still use the privacy map to see the epsilon usage of this new measurement:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[56]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">composed</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_influence</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[56]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1.100100100100557
+</pre></div></div>
+</div>
+</section>
+<section id="Population-Amplification">
+<h2>Population Amplification<a class="headerlink" href="#Population-Amplification" title="Permalink to this heading">#</a></h2>
+<p>Another type of combinator is an amplifier. In this example I’ll apply the amplifier to a dp variance estimator:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[55]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_sized_bounded_variance</span>
+<span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="n">make_population_amplification</span>
+<span class="n">variance</span> <span class="o">=</span> <span class="n">make_sized_bounded_variance</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">count_release</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">float_age_bounds</span><span class="p">)</span>
+
+<span class="n">dp_variance</span> <span class="o">=</span> <span class="n">binary_search_chain</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">variance</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+    <span class="n">d_in</span><span class="o">=</span><span class="n">max_influence</span><span class="p">,</span>
+    <span class="n">d_out</span><span class="o">=</span><span class="mf">1.</span>
+<span class="p">)</span>
+
+<span class="c1"># requires a looser trust model, as the population size can be set arbitrarily</span>
+<span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;honest-but-curious&quot;</span><span class="p">)</span>
+
+<span class="n">make_population_amplification</span><span class="p">(</span><span class="n">dp_variance</span><span class="p">,</span> <span class="mi">100_000</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[55]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.01701997053694077
+</pre></div></div>
+</div>
+<p>You’ll notice that we found a dp variance estimator that was 1 epsilon-DP, but after amplification, it now uses a much smaller epsilon. We are taking advantage of the knowledge that the dataset was a simple sample from a larger population with at least 100,000 individuals.</p>
+</section>
+</section>
+
+
+            </article>
+            
+            
+            
+            <footer class="bd-footer-article">
+                <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+  <a class='left-prev' id="prev-link" href="index.html" title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+          <p class="prev-next-subtitle">previous</p>
+          <p class="prev-next-title">Examples</p>
+      </div>
+  </a>
+  <a class='right-next' id="next-link" href="attacks/index.html" title="next page">
+  <div class="prev-next-info">
+      <p class="prev-next-subtitle">next</p>
+      <p class="prev-next-title">Attacks</p>
+  </div>
+  <i class="fa-solid fa-angle-right"></i>
+  </a>
+</div>
+            </footer>
+            
+          </div>
+          
+          
+          
+            <div class="bd-sidebar-secondary bd-toc">
+              
+<div class="toc-item">
+  
+<div class="tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+</div>
+<nav id="bd-toc-nav" class="page-toc">
+    <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Working-with-CSV-data">
+   Working with CSV data
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Casting">
+   Casting
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Private-Count">
+   Private Count
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Private-Sum">
+   Private Sum
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Private-Mean">
+   Private Mean
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Zero-Concentrated-Differential-Privacy">
+   Zero-Concentrated Differential Privacy
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Measure-Casting">
+   Measure Casting
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Composition">
+   Composition
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#Population-Amplification">
+   Population Amplification
+  </a>
+ </li>
+</ul>
+
+</nav>
+</div>
+
+<div class="toc-item">
+  
+<div id="searchbox"></div>
+</div>
+
+<div class="toc-item">
+  
+</div>
+
+<div class="toc-item">
+  
+<div class="tocsection sourcelink">
+    <a href="../_sources/examples/pums-data-analysis.ipynb.txt">
+        <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+</div>
+
+</div>
+
+            </div>
+          
+          
+        </div>
+        <footer class="bd-footer-content">
+          <div class="bd-footer-content__inner">
+            
+          </div>
+        </footer>
+        
+      </main>
+    </div>
+  </div>
+
+  
+    
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536"></script>
+
+  <footer class="bd-footer"><div class="bd-footer__inner container">
+  
+  <div class="footer-item">
+    
+<p class="copyright">
+
+    &copy; Copyright 2022.<br>
+
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+<p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.1.1.<br>
+</p>
+
+  </div>
+  
+</div>
+  </footer>
+  </body>
+</html>

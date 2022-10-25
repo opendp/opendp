@@ -1,0 +1,1160 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>opendp.measurements module &#8212; OpenDP</title>
+  <script>
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=1e1de1a1873e13ef5536" rel="stylesheet">
+
+  
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/6.1.2/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-brands-400.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/6.1.2/webfonts/fa-regular-400.woff2">
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536">
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/python/opendp.measurements';</script>
+    <link rel="shortcut icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="opendp.mod module" href="opendp.mod.html" />
+    <link rel="prev" title="opendp.core module" href="opendp.core.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="docsearch:language" content="en">
+  </head>
+  
+  
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="180" data-default-mode="">
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__primary" id="__primary">
+  <label class="overlay overlay-primary" for="__primary"></label>
+
+  
+  <input type="checkbox" class="sidebar-toggle" name="__secondary" id="__secondary">
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+      
+<form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+  </div>
+
+  
+  <nav class="bd-header navbar navbar-expand-lg bd-navbar" id="navbar-main"><div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+      <span class="fa-solid fa-bars"></span>
+  </label>
+  <div id="navbar-start">
+    
+    
+  
+
+
+<a class="navbar-brand logo" href="../../index.html">
+
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="Logo image">
+    <img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="Logo image">
+  
+  
+</a>
+    
+  </div>
+
+  
+  <div class="col-lg-9 navbar-header-items">
+    <div id="navbar-center" class="mr-auto">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../user/index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../examples/index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="../index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../developer/index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+    </div>
+
+    <div id="navbar-end">
+      <div class="navbar-end-item navbar-end__search-button-container">
+        
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+      </div>
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+  </div>
+
+
+  
+  <div class="search-button-container--mobile">
+<button class="btn btn-sm navbar-btn search-button search-button__button" title="Search" data-toggle="tooltip">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+  </div>
+
+  
+  <label class="sidebar-toggle secondary-toggle" for="__secondary">
+      <span class="fa-solid fa-outdent"></span>
+  </label>
+  
+
+</div>
+  </nav>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+      
+      <div class="navbar-center-item">
+        <nav class="navbar-nav">
+    <p class="sidebar-header-items__title" role="heading" aria-level="1" aria-label="Site Navigation">
+        Site Navigation
+    </p>
+    <ul id="navbar-main-elements" class="navbar-nav">
+        
+                <li class="nav-item">
+                    <a class="nav-link" href="../../quickstart.html">
+                        Quickstart
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../user/index.html">
+                        User Guide
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../examples/index.html">
+                        Examples
+                    </a>
+                </li>
+                
+
+                <li class="nav-item current active">
+                    <a class="nav-link" href="../index.html">
+                        API
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../developer/index.html">
+                        Developer Guide
+                    </a>
+                </li>
+                
+            <div class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    More
+                </button>
+                <div class="dropdown-menu">
+                    
+                <li class="nav-item">
+                    <a class="nav-link" href="../../resources/index.html">
+                        Resources
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                    </a>
+                </li>
+                
+
+                <li class="nav-item">
+                    <a class="nav-link" href="../../contact.html">
+                        Contact
+                    </a>
+                </li>
+                
+                </div>
+            </div>
+            
+    </ul>
+</nav>
+      </div>
+      
+      </div>
+    
+
+    
+    
+    <div class="sidebar-header-items__end">
+      
+      <div class="navbar-end-item">
+        <span class="theme-switch-button btn btn-sm btn-outline-primary navbar-btn rounded-circle" title="light/dark" data-toggle="tooltip">
+    <a class="theme-switch" data-mode="light"><i class="fa-solid fa-sun"></i></a>
+    <a class="theme-switch" data-mode="dark"><i class="fa-regular fa-moon"></i></a>
+    <a class="theme-switch" data-mode="auto"><i class="fa-solid fa-circle-half-stroke"></i></a>
+</span>
+      </div>
+      
+      <div class="navbar-end-item">
+        <ul id="navbar-icon-links" class="navbar-nav" aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-github"></i></span>
+            <label class="sr-only">GitHub</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://twitter.com/opendp_org" title="Twitter" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="fa-brands fa-square-twitter"></i></span>
+            <label class="sr-only">Twitter</label></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp/opendp/discussions" title="GitHub Discussions" class="nav-link" rel="noopener" target="_blank" data-toggle="tooltip"><span><i class="far fa-comments"></i></span>
+            <label class="sr-only">GitHub Discussions</label></a>
+        </li>
+      </ul>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  
+  <div class="sidebar-start-items sidebar-primary__section">
+    <div class="sidebar-start-items__item">
+<form class="bd-search d-flex align-items-center" action="../../search.html" method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search the docs ..." aria-label="Search the docs ..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+    </div>
+    <div class="sidebar-start-items__item"><nav class="bd-links" id="bd-docs-nav" aria-label="Section navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">
+    Section Navigation
+  </p>
+  <div class="bd-toc-item navbar-nav">
+    <ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Python API</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="opendp.html">opendp package</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-2"><i class="fa-solid fa-chevron-down"></i></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API</a></li>
+</ul>
+
+  </div>
+</nav>
+    </div>
+    <div class="sidebar-start-items__item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="opendp.measurements.html" style="font-weight: bold">latest</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.5.0-rc.1/index.html" style="font-weight: normal">v0.5.0-rc.1</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+
+    </div>
+  </div>
+  
+
+  
+  <div class="sidebar-end-items sidebar-primary__section">
+    <div class="sidebar-end-items__item">
+    </div>
+  </div>
+
+      </div>
+      <main class="bd-main">
+        
+        
+        <div class="bd-content">
+          <div class="bd-article-container">
+            
+            <div class="bd-header-article">
+                
+            </div>
+            
+            
+            <article class="bd-article" role="main">
+              
+  <section id="module-opendp.measurements">
+<span id="opendp-measurements-module"></span><h1>opendp.measurements module<a class="headerlink" href="#module-opendp.measurements" title="Permalink to this heading">#</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_discrete_gaussian">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_discrete_gaussian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AllDomain&lt;int&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ZeroConcentratedDivergence&lt;QO&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">QI</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'int'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_discrete_gaussian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_discrete_gaussian" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that adds noise from the discrete_gaussian(<code class="docutils literal notranslate"><span class="pre">scale</span></code>)
+distribution to the input.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">D</span></code> to change the input data type and input metric:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></th>
+<th class="head"><p>input type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code> (default)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;QI&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Vec&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L2Distance&lt;QI&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html">make_base_discrete_gaussian in Rust
+documentation.</a></p>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MO</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – Noise scale parameter for the gaussian distribution. <code class="docutils literal notranslate"><span class="pre">scale</span></code> == standard_deviation.</p></li>
+<li><p><strong>D</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Domain of the data type to be privatized. Valid values are <code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code>.</p></li>
+<li><p><strong>MO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Output measure. The only valid measure is <code class="docutils literal notranslate"><span class="pre">ZeroConcentratedDivergence&lt;QO&gt;</span></code>, but QO can be any float.</p></li>
+<li><p><strong>QI</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Input distance. The type of sensitivities. Can be any integer or float.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_discrete_laplace">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_discrete_laplace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AllDomain&lt;int&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">QO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_discrete_laplace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_discrete_laplace" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that adds noise from the discrete_laplace(<code class="docutils literal notranslate"><span class="pre">scale</span></code>)
+distribution to the input.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">D</span></code> to change the input data type and input metric:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></th>
+<th class="head"><p>input type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code> (default)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;T&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Vec&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L1Distance&lt;T&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>This uses <code class="docutils literal notranslate"><span class="pre">make_base_discrete_laplace_cks20</span></code> if scale is greater than
+10, otherwise it uses <code class="docutils literal notranslate"><span class="pre">make_base_discrete_laplace_linear</span></code>.</p>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace.html">make_base_discrete_laplace in Rust
+documentation.</a></p>
+<p><strong>Citations:</strong></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://theory.stanford.edu/~tim/papers/priv.pdf">GRS12 Universally Utility-Maximizing Privacy
+Mechanisms</a></p></li>
+<li><p><a class="reference external" href="https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2">CKS20 The Discrete Gaussian for Differential
+Privacy</a></p></li>
+</ul>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MaxDivergence&lt;QO&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – Noise scale parameter for the laplace distribution. <code class="docutils literal notranslate"><span class="pre">scale</span></code> == sqrt(2) * standard_deviation.</p></li>
+<li><p><strong>D</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Domain of the data type to be privatized. Valid values are <code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></li>
+<li><p><strong>QO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Data type of the output distance and scale. <code class="docutils literal notranslate"><span class="pre">f32</span></code> or <code class="docutils literal notranslate"><span class="pre">f64</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_discrete_laplace_cks20">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_discrete_laplace_cks20</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AllDomain&lt;int&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">QO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_discrete_laplace_cks20"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_discrete_laplace_cks20" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that adds noise from the discrete_laplace(<code class="docutils literal notranslate"><span class="pre">scale</span></code>)
+distribution to the input, using an efficient algorithm on rational
+bignums.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">D</span></code> to change the input data type and input metric:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></th>
+<th class="head"><p>input type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code> (default)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;T&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Vec&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L1Distance&lt;T&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_cks20.html">make_base_discrete_laplace_cks20 in Rust
+documentation.</a></p>
+<p><strong>Citations:</strong></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2">CKS20 The Discrete Gaussian for Differential
+Privacy</a></p></li>
+</ul>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MaxDivergence&lt;QO&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – Noise scale parameter for the laplace distribution. <code class="docutils literal notranslate"><span class="pre">scale</span></code> == sqrt(2) * standard_deviation.</p></li>
+<li><p><strong>D</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Domain of the data type to be privatized. Valid values are <code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></li>
+<li><p><strong>QO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Data type of the output distance and scale.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_discrete_laplace_linear">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_discrete_laplace_linear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AllDomain&lt;int&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">QO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_discrete_laplace_linear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_discrete_laplace_linear" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that adds noise from the discrete_laplace(<code class="docutils literal notranslate"><span class="pre">scale</span></code>)
+distribution to the input, using a linear-time algorithm on finite data
+types.</p>
+<p>This algorithm can be executed in constant time if bounds are passed.
+Set <code class="docutils literal notranslate"><span class="pre">D</span></code> to change the input data type and input metric:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></th>
+<th class="head"><p>input type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code> (default)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;T&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Vec&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L1Distance&lt;T&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_linear.html">make_base_discrete_laplace_linear in Rust
+documentation.</a></p>
+<p><strong>Citations:</strong></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://theory.stanford.edu/~tim/papers/priv.pdf">GRS12 Universally Utility-Maximizing Privacy
+Mechanisms</a></p></li>
+</ul>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MaxDivergence&lt;QO&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – Noise scale parameter for the distribution. <code class="docutils literal notranslate"><span class="pre">scale</span></code> == sqrt(2) * standard_deviation.</p></li>
+<li><p><strong>bounds</strong> (<em>Any</em>) – Set bounds on the count to make the algorithm run in constant-time.</p></li>
+<li><p><strong>D</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Domain of the data type to be privatized. Valid values are <code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></li>
+<li><p><strong>QO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Data type of the scale and output distance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_gaussian">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_gaussian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1074</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AllDomain&lt;T&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ZeroConcentratedDivergence&lt;T&gt;'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_gaussian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_gaussian" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that adds noise from the gaussian(<code class="docutils literal notranslate"><span class="pre">scale</span></code>)
+distribution to the input.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">D</span></code> to change the input data type and input metric:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></th>
+<th class="head"><p>input type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code> (default)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;T&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Vec&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L2Distance&lt;T&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>This function takes a noise granularity in terms of 2^k. Larger
+granularities are more computationally efficient, but have a looser
+privacy map. If k is not set, k defaults to the smallest granularity.</p>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_gaussian.html">make_base_gaussian in Rust
+documentation.</a></p>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MO</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – Noise scale parameter for the gaussian distribution. <code class="docutils literal notranslate"><span class="pre">scale</span></code> == standard_deviation.</p></li>
+<li><p><strong>k</strong> (<em>int</em>) – The noise granularity in terms of 2^k.</p></li>
+<li><p><strong>D</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Domain of the data type to be privatized. Valid values are <code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code>.</p></li>
+<li><p><strong>MO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Output Measure. The only valid measure is <code class="docutils literal notranslate"><span class="pre">ZeroConcentratedDivergence&lt;T&gt;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_geometric">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_geometric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AllDomain&lt;int&gt;'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">QO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_geometric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_geometric" title="Permalink to this definition">#</a></dt>
+<dd><p>Deprecated. Use <code class="docutils literal notranslate"><span class="pre">make_base_discrete_laplace</span></code> instead (more efficient).
+<code class="docutils literal notranslate"><span class="pre">make_base_discrete_laplace_linear</span></code> has a similar interface with the
+optional constant-time bounds.</p>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_geometric.html">make_base_geometric in Rust
+documentation.</a></p>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MaxDivergence&lt;QO&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – </p></li>
+<li><p><strong>bounds</strong> (<em>Any</em>) – </p></li>
+<li><p><strong>D</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – </p></li>
+<li><p><strong>QO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_laplace">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_laplace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1074</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'AllDomain&lt;T&gt;'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_laplace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_laplace" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that adds noise from the laplace(<code class="docutils literal notranslate"><span class="pre">scale</span></code>)
+distribution to a scalar value.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">D</span></code> to change the input data type and input metric:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">D</span></code></p></th>
+<th class="head"><p>input type</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code> (default)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;T&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Vec&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L1Distance&lt;T&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>This function takes a noise granularity in terms of 2^k. Larger
+granularities are more computationally efficient, but have a looser
+privacy map. If k is not set, k defaults to the smallest granularity.</p>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace.html">make_base_laplace in Rust
+documentation.</a></p>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">D</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">D::InputMetric</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MaxDivergence&lt;D::Atom&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – Noise scale parameter for the laplace distribution. <code class="docutils literal notranslate"><span class="pre">scale</span></code> == sqrt(2) * standard_deviation.</p></li>
+<li><p><strong>k</strong> (<em>int</em>) – The noise granularity in terms of 2^k.</p></li>
+<li><p><strong>D</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Domain of the data type to be privatized. Valid values are <code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;T&gt;&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_base_ptr">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_base_ptr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TK</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1074</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TV</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_base_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_base_ptr" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that uses propose-test-release to privatize a hashmap
+of counts. This function takes a noise granularity in terms of 2^k.
+Larger granularities are more computationally efficient, but have a
+looser privacy map. If k is not set, k defaults to the smallest
+granularity.</p>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_ptr.html">make_base_ptr in Rust
+documentation.</a></p>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">MapDomain&lt;AllDomain&lt;TK&gt;,</span> <span class="pre">AllDomain&lt;TV&gt;&gt;</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">MapDomain&lt;AllDomain&lt;TK&gt;,</span> <span class="pre">AllDomain&lt;TV&gt;&gt;</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">L1Distance&lt;TV&gt;</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">SmoothedMaxDivergence&lt;TV&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scale</strong> – Noise scale parameter for the laplace distribution. <code class="docutils literal notranslate"><span class="pre">scale</span></code> == sqrt(2) * standard_deviation.</p></li>
+<li><p><strong>threshold</strong> – Exclude counts that are less than this minimum value.</p></li>
+<li><p><strong>k</strong> (<em>int</em>) – The noise granularity in terms of 2^k.</p></li>
+<li><p><strong>TK</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Type of Key. Must be hashable/categorical.</p></li>
+<li><p><strong>TV</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Type of Value. Must be float.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_randomized_response">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_randomized_response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">categories</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constant_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">QO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_randomized_response"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_randomized_response" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that implements randomized response on a categorical
+value.</p>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_randomized_response.html">make_randomized_response in Rust
+documentation.</a></p>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">DiscreteDistance</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MaxDivergence&lt;QO&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>categories</strong> (<em>Any</em>) – Set of valid outcomes</p></li>
+<li><p><strong>prob</strong> – Probability of returning the correct answer. Must be in <code class="docutils literal notranslate"><span class="pre">[1/num_categories,</span> <span class="pre">1)</span></code></p></li>
+<li><p><strong>constant_time</strong> (<em>bool</em>) – Set to true to enable constant time. Slower.</p></li>
+<li><p><strong>T</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Data type of a category.</p></li>
+<li><p><strong>QO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Data type of probability and output distance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.measurements.make_randomized_response_bool">
+<span class="sig-prename descclassname"><span class="pre">opendp.measurements.</span></span><span class="sig-name descname"><span class="pre">make_randomized_response_bool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constant_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">QO</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/measurements.html#make_randomized_response_bool"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.measurements.make_randomized_response_bool" title="Permalink to this definition">#</a></dt>
+<dd><p>Make a Measurement that implements randomized response on a boolean
+value.</p>
+<p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measurements/fn.make_randomized_response_bool.html">make_randomized_response_bool in Rust
+documentation.</a></p>
+<p><strong>Supporting Elements:</strong></p>
+<ul class="simple">
+<li><p>Input Domain: <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;bool&gt;</span></code></p></li>
+<li><p>Output Domain: <code class="docutils literal notranslate"><span class="pre">AllDomain&lt;bool&gt;</span></code></p></li>
+<li><p>Input Metric: <code class="docutils literal notranslate"><span class="pre">DiscreteDistance</span></code></p></li>
+<li><p>Output Measure: <code class="docutils literal notranslate"><span class="pre">MaxDivergence&lt;QO&gt;</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>prob</strong> – Probability of returning the correct answer. Must be in <code class="docutils literal notranslate"><span class="pre">[0.5,</span> <span class="pre">1)</span></code></p></li>
+<li><p><strong>constant_time</strong> (<em>bool</em>) – Set to true to enable constant time. Slower.</p></li>
+<li><p><strong>QO</strong> (<a class="reference internal" href="../../user/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Data type of probability and output distance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><strong>UnknownTypeError</strong> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+            </article>
+            
+            
+            
+            <footer class="bd-footer-article">
+                <!-- Previous / next buttons -->
+<div class='prev-next-area'>
+  <a class='left-prev' id="prev-link" href="opendp.core.html" title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+          <p class="prev-next-subtitle">previous</p>
+          <p class="prev-next-title">opendp.core module</p>
+      </div>
+  </a>
+  <a class='right-next' id="next-link" href="opendp.mod.html" title="next page">
+  <div class="prev-next-info">
+      <p class="prev-next-subtitle">next</p>
+      <p class="prev-next-title">opendp.mod module</p>
+  </div>
+  <i class="fa-solid fa-angle-right"></i>
+  </a>
+</div>
+            </footer>
+            
+          </div>
+          
+          
+          
+            <div class="bd-sidebar-secondary bd-toc">
+              
+<div class="toc-item">
+  
+<div id="searchbox"></div>
+</div>
+
+<div class="toc-item">
+  
+</div>
+
+<div class="toc-item">
+  
+<div class="tocsection sourcelink">
+    <a href="../../_sources/api/python/opendp.measurements.rst.txt">
+        <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+</div>
+
+</div>
+
+            </div>
+          
+          
+        </div>
+        <footer class="bd-footer-content">
+          <div class="bd-footer-content__inner">
+            
+          </div>
+        </footer>
+        
+      </main>
+    </div>
+  </div>
+
+  
+    
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/pydata-sphinx-theme.js?digest=1e1de1a1873e13ef5536"></script>
+
+  <footer class="bd-footer"><div class="bd-footer__inner container">
+  
+  <div class="footer-item">
+    
+<p class="copyright">
+
+    &copy; Copyright 2022.<br>
+
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+<p class="sphinx-version">
+Created using <a href="http://sphinx-doc.org/">Sphinx</a> 5.1.1.<br>
+</p>
+
+  </div>
+  
+</div>
+  </footer>
+  </body>
+</html>

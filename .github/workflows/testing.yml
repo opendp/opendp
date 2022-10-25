@@ -1,0 +1,129 @@
+name: Testing
+
+# Controls when the action will run. 
+on:
+  # Triggers whenever latest is updated or a release is done
+  pull_request:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    # fixed to ubuntu-22.04, which is currently newer than ubuntu-latest, because pandoc needs at least v2.6
+    # ubuntu-latest points to ubuntu-20.04, which has pandoc v2.5, which is subject to this bug: https://github.com/jgm/pandoc/issues/5128
+    runs-on: ubuntu-22.04
+    env:
+      # don't attempt to load binaries when sourcing the library
+      OPENDP_HEADLESS: true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          # Make sure we get all refs needed to build docs for different versions
+          fetch-depth: 0
+      
+      - name: Collect file listing
+        id: "collect"
+        run: |
+          files=$(find . -type f -name "*.tex")
+
+          # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          # construct list of .tex files
+          echo "tex<<EOF" >> $GITHUB_OUTPUT
+          echo "$files" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # construct list of .pdf files
+          echo "pdf<<EOF" >> $GITHUB_OUTPUT
+          echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # name the version
+          version=$(cat VERSION)
+          if [ "$version" == "0.0.0+development" ]; then
+              version=latest
+          else
+              version="v$version"
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+          cat $GITHUB_OUTPUT
+        
+      
+      - name: Build docs site
+        run: |
+          sudo apt-get install -y pandoc
+          echo "Install Sphinx and deploy docs..."
+          cd docs
+          python --version
+          python -m venv venv
+          source venv/bin/activate
+          
+          echo "Upgrade pip and install requirements."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+          echo "Create docs."
+          make versions
+          cp -r build /tmp
+          cd ..
+          git fetch
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+
+          # create brand new history each time
+          git checkout --orphan gh-pages2
+          
+          # sudo to have sufficient permission to delete files created by the docker user while compiling .tex
+          sudo rm -rf *
+          echo docs.opendp.org > CNAME
+          echo "for underscore directories" > .nojekyll
+          cp -r /tmp/build/html/* .
+      
+      - name: Checkout artifacts
+        uses: actions/checkout@v3
+        with:
+          repository: 'opendp/artifacts'
+          path: ./artifacts
+      
+      - name: Populate docs site with pdfs
+        run: |
+          echo "current dir"
+          ls
+
+          echo "artifacts dir"
+          ls artifacts
+
+          # copy each folder over
+          for folder in en/*; do
+
+            source=artifacts/release/$(basename $folder)
+            target=$folder/proofs
+
+            echo iteration
+            echo $folder
+            echo $source
+            echo $target
+
+            if [ -d "$source" ]; then
+              echo copying
+              mkdir -p "$target";
+              mv "$source"/* "$target";
+            fi;
+          done
+          
+          # discard unused pdfs
+          rm -r artifacts
+
+      - name: Push docs to gh-pages2 branch
+        #if: success() && github.ref == 'refs/heads/main'
+        run: |
+          git add --all --force
+          echo "Push docs to gh-pages2 branch"
+          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+          git push --force origin gh-pages2
+        continue-on-error: true
