@@ -41,7 +41,9 @@ def rust(args):
     toml.dump('rust/opendp_derive/Cargo.toml', opendp_toml)
 
     run_command("Publishing opendp_tooling crate", f"cargo publish --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
+    run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
     run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
+    run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
     run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
 
 

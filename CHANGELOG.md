@@ -9,6 +9,46 @@ Please keep this up to date, following the [instructions](#instructions) below.
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
 
+### Added
+- Restructured and expanded documentation on docs.opendp.org
+    - Moved notebooks into the documentation site
+    - Updated developer documentation and added introductions to Rust and proof-writing
+- Much more thorough API documentation and links to corresponding Rust documentation
+- Documentation throughout the Rust library, as well as proof definition stubs
+- Additional combinators for converting the privacy measure
+    - `make_pureDP_to_fixed_approxDP` to convert ε to (ε, 0)-approx DP
+    - `make_pureDP_to_zCDP` to convert ε to ρ
+- Additional accuracy functions for discrete noise mechanisms
+    - `discrete_laplacian_scale_to_accuracy`
+    - `discrete_gaussian_scale_to_accuracy`
+    - `accuracy_to_discrete_laplacian_scale`
+    - `accuracy_to_discrete_gaussian_scale`
+- `make_b_ary_tree` Lipschitz transformation. Use in conjunction with:
+    - `make_consistent_b_ary_tree` to retrieve consistent leaf node counts
+    - `make_quantiles_from_counts` to retrieve quantile estimates
+    - `make_cdf` to estimate a discretized cumulative distribution function
+- `make_subset_by`, `make_df_is_equal` and `make_df_cast_default` transformations 
+    - used for simple dataframe subsetting
+- `make_chain_tm` combinator for postprocessing
+- Updates for proof-writing:
+    - `rust/src/lib.sty` contains a collection of latex macros to aid in cross-linking and maintenance
+    - See the proof-writing section of the developer documentation
+    - PRs with .tex proof documents are rendered by a bot
+    - Documentation will now embed links to proof documents that are adjacent to source files
+    - Proof documents are automatically hosted and versioned on docs.opendp.org
+- An initial proof for `make_count` (by @silviacasac, @cwagaman @gracetian6).
+
+### Changed
+- Renamed `meas` to `measurements`, `trans` to `transformations` and `comb` to `combinators`
+- Added an `honest-but-curious` feature flag to `make_population_amplification`
+
+### Fixed
+- Python bindings check that C integers do not overflow
+- Fixed clamping behaviour on `make_lipschitz_float_mul`
+- Let the type of the sensitivity supplied to `make_base_discrete_gaussian` vary according to type `QI`
+- Fix FFI dispatch in fixed approximate DP composition
+
+
 ## [0.5.0] - 2022-08-23
 [0.5.0]: https://github.com/opendp/opendp/compare/v0.4.0...v0.5.0
 
