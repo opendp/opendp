@@ -33,12 +33,12 @@ def rust(args):
     version = opendp_toml['workspace']['package']['version']
     opendp_toml['dependencies']['opendp_derive']['version'] = version
     opendp_toml['build-dependencies']['opendp_tooling']['version'] = version
-    toml.dump('rust/Cargo.toml', opendp_toml)
+    toml.dump(opendp_toml, 'rust/Cargo.toml')
 
     # write the version into the derive crate dependencies
     opendp_derive_toml = toml.load('rust/opendp_derive/Cargo.toml')
     opendp_derive_toml['dependencies']['opendp_tooling']['version'] = version
-    toml.dump('rust/opendp_derive/Cargo.toml', opendp_toml)
+    toml.dump(opendp_toml, 'rust/opendp_derive/Cargo.toml')
 
     run_command("Publishing opendp_tooling crate", f"cargo publish --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
