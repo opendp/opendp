@@ -24,7 +24,36 @@ jobs:
         with:
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
+      
+      - name: Collect file listing
+        id: "collect"
+        run: |
+          shopt -s globstar nullglob
+          files=(**/*.tex)
+
+          # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          # construct list of .tex files
+          echo "tex<<EOF" >> $GITHUB_OUTPUT
+          echo "$files" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # construct list of .pdf files
+          echo "pdf<<EOF" >> $GITHUB_OUTPUT
+          echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # name the version
+          version=$(cat VERSION)
+          if [ "$version" == "0.0.0+development" ]; then
+              version=latest
+          else
+              version="v$version"
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+          cat $GITHUB_OUTPUT
         
+      
       - name: Build docs site
         run: |
           sudo apt-get install -y pandoc
@@ -57,8 +86,8 @@ jobs:
       
       - name: Checkout artifacts
         uses: actions/checkout@v3
-        repository: 'opendp/artifacts'
         with:
+          repository: 'opendp/artifacts'
           path: ./artifacts
       
       - name: Populate docs site with pdfs
