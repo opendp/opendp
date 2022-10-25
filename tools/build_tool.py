@@ -44,7 +44,7 @@ def rust_container(args):
     platform_to_docker_image = {
         "windows": "windows-latest",
         "macos": "macos-10.15",
-        "linux": "quay.io/pypa/manylinux2010_x86_64",
+        "linux": "quay.io/pypa/manylinux_2_17_x86_64",
     }
     docker_image = platform_to_docker_image[args.platform]
     mount_point = "/io"
