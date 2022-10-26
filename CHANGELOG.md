@@ -9,6 +9,10 @@ Please keep this up to date, following the [instructions](#instructions) below.
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
 
+## [0.6.0] - 2022-10-26
+[0.6.0]: https://github.com/opendp/opendp/compare/v0.5.0...v0.6.0
+
+
 ### Added
 - Restructured and expanded documentation on docs.opendp.org
     - Moved notebooks into the documentation site
