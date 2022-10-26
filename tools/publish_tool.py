@@ -27,19 +27,6 @@ def rust(args):
     if args.dry_run:
         raise NotImplementedError("dry runs aren't supported on workspaces")
 
-    import toml
-    # write the version into the opendp crate dependencies
-    opendp_toml = toml.load('rust/Cargo.toml')
-    version = opendp_toml['workspace']['package']['version']
-    opendp_toml['dependencies']['opendp_derive']['version'] = version
-    opendp_toml['build-dependencies']['opendp_tooling']['version'] = version
-    toml.dump(opendp_toml, open('rust/Cargo.toml', 'w'))
-
-    # write the version into the derive crate dependencies
-    opendp_derive_toml = toml.load('rust/opendp_derive/Cargo.toml')
-    opendp_derive_toml['dependencies']['opendp_tooling']['version'] = version
-    toml.dump(opendp_derive_toml, open('rust/opendp_derive/Cargo.toml', 'w'))
-
     run_command("Publishing opendp_tooling crate", f"cargo publish --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
     run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
