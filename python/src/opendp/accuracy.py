@@ -42,16 +42,18 @@ def accuracy_to_discrete_gaussian_scale(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=accuracy)
     
     # Convert arguments to c types.
-    accuracy = py_to_c(accuracy, c_type=ctypes.c_void_p, type_name=T)
-    alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    c_accuracy = py_to_c(accuracy, c_type=ctypes.c_void_p, type_name=T)
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_accuracy__accuracy_to_discrete_gaussian_scale
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_accuracy__accuracy_to_discrete_gaussian_scale
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(accuracy, alpha, T), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_accuracy, c_alpha, c_T), AnyObjectPtr))
+    
+    return output
 
 
 def accuracy_to_discrete_laplacian_scale(
@@ -81,16 +83,18 @@ def accuracy_to_discrete_laplacian_scale(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=accuracy)
     
     # Convert arguments to c types.
-    accuracy = py_to_c(accuracy, c_type=ctypes.c_void_p, type_name=T)
-    alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    c_accuracy = py_to_c(accuracy, c_type=ctypes.c_void_p, type_name=T)
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_accuracy__accuracy_to_discrete_laplacian_scale
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_accuracy__accuracy_to_discrete_laplacian_scale
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(accuracy, alpha, T), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_accuracy, c_alpha, c_T), AnyObjectPtr))
+    
+    return output
 
 
 def accuracy_to_gaussian_scale(
@@ -192,16 +196,18 @@ def discrete_gaussian_scale_to_accuracy(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
-    alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_accuracy__discrete_gaussian_scale_to_accuracy
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_accuracy__discrete_gaussian_scale_to_accuracy
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, alpha, T), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_scale, c_alpha, c_T), AnyObjectPtr))
+    
+    return output
 
 
 def discrete_laplacian_scale_to_accuracy(
@@ -236,16 +242,18 @@ def discrete_laplacian_scale_to_accuracy(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=scale)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
-    alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    c_alpha = py_to_c(alpha, c_type=ctypes.c_void_p, type_name=T)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_accuracy__discrete_laplacian_scale_to_accuracy
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_accuracy__discrete_laplacian_scale_to_accuracy
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, alpha, T), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_scale, c_alpha, c_T), AnyObjectPtr))
+    
+    return output
 
 
 def gaussian_scale_to_accuracy(

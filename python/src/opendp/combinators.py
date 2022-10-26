@@ -430,14 +430,16 @@ def make_pureDP_to_fixed_approxDP(
     
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
     
     # Call library function.
-    function = lib.opendp_combinators__make_pureDP_to_fixed_approxDP
-    function.argtypes = [Measurement]
-    function.restype = FfiResult
+    lib_function = lib.opendp_combinators__make_pureDP_to_fixed_approxDP
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(measurement), Measurement))
+    output = c_to_py(unwrap(lib_function(c_measurement), Measurement))
+    
+    return output
 
 
 def make_pureDP_to_zCDP(
@@ -463,14 +465,16 @@ def make_pureDP_to_zCDP(
     
     # No type arguments to standardize.
     # Convert arguments to c types.
-    measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
+    c_measurement = py_to_c(measurement, c_type=Measurement, type_name=AnyMeasurement)
     
     # Call library function.
-    function = lib.opendp_combinators__make_pureDP_to_zCDP
-    function.argtypes = [Measurement]
-    function.restype = FfiResult
+    lib_function = lib.opendp_combinators__make_pureDP_to_zCDP
+    lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(measurement), Measurement))
+    output = c_to_py(unwrap(lib_function(c_measurement), Measurement))
+    
+    return output
 
 
 def make_zCDP_to_approxDP(
