@@ -81,11 +81,10 @@ criterion = "0.4"
 crate-type = ["rlib", "cdylib"]
 
 [package.metadata.docs.rs]
-features = ["untrusted", "ffi"]
+features = ["derive", "untrusted", "ffi"]
 rustdoc-args = [
     # so that latex renders
-    "--html-in-header",
-    ".cargo/registry/src/github.com-1ecc6299db9ec823/opendp_tooling-0.6.0/katex.html",
+    "--html-in-header", "katex.html",
     
     # so that proof documents are visible
     "--document-private-items"
