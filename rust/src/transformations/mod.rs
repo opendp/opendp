@@ -103,3 +103,7 @@ mod resize;
 #[cfg(feature="contrib")]
 pub use crate::transformations::resize::*;
 
+#[cfg(feature="contrib")]
+pub mod array;
+#[cfg(feature="contrib")]
+pub use crate::transformations::array::*;

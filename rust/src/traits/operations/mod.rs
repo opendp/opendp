@@ -192,6 +192,14 @@ impl<K, V> CollectionSize for HashMap<K, V> {
 }
 
 
+impl<T> CollectionSize for ndarray::Array2<T> {
+    fn size(&self) -> usize {
+        self.len()
+    }
+}
+
+
+
 macro_rules! impl_check_null_for_non_nullable {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {

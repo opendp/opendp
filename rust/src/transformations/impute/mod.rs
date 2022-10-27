@@ -35,7 +35,7 @@ pub fn make_impute_uniform_float<TA>(
     make_row_by_row_fallible(
         InherentNullDomain::new(AllDomain::new()),
         AllDomain::new(),
-        move |v| if v.is_null() {
+        move |v: &TA| if v.is_null() {
             TA::sample_standard_uniform(false).map(|v| v * scale + lower)
         } else { Ok(*v) })
 }
