@@ -314,14 +314,6 @@ impl<D> Domain for Array2Domain<D>
     }
 }
 
-impl<D> CollectionDomain for Array2Domain<D>
-    where D: Domain<Carrier=Vec<D::Atom>> + RowAtom,
-          D::Atom: Clone {
-    fn size(v: &Self::Carrier) -> usize {
-        v.len()
-    }
-}
-
 // the equivalent of AllDomain, but for rows
 pub struct RowDomain<T>(PhantomData::<T>);
 impl<T> Clone for RowDomain<T> {
@@ -355,12 +347,6 @@ impl<T> RowDomain<T> {
 }
 impl<T> RowAtom for RowDomain<T> {
     type Atom = T;
-}
-
-impl<T> CollectionDomain for RowDomain<T> {
-    fn size(v: &Self::Carrier) -> usize {
-        v.len()
-    }
 }
 
 /// A Domain that contains vectors of (homogeneous) values.
