@@ -351,7 +351,7 @@ These tasks can be used to directly build or test OpenDP.
                 "args": [
                     "--open",
                     "--features", "derive untrusted",
-                    "--", "--html-in-header", "opendp_tooling/katex.html", "--document-private-items"
+                    "--", "--html-in-header", "katex.html", "--document-private-items"
                 ],
                 "group": "build",
                 "label": "cargo rustdoc",
@@ -372,7 +372,7 @@ These tasks can be used to directly build or test OpenDP.
                 },
                 "args": [
                     "--features", "derive untrusted",
-                    "--", "--html-in-header", "opendp_tooling/katex.html", "--document-private-items"
+                    "--", "--html-in-header", "katex.html", "--document-private-items"
                 ],
                 "group": "build",
                 "label": "rust: cargo rustdoc",
