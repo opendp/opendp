@@ -171,7 +171,7 @@ smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
 sphinx_apidoc_cmd = 'sphinx-apidoc -f -F -e -H "OpenDP" -A "The OpenDP Project" -V $VERSION -o source/api/python ../python/src/opendp --templatedir source/_templates'
-rustdoc_cmd = '(cd ../rust && cargo rustdoc --no-deps --target-dir ../docs/source/api/rust -- --html-in-header opendp_tooling/katex.html)'
+rustdoc_cmd = '(cd ../rust && cargo rustdoc --no-deps --target-dir ../docs/source/api/rust -- --html-in-header katex.html)'
 # Building the Rust docs locally takes forever, and is only necessary for latest branch (releases are automatically published to https://docs.rs).
 # TODO: Figure out how to use locally generated Rust docs for latest branch only.
 #smv_prebuild_command = '&&'.join([version_cmd, sphinx_apidoc_cmd, rustdoc_cmd])
