@@ -133,7 +133,9 @@ def init(args):
     target_version = get_target_version(base_version, args.type)
     branch = get_branch(target_version)
     tag = get_tag(target_version)
-    args.ref = args.ref or "main"
+    # If we have an explicit ref, use that.
+    # Otherwise, if this is a patch version, use the (existing) release branch, else use main.
+    args.ref = args.ref or branch if args.type == "patch" else "main"
     write_conf(args.type, base_version, target_version, branch, tag, args.ref)
     if args.type == "patch":
         switch_branch("release", branch)
@@ -215,8 +217,15 @@ def sanity(venv, version, published=False):
     version = format_python_version(version)
     run_command("Creating venv", f"rm -rf {venv} && python -m venv {venv}")
     package = f"opendp=={version}" if published else f"python/wheelhouse/opendp-{version}-py3-none-any.whl"
-    run_command_with_retries(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
-    run_command("Running test script", f"source {venv}/bin/activate && python tools/test.py")
+    run_command(f"Installing test requirements", f"source {venv}/bin/activate && pip install pytest nbmake pytest-xdist")
+    run_command(f"Installing notebook requirements", f"source {venv}/bin/activate && pip install -r docs/requirements_notebooks.txt")
+    if published:
+        run_command_with_retries(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
+    else:
+        run_command(f"Installing opendp {version}", f"source {venv}/bin/activate && pip install {package}")
+    run_command("Running tests", f"source {venv}/bin/activate && pytest -v python", capture_output=False)
+    # globstar doesn't work on macos bash, so use find to collect .ipynb files.
+    run_command("Running notebooks", f"source {venv}/bin/activate && find docs/source -name '*.ipynb' | xargs pytest --nbmake -n=auto", capture_output=False)
 
 
 def preflight(args):
