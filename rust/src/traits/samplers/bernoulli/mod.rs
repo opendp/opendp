@@ -2,7 +2,7 @@ use num::{One, Zero};
 
 use crate::{
     error::Fallible,
-    traits::{ExactIntCast, FloatBits, InfDiv},
+    traits::{ExactIntCast, InfDiv, Float},
 };
 
 use super::{fill_bytes, sample_geometric_buffer};
@@ -59,28 +59,24 @@ impl SampleStandardBernoulli for bool {
 /// ```
 pub trait SampleBernoulli<T>: Sized {
     /// # Proof Definition
-    /// For any setting of `prob`, returns `Ok(out)`,
-    /// where `out` is a sample from the Bernoulli(prob) distribution,
-    /// or `Err(e)` if there is not enough system entropy.
-    ///
-    /// If `constant_time` is set, the algorithm should also run in constant time.
+    /// For any setting of the input parameters, 
+    /// where `prob` is within $[0, 1]$,
+    /// returns `Err(e)` if there is a lack of system entropy or `constant_time` is not supported,
+    /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
+    /// 
+    /// If `constant_time` is set, the implementation's runtime is constant.
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self>;
 }
 
 impl<T> SampleBernoulli<T> for bool
 where
-    T: One + Zero + PartialOrd + FloatBits,
+    T: Float,
     T::Bits: PartialOrd + ExactIntCast<usize>,
     usize: ExactIntCast<T::Bits>,
 {
     /// Uses only an unbiased source of coin flips.
     /// The strategy for doing this with 2 flips in expectation is described [here](https://web.archive.org/web/20160418185834/https://amakelov.wordpress.com/2013/10/10/arbitrarily-biasing-a-coin-in-2-expected-tosses/).
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self> {
-        // ensure that prob is a valid probability
-        if !(T::zero()..=T::one()).contains(&prob) {
-            return fallible!(FailedFunction, "probability is not within [0, 1]");
-        }
-
         // if prob == 1., then exponent is T::EXPONENT_BIAS and mantissa is zero
         if prob.is_one() {
             return Ok(true);
@@ -162,7 +158,7 @@ impl SampleBernoulli<rug::Rational> for bool {
             );
         }
         let (numer, denom) = prob.into_numer_denom();
-        rug::Integer::sample_uniform_int_below(denom).map(|s| s < numer)
+        rug::Integer::sample_uniform_int_below(denom).map(|s| numer > s)
     }
 }
 
