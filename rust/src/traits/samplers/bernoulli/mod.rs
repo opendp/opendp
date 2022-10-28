@@ -43,20 +43,6 @@ impl SampleStandardBernoulli for bool {
 /// # use opendp::error::ExplainUnwrap;
 /// # n.unwrap_test();
 /// ```
-/// ```should_panic
-/// // fails because 1.3 not a valid probability
-/// use opendp::traits::samplers::SampleBernoulli;
-/// let n = bool::sample_bernoulli(1.3, false);
-/// # use opendp::error::ExplainUnwrap;
-/// # n.unwrap_test();
-/// ```
-/// ```should_panic
-/// // fails because -0.3 is not a valid probability
-/// use opendp::traits::samplers::SampleBernoulli;
-/// let n = bool::sample_bernoulli(-0.3, false);
-/// # use opendp::error::ExplainUnwrap;
-/// # n.unwrap_test();
-/// ```
 pub trait SampleBernoulli<T>: Sized {
     /// # Proof Definition
     /// For any setting of the input parameters, 
