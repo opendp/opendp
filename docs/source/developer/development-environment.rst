@@ -10,7 +10,7 @@ Follow the steps below to get an OpenDP development environment set up, includin
 * Install `Python version 3.7 or higher <https://www.python.org>`_.
 
 If you have already installed Rust, make sure that you have installed a version at least as new as the `rust-version` specified in 
-[rust/Cargo.toml](https://github.com/opendp/opendp/blob/main/rust/Cargo.toml).
+`rust/Cargo.toml <https://github.com/opendp/opendp/blob/main/rust/Cargo.toml>`_.
 
 
 Clone the OpenDP Repo

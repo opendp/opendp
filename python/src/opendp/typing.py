@@ -411,6 +411,7 @@ class PrivacyMeasure(RuntimeType):
 
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
+FixedSmoothedMaxDivergence = PrivacyMeasure('FixedSmoothedMaxDivergence')
 ZeroConcentratedDivergence = PrivacyMeasure('ZeroConcentratedDivergence')
 
 class Carrier(RuntimeType):
