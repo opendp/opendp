@@ -8,6 +8,10 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+
+## [0.6.1] - 2022-10-27
+[0.6.1]: https://github.com/opendp/opendp/compare/v0.6.0...v0.6.1
+
 ### Fixed
 - docs.rs failed to render due to Katex dependency
 
