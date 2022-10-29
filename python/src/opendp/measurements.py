@@ -1003,6 +1003,10 @@ def make_randomized_response_bool(
     * Input Metric:   `DiscreteDistance`
     * Output Measure: `MaxDivergence<QO>`
     
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
+    
     :param prob: Probability of returning the correct answer. Must be in `[0.5, 1)`
     :param constant_time: Set to true to enable constant time. Slower.
     :type constant_time: bool

@@ -1,0 +1,143 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+
+
+\title{\texttt{fn make\_binary\_randomized\_response\_bool}}
+\author{Vicki Xu, Hanwen Zhang, Zachary Ratliff}
+\begin{document}
+
+\maketitle
+
+\contrib
+\begin{tcolorbox}
+    \begin{warning}[Code is not constant-time]
+        \texttt{make\_randomized\_response\_bool} takes in a boolean \texttt{constant\_time} parameter that protects against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+    \end{warning}
+\end{tcolorbox}
+
+Proves soundness of \rustdoc{measurements/fn}{make\_binary\_randomized\_response\_bool} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{make\_randomized\_response\_bool} accepts a parameter \texttt{prob} of type \texttt{Q} and a parameter \texttt{constant\_time} of type \texttt{bool}.
+The function on the resulting measurement takes in a boolean data point \texttt{arg} and returns the truthful value \texttt{arg} with probability \texttt{prob},
+or the complement $\texttt{!arg}$ with probability $1 - \texttt{prob}$.
+
+The measurement function runs in constant time if \texttt{constant\_time} is set. 
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{490}
+\end{itemize}
+
+%\section{Measurement Description}
+%In binary randomized response, the participant lies with a probability $< \frac{1}{2}$ and tells the truth for the rest of the time. 
+%In Python and in Rust, when booleans are cast to integers, $1$ represents true, $0$ false. 
+%In the function defined line \ref{line:fn}, the true value, \emph{arg}, is taken as input. A boolean is generated in line \ref{line:coinflip} using \texttt{sample\_bernoulli}, which takes in \emph{prob} and \emph{constant\_time} as inputs. As we see from part (a), this means a value of $1$ is generated \emph{prob} percent of the time, and $0$ is generated $1 -$\emph{prob} percent of the time. This is the ``coinflip" step, wherein the computer decides whether to return the true value or the random response. So with probability \emph{prob}, the true value, \emph{arg}, is returned. With probability $1 -$\emph{prob}, the lie, which in the case of the boolean is the opposite (hence $1 - $\emph{arg}), is returned. 
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+To ensure the correctness of the output, we require the following preconditions:
+
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{prob} must be of type \texttt{QO}
+        \item Variable \texttt{constant\_time} must be of type \texttt{bool}
+        \item Type \texttt{bool} must have trait \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}\texttt{<QO>}
+        \item Type \texttt{QO} must have trait \texttt{Float}
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\begin{lstlisting}[language=Python, escapechar=|]
+def make_randomized_response_bool(prob: QO, constant_time: bool):
+    input_domain = AllDomain(bool)
+    output_domain = AllDomain(bool)
+    input_metric = DiscreteMetric()
+    output_measure = DiscreteDivergence(QO)
+    
+    if (prob < 0.5 or prob >= 1): |\label{line:range}|
+        raise Exception("probability must be in [0.5, 1)")
+
+    c = QO.inf_ln(prob.inf_div(1.neg_inf_sub(prob)))
+    def privacy_map(d_in: IntDistance) -> QO: |\label{line:map}|
+        if d_in == 0:
+            return 0
+        else: 
+            return c
+
+    def function(arg: bool) -> bool: |\label{line:fn}|
+        return arg ^ !bool.sample_bernoulli(prob, constant_time)
+    
+    return Measurement(input_domain, output_domain, function, input_metric, output_measure, privacy_map)
+\end{lstlisting}
+
+
+\subsection*{Postcondition}
+
+\validMeasurement{\texttt{(prob, constant\_time, QO)}}{\\ \texttt{make\_binary\_randomized\_response\_bool}}
+
+\section{Proof}
+
+\begin{proof} 
+\hfill
+\begin{enumerate}
+    \item \textbf{(Domain-metric compatibility.)} For \texttt{binary\_randomized\_response\_bool}, this corresponds to showing \texttt{AllDomain(bool)} is compatible with \texttt{DiscreteMetric}. 
+    This follows directly from the definition of \rustdoc{metrics/struct}{DiscreteMetric}.
+    
+    \item \textbf{(Privacy guarantee.)} 
+    
+    \begin{tcolorbox}
+\begin{note}[Proof relies on correctness of Bernoulli sampler]
+The following proof makes use of the following lemma that asserts the correctness of the Bernoulli sampler function.
+    \begin{lemma}
+    If system entropy is not sufficient, \texttt{sample\_bernoulli} raises an error. 
+    Otherwise, \texttt{sample\_bernoulli(prob, constant\_time)}, the Bernoulli sampler function used in \texttt{make\_randomized\_response\_bool}, 
+    returns \texttt{true} with probability (\texttt{prob}) and returns  \texttt{false} with probability (1 - \texttt{prob}).
+    \end{lemma}
+\end{note}
+\end{tcolorbox}
+
+    \texttt{sample\_bernoulli} can only fail when the OpenSSL pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
+    This is usually related to the computer's physical environment and not the dataset. 
+    The rest of this proof is conditioned on the assumption that \texttt{sample\_bernoulli} does not raise an exception. 
+    
+    Let $v$ and $w$ be datasets that are \texttt{d\_in}-close with respect to \texttt{input\_metric}.
+    Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if $v \ne w$ and $\din = 0$ if $v = w$. 
+    If $v = w$, then the output distributions on $v$ and $w$ are identical, and therefore the max-divergence is 0.
+    Consider $v \ne w$ and assume without loss of generality that $v = \texttt{true}$ and $w = \texttt{false}$. 
+    For shorthand, we let $p$ represent \texttt{prob}, the probability that \texttt{sample\_bernoulli} returns \texttt{true}. 
+    Observe that $p = [0.5, 1.0)$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
+    
+    We now consider the max-divergence $D_{\infty}(Y||Z)$ over the random variables $Y = \function(v)$ and $Z = \function(w)$.
+    
+    \[
+    D_{\infty}(Y||Z) = \max_{S \subseteq Supp(Y)}\left[\ln (\frac{\Pr[Y \in S]}{\Pr[Z \in S]})\right] 
+    \]
+    
+    \[
+    = \max\left(\ln (\frac{\Pr[Y = \texttt{true}]}{\Pr[Z = \texttt{true}]}), \ln(\frac{\Pr[Y = \texttt{false}]}{\Pr[Z = \texttt{false}]})\right)
+    \]
+    
+    \[
+    = \max\left(\ln (\frac{p}{1 - p}), \ln(\frac{1 - p}{p})\right)
+    \]
+    
+    \[
+    = \ln (\frac{p}{1 - p})
+    \]
+
+    We let $c = \texttt{privacy\_map}(\din) = \texttt{QO.inf\_ln(prob.inf\_div(1.neg\_inf\_sub(prob)))}$.
+    The computation of \texttt{c} rounds upward in the presence of floating point rounding errors. 
+    This is because \texttt{1.neg\_inf\_sub(prob)} appears in the denominator, and to ensure that the bound holds even in the presence of rounding errors, the conservative choice is to round down (so the quantity as a whole is bounded above). 
+    Similarly, \texttt{inf\_div} and \texttt{inf\_ln} round up. 
+    
+    When $\din > 0$ and no exception is raised in computing $\texttt{c} = \texttt{privacy\_map}(\din)$, then $\ln\left(\frac{p}{1 - p}\right) \leq \texttt{c}$. 
+    
+    Therefore we've shown that for every pair of elements $v,w \in \{\texttt{false}, \texttt{true}\}$ and every $d_{DM}(v,w) \le \din$ with $\din \ge 0$, 
+    if $v,w$ are $\din$-close then $\function(v),\function(w) \in \{\texttt{false},\texttt{true}\}$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_metric}$ (the Max-Divergence).
+\end{enumerate}
+\end{proof}
+
+\end{document}
