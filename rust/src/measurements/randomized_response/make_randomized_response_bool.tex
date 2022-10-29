@@ -10,43 +10,34 @@
 \maketitle
 
 \contrib
-\begin{tcolorbox}
-    \begin{warning}[Code is not constant-time]
-        \texttt{make\_randomized\_response\_bool} takes in a boolean \texttt{constant\_time} parameter that protects against timing attacks on the Bernoulli sampling procedure. However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
-    \end{warning}
-\end{tcolorbox}
 
 Proves soundness of \rustdoc{measurements/fn}{make\_binary\_randomized\_response\_bool} in \asOfCommit{mod.rs}{f5bb719}.
 
 \texttt{make\_randomized\_response\_bool} accepts a parameter \texttt{prob} of type \texttt{Q} and a parameter \texttt{constant\_time} of type \texttt{bool}.
 The function on the resulting measurement takes in a boolean data point \texttt{arg} and returns the truthful value \texttt{arg} with probability \texttt{prob},
 or the complement $\texttt{!arg}$ with probability $1 - \texttt{prob}$.
+The measurement function makes mitigations against timing channels if \texttt{constant\_time} is set. 
 
-The measurement function runs in constant time if \texttt{constant\_time} is set. 
+\begin{tcolorbox}
+    \begin{warning}[Code is not constant-time]
+        \texttt{make\_randomized\_response\_bool} takes in a boolean \texttt{constant\_time} parameter that protects against timing attacks on the Bernoulli sampling procedure. 
+        However, the current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+    \end{warning}
+\end{tcolorbox}
 
 \subsection*{PR History}
 \begin{itemize}
     \item \vettingPR{490}
 \end{itemize}
 
-%\section{Measurement Description}
-%In binary randomized response, the participant lies with a probability $< \frac{1}{2}$ and tells the truth for the rest of the time. 
-%In Python and in Rust, when booleans are cast to integers, $1$ represents true, $0$ false. 
-%In the function defined line \ref{line:fn}, the true value, \emph{arg}, is taken as input. A boolean is generated in line \ref{line:coinflip} using \texttt{sample\_bernoulli}, which takes in \emph{prob} and \emph{constant\_time} as inputs. As we see from part (a), this means a value of $1$ is generated \emph{prob} percent of the time, and $0$ is generated $1 -$\emph{prob} percent of the time. This is the ``coinflip" step, wherein the computer decides whether to return the true value or the random response. So with probability \emph{prob}, the true value, \emph{arg}, is returned. With probability $1 -$\emph{prob}, the lie, which in the case of the boolean is the opposite (hence $1 - $\emph{arg}), is returned. 
-
 \section{Hoare Triple}
 
 \subsection*{Preconditions}
-To ensure the correctness of the output, we require the following preconditions:
-
 \begin{itemize}
-    \item \textbf{User-specified types:}
-    \begin{itemize}
-        \item Variable \texttt{prob} must be of type \texttt{QO}
-        \item Variable \texttt{constant\_time} must be of type \texttt{bool}
-        \item Type \texttt{bool} must have trait \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}\texttt{<QO>}
-        \item Type \texttt{QO} must have trait \texttt{Float}
-    \end{itemize}
+    \item Variable \texttt{prob} must be of type \texttt{QO}
+    \item Variable \texttt{constant\_time} must be of type \texttt{bool}
+    \item Type \texttt{bool} must have trait \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}\texttt{<QO>}
+    \item Type \texttt{QO} must have trait \rustdoc{traits/trait}{Float}
 \end{itemize}
 
 \subsection*{Pseudocode}
