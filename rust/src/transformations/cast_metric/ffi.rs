@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use crate::core::{FfiResult, Metric, Transformation};
+use crate::core::{FfiResult, Metric, MetricSpace, Transformation};
 use crate::err;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, IntoAnyStabilityMapExt};
 use crate::ffi::util::{self, Type};
@@ -32,6 +32,8 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
     where
         MI::Distance: 'static,
         <MI::OrderedMetric as Metric>::Distance: 'static,
+        (AnyDomain, MI): MetricSpace,
+        (AnyDomain, MI::OrderedMetric): MetricSpace,
     {
         let trans = try_!(super::make_ordered_random::<AnyDomain, MI>(domain));
 
@@ -72,6 +74,8 @@ pub extern "C" fn opendp_transformations__make_unordered(
     where
         MI::Distance: 'static,
         <MI::UnorderedMetric as Metric>::Distance: 'static,
+        (AnyDomain, MI): MetricSpace,
+        (AnyDomain, MI::UnorderedMetric): MetricSpace,
     {
         let trans = try_!(super::make_unordered::<AnyDomain, MI>(domain));
 
@@ -112,6 +116,8 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
     where
         MI::Distance: 'static,
         <MI::BoundedMetric as Metric>::Distance: 'static,
+        (AnyDomain, MI): MetricSpace,
+        (AnyDomain, MI::BoundedMetric): MetricSpace,
     {
         let trans = try_!(super::make_metric_bounded::<AnyDomain, MI>(domain));
 
@@ -151,6 +157,8 @@ pub extern "C" fn opendp_transformations__make_metric_unbounded(
     where
         MI::Distance: 'static,
         <MI::UnboundedMetric as Metric>::Distance: 'static,
+        (AnyDomain, MI): MetricSpace,
+        (AnyDomain, MI::UnboundedMetric): MetricSpace,
     {
         let trans = try_!(super::make_metric_unbounded::<AnyDomain, MI>(domain));
 

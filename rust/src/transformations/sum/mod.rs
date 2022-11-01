@@ -8,7 +8,7 @@ mod float;
 pub use float::*;
 use opendp_derive::bootstrap;
 
-use crate::core::{Metric, Transformation};
+use crate::core::{Metric, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
@@ -39,6 +39,7 @@ pub fn make_bounded_sum<MI, T>(
 where
     MI: Metric,
     T: MakeBoundedSum<MI>,
+    (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
 {
     T::make_bounded_sum(bounds)
 }
@@ -71,6 +72,7 @@ pub fn make_sized_bounded_sum<MI, T>(
 where
     MI: Metric,
     T: MakeSizedBoundedSum<MI>,
+    (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
 {
     T::make_sized_bounded_sum(size, bounds)
 }
@@ -82,7 +84,11 @@ where
 // make_(sized_)?bounded_float_(checked|ordered)_sum
 
 #[doc(hidden)]
-pub trait MakeBoundedSum<MI: Metric>: Sized + CheckAtom + Clone + TotalOrd {
+pub trait MakeBoundedSum<MI: Metric>: Sized + CheckAtom + Clone + TotalOrd
+where
+    (VectorDomain<AtomDomain<Self>>, MI): MetricSpace,
+    (AtomDomain<Self>, AbsoluteDistance<Self>): MetricSpace,
+{
     fn make_bounded_sum(
         bounds: (Self, Self),
     ) -> Fallible<
@@ -163,7 +169,11 @@ macro_rules! impl_make_bounded_sum_float {
 impl_make_bounded_sum_float! { f32 f64 }
 
 #[doc(hidden)]
-pub trait MakeSizedBoundedSum<MI: Metric>: Sized + CheckAtom + Clone + TotalOrd {
+pub trait MakeSizedBoundedSum<MI: Metric>: Sized + CheckAtom + Clone + TotalOrd
+where
+    (VectorDomain<AtomDomain<Self>>, MI): MetricSpace,
+    (AtomDomain<Self>, AbsoluteDistance<Self>): MetricSpace,
+{
     fn make_sized_bounded_sum(
         size: usize,
         bounds: (Self, Self),

@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     combinators::IsSizedDomain,
-    core::{Domain, Function, StabilityMap, Transformation},
+    core::{Domain, Function, MetricSpace, StabilityMap, Transformation},
     error::Fallible,
     metrics::IntDistance,
     traits::samplers::Shuffle,
@@ -37,6 +37,8 @@ where
     D: Domain,
     D::Carrier: Clone + Shuffle,
     MI: UnorderedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::OrderedMetric): MetricSpace,
 {
     Ok(Transformation::new(
         domain.clone(),
@@ -73,6 +75,8 @@ where
     D: Domain,
     D::Carrier: Clone,
     MI: OrderedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::UnorderedMetric): MetricSpace,
 {
     Ok(Transformation::new(
         domain.clone(),
@@ -110,6 +114,8 @@ where
     D: IsSizedDomain,
     D::Carrier: Clone,
     MI: BoundedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::UnboundedMetric): MetricSpace,
 {
     domain.get_size()?;
     Ok(Transformation::new(
@@ -151,6 +157,8 @@ where
     D: IsSizedDomain,
     D::Carrier: Clone,
     MI: UnboundedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::BoundedMetric): MetricSpace,
 {
     domain.get_size()?;
     Ok(Transformation::new(

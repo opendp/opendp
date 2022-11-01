@@ -4,7 +4,7 @@ mod ffi;
 use num::Zero;
 
 use crate::{
-    core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
+    core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::wrap,
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
@@ -34,6 +34,7 @@ where
     TO: 'static,
     MI: 'static + Metric,
     MO: 'static + BasicCompositionMeasure,
+    (DI, MI): MetricSpace,
 {
     if measurements.is_empty() {
         return fallible!(MakeMeasurement, "Must have at least one measurement");
@@ -128,7 +129,7 @@ mod tests {
     use crate::error::ExplainUnwrap;
     use crate::measurements::make_base_laplace;
     use crate::measures::MaxDivergence;
-    use crate::metrics::L1Distance;
+    use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
@@ -136,7 +137,7 @@ mod tests {
     fn test_make_basic_composition() {
         let input_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f64);
-        let input_metric0 = L1Distance::<i32>::default();
+        let input_metric0 = AbsoluteDistance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
         let privacy_map0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement0 = Measurement::new(
@@ -148,7 +149,7 @@ mod tests {
         );
         let input_domain1 = AtomDomain::<i32>::default();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
-        let input_metric1 = L1Distance::<i32>::default();
+        let input_metric1 = AbsoluteDistance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_map1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement1 = Measurement::new(

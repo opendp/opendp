@@ -5,7 +5,7 @@ use opendp_derive::bootstrap;
 use rug::{Complete, Integer, Rational};
 
 use crate::{
-    core::{Measurement, PrivacyMap},
+    core::{Measurement, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
     traits::{samplers::sample_discrete_laplace, InfCast},
@@ -47,6 +47,7 @@ pub fn make_base_discrete_laplace_cks20<D, QO>(
 where
     D: DiscreteLaplaceDomain,
     D::Atom: crate::traits::Integer,
+    (D, D::InputMetric): MetricSpace,
     QO: crate::traits::Float + InfCast<D::Atom>,
     Rational: TryFrom<QO>,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
@@ -110,6 +111,7 @@ pub fn make_base_discrete_laplace_cks20_rug<D>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<Rational>>>
 where
     D: DiscreteLaplaceDomain<Atom = Integer>,
+    (D, D::InputMetric): MetricSpace,
 {
     if scale <= 0 {
         return fallible!(MakeMeasurement, "scale must be positive");

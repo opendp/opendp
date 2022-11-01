@@ -104,9 +104,11 @@ pub extern "C" fn opendp_combinators__make_chain_pm(
 #[cfg(test)]
 mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
-    use crate::core;
+    use crate::core::{self, Function};
     use crate::error::Fallible;
-    use crate::ffi::any::{AnyObject, Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+    use crate::ffi::any::{
+        AnyObject, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt, IntoAnyTransformationExt,
+    };
     use crate::ffi::util;
 
     use super::*;
@@ -119,7 +121,7 @@ mod tests {
             measurement1,
             transformation0,
         ))?;
-        let arg = AnyObject::new_raw(999);
+        let arg = AnyObject::new_raw(vec![999]);
         let res = core::opendp_core__measurement_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);
@@ -139,10 +141,10 @@ mod tests {
             transformation1,
             transformation0,
         ))?;
-        let arg = AnyObject::new_raw(999);
+        let arg = AnyObject::new_raw(vec![999]);
         let res = core::opendp_core__transformation_invoke(&chain, arg);
-        let res: i32 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 999);
+        let res: Vec<i32> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res, vec![999]);
 
         let d_in = AnyObject::new_raw(999u32);
         let d_out = core::opendp_core__transformation_map(&chain, d_in);
@@ -152,14 +154,14 @@ mod tests {
     }
 
     #[test]
-    fn test_make_chain_tm_ffi() -> Fallible<()> {
+    fn test_make_chain_pm_ffi() -> Fallible<()> {
         let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
-        let postprocess1 = util::into_raw(make_test_transformation::<i32>().into_any().function);
+        let postprocess1 = util::into_raw(Function::new(|arg: &i32| arg.clone()).into_any());
         let chain = Result::from(opendp_combinators__make_chain_pm(
             postprocess1,
             measurement0,
         ))?;
-        let arg = AnyObject::new_raw(999);
+        let arg = AnyObject::new_raw(vec![999]);
         let res = core::opendp_core__measurement_invoke(&chain, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
         assert_eq!(res, 999);

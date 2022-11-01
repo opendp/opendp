@@ -1,6 +1,6 @@
 use crate::{
     combinators::assert_components_match,
-    core::{Domain, Function, Measurement, Metric, PrivacyMap},
+    core::{Domain, Function, Measurement, Metric, PrivacyMap, MetricSpace},
     error::Fallible,
     interactive::{Answer, Query, Queryable, WrapFn},
     traits::TotalOrd,
@@ -27,6 +27,7 @@ where
     DI::Carrier: 'static + Clone,
     MI::Distance: 'static + TotalOrd + Clone,
     MO::Distance: 'static + TotalOrd + Clone,
+    (DI, MI): MetricSpace,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_mid");

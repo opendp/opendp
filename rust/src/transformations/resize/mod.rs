@@ -3,7 +3,7 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::VectorDomain;
 use crate::error::Fallible;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
@@ -55,6 +55,8 @@ where
     DA::Carrier: 'static + Clone + CheckNull,
     MI: IsMetricOrdered<Distance = IntDistance>,
     MO: IsMetricOrdered<Distance = IntDistance>,
+    (VectorDomain<DA>, MI): MetricSpace,
+    (VectorDomain<DA>, MO): MetricSpace,
 {
     if !atom_domain.member(&constant)? {
         return fallible!(MakeTransformation, "constant must be a member of DA");

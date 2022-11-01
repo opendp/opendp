@@ -1,8 +1,9 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use crate::core::Metric;
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
+use crate::core::{Metric, MetricSpace};
+use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::Downcast;
 use crate::ffi::any::{AnyObject, AnyTransformation};
@@ -81,6 +82,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             MO::Distance: Number,
             TI: Hashable,
             TO: Number,
+            (VectorDomain<AtomDomain<TO>>, MO): MetricSpace,
         {
             let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TI>>()).clone();
             make_count_by_categories::<MO, TI, TO>(categories, null_category).into_any()
@@ -117,6 +119,7 @@ pub extern "C" fn opendp_transformations__make_count_by(
             MO::Distance: Float,
             TK: Hashable,
             TV: Number,
+            (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
         {
             make_count_by::<MO, TK, TV>().into_any()
         }

@@ -14,9 +14,15 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use std::hash::Hash;
 use std::marker::PhantomData;
 
-use crate::{core::Metric, domains::type_name};
+use crate::{
+    core::{Domain, Metric, MetricSpace},
+    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    traits::{CheckAtom, Hashable},
+    transformations::DataFrameDomain,
+};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -72,6 +78,24 @@ impl Metric for SymmetricDistance {
     type Distance = IntDistance;
 }
 
+// Symmetric distance is defined in terms of unescaped line-breaks for CSV string datasets
+impl MetricSpace for (AtomDomain<String>, SymmetricDistance) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+
+impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
+    fn check(&self) -> bool {
+        true
+    }
+}
+
 /// The smallest number of insertions or deletions to make two datasets equivalent.
 ///
 /// An *insertion* to a dataset is an addition of an element at a specific index,
@@ -121,6 +145,12 @@ impl Debug for InsertDeleteDistance {
 }
 impl Metric for InsertDeleteDistance {
     type Distance = IntDistance;
+}
+
+impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
+    fn check(&self) -> bool {
+        true
+    }
 }
 
 /// The smallest number of changes to make two equal-length datasets equivalent.
@@ -182,6 +212,12 @@ impl Metric for ChangeOneDistance {
     type Distance = IntDistance;
 }
 
+impl<D: Domain> MetricSpace for (VectorDomain<D>, ChangeOneDistance) {
+    fn check(&self) -> bool {
+        self.0.size.is_some()
+    }
+}
+
 /// The number of elements that differ between two equal-length datasets.
 ///
 /// This metric is sensitive to data ordering.
@@ -235,6 +271,11 @@ impl Debug for HammingDistance {
 impl Metric for HammingDistance {
     type Distance = IntDistance;
 }
+impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
+    fn check(&self) -> bool {
+        self.0.size.is_some()
+    }
+}
 
 /// The $L_p$ distance between two vector-valued aggregates.
 ///
@@ -283,6 +324,23 @@ impl<const P: usize, Q> Debug for LpDistance<P, Q> {
 }
 impl<const P: usize, Q> Metric for LpDistance<P, Q> {
     type Distance = Q;
+}
+
+impl<T: CheckAtom, const P: usize, Q> MetricSpace
+    for (VectorDomain<AtomDomain<T>>, LpDistance<P, Q>)
+{
+    fn check(&self) -> bool {
+        !self.0.element_domain.nullable()
+    }
+}
+impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
+    for (MapDomain<AtomDomain<K>, AtomDomain<V>>, LpDistance<P, Q>)
+where
+    K: Eq + Hash,
+{
+    fn check(&self) -> bool {
+        !self.0.value_domain.nullable()
+    }
 }
 
 /// The $L_1$ distance between two vector-valued aggregates.
@@ -335,6 +393,11 @@ impl<Q> Debug for AbsoluteDistance<Q> {
 impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
+impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
+    fn check(&self) -> bool {
+        !self.0.nullable()
+    }
+}
 
 /// Indicates if two elements are equal to each other.
 ///
@@ -378,4 +441,10 @@ impl Debug for DiscreteDistance {
 }
 impl Metric for DiscreteDistance {
     type Distance = IntDistance;
+}
+
+impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
+    fn check(&self) -> bool {
+        true
+    }
 }
