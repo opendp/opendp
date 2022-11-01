@@ -4,7 +4,7 @@ mod ffi;
 use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, Metric, PrivacyMap};
+use crate::core::{Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::measures::MaxDivergence;
@@ -60,6 +60,7 @@ pub fn make_base_laplace<D>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
 where
     D: LaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Float + SampleDiscreteLaplaceZ2k,
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
 {

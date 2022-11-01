@@ -4,7 +4,8 @@ use std::{
 };
 
 use crate::{
-    core::{FfiResult, IntoAnyTransformationFfiResultExt},
+    core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
+    domains::{AllDomain, VectorDomain},
     ffi::{any::AnyTransformation, util::Type},
     metrics::{L1Distance, L2Distance},
     traits::{Integer, Number},
@@ -35,6 +36,7 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
         ) -> FfiResult<*mut AnyTransformation>
         where
             TA: Integer,
+            (VectorDomain<AllDomain<TA>>, M): MetricSpace,
             M: 'static + BAryTreeMetric,
             M::Distance: Number,
         {

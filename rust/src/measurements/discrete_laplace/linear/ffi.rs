@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use crate::core::FfiResult;
+use crate::core::{FfiResult, MetricSpace};
 use crate::ffi::any::{AnyMeasurement, AnyObject};
 use crate::{
     core::IntoAnyMeasurementFfiResultExt,
@@ -37,6 +37,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
         ) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + DiscreteLaplaceDomain,
+            (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom>,
         {

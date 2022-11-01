@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_long, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
@@ -33,6 +33,7 @@ pub extern "C" fn opendp_measurements__make_base_gaussian(
         fn monomorphize2<D, MO>(scale: D::Atom, k: i32) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + GaussianDomain,
+            (D, D::InputMetric): MetricSpace,
             D::Atom: Float + SampleDiscreteGaussianZ2k,
             MO: 'static + GaussianMeasure<D>,
             i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,

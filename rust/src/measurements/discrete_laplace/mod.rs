@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Function, Measurement, Metric},
+    core::{Domain, Function, Measurement, Metric, MetricSpace},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::MaxDivergence,
@@ -102,6 +102,7 @@ pub fn make_base_discrete_laplace<D, QO>(
 where
     D: DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+    (D, D::InputMetric): MetricSpace,
     QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
     rug::Rational: std::convert::TryFrom<QO>,
     rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
@@ -146,6 +147,7 @@ pub fn make_base_discrete_laplace<D, QO>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {

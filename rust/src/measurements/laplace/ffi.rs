@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_long, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
@@ -19,6 +19,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
     fn monomorphize<D>(scale: *const c_void, k: i32) -> FfiResult<*mut AnyMeasurement>
     where
         D: 'static + LaplaceDomain,
+        (D, D::InputMetric): MetricSpace,
         D::Atom: Float + SampleDiscreteLaplaceZ2k,
         i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
     {

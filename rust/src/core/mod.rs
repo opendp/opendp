@@ -227,7 +227,10 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
-pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
+pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure>
+where
+    (DI, MI): MetricSpace,
+{
     pub input_domain: DI,
     pub function: Function<DI::Carrier, TO>,
     pub input_metric: MI,
@@ -235,7 +238,10 @@ pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
     fn clone(&self) -> Self {
         Self {
             input_domain: self.input_domain.clone(),
@@ -247,7 +253,10 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, 
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
     pub fn new(
         input_domain: DI,
         function: Function<DI::Carrier, TO>,
@@ -280,6 +289,8 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     }
 }
 
+pub trait MetricSpace {}
+
 /// A data transformation with certain stability characteristics.
 ///
 /// The trait bounds provided by the Rust type system guarantee that:
@@ -291,7 +302,11 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
 /// * `function` is a mapping from the input domain to the output domain
 /// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
-pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
+pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>
+where
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
     pub input_domain: DI,
     pub output_domain: DO,
     pub function: Function<DI::Carrier, DO::Carrier>,
@@ -300,7 +315,11 @@ pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub stability_map: StabilityMap<MI, MO>,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
     pub fn new(
         input_domain: DI,
         output_domain: DO,
@@ -339,7 +358,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 mod tests {
     use crate::domains::AllDomain;
     use crate::error::ExplainUnwrap;
-    use crate::metrics::L1Distance;
+    use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
@@ -348,8 +367,8 @@ mod tests {
         let input_domain = AllDomain::<i32>::new();
         let output_domain = AllDomain::<i32>::new();
         let function = Function::new(|arg: &i32| arg.clone());
-        let input_metric = L1Distance::<i32>::default();
-        let output_metric = L1Distance::<i32>::default();
+        let input_metric = AbsoluteDistance::<i32>::default();
+        let output_metric = AbsoluteDistance::<i32>::default();
         let stability_map = StabilityMap::new_from_constant(1);
         let identity = Transformation::new(
             input_domain,

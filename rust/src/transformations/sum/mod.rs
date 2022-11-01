@@ -8,7 +8,7 @@ mod float;
 pub use float::*;
 use opendp_derive::bootstrap;
 
-use crate::core::{Metric, Transformation};
+use crate::core::{Metric, MetricSpace, Transformation};
 use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
@@ -33,10 +33,13 @@ use crate::transformations::{make_ordered_random, make_unordered};
 /// # Generics
 /// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
 /// * `T` - Atomic Input Type and Output Type.
-pub fn make_bounded_sum<MI, T>(bounds: (T, T)) -> Fallible<BoundedSumTrans<MI, T>>
+pub fn make_bounded_sum<MI, T>(
+    bounds: (T, T),
+) -> Fallible<Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, MI, AbsoluteDistance<T>>>
 where
     MI: Metric,
     T: MakeBoundedSum<MI>,
+    (VectorDomain<BoundedDomain<T>>, MI): MetricSpace,
 {
     T::make_bounded_sum(bounds)
 }
@@ -65,10 +68,18 @@ where
 pub fn make_sized_bounded_sum<MI, T>(
     size: usize,
     bounds: (T, T),
-) -> Fallible<SizedBoundedSumTrans<MI, T>>
+) -> Fallible<
+    Transformation<
+        SizedDomain<VectorDomain<BoundedDomain<T>>>,
+        AllDomain<T>,
+        MI,
+        AbsoluteDistance<T>,
+    >,
+>
 where
     MI: Metric,
     T: MakeSizedBoundedSum<MI>,
+    (SizedDomain<VectorDomain<BoundedDomain<T>>>, MI): MetricSpace,
 {
     T::make_sized_bounded_sum(size, bounds)
 }
@@ -83,7 +94,10 @@ type BoundedSumTrans<MI, T> =
     Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, MI, AbsoluteDistance<T>>;
 
 #[doc(hidden)]
-pub trait MakeBoundedSum<MI: Metric>: Sized + CheckNull + Clone + TotalOrd {
+pub trait MakeBoundedSum<MI: Metric>: Sized + CheckNull + Clone + TotalOrd
+where
+    (VectorDomain<BoundedDomain<Self>>, MI): MetricSpace,
+{
     fn make_bounded_sum(bounds: (Self, Self)) -> Fallible<BoundedSumTrans<MI, Self>>;
 }
 
@@ -161,7 +175,10 @@ type SizedBoundedSumTrans<MI, T> = Transformation<
     AbsoluteDistance<T>,
 >;
 #[doc(hidden)]
-pub trait MakeSizedBoundedSum<MI: Metric>: Sized + CheckNull + Clone + TotalOrd {
+pub trait MakeSizedBoundedSum<MI: Metric>: Sized + CheckNull + Clone + TotalOrd
+where
+    (SizedDomain<VectorDomain<BoundedDomain<Self>>>, MI): MetricSpace,
+{
     fn make_sized_bounded_sum(
         size: usize,
         bounds: (Self, Self),

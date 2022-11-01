@@ -4,7 +4,7 @@ use std::os::raw::{c_char, c_void};
 use az::SaturatingCast;
 use rug::{Integer, Rational};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
@@ -38,6 +38,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         fn monomorphize2<D, MO, QI>(scale: MO::Atom) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + DiscreteGaussianDomain<QI>,
+            (D, D::InputMetric): MetricSpace,
             Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 
             MO: 'static + DiscreteGaussianMeasure<D, QI>,

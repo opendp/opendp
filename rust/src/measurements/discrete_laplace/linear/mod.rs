@@ -3,7 +3,7 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, PrivacyMap};
+use crate::core::{Measurement, MetricSpace, PrivacyMap};
 use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::traits::samplers::SampleDiscreteLaplaceLinear;
@@ -49,6 +49,7 @@ pub fn make_base_discrete_laplace_linear<D, QO>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -117,6 +118,7 @@ pub fn make_base_geometric<D, QO>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {

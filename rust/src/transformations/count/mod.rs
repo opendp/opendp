@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use num::One;
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Metric, StabilityMap, Transformation};
+use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AllDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
@@ -137,12 +137,13 @@ where
     MO::Distance: Number,
     TIA: Hashable,
     TOA: Number,
+    (VectorDomain<AllDomain<TOA>>, MO): MetricSpace,
 {
     let mut uniques = HashSet::new();
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct");
     }
-    Ok(Transformation::new(
+    Ok(Transformation::<_, _, SymmetricDistance, MO>::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
         Function::new(move |data: &Vec<TIA>| {
@@ -223,6 +224,8 @@ where
     MO::Distance: Float,
     TK: Hashable,
     TV: Number,
+    (VectorDomain<AllDomain<TK>>, SymmetricDistance): MetricSpace,
+    (MapDomain<AllDomain<TK>, AllDomain<TV>>, MO): MetricSpace,
 {
     Ok(Transformation::new(
         VectorDomain::new_all(),

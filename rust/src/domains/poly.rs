@@ -1,7 +1,7 @@
 use std::any;
 use std::any::Any;
 
-use crate::core::{Domain, Function, Measure, Measurement, Metric};
+use crate::core::{Domain, Function, Measure, Measurement, Metric, MetricSpace};
 use crate::error::*;
 
 impl<TI: 'static, TO: 'static> Function<TI, TO> {
@@ -37,6 +37,7 @@ where
     TO: 'static,
     MI: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
 {
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.

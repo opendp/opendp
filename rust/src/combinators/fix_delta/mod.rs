@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Measure, Measurement, Metric, PrivacyMap},
+    core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
 };
@@ -26,6 +26,7 @@ where
     DI: Domain,
     MI: 'static + Metric,
     MO: 'static + FixDeltaMeasure,
+    (DI, MI): MetricSpace,
 {
     let Measurement {
         input_domain,

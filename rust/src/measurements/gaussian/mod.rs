@@ -2,7 +2,7 @@ use num::Float as _;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measure, Measurement, Metric, PrivacyMap},
+    core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
@@ -93,6 +93,7 @@ pub fn make_base_gaussian<D, MO>(
 where
     D: GaussianDomain,
     D::Atom: Float + SampleDiscreteGaussianZ2k,
+    (D, D::InputMetric): MetricSpace,
     MO: GaussianMeasure<D>,
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
 {

@@ -4,7 +4,8 @@ mod ffi;
 use std::ops::Shr;
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
+    Transformation,
 };
 use crate::error::Fallible;
 use std::fmt::Debug;
@@ -55,6 +56,8 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
 {
     if transformation0.output_domain != measurement1.input_domain {
         return fallible!(
@@ -111,6 +114,9 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
+    (DO, MO): MetricSpace,
 {
     if transformation0.output_domain != transformation1.input_domain {
         return fallible!(
@@ -146,12 +152,12 @@ where
     ))
 }
 
-/// Construct the functional composition (`transformation1` ○ `measurement0`).
-/// Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
+/// Construct the functional composition (`postprocessor1` ○ `measurement0`).
+/// Returns a Measurement that when invoked, computes `postprocessor1(measurement0(x))`.
 /// Used to represent non-interactive postprocessing.
 ///
 /// # Arguments
-/// * `transformation1` - outer postprocessing transformation
+/// * `transformation1` - outer postprocessor
 /// * `measurement0` - inner measurement/mechanism
 ///
 /// # Generics
@@ -172,6 +178,7 @@ where
     TO: 'static,
     MI: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
 {
     Ok(Measurement::new(
         measurement0.input_domain.clone(),
@@ -189,7 +196,7 @@ mod tests {
     use crate::domains::AllDomain;
     use crate::error::ExplainUnwrap;
     use crate::measures::MaxDivergence;
-    use crate::metrics::L1Distance;
+    use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
@@ -198,8 +205,8 @@ mod tests {
         let input_domain0 = AllDomain::<u8>::new();
         let output_domain0 = AllDomain::<i32>::new();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
-        let input_metric0 = L1Distance::<i32>::default();
-        let output_metric0 = L1Distance::<i32>::default();
+        let input_metric0 = AbsoluteDistance::<i32>::default();
+        let output_metric0 = AbsoluteDistance::<i32>::default();
         let stability_map0 = StabilityMap::new_from_constant(1);
         let transformation0 = Transformation::new(
             input_domain0,
@@ -211,7 +218,7 @@ mod tests {
         );
         let input_domain1 = AllDomain::<i32>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
-        let input_metric1 = L1Distance::<i32>::default();
+        let input_metric1 = AbsoluteDistance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_map1 = PrivacyMap::new(|d_in: &i32| *d_in as f64 + 1.);
         let measurement1 = Measurement::new(
@@ -237,8 +244,8 @@ mod tests {
         let input_domain0 = AllDomain::<u8>::new();
         let output_domain0 = AllDomain::<i32>::new();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
-        let input_metric0 = L1Distance::<i32>::default();
-        let output_metric0 = L1Distance::<i32>::default();
+        let input_metric0 = AbsoluteDistance::<i32>::default();
+        let output_metric0 = AbsoluteDistance::<i32>::default();
         let stability_map0 = StabilityMap::new_from_constant(1);
         let transformation0 = Transformation::new(
             input_domain0,
@@ -251,8 +258,8 @@ mod tests {
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
-        let input_metric1 = L1Distance::<i32>::default();
-        let output_metric1 = L1Distance::<i32>::default();
+        let input_metric1 = AbsoluteDistance::<i32>::default();
+        let output_metric1 = AbsoluteDistance::<i32>::default();
         let stability_map1 = StabilityMap::new_from_constant(1);
         let transformation1 = Transformation::new(
             input_domain1,
@@ -274,10 +281,10 @@ mod tests {
     }
 
     #[test]
-    fn test_make_chain_tm() {
+    fn test_make_chain_pm() {
         let input_domain0 = AllDomain::<u8>::new();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
-        let input_metric0 = L1Distance::<i32>::default();
+        let input_metric0 = AbsoluteDistance::<i32>::default();
         let output_measure0 = MaxDivergence::<i32>::default();
         let privacy_map0 = PrivacyMap::new_from_constant(1);
         let measurement0 = Measurement::new(
@@ -308,6 +315,8 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
 {
     type Output = Fallible<Measurement<DI, TO, MI, MO>>;
 
@@ -325,6 +334,8 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
 {
     type Output = Fallible<Measurement<DI, TO, MI, MO>>;
 
@@ -341,6 +352,9 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
+    (DO, MO): MetricSpace,
 {
     type Output = Fallible<Transformation<DI, DO, MI, MO>>;
 
@@ -358,6 +372,9 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
+    (DO, MO): MetricSpace,
 {
     type Output = Fallible<Transformation<DI, DO, MI, MO>>;
 
@@ -373,6 +390,7 @@ where
     TO: 'static,
     MI: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
 {
     type Output = Fallible<Measurement<DI, TO, MI, MO>>;
 
@@ -388,6 +406,7 @@ where
     TO: 'static,
     MI: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
 {
     type Output = Fallible<Measurement<DI, TO, MI, MO>>;
 
@@ -406,6 +425,9 @@ where
     MO: 'static + Measure,
     MTI: 'static + Metric,
     MTO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DX, MTI): MetricSpace,
+    (DO, MTO): MetricSpace,
 {
     type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
 
@@ -424,6 +446,9 @@ where
     MO: 'static + Measure,
     MTI: 'static + Metric,
     MTO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DX, MTI): MetricSpace,
+    (DO, MTO): MetricSpace,
 {
     type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
 

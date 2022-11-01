@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Measurement, Metric, PrivacyMap},
+    core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
     traits::Float,
@@ -29,6 +29,7 @@ where
     DI: Domain,
     MI: 'static + Metric,
     QO: Float,
+    (DI, MI): MetricSpace,
 {
     let Measurement {
         input_domain,

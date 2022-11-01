@@ -14,9 +14,15 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use std::hash::Hash;
 use std::marker::PhantomData;
 
-use crate::{core::Metric, domains::type_name};
+use crate::{
+    core::{Domain, Metric, MetricSpace},
+    domains::{type_name, AllDomain, MapDomain, SizedDomain, VectorDomain},
+    traits::{CheckNull, Hashable},
+    transformations::DataFrameDomain,
+};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -72,6 +78,13 @@ impl Metric for SymmetricDistance {
     type Distance = IntDistance;
 }
 
+// Symmetric distance is defined in terms of unescaped line-breaks for CSV string datasets
+impl MetricSpace for (AllDomain<String>, SymmetricDistance) {}
+
+impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {}
+impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {}
+impl<D: Domain> MetricSpace for (SizedDomain<VectorDomain<D>>, SymmetricDistance) {}
+
 /// The smallest number of insertions or deletions to make two datasets equivalent.
 ///
 /// An *insertion* to a dataset is an addition of an element at a specific index,
@@ -122,6 +135,9 @@ impl Debug for InsertDeleteDistance {
 impl Metric for InsertDeleteDistance {
     type Distance = IntDistance;
 }
+
+impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {}
+impl<D: Domain> MetricSpace for (SizedDomain<VectorDomain<D>>, InsertDeleteDistance) {}
 
 /// The smallest number of changes to make two equal-length datasets equivalent.
 ///
@@ -182,6 +198,8 @@ impl Metric for ChangeOneDistance {
     type Distance = IntDistance;
 }
 
+impl<D: Domain> MetricSpace for (SizedDomain<VectorDomain<D>>, ChangeOneDistance) {}
+
 /// The number of elements that differ between two equal-length datasets.
 ///
 /// This metric is sensitive to data ordering.
@@ -235,6 +253,7 @@ impl Debug for HammingDistance {
 impl Metric for HammingDistance {
     type Distance = IntDistance;
 }
+impl<D: Domain> MetricSpace for (SizedDomain<VectorDomain<D>>, HammingDistance) {}
 
 /// The $L_p$ distance between two vector-valued aggregates.
 ///
@@ -283,6 +302,14 @@ impl<const P: usize, Q> Debug for LpDistance<P, Q> {
 }
 impl<const P: usize, Q> Metric for LpDistance<P, Q> {
     type Distance = Q;
+}
+
+impl<D: Domain, const P: usize, Q> MetricSpace for (VectorDomain<D>, LpDistance<P, Q>) {}
+impl<K: CheckNull, V: CheckNull, const P: usize, Q> MetricSpace
+    for (MapDomain<AllDomain<K>, AllDomain<V>>, LpDistance<P, Q>)
+where
+    K: Eq + Hash,
+{
 }
 
 /// The $L_1$ distance between two vector-valued aggregates.
@@ -335,6 +362,7 @@ impl<Q> Debug for AbsoluteDistance<Q> {
 impl<Q> Metric for AbsoluteDistance<Q> {
     type Distance = Q;
 }
+impl<T: CheckNull, Q> MetricSpace for (AllDomain<T>, AbsoluteDistance<Q>) {}
 
 /// Indicates if two elements are equal to each other.
 ///
@@ -380,17 +408,4 @@ impl Metric for DiscreteDistance {
     type Distance = IntDistance;
 }
 
-/// A dummy to fill the metric position in postprocessors.
-///
-/// Postprocessors don't necessarily care about matching metrics.
-#[derive(Clone, Default, PartialEq)]
-pub struct AgnosticMetric;
-
-impl Debug for AgnosticMetric {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "AgnosticMetric()")
-    }
-}
-impl Metric for AgnosticMetric {
-    type Distance = ();
-}
+impl<T: CheckNull> MetricSpace for (AllDomain<T>, DiscreteDistance) {}

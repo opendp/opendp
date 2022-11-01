@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::measures::{SMDCurve, SmoothedMaxDivergence};
@@ -57,6 +57,7 @@ where
     TK: Hashable,
     TV: Float + SampleDiscreteLaplaceZ2k,
     i32: ExactIntCast<TV::Bits>,
+    (MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>): MetricSpace,
 {
     let _2 = TV::exact_int_cast(2)?;
     let (k, relaxation) = get_discretization_consts(k)?;

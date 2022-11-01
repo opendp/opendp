@@ -3,8 +3,7 @@ use std::os::raw::{c_char, c_void};
 
 use az::SaturatingCast;
 
-use crate::core::FfiResult;
-use crate::core::IntoAnyMeasurementFfiResultExt;
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::ffi::any::AnyMeasurement;
 use crate::{
     domains::{AllDomain, VectorDomain},
@@ -34,6 +33,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         where
             D: 'static + DiscreteLaplaceDomain,
             D::Atom: crate::traits::Integer,
+            (D, D::InputMetric): MetricSpace,
             QO: crate::traits::Float + InfCast<D::Atom>,
             rug::Rational: TryFrom<QO>,
             rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,

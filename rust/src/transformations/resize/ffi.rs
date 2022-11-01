@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AllDomain, BoundedDomain};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
+use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::Downcast;
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
@@ -39,6 +39,8 @@ pub extern "C" fn opendp_transformations__make_resize(
     where
         MI: 'static + IsMetricOrdered<Distance = IntDistance>,
         MO: 'static + IsMetricOrdered<Distance = IntDistance>,
+        (VectorDomain<AllDomain<T>>, MI): MetricSpace,
+        (SizedDomain<VectorDomain<AllDomain<T>>>, MO): MetricSpace,
     {
         let atom_domain = try_!(atom_domain.downcast_ref::<AllDomain<T>>()).clone();
         let constant = try_!(constant.downcast_ref::<T>()).clone();
@@ -52,6 +54,8 @@ pub extern "C" fn opendp_transformations__make_resize(
     where
         MI: 'static + IsMetricOrdered<Distance = IntDistance>,
         MO: 'static + IsMetricOrdered<Distance = IntDistance>,
+        (VectorDomain<BoundedDomain<T>>, MI): MetricSpace,
+        (SizedDomain<VectorDomain<BoundedDomain<T>>>, MO): MetricSpace,
     {
         let atom_domain = try_!(atom_domain.downcast_ref::<BoundedDomain<T>>()).clone();
         let constant = try_!(constant.downcast_ref::<T>()).clone();

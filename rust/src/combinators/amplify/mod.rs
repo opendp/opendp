@@ -1,7 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use crate::core::{Domain, Measure, Measurement, Metric, PrivacyMap};
+use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::domains::SizedDomain;
 use crate::error::Fallible;
 use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
@@ -80,14 +80,15 @@ where
 /// * `DO` - Output Domain.
 /// * `MI` - Input Metric.
 /// * `MO` - Output Metric.
-pub fn make_population_amplification<DIA, TO, MI, MO>(
-    measurement: &Measurement<DIA, TO, MI, MO>,
+pub fn make_population_amplification<DI, TO, MI, MO>(
+    measurement: &Measurement<DI, TO, MI, MO>,
     population_size: usize,
-) -> Fallible<Measurement<DIA, TO, MI, MO>>
+) -> Fallible<Measurement<DI, TO, MI, MO>>
 where
-    DIA: IsSizedDomain,
+    DI: IsSizedDomain,
     MI: 'static + Metric,
     MO: 'static + AmplifiableMeasure,
+    (DI, MI): MetricSpace,
 {
     let mut measurement = measurement.clone();
     let sample_size = measurement.input_domain.get_size()?;

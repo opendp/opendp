@@ -3,8 +3,8 @@ use std::os::raw::{c_char, c_uint};
 
 use num::Float;
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric};
-use crate::domains::AllDomain;
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
+use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
@@ -30,6 +30,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_mean(
         T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
         AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
         AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
+        (SizedDomain<VectorDomain<BoundedDomain<T>>>, MI): MetricSpace,
     {
         let bounds = *try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         make_sized_bounded_mean::<MI, T>(size, bounds).into_any()
