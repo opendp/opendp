@@ -4,17 +4,14 @@ use std::os::raw::c_char;
 use num::One;
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Metric, Transformation};
+use crate::core::{Domain, Metric, MetricSpace, Transformation};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::metrics::{
-    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance,
-    L1Distance, L2Distance, SymmetricDistance,
-};
+use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::{CheckAtom, DistanceConstant, InherentNull, Primitive};
 use crate::transformations::{make_is_equal, make_is_null};
 
@@ -30,6 +27,7 @@ where
     D::Carrier: Clone,
     M: Metric,
     M::Distance: DistanceConstant<M::Distance> + One + Clone,
+    (D, M): MetricSpace,
 {
     super::make_identity(Default::default(), Default::default())
 }
@@ -59,11 +57,12 @@ pub extern "C" fn opendp_transformations__make_identity(
             };
             fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
                 where M: 'static + Metric<Distance=IntDistance>,
-                      T: 'static + Clone + CheckAtom {
+                      T: 'static + Clone + CheckAtom,
+                      (VectorDomain<AtomDomain<T>>, M): MetricSpace {
                 make_identity::<VectorDomain<AtomDomain<T>>, M>().into_any()
             }
             dispatch!(monomorphize, [
-                (M, [ChangeOneDistance, InsertDeleteDistance, SymmetricDistance, HammingDistance]),
+                (M, [InsertDeleteDistance, SymmetricDistance]),
                 (T, @primitives)
             ], ())
         }
@@ -77,11 +76,12 @@ pub extern "C" fn opendp_transformations__make_identity(
                 where T: 'static + DistanceConstant<T> + CheckAtom + One + Clone {
                 fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
                     where M: 'static + Metric,
-                          M::Distance: CheckAtom + DistanceConstant<M::Distance> + One + Clone {
+                          M::Distance: CheckAtom + DistanceConstant<M::Distance> + One + Clone,
+                          (AtomDomain<M::Distance>, M): MetricSpace {
                     make_identity::<AtomDomain<M::Distance>, M>().into_any()
                 }
                 dispatch!(monomorphize, [
-                    (M, [AbsoluteDistance<T>, L1Distance<T>, L2Distance<T>])
+                    (M, [AbsoluteDistance<T>])
                 ], ())
             }
             dispatch!(monomorphize, [

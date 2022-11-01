@@ -10,7 +10,8 @@ use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
+    Transformation,
 };
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
@@ -399,6 +400,13 @@ impl Debug for AnyMetric {
 
 pub(crate) type AnyFunction = Function<AnyObject, AnyObject>;
 
+impl<M: Metric> MetricSpace for (AnyDomain, M) {
+    fn check(&self) -> bool {
+        // TODO: check that the domain is compatible with the metric
+        true
+    }
+}
+
 pub trait IntoAnyFunctionExt {
     fn into_any(self) -> AnyFunction;
 }
@@ -477,6 +485,7 @@ where
     DI::Carrier: 'static,
     MI::Distance: 'static,
     MO::Distance: 'static,
+    (DI, MI): MetricSpace,
 {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
@@ -524,6 +533,8 @@ where
     DO::Carrier: 'static,
     MI::Distance: 'static,
     MO::Distance: 'static,
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
 {
     fn into_any(self) -> AnyTransformation {
         AnyTransformation::new(

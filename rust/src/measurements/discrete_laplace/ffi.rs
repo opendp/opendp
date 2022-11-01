@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
@@ -31,6 +31,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
         fn monomorphize2<D, QO>(scale: QO) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + DiscreteLaplaceDomain,
+            (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
             rug::Rational: TryFrom<QO>,
@@ -57,6 +58,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
         fn monomorphize2<D, QO>(scale: QO) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + DiscreteLaplaceDomain,
+            (D, D::InputMetric): MetricSpace,
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom>,
         {

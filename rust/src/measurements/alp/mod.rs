@@ -5,7 +5,7 @@ use std::rc::Rc;
 use num::{Integer, ToPrimitive};
 use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float};
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
@@ -219,6 +219,7 @@ where
     C: 'static + Clone + Integer + CheckAtom + DistanceConstant<C> + ToPrimitive,
     T: 'static + num::Float + DistanceConstant<T> + InfCast<Float> + InfCast<C>,
     Float: InfCast<T>,
+    (SparseDomain<K, C>, L1Distance<C>): MetricSpace,
 {
     if alpha.is_sign_negative() || alpha.is_zero() {
         return fallible!(MakeMeasurement, "alpha must be positive");
@@ -285,6 +286,7 @@ where
     C: 'static + Clone + Integer + CheckAtom + DistanceConstant<C> + InfCast<T> + ToPrimitive,
     T: 'static + num::Float + DistanceConstant<T> + InfCast<Float> + InfCast<C>,
     Float: InfCast<T>,
+    (SparseDomain<K, C>, L1Distance<C>): MetricSpace,
 {
     let factor = size_factor.unwrap_or(SIZE_FACTOR_DEFAULT) as f64;
     let alpha = alpha.unwrap_or_else(|| T::from(ALPHA_DEFAULT).unwrap());
@@ -327,6 +329,7 @@ where
     T: 'static + TFloat,
     HashMap<K, C>: Clone,
     AlpState<K, T>: Clone,
+    (SparseDomain<K, C>, L1Distance<C>): MetricSpace,
 {
     let function = m.function.clone();
     Ok(Measurement::new(

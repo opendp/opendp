@@ -1,4 +1,4 @@
-use crate::core::{Domain, Measure, Measurement, Metric};
+use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
 use std::any::{type_name, Any};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -91,7 +91,10 @@ pub(crate) fn wrap<T, F: FnOnce() -> T>(
     res
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
     pub fn invoke_wrap(
         &self,
         arg: &DI::Carrier,

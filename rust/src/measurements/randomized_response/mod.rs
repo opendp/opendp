@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
@@ -44,6 +44,7 @@ pub fn make_randomized_response_bool<QO>(
 where
     bool: SampleBernoulli<QO>,
     QO: Float,
+    (AtomDomain<bool>, DiscreteDistance): MetricSpace,
 {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(QO::exact_int_cast(2)?.recip()..QO::one()).contains(&prob) {
