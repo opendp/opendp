@@ -10,7 +10,8 @@ use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
+    Transformation,
 };
 use crate::err;
 use crate::error::*;
@@ -356,6 +357,13 @@ impl Debug for AnyMetric {
 
 pub(crate) type AnyFunction = Function<AnyObject, AnyObject>;
 
+impl<M: Metric> MetricSpace for (AnyDomain, M) {
+    fn check(&self) -> bool {
+        // TODO: check that the domain is compatible with the metric
+        true
+    }
+}
+
 pub trait IntoAnyFunctionExt {
     fn into_any(self) -> AnyFunction;
 }
@@ -439,6 +447,7 @@ where
     DI::Carrier: 'static,
     MI::Distance: 'static,
     MO::Distance: 'static,
+    (DI, MI): MetricSpace,
 {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
@@ -486,6 +495,8 @@ where
     DO::Carrier: 'static,
     MI::Distance: 'static,
     MO::Distance: 'static,
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
 {
     fn into_any(self) -> AnyTransformation {
         AnyTransformation::new(
@@ -582,10 +593,7 @@ mod tests {
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
         let t4 = transformations::make_clamp((0.0f64, 10.0))?.into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = measurements::make_base_laplace::<AtomDomain<_>>(
-            0.0, None,
-        )?
-        .into_any();
+        let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg);

@@ -1,13 +1,13 @@
 use std::{convert::TryFrom, ffi::c_void, os::raw::c_char};
 
 use crate::{
-    core::{FfiResult, IntoAnyTransformationFfiResultExt},
-    domains::{AtomDomain, VectorDomain},
+    core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace},
+    domains::AtomDomain,
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
-    metrics::{AbsoluteDistance, L1Distance, L2Distance},
+    metrics::AbsoluteDistance,
     traits::Float,
     traits::SaturatingMul,
     transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric},
@@ -37,6 +37,7 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
             D: 'static + LipschitzMulFloatDomain,
             D::Atom: Float + SaturatingMul,
             M: 'static + LipschitzMulFloatMetric<Distance = D::Atom>,
+            (D, M): MetricSpace,
         {
             make_lipschitz_float_mul::<D, M>(constant, bounds).into_any()
         }
@@ -44,8 +45,8 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
         let constant = *try_as_ref!(constant as *const T);
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [
-            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
-            (M, [AbsoluteDistance<T>, L1Distance<T>, L2Distance<T>])
+            (D, [AtomDomain<T>]),
+            (M, [AbsoluteDistance<T>])
         ], (constant, *bounds))
     }
 

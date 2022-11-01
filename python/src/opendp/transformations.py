@@ -448,8 +448,13 @@ def make_bounded_sum(
     
     **Supporting Elements:**
     
+<<<<<<< HEAD
     * Input Domain:   `VectorDomain<AtomDomain<T>>`
     * Output Domain:  `AtomDomain<T>`
+=======
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+>>>>>>> initial compatible pairings implementation
     * Input Metric:   `MI`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -2380,8 +2385,13 @@ def make_sized_bounded_sum(
     
     **Supporting Elements:**
     
+<<<<<<< HEAD
     * Input Domain:   `VectorDomain<AtomDomain<T>>`
     * Output Domain:  `AtomDomain<T>`
+=======
+    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Output Domain:  `AllDomain<T>`
+>>>>>>> initial compatible pairings implementation
     * Input Metric:   `MI`
     * Output Metric:  `AbsoluteDistance<T>`
     

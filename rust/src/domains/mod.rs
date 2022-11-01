@@ -109,6 +109,9 @@ impl<T: CheckAtom> AtomDomain<T> {
     pub fn new(bounds: Option<Bounds<T>>, nullable: Option<Null<T>>) -> Self {
         AtomDomain { bounds, nullable }
     }
+    pub fn has_null(&self) -> bool {
+        self.nullable.is_some()
+    }
 }
 impl<T: CheckAtom + InherentNull> AtomDomain<T> {
     pub fn new_nullable() -> Self {

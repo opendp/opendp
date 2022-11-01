@@ -60,22 +60,22 @@ def test_identity():
     from opendp.transformations import make_identity
     from opendp.typing import VectorDomain, AtomDomain
     # test int
-    transformation = make_identity(VectorDomain[AtomDomain[int]], ChangeOneDistance)
+    transformation = make_identity(VectorDomain[AtomDomain[int]], SymmetricDistance)
     arg = [123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AtomDomain[float]], ChangeOneDistance)
+    transformation = make_identity(VectorDomain[AtomDomain[float]], SymmetricDistance)
     arg = [123.123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AtomDomain[str]], ChangeOneDistance)
+    transformation = make_identity(VectorDomain[AtomDomain[str]], SymmetricDistance)
     arg = ["hello, world"]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity("VectorDomain<AtomDomain<i32>>", ChangeOneDistance)
+    transformation = make_identity("VectorDomain<AtomDomain<i32>>", SymmetricDistance)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == arg
