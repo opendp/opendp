@@ -1,3 +1,8 @@
 # For https://mybinder.org
+
+ipykernel>=6
+jupyterlab==3.5.0
+jupyterlab-link-share
+
 # No specific version. We'll mostly link to the "stable" branch.
 opendp
