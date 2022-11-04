@@ -1,13 +1,11 @@
 # OpenDP for Windows
 Reproducible build for the [OpenDP library](https://github.com/opendp/opendp) with GMP/MPFR on Windows.
 This repository provides a script that patches a clone of the OpenDP library.
-For a simpler, developer install with non-secure noise, simply run this command:
+For a simpler, developer install with non-secure noise, simply run this command from `rust/`:
 
 ```shell
-cargo build --no-default-features
+cargo build --no-default-features --features untrusted,bindings-python
 ```
-If just working with rust, then run the command from the opendp repo's `rust/opendp`.
-If working with bindings languages, then run the command from `rust/opendp-ffi`.
 
 If you want to build on Windows with secure noise, then follow the instructions below.
 These instructions are part of the process for preparing a multiplatform OpenDP release on PyPi.
