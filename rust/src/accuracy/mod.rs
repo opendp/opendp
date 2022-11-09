@@ -257,7 +257,7 @@ fn dg_normalization_term(scale: f64) -> f64 {
 }
 
 
-#[cfg(all(test, feature="untrusted"))]
+#[cfg(all(test, feature="untrusted", feature="use-mpfr"))]
 pub mod test {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};
