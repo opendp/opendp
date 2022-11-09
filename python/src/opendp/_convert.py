@@ -369,6 +369,8 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
+# The result type cannot be an `ctypes.POINTER(FfiResult)` due to:
+#   https://bugs.python.org/issue5710#msg85731
 #                            (output         , input       )
 CallbackFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
 

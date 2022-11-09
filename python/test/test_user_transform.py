@@ -11,7 +11,7 @@ def make_duplicate(multiplicity, raises=False):
     """An example user-defined transformation from Python"""
     def function(arg):
         if raises:
-            raise ValueError("boohoohoo")
+            raise ValueError("test that error propagates")
         return [elem + 1 for elem in arg] * multiplicity
 
     def stability_map(d_in):
@@ -83,10 +83,3 @@ def make_postprocess_frac():
 def test_make_default_postprocessor():
     mech = make_postprocess_frac()
     print(mech([12., 100.]))
-
-
-if __name__ == "__main__":
-    test_make_default_transformation()
-    test_make_custom_transformation_error()
-    test_make_default_measurement()
-    test_make_default_postprocessor()
