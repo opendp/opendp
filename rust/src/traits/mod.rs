@@ -244,6 +244,7 @@ impl<T> Integer for T where T: Number + Hashable {}
 pub trait Float:
     Number
     + num::Float
+    + num::traits::FloatConst
     + InherentNull
     + InfLn
     + InfLn1P
@@ -260,6 +261,7 @@ pub trait Float:
 impl<T> Float for T where
     T: Number
         + num::Float
+        + num::traits::FloatConst
         + InherentNull
         + InfLn
         + InfLn1P

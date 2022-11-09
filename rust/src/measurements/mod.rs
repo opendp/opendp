@@ -36,3 +36,8 @@ pub use crate::measurements::randomized_response::*;
 mod alp;
 #[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
 pub use crate::measurements::alp::*;
+
+#[cfg(all(feature="use-mpfr", feature="contrib"))]
+mod tulap;
+#[cfg(all(feature="use-mpfr", feature="contrib"))]
+pub use crate::measurements::tulap::*;
