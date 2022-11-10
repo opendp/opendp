@@ -259,9 +259,6 @@ def make_sequential_filter(max_privacy_loss):
             elif isinstance(query, CheckDescendantChange):
                 new_state = check_new_state(self, query.index, query.new_privacy_loss, query.pre_invoke)
                 answer = "OK"
-            elif isinstance(query, GetPrivacyLoss):
-                new_state = self.state
-                answer = self.state.privacy_loss
             else:
                 raise Exception(f"Unrecognized query {query}")
             return answer, new_state
