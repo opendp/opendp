@@ -118,8 +118,10 @@ Queryable.__str__ = __str__
 ################################################################################
 
 
+# Classes for different query types
 CheckDescendantChange = collections.namedtuple("CheckDescendantChange", ["index", "new_privacy_loss", "pre_invoke"])
 GetPrivacyLoss = collections.namedtuple("GetPrivacyLoss", [])
+
 
 def make_concurrent_filter(max_privacy_loss):
 

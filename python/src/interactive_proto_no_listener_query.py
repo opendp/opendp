@@ -9,15 +9,14 @@ class InteractiveMeasurement:
         self.privacy_loss = privacy_loss  # Fixed privacy loss for simplicity
 
     # Public interface
-    def invoke(self, data, context=None) -> "Queryable":
-        context = context or {}
-        return self.function(data, context)
+    def invoke(self, data) -> "Queryable":
+        return self.function(data)
 
 
 class Measurement(InteractiveMeasurement):
 
     def __init__(self, noninteractive_function, privacy_loss):
-        def function(data, _context):
+        def function(data):
             answer = noninteractive_function(data)
             def eval(self, _query):
                 return answer, self.state
@@ -37,9 +36,8 @@ class Odometer:
         self.function = function
 
     # Public interface
-    def invoke(self, data, context=None) -> "Queryable":
-        context = context or {}
-        return self.function(data, context)
+    def invoke(self, data) -> "Queryable":
+        return self.function(data)
 
 
 class Queryable:
@@ -143,16 +141,17 @@ Queryable.__str__ = __str__
 
 
 # Classes for different query types
+JoinTree = collections.namedtuple("JoinTree", ["parent", "sibling_index"])
 CheckDescendantChange = collections.namedtuple("CheckDescendantChange", ["index", "new_privacy_loss", "pre_invoke"])
 GetPrivacyLoss = collections.namedtuple("GetPrivacyLoss", [])
 
 
 def make_concurrent_filter(max_privacy_loss):
 
-    def function(data, context):
+    def function(data):
         # The structure of stuff we store in state
         State = collections.namedtuple("State", ["data", "parent", "sibling_index", "max_privacy_loss", "privacy_loss", "child_privacy_losses"])
-        state = State(data=data, parent=context.get("parent"), sibling_index=context.get("sibling_index"), max_privacy_loss=max_privacy_loss, privacy_loss=0, child_privacy_losses=[])
+        state = State(data=data, parent=None, sibling_index=-1, max_privacy_loss=max_privacy_loss, privacy_loss=0, child_privacy_losses=[])
 
         def check_new_state(self, child_index, child_privacy_loss, pre_invoke):
             # Append or replace the child privacy loss, then calculate the new sum.
@@ -175,12 +174,16 @@ def make_concurrent_filter(max_privacy_loss):
                 new_child_index = len(self.state.child_privacy_losses)
                 new_child_privacy_loss = query.privacy_loss if isinstance(query, InteractiveMeasurement) else 0
                 _new_state = check_new_state(self, new_child_index, new_child_privacy_loss, True)
-                new_child = query.invoke(data, {"parent": self, "sibling_index": new_child_index})
+                new_child = query.invoke(data)
+                new_child.query(JoinTree(parent=self, sibling_index=new_child_index))
                 new_state = check_new_state(self, new_child_index, new_child_privacy_loss, False)
                 # Convenience to get non-interactive answer
                 answer = new_child.query(None) if isinstance(query, Measurement) else new_child
             elif isinstance(query, CheckDescendantChange):
                 new_state = check_new_state(self, query.index, query.new_privacy_loss, query.pre_invoke)
+                answer = "OK"
+            elif isinstance(query, JoinTree):
+                new_state = self.state._replace(parent=query.parent, sibling_index=query.sibling_index)
                 answer = "OK"
             else:
                 raise Exception(f"Unrecognized query {query}")
@@ -193,10 +196,10 @@ def make_concurrent_filter(max_privacy_loss):
 
 def make_concurrent_odometer():
 
-    def function(data, context):
+    def function(data):
         # The structure of stuff we store in state
         State = collections.namedtuple("State", ["data", "parent", "sibling_index", "privacy_loss", "child_privacy_losses"])
-        state = State(data=data, parent=context.get("parent"), sibling_index=context.get("sibling_index"), privacy_loss=0, child_privacy_losses=[])
+        state = State(data=data, parent=None, sibling_index=-1, privacy_loss=0, child_privacy_losses=[])
 
         def check_new_state(self, child_index, child_privacy_loss, pre_invoke):
             # Append or replace the child privacy loss, then calculate the new sum.
@@ -217,12 +220,16 @@ def make_concurrent_odometer():
                 new_child_index = len(self.state.child_privacy_losses)
                 new_child_privacy_loss = query.privacy_loss if isinstance(query, InteractiveMeasurement) else 0
                 _new_state = check_new_state(self, new_child_index, new_child_privacy_loss, True)
-                new_child = query.invoke(data, {"parent": self, "sibling_index": new_child_index})
+                new_child = query.invoke(data)
+                new_child.query(JoinTree(parent=self, sibling_index=new_child_index))
                 new_state = check_new_state(self, new_child_index, new_child_privacy_loss, False)
                 # Convenience to get non-interactive answer
                 answer = new_child.query(None) if isinstance(query, Measurement) else new_child
             elif isinstance(query, CheckDescendantChange):
                 new_state = check_new_state(self, query.index, query.new_privacy_loss, query.pre_invoke)
+                answer = "OK"
+            elif isinstance(query, JoinTree):
+                new_state = self.state._replace(parent=query.parent, sibling_index=query.sibling_index)
                 answer = "OK"
             elif isinstance(query, GetPrivacyLoss):
                 new_state = self.state
@@ -238,9 +245,9 @@ def make_concurrent_odometer():
 
 def make_odomoter_to_filter(odometer, max_privacy_loss):
 
-    def function(data, context):
+    def function(data):
         filter = make_concurrent_filter(max_privacy_loss)
-        filter_queryable = filter.invoke(data, context)
+        filter_queryable = filter.invoke(data)
         return filter_queryable.query(odometer)
 
     return InteractiveMeasurement(function, max_privacy_loss)
@@ -248,10 +255,10 @@ def make_odomoter_to_filter(odometer, max_privacy_loss):
 
 def make_sequential_filter(max_privacy_loss):
 
-    def function(data, context):
+    def function(data):
         # The structure of stuff we store in state
         State = collections.namedtuple("State", ["data", "parent", "sibling_index", "max_privacy_loss", "privacy_loss", "child_privacy_losses", "current_child_index"])
-        state = State(data=data, parent=context.get("parent"), sibling_index=context.get("sibling_index"), max_privacy_loss=max_privacy_loss, privacy_loss=0, child_privacy_losses=[], current_child_index=-1)
+        state = State(data=data, parent=None, sibling_index=-1, max_privacy_loss=max_privacy_loss, privacy_loss=0, child_privacy_losses=[], current_child_index=-1)
 
         def check_new_state(self, child_index, child_privacy_loss, pre_invoke):
             # Append or replace the child privacy loss, then calculate the new sum.
@@ -278,12 +285,16 @@ def make_sequential_filter(max_privacy_loss):
                 new_child_index = len(self.state.child_privacy_losses)
                 new_child_privacy_loss = query.privacy_loss if isinstance(query, InteractiveMeasurement) else 0
                 _new_state = check_new_state(self, new_child_index, new_child_privacy_loss, True)
-                new_child = query.invoke(data, {"parent": self, "sibling_index": new_child_index})
+                new_child = query.invoke(data)
+                new_child.query(JoinTree(parent=self, sibling_index=new_child_index))
                 new_state = check_new_state(self, new_child_index, new_child_privacy_loss, False)
                 # Convenience to get non-interactive answer
                 answer = new_child.query(None) if isinstance(query, Measurement) else new_child
             elif isinstance(query, CheckDescendantChange):
                 new_state = check_new_state(self, query.index, query.new_privacy_loss, query.pre_invoke)
+                answer = "OK"
+            elif isinstance(query, JoinTree):
+                new_state = self.state._replace(parent=query.parent, sibling_index=query.sibling_index)
                 answer = "OK"
             else:
                 raise Exception(f"Unrecognized query {query}")
