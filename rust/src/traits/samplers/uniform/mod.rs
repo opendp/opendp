@@ -93,7 +93,7 @@ impl<T, B> SampleUniform for T
 
 /// Samples from [0, 1) supported on Z*2^k
 #[cfg(feature = "use-mpfr")]
-pub(crate) fn sample_standard_uniform_rational(denom: rug::Integer) -> Fallible<Rational> {
+pub(crate) fn sample_standard_uniform_rational(denom: rug::Integer) -> Fallible<rug::Rational> {
     let numer = rug::Integer::sample_uniform_int_below(denom.clone())?;
     Ok(rug::Rational::from((numer, denom)))
 }
