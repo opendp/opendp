@@ -32,13 +32,17 @@ def bool_free(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_data__bool_free
-    function.argtypes = [BoolPtr]
-    function.restype = FfiResult
+    # Convert arguments to c types.
+    c_this = this
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    # Call library function.
+    lib_function = lib.opendp_data__bool_free
+    lib_function.argtypes = [BoolPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 def ffislice_of_anyobjectptrs(
@@ -57,14 +61,16 @@ def ffislice_of_anyobjectptrs(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    raw = py_to_c(raw, c_type=FfiSlicePtr, type_name=None)
+    c_raw = py_to_c(raw, c_type=FfiSlicePtr, type_name=None)
     
     # Call library function.
-    function = lib.opendp_data__ffislice_of_anyobjectptrs
-    function.argtypes = [FfiSlicePtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_data__ffislice_of_anyobjectptrs
+    lib_function.argtypes = [FfiSlicePtr]
+    lib_function.restype = FfiResult
     
-    return unwrap(function(raw), FfiSlicePtr)
+    output = unwrap(lib_function(c_raw), FfiSlicePtr)
+    
+    return output
 
 
 def object_as_slice(
@@ -84,14 +90,16 @@ def object_as_slice(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    obj = py_to_c(obj, c_type=AnyObjectPtr, type_name=None)
+    c_obj = py_to_c(obj, c_type=AnyObjectPtr, type_name=None)
     
     # Call library function.
-    function = lib.opendp_data__object_as_slice
-    function.argtypes = [AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_data__object_as_slice
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return unwrap(function(obj), FfiSlicePtr)
+    output = unwrap(lib_function(c_obj), FfiSlicePtr)
+    
+    return output
 
 
 def object_free(
@@ -108,13 +116,17 @@ def object_free(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_data__object_free
-    function.argtypes = [AnyObjectPtr]
-    function.restype = FfiResult
+    # Convert arguments to c types.
+    c_this = this
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    # Call library function.
+    lib_function = lib.opendp_data__object_free
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 def object_type(
@@ -133,14 +145,16 @@ def object_type(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
+    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
     
     # Call library function.
-    function = lib.opendp_data__object_type
-    function.argtypes = [AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_data__object_type
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
 
 
 def slice_as_object(
@@ -166,15 +180,17 @@ def slice_as_object(
     T = parse_or_infer(T, raw)
     
     # Convert arguments to c types.
-    raw = py_to_c(raw, c_type=FfiSlicePtr, type_name=T)
-    T = py_to_c(T, c_type=ctypes.c_char_p, type_name=None)
+    c_raw = py_to_c(raw, c_type=FfiSlicePtr, type_name=T)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p, type_name=None)
     
     # Call library function.
-    function = lib.opendp_data__slice_as_object
-    function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_data__slice_as_object
+    lib_function.argtypes = [FfiSlicePtr, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return unwrap(function(raw, T), AnyObjectPtr)
+    output = unwrap(lib_function(c_raw, c_T), AnyObjectPtr)
+    
+    return output
 
 
 def slice_free(
@@ -193,13 +209,17 @@ def slice_free(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_data__slice_free
-    function.argtypes = [FfiSlicePtr]
-    function.restype = FfiResult
+    # Convert arguments to c types.
+    c_this = this
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    # Call library function.
+    lib_function = lib.opendp_data__slice_free
+    lib_function.argtypes = [FfiSlicePtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 def smd_curve_epsilon(
@@ -222,15 +242,17 @@ def smd_curve_epsilon(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    curve = py_to_c(curve, c_type=AnyObjectPtr, type_name=None)
-    delta = py_to_c(delta, c_type=AnyObjectPtr, type_name=get_atom(object_type(curve)))
+    c_curve = py_to_c(curve, c_type=AnyObjectPtr, type_name=None)
+    c_delta = py_to_c(delta, c_type=AnyObjectPtr, type_name=get_atom(object_type(curve)))
     
     # Call library function.
-    function = lib.opendp_data__smd_curve_epsilon
-    function.argtypes = [AnyObjectPtr, AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_data__smd_curve_epsilon
+    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(curve, delta), AnyObjectPtr))
+    output = c_to_py(unwrap(lib_function(c_curve, c_delta), AnyObjectPtr))
+    
+    return output
 
 
 def str_free(
@@ -248,13 +270,17 @@ def str_free(
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     # No type arguments to standardize.
-    # No arguments to convert to c types.
-    # Call library function.
-    function = lib.opendp_data__str_free
-    function.argtypes = [ctypes.c_char_p]
-    function.restype = FfiResult
+    # Convert arguments to c types.
+    c_this = this
     
-    return c_to_py(unwrap(function(this), ctypes.c_void_p))
+    # Call library function.
+    lib_function = lib.opendp_data__str_free
+    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 def to_string(
@@ -273,11 +299,13 @@ def to_string(
     """
     # No type arguments to standardize.
     # Convert arguments to c types.
-    this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
+    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
     
     # Call library function.
-    function = lib.opendp_data__to_string
-    function.argtypes = [AnyObjectPtr]
-    function.restype = FfiResult
+    lib_function = lib.opendp_data__to_string
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(this), ctypes.c_char_p))
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output

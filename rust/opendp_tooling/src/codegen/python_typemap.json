@@ -29,5 +29,6 @@
     "const AnyTransformation *": "Transformation",
     "FfiError *": "ctypes.POINTER(FfiError)",
     "const FfiError *": "ctypes.POINTER(FfiError)",
-    "FfiResult": "FfiResult"
+    "FfiResult": "FfiResult",
+    "CallbackFn": "CallbackFn"
 }

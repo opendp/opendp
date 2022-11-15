@@ -60,7 +60,10 @@ impl IsSizedDomain for AnyDomain {
     }
 }
 
-#[bootstrap(features("contrib", "honest-but-curious"))]
+#[bootstrap(
+    features("contrib", "honest-but-curious"),
+    dependencies("$get_dependencies(measurement)")
+)]
 /// Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
 /// This measurement does not perform any sampling. 
 /// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
