@@ -111,7 +111,7 @@ pub(crate) fn default_measure(M: Type) -> Fallible<AnyMeasure> {
 }
 
 #[bootstrap(
-    name = "make_default_transformation",
+    name = "make_default_user_transformation",
     features("contrib", "honest-but-curious"),
     arguments(
         function(rust_type = "$domain_carrier_type(DO)"),
@@ -149,7 +149,7 @@ pub(crate) fn default_measure(M: Type) -> Fallible<AnyMeasure> {
 /// * `MI` - Input Metric. See Supported Metrics
 /// * `MO` - Output Metric. See Supported Metrics
 #[no_mangle]
-pub extern "C" fn opendp_combinators__make_default_transformation(
+pub extern "C" fn opendp_combinators__make_default_user_transformation(
     function: CallbackFn,
     stability_map: CallbackFn,
     DI: *const c_char,
@@ -173,7 +173,7 @@ pub extern "C" fn opendp_combinators__make_default_transformation(
 }
 
 #[bootstrap(
-    name = "make_default_measurement",
+    name = "make_default_user_measurement",
     features("contrib", "honest-but-curious"),
     arguments(
         function(rust_type = "$domain_carrier_type(DO)"),
@@ -217,7 +217,7 @@ pub extern "C" fn opendp_combinators__make_default_transformation(
 /// * `MI` - Input Metric. See Supported Metrics
 /// * `MO` - Output Measure. See Supported Measures
 #[no_mangle]
-pub extern "C" fn opendp_combinators__make_default_measurement(
+pub extern "C" fn opendp_combinators__make_default_user_measurement(
     function: CallbackFn,
     privacy_map: CallbackFn,
     DI: *const c_char,
@@ -241,7 +241,7 @@ pub extern "C" fn opendp_combinators__make_default_measurement(
 }
 
 #[bootstrap(
-    name = "make_default_postprocessor",
+    name = "make_default_user_postprocessor",
     features("contrib"),
     arguments(
         function(rust_type = "$domain_carrier_type(DO)"),
@@ -262,7 +262,7 @@ pub extern "C" fn opendp_combinators__make_default_measurement(
 /// * `DI` - Input Domain. See Supported Domains
 /// * `DO` - Output Domain. See Supported Domains
 #[no_mangle]
-pub extern "C" fn opendp_combinators__make_default_postprocessor(
+pub extern "C" fn opendp_combinators__make_default_user_postprocessor(
     function: CallbackFn,
     DI: *const c_char,
     DO: *const c_char,

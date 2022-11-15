@@ -10,9 +10,9 @@ __all__ = [
     "make_chain_mt",
     "make_chain_tm",
     "make_chain_tt",
-    "make_default_measurement",
-    "make_default_postprocessor",
-    "make_default_transformation",
+    "make_default_user_measurement",
+    "make_default_user_postprocessor",
+    "make_default_user_transformation",
     "make_fix_delta",
     "make_population_amplification",
     "make_pureDP_to_fixed_approxDP",
@@ -160,7 +160,7 @@ def make_chain_tt(
     return output
 
 
-def make_default_measurement(
+def make_default_user_measurement(
     function,
     privacy_map,
     DI: RuntimeTypeDescriptor,
@@ -192,7 +192,7 @@ def make_default_measurement(
     * `FixedSmoothedMaxDivergence<_>`
     * `ZeroConcentratedDivergence<_>`
     
-    [make_default_measurement in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_default_measurement.html)
+    [make_default_user_measurement in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_default_user_measurement.html)
     
     :param function: A function mapping data from `DI` to `DO`.
     :param privacy_map: A function mapping distances from `MI` to `MO`.
@@ -221,7 +221,7 @@ def make_default_measurement(
     c_MO = py_to_c(MO, c_type=ctypes.c_char_p, type_name=None)
     
     # Call library function.
-    lib_function = lib.opendp_combinators__make_default_measurement
+    lib_function = lib.opendp_combinators__make_default_user_measurement
     lib_function.argtypes = [CallbackFn, CallbackFn, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
@@ -230,7 +230,7 @@ def make_default_measurement(
     return output
 
 
-def make_default_postprocessor(
+def make_default_user_postprocessor(
     function,
     DI: RuntimeTypeDescriptor,
     DO: RuntimeTypeDescriptor
@@ -242,7 +242,7 @@ def make_default_postprocessor(
     * `VectorDomain<AllDomain<_>>`
     * `AllDomain<_>`
     
-    [make_default_postprocessor in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_default_postprocessor.html)
+    [make_default_user_postprocessor in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_default_user_postprocessor.html)
     
     :param function: A function mapping data from `DI` to `DO`.
     :param DI: Input Domain. See Supported Domains
@@ -263,7 +263,7 @@ def make_default_postprocessor(
     c_DO = py_to_c(DO, c_type=ctypes.c_char_p, type_name=None)
     
     # Call library function.
-    lib_function = lib.opendp_combinators__make_default_postprocessor
+    lib_function = lib.opendp_combinators__make_default_user_postprocessor
     lib_function.argtypes = [CallbackFn, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
@@ -272,7 +272,7 @@ def make_default_postprocessor(
     return output
 
 
-def make_default_transformation(
+def make_default_user_transformation(
     function,
     stability_map,
     DI: RuntimeTypeDescriptor,
@@ -298,7 +298,7 @@ def make_default_transformation(
     * `L1Distance<_>`
     * `L2Distance<_>`
     
-    [make_default_transformation in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_default_transformation.html)
+    [make_default_user_transformation in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_default_user_transformation.html)
     
     :param function: A function mapping data from `DI` to `DO`.
     :param stability_map: A function mapping distances from `MI` to `MO`.
@@ -327,7 +327,7 @@ def make_default_transformation(
     c_MO = py_to_c(MO, c_type=ctypes.c_char_p, type_name=None)
     
     # Call library function.
-    lib_function = lib.opendp_combinators__make_default_transformation
+    lib_function = lib.opendp_combinators__make_default_user_transformation
     lib_function.argtypes = [CallbackFn, CallbackFn, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     

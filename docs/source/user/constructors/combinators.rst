@@ -246,11 +246,11 @@ It is possible to construct Transformations, Measurements and Postprocessors on 
    * - Component
      - Constructor
    * - Transformation
-     - :func:`opendp.combinators.make_default_transformation`
+     - :func:`opendp.combinators.make_default_user_transformation`
    * - Measurement
-     - :func:`opendp.combinators.make_default_measurement`
+     - :func:`opendp.combinators.make_default_user_measurement`
    * - Postprocessor
-     - :func:`opendp.combinators.make_default_postprocessor`
+     - :func:`opendp.combinators.make_default_user_postprocessor`
 
 .. note::
 
@@ -272,7 +272,7 @@ In this example, we mock the typical API of the OpenDP library:
 
 .. doctest::
 
-    >>> from opendp.combinators import make_default_transformation
+    >>> from opendp.combinators import make_default_user_transformation
     >>> from opendp.typing import *
     ...
     >>> def make_repeat(multiplicity):
@@ -285,7 +285,7 @@ In this example, we mock the typical API of the OpenDP library:
     ...         # they can now influence `d_in` * `multiplicity` records
     ...         return d_in * multiplicity
     ...
-    ...     return make_default_transformation(
+    ...     return make_default_user_transformation(
     ...         function,
     ...         stability_map,
     ...         DI=VectorDomain[AllDomain[int]],
