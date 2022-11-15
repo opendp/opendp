@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::ffi::c_void;
+use std::ffi::{c_void, CString};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
@@ -15,7 +15,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, Downcast};
-use crate::ffi::util;
+use crate::ffi::util::{self, into_c_char_p};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 
 #[bootstrap(
@@ -401,6 +401,35 @@ pub extern "C" fn opendp_data__to_string(this: *const AnyObject) -> FfiResult<*m
     util::into_c_char_p(format!("{:?}", try_as_ref!(this))).map_or_else(
         |e| FfiResult::Err(util::into_raw(FfiError::from(e))),
         FfiResult::Ok)
+}
+
+/// wrap an AnyObject in an FfiResult::Ok(this)
+#[no_mangle]
+pub extern "C" fn ffiresult_ok(this: *const AnyObject) -> *const FfiResult<*const AnyObject> {
+    util::into_raw(FfiResult::Ok(this))
+}
+
+/// construct an FfiResult::Err(e)
+#[no_mangle]
+pub extern "C" fn ffiresult_err(
+    message: *mut c_char, 
+    backtrace: *mut c_char
+) -> *const FfiResult<*const AnyObject> {
+    fn make_message(message: *mut c_char, backtrace: *mut c_char) -> Fallible<*mut c_char> {
+        let message = util::to_str(message)?;
+        let backtrace = util::to_str(backtrace)?;
+        let message = format!("{message}:\n{backtrace}");
+        into_c_char_p(message)
+    }
+    let message = match make_message(message, backtrace) {
+        Ok(v) => v,
+        Err(e) => return util::into_raw(FfiResult::from(e))
+    };
+    util::into_raw(FfiResult::Err(util::into_raw(FfiError {
+        variant: CString::new("FFI").unwrap().into_raw(),
+        message, 
+        backtrace: CString::new("").unwrap().into_raw(),
+    })))
 }
 
 #[cfg(test)]

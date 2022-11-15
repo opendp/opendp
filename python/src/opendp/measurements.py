@@ -64,17 +64,19 @@ def make_base_discrete_gaussian(
     MO = MO.substitute(QO=QO)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
-    QI = py_to_c(QI, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
+    c_MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    c_QI = py_to_c(QI, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_discrete_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_discrete_gaussian
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D, MO, QI), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_D, c_MO, c_QI), Measurement))
+    
+    return output
 
 
 def make_base_discrete_laplace(
@@ -124,16 +126,18 @@ def make_base_discrete_laplace(
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_discrete_laplace
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_discrete_laplace
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D, QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_D, c_QO), Measurement))
+    
+    return output
 
 
 def make_base_discrete_laplace_cks20(
@@ -181,16 +185,18 @@ def make_base_discrete_laplace_cks20(
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_discrete_laplace_cks20
-    function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_discrete_laplace_cks20
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, D, QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_D, c_QO), Measurement))
+    
+    return output
 
 
 def make_base_discrete_laplace_linear(
@@ -244,17 +250,19 @@ def make_base_discrete_laplace_linear(
     OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_discrete_laplace_linear
-    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_discrete_laplace_linear
+    lib_function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, bounds, D, QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_bounds, c_D, c_QO), Measurement))
+    
+    return output
 
 
 def make_base_gaussian(
@@ -307,17 +315,19 @@ def make_base_gaussian(
     MO = MO.substitute(T=T)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
-    k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    MO = py_to_c(MO, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
+    c_MO = py_to_c(MO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_gaussian
-    function.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_gaussian
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, k, D, MO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_k, c_D, c_MO), Measurement))
+    
+    return output
 
 
 def make_base_geometric(
@@ -360,17 +370,19 @@ def make_base_geometric(
     OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
-    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_geometric
-    function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_geometric
+    lib_function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, bounds, D, QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_bounds, c_D, c_QO), Measurement))
+    
+    return output
 
 
 def make_base_laplace(
@@ -419,16 +431,18 @@ def make_base_laplace(
     D = D.substitute(T=T)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
-    k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
-    D = py_to_c(D, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=T)
+    c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_laplace
-    function.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_laplace
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, k, D), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_k, c_D), Measurement))
+    
+    return output
 
 
 def make_base_ptr(
@@ -472,18 +486,20 @@ def make_base_ptr(
     TV = RuntimeType.parse_or_infer(type_name=TV, public_example=scale)
     
     # Convert arguments to c types.
-    scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
-    threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
-    k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
-    TK = py_to_c(TK, c_type=ctypes.c_char_p)
-    TV = py_to_c(TV, c_type=ctypes.c_char_p)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=TV)
+    c_threshold = py_to_c(threshold, c_type=ctypes.c_void_p, type_name=TV)
+    c_k = py_to_c(k, c_type=ctypes.c_uint32, type_name=i32)
+    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
+    c_TV = py_to_c(TV, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_base_ptr
-    function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_base_ptr
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(scale, threshold, k, TK, TV), Measurement))
+    output = c_to_py(unwrap(lib_function(c_scale, c_threshold, c_k, c_TK, c_TV), Measurement))
+    
+    return output
 
 
 def make_randomized_response(
@@ -525,18 +541,20 @@ def make_randomized_response(
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=prob)
     
     # Convert arguments to c types.
-    categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[T]))
-    prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=QO)
-    constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
-    T = py_to_c(T, c_type=ctypes.c_char_p)
-    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    c_categories = py_to_c(categories, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[T]))
+    c_prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=QO)
+    c_constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
+    c_T = py_to_c(T, c_type=ctypes.c_char_p)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_randomized_response
-    function.argtypes = [AnyObjectPtr, ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_randomized_response
+    lib_function.argtypes = [AnyObjectPtr, ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(categories, prob, constant_time, T, QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_categories, c_prob, c_constant_time, c_T, c_QO), Measurement))
+    
+    return output
 
 
 def make_randomized_response_bool(
@@ -571,13 +589,15 @@ def make_randomized_response_bool(
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=prob)
     
     # Convert arguments to c types.
-    prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=QO)
-    constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
-    QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    c_prob = py_to_c(prob, c_type=ctypes.c_void_p, type_name=QO)
+    c_constant_time = py_to_c(constant_time, c_type=ctypes.c_bool, type_name=bool)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
-    function = lib.opendp_measurements__make_randomized_response_bool
-    function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p]
-    function.restype = FfiResult
+    lib_function = lib.opendp_measurements__make_randomized_response_bool
+    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_char_p]
+    lib_function.restype = FfiResult
     
-    return c_to_py(unwrap(function(prob, constant_time, QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_prob, c_constant_time, c_QO), Measurement))
+    
+    return output

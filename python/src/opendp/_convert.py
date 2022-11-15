@@ -61,6 +61,9 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     if isinstance(value, c_type):
         return value
 
+    if c_type == CallbackFn:
+        return _wrap_py_func(value, type_name)
+
     # check that the type name is consistent with the value
     if type_name is not None:
         RuntimeType.assert_is_similar(RuntimeType.parse(type_name), RuntimeType.infer(value))
@@ -364,3 +367,43 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> Dict[Any, Any]:
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
+
+
+# The result type cannot be an `ctypes.POINTER(FfiResult)` due to:
+#   https://bugs.python.org/issue5710#msg85731
+#                            (output         , input       )
+CallbackFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
+
+def _wrap_py_func(func, TO):
+    from opendp._convert import c_to_py, py_to_c
+
+    def wrapper_func(c_arg):
+        try:
+            # 1. convert AnyObject to Python type
+            py_arg = c_to_py(c_arg)
+            # don't free c_arg, because it is owned by Rust
+            c_arg.__class__ = ctypes.POINTER(AnyObject)
+
+            # 2. invoke the user-supplied function
+            py_out = func(py_arg)
+
+            # 3. convert back to an AnyObject
+            c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
+            # don't free c_out, because we are giving ownership to Rust
+            c_out.__class__ = ctypes.POINTER(AnyObject)
+
+            # 4. pack up into an FfiResult
+            lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+            lib.ffiresult_ok.restype = ctypes.c_void_p
+            return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+
+        except Exception:
+            import traceback
+            lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+            lib.ffiresult_err.restype = ctypes.c_void_p
+            return lib.ffiresult_err(
+                ctypes.c_char_p(f"Continued stack trace from Exception in user-defined function".encode()),
+                ctypes.c_char_p(traceback.format_exc().encode()),
+            )
+
+    return CallbackFn(wrapper_func)

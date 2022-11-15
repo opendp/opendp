@@ -21,6 +21,8 @@ pub struct Function {
     pub derived_types: Vec<Argument>,
     // metadata for return type
     pub ret: Argument,
+    // references to values that should share the same lifetime
+    pub dependencies: Vec<TypeRecipe>
 }
 
 // Metadata for function arguments, derived types and returns.

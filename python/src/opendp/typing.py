@@ -281,6 +281,9 @@ class RuntimeType(object):
 
         if public_example is None:
             return RuntimeType('Option', [UnknownType("Constructed Option from a None variant")])
+        
+        if callable(public_example):
+            return "CallbackFn"
 
         raise UnknownTypeException(type(public_example))
 
@@ -408,6 +411,7 @@ class PrivacyMeasure(RuntimeType):
 
 MaxDivergence = PrivacyMeasure('MaxDivergence')
 SmoothedMaxDivergence = PrivacyMeasure('SmoothedMaxDivergence')
+FixedSmoothedMaxDivergence = PrivacyMeasure('FixedSmoothedMaxDivergence')
 ZeroConcentratedDivergence = PrivacyMeasure('ZeroConcentratedDivergence')
 
 class Carrier(RuntimeType):
@@ -470,3 +474,9 @@ def get_first(value):
 
 def parse_or_infer(type_name: RuntimeType, example):
     return RuntimeType.parse_or_infer(type_name, example)
+
+def get_dependencies(value):
+    return getattr(value, "_dependencies", None)
+
+def get_dependencies_iterable(value):
+    return list(map(get_dependencies, value))

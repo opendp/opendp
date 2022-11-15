@@ -1,7 +1,8 @@
 .. testsetup::
 
+    from typing import List
     from opendp.mod import enable_features
-    enable_features('contrib', 'floating-point', 'honest-but-curious')
+    enable_features('contrib', 'floating-point')
 
 .. _combinator-constructors:
 
@@ -192,11 +193,13 @@ If your dataset is a simple sample from a larger population,
 you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator:
 :func:`opendp.combinators.make_population_amplification`.
 
-The amplifier requires a looser trust model, as the population size can be set arbitrarily.
+.. note::
 
-.. doctest::
+    The amplifier requires a looser trust model, as the population size can be set arbitrarily.
 
-    enable_features("honest-but-curious")
+    .. doctest::
+
+        >>> enable_features("honest-but-curious")
 
 
 In order to demonstrate this API, we'll first create a measurement with a sized input domain.
@@ -230,3 +233,84 @@ is a simple sample of individuals from a theoretical larger dataset that capture
     >>> assert amplified.check(2, .4941)
 
 The efficacy of this combinator improves as n gets larger.
+
+
+User-Defined Callbacks
+----------------------
+
+It is possible to construct Transformations, Measurements and Postprocessors on your own via Python functions.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Component
+     - Constructor
+   * - Transformation
+     - :func:`opendp.combinators.make_default_user_transformation`
+   * - Measurement
+     - :func:`opendp.combinators.make_default_user_measurement`
+   * - Postprocessor
+     - :func:`opendp.combinators.make_default_user_postprocessor`
+
+.. note::
+
+    This API is currently limited to domains that have a default. 
+    Domains that carry state do not have a default:
+    ``SizedDomain`` carries a size parameter, and ``BoundedDomain`` carries bounds, so they are not currently supported.
+    The output domain of ``make_basic_composition`` suffers from the same issue.
+    This restriction may be lifted after `#232 <https://github.com/opendp/opendp/issues/232>`_.
+
+.. note::
+
+    This requires a looser trust model, as we cannot verify any correctness properties of user-defined functions.
+
+    .. doctest::
+
+        >>> enable_features("honest-but-curious")
+
+In this example, we mock the typical API of the OpenDP library:
+
+.. doctest::
+
+    >>> from opendp.combinators import make_default_user_transformation
+    >>> from opendp.typing import *
+    ...
+    >>> def make_repeat(multiplicity):
+    ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
+    ...     def function(arg: List[int]) -> List[int]:
+    ...         return arg * multiplicity
+    ... 
+    ...     def stability_map(d_in: int) -> int:
+    ...         # if a user could influence at most `d_in` records before, 
+    ...         # they can now influence `d_in` * `multiplicity` records
+    ...         return d_in * multiplicity
+    ...
+    ...     return make_default_user_transformation(
+    ...         function,
+    ...         stability_map,
+    ...         DI=VectorDomain[AllDomain[int]],
+    ...         DO=VectorDomain[AllDomain[int]],
+    ...         MI=SymmetricDistance,
+    ...         MO=SymmetricDistance,
+    ...     )
+    
+The resulting Transformation may be used interchangeably with those constructed via the library:
+
+.. doctest::
+
+    >>> from opendp.transformations import *
+    >>> from opendp.measurements import make_base_discrete_laplace
+    >>> trans = (
+    ...     make_cast_default(TIA=str, TOA=int)
+    ...     >> make_repeat(2)  # our custom transformation
+    ...     >> make_clamp((1, 2))
+    ...     >> make_bounded_sum((1, 2))
+    ...     >> make_base_discrete_laplace(1.0)
+    ... )
+    ...
+    >>> release = trans(["0", "1", "2", "3"])
+    >>> trans.map(1) # computes epsilon
+    4.0
+
+The same holds for measurements and postprocessors.
+You can even mix computational primitives from other DP libraries!
