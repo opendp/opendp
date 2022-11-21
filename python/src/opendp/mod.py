@@ -228,6 +228,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         if isinstance(other, Transformation):
             from opendp.combinators import make_chain_tt
             return make_chain_tt(other, self)
+        
+        from opendp.partial import PartialChain
+        if isinstance(other, PartialChain):
+            return PartialChain(lambda x: self >> other.partial(x))
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
