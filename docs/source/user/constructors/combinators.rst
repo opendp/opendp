@@ -38,6 +38,8 @@ In the following example we chain :py:func:`opendp.measurements.make_base_discre
     >>> from opendp.transformations import make_bounded_sum
     >>> from opendp.measurements import make_base_discrete_laplace
     >>> from opendp.combinators import make_chain_mt
+    >>> from opendp.mod import enable_features
+    >>> enable_features("contrib", "floating-point")
     ...
     >>> # call a constructor to produce a transformation
     >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
