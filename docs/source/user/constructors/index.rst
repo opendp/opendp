@@ -29,7 +29,9 @@ In this example, we use a constructor to build a clamp transformation:
 
 .. doctest::
 
+    >>> from opendp.mod import enable_features
     >>> from opendp.transformations import make_clamp
+    >>> enable_features("contrib")
     >>> clamper = make_clamp(bounds=(0, 10))
     ...
     >>> # invoke the function with some data
