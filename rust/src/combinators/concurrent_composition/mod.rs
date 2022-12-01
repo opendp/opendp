@@ -1,50 +1,40 @@
-use std::{any::Any, rc::Rc};
+use std::any::Any;
 
 use crate::{
     core::{Domain, Function, InteractiveMeasurement, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
-    interactive::{Context, Node, Queryable, QueryableNode},
+    interactive::{Context, Queryable},
     traits::{InfAdd, TotalOrd},
 };
 
-enum InnerQuery<'a, 'b> {
-    Context(Context<'a>),
-    Query(&'b dyn Any),
-}
+// struct CheckDescendantChange<Q> {
+//     index: usize,
+//     new_privacy_loss: Q,
+//     commit: bool,
+// }
 
-struct CheckDescendantChange<Q> {
-    index: usize,
-    new_privacy_loss: Q,
-    commit: bool,
-}
-
-trait Contextualize {
+pub trait Contextualize {
     // the type to be contextualized
-    type Content<'a>;
+    type Content;
 
     // a lives at least as long as b, so it's safe to return something with a lifetime of 'a as a lifetime of 'b
-    fn contextualize<'a>(
-        content: Self::Content<'static>,
-        context: Context<'a>,
-    ) -> Self::Content<'a>;
+    fn contextualize(content: Self::Content, context: Context) -> Fallible<()>;
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Contextualize for Measurement<DI, DO, MI, MO> {
-    type Content<'a> = DO::Carrier;
-    fn contextualize<'a>(content: DO::Carrier, _context: Context<'a>) -> DO::Carrier {
-        content
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Contextualize
+    for Measurement<DI, DO, MI, MO>
+{
+    type Content = DO::Carrier;
+    fn contextualize(_content: DO::Carrier, _context: Context) -> Fallible<()> {
+        Ok(())
     }
 }
 
 impl<DI: Domain, MI: Metric, MO: Measure> Contextualize for InteractiveMeasurement<DI, MI, MO> {
-    type Content<'a> = QueryableNode<'a>;
-    fn contextualize<'a>(
-        mut content: QueryableNode<'static>,
-        context: Context<'a>,
-    ) -> QueryableNode<'a> {
-        content.state.context.replace(context);
-        content
+    type Content = Queryable;
+    fn contextualize(mut content: Queryable, context: Context) -> Fallible<()> {
+        content.eval::<()>(&context as &dyn Any)
     }
 }
 
@@ -64,7 +54,7 @@ where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
     MO::Distance: 'static + TotalOrd + Clone + InfAdd,
-    Measurement<DI, DO, MI, MO>: Contextualize<Content<'static> = DO::Carrier>,
+    Measurement<DI, DO, MI, MO>: Contextualize<Content = DO::Carrier>,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_out");
@@ -81,19 +71,11 @@ where
         input_domain,
         QueryableDomain::new(),
         Function::new(enclose!((d_in, d_mids), move |arg: &DI::Carrier| {
-            let state = Node {
-                value: Rc::new(d_mids.clone()),
-                context: None,
-            };
+            // STATE
+            let mut context = None;
+            let mut d_mids = d_mids.clone();
 
-            let transition = enclose!((d_in, arg), move |s: &QueryableNode<'_>, q: &dyn Any| {
-                let mut d_mids = s
-                    .state
-                    .value
-                    .downcast_ref::<Vec<MO::Distance>>()
-                    .unwrap()
-                    .clone();
-
+            Queryable::new(enclose!((d_in, arg), move |s: &Queryable, q: &dyn Any| {
                 if let Some(q_meas) = q.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
                     let d_mid =
                         (d_mids.pop()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
@@ -106,29 +88,21 @@ where
                     let answer = Measurement::<DI, DO, MI, MO>::contextualize(
                         answer,
                         Context {
-                            parent: s,
+                            parent: s.clone(),
                             id: d_mids.len(),
                         },
-                    )?;
-                    let state = Node {
-                        value: Rc::new(d_mids),
-                        context: s.state.context.clone(),
-                    };
-                    return Ok((state, Box::new(answer) as Box<dyn Any>));
+                    );
+                    return Ok(Box::new(answer) as Box<dyn Any>);
                 }
-                if let Some(q) = q.downcast_ref::<Context<'_>>() {
-                    if s.state.context.is_some() {
-                        return fallible!(FailedFunction, "already joined a tree!");
+                if let Some(q) = q.downcast_ref::<Context>() {
+                    if context.is_some() {
+                        return fallible!(FailedFunction, "context has already been set");
                     }
-                    let state = Node {
-                        value: s.state.value.clone(),
-                        context: Some(q.clone()),
-                    };
-                    return Ok((state, Box::new(()) as Box<dyn Any>));
+                    context.replace(q.clone());
+                    return Ok(Box::new(()) as Box<dyn Any>);
                 }
                 fallible!(FailedFunction, "unrecognized query!")
-            });
-            Queryable::new(state, transition)
+            }))
         })),
         input_metric,
         output_measure,
