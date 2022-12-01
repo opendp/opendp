@@ -32,7 +32,7 @@ mod randomized_response;
 #[cfg(feature="contrib")]
 pub use crate::measurements::randomized_response::*;
 
-#[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
-mod alp;
-#[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
-pub use crate::measurements::alp::*;
+// #[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
+// mod alp;
+// #[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
+// pub use crate::measurements::alp::*;

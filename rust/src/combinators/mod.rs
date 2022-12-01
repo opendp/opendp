@@ -30,20 +30,20 @@ mod user_defined;
 #[cfg(all(feature="contrib", feature="ffi"))]
 pub(crate) use crate::combinators::user_defined::*;
 
-#[cfg(feature="contrib")]
-mod privacy_filter;
-#[cfg(feature="contrib")]
-pub use crate::combinators::privacy_filter::*;
+// #[cfg(feature="contrib")]
+// mod privacy_filter;
+// #[cfg(feature="contrib")]
+// pub use crate::combinators::privacy_filter::*;
 
 #[cfg(feature="contrib")]
 mod fix_delta;
 #[cfg(feature="contrib")]
 pub use crate::combinators::fix_delta::*;
 
-#[cfg(feature="contrib")]
-mod sequential_composition;
-#[cfg(feature="contrib")]
-pub use crate::combinators::sequential_composition::*;
+// #[cfg(feature="contrib")]
+// mod sequential_composition;
+// #[cfg(feature="contrib")]
+// pub use crate::combinators::sequential_composition::*;
 
 
 
