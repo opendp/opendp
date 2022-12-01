@@ -147,7 +147,7 @@
 // create clones of variables that are free to be consumed by a closure
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
-    ( ($( $x:ident ),*), $y:expr ) => {
+    ( ($( $x:tt ),*), $y:expr ) => {
         {
             $(let $x = $x.clone();)*
             $y

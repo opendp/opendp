@@ -16,7 +16,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::QueryableNode;
+use crate::interactive::Queryable;
 use crate::traits::{CheckNull, TotalOrd, CollectionSize, InherentNull};
 use std::fmt::{Debug, Formatter};
 
@@ -25,23 +25,7 @@ mod poly;
 #[cfg(feature="contrib")]
 pub use poly::*;
 
-
-#[derive(PartialEq, Clone, Debug)]
-pub struct QueryableDomain {}
-impl QueryableDomain {
-    pub fn new() -> Self {
-        QueryableDomain {  }
-    }
-}
-
-impl Domain for QueryableDomain {
-    type Carrier = QueryableNode<'static>;
-
-    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
-        Ok(true)
-    }
-}
-// pub type QueryableDomain<'a> = AllDomain<QueryableNode<'a>>;
+pub type QueryableDomain = AllDomain<Queryable>;
 
 // pub struct Hook<'s> {
 //     pub inner: Box<dyn Any + 's>,
