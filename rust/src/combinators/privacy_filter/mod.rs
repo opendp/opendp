@@ -5,13 +5,13 @@ use crate::{
     traits::{TotalOrd, InfSub}, interactive::Queryable
 };
 
-pub fn make_privacy_filter<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
+pub fn make_privacy_filter<'a, DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
     domain_in: DI,
     metric_in: MI,
     measure_out: MO,
     d_in: MI::Distance,
     d_out: MO::Distance,
-) -> Fallible<Measurement<DI, QueryableDomain<MO::Distance, Measurement<DI, DO, MI, MO>, DO::Carrier>, MI, MO>>
+) -> Fallible<Measurement<DI, QueryableDomain<'a>, MI, MO>>
 where
     DI::Carrier: 'static + Clone,
     MI::Distance: 'static + TotalOrd + Clone,

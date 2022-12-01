@@ -16,8 +16,8 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::{Queryable, Query};
-use crate::traits::{CheckNull, TotalOrd};
+use crate::interactive::QueryableNode;
+use crate::traits::{CheckNull, TotalOrd, CollectionSize, InherentNull};
 use std::fmt::{Debug, Formatter};
 
 #[cfg(feature="contrib")]
@@ -25,27 +25,43 @@ mod poly;
 #[cfg(feature="contrib")]
 pub use poly::*;
 
-pub type QueryableDomain<S, Q, A> = AllDomain<Queryable<S, Q, A>>;
 
-pub struct Hook<'a, S, L> {
-    pub inner: S,
-    pub listener: Box<dyn Fn(&L, bool) -> Fallible<bool> + 'a>
-}
-
-impl<'a, S, L> Hook<'a, S, L> {
-    pub fn new_queryable<Q, A>(state: S, transition: impl Fn(S, &dyn Query<Q>) -> (S, A) + 'a) -> Queryable<Hook<'a, S, L>, Q, A> {
-        let listener = |v: &L, b: bool| {
-            Ok(true)
-        };
-        Queryable {
-            state: Some(Hook {
-                inner: state,
-                listener: Box::new(listener)
-            }),
-            transition: transition
-        }
+#[derive(PartialEq, Clone, Debug)]
+pub struct QueryableDomain {}
+impl QueryableDomain {
+    pub fn new() -> Self {
+        QueryableDomain {  }
     }
 }
+
+impl Domain for QueryableDomain {
+    type Carrier = QueryableNode<'static>;
+
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+        Ok(true)
+    }
+}
+// pub type QueryableDomain<'a> = AllDomain<QueryableNode<'a>>;
+
+// pub struct Hook<'s> {
+//     pub inner: Box<dyn Any + 's>,
+//     pub listener: Box<dyn Fn(&dyn Any, bool) -> Fallible<bool> + 's>
+// }
+
+// impl<'s> Hook<'s> {
+//     pub fn new_queryable<Q, A>(state: S, transition: impl Fn(S, &dyn Query<Q>) -> (S, A) + 's) -> Queryable<Q, A> {
+//         let listener = |v: &L, b: bool| {
+//             Ok(true)
+//         };
+//         Queryable {
+//             state: Some(Hook {
+//                 inner: state,
+//                 listener: Box::new(listener)
+//             }),
+//             transition: transition
+//         }
+//     }
+// }
 
 
 /// # Proof Definition

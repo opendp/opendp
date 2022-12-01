@@ -27,6 +27,7 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
+use crate::domains::QueryableDomain;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
@@ -220,6 +221,7 @@ pub struct MeasurementBase<DI: Domain, DO: Domain, MI: Metric, MO: Measure, cons
 }
 
 pub type Measurement<DI, DO, MI, MO> = MeasurementBase<DI, DO, MI, MO, false>;
+pub type InteractiveMeasurement<DI, MI, MO> = MeasurementBase<DI, QueryableDomain, MI, MO, true>;
 
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
     pub fn new(
