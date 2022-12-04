@@ -221,9 +221,9 @@ pub struct MeasurementBase<DI: Domain, DO: Domain, MI: Metric, MO: Measure, cons
 }
 
 pub type Measurement<DI, DO, MI, MO> = MeasurementBase<DI, DO, MI, MO, false>;
-pub type InteractiveMeasurement<DI, MI, MO> = MeasurementBase<DI, QueryableDomain, MI, MO, true>;
+pub type InteractiveMeasurement<DI, Q, A, MI, MO> = MeasurementBase<DI, QueryableDomain<Q, A>, MI, MO, true>;
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure, const INTERACTIVE: bool> MeasurementBase<DI, DO, MI, MO, INTERACTIVE> {
     pub fn new(
         input_domain: DI,
         output_domain: DO,

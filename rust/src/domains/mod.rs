@@ -25,7 +25,7 @@ mod poly;
 #[cfg(feature="contrib")]
 pub use poly::*;
 
-pub type QueryableDomain = AllDomain<Queryable>;
+pub type QueryableDomain<Q, A> = AllDomain<Queryable<Q, A>>;
 
 // pub struct Hook<'s> {
 //     pub inner: Box<dyn Any + 's>,
