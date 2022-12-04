@@ -1,7 +1,7 @@
 use std::any;
 use std::any::Any;
 
-use crate::core::{Domain, Function, Measure, Measurement, Metric, Transformation};
+use crate::core::{Domain, Function, Measure, Metric, Transformation, MeasurementBase};
 use crate::error::*;
 use std::fmt::{Formatter, Debug};
 
@@ -48,7 +48,7 @@ impl<DI: Domain> Function<DI, PolyDomain> {
     }
 }
 
-impl<DI, DO, MI, MO> Measurement<DI, DO, MI, MO>
+impl<DI, DO, MI, MO, const INTERACTIVE: bool> MeasurementBase<DI, DO, MI, MO, INTERACTIVE>
     where DI: 'static + Domain,
           DI::Carrier: 'static,
           DO: 'static + Domain,
@@ -57,8 +57,8 @@ impl<DI, DO, MI, MO> Measurement<DI, DO, MI, MO>
           MO: 'static + Measure {
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
-    pub fn into_poly(self) -> Measurement<DI, PolyDomain, MI, MO> {
-        Measurement::new(
+    pub fn into_poly(self) -> MeasurementBase<DI, PolyDomain, MI, MO, INTERACTIVE> {
+        MeasurementBase::new(
             self.input_domain,
             PolyDomain::new(),
             self.function.into_poly(),
