@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::core::{Domain, Metric, Measure, Measurement, InteractiveMeasurement};
+use crate::domains::type_name;
 use crate::error::*;
 use crate::traits::CheckNull;
 
@@ -20,20 +20,10 @@ pub struct Node {
 }
 
 /// A structure tracking the state of an interactive measurement queryable.
-/// It's generic over state (S), query (Q), answer (A), so it can be used for any
-/// interactive measurement expressible as a transition function.
-// pub struct Queryable<S> {
-//     /// The state of the Queryable. It is wrapped in an option so that ownership can be moved out
-//     /// temporarily, during transitions.
-//     pub state: S,
-//     /// The transition function of the Queryable. Takes the current state and a query, returns
-//     /// the new state and the answer.
-//     pub transition: Rc<dyn Fn(&Queryable<S>, &dyn Any) -> Fallible<(S, Box<dyn Any>)>>,
-// }
-
-// Queryables don't need separate state:
 #[derive(Clone)]
-pub struct QueryableBase(Rc<RefCell<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>);
+pub struct QueryableBase(
+    Rc<RefCell<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>
+);
 
 impl QueryableBase {
     pub fn eval<Q: 'static, A: 'static>(&mut self, query: &Q) -> Fallible<A> {
@@ -62,6 +52,9 @@ impl QueryableBase {
     }
 }
 
+
+/// Queryables are used to model interactive measurements,
+/// and are generic over the type of the query (Q) and answer (A).
 pub struct Queryable<Q, A> {
     _query: PhantomData<Q>,
     _answer: PhantomData<A>,
@@ -86,43 +79,15 @@ impl<Q: 'static, A: 'static> Queryable<Q, A> {
     }
 }
 
-trait IntoQueryableBase {
-    fn into_queryable_base(&self) -> &QueryableBase;
-}
-
-impl IntoQueryableBase for QueryableBase {
-    fn into_queryable_base(&self) -> &QueryableBase {
-        self
+impl<Q: 'static> Queryable<Q, Box<dyn Any>> {
+    /// Evaluates a polymorphic query and downcasts to the given type.
+    pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
+        self.eval(&query)?
+            .downcast()
+            .map_err(|_| err!(FailedCast, "failed to downcast to {}", std::any::type_name::<A>()))
+            .map(|b| *b)
     }
 }
-impl<Q, A> IntoQueryableBase for Queryable<Q, A> {
-    fn into_queryable_base(&self) -> &QueryableBase {
-        &self.base
-    }
-}
-
-// impl<'s, Q, A> Queryable<'s, Q, A> {
-//     fn into_any(&self) -> AnyQueryable {
-//         let Queryable {state, transition} = self;
-//         Queryable {
-//             state: state.map(|s| Box::new(s) as Box<dyn Any>),
-//             transition: Rc::new(move |s: Box<dyn Any>, q: &dyn Any| -> Fallible<(Box<dyn Any>, Box<dyn Any>)> {
-//                 let q = q.downcast_ref::<Q>().unwrap();
-//                 (transition)(s, q).map(|(s, a)| (s, Box::new(a)))
-//             })
-//         }
-//     }
-// }
-
-// impl<'a, Q> Queryable<'a, Q, Box<dyn Any>> {
-//     /// Evaluates a polymorphic query and downcasts to the given type.
-//     pub fn eval_poly<A: 'static>(&mut self, query: Q) -> Fallible<A> {
-//         self.eval(query)?
-//             .downcast()
-//             .map_err(|_| err!(FailedCast))
-//             .map(|b| *b)
-//     }
-// }
 
 
 pub struct CheckDescendantChange<Q> {
@@ -131,29 +96,29 @@ pub struct CheckDescendantChange<Q> {
     pub commit: bool,
 }
 
-pub trait EvalIfQueryable {
-    // the type that might be evaluated
-    type OutputCarrier;
-    fn eval_if_queryable<Q1: 'static>(value: &mut Self::OutputCarrier, query: Q1) -> Fallible<()>;
-}
+// pub trait EvalIfQueryable {
+//     // the type that might be evaluated
+//     type OutputCarrier;
+//     fn eval_if_queryable<Q1: 'static>(value: &mut Self::OutputCarrier, query: Q1) -> Fallible<()>;
+// }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> EvalIfQueryable
-    for Measurement<DI, DO, MI, MO>
-{
-    type OutputCarrier = DO::Carrier;
-    fn eval_if_queryable<Q1: 'static>(_value: &mut DO::Carrier, _query: Q1) -> Fallible<()> {
-        Ok(())
-    }
-}
+// impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> EvalIfQueryable
+//     for Measurement<DI, DO, MI, MO>
+// {
+//     type OutputCarrier = DO::Carrier;
+//     fn eval_if_queryable<Q1: 'static>(_value: &mut DO::Carrier, _query: Q1) -> Fallible<()> {
+//         Ok(())
+//     }
+// }
 
-impl<DI: Domain, Q, A, MI: Metric, MO: Measure> EvalIfQueryable
-    for InteractiveMeasurement<DI, Q, A, MI, MO>
-{
-    type OutputCarrier = QueryableBase;
-    fn eval_if_queryable<Q1: 'static>(queryable: &mut QueryableBase, query: Q1) -> Fallible<()> {
-        queryable.eval(&query)
-    }
-}
+// impl<DI: Domain, Q, A, MI: Metric, MO: Measure> EvalIfQueryable
+//     for InteractiveMeasurement<DI, Q, A, MI, MO>
+// {
+//     type OutputCarrier = QueryableBase;
+//     fn eval_if_queryable<Q1: 'static>(queryable: &mut QueryableBase, query: Q1) -> Fallible<()> {
+//         queryable.eval(&query)
+//     }
+// }
 
 
 impl<Q, A> CheckNull for Queryable<Q, A> {

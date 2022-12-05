@@ -25,27 +25,43 @@ mod poly;
 #[cfg(feature="contrib")]
 pub use poly::*;
 
-pub type QueryableDomain<Q, A> = AllDomain<Queryable<Q, A>>;
+pub struct QueryableDomain<Q, A> {
+    _query: PhantomData::<Q>,
+    _answer: PhantomData::<A>,
+}
+impl<Q, A> Domain for QueryableDomain<Q, A> {
+    type Carrier = Queryable<Q, A>;
 
-// pub struct Hook<'s> {
-//     pub inner: Box<dyn Any + 's>,
-//     pub listener: Box<dyn Fn(&dyn Any, bool) -> Fallible<bool> + 's>
-// }
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+        Ok(true)
+    }
 
-// impl<'s> Hook<'s> {
-//     pub fn new_queryable<Q, A>(state: S, transition: impl Fn(S, &dyn Query<Q>) -> (S, A) + 's) -> Queryable<Q, A> {
-//         let listener = |v: &L, b: bool| {
-//             Ok(true)
-//         };
-//         Queryable {
-//             state: Some(Hook {
-//                 inner: state,
-//                 listener: Box::new(listener)
-//             }),
-//             transition: transition
-//         }
-//     }
-// }
+    fn eval_member<Q1: 'static>(value: &mut Self::Carrier, query: Q1) -> Fallible<Box<dyn Any>> {
+        value.base.eval(&query)
+    }
+}
+
+impl<Q, A> Debug for QueryableDomain<Q, A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "QueryableDomain({}, {})", type_name!(Q), type_name!(A))
+    }
+}
+impl<Q, A> Default for QueryableDomain<Q, A> {
+    fn default() -> Self { Self::new() }
+}
+impl<Q, A> QueryableDomain<Q, A> {
+    pub fn new() -> Self {
+        QueryableDomain { _query: PhantomData, _answer: PhantomData }
+    }
+}
+// Auto-deriving Clone would put the same trait bound on T, so we implement it manually.
+impl<Q, A> Clone for QueryableDomain<Q, A> {
+    fn clone(&self) -> Self { Self::new() }
+}
+// Auto-deriving PartialEq would put the same trait bound on T, so we implement it manually.
+impl<Q, A> PartialEq for QueryableDomain<Q, A> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
 
 
 /// # Proof Definition
