@@ -4,7 +4,7 @@ use crate::{
     core::{Domain, Function, InteractiveMeasurement, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
-    interactive::{CheckDescendantChange, Context, EvalIfQueryable, Queryable},
+    interactive::{CheckDescendantChange, Context, Queryable},
     traits::{InfAdd, TotalOrd},
 };
 
@@ -24,7 +24,6 @@ where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
     MO::Distance: 'static + TotalOrd + Clone + InfAdd,
-    Measurement<DI, DO, MI, MO>: EvalIfQueryable<OutputCarrier = DO::Carrier>,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_out");
@@ -67,23 +66,15 @@ where
 
                         let mut answer = q_meas.invoke(&arg)?;
 
-                        // // commit... I don't think this is needed in this case
-                        // if let Some(context) = &mut context {
-                        //     context.parent.eval::<_, ()>(&CheckDescendantChange {
-                        //         index: context.id,
-                        //         new_privacy_loss: d_out.clone(),
-                        //         commit: true,
-                        //     })?;
-                        // }
-
                         // register context with the child if it is a queryable
-                        Measurement::<DI, DO, MI, MO>::eval_if_queryable(
+                        DO::eval_member(
                             &mut answer,
                             Context {
                                 parent: s.base.clone(),
                                 id: d_mids.len(),
                             },
                         )?;
+
                         return Ok(Box::new(answer) as Box<dyn Any>);
                     }
 
@@ -131,7 +122,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        domains::AllDomain, measurements::make_randomized_response_bool, measures::MaxDivergence,
+        domains::{AllDomain, PolyDomain}, measurements::make_randomized_response_bool, measures::MaxDivergence,
         metrics::DiscreteDistance,
     };
 
@@ -140,7 +131,7 @@ mod test {
     #[test]
     fn test_concurrent_composition() -> Fallible<()> {
         // construct concurrent compositor IM
-        let comp = make_concurrent_composition(
+        let root = make_concurrent_composition(
             AllDomain::new(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
@@ -149,25 +140,45 @@ mod test {
         )?;
 
         // pass dataset in and receive a queryable
-        let mut queryable = comp.invoke(&true)?;
+        let mut queryable = root.invoke(&true)?;
+
+        let rr_poly_query = make_randomized_response_bool(0.5, false)?.into_poly();
+        let rr_query = make_randomized_response_bool(0.5, false)?;
 
         // pass queries into the CC queryable
-        let _answer1 = queryable.eval(&make_randomized_response_bool(0.5, false)?.into_poly())?;
-        let _answer2 = queryable.eval(&make_randomized_response_bool(0.5, false)?.into_poly())?;
+        let _answer1: bool = queryable.eval_poly(&rr_poly_query)?;
+        let _answer2: bool = queryable.eval_poly(&rr_poly_query)?;
 
         // pass a concurrent composition compositor into the original CC compositor
-        // TODO: Fails because into_poly doesn't erase the INTERACTIVE const generic
-        // let answer3 = queryable.eval(&make_concurrent_composition(
-        //     AllDomain::new(),
-        //     DiscreteDistance::default(),
-        //     MaxDivergence::default(),
-        //     1,
-        //     vec![0.2, 0.3],
-        // )?.into_poly())?;
-        // let _answer3_1 = answer3.eval(&make_randomized_response_bool(0.5, false)?)?;
-        // let _answer3_2 = answer3.eval(&make_randomized_response_bool(0.5, false)?)?;
+        // This compositor expects all outputs are in AllDomain<bool>
+        let cc_query_3 = make_concurrent_composition::<_, AllDomain<bool>, _, _>(
+            AllDomain::<bool>::new(),
+            DiscreteDistance::default(),
+            MaxDivergence::default(),
+            1,
+            vec![0.1, 0.1],
+        )?
+        .into_poly();
 
-        let _answer3 = queryable.eval(&make_randomized_response_bool(0.5, false)?.into_poly())?;
+        let mut answer3: Queryable<_, bool> = queryable.eval_poly(&cc_query_3)?;
+        let _answer3_1: bool = answer3.eval(&rr_query)?;
+        let _answer3_2: bool = answer3.eval(&rr_query)?;
+
+        // pass a concurrent composition compositor into the original CC compositor
+        // This compositor expects all outputs are in PolyDomain
+        let cc_query_4 = make_concurrent_composition::<_, PolyDomain, _, _>(
+            AllDomain::<bool>::new(),
+            DiscreteDistance::default(),
+            MaxDivergence::default(),
+            1,
+            vec![0.2, 0.3],
+        )?
+        .into_poly();
+
+        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, Box<dyn Any>> = queryable.eval_poly(&cc_query_4)?;
+        let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
+        let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
+
         Ok(())
     }
 }

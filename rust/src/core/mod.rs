@@ -25,6 +25,7 @@ mod ffi;
 #[cfg(feature="ffi")]
 pub use ffi::*;
 
+use std::any::Any;
 use std::rc::Rc;
 
 use crate::domains::QueryableDomain;
@@ -65,6 +66,12 @@ pub trait Domain: Clone + PartialEq + Debug {
     /// It generally suffices to treat `Err(e)` as if `val` is not a member of the domain.
     /// It can be useful, however, to see richer debug information via `e` in the event of a failure.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
+
+    /// A helper to communicate with a member of this domain.
+    /// The members of most domains are not interactive, so the default implementation returns nothing.
+    fn eval_member<Q: 'static>(_member: &mut Self::Carrier, _query: Q) -> Fallible<Box<dyn Any>> {
+        Ok(Box::new(()))
+    }
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
@@ -211,7 +218,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
 #[derive(Clone)]
-pub struct MeasurementBase<DI: Domain, DO: Domain, MI: Metric, MO: Measure, const INTERACTIVE: bool> {
+pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
     pub output_domain: DO,
     pub function: Function<DI, DO>,
@@ -220,10 +227,9 @@ pub struct MeasurementBase<DI: Domain, DO: Domain, MI: Metric, MO: Measure, cons
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-pub type Measurement<DI, DO, MI, MO> = MeasurementBase<DI, DO, MI, MO, false>;
-pub type InteractiveMeasurement<DI, Q, A, MI, MO> = MeasurementBase<DI, QueryableDomain<Q, A>, MI, MO, true>;
+pub type InteractiveMeasurement<DI, Q, A, MI, MO> = Measurement<DI, QueryableDomain<Q, A>, MI, MO>;
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure, const INTERACTIVE: bool> MeasurementBase<DI, DO, MI, MO, INTERACTIVE> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
     pub fn new(
         input_domain: DI,
         output_domain: DO,
