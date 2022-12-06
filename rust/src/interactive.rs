@@ -3,7 +3,6 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::domains::type_name;
 use crate::error::*;
 use crate::traits::CheckNull;
 
@@ -11,6 +10,24 @@ use crate::traits::CheckNull;
 pub struct Context {
     pub parent: QueryableBase,
     pub id: usize,
+}
+
+impl Context {
+    pub fn pre_commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
+        self.parent.eval(&DescendantChange {
+            id: self.id,
+            new_privacy_loss: new_privacy_loss.clone(),
+            commit: false,
+        })
+    }
+
+    pub fn commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
+        self.parent.eval(&DescendantChange {
+            id: self.id,
+            new_privacy_loss: new_privacy_loss.clone(),
+            commit: true,
+        })
+    }
 }
 
 #[derive(Clone)]
@@ -67,14 +84,12 @@ impl<Q: 'static, A: 'static> Queryable<Q, A> {
     }
 
     pub fn new(
-        mut transition: impl FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>> + 'static,
+        transition: impl FnMut(&QueryableBase, &dyn Any) -> Fallible<Box<dyn Any>> + 'static,
     ) -> Self {
         Queryable {
             _query: PhantomData,
             _answer: PhantomData,
-            base: QueryableBase::new(move |queryable: &QueryableBase, query: &dyn Any| {
-                transition(&queryable.clone().as_typed::<Q, A>(), query)
-            }),
+            base: QueryableBase::new(transition),
         }
     }
 }
@@ -90,35 +105,11 @@ impl<Q: 'static> Queryable<Q, Box<dyn Any>> {
 }
 
 
-pub struct CheckDescendantChange<Q> {
-    pub index: usize,
+pub struct DescendantChange<Q> {
+    pub id: usize,
     pub new_privacy_loss: Q,
     pub commit: bool,
 }
-
-// pub trait EvalIfQueryable {
-//     // the type that might be evaluated
-//     type OutputCarrier;
-//     fn eval_if_queryable<Q1: 'static>(value: &mut Self::OutputCarrier, query: Q1) -> Fallible<()>;
-// }
-
-// impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> EvalIfQueryable
-//     for Measurement<DI, DO, MI, MO>
-// {
-//     type OutputCarrier = DO::Carrier;
-//     fn eval_if_queryable<Q1: 'static>(_value: &mut DO::Carrier, _query: Q1) -> Fallible<()> {
-//         Ok(())
-//     }
-// }
-
-// impl<DI: Domain, Q, A, MI: Metric, MO: Measure> EvalIfQueryable
-//     for InteractiveMeasurement<DI, Q, A, MI, MO>
-// {
-//     type OutputCarrier = QueryableBase;
-//     fn eval_if_queryable<Q1: 'static>(queryable: &mut QueryableBase, query: Q1) -> Fallible<()> {
-//         queryable.eval(&query)
-//     }
-// }
 
 
 impl<Q, A> CheckNull for Queryable<Q, A> {
