@@ -32,9 +32,7 @@ impl Context {
 
 /// A structure tracking the state of an interactive measurement queryable.
 #[derive(Clone)]
-pub(crate) struct QueryableBase(
-    Rc<RefCell<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>
-);
+pub(crate) struct QueryableBase(Rc<RefCell<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>);
 
 impl QueryableBase {
     pub fn eval<Q: 'static, A: 'static>(&mut self, query: &Q) -> Fallible<A> {
@@ -54,7 +52,6 @@ impl QueryableBase {
         QueryableBase(Rc::new(RefCell::new(transition)))
     }
 }
-
 
 /// Queryables are used to model interactive measurements,
 /// and are generic over the type of the query (Q) and answer (A).
@@ -79,61 +76,62 @@ impl<Q: 'static, A: 'static> Queryable<Q, A> {
         }
     }
 
-
     pub(crate) fn new_nestable<S: 'static, QD: 'static + Clone>(
         mut state: S,
+        // get what the privacy spend (DQ) would be after computing the query (Q)
         pre_eval: impl Fn(&S, &Q) -> Fallible<QD> + 'static,
+        // compute the query
         eval: impl Fn(&mut S, &Q, &QueryableBase) -> Fallible<A> + 'static,
-        pre_child_eval: impl Fn(&S, &DescendantChange<QD>) -> Fallible<QD> + 'static,
-        child_eval: impl Fn(&mut S, &DescendantChange<QD>) -> Fallible<()> + 'static
+        // maybe apply descendant change and return new privacy spend
+        child_eval: Option<impl Fn(&mut S, &DescendantChange<QD>) -> Fallible<QD> + 'static>,
     ) -> Self {
         let mut context: Option<Context> = None;
-        Queryable::new(
-            move |self_: &QueryableBase, query: &dyn Any| {
-                if let Some(query) = query.downcast_ref::<Q>() {
+        Queryable::new(move |self_: &QueryableBase, query: &dyn Any| {
+            if let Some(query) = query.downcast_ref::<Q>() {
+                let d_mid = pre_eval(&state, &query)?;
 
-                    let d_mid = pre_eval(&state, &query)?;
-                    
-                    // if there is context, run a pre-commit
-                    if let Some(context) = &mut context {
-                        context.pre_commit(&d_mid)?;
-                    }
-
-                    let answer = eval(&mut state, &query, self_)?;
-
-                    // if there is context, commit the changes
-                    if let Some(context) = &mut context {
-                        context.commit(&d_mid)?;
-                    }
-
-                    return Ok(Box::new(answer) as Box<dyn Any>);
+                // if there is context, run a pre-commit
+                if let Some(context) = &mut context {
+                    context.pre_commit(&d_mid)?;
                 }
 
-                if let Some(q) = query.downcast_ref::<Context>() {
-                    if context.is_some() {
-                        return fallible!(FailedFunction, "context has already been set");
-                    }
-                    context.replace(q.clone());
-                    return Ok(Box::new(()) as Box<dyn Any>);
+                let answer = eval(&mut state, &query, self_)?;
+
+                // if there is context, commit the changes
+                if let Some(context) = &mut context {
+                    context.commit(&d_mid)?;
                 }
 
-                // children are always IM's, so new_privacy_loss is bounded by d_mid_i
-                if let Some(query) = query.downcast_ref::<DescendantChange<QD>>() {
-                    let d_temp = pre_child_eval(&state, query)?;
-                    if let Some(context) = &mut context {
-                        context.parent.eval_any(&DescendantChange {
-                            id: context.id,
-                            new_privacy_loss: d_temp,
-                            commit: query.commit,
-                        })?;
-                    };
-                    child_eval(&mut state, query)?;
-                    return Ok(Box::new(()) as Box<dyn Any>)
-                }
-
-                fallible!(FailedFunction, "unrecognized query!")
+                return Ok(Box::new(answer) as Box<dyn Any>);
             }
-        )
+
+            if let Some(q) = query.downcast_ref::<Context>() {
+                if context.is_some() {
+                    return fallible!(FailedFunction, "context has already been set");
+                }
+                context.replace(q.clone());
+                return Ok(Box::new(()) as Box<dyn Any>);
+            }
+
+            // children are always IM's, so new_privacy_loss is bounded by d_mid_i
+            if let Some(query) = query.downcast_ref::<DescendantChange<QD>>() {
+                let Some(child_eval) = &child_eval else {
+                    return fallible!(FailedFunction, "queryable is not a suitable parent")
+                };
+
+                let d_temp = child_eval(&mut state, query)?;
+                if let Some(context) = &mut context {
+                    context.parent.eval_any(&DescendantChange {
+                        id: context.id,
+                        new_privacy_loss: d_temp,
+                        commit: query.commit,
+                    })?;
+                };
+                return Ok(Box::new(()) as Box<dyn Any>);
+            }
+
+            fallible!(FailedFunction, "unrecognized query!")
+        })
     }
 }
 
@@ -142,11 +140,16 @@ impl<Q: 'static> Queryable<Q, Box<dyn Any>> {
     pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
         self.eval(&query)?
             .downcast()
-            .map_err(|_| err!(FailedCast, "failed to downcast to {}", std::any::type_name::<A>()))
+            .map_err(|_| {
+                err!(
+                    FailedCast,
+                    "failed to downcast to {}",
+                    std::any::type_name::<A>()
+                )
+            })
             .map(|b| *b)
     }
 }
-
 
 pub(crate) struct DescendantChange<Q> {
     #[allow(dead_code)]
@@ -155,7 +158,6 @@ pub(crate) struct DescendantChange<Q> {
     pub new_privacy_loss: Q,
     pub commit: bool,
 }
-
 
 impl<Q, A> CheckNull for Queryable<Q, A> {
     fn is_null(&self) -> bool {

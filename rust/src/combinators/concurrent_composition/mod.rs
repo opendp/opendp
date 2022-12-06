@@ -1,4 +1,3 @@
-
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
@@ -41,38 +40,49 @@ where
         Function::new(enclose!((d_in, d_out, d_mids), move |arg: &DI::Carrier| {
             Queryable::new_nestable(
                 d_mids.clone(),
-                enclose!(d_in, move |d_mids: &Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>| {
-                    let d_mid =
-                    (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
+                // computes what the new privacy spend would be
+                enclose!(
+                    (d_in, d_out),
+                    move |d_mids: &Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>| {
+                        let d_mid = (d_mids.last())
+                            .ok_or_else(|| err!(FailedFunction, "out of queries"))?;
 
-                    if !meas.check(&d_in, d_mid)? {
-                        return fallible!(FailedFunction, "insufficient budget for query");
+                        if !meas.check(&d_in, d_mid)? {
+                            return fallible!(FailedFunction, "insufficient budget for query");
+                        }
+                        Ok(d_out.clone())
                     }
-                    Ok(d_mid.clone())
-                }),
-                enclose!(arg, move |d_mids: &mut Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>, self_: &QueryableBase| {
-                    let mut answer = meas.invoke(&arg)?;
-                    d_mids.pop();
+                ),
+                // evaluates the query
+                enclose!(
+                    arg,
+                    move |d_mids: &mut Vec<MO::Distance>,
+                          meas: &Measurement<DI, DO, MI, MO>,
+                          self_: &QueryableBase| {
+                        let mut answer = meas.invoke(&arg)?;
+                        d_mids.pop();
 
-                    // register context with the child if it is a queryable
-                    DO::eval_member(
-                        &mut answer,
-                        Context {
-                            parent: self_.clone(),
-                            id: d_mids.len(),
-                        },
-                    )?;
+                        // register context with the child if it is a queryable
+                        DO::eval_member(
+                            &mut answer,
+                            Context {
+                                parent: self_.clone(),
+                                id: d_mids.len(),
+                            },
+                        )?;
 
-                    Ok(answer)
-                }),
-                enclose!(d_out, move |_d_mids: &Vec<MO::Distance>, _query: &DescendantChange<MO::Distance>| {
-                    Ok(d_out.clone())
-                }),
-                |_d_mids: &mut Vec<MO::Distance>, _query: &DescendantChange<MO::Distance>| {
-                    Ok(())
-                }
-            )}
-        )),
+                        Ok(answer)
+                    }
+                ),
+                // defines how to handle queries from children
+                Some(enclose!(
+                    d_out,
+                    move |_d_mids: &mut Vec<MO::Distance>, _query: &DescendantChange<MO::Distance>| {
+                        Ok(d_out.clone())
+                    }
+                )),
+            )
+        })),
         input_metric,
         output_measure,
         PrivacyMap::new_fallible(move |d_in_p: &MI::Distance| {
