@@ -30,6 +30,7 @@ use std::rc::Rc;
 
 use crate::domains::QueryableDomain;
 use crate::error::*;
+use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
 
@@ -227,8 +228,6 @@ pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-pub type InteractiveMeasurement<DI, Q, A, MI, MO> = Measurement<DI, QueryableDomain<Q, A>, MI, MO>;
-
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
     pub fn new(
         input_domain: DI,
@@ -312,6 +311,37 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
         where MO::Distance: TotalOrd {
         d_out.total_ge(&self.map(d_in)?)
+    }
+}
+
+#[derive(Clone)]
+pub struct Odometer<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+    pub input_domain: DI,
+    pub output_domain: DO,
+    pub function: Function<DI, DO>,
+    pub input_metric: MI,
+    pub output_measure: MO,
+}
+
+impl<DI: Domain, Q, A, MI: Metric, MO: Measure> Odometer<DI, QueryableDomain<Q, A>, MI, MO> {
+    pub fn new(
+        input_domain: DI,
+        output_domain: QueryableDomain<Q, A>,
+        function: Function<DI, QueryableDomain<Q, A>>,
+        input_metric: MI,
+        output_measure: MO,
+    ) -> Self {
+        Self {
+            input_domain,
+            output_domain,
+            function,
+            input_metric,
+            output_measure,
+        }
+    }
+
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<Queryable<Q, A>> {
+        self.function.eval(arg)
     }
 }
 

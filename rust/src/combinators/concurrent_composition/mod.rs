@@ -1,10 +1,10 @@
 use std::any::Any;
 
 use crate::{
-    core::{Domain, Function, InteractiveMeasurement, Measure, Measurement, Metric, PrivacyMap},
+    core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
-    interactive::{CheckDescendantChange, Context, Queryable},
+    interactive::{Context, DescendantChange, Queryable, QueryableBase},
     traits::{InfAdd, TotalOrd},
 };
 
@@ -19,7 +19,7 @@ pub fn make_concurrent_composition<
     output_measure: MO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
-) -> Fallible<InteractiveMeasurement<DI, Measurement<DI, DO, MI, MO>, DO::Carrier, MI, MO>>
+) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO::Carrier>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
@@ -36,7 +36,7 @@ where
     // we'll iteratively pop from the end
     d_mids.reverse();
 
-    Ok(InteractiveMeasurement::new(
+    Ok(Measurement::new(
         input_domain,
         QueryableDomain::new(),
         Function::new(enclose!((d_in, d_out, d_mids), move |arg: &DI::Carrier| {
@@ -46,7 +46,7 @@ where
 
             Queryable::new(enclose!(
                 (d_in, d_out, arg),
-                move |s: &Queryable<Measurement<DI, DO, MI, MO>, DO::Carrier>, q: &dyn Any| {
+                move |s: &QueryableBase, q: &dyn Any| {
                     if let Some(q_meas) = q.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
                         let d_mid =
                             (d_mids.pop()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
@@ -55,22 +55,27 @@ where
                             return fallible!(FailedFunction, "insufficient budget for query");
                         }
 
-                        // pre-check
+                        // if there is context, run a pre-commit
                         if let Some(context) = &mut context {
-                            context.parent.eval::<_, ()>(&CheckDescendantChange {
-                                index: context.id,
-                                new_privacy_loss: d_out.clone(),
-                                commit: false,
-                            })?;
+                            context.pre_commit(&d_mid)?;
                         }
 
-                        let mut answer = q_meas.invoke(&arg)?;
+                        let mut answer = q_meas.invoke(&arg).map_err(|e| {
+                            // If query failed, restore the budget and propagate the error
+                            d_mids.push(d_mid.clone());
+                            e
+                        })?;
+
+                        // if there is context, commit the changes
+                        if let Some(context) = &mut context {
+                            context.commit(&d_mid)?;
+                        }
 
                         // register context with the child if it is a queryable
                         DO::eval_member(
                             &mut answer,
                             Context {
-                                parent: s.base.clone(),
+                                parent: s.clone(),
                                 id: d_mids.len(),
                             },
                         )?;
@@ -88,10 +93,10 @@ where
                     }
 
                     // children are always IM's, so new_privacy_loss is bounded by d_mid_i
-                    if let Some(query) = q.downcast_ref::<CheckDescendantChange<MO::Distance>>() {
+                    if let Some(query) = q.downcast_ref::<DescendantChange<MO::Distance>>() {
                         return if let Some(context) = &mut context {
-                            context.parent.eval_any(&CheckDescendantChange {
-                                index: context.id,
+                            context.parent.eval_any(&DescendantChange {
+                                id: context.id,
                                 new_privacy_loss: d_out.clone(),
                                 commit: query.commit,
                             })
@@ -119,10 +124,38 @@ where
     ))
 }
 
+// fn two_phase_commit<T, Q: 'static + Clone>(
+//     context: &mut Option<Context>,
+//     new_privacy_loss: &Q,
+//     function: impl FnOnce() -> Fallible<T>,
+// ) -> Fallible<T> {
+//     if let Some(context) = context {
+//         context.parent.eval_any(&DescendantChange {
+//             id: context.id,
+//             new_privacy_loss: new_privacy_loss.clone(),
+//             commit: false,
+//         })?;
+//     }
+    
+//     let answer = function()?;
+
+//     if let Some(context) = context {
+//         context.parent.eval_any(&DescendantChange {
+//             id: context.id,
+//             new_privacy_loss: new_privacy_loss.clone(),
+//             commit: true,
+//         })?;
+//     };
+
+//     Ok(answer)
+// }
+
 #[cfg(test)]
 mod test {
     use crate::{
-        domains::{AllDomain, PolyDomain}, measurements::make_randomized_response_bool, measures::MaxDivergence,
+        domains::{AllDomain, PolyDomain},
+        measurements::make_randomized_response_bool,
+        measures::MaxDivergence,
         metrics::DiscreteDistance,
     };
 
@@ -175,7 +208,8 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, Box<dyn Any>> = queryable.eval_poly(&cc_query_4)?;
+        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, Box<dyn Any>> =
+            queryable.eval_poly(&cc_query_4)?;
         let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
         let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
 
