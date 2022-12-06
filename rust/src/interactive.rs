@@ -7,7 +7,7 @@ use crate::error::*;
 use crate::traits::CheckNull;
 
 #[derive(Clone)]
-pub struct Context {
+pub(crate) struct Context {
     pub parent: QueryableBase,
     pub id: usize,
 }
@@ -30,15 +30,9 @@ impl Context {
     }
 }
 
-#[derive(Clone)]
-pub struct Node {
-    pub value: Rc<dyn Any>,
-    pub context: Option<Context>,
-}
-
 /// A structure tracking the state of an interactive measurement queryable.
 #[derive(Clone)]
-pub struct QueryableBase(
+pub(crate) struct QueryableBase(
     Rc<RefCell<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>
 );
 
@@ -59,14 +53,6 @@ impl QueryableBase {
     ) -> Self {
         QueryableBase(Rc::new(RefCell::new(transition)))
     }
-
-    pub fn as_typed<Q, A>(self) -> Queryable<Q, A> {
-        Queryable {
-            _query: PhantomData::<Q>,
-            _answer: PhantomData::<A>,
-            base: self,
-        }
-    }
 }
 
 
@@ -75,7 +61,7 @@ impl QueryableBase {
 pub struct Queryable<Q, A> {
     _query: PhantomData<Q>,
     _answer: PhantomData<A>,
-    pub base: QueryableBase,
+    pub(crate) base: QueryableBase,
 }
 
 impl<Q: 'static, A: 'static> Queryable<Q, A> {
@@ -83,7 +69,7 @@ impl<Q: 'static, A: 'static> Queryable<Q, A> {
         self.base.eval::<Q, A>(q)
     }
 
-    pub fn new(
+    pub(crate) fn new(
         transition: impl FnMut(&QueryableBase, &dyn Any) -> Fallible<Box<dyn Any>> + 'static,
     ) -> Self {
         Queryable {
@@ -105,7 +91,7 @@ impl<Q: 'static> Queryable<Q, Box<dyn Any>> {
 }
 
 
-pub struct DescendantChange<Q> {
+pub(crate) struct DescendantChange<Q> {
     pub id: usize,
     pub new_privacy_loss: Q,
     pub commit: bool,
