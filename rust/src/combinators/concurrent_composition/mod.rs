@@ -1,4 +1,3 @@
-use std::any::Any;
 
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
@@ -40,75 +39,40 @@ where
         input_domain,
         QueryableDomain::new(),
         Function::new(enclose!((d_in, d_out, d_mids), move |arg: &DI::Carrier| {
-            // STATE
-            let mut context: Option<Context> = None;
-            let mut d_mids = d_mids.clone();
+            Queryable::new_nestable(
+                d_mids.clone(),
+                enclose!(d_in, move |d_mids: &Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>| {
+                    let d_mid =
+                    (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
 
-            Queryable::new(enclose!(
-                (d_in, d_out, arg),
-                move |s: &QueryableBase, q: &dyn Any| {
-                    if let Some(q_meas) = q.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
-                        let d_mid =
-                            (d_mids.pop()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
-
-                        if !q_meas.check(&d_in, &d_mid)? {
-                            return fallible!(FailedFunction, "insufficient budget for query");
-                        }
-
-                        // if there is context, run a pre-commit
-                        if let Some(context) = &mut context {
-                            context.pre_commit(&d_mid)?;
-                        }
-
-                        let mut answer = q_meas.invoke(&arg).map_err(|e| {
-                            // If query failed, restore the budget and propagate the error
-                            d_mids.push(d_mid.clone());
-                            e
-                        })?;
-
-                        // if there is context, commit the changes
-                        if let Some(context) = &mut context {
-                            context.commit(&d_mid)?;
-                        }
-
-                        // register context with the child if it is a queryable
-                        DO::eval_member(
-                            &mut answer,
-                            Context {
-                                parent: s.clone(),
-                                id: d_mids.len(),
-                            },
-                        )?;
-
-                        return Ok(Box::new(answer) as Box<dyn Any>);
+                    if !meas.check(&d_in, d_mid)? {
+                        return fallible!(FailedFunction, "insufficient budget for query");
                     }
+                    Ok(d_mid.clone())
+                }),
+                enclose!(arg, move |d_mids: &mut Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>, self_: &QueryableBase| {
+                    let mut answer = meas.invoke(&arg)?;
+                    d_mids.pop();
 
-                    // tell this queryable that it is a child of some other queryable
-                    if let Some(q) = q.downcast_ref::<Context>() {
-                        if context.is_some() {
-                            return fallible!(FailedFunction, "context has already been set");
-                        }
-                        context.replace(q.clone());
-                        return Ok(Box::new(()) as Box<dyn Any>);
-                    }
+                    // register context with the child if it is a queryable
+                    DO::eval_member(
+                        &mut answer,
+                        Context {
+                            parent: self_.clone(),
+                            id: d_mids.len(),
+                        },
+                    )?;
 
-                    // children are always IM's, so new_privacy_loss is bounded by d_mid_i
-                    if let Some(query) = q.downcast_ref::<DescendantChange<MO::Distance>>() {
-                        return if let Some(context) = &mut context {
-                            context.parent.eval_any(&DescendantChange {
-                                id: context.id,
-                                new_privacy_loss: d_out.clone(),
-                                commit: query.commit,
-                            })
-                        } else {
-                            Ok(Box::new(()) as Box<dyn Any>)
-                        };
-                    }
-
-                    fallible!(FailedFunction, "unrecognized query!")
+                    Ok(answer)
+                }),
+                enclose!(d_out, move |_d_mids: &Vec<MO::Distance>, _query: &DescendantChange<MO::Distance>| {
+                    Ok(d_out.clone())
+                }),
+                |_d_mids: &mut Vec<MO::Distance>, _query: &DescendantChange<MO::Distance>| {
+                    Ok(())
                 }
-            ))
-        })),
+            )}
+        )),
         input_metric,
         output_measure,
         PrivacyMap::new_fallible(move |d_in_p: &MI::Distance| {
@@ -136,7 +100,7 @@ where
 //             commit: false,
 //         })?;
 //     }
-    
+
 //     let answer = function()?;
 
 //     if let Some(context) = context {
@@ -152,6 +116,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::any::Any;
+
     use crate::{
         domains::{AllDomain, PolyDomain},
         measurements::make_randomized_response_bool,
