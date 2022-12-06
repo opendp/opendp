@@ -176,6 +176,7 @@ extern crate lazy_static;
 pub mod error;
 
 pub mod accuracy;
+#[cfg(feature="ffi")]
 pub mod beam;
 pub mod combinators;
 pub mod core;

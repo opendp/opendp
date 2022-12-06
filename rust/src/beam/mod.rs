@@ -1,6 +1,8 @@
-use crate::core::{Function, StabilityMap, Transformation};
+use std::any::Any;
+use crate::core::{FfiResult, Function, StabilityMap, Transformation};
 use crate::domains::AllDomain;
 use crate::error::Fallible;
+use crate::ffi::any::AnyObject;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::CheckNull;
 
@@ -10,8 +12,24 @@ impl CheckNull for PCollection {
         false
     }
 }
+impl PCollection {
+    pub fn map(function: impl Fn(&i32) -> i32 + 'static) {
+    }
+}
 
-pub fn make_beam_sum() -> Fallible<
+
+pub type MapFn = extern "C" fn(*const AnyObject, *const AnyObject) -> *mut FfiResult<*mut AnyObject>;
+pub type MapImplFn = extern "C" fn(*const PCollection, MapFn, *const AnyObject) -> *mut FfiResult<*mut PCollection>;
+
+fn mul_map_fn(x: *const AnyObject, ctx: *const AnyObject) -> *mut FfiResult<*mut AnyObject> {
+    todo!()
+}
+
+fn local_map_impl_fn(arg: *const PCollection, f: MapFn, ctx: *const AnyObject) -> *mut FfiResult<*mut PCollection> {
+    todo!()
+}
+
+pub fn make_mul_beam(x: i32, map_impl: MapImplFn) -> Fallible<
     Transformation<
         AllDomain<PCollection>,
         AllDomain<f64>,
@@ -22,7 +40,9 @@ pub fn make_beam_sum() -> Fallible<
     Ok(Transformation::new(
         AllDomain::new(),
         AllDomain::new(),
-        Function::new(|arg| 99.9),
+        Function::new(|arg| {
+            map_impl(arg, mul_map_fn, std::ptr::null())
+        }),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityMap::new(|_d_in| 1.0),
@@ -35,9 +55,9 @@ pub mod test {
 
     #[test]
     fn test_sum() -> Fallible<()> {
-        let sum = make_beam_sum()?;
+        let mul2 = make_mul_beam(2, local_map_impl_fn)?;
         let arg = PCollection {};
-        let res = sum.invoke(&arg)?;
+        let res = mul2.invoke(&arg)?;
         assert_eq!(res, 99.9);
         Ok(())
     }
