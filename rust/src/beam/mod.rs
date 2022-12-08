@@ -18,6 +18,23 @@ impl PCollection {
 }
 
 
+pub trait Collection<T> {
+    fn map(&self, f: impl Fn(&T) -> T + 'static) -> Box<dyn Collection<T>>;
+    fn reduce(&self, f: impl Fn(&T) -> T + 'static) -> Box<dyn Collection<T>>;
+}
+
+pub struct VecCollection<T>(Vec<T>);
+impl<T> Collection<T> for VecCollection<T> {
+    fn map(&self, f: impl Fn(&T) -> T + 'static) -> Box<dyn Collection<T>> {
+        self.0.into_iter().map(f).collect()
+    }
+
+    fn reduce(&self, function: impl Fn(&T) -> T + 'static) -> Box<dyn Collection<T>> {
+        todo!()
+    }
+}
+
+
 pub type MapFn = extern "C" fn(*const AnyObject, *const AnyObject) -> *mut FfiResult<*mut AnyObject>;
 pub type MapImplFn = extern "C" fn(*const PCollection, MapFn, *const AnyObject) -> *mut FfiResult<*mut PCollection>;
 
