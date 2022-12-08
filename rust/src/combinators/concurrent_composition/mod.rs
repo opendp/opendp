@@ -1,8 +1,10 @@
+use std::any::Any;
+
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
-    interactive::{Context, DescendantChange, Queryable, QueryableBase},
+    interactive::{ChildChange, Context, PrivacyUsageAfter, Queryable, QueryableBase},
     traits::{InfAdd, TotalOrd},
 };
 
@@ -17,7 +19,7 @@ pub fn make_concurrent_composition<
     output_measure: MO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
-) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO::Carrier>, MI, MO>>
+) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
@@ -38,50 +40,50 @@ where
         input_domain,
         QueryableDomain::new(),
         Function::new(enclose!((d_in, d_out, d_mids), move |arg: &DI::Carrier| {
-            Queryable::new_nestable(
-                d_mids.clone(),
-                // computes what the new privacy spend would be
-                enclose!(
-                    (d_in, d_out),
-                    move |d_mids: &Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>| {
+            // STATE
+            let mut d_mids = d_mids.clone();
+
+            Queryable::new(enclose!(
+                (d_in, d_out, arg),
+                move |self_: &QueryableBase, query: &dyn Any| {
+                    // evaluate the measurement query and return the answer
+                    if let Some(measurement) = query.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
                         let d_mid = (d_mids.last())
                             .ok_or_else(|| err!(FailedFunction, "out of queries"))?;
 
-                        if !meas.check(&d_in, d_mid)? {
+                        if !measurement.check(&d_in, d_mid)? {
                             return fallible!(FailedFunction, "insufficient budget for query");
                         }
-                        Ok(d_out.clone())
-                    }
-                ),
-                // evaluates the query
-                enclose!(
-                    arg,
-                    move |d_mids: &mut Vec<MO::Distance>,
-                          meas: &Measurement<DI, DO, MI, MO>,
-                          self_: &QueryableBase| {
-                        let mut answer = meas.invoke(&arg)?;
+
+                        let answer = measurement.invoke(&arg)?;
+
+                        let answer = DO::wrap_queryable::<MO::Distance>(
+                            answer,
+                            Context::new(self_.clone(), d_mids.len()),
+                        );
+
                         d_mids.pop();
 
-                        // register context with the child if it is a queryable
-                        DO::eval_member(
-                            &mut answer,
-                            Context {
-                                parent: self_.clone(),
-                                id: d_mids.len(),
-                            },
-                        )?;
+                        return Ok(Box::new(answer));
+                    }
 
-                        Ok(answer)
+                    // returns what the privacy usage would be after evaluating the measurement
+                    if (query.downcast_ref::<PrivacyUsageAfter<Measurement<DI, DO, MI, MO>>>())
+                        .is_some()
+                    {
+                        // privacy usage won't change in response to any query
+                        return Ok(Box::new(d_out.clone()));
                     }
-                ),
-                // defines how to handle queries from children
-                Some(enclose!(
-                    d_out,
-                    move |_d_mids: &mut Vec<MO::Distance>, _query: &DescendantChange<MO::Distance>| {
-                        Ok(d_out.clone())
+
+                    // update state based on child change
+                    if query.downcast_ref::<ChildChange<MO::Distance>>().is_some() {
+                        // state won't change in response to child
+                        return Ok(Box::new(()));
                     }
-                )),
-            )
+
+                    fallible!(FailedFunction, "unrecognized query!")
+                }
+            ))
         })),
         input_metric,
         output_measure,
@@ -98,35 +100,8 @@ where
     ))
 }
 
-// fn two_phase_commit<T, Q: 'static + Clone>(
-//     context: &mut Option<Context>,
-//     new_privacy_loss: &Q,
-//     function: impl FnOnce() -> Fallible<T>,
-// ) -> Fallible<T> {
-//     if let Some(context) = context {
-//         context.parent.eval_any(&DescendantChange {
-//             id: context.id,
-//             new_privacy_loss: new_privacy_loss.clone(),
-//             commit: false,
-//         })?;
-//     }
-
-//     let answer = function()?;
-
-//     if let Some(context) = context {
-//         context.parent.eval_any(&DescendantChange {
-//             id: context.id,
-//             new_privacy_loss: new_privacy_loss.clone(),
-//             commit: true,
-//         })?;
-//     };
-
-//     Ok(answer)
-// }
-
 #[cfg(test)]
 mod test {
-    use std::any::Any;
 
     use crate::{
         domains::{AllDomain, PolyDomain},
@@ -169,7 +144,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, bool> = queryable.eval_poly(&cc_query_3)?;
+        let mut answer3: Queryable<_, AllDomain<bool>> = queryable.eval_poly(&cc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?;
         let _answer3_2: bool = answer3.eval(&rr_query)?;
 
@@ -184,7 +159,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, Box<dyn Any>> =
+        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, _> =
             queryable.eval_poly(&cc_query_4)?;
         let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
         let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;

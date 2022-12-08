@@ -3,26 +3,31 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+use crate::core::Domain;
+use crate::domains::PolyDomain;
 use crate::error::*;
 use crate::traits::CheckNull;
 
 #[derive(Clone)]
-pub(crate) struct Context {
-    pub parent: QueryableBase,
-    pub id: usize,
+pub struct Context {
+    parent: QueryableBase,
+    id: usize,
 }
 
 impl Context {
-    pub fn pre_commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
-        self.parent.eval(&DescendantChange {
+    pub(crate) fn new(parent: QueryableBase, id: usize) -> Self {
+        Context { parent, id }
+    }
+    pub(crate) fn pre_commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
+        self.parent.eval(&ChildChange {
             id: self.id,
             new_privacy_loss: new_privacy_loss.clone(),
             commit: false,
         })
     }
 
-    pub fn commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
-        self.parent.eval(&DescendantChange {
+    pub(crate) fn commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
+        self.parent.eval(&ChildChange {
             id: self.id,
             new_privacy_loss: new_privacy_loss.clone(),
             commit: true,
@@ -55,15 +60,17 @@ impl QueryableBase {
 
 /// Queryables are used to model interactive measurements,
 /// and are generic over the type of the query (Q) and answer (A).
-pub struct Queryable<Q, A> {
+pub struct Queryable<Q, DA: Domain> {
     _query: PhantomData<Q>,
-    _answer: PhantomData<A>,
+    _answer: PhantomData<DA>,
     pub(crate) base: QueryableBase,
 }
 
-impl<Q: 'static, A: 'static> Queryable<Q, A> {
-    pub fn eval(&mut self, q: &Q) -> Fallible<A> {
-        self.base.eval::<Q, A>(q)
+impl<Q: 'static + Clone, DA: Domain + 'static> Queryable<Q, DA>
+    where DA::Carrier: 'static {
+    
+    pub fn eval(&mut self, q: &Q) -> Fallible<DA::Carrier> {
+        self.base.eval::<Q, DA::Carrier>(q)
     }
 
     pub(crate) fn new(
@@ -76,66 +83,36 @@ impl<Q: 'static, A: 'static> Queryable<Q, A> {
         }
     }
 
-    pub(crate) fn new_nestable<S: 'static, QD: 'static + Clone>(
-        mut state: S,
-        // get what the privacy spend (DQ) would be after computing the query (Q)
-        pre_eval: impl Fn(&S, &Q) -> Fallible<QD> + 'static,
-        // compute the query
-        eval: impl Fn(&mut S, &Q, &QueryableBase) -> Fallible<A> + 'static,
-        // maybe apply descendant change and return new privacy spend
-        child_eval: Option<impl Fn(&mut S, &DescendantChange<QD>) -> Fallible<QD> + 'static>,
-    ) -> Self {
-        let mut context: Option<Context> = None;
-        Queryable::new(move |self_: &QueryableBase, query: &dyn Any| {
+    pub(crate) fn with_context<QD: 'static + Clone>(mut self, mut context: Context) -> Self {
+        Queryable::new(move |_self_outer: &QueryableBase, query: &dyn Any| {
             if let Some(query) = query.downcast_ref::<Q>() {
-                let d_mid = pre_eval(&state, &query)?;
+                let d_mid = self.base.eval(&PrivacyUsageAfter(query.clone()))?;
 
-                // if there is context, run a pre-commit
-                if let Some(context) = &mut context {
-                    context.pre_commit(&d_mid)?;
-                }
+                context.pre_commit(&d_mid)?;
 
-                let answer = eval(&mut state, &query, self_)?;
+                let answer = self.eval(&query)?;
 
-                // if there is context, commit the changes
-                if let Some(context) = &mut context {
-                    context.commit(&d_mid)?;
-                }
+                context.commit(&d_mid)?;
 
                 return Ok(Box::new(answer) as Box<dyn Any>);
             }
 
-            if let Some(q) = query.downcast_ref::<Context>() {
-                if context.is_some() {
-                    return fallible!(FailedFunction, "context has already been set");
-                }
-                context.replace(q.clone());
-                return Ok(Box::new(()) as Box<dyn Any>);
-            }
-
             // children are always IM's, so new_privacy_loss is bounded by d_mid_i
-            if let Some(query) = query.downcast_ref::<DescendantChange<QD>>() {
-                let Some(child_eval) = &child_eval else {
-                    return fallible!(FailedFunction, "queryable is not a suitable parent")
-                };
-
-                let d_temp = child_eval(&mut state, query)?;
-                if let Some(context) = &mut context {
-                    context.parent.eval_any(&DescendantChange {
-                        id: context.id,
-                        new_privacy_loss: d_temp,
-                        commit: query.commit,
-                    })?;
-                };
-                return Ok(Box::new(()) as Box<dyn Any>);
+            if let Some(query) = query.downcast_ref::<ChildChange<QD>>() {
+                let d_temp = self.base.eval(query)?;
+                return context.parent.eval_any(&ChildChange {
+                    id: context.id,
+                    new_privacy_loss: d_temp,
+                    commit: query.commit,
+                });
             }
 
-            fallible!(FailedFunction, "unrecognized query!")
+            self.base.eval_any(query)
         })
     }
 }
 
-impl<Q: 'static> Queryable<Q, Box<dyn Any>> {
+impl<Q: 'static + Clone> Queryable<Q, PolyDomain> {
     /// Evaluates a polymorphic query and downcasts to the given type.
     pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
         self.eval(&query)?
@@ -151,7 +128,7 @@ impl<Q: 'static> Queryable<Q, Box<dyn Any>> {
     }
 }
 
-pub(crate) struct DescendantChange<Q> {
+pub(crate) struct ChildChange<Q> {
     #[allow(dead_code)]
     pub id: usize,
     #[allow(dead_code)]
@@ -159,7 +136,9 @@ pub(crate) struct DescendantChange<Q> {
     pub commit: bool,
 }
 
-impl<Q, A> CheckNull for Queryable<Q, A> {
+pub struct PrivacyUsageAfter<Q>(pub Q);
+
+impl<Q, DA: Domain> CheckNull for Queryable<Q, DA> {
     fn is_null(&self) -> bool {
         false
     }

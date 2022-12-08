@@ -1,27 +1,144 @@
 use crate::{
-    core::{Domain, Measure, Measurement, Metric, PrivacyMap, Function},
+    core::{Domain, Function, Measure, Measurement, Metric, Odometer, PrivacyMap, Transformation},
     domains::QueryableDomain,
     error::Fallible,
-    traits::{TotalOrd, InfSub}, interactive::Queryable
+    interactive::{ChildChange, Context, Queryable, QueryableBase},
+    traits::{InfAdd, TotalOrd},
 };
 
-pub fn make_privacy_odometer<DI: Domain, DO: Domain, MI: Metric, MO: Measure>(
-    domain_in: DI,
-    metric_in: MI,
-    measure_out: MO,
-    d_in: MI::Distance,
-) -> Fallible<Queryable<MO::Distance, Measurement<DI, DO, MI, MO>, DO::Carrier>>
+pub fn make_odometer<
+    DI: Domain + 'static,
+    DX: Domain + 'static,
+    DO: Domain + 'static,
+    MI: Metric + 'static,
+    MX: Metric + 'static,
+    MO: Measure + 'static,
+>(
+    transformation: Option<Transformation<DI, DX, MI, MX>>,
+    d_in: MI::Distance
+) -> Fallible<Odometer<DI, QueryableDomain<Measurement<DX, DO, MX, MO>, DO::Carrier>, MI, MO>>
 where
-    DI::Carrier: 'static + Clone,
     MI::Distance: 'static + TotalOrd + Clone,
-    MO::Distance: 'static + TotalOrd + Clone + InfAdd + Zero,
-{   
-    let state = d_out.clone();
-    let transition = enclose!((arg, d_in), move |mut s: MO::Distance, q: &Measurement<DI, DO, MI, MO>| {
-        let d_mid = q.map(&d_in)?;
-        s = s.inf_sub(&d_mid)?;
-        let a = q.invoke(&arg)?;
-        Ok((s, a))
-    });
-    Queryable::new(state, transition)
+    DI::Carrier: 'static + Clone,
+    MO::Distance: 'static + TotalOrd + Clone + InfAdd,
+{
+    Ok(Odometer::new(
+        input_domain,
+        QueryableDomain::new(),
+        Function::new(move |arg: &DI::Carrier| {
+            Queryable::new_nestable(
+                vec![],
+                // computes what the new privacy spend would be
+                move |d_mids: &Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>| {
+
+                    // TODO: assert that input domain, metric and measure match
+
+                    
+                    if !meas.check(&d_in, d_mid)? {
+                        return fallible!(FailedFunction, "insufficient budget for query");
+                    }
+                    Ok(d_out.clone())
+                },
+                // evaluates the query
+                move |d_mids: &mut Vec<MO::Distance>,
+                      meas: &Measurement<DI, DO, MI, MO>,
+                      self_: &QueryableBase| {
+                    let mut answer = meas.invoke(&arg)?;
+                    d_mids.pop();
+
+                    // register context with the child if it is a queryable
+                    DO::eval_member(
+                        &mut answer,
+                        Context {
+                            parent: self_.clone(),
+                            id: d_mids.len(),
+                        },
+                    )?;
+
+                    Ok(answer)
+                },
+                // defines how to handle queries from children
+                move |d_mids: &mut Vec<MO::Distance>, query: &ChildChange<MO::Distance>| {
+                    if query.id != d_mids.len() {
+                        return fallible!(
+                            FailedFunction,
+                            "sequential compositor has received a new query"
+                        );
+                    }
+                    Ok(d_out.clone())
+                },
+            )
+        }),
+        input_metric,
+        output_measure,
+    ))
+}
+
+#[cfg(test)]
+mod test {
+    use std::any::Any;
+
+    use crate::{
+        domains::{AllDomain, PolyDomain},
+        measurements::make_randomized_response_bool,
+        measures::MaxDivergence,
+        metrics::DiscreteDistance,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_concurrent_composition() -> Fallible<()> {
+        // construct concurrent compositor IM
+        let root = make_sequential_composition(
+            AllDomain::new(),
+            DiscreteDistance::default(),
+            MaxDivergence::default(),
+            1,
+            vec![0.1, 0.1, 0.3, 0.5],
+        )?;
+
+        // pass dataset in and receive a queryable
+        let mut queryable = root.invoke(&true)?;
+
+        let rr_poly_query = make_randomized_response_bool(0.5, false)?.into_poly();
+        let rr_query = make_randomized_response_bool(0.5, false)?;
+
+        // pass queries into the CC queryable
+        let _answer1: bool = queryable.eval_poly(&rr_poly_query)?;
+        let _answer2: bool = queryable.eval_poly(&rr_poly_query)?;
+
+        // pass a concurrent composition compositor into the original CC compositor
+        // This compositor expects all outputs are in AllDomain<bool>
+        let cc_query_3 = make_sequential_composition::<_, AllDomain<bool>, _, _>(
+            AllDomain::<bool>::new(),
+            DiscreteDistance::default(),
+            MaxDivergence::default(),
+            1,
+            vec![0.1, 0.1],
+        )?
+        .into_poly();
+
+        let mut answer3: Queryable<_, bool> = queryable.eval_poly(&cc_query_3)?;
+        let _answer3_1: bool = answer3.eval(&rr_query)?;
+        let _answer3_2: bool = answer3.eval(&rr_query)?;
+
+        // pass a concurrent composition compositor into the original CC compositor
+        // This compositor expects all outputs are in PolyDomain
+        let cc_query_4 = make_sequential_composition::<_, PolyDomain, _, _>(
+            AllDomain::<bool>::new(),
+            DiscreteDistance::default(),
+            MaxDivergence::default(),
+            1,
+            vec![0.2, 0.3],
+        )?
+        .into_poly();
+
+        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, Box<dyn Any>> =
+            queryable.eval_poly(&cc_query_4)?;
+        let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
+        let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
+
+        Ok(())
+    }
 }
