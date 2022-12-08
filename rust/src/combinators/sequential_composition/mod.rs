@@ -1,8 +1,10 @@
+use std::any::Any;
+
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
-    interactive::{Context, ChildChange, Queryable, QueryableBase},
+    interactive::{ChildChange, Context, PrivacyUsageAfter, Queryable, QueryableBase},
     traits::{InfAdd, TotalOrd},
 };
 
@@ -19,9 +21,9 @@ pub fn make_sequential_composition<
     mut d_mids: Vec<MO::Distance>,
 ) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
 where
-    MI::Distance: 'static + TotalOrd + Clone,
+    MI::Distance: 'static + TotalOrd + Copy,
     DI::Carrier: 'static + Clone,
-    MO::Distance: 'static + TotalOrd + Clone + InfAdd,
+    MO::Distance: 'static + TotalOrd + Copy + InfAdd,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_out");
@@ -37,54 +39,78 @@ where
     Ok(Measurement::new(
         input_domain,
         QueryableDomain::new(),
-        Function::new(enclose!((d_in, d_out, d_mids), move |arg: &DI::Carrier| {
-            Queryable::new_nestable(
-                d_mids.clone(),
-                // computes what the new privacy spend would be
-                enclose!(
-                    (d_in, d_out),
-                    move |d_mids: &Vec<MO::Distance>, meas: &Measurement<DI, DO, MI, MO>| {
-                        let d_mid = (d_mids.last())
-                            .ok_or_else(|| err!(FailedFunction, "out of queries"))?;
+        Function::new(enclose!((d_in, d_out), move |arg: &DI::Carrier| {
+            // a new copy of the state variables is made each time the Function is called:
 
-                        if !meas.check(&d_in, d_mid)? {
-                            return fallible!(FailedFunction, "insufficient budget for query");
-                        }
-                        Ok(d_out.clone())
-                    }
-                ),
-                // evaluates the query
-                enclose!(
-                    arg,
-                    move |d_mids: &mut Vec<MO::Distance>,
-                          meas: &Measurement<DI, DO, MI, MO>,
-                          self_: &QueryableBase| {
-                        let mut answer = meas.invoke(&arg)?;
-                        d_mids.pop();
+            // IMMUTABLE STATE VARIABLES
+            let arg = arg.clone();
 
-                        // register context with the child if it is a queryable
-                        DO::eval_member(
-                            &mut answer,
-                            Context {
-                                parent: self_.clone(),
-                                id: d_mids.len(),
-                            },
-                        )?;
+            // MUTABLE STATE VARIABLES
+            let mut d_mids = d_mids.clone();
 
-                        Ok(answer)
+            // below, the queryable closure's arguments are
+            // 1. a reference to itself (which it can use to set context)
+            // 2. the query, which is a dynamically typed `&dyn Any`
+
+            // arg, d_mids, d_in and d_out are all moved into (or captured by) the Queryable closure here
+            Queryable::new(move |self_: &QueryableBase, query: &dyn Any| {
+
+                // evaluate the measurement query and return the answer.
+                //     the downcast ref attempts to downcast the &dyn Any to a specific concrete type
+                //     if the query passed in was this type of measurement, the downcast will succeed
+                if let Some(measurement) = query.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
+
+                    // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
+                    let d_mid =
+                        (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
+
+                    // check that the query doesn't consume too much privacy
+                    if !measurement.check(&d_in, d_mid)? {
+                        return fallible!(FailedFunction, "insufficient budget for query");
                     }
-                ),
-                // defines how to handle queries from children
-                Some(enclose!(
-                    d_out,
-                    move |d_mids: &mut Vec<MO::Distance>, query: &ChildChange<MO::Distance>| {
-                        if query.id != d_mids.len()  {
-                            return fallible!(FailedFunction, "sequential compositor has received a new query")
-                        }
-                        Ok(d_out.clone())
+
+                    // evaluate the query!
+                    let answer = measurement.invoke(&arg)?;
+
+                    // we've now consumed the last d_mid. This is our only state modification
+                    d_mids.pop();
+
+                    // if the answer is a queryable, 
+                    // wrap it so that when the child gets a query it sends a ChildChange query to this parent queryable
+                    // it gives this sequential composition queryable (or any parent of this queryable) 
+                    // a chance to deny the child permission to execute
+                    let wrapped_answer = DO::wrap_queryable::<MO::Distance>(
+                        answer,
+                        Context::new(self_.clone(), d_mids.len()),
+                    );
+
+                    // The box allows the return value to be dynamically typed, just like query was.
+                    // Necessary because different queries have different return types.
+                    // All responses are of type `Fallible<Box<dyn Any>>`
+                    return Ok(Box::new(wrapped_answer));
+                }
+
+                // returns what the privacy usage would be after evaluating the measurement
+                if (query.downcast_ref::<PrivacyUsageAfter<Measurement<DI, DO, MI, MO>>>())
+                    .is_some()
+                {
+                    // privacy usage won't change in response to any query
+                    // when this queryable is a child, d_out is used to send a ChildChange query to parent
+                    return Ok(Box::new(d_out.clone()));
+                }
+
+                // update state based on child change
+                if let Some(change) = query.downcast_ref::<ChildChange<MO::Distance>>() {
+                    if change.id != d_mids.len()  {
+                        return fallible!(FailedFunction, "sequential compositor has received a new query")
                     }
-                )),
-            )
+                    // state won't change in response to child,
+                    // but return an Ok to approve the change
+                    return Ok(Box::new(()));
+                }
+
+                fallible!(FailedFunction, "unrecognized query!")
+            })
         })),
         input_metric,
         output_measure,
@@ -103,7 +129,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::any::Any;
 
     use crate::{
         domains::{AllDomain, PolyDomain},
@@ -115,8 +140,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_concurrent_composition() -> Fallible<()> {
-        // construct concurrent compositor IM
+    fn test_sequential_composition() -> Fallible<()> {
+        // construct sequential compositor IM
         let root = make_sequential_composition(
             AllDomain::new(),
             DiscreteDistance::default(),
@@ -131,13 +156,13 @@ mod test {
         let rr_poly_query = make_randomized_response_bool(0.5, false)?.into_poly();
         let rr_query = make_randomized_response_bool(0.5, false)?;
 
-        // pass queries into the CC queryable
+        // pass queries into the SC queryable
         let _answer1: bool = queryable.eval_poly(&rr_poly_query)?;
         let _answer2: bool = queryable.eval_poly(&rr_poly_query)?;
 
-        // pass a concurrent composition compositor into the original CC compositor
+        // pass a sequential composition compositor into the original SC compositor
         // This compositor expects all outputs are in AllDomain<bool>
-        let cc_query_3 = make_sequential_composition::<_, AllDomain<bool>, _, _>(
+        let sc_query_3 = make_sequential_composition::<_, AllDomain<bool>, _, _>(
             AllDomain::<bool>::new(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
@@ -146,13 +171,13 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, bool> = queryable.eval_poly(&cc_query_3)?;
+        let mut answer3: Queryable<_, AllDomain<bool>> = queryable.eval_poly(&sc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?;
         let _answer3_2: bool = answer3.eval(&rr_query)?;
 
-        // pass a concurrent composition compositor into the original CC compositor
+        // pass a sequential composition compositor into the original SC compositor
         // This compositor expects all outputs are in PolyDomain
-        let cc_query_4 = make_sequential_composition::<_, PolyDomain, _, _>(
+        let sc_query_4 = make_sequential_composition::<_, PolyDomain, _, _>(
             AllDomain::<bool>::new(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
@@ -161,8 +186,8 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, Box<dyn Any>> =
-            queryable.eval_poly(&cc_query_4)?;
+        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, _> =
+            queryable.eval_poly(&sc_query_4)?;
         let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
         let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
 
