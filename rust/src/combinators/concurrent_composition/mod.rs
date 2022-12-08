@@ -1,18 +1,18 @@
 use std::any::Any;
 
 use crate::{
-    core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
+    core::{Domain, Function, Measurement, Metric, PrivacyMap, Measure},
     domains::QueryableDomain,
     error::Fallible,
     interactive::{ChildChange, Context, PrivacyUsageAfter, Queryable, QueryableBase},
-    traits::{InfAdd, TotalOrd},
+    traits::{InfAdd, TotalOrd}, measures::{MaxDivergence, SmoothedMaxDivergence},
 };
 
 pub fn make_concurrent_composition<
     DI: Domain + 'static,
     DO: Domain + 'static,
     MI: Metric + 'static,
-    MO: Measure + 'static,
+    MO: ConcurrentCompositionMeasure + 'static,
 >(
     input_domain: DI,
     input_metric: MI,
@@ -55,16 +55,17 @@ where
                             return fallible!(FailedFunction, "insufficient budget for query");
                         }
 
+                        // evaluate the query!
                         let answer = measurement.invoke(&arg)?;
+                        d_mids.pop();
 
-                        let answer = DO::wrap_queryable::<MO::Distance>(
+                        // if the answer is a queryable, wrap it so that it will communicate with its parent
+                        let wrapped_answer = DO::wrap_queryable::<MO::Distance>(
                             answer,
                             Context::new(self_.clone(), d_mids.len()),
                         );
 
-                        d_mids.pop();
-
-                        return Ok(Box::new(answer));
+                        return Ok(Box::new(wrapped_answer));
                     }
 
                     // returns what the privacy usage would be after evaluating the measurement
@@ -72,12 +73,14 @@ where
                         .is_some()
                     {
                         // privacy usage won't change in response to any query
+                        // when this queryable is a child, d_out is used to send a ChildChange query to parent
                         return Ok(Box::new(d_out.clone()));
                     }
 
                     // update state based on child change
                     if query.downcast_ref::<ChildChange<MO::Distance>>().is_some() {
-                        // state won't change in response to child
+                        // state won't change in response to child, 
+                        // but return an Ok to approve the change
                         return Ok(Box::new(()));
                     }
 
@@ -99,6 +102,14 @@ where
         }),
     ))
 }
+
+/// A trait that is only implemented for measures that support concurrent composition
+#[doc(hidden)]
+pub trait ConcurrentCompositionMeasure: Measure {}
+
+// concurrent composition supports at least pure and approximate DP
+impl<Q: Clone> ConcurrentCompositionMeasure for MaxDivergence<Q> {}
+impl<Q: Clone> ConcurrentCompositionMeasure for SmoothedMaxDivergence<Q> {}
 
 #[cfg(test)]
 mod test {
