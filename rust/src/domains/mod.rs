@@ -16,7 +16,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::Queryable;
+use crate::interactive::{Queryable, Context};
 use crate::traits::{CheckNull, TotalOrd, CollectionSize, InherentNull};
 use std::fmt::{Debug, Formatter};
 
@@ -25,41 +25,43 @@ mod poly;
 #[cfg(feature="contrib")]
 pub use poly::*;
 
-pub struct QueryableDomain<Q, A> {
+pub struct QueryableDomain<Q, DA: Domain> {
     _query: PhantomData::<Q>,
-    _answer: PhantomData::<A>,
+    _answer: PhantomData::<DA>,
 }
-impl<Q, A> Domain for QueryableDomain<Q, A> {
-    type Carrier = Queryable<Q, A>;
+impl<Q: 'static + Clone, DA: Domain + 'static> Domain for QueryableDomain<Q, DA>
+    where DA::Carrier: 'static {
+
+    type Carrier = Queryable<Q, DA>;
 
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         Ok(true)
     }
 
-    fn eval_member<Q1: 'static>(value: &mut Self::Carrier, query: Q1) -> Fallible<Box<dyn Any>> {
-        value.base.eval(&query)
+    fn wrap_queryable<QD: 'static + Clone>(queryable: Self::Carrier, context: Context) -> Self::Carrier {
+        queryable.with_context::<QD>(context)
     }
 }
 
-impl<Q, A> Debug for QueryableDomain<Q, A> {
+impl<Q, DA: Domain> Debug for QueryableDomain<Q, DA> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "QueryableDomain({}, {})", type_name!(Q), type_name!(A))
+        write!(f, "QueryableDomain({}, {})", type_name!(Q), type_name!(DA))
     }
 }
-impl<Q, A> Default for QueryableDomain<Q, A> {
+impl<Q, DA: Domain> Default for QueryableDomain<Q, DA> {
     fn default() -> Self { Self::new() }
 }
-impl<Q, A> QueryableDomain<Q, A> {
+impl<Q, DA: Domain> QueryableDomain<Q, DA> {
     pub fn new() -> Self {
         QueryableDomain { _query: PhantomData, _answer: PhantomData }
     }
 }
 // Auto-deriving Clone would put the same trait bound on T, so we implement it manually.
-impl<Q, A> Clone for QueryableDomain<Q, A> {
+impl<Q, DA: Domain> Clone for QueryableDomain<Q, DA> {
     fn clone(&self) -> Self { Self::new() }
 }
 // Auto-deriving PartialEq would put the same trait bound on T, so we implement it manually.
-impl<Q, A> PartialEq for QueryableDomain<Q, A> {
+impl<Q, DA: Domain> PartialEq for QueryableDomain<Q, DA> {
     fn eq(&self, _other: &Self) -> bool { true }
 }
 

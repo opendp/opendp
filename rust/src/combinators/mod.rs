@@ -26,9 +26,9 @@ mod measure_cast;
 pub use crate::combinators::measure_cast::*;
 
 // #[cfg(feature="contrib")]
-// mod privacy_filter;
+// mod privacy_odometer;
 // #[cfg(feature="contrib")]
-// pub use crate::combinators::privacy_filter::*;
+// pub use crate::combinators::privacy_odometer::*;
 
 #[cfg(feature="contrib")]
 mod fix_delta;
