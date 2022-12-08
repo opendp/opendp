@@ -1,11 +1,12 @@
 use std::any::Any;
 
 use crate::{
-    core::{Domain, Function, Measurement, Metric, PrivacyMap, Measure},
+    core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
     interactive::{ChildChange, Context, PrivacyUsageAfter, Queryable, QueryableBase},
-    traits::{InfAdd, TotalOrd}, measures::{MaxDivergence, SmoothedMaxDivergence},
+    measures::{MaxDivergence, SmoothedMaxDivergence},
+    traits::{InfAdd, TotalOrd},
 };
 
 pub fn make_concurrent_composition<
@@ -21,9 +22,9 @@ pub fn make_concurrent_composition<
     mut d_mids: Vec<MO::Distance>,
 ) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
 where
-    MI::Distance: 'static + TotalOrd + Clone,
+    MI::Distance: 'static + TotalOrd + Copy,
     DI::Carrier: 'static + Clone,
-    MO::Distance: 'static + TotalOrd + Clone + InfAdd,
+    MO::Distance: 'static + TotalOrd + Copy + InfAdd,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_out");
@@ -39,54 +40,75 @@ where
     Ok(Measurement::new(
         input_domain,
         QueryableDomain::new(),
-        Function::new(enclose!((d_in, d_out, d_mids), move |arg: &DI::Carrier| {
-            // STATE
+        Function::new(enclose!((d_in, d_out), move |arg: &DI::Carrier| {
+            // a new copy of the state variables is made each time the Function is called:
+
+            // IMMUTABLE STATE VARIABLES
+            let arg = arg.clone();
+
+            // MUTABLE STATE VARIABLES
             let mut d_mids = d_mids.clone();
 
-            Queryable::new(enclose!(
-                (d_in, d_out, arg),
-                move |self_: &QueryableBase, query: &dyn Any| {
-                    // evaluate the measurement query and return the answer
-                    if let Some(measurement) = query.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
-                        let d_mid = (d_mids.last())
-                            .ok_or_else(|| err!(FailedFunction, "out of queries"))?;
+            // below, the queryable closure's arguments are
+            // 1. a reference to itself (which it can use to set context)
+            // 2. the query, which is a dynamically typed `&dyn Any`
 
-                        if !measurement.check(&d_in, d_mid)? {
-                            return fallible!(FailedFunction, "insufficient budget for query");
-                        }
+            // arg, d_mids, d_in and d_out are all moved into (or captured by) the Queryable closure here
+            Queryable::new(move |self_: &QueryableBase, query: &dyn Any| {
 
-                        // evaluate the query!
-                        let answer = measurement.invoke(&arg)?;
-                        d_mids.pop();
+                // evaluate the measurement query and return the answer.
+                //     the downcast ref attempts to downcast the &dyn Any to a specific concrete type
+                //     if the query passed in was this type of measurement, the downcast will succeed
+                if let Some(measurement) = query.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
 
-                        // if the answer is a queryable, wrap it so that it will communicate with its parent
-                        let wrapped_answer = DO::wrap_queryable::<MO::Distance>(
-                            answer,
-                            Context::new(self_.clone(), d_mids.len()),
-                        );
+                    // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
+                    let d_mid =
+                        (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
 
-                        return Ok(Box::new(wrapped_answer));
+                    // check that the query doesn't consume too much privacy
+                    if !measurement.check(&d_in, d_mid)? {
+                        return fallible!(FailedFunction, "insufficient budget for query");
                     }
 
-                    // returns what the privacy usage would be after evaluating the measurement
-                    if (query.downcast_ref::<PrivacyUsageAfter<Measurement<DI, DO, MI, MO>>>())
-                        .is_some()
-                    {
-                        // privacy usage won't change in response to any query
-                        // when this queryable is a child, d_out is used to send a ChildChange query to parent
-                        return Ok(Box::new(d_out.clone()));
-                    }
+                    // evaluate the query!
+                    let answer = measurement.invoke(&arg)?;
 
-                    // update state based on child change
-                    if query.downcast_ref::<ChildChange<MO::Distance>>().is_some() {
-                        // state won't change in response to child, 
-                        // but return an Ok to approve the change
-                        return Ok(Box::new(()));
-                    }
+                    // we've now consumed the last d_mid. This is our only state modification
+                    d_mids.pop();
 
-                    fallible!(FailedFunction, "unrecognized query!")
+                    // if the answer is a queryable, 
+                    // wrap it so that when the child gets a query it sends a ChildChange query to this parent queryable
+                    // it gives this concurrent composition queryable (or any parent of this queryable) 
+                    // a chance to deny the child permission to execute
+                    let wrapped_answer = DO::wrap_queryable::<MO::Distance>(
+                        answer,
+                        Context::new(self_.clone(), d_mids.len()),
+                    );
+
+                    // The box allows the return value to be dynamically typed, just like query was.
+                    // Necessary because different queries have different return types.
+                    // All responses are of type `Fallible<Box<dyn Any>>`
+                    return Ok(Box::new(wrapped_answer));
                 }
-            ))
+
+                // returns what the privacy usage would be after evaluating the measurement
+                if (query.downcast_ref::<PrivacyUsageAfter<Measurement<DI, DO, MI, MO>>>())
+                    .is_some()
+                {
+                    // privacy usage won't change in response to any query
+                    // when this queryable is a child, d_out is used to send a ChildChange query to parent
+                    return Ok(Box::new(d_out.clone()));
+                }
+
+                // update state based on child change
+                if query.downcast_ref::<ChildChange<MO::Distance>>().is_some() {
+                    // state won't change in response to child,
+                    // but return an Ok to approve the change
+                    return Ok(Box::new(()));
+                }
+
+                fallible!(FailedFunction, "unrecognized query!")
+            })
         })),
         input_metric,
         output_measure,
