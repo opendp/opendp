@@ -68,8 +68,7 @@ pub trait Domain: Clone + PartialEq + Debug {
 
     /// A helper to communicate with a member of this domain.
     /// The members of most domains are not interactive, so the default implementation returns itself without changes
-    fn wrap_queryable<QD: 'static + Clone>(member: Self::Carrier, _context: Context) -> Self::Carrier {
-        member
+    fn inject_context<QD: 'static + Clone>(_member: &mut Self::Carrier, _context: Context) {
     }
 }
 
@@ -344,6 +343,7 @@ pub struct Odometer<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub function: Function<DI, DO>,
     pub input_metric: MI,
     pub output_measure: MO,
+    pub d_in: MI::Distance,
 }
 
 impl<DI: Domain, Q: 'static + Clone, DA: Domain + 'static, MI: Metric, MO: Measure>
@@ -356,6 +356,7 @@ impl<DI: Domain, Q: 'static + Clone, DA: Domain + 'static, MI: Metric, MO: Measu
         function: Function<DI, QueryableDomain<Q, DA>>,
         input_metric: MI,
         output_measure: MO,
+        d_in: MI::Distance
     ) -> Self {
         Self {
             input_domain,
@@ -363,6 +364,7 @@ impl<DI: Domain, Q: 'static + Clone, DA: Domain + 'static, MI: Metric, MO: Measu
             function,
             input_metric,
             output_measure,
+            d_in
         }
     }
 

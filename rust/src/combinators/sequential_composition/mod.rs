@@ -11,12 +11,10 @@ use crate::{
 pub fn make_sequential_composition<
     DI: Domain + 'static,
     DO: Domain + 'static,
-    MI: Metric + 'static,
-    MO: Measure + 'static,
+    MI: Metric + Default + 'static,
+    MO: Measure + Default + 'static,
 >(
     input_domain: DI,
-    input_metric: MI,
-    output_measure: MO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
 ) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
@@ -70,7 +68,7 @@ where
                     }
 
                     // evaluate the query!
-                    let answer = measurement.invoke(&arg)?;
+                    let mut answer = measurement.invoke(&arg)?;
 
                     // we've now consumed the last d_mid. This is our only state modification
                     d_mids.pop();
@@ -79,15 +77,15 @@ where
                     // wrap it so that when the child gets a query it sends a ChildChange query to this parent queryable
                     // it gives this sequential composition queryable (or any parent of this queryable) 
                     // a chance to deny the child permission to execute
-                    let wrapped_answer = DO::wrap_queryable::<MO::Distance>(
-                        answer,
+                    DO::inject_context::<MO::Distance>(
+                        &mut answer,
                         Context::new(self_.clone(), d_mids.len()),
                     );
 
                     // The box allows the return value to be dynamically typed, just like query was.
                     // Necessary because different queries have different return types.
                     // All responses are of type `Fallible<Box<dyn Any>>`
-                    return Ok(Box::new(wrapped_answer));
+                    return Ok(Box::new(answer));
                 }
 
                 // returns what the privacy usage would be after evaluating the measurement
@@ -112,8 +110,8 @@ where
                 fallible!(FailedFunction, "unrecognized query!")
             })
         })),
-        input_metric,
-        output_measure,
+        MI::default(),
+        MO::default(),
         PrivacyMap::new_fallible(move |d_in_p: &MI::Distance| {
             if d_in_p.total_gt(&d_in)? {
                 fallible!(
@@ -133,8 +131,6 @@ mod test {
     use crate::{
         domains::{AllDomain, PolyDomain},
         measurements::make_randomized_response_bool,
-        measures::MaxDivergence,
-        metrics::DiscreteDistance,
     };
 
     use super::*;
@@ -144,8 +140,6 @@ mod test {
         // construct sequential compositor IM
         let root = make_sequential_composition(
             AllDomain::new(),
-            DiscreteDistance::default(),
-            MaxDivergence::default(),
             1,
             vec![0.1, 0.1, 0.3, 0.5],
         )?;
@@ -164,8 +158,6 @@ mod test {
         // This compositor expects all outputs are in AllDomain<bool>
         let sc_query_3 = make_sequential_composition::<_, AllDomain<bool>, _, _>(
             AllDomain::<bool>::new(),
-            DiscreteDistance::default(),
-            MaxDivergence::default(),
             1,
             vec![0.1, 0.1],
         )?
@@ -179,8 +171,6 @@ mod test {
         // This compositor expects all outputs are in PolyDomain
         let sc_query_4 = make_sequential_composition::<_, PolyDomain, _, _>(
             AllDomain::<bool>::new(),
-            DiscreteDistance::default(),
-            MaxDivergence::default(),
             1,
             vec![0.2, 0.3],
         )?

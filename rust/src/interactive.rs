@@ -18,26 +18,13 @@ impl Context {
     pub(crate) fn new(parent: QueryableBase, id: usize) -> Self {
         Context { parent, id }
     }
-    pub(crate) fn pre_commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
-        self.parent.eval(&ChildChange {
-            id: self.id,
-            new_privacy_loss: new_privacy_loss.clone(),
-            commit: false,
-        })
-    }
-
-    pub(crate) fn commit<Q: 'static + Clone>(&mut self, new_privacy_loss: &Q) -> Fallible<()> {
-        self.parent.eval(&ChildChange {
-            id: self.id,
-            new_privacy_loss: new_privacy_loss.clone(),
-            commit: true,
-        })
-    }
 }
 
 /// A structure tracking the state of an interactive measurement queryable.
 #[derive(Clone)]
-pub(crate) struct QueryableBase(Rc<RefCell<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>);
+pub(crate) struct QueryableBase(
+    Rc<RefCell<Option<Box<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>>>,
+);
 
 impl QueryableBase {
     pub fn eval<Q: 'static, A: 'static>(&mut self, query: &Q) -> Fallible<A> {
@@ -48,13 +35,13 @@ impl QueryableBase {
     }
 
     pub fn eval_any(&mut self, query: &dyn Any) -> Fallible<Box<dyn Any>> {
-        (self.0.borrow_mut())(self, query)
+        (self.0.borrow_mut().as_mut().unwrap())(self, query)
     }
 
     pub fn new(
         transition: impl FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>> + 'static,
     ) -> Self {
-        QueryableBase(Rc::new(RefCell::new(transition)))
+        QueryableBase(Rc::new(RefCell::new(Some(Box::new(transition)))))
     }
 }
 
@@ -67,10 +54,15 @@ pub struct Queryable<Q, DA: Domain> {
 }
 
 impl<Q: 'static + Clone, DA: Domain + 'static> Queryable<Q, DA>
-    where DA::Carrier: 'static {
-    
+where
+    DA::Carrier: 'static,
+{
     pub fn eval(&mut self, q: &Q) -> Fallible<DA::Carrier> {
         self.base.eval::<Q, DA::Carrier>(q)
+    }
+
+    pub fn eval_privacy_after<QD: 'static>(&mut self, q: &Q) -> Fallible<QD> {
+        self.base.eval(&PrivacyUsageAfter(q.clone()))
     }
 
     pub(crate) fn new(
@@ -82,34 +74,66 @@ impl<Q: 'static + Clone, DA: Domain + 'static> Queryable<Q, DA>
             base: QueryableBase::new(transition),
         }
     }
+}
 
-    pub(crate) fn with_context<QD: 'static + Clone>(mut self, mut context: Context) -> Self {
-        Queryable::new(move |_self_outer: &QueryableBase, query: &dyn Any| {
-            if let Some(query) = query.downcast_ref::<Q>() {
-                let d_mid = self.base.eval(&PrivacyUsageAfter(query.clone()))?;
-
-                context.pre_commit(&d_mid)?;
-
-                let answer = self.eval(&query)?;
-
-                context.commit(&d_mid)?;
-
-                return Ok(Box::new(answer) as Box<dyn Any>);
-            }
-
-            // children are always IM's, so new_privacy_loss is bounded by d_mid_i
-            if let Some(query) = query.downcast_ref::<ChildChange<QD>>() {
-                let d_temp = self.base.eval(query)?;
-                return context.parent.eval_any(&ChildChange {
-                    id: context.id,
-                    new_privacy_loss: d_temp,
-                    commit: query.commit,
-                });
-            }
-
-            self.base.eval_any(query)
-        })
-    }
+/// Mutates a queryable so that it knows how to speak with its parent
+/// Intercepts two kinds of queries:
+/// 1. user queries to self
+/// 2. internal change queries from children
+pub(crate) fn inject_context<Q, DA, QD>(
+    queryable: &mut Queryable<Q, DA>,
+    mut context: Context,
+)
+where
+    Q: 'static + Clone,
+    DA: 'static + Domain,
+    QD: 'static + Clone,
+{
+    queryable
+        .base
+        .0
+        .as_ref()
+        .replace_with(|f| {
+            let mut transition = f.take().unwrap();    
+            Some(Box::new(move |self_: &QueryableBase, query: &dyn Any| {
+                if let Some(query2) = query.downcast_ref::<Q>() {
+                    let d_mid: QD = *transition(self_, &PrivacyUsageAfter(query2.clone()))?.downcast().unwrap();
+        
+                    context.parent.eval(&ChildChange {
+                        id: context.id,
+                        new_privacy_loss: d_mid.clone(),
+                        commit: false,
+                    })?;
+        
+                    let answer = transition(self_, query)?;
+        
+                    context.parent.eval(&ChildChange {
+                        id: context.id,
+                        new_privacy_loss: d_mid.clone(),
+                        commit: true,
+                    })?;
+        
+                    return Ok(Box::new(answer));
+                }
+                // 1. sequential composition
+                // 2. concurrent composition
+                // 3. sparse vector
+                if let Some(query) = query.downcast_ref::<ChildChange<QD>>() {
+                    // checks with the inner queryable if the child change is ok
+                    // TODO: don't unwrap
+                    let d_mid: QD = *transition(self_, query)?.downcast().unwrap();
+                    
+                    // check with the parent that the change to the inner queryable is ok
+                    return context.parent.eval_any(&ChildChange {
+                        id: context.id,
+                        new_privacy_loss: d_mid,
+                        commit: query.commit,
+                    });
+                }
+        
+                transition(self_, query)
+            }))
+        });
 }
 
 impl<Q: 'static + Clone> Queryable<Q, PolyDomain> {
@@ -136,6 +160,7 @@ pub(crate) struct ChildChange<Q> {
     pub commit: bool,
 }
 
+pub struct PrivacyUsage;
 pub struct PrivacyUsageAfter<Q>(pub Q);
 
 impl<Q, DA: Domain> CheckNull for Queryable<Q, DA> {

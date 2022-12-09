@@ -18,7 +18,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::{Queryable, Context};
+use crate::interactive::{Queryable, Context, inject_context};
 use crate::traits::{CheckNull, TotalOrd, CollectionSize, InherentNull};
 use std::fmt::{Debug, Formatter};
 
@@ -40,8 +40,8 @@ impl<Q: 'static + Clone, DA: Domain + 'static> Domain for QueryableDomain<Q, DA>
         Ok(true)
     }
 
-    fn wrap_queryable<QD: 'static + Clone>(queryable: Self::Carrier, context: Context) -> Self::Carrier {
-        queryable.with_context::<QD>(context)
+    fn inject_context<QD: 'static + Clone>(queryable: &mut Self::Carrier, context: Context) {
+        inject_context::<_, _, QD>(queryable, context);
     }
 }
 
