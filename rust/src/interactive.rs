@@ -87,7 +87,7 @@ pub(crate) fn inject_context<Q, DA, QD>(
 )
 where
     Q: 'static + Clone,
-    DA: 'static + Domain,
+    DA: Domain,
     QD: 'static + Clone,
 {
     queryable

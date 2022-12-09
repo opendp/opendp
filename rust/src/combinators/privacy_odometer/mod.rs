@@ -3,13 +3,14 @@ use std::any::Any;
 use num::Zero;
 
 use crate::{
+    combinators::assert_components_match,
     core::{Domain, Function, Measurement, Metric, Odometer},
     domains::QueryableDomain,
     error::Fallible,
     interactive::{
         ChildChange, Context, PrivacyUsage, PrivacyUsageAfter, Queryable, QueryableBase,
     },
-    traits::{InfAdd, TotalOrd}, combinators::assert_components_match,
+    traits::{InfAdd, TotalOrd},
 };
 
 use super::BasicCompositionMeasure;
@@ -64,7 +65,7 @@ where
                             output_measure,
                             measurement.output_measure
                         );
-                        
+
                         let d_child = measurement.map(&d_in)?;
 
                         let mut answer = measurement.invoke(&arg)?;
@@ -72,10 +73,42 @@ where
                         DO::inject_context(
                             &mut answer,
                             Context::new(self_.clone(), d_children.len()),
-                            None::<MO::Distance>
+                            Some(d_child.clone()),
                         );
 
                         d_children.push(d_child);
+
+                        return Ok(Box::new(answer));
+                    }
+
+                    if let Some(odometer) = query.downcast_ref::<Odometer<DI, DO, MI, MO>>() {
+                        assert_components_match!(
+                            DomainMismatch,
+                            input_domain,
+                            odometer.input_domain
+                        );
+
+                        assert_components_match!(
+                            MetricMismatch,
+                            MI::default(),
+                            odometer.input_metric
+                        );
+
+                        assert_components_match!(
+                            MeasureMismatch,
+                            output_measure,
+                            odometer.output_measure
+                        );
+
+                        let mut answer = odometer.invoke(&arg)?;
+
+                        DO::inject_context(
+                            &mut answer,
+                            Context::new(self_.clone(), d_children.len()),
+                            None::<MO::Distance>,
+                        );
+
+                        d_children.push(MO::Distance::zero());
 
                         return Ok(Box::new(answer));
                     }
@@ -86,18 +119,20 @@ where
                     {
                         let mut pending_d_children = d_children.clone();
                         pending_d_children.push(measurement.map(&d_in)?);
-                        
+
                         return Ok(Box::new(output_measure.compose(pending_d_children)?));
                     }
 
-                    if query.downcast_ref::<PrivacyUsage>().is_some() {
-                        return output_measure.compose(d_children.clone())
-                            .map(|v| Box::new(v) as Box<dyn Any>);
+                    // returns what the privacy usage is, or would be after adding an odometer
+                    if query.downcast_ref::<PrivacyUsage>().is_some()
+                        || (query.downcast_ref::<PrivacyUsageAfter<Odometer<DI, DO, MI, MO>>>())
+                            .is_some()
+                    {
+                        return Ok(Box::new(output_measure.compose(d_children.clone())?));
                     }
 
                     // update state based on child change
                     if let Some(change) = query.downcast_ref::<ChildChange<MO::Distance>>() {
-                        // TODO: d_mids -> d_? because it is confused with hints
                         let mut pending_d_children = d_children.clone();
                         *pending_d_children
                             .get_mut(change.id)
@@ -108,7 +143,8 @@ where
                             d_children[change.id] = change.new_privacy_loss.clone();
                         }
 
-                        return output_measure.compose(pending_d_children)
+                        return output_measure
+                            .compose(pending_d_children)
                             .map(|v| Box::new(v) as Box<dyn Any>);
                     }
 

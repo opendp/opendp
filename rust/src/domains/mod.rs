@@ -31,8 +31,7 @@ pub struct QueryableDomain<Q, DA: Domain> {
     _query: PhantomData::<Q>,
     _answer: PhantomData::<DA>,
 }
-impl<Q: 'static + Clone, DA: Domain + 'static> Domain for QueryableDomain<Q, DA>
-    where DA::Carrier: 'static {
+impl<Q: 'static + Clone, DA: Domain> Domain for QueryableDomain<Q, DA> {
 
     type Carrier = Queryable<Q, DA>;
 

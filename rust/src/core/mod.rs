@@ -27,9 +27,8 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
-use crate::domains::QueryableDomain;
 use crate::error::*;
-use crate::interactive::{Queryable, Context};
+use crate::interactive::Context;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
 
@@ -68,7 +67,11 @@ pub trait Domain: Clone + PartialEq + Debug {
 
     /// A helper to communicate with a member of this domain.
     /// The members of most domains are not interactive, so the default implementation returns itself without changes
-    fn inject_context<QD: 'static + Clone>(_member: &mut Self::Carrier, _context: Context, _max_usage: Option<QD>) {
+    fn inject_context<QD: 'static + Clone>(
+        _member: &mut Self::Carrier,
+        _context: Context,
+        _max_usage: Option<QD>,
+    ) {
     }
 }
 
@@ -346,17 +349,14 @@ pub struct Odometer<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
     pub d_in: MI::Distance,
 }
 
-impl<DI: Domain, Q: 'static + Clone, DA: Domain + 'static, MI: Metric, MO: Measure>
-    Odometer<DI, QueryableDomain<Q, DA>, MI, MO>
-    where DA::Carrier: 'static
-{
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Odometer<DI, DO, MI, MO> {
     pub fn new(
         input_domain: DI,
-        output_domain: QueryableDomain<Q, DA>,
-        function: Function<DI, QueryableDomain<Q, DA>>,
+        output_domain: DO,
+        function: Function<DI, DO>,
         input_metric: MI,
         output_measure: MO,
-        d_in: MI::Distance
+        d_in: MI::Distance,
     ) -> Self {
         Self {
             input_domain,
@@ -364,11 +364,11 @@ impl<DI: Domain, Q: 'static + Clone, DA: Domain + 'static, MI: Metric, MO: Measu
             function,
             input_metric,
             output_measure,
-            d_in
+            d_in,
         }
     }
 
-    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<Queryable<Q, DA>> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
         self.function.eval(arg)
     }
 }
