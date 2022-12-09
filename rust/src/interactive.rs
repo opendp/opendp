@@ -53,9 +53,9 @@ pub struct Queryable<Q, DA: Domain> {
     pub(crate) base: QueryableBase,
 }
 
-impl<Q: 'static + Clone, DA: Domain + 'static> Queryable<Q, DA>
+impl<Q, DA> Queryable<Q, DA>
 where
-    DA::Carrier: 'static,
+    Q: 'static + Clone, DA: Domain + 'static, DA::Carrier: 'static
 {
     pub fn eval(&mut self, q: &Q) -> Fallible<DA::Carrier> {
         self.base.eval::<Q, DA::Carrier>(q)
@@ -73,6 +73,17 @@ where
             _answer: PhantomData,
             base: QueryableBase::new(transition),
         }
+    }
+
+    pub(crate) fn new_concrete(
+        mut transition: impl FnMut(&Q) -> Fallible<DA::Carrier> + 'static,
+    ) -> Self {
+        Queryable::new(move |_self: &QueryableBase, query: &dyn Any| {
+            let concrete_query = query
+                .downcast_ref::<Q>()
+                .ok_or_else(|| err!(FailedFunction, "unrecognized query. Expected {}", std::any::type_name::<Q>()))?;
+            Ok(Box::new(transition(concrete_query)?))
+        })
     }
 }
 
@@ -159,15 +170,13 @@ impl<Q: 'static + Clone> Queryable<Q, PolyDomain> {
 }
 
 pub(crate) struct ChildChange<Q> {
-    #[allow(dead_code)]
     pub id: usize,
-    #[allow(dead_code)]
     pub new_privacy_loss: Q,
     pub commit: bool,
 }
 
-pub struct PrivacyUsage;
-pub struct PrivacyUsageAfter<Q>(pub Q);
+pub(crate) struct PrivacyUsage;
+pub(crate) struct PrivacyUsageAfter<Q>(pub Q);
 
 impl<Q, DA: Domain> CheckNull for Queryable<Q, DA> {
     fn is_null(&self) -> bool {
