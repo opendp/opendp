@@ -30,7 +30,7 @@ where
     MO::Distance: 'static + TotalOrd + Clone + Zero + InfAdd,
 {
     if d_mids.len() == 0 {
-        return fallible!(MakeMeasurement, "must be at least one d_out");
+        return fallible!(MakeMeasurement, "must be at least one d_mid");
     }
     
     // we'll iteratively pop from the end
