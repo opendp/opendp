@@ -52,9 +52,10 @@ where
                         }
                         let mut answer = odom_queryable.eval(measurement)?;
 
-                        DO::inject_context::<MO::Distance>(
+                        DO::inject_context(
                             &mut answer,
                             Context::new(self_.clone(), 0),
+                            Some(d_out.clone()) // even though child is an odometer, it will now never consume more than d_out
                         );
 
                         return Ok(Box::new(answer));

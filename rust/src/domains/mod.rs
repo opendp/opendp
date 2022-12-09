@@ -40,8 +40,8 @@ impl<Q: 'static + Clone, DA: Domain + 'static> Domain for QueryableDomain<Q, DA>
         Ok(true)
     }
 
-    fn inject_context<QD: 'static + Clone>(queryable: &mut Self::Carrier, context: Context) {
-        inject_context::<_, _, QD>(queryable, context);
+    fn inject_context<QD: 'static + Clone>(queryable: &mut Self::Carrier, context: Context, max_usage: Option<QD>) {
+        inject_context(queryable, context, max_usage);
     }
 }
 

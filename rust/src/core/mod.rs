@@ -68,7 +68,7 @@ pub trait Domain: Clone + PartialEq + Debug {
 
     /// A helper to communicate with a member of this domain.
     /// The members of most domains are not interactive, so the default implementation returns itself without changes
-    fn inject_context<QD: 'static + Clone>(_member: &mut Self::Carrier, _context: Context) {
+    fn inject_context<QD: 'static + Clone>(_member: &mut Self::Carrier, _context: Context, _max_usage: Option<QD>) {
     }
 }
 

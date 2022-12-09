@@ -69,9 +69,10 @@ where
 
                         let mut answer = measurement.invoke(&arg)?;
 
-                        DO::inject_context::<MO::Distance>(
+                        DO::inject_context(
                             &mut answer,
                             Context::new(self_.clone(), d_children.len()),
+                            None::<MO::Distance>
                         );
 
                         d_children.push(d_child);

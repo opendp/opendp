@@ -4,7 +4,7 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
-    interactive::{ChildChange, Context, PrivacyUsageAfter, Queryable, QueryableBase},
+    interactive::{ChildChange, Context, Queryable, QueryableBase},
     traits::{InfAdd, TotalOrd},
 };
 
@@ -37,7 +37,7 @@ where
     Ok(Measurement::new(
         input_domain,
         QueryableDomain::new(),
-        Function::new(enclose!((d_in, d_out), move |arg: &DI::Carrier| {
+        Function::new(enclose!(d_in, move |arg: &DI::Carrier| {
             // a new copy of the state variables is made each time the Function is called:
 
             // IMMUTABLE STATE VARIABLES
@@ -71,30 +71,22 @@ where
                     let mut answer = measurement.invoke(&arg)?;
 
                     // we've now consumed the last d_mid. This is our only state modification
-                    d_mids.pop();
+                    let d_mid = d_mids.pop();
 
                     // if the answer is a queryable, 
                     // wrap it so that when the child gets a query it sends a ChildChange query to this parent queryable
                     // it gives this sequential composition queryable (or any parent of this queryable) 
                     // a chance to deny the child permission to execute
-                    DO::inject_context::<MO::Distance>(
+                    DO::inject_context(
                         &mut answer,
                         Context::new(self_.clone(), d_mids.len()),
+                        d_mid
                     );
 
                     // The box allows the return value to be dynamically typed, just like query was.
                     // Necessary because different queries have different return types.
                     // All responses are of type `Fallible<Box<dyn Any>>`
                     return Ok(Box::new(answer));
-                }
-
-                // returns what the privacy usage would be after evaluating the measurement
-                if (query.downcast_ref::<PrivacyUsageAfter<Measurement<DI, DO, MI, MO>>>())
-                    .is_some()
-                {
-                    // privacy usage won't change in response to any query
-                    // when this queryable is a child, d_out is used to send a ChildChange query to parent
-                    return Ok(Box::new(d_out.clone()));
                 }
 
                 // update state based on child change

@@ -83,6 +83,7 @@ where
 pub(crate) fn inject_context<Q, DA, QD>(
     queryable: &mut Queryable<Q, DA>,
     mut context: Context,
+    d_final: Option<QD>
 )
 where
     Q: 'static + Clone,
@@ -96,8 +97,11 @@ where
         .replace_with(|f| {
             let mut transition = f.take().unwrap();    
             Some(Box::new(move |self_: &QueryableBase, query: &dyn Any| {
-                if let Some(query2) = query.downcast_ref::<Q>() {
-                    let d_mid: QD = *transition(self_, &PrivacyUsageAfter(query2.clone()))?.downcast().unwrap();
+                if let Some(query_typed) = query.downcast_ref::<Q>() {
+
+                    let Some(d_mid) = d_final.clone() else {
+                        *transition(self_, &PrivacyUsageAfter(query_typed.clone()))?.downcast().unwrap()
+                    };
         
                     context.parent.eval(&ChildChange {
                         id: context.id,
@@ -124,11 +128,13 @@ where
                     let d_mid: QD = *transition(self_, query)?.downcast().unwrap();
                     
                     // check with the parent that the change to the inner queryable is ok
-                    return context.parent.eval_any(&ChildChange {
+                    context.parent.eval_any(&ChildChange {
                         id: context.id,
-                        new_privacy_loss: d_mid,
+                        new_privacy_loss: d_mid.clone(),
                         commit: query.commit,
-                    });
+                    })?;
+
+                    return Ok(Box::new(d_mid))
                 }
         
                 transition(self_, query)
