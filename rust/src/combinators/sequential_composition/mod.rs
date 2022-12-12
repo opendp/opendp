@@ -2,7 +2,7 @@ use std::any::Any;
 
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
-    domains::QueryableDomain,
+    domains::{QueryableDomain, AllDomain},
     error::Fallible,
     interactive::{ChildChange, Context, Queryable, QueryableBase},
     traits::{InfAdd, TotalOrd},
@@ -15,9 +15,10 @@ pub fn make_sequential_composition<
     MO: Measure + Default + 'static,
 >(
     input_domain: DI,
+    output_domain: DO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
-) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
+) -> Fallible<Measurement<DI, QueryableDomain<AllDomain<Measurement<DI, DO, MI, MO>>, DO>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Copy,
     DI::Carrier: 'static + Clone,
@@ -36,7 +37,7 @@ where
 
     Ok(Measurement::new(
         input_domain,
-        QueryableDomain::new(),
+        QueryableDomain::new(AllDomain::new(), output_domain),
         Function::new(enclose!(d_in, move |arg: &DI::Carrier| {
             // a new copy of the state variables is made each time the Function is called:
 
@@ -132,6 +133,7 @@ mod test {
         // construct sequential compositor IM
         let root = make_sequential_composition(
             AllDomain::new(),
+            PolyDomain::new(),
             1,
             vec![0.1, 0.1, 0.3, 0.5],
         )?;
@@ -150,12 +152,13 @@ mod test {
         // This compositor expects all outputs are in AllDomain<bool>
         let sc_query_3 = make_sequential_composition::<_, AllDomain<bool>, _, _>(
             AllDomain::<bool>::new(),
+            AllDomain::new(),
             1,
             vec![0.1, 0.1],
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, AllDomain<bool>> = queryable.eval_poly(&sc_query_3)?;
+        let mut answer3: Queryable<AllDomain<_>, AllDomain<bool>> = queryable.eval_poly(&sc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?;
         let _answer3_2: bool = answer3.eval(&rr_query)?;
 
@@ -163,12 +166,13 @@ mod test {
         // This compositor expects all outputs are in PolyDomain
         let sc_query_4 = make_sequential_composition::<_, PolyDomain, _, _>(
             AllDomain::<bool>::new(),
+            PolyDomain::new(),
             1,
             vec![0.2, 0.3],
         )?
         .into_poly();
 
-        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, _> =
+        let mut answer4: Queryable<AllDomain<Measurement<_, PolyDomain, _, _>>, _> =
             queryable.eval_poly(&sc_query_4)?;
         let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
         let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;

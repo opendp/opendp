@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::core::Domain;
+use crate::core::{Domain, Measurement, Metric, Measure, Transformation};
 use crate::domains::PolyDomain;
 use crate::error::*;
 use crate::traits::CheckNull;
@@ -47,21 +47,22 @@ impl QueryableBase {
 
 /// Queryables are used to model interactive measurements,
 /// and are generic over the type of the query (Q) and answer (A).
-pub struct Queryable<Q, DA: Domain> {
-    _query: PhantomData<Q>,
+#[derive(Clone)]
+pub struct Queryable<DQ: Domain, DA: Domain> {
+    _query: PhantomData<DQ>,
     _answer: PhantomData<DA>,
     pub(crate) base: QueryableBase,
 }
 
-impl<Q, DA> Queryable<Q, DA>
+impl<DQ, DA> Queryable<DQ, DA>
 where
-    Q: 'static + Clone, DA: Domain + 'static, DA::Carrier: 'static
+DQ: Domain, DQ::Carrier: 'static + Clone, DA: Domain + 'static, DA::Carrier: 'static
 {
-    pub fn eval(&mut self, q: &Q) -> Fallible<DA::Carrier> {
-        self.base.eval::<Q, DA::Carrier>(q)
+    pub fn eval(&mut self, q: &DQ::Carrier) -> Fallible<DA::Carrier> {
+        self.base.eval::<DQ::Carrier, DA::Carrier>(q)
     }
 
-    pub fn eval_privacy_after<QD: 'static>(&mut self, q: &Q) -> Fallible<QD> {
+    pub fn eval_privacy_after<QD: 'static>(&mut self, q: &DQ::Carrier) -> Fallible<QD> {
         self.base.eval(&PrivacyUsageAfter(q.clone()))
     }
 
@@ -76,12 +77,12 @@ where
     }
 
     pub(crate) fn new_concrete(
-        mut transition: impl FnMut(&Q) -> Fallible<DA::Carrier> + 'static,
+        mut transition: impl FnMut(&DQ::Carrier) -> Fallible<DA::Carrier> + 'static,
     ) -> Self {
         Queryable::new(move |_self: &QueryableBase, query: &dyn Any| {
             let concrete_query = query
-                .downcast_ref::<Q>()
-                .ok_or_else(|| err!(FailedFunction, "unrecognized query. Expected {}", std::any::type_name::<Q>()))?;
+                .downcast_ref::<DQ::Carrier>()
+                .ok_or_else(|| err!(FailedFunction, "unrecognized query. Expected {}", std::any::type_name::<DQ::Carrier>()))?;
             Ok(Box::new(transition(concrete_query)?))
         })
     }
@@ -91,13 +92,14 @@ where
 /// Intercepts two kinds of queries:
 /// 1. user queries to self
 /// 2. internal change queries from children
-pub(crate) fn inject_context<Q, DA, QD>(
-    queryable: &mut Queryable<Q, DA>,
+pub(crate) fn inject_context<DQ, DA, QD>(
+    queryable: &mut Queryable<DQ, DA>,
     mut context: Context,
     d_final: Option<QD>
 )
 where
-    Q: 'static + Clone,
+    DQ: Domain,
+    DQ::Carrier: 'static + Clone,
     DA: Domain,
     QD: 'static + Clone,
 {
@@ -108,7 +110,7 @@ where
         .replace_with(|f| {
             let mut transition = f.take().unwrap();    
             Some(Box::new(move |self_: &QueryableBase, query: &dyn Any| {
-                if let Some(query_typed) = query.downcast_ref::<Q>() {
+                if let Some(query_typed) = query.downcast_ref::<DQ::Carrier>() {
 
                     let Some(d_mid) = d_final.clone() else {
                         *transition(self_, &PrivacyUsageAfter(query_typed.clone()))?.downcast().unwrap()
@@ -153,9 +155,10 @@ where
         });
 }
 
-impl<Q: 'static + Clone> Queryable<Q, PolyDomain> {
+impl<DQ> Queryable<DQ, PolyDomain>
+    where DQ: Domain, DQ::Carrier: 'static + Clone {
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
+    pub fn eval_poly<A: 'static>(&mut self, query: &DQ::Carrier) -> Fallible<A> {
         self.eval(&query)?
             .downcast()
             .map_err(|_| {
@@ -178,7 +181,20 @@ pub(crate) struct ChildChange<Q> {
 pub(crate) struct PrivacyUsage;
 pub(crate) struct PrivacyUsageAfter<Q>(pub Q);
 
-impl<Q, DA: Domain> CheckNull for Queryable<Q, DA> {
+impl<DQ: Domain, DA: Domain> CheckNull for Queryable<DQ, DA> {
+    fn is_null(&self) -> bool {
+        false
+    }
+}
+
+
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> CheckNull for Measurement<DI, DO, MI, MO> {
+    fn is_null(&self) -> bool {
+        false
+    }
+}
+
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> CheckNull for Transformation<DI, DO, MI, MO> {
     fn is_null(&self) -> bool {
         false
     }

@@ -4,7 +4,7 @@ use num::Zero;
 
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, Odometer, PrivacyMap},
-    domains::QueryableDomain,
+    domains::{QueryableDomain, AllDomain},
     error::Fallible,
     interactive::{Queryable, QueryableBase, Context},
     traits::{InfAdd, TotalOrd},
@@ -18,9 +18,9 @@ pub fn make_odometer_to_filter<
     MI: Metric + 'static,
     MO: Measure + Default + 'static,
 >(
-    odometer: Odometer<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>,
+    odometer: Odometer<DI, QueryableDomain<AllDomain<Measurement<DI, DO, MI, MO>>, DO>, MI, MO>,
     d_out: MO::Distance,
-) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
+) -> Fallible<Measurement<DI, QueryableDomain<AllDomain<Measurement<DI, DO, MI, MO>>, DO>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
@@ -87,14 +87,15 @@ pub fn make_filter<
     MO: BasicCompositionMeasure + 'static,
 >(
     input_domain: DI,
+    output_domain: DO,
     output_measure: MO,
     d_in: MI::Distance,
     d_out: MO::Distance,
-) -> Fallible<Measurement<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
+) -> Fallible<Measurement<DI, QueryableDomain<AllDomain<Measurement<DI, DO, MI, MO>>, DO>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
     MO::Distance: 'static + TotalOrd + Clone + InfAdd + Zero,
 {
-    make_odometer_to_filter(make_odometer(input_domain, output_measure, d_in)?, d_out)
+    make_odometer_to_filter(make_odometer(input_domain, output_domain, output_measure, d_in)?, d_out)
 }

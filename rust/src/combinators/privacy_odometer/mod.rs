@@ -5,7 +5,7 @@ use num::Zero;
 use crate::{
     combinators::assert_components_match,
     core::{Domain, Function, Measurement, Metric, Odometer},
-    domains::QueryableDomain,
+    domains::{QueryableDomain, AllDomain},
     error::Fallible,
     interactive::{
         ChildChange, Context, PrivacyUsage, PrivacyUsageAfter, Queryable, QueryableBase,
@@ -22,9 +22,10 @@ pub fn make_odometer<
     MO: BasicCompositionMeasure + 'static,
 >(
     input_domain: DI,
+    answer_domain: DO,
     output_measure: MO,
     d_in: MI::Distance,
-) -> Fallible<Odometer<DI, QueryableDomain<Measurement<DI, DO, MI, MO>, DO>, MI, MO>>
+) -> Fallible<Odometer<DI, QueryableDomain<AllDomain<Measurement<DI, DO, MI, MO>>, DO>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
@@ -32,7 +33,7 @@ where
 {
     Ok(Odometer::new(
         input_domain.clone(),
-        QueryableDomain::new(),
+        QueryableDomain::new(AllDomain::new(), answer_domain),
         Function::new(enclose!(
             (input_domain, output_measure, d_in),
             move |arg: &DI::Carrier| {
@@ -173,7 +174,7 @@ mod test {
     #[test]
     fn test_concurrent_composition() -> Fallible<()> {
         // construct concurrent compositor IM
-        let root = make_odometer(AllDomain::<bool>::new(), MaxDivergence::default(), 1)?;
+        let root = make_odometer(AllDomain::<bool>::new(), PolyDomain::new(), MaxDivergence::default(), 1)?;
 
         // pass dataset in and receive a queryable
         let mut queryable = root.invoke(&true)?;
@@ -189,13 +190,14 @@ mod test {
         // This compositor expects all outputs are in AllDomain<bool>
         let cc_query_3 = make_concurrent_composition::<_, AllDomain<bool>, _, _>(
             AllDomain::<bool>::new(),
+            AllDomain::new(),
             MaxDivergence::default(),
             1,
             vec![0.1, 0.1],
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, AllDomain<bool>> = queryable.eval_poly(&cc_query_3)?;
+        let mut answer3: Queryable<AllDomain<_>, AllDomain<bool>> = queryable.eval_poly(&cc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?;
         let _answer3_2: bool = answer3.eval(&rr_query)?;
 
@@ -203,12 +205,13 @@ mod test {
         // This compositor expects all outputs are in PolyDomain
         let cc_query_4 = make_sequential_composition::<_, PolyDomain, _, _>(
             AllDomain::<bool>::new(),
+            PolyDomain::new(),
             1,
             vec![0.2, 0.3],
         )?
         .into_poly();
 
-        let mut answer4: Queryable<Measurement<_, PolyDomain, _, _>, PolyDomain> =
+        let mut answer4: Queryable<AllDomain<Measurement<_, PolyDomain, _, _>>, PolyDomain> =
             queryable.eval_poly(&cc_query_4)?;
         let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
         let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
