@@ -3,6 +3,9 @@ from opendp.mod import enable_features
 
 import ctypes
 
+import ctypes
+
+ctypes.c_int32(1)
 
 def make_mul_beam(x, map_impl):
     def fn(arg, ctx):

@@ -30,6 +30,24 @@ impl<T> Collection<T> for VecCollection<T> {
     }
 
     fn reduce(&self, function: impl Fn(&T) -> T + 'static) -> Box<dyn Collection<T>> {
+        if self.0.is_empty() {
+            Box::new(VecCollection(vec![]))
+        } else {
+            todo!()
+        }
+    }
+}
+
+pub struct AnyCollection<T> {
+    inner: Box<dyn Any>,
+    map_glue: Fn()
+}
+impl<T> Collection<T> for AnyCollection<T> {
+    fn map(&self, f: impl Fn(&T) -> T + 'static) -> Box<dyn Collection<T>> {
+        todo!()
+    }
+
+    fn reduce(&self, f: impl Fn(&T) -> T + 'static) -> Box<dyn Collection<T>> {
         todo!()
     }
 }
