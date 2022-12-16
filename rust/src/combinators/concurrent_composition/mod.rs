@@ -9,7 +9,7 @@ use crate::{
     error::Fallible,
     interactive::{Queryable, QueryableBase},
     measures::{MaxDivergence, SmoothedMaxDivergence},
-    traits::{InfAdd, TotalOrd},
+    traits::TotalOrd,
 };
 
 use super::BasicCompositionMeasure;
@@ -28,18 +28,12 @@ pub fn make_concurrent_composition<
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
 ) -> Fallible<
-    Measurement<
-        DI,
-        AllDomain<Measurement<DI, DQ, DA, MI, MO>>,
-        QueryableDomain<DQ, DA>,
-        MI,
-        MO,
-    >,
+    Measurement<DI, AllDomain<Measurement<DI, DQ, DA, MI, MO>>, QueryableDomain<DQ, DA>, MI, MO>,
 >
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
-    MO::Distance: 'static + TotalOrd + Clone + Zero + InfAdd,
+    MO::Distance: 'static + TotalOrd + Clone + Zero,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_mid");
@@ -181,9 +175,9 @@ mod test {
 
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are in AllDomain<bool>
-        let cc_query_3 = make_concurrent_composition::<_, PolyDomain, AllDomain<bool>, _, _>(
+        let cc_query_3 = make_concurrent_composition(
             AllDomain::<bool>::new(),
-            PolyDomain::new(),
+            AllDomain::<()>::new(),
             AllDomain::<bool>::new(),
             MaxDivergence::default(),
             1,
@@ -191,24 +185,26 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, bool> = queryable.eval(&cc_query_3)?.get_poly()?;
-        let _answer3_1: bool = answer3.eval(&rr_query)?;
-        let _answer3_2: bool = answer3.eval(&rr_query)?;
+        let mut answer3: Queryable<_, Queryable<(), bool>> = queryable.eval_poly(&cc_query_3)?;
+        let _answer3_1: bool = answer3.eval(&rr_query)?.get()?;
+        let _answer3_2: bool = answer3.eval(&rr_query)?.get()?;
 
-        // // pass a concurrent composition compositor into the original CC compositor
-        // // This compositor expects all outputs are in PolyDomain
-        // let cc_query_4 = make_concurrent_composition(
-        //     AllDomain::<bool>::new(),
-        //     PolyDomain::new(),
-        //     PolyDomain::new(),
-        //     MaxDivergence::default(),
-        //     1,
-        //     vec![0.2, 0.3],
-        // )?.into_poly();
+        // pass a concurrent composition compositor into the original CC compositor
+        // This compositor expects all outputs are in PolyDomain
+        let cc_query_4 = make_concurrent_composition(
+            AllDomain::<bool>::new(),
+            PolyDomain::new(),
+            PolyDomain::new(),
+            MaxDivergence::default(),
+            1,
+            vec![0.2, 0.3],
+        )?
+        .into_poly();
 
-        // let mut answer4: Queryable<_, Queryable<Box<dyn Any>, Box<dyn Any>>> = queryable.eval(&cc_query_4)?.get_poly()?;
-        // let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
-        // let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+        let mut answer4: Queryable<_, Queryable<Box<dyn Any>, Box<dyn Any>>> =
+            queryable.eval_poly(&cc_query_4)?;
+        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
 
         Ok(())
     }

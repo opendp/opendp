@@ -345,11 +345,11 @@ where
     MO: Measure
 {
     pub fn invoke_poly<Q: 'static + Clone, A: 'static>(&self, arg: &DI::Carrier) -> Fallible<Queryable<Q, A>> {
-        self.function.eval_poly(arg)
+        Ok(self.function.eval(arg)?.typed_as())
     }
 
     pub fn invoke1_poly<A: 'static>(&self, arg: &DI::Carrier) -> Fallible<A> {
-        self.function.eval1_poly(arg)
+        self.function.eval(arg)?.typed_as::<(), _>().eval(&())
     }
 }
 /// A data transformation with certain stability characteristics.

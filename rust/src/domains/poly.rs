@@ -69,7 +69,7 @@ where
                     err!(
                         FailedFunction,
                         "failed to downcast query to {}",
-                        type_name::<DI::Carrier>()
+                        type_name::<DOQ::Carrier>()
                     )
                 })?;
                 res.eval(query).map(|o| Box::new(o) as Box<dyn Any>)
@@ -95,12 +95,10 @@ impl<DI: Domain> Function<DI, PolyDomain> {
     }
 }
 
-impl<DI: Domain> Function<DI, QueryableDomain<PolyDomain, PolyDomain>> {
-    pub fn eval_poly<Q: 'static + Clone, A: 'static>(&self, arg: &DI::Carrier) -> Fallible<Queryable<Q, A>> {
-        let mut queryable = self.eval(arg)?;
-
-        Ok(Queryable::new_concrete(move |query: &Q| {
-            queryable.eval(&(Box::new(query.clone()) as Box<dyn Any>))?.downcast()
+impl Queryable<Box<dyn Any>, Box<dyn Any>> {
+    pub fn typed_as<Q: 'static + Clone, A: 'static>(mut self) -> Queryable<Q, A> {
+        Queryable::new_concrete(move |query: &Q| {
+            self.eval(&(Box::new(query.clone()) as Box<dyn Any>))?.downcast()
             .map_err(|_| {
                 err!(
                     FailedCast,
@@ -109,10 +107,16 @@ impl<DI: Domain> Function<DI, QueryableDomain<PolyDomain, PolyDomain>> {
                 )
             })
             .map(|res| *res)
-        }))
+        })
+    }
+}
+
+impl<QI: 'static> Queryable<QI, Queryable<Box<dyn Any>, Box<dyn Any>>> {
+    pub fn eval_poly<Q: 'static + Clone, A: 'static>(&mut self, arg: &QI) -> Fallible<Queryable<Q, A>> {
+        self.eval(arg).map(Queryable::typed_as)
     }
 
-    pub fn eval1_poly<A: 'static>(&self, arg: &DI::Carrier) -> Fallible<A> {
+    pub fn eval1_poly<A: 'static>(&mut self, arg: &QI) -> Fallible<A> {
         self.eval_poly::<(), A>(arg)?.get()
     }
 }

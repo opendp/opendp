@@ -3,7 +3,8 @@ use std::any::Any;
 use num::Zero;
 
 use crate::{
-    core::{Domain, Function, Measure, Metric, Odometer, PrivacyMap, Measurement},
+    core::{Domain, Function, Measure, Measurement, Metric, Odometer, PrivacyMap},
+    domains::QueryableDomain,
     error::Fallible,
     interactive::{Queryable, QueryableBase},
     traits::{InfAdd, TotalOrd},
@@ -14,13 +15,14 @@ use super::{make_odometer, BasicCompositionMeasure, Invokable};
 pub fn make_odometer_to_filter<
     DI: Domain + 'static,
     DQ: Domain + 'static,
-    DA: Domain + 'static,
+    DAQ: Domain + 'static,
+    DAA: Domain + 'static,
     MI: Metric + 'static,
     MO: Measure + Default + 'static,
 >(
-    odometer: Odometer<DI, DQ, DA, MI, MO>,
+    odometer: Odometer<DI, DQ, QueryableDomain<DAQ, DAA>, MI, MO>,
     d_out: MO::Distance,
-) -> Fallible<Measurement<DI, DQ, DA, MI, MO>>
+) -> Fallible<Measurement<DI, DQ, QueryableDomain<DAQ, DAA>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DQ::Carrier: 'static + Clone,
@@ -47,7 +49,8 @@ where
             Ok(Queryable::new(
                 move |_self: &QueryableBase, query: &dyn Any| {
                     if let Some(query) = query.downcast_ref::<DQ::Carrier>() {
-                        let d_out_pending: MO::Distance = odom_queryable.eval_privacy_after(query)?;
+                        let d_out_pending: MO::Distance =
+                            odom_queryable.eval_privacy_after(query)?;
 
                         if d_out_pending > d_out {
                             return fallible!(FailedFunction, "insufficient budget");
@@ -78,23 +81,35 @@ where
 pub fn make_filter<
     DI: Domain + 'static,
     DQ: Domain + 'static,
-    DA: Domain + 'static,
+    DAQ: Domain + 'static,
+    DAA: Domain + 'static,
     MI: Metric + 'static,
     MO: BasicCompositionMeasure + 'static,
 >(
     input_domain: DI,
     query_domain: DQ,
-    answer_domain: DA,
+    query2_domain: DAQ,
+    answer2_domain: DAA,
     output_measure: MO,
     d_in: MI::Distance,
     d_out: MO::Distance,
-) -> Fallible<Measurement<DI, DQ, DA, MI, MO>>
+) -> Fallible<Measurement<DI, DQ, QueryableDomain<DAQ, DAA>, MI, MO>>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
     DQ::Carrier: 'static + Clone,
     MO::Distance: 'static + TotalOrd + Clone + InfAdd + Zero,
-    DQ::Carrier: Invokable<DI, DQ, DA, MI, MO>
+    DQ::Carrier: Invokable<DI, DAQ, DAA, MI, MO>,
 {
-    make_odometer_to_filter(make_odometer(input_domain, query_domain, answer_domain, output_measure, d_in)?, d_out)
+    make_odometer_to_filter(
+        make_odometer(
+            input_domain,
+            query_domain,
+            query2_domain,
+            answer2_domain,
+            output_measure,
+            d_in,
+        )?,
+        d_out,
+    )
 }

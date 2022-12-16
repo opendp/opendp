@@ -104,6 +104,22 @@ impl Queryable<Box<dyn Any>, Box<dyn Any>> {
     }
 }
 
+impl<Q: 'static> Queryable<Q, Box<dyn Any>> {
+    /// Evaluates a polymorphic query and downcasts to the given type.
+    pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
+        self.eval(query)?
+            .downcast()
+            .map_err(|_| {
+                err!(
+                    FailedCast,
+                    "failed to downcast to {}",
+                    std::any::type_name::<A>()
+                )
+            })
+            .map(|b| *b)
+    }
+}
+
 pub(crate) struct ChildChange<Q> {
     pub id: usize,
     pub new_privacy_loss: Q,
