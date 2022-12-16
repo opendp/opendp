@@ -4,7 +4,7 @@ mod ffi;
 use num::{Zero, Float as _};
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, PrivacyMap, Metric};
+use crate::core::{Measurement1, PrivacyMap, Metric};
 use crate::measures::MaxDivergence;
 use crate::metrics::{L1Distance, AbsoluteDistance};
 use crate::domains::{AllDomain, VectorDomain};
@@ -18,10 +18,10 @@ use super::MappableDomain;
 pub trait LaplaceDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> LaplaceDomain for AllDomain<T> {
+impl<T: 'static + Clone + CheckNull> LaplaceDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
+impl<T: 'static + Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 
@@ -54,8 +54,8 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
 /// 
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
-pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<D::Atom>>>
-    where D: LaplaceDomain,
+pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<D::Atom>>>
+    where D: 'static + LaplaceDomain,
           D::Atom: Float + SampleDiscreteLaplaceZ2k,
           i32: ExactIntCast<<D::Atom as FloatBits>::Bits> {
     if scale.is_sign_negative() {
@@ -64,7 +64,7 @@ pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurem
 
     let (k, relaxation) = get_discretization_consts(k)?;
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         D::default(),
         D::default(),
         D::new_map_function(move |arg: &D::Atom| D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)),
@@ -120,21 +120,21 @@ mod tests {
             make_sized_bounded_mean::<SymmetricDistance, _>(3, (10.0, 12.0))? >>
             make_base_laplace(1.0, None)?
         )?;
-        let _ret = chain.invoke(&vec![10.0, 11.0, 12.0])?;
+        let _ret = chain.invoke1(&vec![10.0, 11.0, 12.0])?;
         Ok(())
     }
 
     #[test]
     fn test_big_laplace() -> Fallible<()> {
         let chain = make_base_laplace::<AllDomain<f64>>(f64::MAX, None)?;
-        println!("{:?}", chain.invoke(&f64::MAX)?);
+        println!("{:?}", chain.invoke1(&f64::MAX)?);
         Ok(())
     }
 
     #[test]
     fn test_make_laplace_mechanism() -> Fallible<()> {
         let measurement = make_base_laplace::<AllDomain<_>>(1.0, None)?;
-        let _ret = measurement.invoke(&0.0)?;
+        let _ret = measurement.invoke1(&0.0)?;
 
         assert!(measurement.check(&1., &1.)?);
         Ok(())
@@ -144,7 +144,7 @@ mod tests {
     fn test_make_vector_laplace_mechanism() -> Fallible<()> {
         let measurement = make_base_laplace::<VectorDomain<_>>(1.0, None)?;
         let arg = vec![1.0, 2.0, 3.0];
-        let _ret = measurement.invoke(&arg)?;
+        let _ret = measurement.invoke1(&arg)?;
 
         assert!(measurement.check(&1., &1.)?);
         Ok(())

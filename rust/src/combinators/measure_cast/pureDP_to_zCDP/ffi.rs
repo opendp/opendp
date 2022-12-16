@@ -22,7 +22,8 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     fn monomorphize<QO: Float>(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let AnyMeasurement {
             input_domain,
-            output_domain,
+            query_domain,
+            answer_domain,
             function,
             input_metric,
             output_measure,
@@ -31,7 +32,8 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     
         let measurement = Measurement {
             input_domain,
-            output_domain,
+            query_domain,
+            answer_domain,
             function,
             input_metric,
             output_measure: try_!(output_measure.downcast::<MaxDivergence<QO>>()),
@@ -44,7 +46,8 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     
         let Measurement {
             input_domain,
-            output_domain,
+            query_domain,
+            answer_domain,
             function,
             input_metric,
             output_measure,
@@ -53,7 +56,8 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     
         Ok(AnyMeasurement {
             input_domain,
-            output_domain,
+            query_domain,
+            answer_domain,
             function,
             input_metric,
             output_measure: AnyMeasure::new(output_measure),

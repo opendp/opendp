@@ -3,7 +3,7 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, PrivacyMap};
+use crate::core::{Measurement1, PrivacyMap};
 use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::traits::samplers::SampleDiscreteLaplaceLinear;
@@ -48,9 +48,9 @@ use super::DiscreteLaplaceDomain;
 pub fn make_base_discrete_laplace_linear<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: 'static + DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -65,7 +65,7 @@ where
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         D::default(),
         D::default(),
         D::new_map_function(move |v: &D::Atom| {
@@ -119,9 +119,9 @@ where
 pub fn make_base_geometric<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: 'static + DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -140,7 +140,7 @@ mod tests {
             make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, Some((200, 210)))
                 .unwrap_test();
         let arg = 205;
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke1(&arg).unwrap_test();
         println!("{:?}", _ret);
 
         assert!(measurement.check(&1, &0.5).unwrap_test());
@@ -152,7 +152,7 @@ mod tests {
             make_base_discrete_laplace_linear::<VectorDomain<_>, f64>(10.0, Some((200, 210)))
                 .unwrap_test();
         let arg = vec![1, 2, 3, 4];
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke1(&arg).unwrap_test();
         println!("{:?}", _ret);
 
         assert!(measurement.check(&1, &0.5).unwrap_test());
@@ -163,7 +163,7 @@ mod tests {
         let measurement =
             make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = 205;
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke1(&arg).unwrap_test();
         println!("{:?}", _ret);
 
         assert!(measurement.check(&1, &0.5).unwrap_test());
@@ -174,7 +174,7 @@ mod tests {
         let measurement =
             make_base_discrete_laplace_linear::<VectorDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = vec![1, 2, 3, 4];
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke1(&arg).unwrap_test();
         println!("{:?}", _ret);
 
         assert!(measurement.check(&1, &0.5).unwrap_test());

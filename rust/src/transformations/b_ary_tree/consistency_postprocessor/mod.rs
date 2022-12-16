@@ -41,7 +41,7 @@ pub fn make_consistent_b_ary_tree<TIA, TOA>(
     >,
 >
 where
-    TIA: CheckNull + Clone,
+    TIA: 'static + CheckNull + Clone,
     TOA: Float + RoundCast<TIA>,
 {
     make_postprocess(

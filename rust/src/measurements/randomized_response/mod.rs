@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement1, PrivacyMap};
 use crate::domains::AllDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
@@ -43,7 +43,7 @@ use crate::traits::{Hashable, Float};
 pub fn make_randomized_response_bool<QO>(
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement1<AllDomain<bool>, AllDomain<bool>, DiscreteDistance, MaxDivergence<QO>>>
     where bool: SampleBernoulli<QO>,
           QO: Float {
 
@@ -57,7 +57,7 @@ pub fn make_randomized_response_bool<QO>(
     //       = min(d_in, 1) * ln(p / (1 - p))
     let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(move |arg: &bool| {
@@ -98,7 +98,7 @@ pub fn make_randomized_response<T, QO>(
     categories: HashSet<T>,
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement1<AllDomain<T>, AllDomain<T>, DiscreteDistance, MaxDivergence<QO>>>
     where T: Hashable,
           bool: SampleBernoulli<QO>,
           QO: Float {
@@ -129,7 +129,7 @@ pub fn make_randomized_response<T, QO>(
         .inf_mul(&num_categories.inf_sub(&QO::one())?)?
         .inf_ln()?;
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(move |truth: &T| {
@@ -175,7 +175,7 @@ mod test {
     #[test]
     fn test_bool() -> Fallible<()> {
         let ran_res = make_randomized_response_bool(0.75, false)?;
-        let res = ran_res.invoke(&false)?;
+        let res = ran_res.invoke1(&false)?;
         println!("{:?}", res);
         assert!(ran_res.check(&1, &3.0.ln())?);
         assert!(!ran_res.check(&1, &2.99999.ln())?);
@@ -197,7 +197,7 @@ mod test {
             0.75,
             false,
         )?;
-        let res = ran_res.invoke(&3)?;
+        let res = ran_res.invoke1(&3)?;
         println!("{:?}", res);
         // (.75 * 3 / .25) = 9
         assert!(ran_res.check(&1, &9.0.ln())?);

@@ -63,7 +63,7 @@ pub trait ImputeConstantDomain: Domain {
     
 }
 // how to impute, when null represented as Option<T>
-impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: 'static + CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         default.as_ref().unwrap_or(constant)
@@ -122,7 +122,7 @@ pub trait DropNullDomain: Domain {
     /// For example, consider `D` to be `OptionNullDomain<T>`, the domain of all `Option<T>`.
     /// The implementation of this trait for `DropNullDomain<T>` designates that `type Imputed = T`. 
     /// Thus `DropNullDomain<T>::Imputed` is `T`.
-    type Imputed;
+    type Imputed: 'static;
 
     /// Standardizes `D::Carrier` into an `Option<D::Imputed>`, where `D::Imputed` is never null.
     /// 
@@ -132,7 +132,7 @@ pub trait DropNullDomain: Domain {
 }
 
 /// how to standardize into an option, when null represented as Option<T>
-impl<T: CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: 'static + CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() { None } else { value.clone() }

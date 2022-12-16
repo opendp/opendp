@@ -231,6 +231,10 @@ impl CheckNull for rug::Integer {
     }
 }
 
+impl CheckNull for () {
+    fn is_null(&self) -> bool { false }
+}
+
 // TRAIT InherentNull
 macro_rules! impl_inherent_null_float {
     ($($ty:ty),+) => ($(impl InherentNull for $ty {

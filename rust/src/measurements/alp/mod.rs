@@ -5,7 +5,7 @@ use std::rc::Rc;
 use num::{Integer, ToPrimitive};
 use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float};
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement1, PrivacyMap};
 use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
@@ -219,7 +219,7 @@ pub fn make_base_alp_with_hashers<K, C, T>(
     scale: T,
     s: usize,
     h: HashFunctions<K>,
-) -> Fallible<Measurement<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>>
+) -> Fallible<Measurement1<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>>
 where
     K: 'static + Eq + Hash + CheckNull,
     C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + ToPrimitive,
@@ -243,7 +243,7 @@ where
         );
     }
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         MapDomain {
             key_domain: AllDomain::new(),
             value_domain: AllDomain::new(),
@@ -287,7 +287,7 @@ pub fn make_base_alp<K, C, T>(
     alpha: Option<T>,
     scale: T,
     beta: C,
-) -> Fallible<Measurement<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>>
+) -> Fallible<Measurement1<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>>
 where
     K: 'static + Eq + Hash + Clone + CheckNull,
     C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
@@ -318,7 +318,7 @@ where
 ///
 /// The Queryable object works similar to a dictionary.
 /// Note that the access time is O(state.h.len()).
-pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AllDomain<K>, AllDomain<T>>
+pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<K, T>
 where
     T: 'static + TFloat,
     K: 'static + Clone + CheckNull,
@@ -328,11 +328,11 @@ where
 
 /// Wrapper Measurement. See [`post_process`].
 pub fn make_alp_histogram_post_process<K, C, T>(
-    m: &Measurement<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>,
+    m: &Measurement1<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>,
 ) -> Fallible<
-    Measurement<
+    Measurement1<
         SparseDomain<K, C>,
-        AllDomain<Queryable<AllDomain<K>, AllDomain<T>>>,
+        AllDomain<Queryable<K, T>>,
         L1Distance<C>,
         MaxDivergence<T>,
     >,
@@ -345,10 +345,10 @@ where
     AlpState<K, T>: Clone,
 {
     let function = m.function.clone();
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         m.input_domain.clone(),
         AllDomain::new(),
-        Function::new_fallible(move |x| function.eval(x).map(post_process)),
+        Function::new_fallible(move |x| function.eval1(x).map(post_process)),
         m.input_metric.clone(),
         m.output_measure.clone(),
         m.privacy_map.clone(),
@@ -513,7 +513,7 @@ mod tests {
 
         let alp = make_base_alp::<i32, i32, f64>(24, None, None, 2., 24)?;
 
-        let state = alp.function.eval(&x)?;
+        let state = alp.function.eval1(&x)?;
 
         let mut query = post_process(state);
 
@@ -538,7 +538,7 @@ mod tests {
 
         assert_eq!(wrapped.map(&1)?, 2.);
 
-        let mut query = wrapped.function.eval(&x)?;
+        let mut query = wrapped.function.eval1(&x)?;
 
         query.eval(&0)?;
         query.eval(&42)?;

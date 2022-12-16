@@ -27,8 +27,9 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
+use crate::domains::{AllDomain, QueryableDomain, PolyDomain};
 use crate::error::*;
-use crate::interactive::Context;
+use crate::interactive::{Queryable};
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
 
@@ -50,7 +51,7 @@ pub trait Domain: Clone + PartialEq + Debug {
     ///
     /// # Proof Definition
     /// `Self::Carrier` can represent all values in the set described by `Self`.
-    type Carrier;
+    type Carrier: 'static;
 
     /// Predicate to test an element for membership in the domain.
     /// Not all possible values of `::Carrier` are a member of the domain.
@@ -65,14 +66,15 @@ pub trait Domain: Clone + PartialEq + Debug {
     /// It can be useful, however, to see richer debug information via `e` in the event of a failure.
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 
-    /// A helper to communicate with a member of this domain.
-    /// The members of most domains are not interactive, so the default implementation returns itself without changes
-    fn inject_context<QD: 'static + Clone>(
-        _member: &mut Self::Carrier,
-        _context: Context,
-        _max_usage: Option<QD>,
-    ) {
-    }
+    // /// A helper to communicate with a member of this domain.
+    // /// The members of most domains are not interactive, so the default implementation returns itself without changes
+    // TODO: consider removal
+    // fn map_queryable<QD: 'static + Clone>(
+    //     _member: &mut Self::Carrier,
+    //     _context: Context,
+    //     _max_usage: Option<QD>,
+    // ) {
+    // }
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
@@ -102,6 +104,12 @@ impl<DI: Domain, DO: Domain> Function<DI, DO> {
 
     pub fn eval(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
         (self.function)(arg)
+    }
+}
+
+impl<DI: Domain, DO: Domain> Function<DI, QueryableDomain<AllDomain<()>, DO>> {
+    pub fn eval1(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+        (self.function)(arg)?.get()
     }
 }
 
@@ -240,27 +248,34 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
 #[derive(Clone)]
-pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+pub struct Measurement<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
-    pub output_domain: DO,
-    pub function: Function<DI, DO>,
+    pub query_domain: DQ,
+    pub answer_domain: DA,
+    pub function: Function<DI, QueryableDomain<DQ, DA>>,
     pub input_metric: MI,
     pub output_measure: MO,
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
+pub type Measurement1<DI, DO, MI, MO> = Measurement<DI, AllDomain<()>, DO, MI, MO>;
+
+impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure>
+    Measurement<DI, DQ, DA, MI, MO>
+{
     pub fn new(
         input_domain: DI,
-        output_domain: DO,
-        function: Function<DI, DO>,
+        query_domain: DQ,
+        answer_domain: DA,
+        function: Function<DI, QueryableDomain<DQ, DA>>,
         input_metric: MI,
         output_measure: MO,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Self {
         Self {
             input_domain,
-            output_domain,
+            query_domain, 
+            answer_domain,
             function,
             input_metric,
             output_measure,
@@ -268,7 +283,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
         }
     }
 
-    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<Queryable<DQ::Carrier, DA::Carrier>> {
         self.function.eval(arg)
     }
 
@@ -284,6 +299,59 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
     }
 }
 
+impl<DI, DO, MI, MO> Measurement1<DI, DO, MI, MO>
+where
+    DI: 'static + Domain,
+    DO: 'static + Domain,
+    MI: Metric,
+    MO: Measure,
+    DO::Carrier: 'static
+{
+    pub fn new1(
+        input_domain: DI,
+        output_domain: DO,
+        function: Function<DI, DO>,
+        input_metric: MI,
+        output_measure: MO,
+        privacy_map: PrivacyMap<MI, MO>,
+    ) -> Self {
+        Self::new(
+            input_domain,
+            AllDomain::new(),
+            output_domain,
+            Function::new_fallible(move |arg: &DI::Carrier| {
+                let mut answer = Some(function.eval(&arg)?);
+
+                Ok(Queryable::new_concrete(move |_query: &()| {
+                    answer.take().ok_or_else(|| err!(FailedFunction, "answer has already been returned"))
+                }))
+            }),
+            input_metric,
+            output_measure,
+            privacy_map,
+        )
+    }
+
+    /// A shorthand for invoking a non-interactive measurement
+    pub fn invoke1(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+        self.function.eval1(arg)
+    }
+}
+
+impl<DI, MI, MO> Measurement<DI, PolyDomain, PolyDomain, MI, MO>
+where
+    DI: 'static + Domain,
+    MI: Metric,
+    MO: Measure
+{
+    pub fn invoke_poly<Q: 'static + Clone, A: 'static>(&self, arg: &DI::Carrier) -> Fallible<Queryable<Q, A>> {
+        self.function.eval_poly(arg)
+    }
+
+    pub fn invoke1_poly<A: 'static>(&self, arg: &DI::Carrier) -> Fallible<A> {
+        self.function.eval1_poly(arg)
+    }
+}
 /// A data transformation with certain stability characteristics.
 ///
 /// The trait bounds provided by the Rust type system guarantee that:
@@ -340,27 +408,30 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 }
 
 #[derive(Clone)]
-pub struct Odometer<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+pub struct Odometer<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> {
     pub input_domain: DI,
-    pub output_domain: DO,
-    pub function: Function<DI, DO>,
+    pub query_domain: DQ,
+    pub answer_domain: DA,
+    pub function: Function<DI, QueryableDomain<DQ, DA>>,
     pub input_metric: MI,
     pub output_measure: MO,
     pub d_in: MI::Distance,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Odometer<DI, DO, MI, MO> {
+impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Odometer<DI, DQ, DA, MI, MO> {
     pub fn new(
         input_domain: DI,
-        output_domain: DO,
-        function: Function<DI, DO>,
+        query_domain: DQ,
+        answer_domain: DA,
+        function: Function<DI, QueryableDomain<DQ, DA>>,
         input_metric: MI,
         output_measure: MO,
         d_in: MI::Distance,
     ) -> Self {
         Self {
             input_domain,
-            output_domain,
+            query_domain,
+            answer_domain,
             function,
             input_metric,
             output_measure,
@@ -368,7 +439,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Odometer<DI, DO, MI, MO> {
         }
     }
 
-    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<Queryable<DQ::Carrier, DA::Carrier>> {
         self.function.eval(arg)
     }
 }

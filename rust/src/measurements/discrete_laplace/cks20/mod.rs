@@ -5,7 +5,7 @@ use opendp_derive::bootstrap;
 use rug::{Complete, Integer, Rational};
 
 use crate::{
-    core::{Measurement, PrivacyMap},
+    core::{Measurement1, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
     traits::{samplers::sample_discrete_laplace, InfCast},
@@ -43,9 +43,9 @@ mod ffi;
 /// * `QO` - Data type of the output distance and scale.
 pub fn make_base_discrete_laplace_cks20<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: 'static + DiscreteLaplaceDomain,
     D::Atom: crate::traits::Integer,
     QO: crate::traits::Float + InfCast<D::Atom>,
     Rational: TryFrom<QO>,
@@ -57,7 +57,7 @@ where
     let scale_rational =
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         D::default(),
         D::default(),
         if scale.is_zero() {
@@ -108,15 +108,15 @@ where
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<Integer>>` or `AllDomain<Integer>`
 pub fn make_base_discrete_laplace_cks20_rug<D>(
     scale: Rational,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<Rational>>>
+) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<Rational>>>
 where
-    D: DiscreteLaplaceDomain<Atom = Integer>,
+    D: 'static + DiscreteLaplaceDomain<Atom = Integer>,
 {
     if scale <= 0 {
         return fallible!(MakeMeasurement, "scale must be positive");
     }
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         D::default(),
         D::default(),
         D::new_map_function(enclose!(scale, move |arg: &Integer| {
@@ -140,16 +140,16 @@ mod test {
     #[test]
     fn test_make_base_discrete_laplace_cks20() -> Fallible<()> {
         let meas = make_base_discrete_laplace_cks20::<AllDomain<_>, _>(1e30f64)?;
-        println!("{:?}", meas.invoke(&0)?);
+        println!("{:?}", meas.invoke1(&0)?);
         assert!(meas.check(&1, &1e30f64)?);
 
         let meas = make_base_discrete_laplace_cks20::<AllDomain<_>, _>(0.)?;
-        assert_eq!(meas.invoke(&0)?, 0);
+        assert_eq!(meas.invoke1(&0)?, 0);
         assert_eq!(meas.map(&0)?, 0.);
         assert_eq!(meas.map(&1)?, f64::INFINITY);
 
         let meas = make_base_discrete_laplace_cks20::<AllDomain<_>, _>(f64::MAX)?;
-        println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
+        println!("{:?} {:?}", meas.invoke1(&0)?, i32::MAX);
 
         Ok(())
     }
@@ -158,14 +158,14 @@ mod test {
     fn test_make_base_discrete_laplace_cks20_rug() -> Fallible<()> {
         let _1e30 = Rational::try_from(1e30f64).unwrap_test();
         let meas = make_base_discrete_laplace_cks20_rug::<AllDomain<_>>(_1e30.clone())?;
-        println!("{:?}", meas.invoke(&Integer::zero())?);
+        println!("{:?}", meas.invoke1(&Integer::zero())?);
         assert!(meas.check(&Integer::one(), &_1e30)?);
 
         assert!(make_base_discrete_laplace_cks20_rug::<AllDomain<_>>(Rational::zero()).is_err());
         
         let f64_max = Rational::try_from(f64::MAX).unwrap_test();
         let meas = make_base_discrete_laplace_cks20_rug::<AllDomain<_>>(f64_max)?;
-        println!("sample with scale=f64::MAX: {:?}", meas.invoke(&Integer::zero())?);
+        println!("sample with scale=f64::MAX: {:?}", meas.invoke1(&Integer::zero())?);
 
         Ok(())
     }

@@ -7,7 +7,7 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::{AllDomain, QueryableDomain},
     error::Fallible,
-    interactive::{ChildChange, Context, Queryable, QueryableBase},
+    interactive::{Queryable, QueryableBase},
     measures::{MaxDivergence, SmoothedMaxDivergence},
     traits::{InfAdd, TotalOrd},
 };
@@ -16,16 +16,26 @@ use super::BasicCompositionMeasure;
 
 pub fn make_concurrent_composition<
     DI: Domain + 'static,
-    DO: Domain + 'static,
+    DQ: Domain + 'static,
+    DA: Domain + 'static,
     MI: Metric + Default + 'static,
     MO: ConcurrentCompositionMeasure + BasicCompositionMeasure + 'static,
 >(
     input_domain: DI,
-    answer_domain: DO,
+    query_domain: DQ,
+    answer_domain: DA,
     output_measure: MO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
-) -> Fallible<Measurement<DI, QueryableDomain<AllDomain<Measurement<DI, DO, MI, MO>>, DO>, MI, MO>>
+) -> Fallible<
+    Measurement<
+        DI,
+        AllDomain<Measurement<DI, DQ, DA, MI, MO>>,
+        QueryableDomain<DQ, DA>,
+        MI,
+        MO,
+    >,
+>
 where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
@@ -42,9 +52,10 @@ where
 
     Ok(Measurement::new(
         input_domain.clone(),
-        QueryableDomain::new(AllDomain::new(), answer_domain),
+        AllDomain::new(),
+        QueryableDomain::new(query_domain, answer_domain),
         Function::new(enclose!(
-            (input_domain, output_measure, d_in, d_out),
+            (input_domain, output_measure, d_in),
             move |arg: &DI::Carrier| {
                 // a new copy of the state variables is made each time the Function is called:
 
@@ -52,7 +63,6 @@ where
                 let input_domain = input_domain.clone();
                 let output_measure = output_measure.clone();
                 let d_in = d_in.clone();
-                let d_out = d_out.clone();
                 let arg = arg.clone();
 
                 // MUTABLE STATE VARIABLES
@@ -63,11 +73,13 @@ where
                 // 2. the query, which is a dynamically typed `&dyn Any`
 
                 // arg, d_mids, d_in and d_out are all moved into (or captured by) the Queryable closure here
-                Queryable::new(move |self_: &QueryableBase, query: &dyn Any| {
+                Queryable::new(move |_self: &QueryableBase, query: &dyn Any| {
                     // evaluate the measurement query and return the answer.
                     //     the downcast ref attempts to downcast the &dyn Any to a specific concrete type
                     //     if the query passed in was this type of measurement, the downcast will succeed
-                    if let Some(measurement) = query.downcast_ref::<Measurement<DI, DO, MI, MO>>() {
+                    if let Some(measurement) =
+                        query.downcast_ref::<Measurement<DI, DQ, DA, MI, MO>>()
+                    {
                         assert_components_match!(
                             DomainMismatch,
                             input_domain,
@@ -96,32 +108,15 @@ where
                         }
 
                         // evaluate the query!
-                        let mut answer = measurement.invoke(&arg)?;
+                        let answer = measurement.invoke(&arg)?;
 
-                        // we've now consumed the last d_mid. This is our only state modification
-                        let d_mid = d_mids.pop();
-
-                        // if the answer is a queryable,
-                        // wrap it so that when the child gets a query it sends a ChildChange query to this parent queryable
-                        // it gives this concurrent composition queryable (or any parent of this queryable)
-                        // a chance to deny the child permission to execute
-                        DO::inject_context(
-                            &mut answer,
-                            Context::new(self_.clone(), d_mids.len()),
-                            d_mid,
-                        );
+                        // we've now consumed the trailing d_mid. This is our only state modification
+                        d_mids.pop();
 
                         // The box allows the return value to be dynamically typed, just like query was.
                         // Necessary because different queries have different return types.
                         // All responses are of type `Fallible<Box<dyn Any>>`
                         return Ok(Box::new(answer));
-                    }
-
-                    // update state based on child change
-                    if query.downcast_ref::<ChildChange<MO::Distance>>().is_some() {
-                        // state won't change in response to child,
-                        // but return an Ok to approve the change
-                        return Ok(Box::new(d_out.clone()));
                     }
 
                     fallible!(FailedFunction, "unrecognized query!")
@@ -157,6 +152,7 @@ mod test {
     use crate::{
         domains::{AllDomain, PolyDomain},
         measurements::make_randomized_response_bool,
+        metrics::DiscreteDistance,
     };
 
     use super::*;
@@ -164,8 +160,9 @@ mod test {
     #[test]
     fn test_concurrent_composition() -> Fallible<()> {
         // construct concurrent compositor IM
-        let root = make_concurrent_composition(
+        let root = make_concurrent_composition::<_, _, _, DiscreteDistance, _>(
             AllDomain::new(),
+            PolyDomain::new(),
             PolyDomain::new(),
             MaxDivergence::default(),
             1,
@@ -179,13 +176,14 @@ mod test {
         let rr_query = make_randomized_response_bool(0.5, false)?;
 
         // pass queries into the CC queryable
-        let _answer1: bool = queryable.eval_poly(&rr_poly_query)?;
-        let _answer2: bool = queryable.eval_poly(&rr_poly_query)?;
+        let _answer1: bool = queryable.eval(&rr_poly_query)?.get_poly()?;
+        let _answer2: bool = queryable.eval(&rr_poly_query)?.get_poly()?;
 
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are in AllDomain<bool>
-        let cc_query_3 = make_concurrent_composition::<_, AllDomain<bool>, _, _>(
+        let cc_query_3 = make_concurrent_composition::<_, PolyDomain, AllDomain<bool>, _, _>(
             AllDomain::<bool>::new(),
+            PolyDomain::new(),
             AllDomain::<bool>::new(),
             MaxDivergence::default(),
             1,
@@ -193,25 +191,24 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer3: Queryable<AllDomain<_>, AllDomain<bool>> = queryable.eval_poly(&cc_query_3)?;
+        let mut answer3: Queryable<_, bool> = queryable.eval(&cc_query_3)?.get_poly()?;
         let _answer3_1: bool = answer3.eval(&rr_query)?;
         let _answer3_2: bool = answer3.eval(&rr_query)?;
 
-        // pass a concurrent composition compositor into the original CC compositor
-        // This compositor expects all outputs are in PolyDomain
-        let cc_query_4 = make_concurrent_composition::<_, PolyDomain, _, _>(
-            AllDomain::<bool>::new(),
-            PolyDomain::new(),
-            MaxDivergence::default(),
-            1,
-            vec![0.2, 0.3],
-        )?
-        .into_poly();
+        // // pass a concurrent composition compositor into the original CC compositor
+        // // This compositor expects all outputs are in PolyDomain
+        // let cc_query_4 = make_concurrent_composition(
+        //     AllDomain::<bool>::new(),
+        //     PolyDomain::new(),
+        //     PolyDomain::new(),
+        //     MaxDivergence::default(),
+        //     1,
+        //     vec![0.2, 0.3],
+        // )?.into_poly();
 
-        let mut answer4: Queryable<AllDomain<Measurement<_, PolyDomain, _, _>>, _> =
-            queryable.eval_poly(&cc_query_4)?;
-        let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
-        let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
+        // let mut answer4: Queryable<_, Queryable<Box<dyn Any>, Box<dyn Any>>> = queryable.eval(&cc_query_4)?.get_poly()?;
+        // let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+        // let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
 
         Ok(())
     }

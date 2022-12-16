@@ -13,7 +13,7 @@ pub fn collect(c: &mut Criterion) {
                 let meas =
                     make_base_discrete_laplace_linear::<VectorDomain<AllDomain<i32>>, _>(scale, None)
                         .unwrap();
-                meas.invoke(&vec![0; 1000]).unwrap();
+                meas.invoke1(&vec![0; 1000]).unwrap();
             })
         });
 
@@ -21,7 +21,7 @@ pub fn collect(c: &mut Criterion) {
             b.iter(|| {
                 let meas =
                     make_base_discrete_laplace_cks20::<VectorDomain<AllDomain<i32>>, _>(scale).unwrap();
-                meas.invoke(&vec![0; 1000]).unwrap();
+                meas.invoke1(&vec![0; 1000]).unwrap();
             })
         });
     });

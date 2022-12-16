@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Function, Measurement, Metric},
+    core::{Domain, Function, Measurement1, Metric},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::MaxDivergence,
@@ -39,7 +39,7 @@ pub trait MappableDomain: Domain {
     }
 }
 
-impl<T: Clone + CheckNull> MappableDomain for AllDomain<T> {
+impl<T: 'static + Clone + CheckNull> MappableDomain for AllDomain<T> {
     type Atom = T;
     fn map_over(
         arg: &Self::Carrier,
@@ -62,10 +62,10 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
 pub trait DiscreteLaplaceDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
+impl<T: 'static + Clone + CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> {
+impl<T: 'static + Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 
@@ -98,9 +98,9 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
 #[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: 'static + DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
     rug::Rational: std::convert::TryFrom<QO>,
@@ -143,9 +143,9 @@ where
 #[cfg(not(feature = "use-mpfr"))]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<QO>>>
 where
-    D: DiscreteLaplaceDomain,
+    D: 'static + DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -162,7 +162,7 @@ mod test {
     #[test]
     fn test_make_base_discrete_laplace() -> Fallible<()> {
         let meas = make_base_discrete_laplace::<AllDomain<_>, _>(1f64)?;
-        println!("{:?}", meas.invoke(&0)?);
+        println!("{:?}", meas.invoke1(&0)?);
         assert!(meas.check(&1, &1.)?);
         Ok(())
     }

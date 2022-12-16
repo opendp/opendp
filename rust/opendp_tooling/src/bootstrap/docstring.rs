@@ -198,7 +198,7 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                 )
             }
         }),
-        i if i == "Transformation" || i == "Measurement" || i == "Postprocessor" => {
+        i if i == "Transformation" || i == "Measurement1" || i == "Postprocessor" => {
             match arguments {
                 syn::PathArguments::AngleBracketed(ab) => {
                     let num_args = if i == "Postprocessor" { 2 } else { 4 };
@@ -229,7 +229,7 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
 
                         let output_distance = match i {
                             i if i == "Transformation" => "Metric: ",
-                            i if i == "Measurement" => "Measure:",
+                            i if i == "Measurement1" => "Measure:",
                             _ => unreachable!(),
                         };
                         let [input_metric, output_metmeas] = [&ab.args[2], &ab.args[3]];

@@ -232,7 +232,7 @@ pub mod test_b_trees {
     fn test_noise_b_ary_tree() -> Fallible<()> {
         let meas =
             (make_b_ary_tree::<L1Distance<i32>, i32>(10, 2)? >> make_base_discrete_laplace(1.)?)?;
-        println!("noised {:?}", meas.invoke(&vec![1; 10])?);
+        println!("noised {:?}", meas.invoke1(&vec![1; 10])?);
 
         Ok(())
     }
@@ -244,7 +244,7 @@ pub mod test_b_trees {
         let meas = (trans.clone() >> make_base_discrete_laplace(0.)?)?;
         let post = make_consistent_b_ary_tree::<i32, f64>(b)?;
 
-        let noisy_tree = meas.invoke(&vec![1; 10])?;
+        let noisy_tree = meas.invoke1(&vec![1; 10])?;
         // casting should not lose data, as noise was integral
         let consi_leaves = post.invoke(&noisy_tree)?.into_iter().map(|v| v as i32).collect();
         let consi_tree = make_b_ary_tree::<L1Distance<f64>, i32>(10, b)?.invoke(&consi_leaves)?;

@@ -2,7 +2,7 @@ use num::Float as _;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measure, Measurement, PrivacyMap, Metric},
+    core::{Measure, Measurement1, PrivacyMap, Metric},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
@@ -19,10 +19,10 @@ mod ffi;
 pub trait GaussianDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> GaussianDomain for AllDomain<T> {
+impl<T: 'static + Clone + CheckNull> GaussianDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> GaussianDomain for VectorDomain<AllDomain<T>> {
+impl<T: 'static + Clone + CheckNull> GaussianDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L2Distance<T>;
 }
 
@@ -86,9 +86,9 @@ where
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
-pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MO>>
+pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement1<D, D, D::InputMetric, MO>>
 where
-    D: GaussianDomain,
+    D: 'static + GaussianDomain,
     D::Atom: Float + SampleDiscreteGaussianZ2k,
     MO: GaussianMeasure<D>,
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>
@@ -99,7 +99,7 @@ where
     
     let (k , relaxation) = get_discretization_consts(k)?;
 
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         D::default(),
         D::default(),
         D::new_map_function(move |arg: &D::Atom| D::Atom::sample_discrete_gaussian_Z2k(*arg, scale, k)),
@@ -118,7 +118,7 @@ mod tests {
         let measurement =
             make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
         let arg = 0.0;
-        let _ret = measurement.invoke(&arg)?;
+        let _ret = measurement.invoke1(&arg)?;
 
         assert!(measurement.check(&0.1, &0.0050000001)?);
         Ok(())
@@ -129,7 +129,7 @@ mod tests {
         let measurement =
             make_base_gaussian::<VectorDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
         let arg = vec![0.0, 1.0];
-        let _ret = measurement.invoke(&arg)?;
+        let _ret = measurement.invoke1(&arg)?;
 
         assert!(measurement.map(&0.1)? <= 0.0050000001);
         Ok(())

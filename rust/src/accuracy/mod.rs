@@ -257,7 +257,7 @@ fn dg_normalization_term(scale: f64) -> f64 {
 }
 
 
-#[cfg(all(test, feature="untrusted"))]
+#[cfg(all(test, feature="untrusted", feature="use-mpfr"))]
 pub mod test {
     use std::fmt::Debug;
     use std::ops::{Mul, Sub};
@@ -430,7 +430,7 @@ pub mod test {
         let base_laplace = make_base_laplace::<AllDomain<f64>>(scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
+            .filter(|_| base_laplace.invoke1(&0.0).unwrap_test().abs() > accuracy)
             .count() as f64 / n as f64;
 
         println!("Laplacian significance levels/alpha");
@@ -448,7 +448,7 @@ pub mod test {
         let base_gaussian = make_base_gaussian::<AllDomain<f64>, ZeroConcentratedDivergence<_>>(scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)
+            .filter(|_| base_gaussian.invoke1(&0.0).unwrap_test().abs() > accuracy)
             .count() as f64 / n as f64;
 
         println!("Gaussian significance levels/alpha");
@@ -467,7 +467,7 @@ pub mod test {
         let base_dl = make_base_discrete_laplace::<AllDomain<i8>, f64>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_dl.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
+            .filter(|_| base_dl.invoke1(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
             .count() as f64 / n as f64;
 
         println!("Discrete laplace significance levels/alpha");
@@ -488,7 +488,7 @@ pub mod test {
         let base_dg = make_base_discrete_gaussian::<AllDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_dg.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
+            .filter(|_| base_dg.invoke1(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
             .count() as f64 / n as f64;
 
         println!("Discrete gaussian significance levels/alpha");

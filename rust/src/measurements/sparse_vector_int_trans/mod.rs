@@ -1,7 +1,7 @@
 use std::any::Any;
 
 use crate::{
-    core::{Domain, Function, Measure, Measurement, PrivacyMap},
+    core::{Domain, Function, Measure, Measurement1, PrivacyMap},
     domains::{AllDomain, QueryableDomain},
     error::Fallible,
     interactive::{Queryable, QueryableBase},
@@ -18,7 +18,7 @@ pub fn make_sparse_vector<DI: 'static + Domain, T: Float, QI, MODE>(
     scale_release: MODE::Scale,
     query_limit: usize,
 ) -> Fallible<
-    Measurement<
+    Measurement1<
         QueryableDomain<DI, AllDomain<T>>,
         QueryableDomain<DI, AllDomain<MODE::Output>>,
         AbsoluteDistance<QI>,
@@ -32,12 +32,12 @@ where
     QI: Clone,
     MODE: SVMode<T>,
 {
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         QueryableDomain::new(input_domain.clone(), AllDomain::new()),
         QueryableDomain::new(input_domain.clone(), AllDomain::new()),
         Function::new_fallible(enclose!(scale_release, move |arg: &Queryable<
-            DI,
-            AllDomain<T>,
+            DI::Carrier,
+            T,
         >| {
             let mut trans_queryable = arg.clone();
 
@@ -149,16 +149,17 @@ mod test {
             3,    // limit on number of queries released
         )?;
 
-        let mut sv = sv_meas.invoke(&Queryable::new(|_self: &QueryableBase, query: &dyn Any| {
-            Ok(Box::new(*query.downcast_ref::<f64>().unwrap()))
-        }))?;
+        let mut sv =
+            sv_meas.invoke1(&Queryable::new(|_self: &QueryableBase, query: &dyn Any| {
+                Ok(Box::new(*query.downcast_ref::<f64>().unwrap()))
+            }))?;
 
         println!("too small       : {:?}", sv.eval(&1.)?);
         println!("maybe true      : {:?}", sv.eval(&100.)?);
         println!("definitely true : {:?}", sv.eval(&1000.)?);
         println!("maybe exhausted : {:?}", sv.eval(&1000.).is_err());
         println!("exhausted       : {:?}", sv.eval(&1000.).is_err());
-        
+
         Ok(())
     }
 }

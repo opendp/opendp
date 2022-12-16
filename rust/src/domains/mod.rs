@@ -18,7 +18,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::{inject_context, Context, Queryable};
+use crate::interactive::Queryable;
 use crate::traits::{CheckNull, CollectionSize, InherentNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
@@ -29,24 +29,28 @@ pub use poly::*;
 
 #[derive(PartialEq)]
 pub struct QueryableDomain<DQ: Domain, DA: Domain> {
-    query_domain: DQ,
-    answer_domain: DA,
+    pub query_domain: DQ,
+    pub answer_domain: DA,
 }
-impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA> 
-    where DQ::Carrier: 'static + Clone {
-    type Carrier = Queryable<DQ, DA>;
+impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA>
+where
+    DQ::Carrier: 'static,
+    DA::Carrier: 'static,
+{
+    type Carrier = Queryable<DQ::Carrier, DA::Carrier>;
 
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         Ok(true)
     }
 
-    fn inject_context<QD: 'static + Clone>(
-        queryable: &mut Self::Carrier,
-        context: Context,
-        max_usage: Option<QD>,
-    ) {
-        inject_context(queryable, context, max_usage);
-    }
+    // TODO: consider removal
+    // fn inject_context<QD: 'static + Clone>(
+    //     queryable: &mut Self::Carrier,
+    //     context: Context,
+    //     max_usage: Option<QD>,
+    // ) {
+    //     inject_context(queryable, context, max_usage);
+    // }
 }
 
 impl<DQ: Domain, DA: Domain> Debug for QueryableDomain<DQ, DA> {
@@ -126,7 +130,7 @@ impl<T> PartialEq for AllDomain<T> {
         true
     }
 }
-impl<T: CheckNull> Domain for AllDomain<T> {
+impl<T: 'static + CheckNull> Domain for AllDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         Ok(!val.is_null())
@@ -204,7 +208,7 @@ impl<T: TotalOrd> Debug for BoundedDomain<T> {
         write!(f, "BoundedDomain({})", type_name!(T))
     }
 }
-impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
+impl<T: 'static + Clone + TotalOrd> Domain for BoundedDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         Ok(match &self.lower {
@@ -271,7 +275,7 @@ where
         }
     }
 }
-impl<K: CheckNull, V: CheckNull> MapDomain<AllDomain<K>, AllDomain<V>>
+impl<K: 'static + CheckNull, V: 'static + CheckNull> MapDomain<AllDomain<K>, AllDomain<V>>
 where
     K: Eq + Hash,
 {
@@ -336,7 +340,7 @@ impl<D: Domain> VectorDomain<D> {
         VectorDomain { element_domain }
     }
 }
-impl<T: CheckNull> VectorDomain<AllDomain<T>> {
+impl<T: 'static + CheckNull> VectorDomain<AllDomain<T>> {
     pub fn new_all() -> Self {
         Self::new(AllDomain::<T>::new())
     }

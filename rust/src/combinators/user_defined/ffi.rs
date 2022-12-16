@@ -12,7 +12,7 @@ use crate::{
     ffi::{
         any::{
             AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyTransformation,
-            IntoAnyStabilityMapExt,
+            IntoAnyStabilityMapExt, Downcast,
         },
         util::{self, Type, TypeContents},
     },
@@ -22,6 +22,7 @@ use crate::{
         InsertDeleteDistance, L1Distance, L2Distance, SymmetricDistance,
     },
     traits::CheckNull,
+    interactive::Queryable
 };
 
 type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>;
@@ -124,14 +125,14 @@ pub(crate) fn default_measure(M: Type) -> Fallible<AnyMeasure> {
     dependencies("c_function", "c_stability_map")
 )]
 /// Construct a Transformation from user-defined callbacks.
-/// 
+///
 /// **Supported Domains:**
-/// 
+///
 /// * `VectorDomain<AllDomain<_>>`
 /// * `AllDomain<_>`
-/// 
+///
 /// **Supported Metrics:**
-/// 
+///
 /// * `SymmetricDistance`
 /// * `InsertDeleteDistance`
 /// * `ChangeOneDistance`
@@ -140,7 +141,7 @@ pub(crate) fn default_measure(M: Type) -> Fallible<AnyMeasure> {
 /// * `AbsoluteDistance<_>`
 /// * `L1Distance<_>`
 /// * `L2Distance<_>`
-/// 
+///
 /// # Arguments
 /// * `function` - A function mapping data from `DI` to `DO`.
 /// * `stability_map` - A function mapping distances from `MI` to `MO`.
@@ -186,14 +187,14 @@ pub extern "C" fn opendp_combinators__make_default_user_transformation(
     dependencies("c_function", "c_privacy_map")
 )]
 /// Construct a Measurement from user-defined callbacks.
-/// 
+///
 /// **Supported Domains:**
-/// 
+///
 /// * `VectorDomain<AllDomain<_>>`
 /// * `AllDomain<_>`
-/// 
+///
 /// **Supported Metrics:**
-/// 
+///
 /// * `SymmetricDistance`
 /// * `InsertDeleteDistance`
 /// * `ChangeOneDistance`
@@ -202,13 +203,13 @@ pub extern "C" fn opendp_combinators__make_default_user_transformation(
 /// * `AbsoluteDistance<_>`
 /// * `L1Distance<_>`
 /// * `L2Distance<_>`
-/// 
+///
 /// **Supported Measures:**
-/// 
+///
 /// * `MaxDivergence<_>`
 /// * `FixedSmoothedMaxDivergence<_>`
 /// * `ZeroConcentratedDivergence<_>`
-/// 
+///
 /// # Arguments
 /// * `function` - A function mapping data from `DI` to `DO`.
 /// * `privacy_map` - A function mapping distances from `MI` to `MO`.
@@ -230,10 +231,22 @@ pub extern "C" fn opendp_combinators__make_default_user_measurement(
     let MI = try_!(Type::try_from(MI));
     let MO = try_!(Type::try_from(MO));
 
+    let function = Box::new(wrap_func(function));
+
     FfiResult::Ok(util::into_raw(Measurement::new(
         try_!(default_domain(DI)),
+        AnyDomain::new(AllDomain::<()>::new()),
         try_!(default_domain(DO)),
-        Function::new_fallible(wrap_func(function)),
+        Function::new_fallible(move |arg| {
+            let mut res = Some(function(arg)?);
+            Ok(Queryable::new_concrete(move |query: &AnyObject| {
+                query.downcast_ref::<()>()
+                    .map_err(|_| err!(FailedFunction, "user-defined measurements may only receive trivial () queries"))?;
+                    
+                res.take()
+                    .ok_or_else(|| err!(FailedFunction, "answer has already been returned"))
+            }))
+        }),
         try_!(default_metric(MI)),
         try_!(default_measure(MO)),
         PrivacyMap::new_fallible(wrap_func(privacy_map)),
@@ -251,12 +264,12 @@ pub extern "C" fn opendp_combinators__make_default_user_measurement(
     dependencies("c_function")
 )]
 /// Construct a Postprocessor from user-defined callbacks.
-/// 
+///
 /// **Supported Domains:**
-/// 
+///
 /// * `VectorDomain<AllDomain<_>>`
 /// * `AllDomain<_>`
-/// 
+///
 /// # Arguments
 /// * `function` - A function mapping data from `DI` to `DO`.
 /// * `DI` - Input Domain. See Supported Domains

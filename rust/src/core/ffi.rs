@@ -318,7 +318,7 @@ pub extern "C" fn opendp_core__measurement_check(
 pub extern "C" fn opendp_core__measurement_invoke(this: *const AnyMeasurement, arg: *const AnyObject) -> FfiResult<*mut AnyObject> {
     let this = try_as_ref!(this);
     let arg = try_as_ref!(arg);
-    this.invoke(arg).into()
+    try_!(this.invoke(arg)).eval(&AnyObject::new(())).into()
 }
 
 #[bootstrap(

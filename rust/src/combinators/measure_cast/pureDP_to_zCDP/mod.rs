@@ -22,18 +22,20 @@ mod ffi;
 /// * `DO` - Output Domain
 /// * `MI` - Input Metric
 /// * `QO` - Output distance type. One of `f32` or `f64`.
-pub fn make_pureDP_to_zCDP<DI, DO, MI, QO>(
-    meas: Measurement<DI, DO, MI, MaxDivergence<QO>>,
-) -> Fallible<Measurement<DI, DO, MI, ZeroConcentratedDivergence<QO>>>
+pub fn make_pureDP_to_zCDP<DI, DOQ, DOA, MI, QO>(
+    meas: Measurement<DI, DOQ, DOA, MI, MaxDivergence<QO>>,
+) -> Fallible<Measurement<DI, DOQ, DOA, MI, ZeroConcentratedDivergence<QO>>>
 where
     DI: Domain,
-    DO: Domain,
+    DOQ: Domain,
+    DOA: Domain,
     MI: 'static + Metric,
     QO: Float,
 {
     let Measurement {
         input_domain,
-        output_domain,
+        query_domain,
+        answer_domain,
         function,
         input_metric,
         privacy_map,
@@ -44,7 +46,8 @@ where
 
     Ok(Measurement::new(
         input_domain,
-        output_domain,
+        query_domain,
+        answer_domain,
         function,
         input_metric,
         ZeroConcentratedDivergence::default(),

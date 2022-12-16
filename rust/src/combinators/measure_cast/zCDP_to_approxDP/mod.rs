@@ -23,34 +23,37 @@ mod cdp_epsilon;
 /// * `DO` - Output Domain
 /// * `MI` - Input Metric
 /// * `QO` - Output distance type. One of `f32` or `f64`.
-pub fn make_zCDP_to_approxDP<DI, DO, MI, QO>(
-    meas: Measurement<DI, DO, MI, ZeroConcentratedDivergence<QO>>,
-) -> Fallible<Measurement<DI, DO, MI, SmoothedMaxDivergence<QO>>>
+pub fn make_zCDP_to_approxDP<DI, DOQ, DOA, MI, QO>(
+    meas: Measurement<DI, DOQ, DOA, MI, ZeroConcentratedDivergence<QO>>,
+) -> Fallible<Measurement<DI, DOQ, DOA, MI, SmoothedMaxDivergence<QO>>>
 where
     DI: Domain,
-    DO: Domain,
+    DOQ: Domain,
+    DOA: Domain,
     MI: 'static + Metric,
     QO: Float,
 {
     let Measurement {
         input_domain,
-        output_domain,
+        query_domain,
+        answer_domain,
         function,
         input_metric,
         privacy_map,
         ..
     } = meas;
 
-    Ok(Measurement::new(
+    Ok(Measurement {
         input_domain,
-        output_domain,
+        query_domain,
+        answer_domain,
         function,
         input_metric,
-        SmoothedMaxDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
+        output_measure: SmoothedMaxDivergence::default(),
+        privacy_map: PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;
             
             Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
         }),
-    ))
+    })
 }

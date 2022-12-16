@@ -38,6 +38,6 @@ mod alp;
 pub use crate::measurements::alp::*;
 
 #[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
-mod sparse_vector;
+mod sparse_vector_int_trans;
 #[cfg(all(feature="use-mpfr", feature="floating-point", feature="contrib"))]
-pub use crate::measurements::sparse_vector::*;
+pub use crate::measurements::sparse_vector_int_trans::*;

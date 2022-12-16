@@ -9,9 +9,11 @@ use std::any;
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
-use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Measure, Metric, PrivacyMap, StabilityMap, Transformation, Measurement};
+use crate::domains::QueryableDomain;
 use crate::err;
 use crate::error::*;
+use crate::interactive::Queryable;
 
 use super::glue::Glue;
 use super::util::Type;
@@ -301,6 +303,53 @@ impl<DO> IntoAnyFunctionOutExt for Function<AnyDomain, DO>
     }
 }
 
+type AnyQueryableFunction = Function<AnyDomain, QueryableDomain<AnyDomain, AnyDomain>>;
+
+pub trait IntoAnyFunctionQueryableExt {
+    fn into_any_queryable(self) -> AnyQueryableFunction;
+}
+
+impl<DI, DQ, DA> IntoAnyFunctionQueryableExt for Function<DI, QueryableDomain<DQ, DA>>
+    where DI: 'static + Domain,
+          DI::Carrier: 'static,
+          DQ: 'static + Domain,
+          DQ::Carrier: 'static, 
+          DA: 'static + Domain,
+          DA::Carrier: 'static {
+    fn into_any_queryable(self) -> AnyQueryableFunction {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyObject>> {
+            let arg = arg.downcast_ref()?;
+            let mut res = self.eval(arg)?;
+
+            Ok(Queryable::new_concrete(move |query: &AnyObject| -> Fallible<AnyObject> {
+                let query = query.downcast_ref().unwrap();
+                res.eval(&query).map(AnyObject::new)
+            }))
+        })
+    }
+}
+
+pub trait IntoAnyFunctionQueryableOutExt {
+    fn into_any_queryable_out(self) -> AnyQueryableFunction;
+}
+
+impl<DQ, DA> IntoAnyFunctionQueryableOutExt for Function<AnyDomain, QueryableDomain<DQ, DA>>
+    where DQ: 'static + Domain,
+          DQ::Carrier: 'static,
+          DA: 'static + Domain,
+          DA::Carrier: 'static {
+    fn into_any_queryable_out(self) -> AnyQueryableFunction {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyObject>> {
+            let mut res = self.eval(arg)?;
+
+            Ok(Queryable::new_concrete(move |query: &AnyObject| -> Fallible<AnyObject> {
+                let query = query.downcast_ref().unwrap();
+                res.eval(&query).map(AnyObject::new)
+            }))
+        })
+    }
+}
+
 pub type AnyPrivacyMap = PrivacyMap<AnyMetric, AnyMeasure>;
 
 pub trait IntoAnyPrivacyMapExt {
@@ -333,7 +382,7 @@ impl<MI: Metric, MO: Metric> IntoAnyStabilityMapExt for StabilityMap<MI, MO>
 
 /// A Measurement with all generic types filled by Any types. This is the type of Measurements
 /// passed back and forth over FFI.
-pub type AnyMeasurement = Measurement<AnyDomain, AnyDomain, AnyMetric, AnyMeasure>;
+pub type AnyMeasurement = Measurement<AnyDomain, AnyDomain, AnyDomain, AnyMetric, AnyMeasure>;
 
 /// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
 /// with blanket implementation, and we need an extension trait to add methods to Measurement.
@@ -341,16 +390,18 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
+impl<DI: 'static + Domain, DQ: 'static + Domain, DA: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DQ, DA, MI, MO>
     where DI::Carrier: 'static,
-          DO::Carrier: 'static,
+          DQ::Carrier: 'static,
+          DA::Carrier: 'static,
           MI::Distance: 'static,
           MO::Distance: 'static {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),
-            AnyDomain::new(self.output_domain),
-            self.function.into_any(),
+            AnyDomain::new(self.query_domain),
+            AnyDomain::new(self.answer_domain),
+            self.function.into_any_queryable(),
             AnyMetric::new(self.input_metric),
             AnyMeasure::new(self.output_measure),
             self.privacy_map.into_any(),
@@ -364,13 +415,14 @@ pub trait IntoAnyMeasurementOutExt {
     fn into_any_out(self) -> AnyMeasurement;
 }
 
-impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DO, AnyMetric, AnyMeasure>
-    where DO::Carrier: 'static {
+impl<DQ: 'static + Domain, DA: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DQ, DA, AnyMetric, AnyMeasure>
+    where DQ::Carrier: 'static, DA::Carrier: 'static {
     fn into_any_out(self) -> AnyMeasurement {
         AnyMeasurement::new(
             self.input_domain,
-            AnyDomain::new(self.output_domain),
-            self.function.into_any_out(),
+            AnyDomain::new(self.query_domain),
+            AnyDomain::new(self.answer_domain),
+            self.function.into_any_queryable_out(),
             self.input_metric,
             self.output_measure,
             self.privacy_map,
@@ -470,6 +522,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature="use-mpfr")]
     #[test]
     fn test_any_chain() -> Fallible<()> {
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?.into_any();
@@ -480,8 +533,8 @@ mod tests {
         let m1 = measurements::make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(0.0, None)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
-        let res = chain.invoke(&arg);
-        let res: f64 = res?.downcast()?;
+        let res = chain.invoke(&arg)?.eval(&AnyObject::new(()))?;
+        let res: f64 = res.downcast()?;
         assert_eq!(6.0, res);
 
         Ok(())

@@ -28,7 +28,7 @@ use crate::transformations::cast_metric::traits::{
 ///
 /// # Generics
 /// * `TA` - Atomic Type.
-fn make_ordered_random<TA: Clone + CheckNull>() -> Fallible<
+fn make_ordered_random<TA: 'static + Clone + CheckNull>() -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TA>>,
         VectorDomain<AllDomain<TA>>,
@@ -190,7 +190,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_ordered_random(
 /// 
 /// # Generics
 /// * `TA` - Atomic Type.
-fn make_unordered<TA: Clone + CheckNull>() -> Fallible<
+fn make_unordered<TA: 'static + Clone + CheckNull>() -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TA>>,
         VectorDomain<AllDomain<TA>>,

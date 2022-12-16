@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement1, PrivacyMap};
 use crate::metrics::L1Distance;
 use crate::measures::{SmoothedMaxDivergence, SMDCurve};
 use crate::domains::{AllDomain, MapDomain};
@@ -45,13 +45,13 @@ use super::get_discretization_consts;
 /// * `TV` - Type of Value. Must be float.
 pub fn make_base_ptr<TK, TV>(
     scale: TV, threshold: TV, k: Option<i32>
-) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
+) -> Fallible<Measurement1<MapDomain<AllDomain<TK>, AllDomain<TV>>, MapDomain<AllDomain<TK>, AllDomain<TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
     where TK: Hashable,
           TV: Float + SampleDiscreteLaplaceZ2k,
           i32: ExactIntCast<TV::Bits> {
     let _2 = TV::exact_int_cast(2)?;
     let (k, relaxation) = get_discretization_consts(k)?;
-    Ok(Measurement::new(
+    Ok(Measurement1::new1(
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
@@ -104,7 +104,7 @@ mod tests {
             make_count_by()? >>
             make_base_ptr::<char, f64>(scale, threshold, None)?
         )?;
-        let ret = measurement.invoke(
+        let ret = measurement.invoke1(
             &vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
         println!("stability eval: {:?}", ret);
 

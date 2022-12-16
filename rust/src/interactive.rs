@@ -3,28 +3,13 @@ use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
-use crate::core::{Domain, Measurement, Metric, Measure, Transformation};
-use crate::domains::PolyDomain;
+use crate::core::{Domain, Measure, Measurement, Metric, Transformation};
 use crate::error::*;
 use crate::traits::CheckNull;
 
-#[derive(Clone)]
-pub struct Context {
-    parent: QueryableBase,
-    id: usize,
-}
-
-impl Context {
-    pub(crate) fn new(parent: QueryableBase, id: usize) -> Self {
-        Context { parent, id }
-    }
-}
-
 /// A structure tracking the state of an interactive measurement queryable.
 #[derive(Clone)]
-pub(crate) struct QueryableBase(
-    Rc<RefCell<Option<Box<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>>>,
-);
+pub(crate) struct QueryableBase(Rc<RefCell<dyn FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>>>>);
 
 impl QueryableBase {
     pub fn eval<Q: 'static, A: 'static>(&mut self, query: &Q) -> Fallible<A> {
@@ -35,35 +20,32 @@ impl QueryableBase {
     }
 
     pub fn eval_any(&mut self, query: &dyn Any) -> Fallible<Box<dyn Any>> {
-        (self.0.borrow_mut().as_mut().unwrap())(self, query)
+        (self.0.borrow_mut())(self, query)
     }
 
     pub fn new(
         transition: impl FnMut(&Self, &dyn Any) -> Fallible<Box<dyn Any>> + 'static,
     ) -> Self {
-        QueryableBase(Rc::new(RefCell::new(Some(Box::new(transition)))))
+        QueryableBase(Rc::new(RefCell::new(transition)))
     }
 }
 
 /// Queryables are used to model interactive measurements,
 /// and are generic over the type of the query (Q) and answer (A).
 #[derive(Clone)]
-pub struct Queryable<DQ: Domain, DA: Domain> {
-    _query: PhantomData<DQ>,
-    _answer: PhantomData<DA>,
+pub struct Queryable<Q: ?Sized, A> {
+    _query: PhantomData<Q>,
+    _answer: PhantomData<A>,
     pub(crate) base: QueryableBase,
 }
 
-impl<DQ, DA> Queryable<DQ, DA>
+impl<Q, A> Queryable<Q, A>
 where
-DQ: Domain, DQ::Carrier: 'static + Clone, DA: Domain + 'static, DA::Carrier: 'static
+    Q: 'static,
+    A: 'static,
 {
-    pub fn eval(&mut self, q: &DQ::Carrier) -> Fallible<DA::Carrier> {
-        self.base.eval::<DQ::Carrier, DA::Carrier>(q)
-    }
-
-    pub fn eval_privacy_after<QD: 'static>(&mut self, q: &DQ::Carrier) -> Fallible<QD> {
-        self.base.eval(&PrivacyUsageAfter(q.clone()))
+    pub fn eval(&mut self, q: &Q) -> Fallible<A> {
+        self.base.eval::<Q, A>(q)
     }
 
     pub(crate) fn new(
@@ -76,90 +58,40 @@ DQ: Domain, DQ::Carrier: 'static + Clone, DA: Domain + 'static, DA::Carrier: 'st
         }
     }
 
-    pub(crate) fn new_concrete(
-        mut transition: impl FnMut(&DQ::Carrier) -> Fallible<DA::Carrier> + 'static,
-    ) -> Self {
+    pub(crate) fn new_concrete(mut transition: impl FnMut(&Q) -> Fallible<A> + 'static) -> Self {
         Queryable::new(move |_self: &QueryableBase, query: &dyn Any| {
-            let concrete_query = query
-                .downcast_ref::<DQ::Carrier>()
-                .ok_or_else(|| err!(FailedFunction, "unrecognized query. Expected {}", std::any::type_name::<DQ::Carrier>()))?;
+            let concrete_query = query.downcast_ref::<Q>().ok_or_else(|| {
+                err!(
+                    FailedFunction,
+                    "unrecognized query. Expected {}",
+                    std::any::type_name::<Q>()
+                )
+            })?;
             Ok(Box::new(transition(concrete_query)?))
         })
     }
 }
 
-/// Mutates a queryable so that it knows how to speak with its parent
-/// Intercepts two kinds of queries:
-/// 1. user queries to self
-/// 2. internal change queries from children
-pub(crate) fn inject_context<DQ, DA, QD>(
-    queryable: &mut Queryable<DQ, DA>,
-    mut context: Context,
-    d_final: Option<QD>
-)
+impl<Q, A> Queryable<Q, A>
 where
-    DQ: Domain,
-    DQ::Carrier: 'static + Clone,
-    DA: Domain,
-    QD: 'static + Clone,
+    Q: Clone + 'static,
 {
-    queryable
-        .base
-        .0
-        .as_ref()
-        .replace_with(|f| {
-            let mut transition = f.take().unwrap();    
-            Some(Box::new(move |self_: &QueryableBase, query: &dyn Any| {
-                if let Some(query_typed) = query.downcast_ref::<DQ::Carrier>() {
-
-                    let Some(d_mid) = d_final.clone() else {
-                        *transition(self_, &PrivacyUsageAfter(query_typed.clone()))?.downcast().unwrap()
-                    };
-        
-                    context.parent.eval(&ChildChange {
-                        id: context.id,
-                        new_privacy_loss: d_mid.clone(),
-                        commit: false,
-                    })?;
-        
-                    let answer = transition(self_, query)?;
-        
-                    context.parent.eval(&ChildChange {
-                        id: context.id,
-                        new_privacy_loss: d_mid.clone(),
-                        commit: true,
-                    })?;
-        
-                    return Ok(Box::new(answer));
-                }
-                // 1. sequential composition
-                // 2. concurrent composition
-                // 3. sparse vector
-                if let Some(query) = query.downcast_ref::<ChildChange<QD>>() {
-                    // checks with the inner queryable if the child change is ok
-                    // TODO: don't unwrap
-                    let d_mid: QD = *transition(self_, query)?.downcast().unwrap();
-                    
-                    // check with the parent that the change to the inner queryable is ok
-                    context.parent.eval_any(&ChildChange {
-                        id: context.id,
-                        new_privacy_loss: d_mid.clone(),
-                        commit: query.commit,
-                    })?;
-
-                    return Ok(Box::new(d_mid))
-                }
-        
-                transition(self_, query)
-            }))
-        });
+    pub fn eval_privacy_after<QD: 'static>(&mut self, q: &Q) -> Fallible<QD> {
+        self.base.eval(&PrivacyUsageAfter(q.clone()))
+    }
 }
 
-impl<DQ> Queryable<DQ, PolyDomain>
-    where DQ: Domain, DQ::Carrier: 'static + Clone {
+impl<A: 'static> Queryable<(), A> {
+    // for consistency with the 1 convention
+    pub fn get(&mut self) -> Fallible<A> {
+        self.eval(&())
+    }
+}
+
+impl Queryable<Box<dyn Any>, Box<dyn Any>> {
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn eval_poly<A: 'static>(&mut self, query: &DQ::Carrier) -> Fallible<A> {
-        self.eval(&query)?
+    pub fn get_poly<A: 'static>(&mut self) -> Fallible<A> {
+        self.eval(&(Box::new(()) as Box<dyn Any>))?
             .downcast()
             .map_err(|_| {
                 err!(
@@ -181,14 +113,15 @@ pub(crate) struct ChildChange<Q> {
 pub(crate) struct PrivacyUsage;
 pub(crate) struct PrivacyUsageAfter<Q>(pub Q);
 
-impl<DQ: Domain, DA: Domain> CheckNull for Queryable<DQ, DA> {
+impl<Q, A> CheckNull for Queryable<Q, A> {
     fn is_null(&self) -> bool {
         false
     }
 }
 
-
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> CheckNull for Measurement<DI, DO, MI, MO> {
+impl<DI: Domain, DOQ: Domain, DOA: Domain, MI: Metric, MO: Measure> CheckNull
+    for Measurement<DI, DOQ, DOA, MI, MO>
+{
     fn is_null(&self) -> bool {
         false
     }
