@@ -1,49 +1,71 @@
 import apache_beam as beam
-from opendp.mod import enable_features
-
 import ctypes
+from opendp.beam import *
 
-import ctypes
+enable_features("floating-point", "contrib", "honest-but-curious")
 
-ctypes.c_int32(1)
+
+def test_make_mul():
+    data = list(range(10))
+    with beam.Pipeline() as p:
+        pcollection = p | "Create" >> beam.Create(data)
+        print("Just made", ctypes.py_object(pcollection))
+        # collection = make_collection(pcollection, "i32")
+        # print("After make_collection", ctypes.py_object(pcollection))
+        mul = make_mul(2, "i32")
+        mul_pcollection = mul(pcollection)
+        print(mul_pcollection)
+        mul_pcollection | "Combine" >> beam.combiners.ToList() | "Print" >> beam.Map(lambda x: print(x))
+
+"""
+test makes pcollection
+test calls make_collection()
+    make_collection() calls opendp_beam__new_collection_methods()
+        opendp_beam__new_collection_methods() allocates and returns AnyObject0
+    make_collection() calls unwrap(AnyObject0)
+        unwrap() extracts AnyObject0, but it's not freed -- WHY?
+    make_collection() returns AnyObject0
+test makes py_transformation
+test calls py_transformation(AnyObject0)
+    py_transformation() calls rust_transformation(AnyObject0)
+        rust_transformation() takes reference to AnyObject0
+        rust_transformation() calls external.map(data)
+            external.map() calls runtime.map()
+                runtime.map() calls make_collection()
+                    make_collection() calls opendp_beam__new_collection_methods()
+                        opendp_beam__new_collection_methods() allocates and returns AnyObject1
+                    make_collection() calls unwrap(AnyObject1)
+                        unwrap() extracts AnyObject1
+                    make_collection() returns AnyObject1
+                runtime.map() returns AnyObject1
+            external.map() consumes AnyObject1
+            external.map() returns Collection
+        rust_transformation() allocates and returns AnyObject2
+    py_transformation frees AnyObject1
+"""
+
+
+
 
 def make_mul_beam(x, map_impl):
-    def fn(arg, ctx):
+    def f(arg, ctx):
         return arg * ctx
     def function(arg):
-        return map_impl(arg, fn, x)
+        return map_impl(arg, f, x)
     return function
 
 
-def map_impl(arg, fn, ctx):
-    return arg | "Mul" >> beam.Map(lambda a: fn(a, ctx))
-
-map_impl_c_type = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
-map_impl_c = map_impl_c_type(map_impl)
-
 def test_make_sum_beam():
-    enable_features("contrib")
-    # import os
-    # out_path = "/tmp/beam_test_out.txt"
-    # out_path_part = f"{out_path}-00000-of-00001"
-    # if os.path.isfile(out_path_part):
-    #     os.remove(out_path_part)
+    def map_impl(arg, f, ctx):
+        return arg | "Mul" >> beam.Map(lambda a: f(a, ctx))
 
     with beam.Pipeline() as p:
-        # args = (
-        #     p | 'Read' >> beam.io.ReadFromText("/Users/av/Repositories/opendp/README.md")
-        #     | 'PairWithOne' >> beam.Map(lambda x: (x, 1))
-        #     | 'GroupAndSum' >> beam.CombinePerKey(sum)
-        #     | 'Format' >> beam.MapTuple(lambda w, c: '%s: %d' % (w, c))
-        #     | 'Write' >> beam.io.WriteToText("/tmp/beam_test_out.txt")
-        # )
-
         mul2 = make_mul_beam(2, map_impl)
         arg = p | "Create" >> beam.Create(list(range(10)))
         res = mul2(arg)
-
-        # res | "Write" >> beam.io.WriteToText(out_path)
         res | "Combine" >> beam.combiners.ToList() | "Print" >> beam.Map(lambda x: print(x))
 
+
 if __name__ == "__main__":
-    test_make_sum_beam()
+    # test_make_sum_beam()
+    test_make_mul()

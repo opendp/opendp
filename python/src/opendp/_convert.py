@@ -69,6 +69,10 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     :return: value converted to ctypes representation
     """
 
+    if type_name == "opendp::beam::Collection<i32>":
+        import opendp.beam
+        return opendp.beam.make_collection(value, "i32")
+
     if isinstance(type_name, str):
         type_name = RuntimeType.parse(type_name)
 
@@ -139,6 +143,16 @@ def c_to_py(value: Any) -> Any:
     if isinstance(value, AnyObjectPtr):
         from opendp._data import object_type, object_as_slice, slice_free
         obj_type = object_type(value)
+        if obj_type == "opendp::beam::Collection<i32>":
+            import opendp.beam
+            value.__class__ = ctypes.POINTER(AnyObject)
+            lib.opendp_beam__get_data.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+            lib.opendp_beam__get_data.restype = FfiResult
+            ffi_ret = lib.opendp_beam__get_data(value, py_to_c("i32", ctypes.c_char_p))
+            unwrapped = unwrap(ffi_ret, ctypes.py_object)
+            # don't free c_out, because we are giving ownership to Rust
+            return opendp.beam.data_to_pcollection(unwrapped)
+
         if "SMDCurve" in obj_type:
             return SMDCurve(value)
         if "Queryable" in obj_type:
