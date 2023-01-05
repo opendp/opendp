@@ -3,8 +3,8 @@ def cdp_epsilon(rho: Q, delta: Q) -> Q:
     if rho.is_sign_negative():
         raise "rho must be non-negative"
 
-    if delta.is_sign_negative():
-        raise "delta must be non-negative"
+    if not delta.is_sign_positive():
+        raise "delta must be positive"
 
     if rho.is_zero():
         return 0
@@ -44,4 +44,4 @@ def cdp_epsilon(rho: Q, delta: Q) -> Q:
 
     epsilon = a_max.inf_mul(rho).inf_add(numer.inf_div(denom))
 
-    return epsilon
+    return max(epsilon, 0)
