@@ -1,22 +1,21 @@
-import apache_beam as beam
+import apache_beam
 import ctypes
+import tempfile
 from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 
 
-map_method_type = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p)
-take_method_type = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.c_char_p)
+data_t = ctypes.py_object
+
+map_method_type = ctypes.CFUNCTYPE(ctypes.c_void_p, data_t, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p)
+take_method_type = ctypes.CFUNCTYPE(ctypes.c_void_p, data_t, ctypes.c_char_p)
 
 class ExternalRuntime(ctypes.Structure):
     _fields_ = [
         ("map_method", map_method_type),
         ("take_method", take_method_type),
-        # ("map_method", ctypes.c_void_p),
-        # ("take_method", ctypes.c_void_p),
-        ("foo", ctypes.c_int32),
-        ("bar", ctypes.c_double),
     ]
 
 
@@ -25,11 +24,11 @@ opendp_beam__call_closure_1.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes
 opendp_beam__call_closure_1.restype = FfiResult
 
 opendp_beam__new_collection = lib.opendp_beam__new_collection
-opendp_beam__new_collection.argtypes = [ctypes.POINTER(ExternalRuntime), ctypes.c_void_p, ctypes.c_char_p]
+opendp_beam__new_collection.argtypes = [ExternalRuntime, data_t, ctypes.c_char_p]
 opendp_beam__new_collection.restype = FfiResult
 
 opendp_beam__new_collection_methods = lib.opendp_beam__new_collection_methods
-opendp_beam__new_collection_methods.argtypes = [map_method_type, take_method_type, ctypes.py_object, ctypes.c_char_p]
+opendp_beam__new_collection_methods.argtypes = [map_method_type, take_method_type, data_t, ctypes.c_char_p]
 opendp_beam__new_collection_methods.restype = FfiResult
 
 
@@ -57,7 +56,6 @@ def make_mul(
 
 
 def pcollection_to_data(pcollection):
-    # return ctypes.pointer(ctypes.py_object(pcollection))
     return ctypes.py_object(pcollection)
 
 
@@ -65,8 +63,8 @@ def data_to_pcollection(data):
     return data.value
 
 
-def map_method(data, closure, T, U):
-    print(f"python map f", data, closure, T, U)
+def map_method(pcollection, closure, T, U):
+    print(f"python map f", pcollection, closure, T, U)
     def f(x):
         print(f"python map({x})")
         y = 0
@@ -78,12 +76,10 @@ def map_method(data, closure, T, U):
         return y.value
 
     try:
-        # 1. convert AnyObject to Python type
-        # pcollection = data_to_pcollection(data)
-        pcollection = data
+        # 1. pcollection is already a Python object thanks to ctypes.py_object
 
         # 2. invoke the user-supplied function
-        ret = pcollection | "OpenDP Closure" >> beam.Map(f)
+        ret = pcollection | "OpenDP Closure" >> apache_beam.Map(f)
 
         # 3. convert back to an AnyObject
         U = U.decode("utf-8")
@@ -106,9 +102,24 @@ def map_method(data, closure, T, U):
             ctypes.c_char_p(traceback.format_exc().encode()),
         )
 
-def take_method(data, T):
+
+def take_method(pcollection, T):
     print("python take")
-    return []
+    with tempfile.TemporaryDirectory() as out_dir:
+        file_path_prefix=f"{out_dir}/take"
+        coder = apache_beam.coders.PickleCoder()
+        (
+                pcollection
+                | "Combine" >> apache_beam.combiners.ToList()
+                | "Write" >> apache_beam.io.WriteToText(file_path_prefix=file_path_prefix, num_shards=1, coder=coder)
+        )
+        pcollection.pipeline.run().wait_until_finish()
+        with open(f"{file_path_prefix}-00000-of-00001", "rb") as f:
+            encoded = f.read()
+    taken = coder.decode(encoded)
+    print("OUT", taken)
+    return taken
+
 
 
 c_map_method = map_method_type(map_method)
@@ -121,8 +132,9 @@ def make_collection(pcollection, T: RuntimeTypeDescriptor=None):
 
     c_T = py_to_c(T, c_type=ctypes.c_char_p)
 
-    # runtime = ExternalRuntime(map_method=map_method, take_method=c_take_method, foo=987, bar=654.0)
-    # res = opendp_beam__new_collection(map_method, take_method, data, c_T)
-    res = opendp_beam__new_collection_methods(c_map_method, c_take_method, data, c_T)
+    runtime = ExternalRuntime(map_method=c_map_method, take_method=c_take_method)
+    print(f"runtime={runtime}, c_T={c_T}")
+    res = opendp_beam__new_collection(runtime, data, c_T)
+    # res = opendp_beam__new_collection_methods(c_map_method, c_take_method, data, c_T)
 
     return unwrap(res, AnyObjectPtr)

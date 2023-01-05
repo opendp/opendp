@@ -1,21 +1,18 @@
-import apache_beam as beam
-import ctypes
+import apache_beam
 from opendp.beam import *
+
 
 enable_features("floating-point", "contrib", "honest-but-curious")
 
-
 def test_make_mul():
     data = list(range(10))
-    with beam.Pipeline() as p:
-        pcollection = p | "Create" >> beam.Create(data)
-        print("Just made", ctypes.py_object(pcollection))
-        # collection = make_collection(pcollection, "i32")
-        # print("After make_collection", ctypes.py_object(pcollection))
+    with apache_beam.Pipeline() as p:
+        pcollection = p | "Create" >> apache_beam.Create(data)
         mul = make_mul(2, "i32")
         mul_pcollection = mul(pcollection)
-        print(mul_pcollection)
-        mul_pcollection | "Combine" >> beam.combiners.ToList() | "Print" >> beam.Map(lambda x: print(x))
+        out = take_method(mul_pcollection, "i32")
+    assert out == [x * 2 for x in data]
+
 
 """
 test makes pcollection
@@ -43,27 +40,6 @@ test calls py_transformation(AnyObject0)
         rust_transformation() allocates and returns AnyObject2
     py_transformation frees AnyObject1
 """
-
-
-
-
-def make_mul_beam(x, map_impl):
-    def f(arg, ctx):
-        return arg * ctx
-    def function(arg):
-        return map_impl(arg, f, x)
-    return function
-
-
-def test_make_sum_beam():
-    def map_impl(arg, f, ctx):
-        return arg | "Mul" >> beam.Map(lambda a: f(a, ctx))
-
-    with beam.Pipeline() as p:
-        mul2 = make_mul_beam(2, map_impl)
-        arg = p | "Create" >> beam.Create(list(range(10)))
-        res = mul2(arg)
-        res | "Combine" >> beam.combiners.ToList() | "Print" >> beam.Map(lambda x: print(x))
 
 
 if __name__ == "__main__":

@@ -83,8 +83,8 @@ impl<T: 'static> CollectionImpl<T> for ExternalCollectionImpl<T> {
             FfiResult::Ok(ptr) => {
                 println!("Ok({:p})", ptr)
             }
-            FfiResult::Err(_err) => {
-                println!("Err")
+            FfiResult::Err(err) => {
+                println!("Err({:p})", err)
             }
         }
         let res: Fallible<_> = res.into();
@@ -103,21 +103,19 @@ impl<T: 'static> CollectionImpl<T> for ExternalCollectionImpl<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[repr(C)]
 pub struct ExternalRuntime {
     // map: ExternalMethod3<Closure1, c_char, c_char, AnyObject>,
     // take: ExternalMethod1<c_char, AnyObject>,
-    map: extern "C" fn(data: *const c_void, arg0: *const Closure1, arg1: *const c_char, arg2: *const c_char) -> *mut FfiResult<*mut AnyObject>,
-    take: extern "C" fn(data: *const c_void, arg: *const c_char) -> *mut FfiResult<*mut AnyObject>,
-    foo: i32,
-    bar: f64,
+    map: extern "C" fn(data: *const c_void, arg: *const Closure1, T: *const c_char, U: *const c_char) -> *mut FfiResult<*mut AnyObject>,
+    take: extern "C" fn(data: *const c_void, T: *const c_char) -> *mut FfiResult<*mut AnyObject>,
 }
 
-pub type ExternalMethod0<TO> = extern "C" fn(data: *const c_void) -> *mut FfiResult<*mut TO>;
-pub type ExternalMethod1<TI, TO> = extern "C" fn(data: *const c_void, arg: *const TI) -> *mut FfiResult<*mut TO>;
-pub type ExternalMethod2<TI0, TI1, TO> = extern "C" fn(data: *const c_void, arg0: *const TI0, arg1: *const TI1) -> *mut FfiResult<*mut TO>;
-pub type ExternalMethod3<TI0, TI1, TI2, TO> = extern "C" fn(data: *const c_void, arg0: *const TI0, arg1: *const TI1, arg2: *const TI2) -> *mut FfiResult<*mut TO>;
+// pub type ExternalMethod0<TO> = extern "C" fn(data: *const c_void) -> *mut FfiResult<*mut TO>;
+// pub type ExternalMethod1<TI, TO> = extern "C" fn(data: *const c_void, arg: *const TI) -> *mut FfiResult<*mut TO>;
+// pub type ExternalMethod2<TI0, TI1, TO> = extern "C" fn(data: *const c_void, arg0: *const TI0, arg1: *const TI1) -> *mut FfiResult<*mut TO>;
+// pub type ExternalMethod3<TI0, TI1, TI2, TO> = extern "C" fn(data: *const c_void, arg0: *const TI0, arg1: *const TI1, arg2: *const TI2) -> *mut FfiResult<*mut TO>;
 
 pub struct Closure1 {
     f: Box<dyn Fn(*const c_void, *mut c_void) -> Fallible<()>>,
@@ -187,7 +185,7 @@ pub extern "C" fn opendp_beam__new_collection_methods(
     data: *const c_void,
     T: *const c_char,
 ) -> FfiResult<*mut AnyObject> {
-    let runtime = ExternalRuntime { map, take, foo: 123, bar: 456.0 };
+    let runtime = ExternalRuntime { map, take };
     let res = opendp_beam__new_collection(runtime, data, T);
     println!("Done new collection");
     res
@@ -200,6 +198,8 @@ pub extern "C" fn opendp_beam__new_collection(
     data: *const c_void,
     T: *const c_char,
 ) -> FfiResult<*mut AnyObject> {
+    println!("new_collection");
+    println!("new_collection, runtime={:?}, data={:?}, T={:p}", runtime, data, T);
     fn monomorphize<T: 'static>(
         runtime: ExternalRuntime,
         data: *const c_void,
@@ -236,18 +236,18 @@ pub extern "C" fn opendp_beam__get_data(
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_beam__make_mul(x: *const c_void, T: *const c_char) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<T: Number>(x: *const c_void) -> FfiResult<*mut AnyTransformation> {
+pub extern "C" fn opendp_beam__make_mul(constant: *const c_void, T: *const c_char) -> FfiResult<*mut AnyTransformation> {
+    fn monomorphize<T: Number>(constant: *const c_void) -> FfiResult<*mut AnyTransformation> {
         // TODO: Use this pattern elswhere.
-        let x = *try_as_ref!(x as *const T);
-        make_mul::<T>(x).into_any()
+        let constant = *try_as_ref!(constant as *const T);
+        make_mul::<T>(constant).into_any()
     }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], (x))
+    dispatch!(monomorphize, [(T, @numbers)], (constant))
 }
 
 pub fn make_mul<T: Number>(
-    x: T,
+    constant: T,
 ) -> Fallible<
     Transformation<
         AllDomain<Collection<T>>,
@@ -261,7 +261,7 @@ pub fn make_mul<T: Number>(
         AllDomain::new(),
         Function::new_fallible(move |arg: &Collection<T>| arg.map(move |e| {
             println!("map ({:?})", e);
-            Ok(*e * x)
+            Ok(*e * constant)
         })),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
@@ -313,7 +313,7 @@ pub mod test {
             let res = dispatch!(monomorphize, [(T, @numbers)], (data));
             util::into_raw(res)
         }
-        let runtime = ExternalRuntime { map: test_runtime_map, take: test_runtime_take, foo: 123, bar: 456.0 };
+        let runtime = ExternalRuntime { map: test_runtime_map, take: test_runtime_take };
         let T = Type::of::<T>();
         let collection = opendp_beam__new_collection(runtime, data, util::into_c_char_p(T.descriptor).unwrap_test());
         let collection: Fallible<_> = collection.into();
