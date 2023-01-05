@@ -280,6 +280,27 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
+    def __getattr__(self, name: str):
+
+        import opendp.transformations as trans
+        import opendp.measurements as meas
+        from functools import wraps
+        constructor_name = "make_" + name
+        constructor = getattr(trans, constructor_name, None) or getattr(meas, constructor_name, None)
+
+        if constructor is not None:
+            @wraps(constructor)
+            def chainer(*args, **kwargs):
+                return self.__rshift__(constructor(*args, **kwargs))
+
+            return chainer
+        return super().__getattribute__(name)
+    
+    def __dir__(self):
+        import opendp.transformations as trans
+        import opendp.measurements as meas
+        return super().__dir__() + [i[5:] for i in dir(trans) + dir(meas) if i.startswith("make_")]
+
 
 class SMDCurve(object):
     def __init__(self, curve):
