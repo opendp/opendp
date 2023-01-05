@@ -5,8 +5,8 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
         return fallible!(FailedRelation, "rho must be non-negative");
     }
 
-    if delta.is_sign_negative() {
-        return fallible!(FailedRelation, "delta must be non-negative");
+    if !delta.is_sign_positive() {
+        return fallible!(FailedRelation, "delta must be positive");
     }
 
     if rho.is_zero() {
@@ -84,5 +84,5 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
     //          = δρ                          + numer        / denom
     let epsilon = a_max.inf_mul(&rho)?.inf_add(&numer.inf_div(&denom)?)?;
 
-    Ok(epsilon)
+    Ok(epsilon.max(Q::zero()))
 }
