@@ -49,9 +49,7 @@ where
         SmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;
-            if rho.is_sign_negative() {
-                return fallible!(FailedRelation, "rho must be non-negative");
-            }
+            
             Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
         }),
     ))
