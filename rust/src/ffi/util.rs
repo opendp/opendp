@@ -7,6 +7,7 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+use crate::beam::Collection;
 use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
@@ -285,7 +286,11 @@ lazy_static! {
             type_vec![ExtrinsicObject],
             // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
+<<<<<<< HEAD
             type_vec![Vec, <(f32, f32), (f64, f64)>],
+=======
+            type_vec![Collection, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
+>>>>>>> ceeda8125 (Integrated into convert/typing modules, implemented dynamic element types.)
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],

@@ -69,10 +69,6 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     :return: value converted to ctypes representation
     """
 
-    if type_name == "opendp::beam::Collection<i32>":
-        import opendp.beam
-        return opendp.beam.make_collection(value, "i32")
-
     if isinstance(type_name, str):
         type_name = RuntimeType.parse(type_name)
 
@@ -109,8 +105,12 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         raise UnknownTypeException(rust_type)
 
     if c_type == AnyObjectPtr:
-        from opendp._data import slice_as_object
-        return slice_as_object(value, type_name) # type: ignore
+        if type_name.origin == "Collection":
+            from opendp.beam import _pcollection_to_obj
+            return _pcollection_to_obj(value, type_name)
+        else:
+            from opendp._data import slice_as_object
+            return slice_as_object(value, type_name) # type: ignore
 
     if c_type == FfiSlicePtr:
         if type_name is None:
@@ -143,23 +143,21 @@ def c_to_py(value: Any) -> Any:
     if isinstance(value, AnyObjectPtr):
         from opendp._data import object_type, object_as_slice, slice_free
         obj_type = object_type(value)
-        if obj_type == "opendp::beam::Collection<i32>":
-            import opendp.beam
-            value.__class__ = ctypes.POINTER(AnyObject)
-            lib.opendp_beam__get_data.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-            lib.opendp_beam__get_data.restype = FfiResult
-            ffi_ret = lib.opendp_beam__get_data(value, py_to_c("i32", ctypes.c_char_p))
-            unwrapped = unwrap(ffi_ret, ctypes.py_object)
-            # don't free c_out, because we are giving ownership to Rust
-            return opendp.beam.data_to_pcollection(unwrapped)
+        type_name = RuntimeType.parse(obj_type)
 
-        if "SMDCurve" in obj_type:
+        if type_name.origin == "Collection":
+            from opendp.beam import _obj_to_pcollection
+            return _obj_to_pcollection(value, type_name)
+
+        if type_name.origin == "SMDCurve":
             return SMDCurve(value)
+
         if "Queryable" in obj_type:
             return Queryable(value)
+
         ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
+            return _slice_to_py(ffi_slice, type_name)
         finally:
             slice_free(ffi_slice)
 
@@ -454,8 +452,6 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
 CallbackFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
 
 def _wrap_py_func(func, TO):
-    from opendp._convert import c_to_py, py_to_c
-
     def wrapper_func(c_arg):
         try:
             # 1. convert AnyObject to Python type

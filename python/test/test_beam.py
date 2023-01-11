@@ -5,10 +5,10 @@ from opendp.beam import *
 enable_features("floating-point", "contrib", "honest-but-curious")
 
 def test_make_mul():
-    data = list(range(10))
+    data = [1.0, 2.0, 3.0]
     with apache_beam.Pipeline() as p:
         pcollection = p | "Create" >> apache_beam.Create(data)
-        mul = make_mul(2, "i32")
+        mul = make_mul(2.0)
         mul_pcollection = mul(pcollection)
         out = take_method(mul_pcollection, "i32")
     assert out == [x * 2 for x in data]
@@ -43,5 +43,4 @@ test calls py_transformation(AnyObject0)
 
 
 if __name__ == "__main__":
-    # test_make_sum_beam()
     test_make_mul()

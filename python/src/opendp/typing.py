@@ -245,6 +245,10 @@ class RuntimeType(object):
         if type_name == tuple:
             raise UnknownTypeException(f"non-parameterized argument")
 
+        beam_type_name = _beam_try_parse(type_name)
+        if beam_type_name is not None:
+            return beam_type_name
+
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
@@ -292,6 +296,10 @@ class RuntimeType(object):
         
         if isinstance(public_example, list):
             return RuntimeType('Vec', [infer_homogeneous(public_example)])
+
+        beam_type_name = _beam_try_infer(public_example)
+        if beam_type_name is not None:
+            return beam_type_name
 
         if np is not None and isinstance(public_example, np.ndarray):
             if public_example.ndim == 0:  # pragma: no cover
@@ -421,6 +429,7 @@ class Carrier(RuntimeType):
         return Carrier(self.origin, [self.parse(type_name=subdomain) for subdomain in subdomains])
 
 
+Collection: Carrier = Carrier('Collection')
 Vec: Carrier = Carrier('Vec')
 HashMap: Carrier = Carrier('HashMap')
 i8: str = 'i8'
@@ -477,6 +486,7 @@ def get_first(value):
 def parse_or_infer(type_name: RuntimeTypeDescriptor, example) -> Union[RuntimeType, str]:
     return RuntimeType.parse_or_infer(type_name, example)
 
+<<<<<<< HEAD
 def pass_through(value: Any) -> Any:
     return value
 
@@ -498,3 +508,42 @@ def get_value_type(type_name):
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     return value.distance_type
+=======
+
+def pass_through(value):
+    return value
+
+
+def get_dependencies(value):
+    return getattr(value, "_dependencies", None)
+
+
+def get_dependencies_iterable(value):
+    return list(map(get_dependencies, value))
+
+def get_distance_type(value):
+    return value.distance_type
+
+def _beam_try_infer(public_example: Any):
+    try:
+        import apache_beam
+    except ImportError:
+        return None
+    if isinstance(public_example, apache_beam.PCollection):
+        element_type = public_example.element_type
+        inner_type = RuntimeType.parse(element_type)
+        return RuntimeType('Collection', [inner_type])
+    else:
+        return None
+
+
+def _beam_try_parse(type_name: RuntimeType):
+    try:
+        import apache_beam
+    except ImportError:
+        return None
+    if isinstance(type_name, apache_beam.typehints.typehints.AnyTypeConstraint):
+        return UnknownType("apache_beam.typehints.typehints.AnyTypeConstraint")
+    else:
+        return None
+>>>>>>> ceeda8125 (Integrated into convert/typing modules, implemented dynamic element types.)
