@@ -19,22 +19,22 @@ class ExternalRuntime(ctypes.Structure):
     ]
 
 
-def _get_ctype(T):
+def _get_types(T):
     c_type = {
-        "bool": ctypes.c_uint8,  # Must be synchronized with c_bool in crate::ffi::util
-        "char": ctypes.c_char,
-        "i8": ctypes.c_int8,
-        "i16": ctypes.c_int16,
-        "i32": ctypes.c_int32,
-        "i64": ctypes.c_int64,
-        "u8": ctypes.c_uint8,
-        "u16": ctypes.c_uint16,
-        "u32": ctypes.c_uint32,
-        "u64": ctypes.c_uint64,
-        "f32": ctypes.c_float,
-        "f64": ctypes.c_double,
-        "String": ctypes.c_char_p,  # TODO
-        "AnyObject": ctypes.c_void_p,  # TODO
+        "bool": (bool, ctypes.c_uint8),  # Must be synchronized with c_bool in crate::ffi::util
+        "char": (str, ctypes.c_char),  # TODO
+        "i8": (int, ctypes.c_int8),
+        "i16": (int, ctypes.c_int16),
+        "i32": (int, ctypes.c_int32),
+        "i64": (int, ctypes.c_int64),
+        "u8": (int, ctypes.c_uint8),
+        "u16": (int, ctypes.c_uint16),
+        "u32": (int, ctypes.c_uint32),
+        "u64": (int, ctypes.c_uint64),
+        "f32": (float, ctypes.c_float),
+        "f64": (float, ctypes.c_double),
+        "String": (str, ctypes.c_char_p),  # TODO
+        "AnyObject": (Any, ctypes.c_void_p),  # TODO
     }.get(T)
     if c_type is None:
         raise UnknownTypeException(T)
@@ -49,9 +49,12 @@ def _call_closure_1(c_closure, xp, yp):
 
 
 def _wrap_closure(c_closure, T, U):
-    T_ctype = _get_ctype(T)
-    U_ctype = _get_ctype(U)
+    T_pytype, T_ctype = _get_types(T)
+    U_pytype, U_ctype = _get_types(U)
 
+    # Annotate the function, so beam will have types, and RuntimeType.parse() will be happy.
+    @apache_beam.typehints.with_input_types(T_pytype)
+    @apache_beam.typehints.with_output_types(U_pytype)
     def f(x):
         print(f"Python closure({x})")
         x = T_ctype(x)
