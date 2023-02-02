@@ -29,7 +29,7 @@ pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(scale: T, alph
     if alpha <= T::zero() || T::one() < alpha {
         return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]")
     }
-    Ok(scale * alpha.recip().ln())
+    Ok(-scale * alpha.ln())
 }
 
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
@@ -85,7 +85,7 @@ pub fn accuracy_to_laplacian_scale<T: Float + Zero + One + Debug>(accuracy: T, a
     if alpha <= T::zero() || T::one() <= alpha {
         return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)")
     }
-    Ok(accuracy / alpha.recip().ln())
+    Ok(-accuracy / alpha.ln())
 }
 
 #[bootstrap(arguments(accuracy(c_type = "void *"), alpha(c_type = "void *")))]
@@ -164,7 +164,7 @@ pub fn discrete_gaussian_scale_to_accuracy<T>(scale: T, alpha: T) -> Fallible<T>
     let mut total = (1. - alpha) * dg_normalization_term(scale);
     let mut i = 0;
     total -= dg_pdf(i, scale);
-    while total.is_sign_positive() {
+    while total > 0. {
         i += 1;
         let dens = 2. * dg_pdf(i, scale);
         if dens.is_zero() {
