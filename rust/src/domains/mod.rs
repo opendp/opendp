@@ -8,7 +8,8 @@
 //! Each metric (see [`crate::metrics`]) is associated with certain data domains. 
 //! The [`Domain`] trait is implemented for all domains used in OpenDP.
 
-#[cfg(feature="ffi")]
+// Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.
+#[cfg(feature="contrib")]
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hash;

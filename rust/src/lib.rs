@@ -145,7 +145,8 @@
 #![recursion_limit="512"]
 
 // create clones of variables that are free to be consumed by a closure
-#[cfg(feature="ffi")]
+// Once we have things using `enclose!` that are outside of `contrib`, this should specify `feature="ffi"`.
+#[cfg(feature="contrib")]
 macro_rules! enclose {
     ( $x:ident, $y:expr ) => (enclose!(($x), $y));
     ( ($( $x:ident ),*), $y:expr ) => {
