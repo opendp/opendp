@@ -206,7 +206,7 @@ For any possible setting of $\rho$ and $\delta$, $\texttt{cdp\_epsilon}$ either 
 \begin{proof}
 The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
 Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{zcdp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
-Define $\epsilon_{cons}(\alpha)$ as a ``looser'' function for computing $\epsilon(\alpha)$, 
+Define $\epsilon_{cons}(\alpha)$ as a ``conservative'' function for computing $\epsilon(\alpha)$, 
 where floating-point arithmetic is computed with conservative rounding such that $\epsilon_{cons}(\alpha) \geq \epsilon(\alpha)$ for $\forall \alpha \in (1, \infty)$.
 Since $\texttt{epsilon} = \epsilon_{cons}(\texttt{a\_max}) \geq \epsilon(\texttt{a\_max})$, then any $(\epsilon(\texttt{a\_max}), \delta)$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
 \end{proof}
