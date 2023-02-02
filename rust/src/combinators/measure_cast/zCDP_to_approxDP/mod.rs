@@ -5,12 +5,12 @@ use crate::{
     traits::Float,
 };
 
-use self::cks20::cdp_epsilon;
+use self::cdp_epsilon::cdp_epsilon;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-mod cks20;
+mod cdp_epsilon;
 
 /// Constructs a new output measurement where the output measure 
 /// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
