@@ -6,10 +6,10 @@ Examples
 Python Docs
 -----------
 
-There are a few useful examples embedded in the user guide and API docs:
+There are many useful notebooks embedded in the user guide and API docs:
 
-* Don't miss the :ref:`conclusion of the user-guide <putting-together>`!
-* base_discrete_laplace in :ref:`constructors` (user guide)
+* `Getting started <../user/getting-started.html>`_ in the user guide.
+* :ref:`Putting things together <putting-together>` at the end of the user guide.
 * DP-sum in :ref:`chaining` (user guide)
 * count in :class:`opendp.mod.Transformation` (API docs)
 * DP-mean in :class:`opendp.mod.Measurement` (API docs)

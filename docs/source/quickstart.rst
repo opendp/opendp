@@ -28,14 +28,11 @@ In the example below, we'll construct an identity :class:`opendp.mod.Transformat
 
 .. doctest::
 
-    >>> from opendp.transformations import make_identity
-    >>> from opendp.typing import SymmetricDistance, VectorDomain, AllDomain
+    >>> from opendp.transformations import make_clamp
     ...
-    >>> identity = make_identity(D=VectorDomain[AllDomain[str]], M=SymmetricDistance)
-    >>> identity(["Hello, world!"])
-    ['Hello, world!']
-
-There's a more thorough explanation in the :ref:`Getting Started <hello-opendp>` section.
+    >>> identity = make_clamp(bounds=(0, 10))
+    >>> identity([-1, 5, 12, -2])
+    [0, 5, 10, 0]
 
 If you would like to skip directly to a more complete example, see :ref:`putting-together`.
 
