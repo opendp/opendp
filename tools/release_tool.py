@@ -195,8 +195,8 @@ def version(args):
     run_command(None, f"sed {inplace_arg} 's/^version = \"{cached_version}\"$/version = \"{resolved_target_version}\"/' rust/Cargo.toml")
     # Update the dependency versions, so that crate publishing will work.
     # It's a little janky to do this with sed, rather than with toml, but this way we retain our formatting.
-    run_command(None, f"sed {inplace_arg} 's/, version = \"{cached_version}\"/, version = \"{resolved_target_version}\"/' rust/Cargo.toml")
-    run_command(None, f"sed {inplace_arg} 's/, version = \"{cached_version}\"/, version = \"{resolved_target_version}\"/' rust/opendp_derive/Cargo.toml")
+    run_command(None, f"sed {inplace_arg} 's/^\\(opendp_.* = {{.*\\) }}/\\1, version = \"{resolved_target_version}\" }}/' rust/Cargo.toml")
+    run_command(None, f"sed {inplace_arg} 's/^\\(opendp_.* = {{.*\\) }}/\\1, version = \"{resolved_target_version}\" }}/' rust/opendp_derive/Cargo.toml")
     run_command(None, f"sed {inplace_arg} 's/^version = {cached_version}$/version = {resolved_target_version}/' python/setup.cfg")
     commit("versioned files", versioned_files, f"RELEASE_TOOL: Set version to {resolved_target_version}.")
 
