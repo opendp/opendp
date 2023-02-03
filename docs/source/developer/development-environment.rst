@@ -36,7 +36,7 @@ Build OpenDP
 
 Next, you'll need to build the Rust binaries. 
 
-Make sure you are on the latest rust version:
+Make sure you are on the latest Rust version:
 
 .. code-block:: bash
 
@@ -153,6 +153,7 @@ The `-e` flag is significant!
 It stands for "editable", meaning you only have to run this command once.
 That is, you do not need to reinstall the OpenDP Python package if changes are made in the ``/python/src`` folder or to the library binary,
 but you should restart the Python interpreter or kernel.
+
 At this point, you should be able import OpenDP as a locally installed package:
 
 .. code-block:: python

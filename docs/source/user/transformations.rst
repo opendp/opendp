@@ -245,20 +245,6 @@ You can use combinations of the indicial transformers to map hashable data to in
      - ``SymmetricDistance``
 
 
-Quantiles via Trees
--------------------
-
-Building off of the binning transformation, quantiles can be estimated by privatizing a b-ary tree and then postprocessing.
-See the following notebook for more information:
-
-.. toctree::
-   :glob:
-   :titlesonly:
-
-   transformations/aggregation-quantile
-
-These use :func:`opendp.transformations.make_b_ary_tree`, :func:`opendp.transformations.make_consistent_b_ary_tree` and :func:`opendp.transformations.make_quantiles_from_counts`.
-
 Clamping
 --------
 Many aggregators depend on bounded data to limit the influence that perturbing an individual may have on a query.
@@ -557,3 +543,18 @@ Sequential summation results in an ``O(n^2)`` increase in sensitivity, while pai
 .. raw:: html
 
    </details>
+  
+
+Quantiles via Trees
+-------------------
+
+Building off of the binning transformation, quantiles can be estimated by privatizing a b-ary tree and then postprocessing.
+See the following notebook for more information:
+
+.. toctree::
+   :glob:
+   :titlesonly:
+
+   transformations/aggregation-quantile
+
+These use :func:`opendp.transformations.make_b_ary_tree`, :func:`opendp.transformations.make_consistent_b_ary_tree` and :func:`opendp.transformations.make_quantiles_from_counts`.

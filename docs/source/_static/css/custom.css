@@ -7,3 +7,6 @@ div.bd-sidebar {
 .logo__image.only-dark {
     filter: invert();
 }
+
+/* make titles of spoilers in nbsphinx notebooks render inline */
+details summary p { display: inline }
