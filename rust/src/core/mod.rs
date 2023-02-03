@@ -51,7 +51,7 @@ pub trait Domain: Clone + PartialEq + Debug + 'static {
     ///
     /// # Proof Definition
     /// `Self::Carrier` can represent all values in the set described by `Self`.
-    type Carrier;
+    type Carrier: ?Sized;
 
     /// Predicate to test an element for membership in the domain.
     /// Not all possible values of `::Carrier` are a member of the domain.
@@ -69,18 +69,19 @@ pub trait Domain: Clone + PartialEq + Debug + 'static {
     // /// A helper to communicate with a member of this domain.
     // /// The members of most domains are not interactive, so the default implementation returns itself without changes
     fn map_queryable(
-        _member: Self::Carrier,
+        _member: Box<Self::Carrier>,
         _mapper: &dyn Fn(PolyQueryable) -> PolyQueryable,
-    ) -> Fallible<Self::Carrier> {
+    ) -> Fallible<Box<Self::Carrier>> {
         fallible!(FailedFunction, "attempted to apply map to a non-queryable")
     }
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-pub struct Function<DI: Domain, DO: Domain> {
+pub struct Function<DI: Domain, DO: Domain> where DO::Carrier: Sized {
     pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
 }
-impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+impl<DI: Domain, DO: Domain> Clone for Function<DI, DO>
+    where DO::Carrier: Sized {
     fn clone(&self) -> Self {
         Function {
             function: self.function.clone(),
@@ -88,7 +89,8 @@ impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
     }
 }
 
-impl<DI: Domain, DO: Domain> Function<DI, DO> {
+impl<DI: Domain, DO: Domain> Function<DI, DO>
+    where DO::Carrier: Sized {
     pub fn new(function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static) -> Self {
         Self::new_fallible(move |arg| Ok(function(arg)))
     }
@@ -106,17 +108,19 @@ impl<DI: Domain, DO: Domain> Function<DI, DO> {
     }
 }
 
-impl<DI: Domain, DO: Domain + 'static> Function<DI, QueryableDomain<AllDomain<()>, DO>> {
+impl<DI: Domain, DO: Domain + 'static> Function<DI, QueryableDomain<AllDomain<()>, DO>> 
+    where DO::Carrier: Sized {
     pub fn eval1(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
         (self.function)(arg)?.get()
     }
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
+impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO>
+    where DO::Carrier: Sized {
     pub fn make_chain<XD: 'static + Domain>(
         function1: &Function<XD, DO>,
         function0: &Function<DI, XD>,
-    ) -> Function<DI, DO> {
+    ) -> Function<DI, DO> where XD::Carrier: Sized {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
         Self::new_fallible(move |arg| function1(&function0(arg)?))
@@ -250,7 +254,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 pub struct Measurement<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure>
 where
     DQ::Carrier: 'static,
-    DA::Carrier: 'static,
+    DA::Carrier: 'static + Sized,
 {
     pub input_domain: DI,
     pub query_domain: DQ,
@@ -263,7 +267,8 @@ where
 
 pub type Measurement1<DI, DO, MI, MO> = Measurement<DI, AllDomain<()>, DO, MI, MO>;
 
-impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Measurement<DI, DQ, DA, MI, MO> {
+impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Measurement<DI, DQ, DA, MI, MO> 
+    where DA::Carrier: Sized {
     pub fn new(
         input_domain: DI,
         query_domain: DQ,
@@ -306,7 +311,7 @@ where
     DO: 'static + Domain,
     MI: Metric,
     MO: Measure,
-    DO::Carrier: 'static,
+    DO::Carrier: 'static + Sized,
 {
     pub fn new1(
         input_domain: DI,
@@ -341,7 +346,7 @@ where
     }
 }
 
-impl<DI, MI, MO> Measurement<DI, PolyDomain, PolyDomain, MI, MO>
+impl<DI, MI, MO> Measurement<DI, AllDomain<dyn std::any::Any>, PolyDomain, MI, MO>
 where
     DI: 'static + Domain,
     MI: Metric,
@@ -350,11 +355,13 @@ where
     pub fn invoke_poly<Q: 'static + Clone, DA: Domain + 'static>(
         &self,
         arg: &DI::Carrier,
-    ) -> Fallible<Queryable<Q, DA>> {
+    ) -> Fallible<Queryable<Q, DA>> 
+        where DA::Carrier: Sized {
         Ok(self.function.eval(arg)?.downcast_qbl())
     }
 
-    pub fn invoke1_poly<DA: Domain + 'static>(&self, arg: &DI::Carrier) -> Fallible<DA::Carrier> {
+    pub fn invoke1_poly<DA: Domain + 'static>(&self, arg: &DI::Carrier) -> Fallible<DA::Carrier>
+        where DA::Carrier: Sized {
         self.function.eval(arg)?.downcast_qbl::<(), DA>().eval(&())
     }
 }
@@ -369,7 +376,8 @@ where
 /// * `function` is a mapping from the input domain to the output domain
 /// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
-pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
+pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>   
+    where DO::Carrier: Sized {
     pub input_domain: DI,
     pub output_domain: DO,
     pub function: Function<DI, DO>,
@@ -378,7 +386,8 @@ pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub stability_map: StabilityMap<MI, MO>,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> 
+    where DO::Carrier: Sized {
     pub fn new(
         input_domain: DI,
         output_domain: DO,
@@ -417,7 +426,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 pub struct Odometer<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure>
 where
     DQ::Carrier: 'static,
-    DA::Carrier: 'static,
+    DA::Carrier: 'static + Sized,
 {
     pub input_domain: DI,
     pub query_domain: DQ,
@@ -428,7 +437,8 @@ where
     pub d_in: MI::Distance,
 }
 
-impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Odometer<DI, DQ, DA, MI, MO> {
+impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Odometer<DI, DQ, DA, MI, MO> 
+    where DA::Carrier: Sized {
     pub fn new(
         input_domain: DI,
         query_domain: DQ,

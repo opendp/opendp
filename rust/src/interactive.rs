@@ -24,11 +24,11 @@ use crate::traits::CheckNull;
 //     Rc<RefCell<dyn FnMut(&Self, &Either<Q, Nonced<QI>>) -> Fallible<Either<(DA::Carrier, bool), Box<dyn Any>>>>>,
 // );
 
-pub struct Queryable<Q, DA: Domain>(
+pub struct Queryable<Q: ?Sized, DA: Domain> (
     Rc<RefCell<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<DA::Carrier>>>>,
-);
+) where DA::Carrier: Sized;
 
-impl<Q, DA: Domain> Clone for Queryable<Q, DA> {
+impl<Q: ?Sized, DA: Domain> Clone for Queryable<Q, DA> where DA::Carrier: Sized {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
@@ -42,9 +42,10 @@ impl<Q, DA: Domain> Clone for Queryable<Q, DA> {
 // type BranchUserQueryable<Q, Q2, A2> = GeneralUserQueryable<Q, Q2, A2, ()>;
 // type LeafUserQueryable<Q, A> = GeneralUserQueryable<Q, (), (), A>;
 
-pub type PolyQueryable = Queryable<Box<dyn Any>, PolyDomain>;
+pub type PolyQueryable = Queryable<dyn Any, PolyDomain>;
 
-impl<Q, DA: Domain> Queryable<Q, DA> {
+impl<Q: ?Sized, DA: Domain> Queryable<Q, DA>
+    where DA::Carrier: Sized {
     pub fn eval(&mut self, query: &Q) -> Fallible<DA::Carrier> {
         self.eval_meta(query).map(|v| v.0)
     }
@@ -80,7 +81,7 @@ impl<Q, DA: Domain> Queryable<Q, DA> {
     }
 }
 
-pub(crate) enum Query<'a, Q> {
+pub(crate) enum Query<'a, Q: ?Sized> {
     External(&'a Q),
     Internal(&'a dyn Any),
 }
@@ -96,7 +97,7 @@ impl<A> From<(A, bool)> for Answer<A> {
     }
 }
 
-impl<Q, DA: Domain> Queryable<Q, DA> {
+impl<Q: ?Sized, DA: Domain> Queryable<Q, DA> where DA::Carrier: Sized {
     pub(crate) fn new(
         transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<DA::Carrier>> + 'static,
     ) -> Self {
@@ -170,9 +171,9 @@ impl<Q, DA: Domain> Queryable<Q, DA> {
     }
 }
 
-impl<Q: 'static, DA: Domain> Queryable<Q, DA> {
+impl<Q: 'static, DA: Domain> Queryable<Q, DA> where DA::Carrier: Sized {
     pub fn to_poly(mut self) -> PolyQueryable {
-        Queryable::new(move |_self: &PolyQueryable, query: Query<Box<dyn Any>>| {
+        Queryable::new(move |_self: &PolyQueryable, query: Query<dyn Any>| {
             Ok(match query {
                 Query::External(q) => {
                     let (answer, interactive) =
@@ -187,13 +188,28 @@ impl<Q: 'static, DA: Domain> Queryable<Q, DA> {
     }
 }
 
-impl Queryable<Box<dyn Any>, PolyDomain> {
-    pub fn downcast_qbl<Q: 'static, DA: Domain>(mut self) -> Queryable<Q, DA> {
+
+impl<DA: Domain> Queryable<dyn Any, DA> where DA::Carrier: Sized {
+    pub fn to_poly(mut self) -> PolyQueryable {
+        Queryable::new(move |_self: &PolyQueryable, query: Query<dyn Any>| {
+            Ok(match query {
+                Query::External(q) => {
+                    let (answer, interactive) =
+                        self.eval_meta(q)?;
+                    Answer::External(Box::new(answer) as Box<dyn Any>, interactive)
+                }
+                Query::Internal(q) => Answer::Internal(self.eval_internal(q)?),
+            })
+        })
+    }
+}
+
+impl Queryable<dyn Any, PolyDomain> {
+    pub fn downcast_qbl<Q: 'static, DA: Domain>(mut self) -> Queryable<Q, DA> where DA::Carrier: Sized {
         Queryable::new(move |_self: &Queryable<Q, DA>, query: Query<Q>| {
             Ok(match query {
                 Query::External(query) => {
-                    let query = Box::new(query) as Box<dyn Any>;
-                    let (answer, interactive) = self.eval_meta(&query)?;
+                    let (answer, interactive) = self.eval_meta(query as &dyn Any)?;
 
                     let answer = *answer.downcast::<DA::Carrier>().unwrap();
                     Answer::External(answer, interactive)
@@ -213,16 +229,16 @@ impl Queryable<Box<dyn Any>, PolyDomain> {
     }
 }
 
-impl<DA: Domain> Queryable<(), DA> {
+impl<DA: Domain> Queryable<(), DA> where DA::Carrier: Sized {
     pub fn get(&mut self) -> Fallible<DA::Carrier> {
         self.eval(&())
     }
 }
 
-impl Queryable<Box<dyn Any>, PolyDomain> {
+impl Queryable<dyn Any, PolyDomain> {
     /// Evaluates a polymorphic query and downcasts to the given type.
     pub fn get_poly<A: 'static>(&mut self) -> Fallible<A> {
-        self.eval(&(Box::new(()) as Box<dyn Any>))?
+        self.eval(&())?
             .downcast()
             .map_err(|_| {
                 err!(
@@ -235,7 +251,7 @@ impl Queryable<Box<dyn Any>, PolyDomain> {
     }
 }
 
-impl<Q: 'static> Queryable<Q, PolyDomain> {
+impl<Q: 'static + ?Sized> Queryable<Q, PolyDomain> {
     /// Evaluates a polymorphic query and downcasts to the given type.
     pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
         self.eval(query)?
@@ -260,21 +276,23 @@ pub(crate) struct ChildChange<Q> {
 pub(crate) struct PrivacyUsage;
 pub(crate) struct PrivacyUsageAfter<Q>(pub Q);
 
-impl<Q, DA: Domain> CheckNull for Queryable<Q, DA> {
+impl<Q, DA: Domain> CheckNull for Queryable<Q, DA> where DA::Carrier: Sized {
     fn is_null(&self) -> bool {
         false
     }
 }
 
 impl<DI: Domain, DOQ: Domain, DOA: Domain, MI: Metric, MO: Measure> CheckNull
-    for Measurement<DI, DOQ, DOA, MI, MO>
+    for Measurement<DI, DOQ, DOA, MI, MO> 
+    where DOA::Carrier: Sized
 {
     fn is_null(&self) -> bool {
         false
     }
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> CheckNull for Transformation<DI, DO, MI, MO> {
+impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> CheckNull for Transformation<DI, DO, MI, MO> 
+    where DO::Carrier: Sized {
     fn is_null(&self) -> bool {
         false
     }

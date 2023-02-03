@@ -43,6 +43,7 @@ pub fn make_lipschitz_float_mul<D, M>(
 ) -> Fallible<Transformation<D, D, M, M>>
 where
     D: LipschitzMulFloatDomain,
+    D::Carrier: Sized,
     M: LipschitzMulFloatMetric<Distance = D::Atom>,
 {
     let mantissa_bits = D::Atom::exact_int_cast(D::Atom::MANTISSA_BITS)?;
@@ -88,7 +89,7 @@ where
 }
 
 /// Implemented for any domain that supports multiplication lipschitz extensions
-pub trait LipschitzMulFloatDomain: Domain + Default {
+pub trait LipschitzMulFloatDomain: Domain + Default where Self::Carrier: Sized {
     type Atom: 'static + Float;
     fn transform(
         constant: &Self::Atom,
@@ -109,6 +110,7 @@ where
 
 impl<D: LipschitzMulFloatDomain> LipschitzMulFloatDomain for VectorDomain<D>
 where
+    D::Carrier: Sized,
     D::Atom: Copy + SaturatingMul + CheckNull + TotalOrd,
 {
     type Atom = D::Atom;

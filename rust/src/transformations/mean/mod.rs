@@ -46,6 +46,7 @@ where
     MI: 'static + Metric,
     T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
     AllDomain<T>: LipschitzMulFloatDomain<Atom = T>,
+    <AllDomain<T> as crate::core::Domain>::Carrier: Sized,
     AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
 {
     if size == 0 {

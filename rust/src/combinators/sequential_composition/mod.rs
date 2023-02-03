@@ -30,6 +30,8 @@ where
     MI::Distance: 'static + TotalOrd + Copy,
     DI::Carrier: 'static + Clone,
     MO::Distance: 'static + TotalOrd + Copy,
+    DQ::Carrier: Sized,
+    DA::Carrier: Sized,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_out");
@@ -95,7 +97,7 @@ where
                                 let mut self_ = self_.clone();
                                 let func = func.clone();
                                 Queryable::new(
-                                    move |_wrapper: &PolyQueryable, query: Query<Box<dyn Any>>| {
+                                    move |_wrapper: &PolyQueryable, query: Query<dyn Any>| {
                                         self_.eval_internal(&AskPermission(child_id.clone()))?;
 
                                         Ok(match inner_qbl.eval_query(query)? {
@@ -170,7 +172,7 @@ pub(crate) struct Wrap(
 mod test {
 
     use crate::{
-        domains::{AllDomain, PolyDomain},
+        domains::{AllDomain, PolyDomain, DynDomain},
         measurements::make_randomized_response_bool,
         measures::MaxDivergence,
     };
@@ -221,7 +223,7 @@ mod test {
         // This compositor expects all outputs are in PolyDomain
         let sc_query_4 = make_sequential_composition(
             AllDomain::<bool>::new(),
-            PolyDomain::new(),
+            DynDomain::new(),
             PolyDomain::new(),
             MaxDivergence::default(),
             1,
@@ -229,7 +231,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<_, QueryableDomain<PolyDomain, PolyDomain>> =
+        let mut answer4: Queryable<_, QueryableDomain<DynDomain, PolyDomain>> =
             queryable.eval_poly(&sc_query_4)?;
         let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
         let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;

@@ -191,6 +191,14 @@ impl<K, V> CollectionSize for HashMap<K, V> {
     }
 }
 
+impl CheckNull for dyn std::any::Any {
+    #[inline]
+    fn is_null(&self) -> bool {false}
+}
+impl CheckNull for &dyn std::any::Any {
+    #[inline]
+    fn is_null(&self) -> bool {false}
+}
 
 macro_rules! impl_check_null_for_non_nullable {
     ($($ty:ty),+) => {

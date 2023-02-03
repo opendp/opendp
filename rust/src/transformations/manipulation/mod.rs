@@ -18,7 +18,8 @@ pub(crate) fn make_row_by_row<DIA, DOA, M>(
     atom_function: impl 'static + Fn(&DIA::Carrier) -> DOA::Carrier
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
-          DIA::Carrier: 'static,
+          DIA::Carrier: 'static + Sized,
+          DOA::Carrier: Sized,
           M: Metric<Distance=IntDistance> {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
@@ -37,7 +38,8 @@ pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
     atom_function: impl 'static + Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
     where DIA: Domain, DOA: Domain,
-          DIA::Carrier: 'static,
+          DIA::Carrier: 'static + Sized,
+          DOA::Carrier: Sized,
           M: Metric<Distance=IntDistance> {
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain),
@@ -89,7 +91,8 @@ pub fn make_is_equal<TIA>(
 /// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
 pub fn make_is_null<DIA>() -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
     where DIA: Domain + Default,
-          DIA::Carrier: 'static + CheckNull {
+          DIA::Carrier: 'static + CheckNull,
+        DIA::Carrier: Sized {
     make_row_by_row(
         DIA::default(),
         AllDomain::default(),

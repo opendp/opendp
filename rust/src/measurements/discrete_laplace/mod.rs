@@ -25,7 +25,7 @@ mod linear;
 pub use linear::*;
 
 #[doc(hidden)]
-pub trait MappableDomain: Domain {
+pub trait MappableDomain: Domain where Self::Carrier: Sized {
     type Atom: Clone;
     fn map_over(
         arg: &Self::Carrier,
@@ -48,7 +48,7 @@ impl<T: 'static + Clone + CheckNull> MappableDomain for AllDomain<T> {
         (func)(arg)
     }
 }
-impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
+impl<D: MappableDomain> MappableDomain for VectorDomain<D> where D::Carrier: Sized {
     type Atom = D::Atom;
     fn map_over(
         arg: &Vec<D::Carrier>,
@@ -59,7 +59,7 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
 }
 
 #[doc(hidden)]
-pub trait DiscreteLaplaceDomain: MappableDomain + Default {
+pub trait DiscreteLaplaceDomain: MappableDomain + Default where Self::Carrier: Sized {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
 impl<T: 'static + Clone + CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
@@ -101,6 +101,7 @@ pub fn make_base_discrete_laplace<D, QO>(
 ) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<QO>>>
 where
     D: 'static + DiscreteLaplaceDomain,
+    D::Carrier: Sized,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
     rug::Rational: std::convert::TryFrom<QO>,

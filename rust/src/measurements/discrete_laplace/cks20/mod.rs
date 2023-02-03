@@ -47,6 +47,7 @@ pub fn make_base_discrete_laplace_cks20<D, QO>(
 where
     D: 'static + DiscreteLaplaceDomain,
     D::Atom: crate::traits::Integer,
+    D::Carrier: Sized,
     QO: crate::traits::Float + InfCast<D::Atom>,
     Rational: TryFrom<QO>,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
@@ -111,6 +112,7 @@ pub fn make_base_discrete_laplace_cks20_rug<D>(
 ) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<Rational>>>
 where
     D: 'static + DiscreteLaplaceDomain<Atom = Integer>,
+    D::Carrier: Sized
 {
     if scale <= 0 {
         return fallible!(MakeMeasurement, "scale must be positive");

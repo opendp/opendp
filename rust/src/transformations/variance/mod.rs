@@ -54,6 +54,7 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
     AllDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
+    <AllDomain<S::Item> as crate::core::Domain>::Carrier: Sized,
     AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
 {
     if ddof >= size {

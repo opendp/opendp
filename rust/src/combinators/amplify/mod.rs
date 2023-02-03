@@ -53,6 +53,7 @@ pub fn make_population_amplification<DIA, DQ, DA, MI, MO>(
     where DIA: IsSizedDomain,
           DQ: Domain,
           DA: Domain,
+          DA::Carrier: Sized,
           MI: 'static + Metric,
           MO: 'static + AmplifiableMeasure {
     let mut measurement = measurement.clone();

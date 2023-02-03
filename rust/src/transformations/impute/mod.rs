@@ -103,6 +103,7 @@ pub fn make_impute_constant<DIA>(
     constant: DIA::Imputed
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AllDomain<DIA::Imputed>>, SymmetricDistance, SymmetricDistance>>
     where DIA: ImputeConstantDomain + Default,
+          DIA::Carrier: Sized,
           DIA::Imputed: 'static + Clone + CheckNull,
           DIA::Carrier: 'static {
     if constant.is_null() { return fallible!(MakeTransformation, "Constant may not be null.") }
@@ -160,7 +161,8 @@ impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>
 pub fn make_drop_null<DA>(
 ) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
     where DA: DropNullDomain + Default, 
-          DA::Imputed: CheckNull {
+          DA::Imputed: CheckNull,
+        DA::Carrier: Sized {
     Ok(Transformation::new(
         VectorDomain::new(DA::default()),
         VectorDomain::new_all(),

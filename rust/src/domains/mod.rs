@@ -32,7 +32,8 @@ pub struct QueryableDomain<DQ: Domain, DA: Domain> {
     pub query_domain: DQ,
     pub answer_domain: DA,
 }
-impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA> where DQ::Carrier: 'static, DA::Carrier: 'static
+
+impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA> where DQ::Carrier: 'static, DA::Carrier: 'static + Sized
 {
     type Carrier = Queryable<DQ::Carrier, DA>;
 
@@ -40,13 +41,35 @@ impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA> where DQ::Carrie
         Ok(true)
     }
 
-    fn map_queryable(
-        member: Self::Carrier, 
-        mapper: &dyn Fn(PolyQueryable) -> PolyQueryable
-    ) -> Fallible<Self::Carrier> {
-        Ok(mapper(member.to_poly()).downcast_qbl())
-    }
+    // fn map_queryable(
+    //     member: Box<Self::Carrier>, 
+    //     mapper: &dyn Fn(PolyQueryable) -> PolyQueryable
+    // ) -> Fallible<Box<Self::Carrier>> {
+    //     // you can't convert something that doesn't have a size to poly
+    //     // this associated function needs to be on this Domain impl
+    //     // but DQ needs to be unsized to include unsized domains
+    //     Ok(Box::new(mapper((*member).to_poly()).downcast_qbl()))
+    // }
 }
+
+// impl<DA: Domain> Domain for QueryableDomain<DynDomain, DA> where DA::Carrier: 'static + Sized
+// {
+//     type Carrier = Queryable<dyn Any, DA>;
+
+//     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+//         Ok(true)
+//     }
+
+//     fn map_queryable(
+//         member: Box<Self::Carrier>, 
+//         mapper: &dyn Fn(PolyQueryable) -> PolyQueryable
+//     ) -> Fallible<Box<Self::Carrier>> {
+//         // you can't convert something that doesn't have a size to poly
+//         // this associated function needs to be on this Domain impl
+//         // but DQ needs to be unsized to include unsized domains
+//         Ok(Box::new(mapper((*member).to_poly()).downcast_qbl()))
+//     }
+// }
 
 impl<DQ: Domain, DA: Domain> Debug for QueryableDomain<DQ, DA> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -93,20 +116,22 @@ impl<DQ: Domain, DA: Domain> Clone for QueryableDomain<DQ, DA> {
 /// assert!(!f32_domain.member(&f32::NAN)?);
 /// # opendp::error::Fallible::Ok(())
 /// ```
-pub struct AllDomain<T> {
+pub struct AllDomain<T: ?Sized> {
     _marker: PhantomData<T>,
 }
-impl<T> Debug for AllDomain<T> {
+pub type DynDomain = AllDomain<dyn Any>;
+
+impl<T: ?Sized> Debug for AllDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "AllDomain({})", type_name!(T))
     }
 }
-impl<T> Default for AllDomain<T> {
+impl<T: ?Sized> Default for AllDomain<T> {
     fn default() -> Self {
         Self::new()
     }
 }
-impl<T> AllDomain<T> {
+impl<T: ?Sized> AllDomain<T> {
     pub fn new() -> Self {
         AllDomain {
             _marker: PhantomData,
@@ -114,18 +139,18 @@ impl<T> AllDomain<T> {
     }
 }
 // Auto-deriving Clone would put the same trait bound on T, so we implement it manually.
-impl<T> Clone for AllDomain<T> {
+impl<T: ?Sized> Clone for AllDomain<T> {
     fn clone(&self) -> Self {
         Self::new()
     }
 }
 // Auto-deriving PartialEq would put the same trait bound on T, so we implement it manually.
-impl<T> PartialEq for AllDomain<T> {
+impl<T: ?Sized> PartialEq for AllDomain<T> {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
-impl<T: 'static + CheckNull> Domain for AllDomain<T> {
+impl<T: ?Sized + 'static + CheckNull> Domain for AllDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         Ok(!val.is_null())
@@ -280,7 +305,7 @@ where
 }
 impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV>
 where
-    DK::Carrier: Eq + Hash,
+    DK::Carrier: Eq + Hash + Sized, DV::Carrier: Sized,
 {
     type Carrier = HashMap<DK::Carrier, DV::Carrier>;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
@@ -340,7 +365,8 @@ impl<T: 'static + CheckNull> VectorDomain<AllDomain<T>> {
         Self::new(AllDomain::<T>::new())
     }
 }
-impl<D: Domain> Domain for VectorDomain<D> {
+impl<D: Domain> Domain for VectorDomain<D> 
+    where D::Carrier: Sized {
     type Carrier = Vec<D::Carrier>;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         for e in val {
@@ -530,7 +556,8 @@ impl<D: Domain> Debug for OptionNullDomain<D> {
         write!(f, "OptionNullDomain({:?})", self.element_domain)
     }
 }
-impl<D: Domain> Domain for OptionNullDomain<D> {
+impl<D: Domain> Domain for OptionNullDomain<D>
+    where D::Carrier: Sized, {
     type Carrier = Option<D::Carrier>;
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         value
@@ -566,7 +593,8 @@ mod contrib {
             PairDomain(element_domain0, element_domain1)
         }
     }
-    impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1> {
+    impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1>
+        where D0::Carrier: Sized, D1::Carrier: Sized {
         type Carrier = (D0::Carrier, D1::Carrier);
         fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
             Ok(self.0.member(&val.0)? && self.1.member(&val.1)?)
@@ -602,7 +630,7 @@ mod contrib {
     }
     impl<D: Domain> Domain for DataDomain<D>
     where
-        D::Carrier: 'static + Any,
+        D::Carrier: 'static + Sized,
     {
         type Carrier = Box<dyn Any>;
         fn member(&self, val: &Self::Carrier) -> Fallible<bool> {

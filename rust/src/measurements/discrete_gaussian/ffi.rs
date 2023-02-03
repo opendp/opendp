@@ -31,6 +31,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         fn monomorphize2<D, MO, QI>(scale: MO::Atom) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + DiscreteGaussianDomain<QI>,
+            D::Carrier: Sized,
             Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 
             MO: 'static + DiscreteGaussianMeasure<D, QI>,

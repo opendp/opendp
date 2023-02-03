@@ -16,7 +16,7 @@ use super::{get_discretization_consts, MappableDomain};
 mod ffi;
 
 #[doc(hidden)]
-pub trait GaussianDomain: MappableDomain + Default {
+pub trait GaussianDomain: MappableDomain + Default where Self::Carrier: Sized, {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
 impl<T: 'static + Clone + CheckNull> GaussianDomain for AllDomain<T> {
@@ -27,13 +27,14 @@ impl<T: 'static + Clone + CheckNull> GaussianDomain for VectorDomain<AllDomain<T
 }
 
 #[doc(hidden)]
-pub trait GaussianMeasure<DI: GaussianDomain>: Measure + Default {
+pub trait GaussianMeasure<DI: GaussianDomain>: Measure + Default where DI::Carrier: Sized {
     fn new_forward_map(scale: DI::Atom, relaxation: DI::Atom) -> PrivacyMap<DI::InputMetric, Self>;
 }
 
 impl<DI, Q> GaussianMeasure<DI> for ZeroConcentratedDivergence<Q>
 where
     DI: GaussianDomain<Atom = Q>,
+    DI::Carrier: Sized,
     Q: Float,
 {
     fn new_forward_map(scale: Q, relaxation: Q) -> PrivacyMap<DI::InputMetric, Self> {
@@ -89,7 +90,9 @@ where
 pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement1<D, D, D::InputMetric, MO>>
 where
     D: 'static + GaussianDomain,
+     
     D::Atom: Float + SampleDiscreteGaussianZ2k,
+    D::Carrier: Sized,
     MO: GaussianMeasure<D>,
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>
 {

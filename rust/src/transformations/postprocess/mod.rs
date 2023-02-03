@@ -14,6 +14,7 @@ pub(crate) fn make_postprocess<DI, DO>(
 where
     DI: Domain,
     DO: Domain,
+    DO::Carrier: Sized,
 {
     Ok(Transformation::new(
         input_domain,

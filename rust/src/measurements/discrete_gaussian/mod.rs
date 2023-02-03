@@ -20,7 +20,7 @@ mod ffi;
 use super::MappableDomain;
 
 #[doc(hidden)]
-pub trait DiscreteGaussianDomain<QI>: MappableDomain + Default {
+pub trait DiscreteGaussianDomain<QI>: MappableDomain + Default where Self::Carrier: Sized {
     type InputMetric: Metric<Distance = QI> + Default;
 }
 impl<T: 'static + Clone + CheckNull, QI> DiscreteGaussianDomain<QI> for AllDomain<T> {
@@ -34,6 +34,7 @@ impl<T: 'static + Clone + CheckNull, QI> DiscreteGaussianDomain<QI> for VectorDo
 pub trait DiscreteGaussianMeasure<DI, QI>: Measure + Default
 where
     DI: DiscreteGaussianDomain<QI>,
+    DI::Carrier: Sized
 {
     type Atom: Float;
     fn new_forward_map(scale: Self::Atom) -> Fallible<PrivacyMap<DI::InputMetric, Self>>;
@@ -42,6 +43,7 @@ where
 impl<DI, QI, QO> DiscreteGaussianMeasure<DI, QI> for ZeroConcentratedDivergence<QO>
 where
     DI: DiscreteGaussianDomain<QI>,
+    DI::Carrier: Sized,
     QI: Number,
     QO: Float + InfCast<QI>,
     Rational: TryFrom<QO>,
@@ -102,6 +104,7 @@ pub fn make_base_discrete_gaussian<D, MO, QI>(
 ) -> Fallible<Measurement1<D, D, D::InputMetric, MO>>
 where
     D: 'static + DiscreteGaussianDomain<QI>,
+    D::Carrier: Sized,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 
     MO: DiscreteGaussianMeasure<D, QI>,
@@ -140,6 +143,7 @@ pub fn make_base_discrete_gaussian_rug<D>(
 ) -> Fallible<Measurement1<D, D, D::InputMetric, ZeroConcentratedDivergence<Rational>>>
 where
     D: 'static + DiscreteGaussianDomain<Rational, Atom = Integer>,
+    D::Carrier: Sized
 {
     if scale <= 0 {
         return fallible!(MakeMeasurement, "scale must be positive");

@@ -32,6 +32,7 @@ where
     MI::Distance: 'static + TotalOrd + Clone,
     DI::Carrier: 'static + Clone,
     MO::Distance: 'static + TotalOrd + Clone + Zero,
+    DA::Carrier: Sized
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_mid");
@@ -141,7 +142,7 @@ impl<Q: Clone> ConcurrentCompositionMeasure for SmoothedMaxDivergence<Q> {}
 mod test {
 
     use crate::{
-        domains::{AllDomain, PolyDomain},
+        domains::{AllDomain, PolyDomain, DynDomain},
         measurements::make_randomized_response_bool,
         metrics::DiscreteDistance,
     };
@@ -153,7 +154,7 @@ mod test {
         // construct concurrent compositor IM
         let root = make_concurrent_composition::<_, _, _, DiscreteDistance, _>(
             AllDomain::new(),
-            PolyDomain::new(),
+            AllDomain::new(),
             PolyDomain::new(),
             MaxDivergence::default(),
             1,
@@ -199,7 +200,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<_, QueryableDomain<PolyDomain, PolyDomain>> =
+        let mut answer4: Queryable<_, QueryableDomain<DynDomain, PolyDomain>> =
             queryable.eval_poly(&cc_query_4)?;
         let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
         let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;

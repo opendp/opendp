@@ -276,7 +276,7 @@ impl<DI, DO> IntoAnyFunctionExt for Function<DI, DO>
     where DI: 'static + Domain,
           DI::Carrier: 'static,
           DO: 'static + Domain,
-          DO::Carrier: 'static {
+          DO::Carrier: 'static + Sized {
     fn into_any(self) -> AnyFunction {
         let function = move |arg: &<AnyDomain as Domain>::Carrier| -> Fallible<<AnyDomain as Domain>::Carrier> {
             let arg = arg.downcast_ref()?;
@@ -293,7 +293,7 @@ pub trait IntoAnyFunctionOutExt {
 
 impl<DO> IntoAnyFunctionOutExt for Function<AnyDomain, DO>
     where DO: 'static + Domain,
-          DO::Carrier: 'static {
+          DO::Carrier: 'static + Sized {
     fn into_any_out(self) -> AnyFunction {
         let function = move |arg: &<AnyDomain as Domain>::Carrier| -> Fallible<<AnyDomain as Domain>::Carrier> {
             let res = self.eval(arg);
@@ -315,7 +315,7 @@ impl<DI, DQ, DA> IntoAnyFunctionQueryableExt for Function<DI, QueryableDomain<DQ
           DQ: 'static + Domain,
           DQ::Carrier: 'static, 
           DA: 'static + Domain,
-          DA::Carrier: 'static {
+          DA::Carrier: 'static + Sized {
     fn into_any_queryable(self) -> AnyQueryableFunction {
         Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyDomain>> {
             let arg = arg.downcast_ref()?;
@@ -337,7 +337,7 @@ impl<DQ, DA> IntoAnyFunctionQueryableOutExt for Function<AnyDomain, QueryableDom
     where DQ: 'static + Domain,
           DQ::Carrier: 'static,
           DA: 'static + Domain,
-          DA::Carrier: 'static {
+          DA::Carrier: 'static + Sized {
     fn into_any_queryable_out(self) -> AnyQueryableFunction {
         Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyDomain>> {
             let mut res = self.eval(arg)?;
@@ -393,7 +393,7 @@ pub trait IntoAnyMeasurementExt {
 impl<DI: 'static + Domain, DQ: 'static + Domain, DA: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DQ, DA, MI, MO>
     where DI::Carrier: 'static,
           DQ::Carrier: 'static,
-          DA::Carrier: 'static,
+          DA::Carrier: 'static + Sized,
           MI::Distance: 'static,
           MO::Distance: 'static {
     fn into_any(self) -> AnyMeasurement {
@@ -416,7 +416,7 @@ pub trait IntoAnyMeasurementOutExt {
 }
 
 impl<DQ: 'static + Domain, DA: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DQ, DA, AnyMetric, AnyMeasure>
-    where DQ::Carrier: 'static, DA::Carrier: 'static {
+    where DQ::Carrier: 'static, DA::Carrier: 'static + Sized {
     fn into_any_out(self) -> AnyMeasurement {
         AnyMeasurement::new(
             self.input_domain,
@@ -442,7 +442,7 @@ pub trait IntoAnyTransformationExt {
 
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric> IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
     where DI::Carrier: 'static,
-          DO::Carrier: 'static,
+          DO::Carrier: 'static + Sized,
           MI::Distance: 'static,
           MO::Distance: 'static {
     fn into_any(self) -> AnyTransformation {

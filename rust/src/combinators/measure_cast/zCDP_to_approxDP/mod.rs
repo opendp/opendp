@@ -30,6 +30,7 @@ where
     DI: Domain,
     DOQ: Domain,
     DOA: Domain,
+    DOA::Carrier: Sized,
     MI: 'static + Metric,
     QO: Float,
 {

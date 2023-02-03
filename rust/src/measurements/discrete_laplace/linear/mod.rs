@@ -52,6 +52,7 @@ pub fn make_base_discrete_laplace_linear<D, QO>(
 where
     D: 'static + DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
+    D::Carrier: Sized,
     QO: Float + InfCast<D::Atom>,
 {
     if scale.is_sign_negative() {
@@ -122,6 +123,7 @@ pub fn make_base_geometric<D, QO>(
 ) -> Fallible<Measurement1<D, D, D::InputMetric, MaxDivergence<QO>>>
 where
     D: 'static + DiscreteLaplaceDomain,
+    D::Carrier: Sized,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
