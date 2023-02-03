@@ -6,7 +6,7 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, Odometer, PrivacyMap},
     domains::QueryableDomain,
     error::Fallible,
-    interactive::{Queryable, QueryableBase},
+    interactive::Queryable,
     traits::{InfAdd, TotalOrd},
 };
 

@@ -238,8 +238,8 @@ pub extern "C" fn opendp_combinators__make_default_user_measurement(
         AnyDomain::new(AllDomain::<()>::new()),
         try_!(default_domain(DO)),
         Function::new_fallible(move |arg| {
-            let mut res = Some(function(arg)?);
-            Ok(Queryable::new_concrete(move |query: &AnyObject| {
+            let mut res = Some((function(arg)?, false));
+            Ok(Queryable::new_external(move |query: &AnyObject| {
                 query.downcast_ref::<()>()
                     .map_err(|_| err!(FailedFunction, "user-defined measurements may only receive trivial () queries"))?;
                     

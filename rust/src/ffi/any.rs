@@ -317,13 +317,13 @@ impl<DI, DQ, DA> IntoAnyFunctionQueryableExt for Function<DI, QueryableDomain<DQ
           DA: 'static + Domain,
           DA::Carrier: 'static {
     fn into_any_queryable(self) -> AnyQueryableFunction {
-        Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyObject>> {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyDomain>> {
             let arg = arg.downcast_ref()?;
             let mut res = self.eval(arg)?;
 
-            Ok(Queryable::new_concrete(move |query: &AnyObject| -> Fallible<AnyObject> {
+            Ok(Queryable::new_external(move |query: &AnyObject| -> Fallible<(AnyObject, bool)> {
                 let query = query.downcast_ref().unwrap();
-                res.eval(&query).map(AnyObject::new)
+                res.eval_meta(query).map(|(o, i)| (AnyObject::new(o), i))
             }))
         })
     }
@@ -339,12 +339,12 @@ impl<DQ, DA> IntoAnyFunctionQueryableOutExt for Function<AnyDomain, QueryableDom
           DA: 'static + Domain,
           DA::Carrier: 'static {
     fn into_any_queryable_out(self) -> AnyQueryableFunction {
-        Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyObject>> {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyDomain>> {
             let mut res = self.eval(arg)?;
 
-            Ok(Queryable::new_concrete(move |query: &AnyObject| -> Fallible<AnyObject> {
+            Ok(Queryable::new_external(move |query: &AnyObject| -> Fallible<(AnyObject, bool)> {
                 let query = query.downcast_ref().unwrap();
-                res.eval(&query).map(AnyObject::new)
+                res.eval_meta(query).map(|(o, i)| (AnyObject::new(o), i))
             }))
         })
     }

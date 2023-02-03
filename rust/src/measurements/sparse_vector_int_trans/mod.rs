@@ -4,7 +4,7 @@ use crate::{
     core::{Domain, Function, Measure, Measurement1, PrivacyMap},
     domains::{AllDomain, QueryableDomain},
     error::Fallible,
-    interactive::{Queryable, QueryableBase},
+    interactive::Queryable,
     measures::MaxDivergence,
     metrics::AbsoluteDistance,
     traits::{samplers::SampleDiscreteLaplaceZ2k, CheckNull, Float, InfCast},
@@ -37,7 +37,7 @@ where
         QueryableDomain::new(input_domain.clone(), AllDomain::new()),
         Function::new_fallible(enclose!(scale_release, move |arg: &Queryable<
             DI::Carrier,
-            T,
+            AllDomain<T>,
         >| {
             let mut trans_queryable = arg.clone();
 
@@ -48,7 +48,7 @@ where
             let mut query_limit = query_limit.clone();
 
             Ok(Queryable::new(
-                move |_self: &QueryableBase, query: &dyn Any| {
+                move |_self: &Queryable<_, _>, query: &dyn Any| {
                     if let Some(query) = query.downcast_ref::<DI::Carrier>() {
                         if query_limit == 0 {
                             return fallible!(FailedFunction, "queries exhausted");
@@ -154,11 +154,11 @@ mod test {
                 Ok(Box::new(*query.downcast_ref::<f64>().unwrap()))
             }))?;
 
-        println!("too small       : {:?}", sv.eval(&1.)?);
-        println!("maybe true      : {:?}", sv.eval(&100.)?);
-        println!("definitely true : {:?}", sv.eval(&1000.)?);
-        println!("maybe exhausted : {:?}", sv.eval(&1000.).is_err());
-        println!("exhausted       : {:?}", sv.eval(&1000.).is_err());
+        println!("too small       : {:?}", sv.eval(1.)?);
+        println!("maybe true      : {:?}", sv.eval(100.)?);
+        println!("definitely true : {:?}", sv.eval(1000.)?);
+        println!("maybe exhausted : {:?}", sv.eval(1000.).is_err());
+        println!("exhausted       : {:?}", sv.eval(1000.).is_err());
 
         Ok(())
     }

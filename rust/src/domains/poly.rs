@@ -34,6 +34,34 @@ impl Domain for PolyDomain {
     }
 }
 
+
+/// A polymorphic Domain. This admits any value of any type (represented as a Box<dyn Any>).
+///
+// #[derive(PartialEq, Clone)]
+// pub struct DynDomain {}
+
+// impl DynDomain {
+//     pub fn new() -> Self {
+//         DynDomain { }
+//     }
+// }
+// impl Default for DynDomain {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
+// impl Debug for DynDomain {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+//         write!(f, "DynDomain()")
+//     }
+// }
+// impl Domain for DynDomain {
+//     type Carrier = dyn Any;
+//     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+//         Ok(true)
+//     }
+// }
+
 impl<DI, DO> Function<DI, DO>
 where
     DI: 'static + Domain,
@@ -62,9 +90,9 @@ where
 {
     /// Converts this Function into one with polymorphic output.
     pub fn into_poly_queryable(self) -> Function<DI, QueryableDomain<PolyDomain, PolyDomain>> {
-        let function = move |arg: &DI::Carrier| -> Fallible<Queryable<Box<dyn Any>, Box<dyn Any>>> {
+        let function = move |arg: &DI::Carrier| -> Fallible<Queryable<Box<dyn Any>, PolyDomain>> {
             let mut res = self.eval(arg)?;
-            Ok(Queryable::new_concrete(move |query: &Box<dyn Any>| {
+            Ok(Queryable::new_external(move |query: &Box<dyn Any>| {
                 let query = query.downcast_ref::<DOQ::Carrier>().ok_or_else(|| {
                     err!(
                         FailedFunction,
@@ -72,7 +100,7 @@ where
                         type_name::<DOQ::Carrier>()
                     )
                 })?;
-                res.eval(query).map(|o| Box::new(o) as Box<dyn Any>)
+                res.eval_meta(query).map(|(o, i)| (Box::new(o) as Box<dyn Any>, i))
             }))
         };
         Function::new_fallible(function)
@@ -95,29 +123,9 @@ impl<DI: Domain> Function<DI, PolyDomain> {
     }
 }
 
-impl Queryable<Box<dyn Any>, Box<dyn Any>> {
-    pub fn typed_as<Q: 'static + Clone, A: 'static>(mut self) -> Queryable<Q, A> {
-        Queryable::new_concrete(move |query: &Q| {
-            self.eval(&(Box::new(query.clone()) as Box<dyn Any>))?.downcast()
-            .map_err(|_| {
-                err!(
-                    FailedCast,
-                    "Failed downcast of eval_poly result to {}",
-                    any::type_name::<A>()
-                )
-            })
-            .map(|res| *res)
-        })
-    }
-}
-
-impl<QI: 'static> Queryable<QI, Queryable<Box<dyn Any>, Box<dyn Any>>> {
-    pub fn eval_poly<Q: 'static + Clone, A: 'static>(&mut self, arg: &QI) -> Fallible<Queryable<Q, A>> {
-        self.eval(arg).map(Queryable::typed_as)
-    }
-
-    pub fn eval1_poly<A: 'static>(&mut self, arg: &QI) -> Fallible<A> {
-        self.eval_poly::<(), A>(arg)?.get()
+impl<QI: 'static> Queryable<QI, QueryableDomain<PolyDomain, PolyDomain>> {
+    pub fn eval_poly<Q: 'static + Clone, DA: Domain>(&mut self, arg: &QI) -> Fallible<Queryable<Q, DA>> {
+        self.eval(arg).map(Queryable::downcast_qbl)
     }
 }
 
@@ -185,9 +193,9 @@ mod tests {
         let res_plain = op_plain.invoke1(&arg)?;
         assert_eq!(res_plain, arg);
         let op_poly = op_plain.into_poly();
-        let res_poly = op_poly.invoke1_poly::<f64>(&arg)?;
+        let res_poly = op_poly.invoke1_poly::<AllDomain<f64>>(&arg)?;
         assert_eq!(res_poly, arg);
-        let res_bogus = op_poly.invoke1_poly::<i32>(&arg);
+        let res_bogus = op_poly.invoke1_poly::<AllDomain<i32>>(&arg);
         assert_eq!(
             res_bogus.err().unwrap_test().variant,
             ErrorVariant::FailedCast

@@ -203,9 +203,9 @@ where
         transformation1.output_domain.clone(),
         Function::new_fallible(move |arg: &DI::Carrier| {
             let mut qbl = function_meas.eval(arg)?;
-            Ok(Queryable::new_concrete(enclose!(function_trans, move |query: &DQ::Carrier| {
-                let answer: DXA::Carrier = qbl.eval(query)?;
-                function_trans.eval(&answer)
+            Ok(Queryable::new_external(enclose!(function_trans, move |query: &DQ::Carrier| {
+                let (answer, interactive): (DXA::Carrier, bool) = qbl.eval_meta(query)?;
+                function_trans.eval(&answer).map(|a| (a, interactive))
             })))
         }),
         // Function::make_chain(&transformation1.function, &measurement0.function),

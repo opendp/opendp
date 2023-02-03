@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use num::Zero;
 
 use crate::{
@@ -7,7 +5,7 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     domains::{AllDomain, QueryableDomain},
     error::Fallible,
-    interactive::{Queryable, QueryableBase},
+    interactive::{Queryable, Query, Answer},
     measures::{MaxDivergence, SmoothedMaxDivergence},
     traits::TotalOrd,
 };
@@ -67,12 +65,11 @@ where
                 // 2. the query, which is a dynamically typed `&dyn Any`
 
                 // arg, d_mids, d_in and d_out are all moved into (or captured by) the Queryable closure here
-                Queryable::new(move |_self: &QueryableBase, query: &dyn Any| {
+                Queryable::new(move |_self: &Queryable<_, _>, query: Query<Measurement<DI, DQ, DA, MI, MO>>| {
                     // evaluate the measurement query and return the answer.
                     //     the downcast ref attempts to downcast the &dyn Any to a specific concrete type
                     //     if the query passed in was this type of measurement, the downcast will succeed
-                    if let Some(measurement) =
-                        query.downcast_ref::<Measurement<DI, DQ, DA, MI, MO>>()
+                    if let Query::External(measurement) = query
                     {
                         assert_components_match!(
                             DomainMismatch,
@@ -110,7 +107,7 @@ where
                         // The box allows the return value to be dynamically typed, just like query was.
                         // Necessary because different queries have different return types.
                         // All responses are of type `Fallible<Box<dyn Any>>`
-                        return Ok(Box::new(answer));
+                        return Ok(Answer::External(answer, true));
                     }
 
                     fallible!(FailedFunction, "unrecognized query!")
@@ -185,7 +182,8 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, Queryable<(), bool>> = queryable.eval_poly(&cc_query_3)?;
+        let mut answer3: Queryable<_, QueryableDomain<AllDomain<()>, AllDomain<bool>>> =
+            queryable.eval_poly(&cc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?.get()?;
         let _answer3_2: bool = answer3.eval(&rr_query)?.get()?;
 
@@ -201,7 +199,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<_, Queryable<Box<dyn Any>, Box<dyn Any>>> =
+        let mut answer4: Queryable<_, QueryableDomain<PolyDomain, PolyDomain>> =
             queryable.eval_poly(&cc_query_4)?;
         let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
         let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;

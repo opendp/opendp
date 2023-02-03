@@ -318,7 +318,7 @@ where
 ///
 /// The Queryable object works similar to a dictionary.
 /// Note that the access time is O(state.h.len()).
-pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<K, T>
+pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<K, AllDomain<T>>
 where
     T: 'static + TFloat,
     K: 'static + Clone + CheckNull,
@@ -332,7 +332,7 @@ pub fn make_alp_histogram_post_process<K, C, T>(
 ) -> Fallible<
     Measurement1<
         SparseDomain<K, C>,
-        AllDomain<Queryable<K, T>>,
+        AllDomain<Queryable<K, AllDomain<T>>>,
         L1Distance<C>,
         MaxDivergence<T>,
     >,

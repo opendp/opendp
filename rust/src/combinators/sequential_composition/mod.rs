@@ -1,10 +1,10 @@
-use std::any::Any;
+use std::{any::Any, cell::RefCell, rc::Rc};
 
 use crate::{
     core::{Domain, Function, Measurement, Metric, PrivacyMap},
     domains::{AllDomain, QueryableDomain},
     error::Fallible,
-    interactive::{ChildChange, Queryable, QueryableBase},
+    interactive::{Answer, PolyQueryable, Query, Queryable},
     traits::TotalOrd,
 };
 
@@ -58,57 +58,92 @@ where
             // 2. the query, which is a dynamically typed `&dyn Any`
 
             // arg, d_mids, d_in and d_out are all moved into (or captured by) the Queryable closure here
-            Queryable::new(move |_self: &QueryableBase, query: &dyn Any| {
-                // evaluate the measurement query and return the answer.
-                //     the downcast ref attempts to downcast the &dyn Any to a specific concrete type
-                //     if the query passed in was this type of measurement, the downcast will succeed
-                if let Some(measurement) = query.downcast_ref::<Measurement<DI, DQ, DA, MI, MO>>() {
-                    // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
-                    let d_mid =
-                        (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
+            Queryable::new(
+                move |self_: &Queryable<_, _>, query: Query<Measurement<DI, DQ, DA, MI, MO>>| {
+                    // evaluate the measurement query and return the answer.
+                    //     the downcast ref attempts to downcast the &dyn Any to a specific concrete type
+                    //     if the query passed in was this type of measurement, the downcast will succeed
+                    if let Query::External(measurement) = query {
+                        // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
+                        let d_mid = (d_mids.last())
+                            .ok_or_else(|| err!(FailedFunction, "out of queries"))?;
 
-                    // check that the query doesn't consume too much privacy
-                    if !measurement.check(&d_in, d_mid)? {
-                        return fallible!(FailedFunction, "insufficient budget for query");
+                        // check that the query doesn't consume too much privacy
+                        if !measurement.check(&d_in, d_mid)? {
+                            return fallible!(FailedFunction, "insufficient budget for query");
+                        }
+
+                        // evaluate the query!
+                        let mut answer = measurement.invoke(&arg)?;
+
+                        // we've now consumed the last d_mid. This is our only state modification
+                        d_mids.pop();
+
+                        // if the answer is a queryable,
+                        // wrap it so that when the child gets a query it sends a ChildChange query to this parent queryable
+                        // it gives this sequential composition queryable (or any parent of this queryable)
+                        // a chance to deny the child permission to execute
+                        let child_id = d_mids.len();
+
+                        #[derive(Clone)]
+                        struct Func(Rc<RefCell<dyn FnMut(&Func, &PolyQueryable) -> PolyQueryable>>);
+
+                        let self_ = self_.clone();
+                        let func = Func(Rc::new(RefCell::new(
+                            move |func: &Func, qbl: &PolyQueryable| -> PolyQueryable {
+                                let mut inner_qbl = qbl.clone();
+                                let mut self_ = self_.clone();
+                                let func = func.clone();
+                                Queryable::new(
+                                    move |_wrapper: &PolyQueryable, query: Query<Box<dyn Any>>| {
+                                        self_.eval_internal(&AskPermission(child_id.clone()))?;
+
+                                        Ok(match inner_qbl.eval_query(query)? {
+                                            Answer::External(mut answer, true) => Answer::External(
+                                                inner_qbl.eval_internal(&Wrap(
+                                                    RefCell::new(Some(answer)),
+                                                    Box::new(enclose!(func, move |queryable| {
+                                                        (func.0.borrow_mut())(&func, &queryable)
+                                                    })),
+                                                ))?,
+                                                true,
+                                            ),
+                                            a => a,
+                                        })
+                                    },
+                                )
+                            },
+                        )));
+
+                        // wrap the base queryable
+                        answer = (func.0.borrow_mut())(&func, &answer.to_poly()).downcast_qbl();
+
+                        // The box allows the return value to be dynamically typed, just like query was.
+                        // Necessary because different queries have different return types.
+                        // All responses are of type `Fallible<Box<dyn Any>>`
+                        return Ok(Answer::External(answer, true));
                     }
 
-                    // evaluate the query!
-                    let answer = measurement.invoke(&arg)?;
+                    let Query::Internal(query) = query else {
+                    unreachable!()
+                };
 
-                    // we've now consumed the last d_mid. This is our only state modification
-                    d_mids.pop();
-
-                    // if the answer is a queryable,
-                    // wrap it so that when the child gets a query it sends a ChildChange query to this parent queryable
-                    // it gives this sequential composition queryable (or any parent of this queryable)
-                    // a chance to deny the child permission to execute
-                    // DO::map_queryable(|queryable: QueryableBase| {
-                    //     Queryable::new(move |self_child: &QueryableBase, query: &dyn Any| {
-                    //         unimplemented!()
-                    //     })
-                    // });
-
-                    // The box allows the return value to be dynamically typed, just like query was.
-                    // Necessary because different queries have different return types.
-                    // All responses are of type `Fallible<Box<dyn Any>>`
-                    return Ok(Box::new(answer));
-                }
-
-                // update state based on child change
-                if let Some(change) = query.downcast_ref::<ChildChange<MO::Distance>>() {
-                    if change.id != d_mids.len() {
-                        return fallible!(
-                            FailedFunction,
-                            "sequential compositor has received a new query"
-                        );
+                    // update state based on child change
+                    if let Some(AskPermission(id)) = query.downcast_ref() {
+                        if *id != d_mids.len() {
+                            return fallible!(
+                                FailedFunction,
+                                "sequential compositor has received a new query"
+                            );
+                        }
+                        // state won't change in response to child,
+                        // but return an Ok to approve the change
+                        return Ok(Answer::Internal(Box::new(())));
                     }
-                    // state won't change in response to child,
-                    // but return an Ok to approve the change
-                    return Ok(Box::new(()));
-                }
 
-                fallible!(FailedFunction, "unrecognized query!")
-            })
+                    fallible!(FailedFunction, "unrecognized query!")
+                },
+            )
         })),
         MI::default(),
         MO::default(),
@@ -124,6 +159,12 @@ where
         }),
     ))
 }
+
+struct AskPermission(pub usize);
+pub(crate) struct Wrap(
+    pub RefCell<Option<Box<dyn Any>>>,
+    pub Box<dyn Fn(PolyQueryable) -> PolyQueryable>,
+);
 
 #[cfg(test)]
 mod test {
@@ -170,7 +211,9 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, Queryable<(), bool>> = queryable.eval_poly(&sc_query_3)?;
+        let v = queryable.eval(&sc_query_3)?;
+
+        let mut answer3 = queryable.eval_poly::<_, QueryableDomain<AllDomain<()>, AllDomain<bool>>>(&sc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?.get()?;
         let _answer3_2: bool = answer3.eval(&rr_query)?.get()?;
 
@@ -186,7 +229,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<_, Queryable<Box<dyn Any>, Box<dyn Any>>> =
+        let mut answer4: Queryable<_, QueryableDomain<PolyDomain, PolyDomain>> =
             queryable.eval_poly(&sc_query_4)?;
         let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
         let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;

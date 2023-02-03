@@ -18,7 +18,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::Queryable;
+use crate::interactive::{Queryable, PolyQueryable};
 use crate::traits::{CheckNull, CollectionSize, InherentNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
@@ -32,25 +32,20 @@ pub struct QueryableDomain<DQ: Domain, DA: Domain> {
     pub query_domain: DQ,
     pub answer_domain: DA,
 }
-impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA>
-where
-    DQ::Carrier: 'static,
-    DA::Carrier: 'static,
+impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA> where DQ::Carrier: 'static, DA::Carrier: 'static
 {
-    type Carrier = Queryable<DQ::Carrier, DA::Carrier>;
+    type Carrier = Queryable<DQ::Carrier, DA>;
 
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         Ok(true)
     }
 
-    // TODO: consider removal
-    // fn inject_context<QD: 'static + Clone>(
-    //     queryable: &mut Self::Carrier,
-    //     context: Context,
-    //     max_usage: Option<QD>,
-    // ) {
-    //     inject_context(queryable, context, max_usage);
-    // }
+    fn map_queryable(
+        member: Self::Carrier, 
+        mapper: &dyn Fn(PolyQueryable) -> PolyQueryable
+    ) -> Fallible<Self::Carrier> {
+        Ok(mapper(member.to_poly()).downcast_qbl())
+    }
 }
 
 impl<DQ: Domain, DA: Domain> Debug for QueryableDomain<DQ, DA> {

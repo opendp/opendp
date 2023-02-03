@@ -126,7 +126,7 @@ pub trait Invokable<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure>
         &self,
         value: &DI::Carrier,
         context: Context,
-    ) -> Fallible<Queryable<DQ::Carrier, DA::Carrier>>;
+    ) -> Fallible<Queryable<DQ::Carrier, DA>>;
     fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance>;
 
     fn input_domain(&self) -> DI;
@@ -141,7 +141,7 @@ impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Invokable<DI, 
         &self,
         value: &DI::Carrier,
         _context: Context,
-    ) -> Fallible<Queryable<DQ::Carrier, DA::Carrier>> {
+    ) -> Fallible<Queryable<DQ::Carrier, DA>> {
         self.invoke(value)
     }
 
@@ -166,13 +166,14 @@ impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Invokable<DI, 
     for Odometer<DI, DQ, DA, MI, MO>
 where
     MO::Distance: 'static + Clone + Zero,
-    DQ::Carrier: Clone,
+    DQ::Carrier: 'static + Clone,
+    DA::Carrier: 'static,
 {
     fn invoke(
         &self,
         value: &DI::Carrier,
         mut context: Context,
-    ) -> Fallible<Queryable<DQ::Carrier, DA::Carrier>> {
+    ) -> Fallible<Queryable<DQ::Carrier, DA>> {
         let mut inner = self.invoke(value)?;
 
         Ok(Queryable::new(
@@ -277,7 +278,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer3: Queryable<_, Queryable<(), bool>> = queryable.eval_poly(&cc_query_3)?;
+        let mut answer3: Queryable<_, QueryableDomain<AllDomain<()>, AllDomain<bool>>> = queryable.eval_poly(&cc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?.get()?;
         let _answer3_2: bool = answer3.eval(&rr_query)?.get()?;
 
@@ -293,7 +294,7 @@ mod test {
         )?
         .into_poly();
 
-        let mut answer4: Queryable<_, Queryable<Box<dyn Any>, Box<dyn Any>>> =
+        let mut answer4: Queryable<_, QueryableDomain<PolyDomain, PolyDomain>> =
             queryable.eval_poly(&sc_query_4)?;
         let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
         let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;

@@ -74,10 +74,12 @@ pub fn make_is_equal<TIA>(
     value: TIA
 ) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
     where TIA: 'static + PartialEq + CheckNull {
+
     make_row_by_row(
         AllDomain::new(),
         AllDomain::new(),
         move |v| v == &value)
+
 }
 
 #[bootstrap(features("contrib"))]
