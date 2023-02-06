@@ -8,6 +8,24 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+### Added
+
+- [support for user-defined callbacks under explicit opt-in](https://docs.opendp.org/en/latest/user/combinators.html#user-defined-callbacks)
+    - researchers may construct their own transformations, measurements and postprocessors in Python
+    - these "custom" components may be interleaved with other components in the library
+- expanded docs.opendp.org User Guide with more explanatory notebooks
+- "contrib" proofs for CKS20 sampler algorithms
+- "contrib" proof for ρ-zCDP to ε(δ)-DP conversion
+- CITATION.cff [#552](https://github.com/opendp/opendp/pull/552)
+
+### Fixed
+- cleanup of accuracy utilities [#626](https://github.com/opendp/opendp/issues/626)
+    * `discrete_gaussian_scale_to_accuracy` returns an accuracy one too large when the scale is on the lower edge
+    * improve float precision of `laplacian_scale_to_accuracy` and `accuracy_to_laplacian_scale`
+    * Reported by Alex Whitworth (@alexWhitworth). Thank you!
+- clamp negative epsilon in `make_zCDP_to_approxDP` when delta is large [#621](https://github.com/opendp/opendp/issues/621)
+    * Reported by Marika Swanberg and Shlomi Hod. Thank you!
+- resolve build warnings from metadata in version tags
 
 ## [0.6.1] - 2022-10-27
 [0.6.1]: https://github.com/opendp/opendp/compare/v0.6.0...v0.6.1
