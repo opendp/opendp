@@ -27,12 +27,6 @@ Please keep this up to date, following the [instructions](#instructions) below.
     * Reported by Marika Swanberg and Shlomi Hod. Thank you!
 - resolve build warnings from metadata in version tags
 
-## [0.6.1] - 2022-10-27
-[0.6.1]: https://github.com/opendp/opendp/compare/v0.6.0...v0.6.1
-
-### Fixed
-- docs.rs failed to render due to Katex dependency
-
 
 ## [0.6.1] - 2022-10-27
 [0.6.1]: https://github.com/opendp/opendp/compare/v0.6.0...v0.6.1
@@ -43,7 +37,6 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [0.6.0] - 2022-10-26
 [0.6.0]: https://github.com/opendp/opendp/compare/v0.5.0...v0.6.0
-
 
 ### Added
 - Restructured and expanded documentation on docs.opendp.org
@@ -149,7 +142,6 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - Added conservative rounding when converting between MFPR floats and native floats
     - MFPR has a different exponent range, which could lead to unintended rounding of floats that are out of exponent range
 
-
 ### Migration
 - `make_base_gaussian`'s output measure is now ZeroConcentratedDivergence.
     - This means the output distance is now a single scalar, rho (it used to be an (ε, δ) tuple)
@@ -160,6 +152,7 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - replace `make_base_geometric` with `make_base_discrete_laplace`
 - `make_basic_composition` accepts a list of measurements as its first argument (it used to have two arguments)
 - slight increase in sensitivities/privacy utilization across the library as a byproduct of floating-point attack mitigations
+
 
 ## [0.4.0] - 2021-12-10
 [0.4.0]: https://github.com/opendp/opendp/compare/v0.3.0...v0.4.0
