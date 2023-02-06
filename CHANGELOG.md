@@ -8,6 +8,10 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+
+## [0.6.2] - 2023-02-06
+[0.6.2]: https://github.com/opendp/opendp/compare/v0.6.1...v0.6.2
+
 ### Added
 
 - [support for user-defined callbacks under explicit opt-in](https://docs.opendp.org/en/latest/user/combinators.html#user-defined-callbacks)
