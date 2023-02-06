@@ -8,17 +8,28 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+### Added
 
-## [0.6.1] - 2022-10-27
-[0.6.1]: https://github.com/opendp/opendp/compare/v0.6.0...v0.6.1
+- [support for user-defined callbacks under explicit opt-in](https://docs.opendp.org/en/latest/user/combinators.html#user-defined-callbacks)
+    - researchers may construct their own transformations, measurements and postprocessors in Python
+    - these "custom" components may be interleaved with other components in the library
+- expanded docs.opendp.org User Guide with more explanatory notebooks
+- "contrib" proofs for CKS20 sampler algorithms
+- "contrib" proof for ρ-zCDP to ε(δ)-DP conversion
+- CITATION.cff [#552](https://github.com/opendp/opendp/pull/552)
 
 ### Fixed
-- docs.rs failed to render due to Katex dependency
+- cleanup of accuracy utilities [#626](https://github.com/opendp/opendp/issues/626)
+    * `discrete_gaussian_scale_to_accuracy` returns an accuracy one too large when the scale is on the lower edge
+    * improve float precision of `laplacian_scale_to_accuracy` and `accuracy_to_laplacian_scale`
+    * Reported by Alex Whitworth (@alexWhitworth). Thank you!
+- clamp negative epsilon in `make_zCDP_to_approxDP` when delta is large [#621](https://github.com/opendp/opendp/issues/621)
+    * Reported by Marika Swanberg and Shlomi Hod. Thank you!
+- resolve build warnings from metadata in version tags
 
 
 ## [0.6.0] - 2022-10-26
 [0.6.0]: https://github.com/opendp/opendp/compare/v0.5.0...v0.6.0
-
 
 ### Added
 - Restructured and expanded documentation on docs.opendp.org
@@ -124,7 +135,6 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - Added conservative rounding when converting between MFPR floats and native floats
     - MFPR has a different exponent range, which could lead to unintended rounding of floats that are out of exponent range
 
-
 ### Migration
 - `make_base_gaussian`'s output measure is now ZeroConcentratedDivergence.
     - This means the output distance is now a single scalar, rho (it used to be an (ε, δ) tuple)
@@ -135,6 +145,7 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - replace `make_base_geometric` with `make_base_discrete_laplace`
 - `make_basic_composition` accepts a list of measurements as its first argument (it used to have two arguments)
 - slight increase in sensitivities/privacy utilization across the library as a byproduct of floating-point attack mitigations
+
 
 ## [0.4.0] - 2021-12-10
 [0.4.0]: https://github.com/opendp/opendp/compare/v0.3.0...v0.4.0
