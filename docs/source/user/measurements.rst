@@ -6,21 +6,26 @@ Measurements
 This section gives a high-level overview of the measurements that are available in the library.
 Refer to the :ref:`measurement` section for an explanation of what a measurement is.
 
-As covered in the :ref:`chaining` section, the intermediate domains and metrics need to match when chaining.
+As mentioned in `Getting Started <getting-started.html#Chaining>`_, the intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
 
-In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
-You can choose whether to construct scalar or vector-valued versions by setting the ``D`` type argument when calling the constructor.
 
-:Scalar: ``D=AllDomain[T]`` (default)
-:Vector: ``D=VectorDomain[AllDomain[T]]``
+.. toctree::
 
-Notice that there is a symmetric structure to the core measurements:
+   measurements/additive-noise-mechanisms
+   measurements/randomized-response
+
+Additive Noise Mechanisms
+-------------------------
+
+See the `Additive Noise Mechanisms notebook <measurements/additive-noise-mechanisms.html>`_ for code examples and more exposition.
+
+Notice that there is a symmetric structure to the additive noise measurements:
 
 .. list-table::
    :header-rows: 1
 
-   * - Input Metric
+   * - Vector Input Metric
      - Integer
      - Float
    * - ``L1Distance<T>``
@@ -30,11 +35,16 @@ Notice that there is a symmetric structure to the core measurements:
      - :func:`make_base_discrete_gaussian <opendp.measurements.make_base_discrete_gaussian>`
      - :func:`make_base_gaussian <opendp.measurements.make_base_gaussian>`
 
+In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
+You can choose whether to construct scalar or vector-valued versions by setting the ``D`` type argument when calling the constructor.
+
+:Scalar: ``D=AllDomain[T]`` (default)
+:Vector: ``D=VectorDomain[AllDomain[T]]``
 
 Laplacian Noise
----------------
+***************
 
-These algorithms accept L1 sensitivities and measure privacy in terms of epsilon. 
+These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
 Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_laplacian_scale` functions to convert to/from accuracy estimates.
 
 .. list-table::
@@ -45,21 +55,21 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_base_discrete_laplace`
-     - ``AllDomain<T>``
-     - ``AbsoluteDistance<T>``
+     - ``AllDomain<int>``
+     - ``AbsoluteDistance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace`
-     - ``VectorDomain<AllDomain<T>>``
-     - ``L1Distance<T>``
+     - ``VectorDomain<AllDomain<int>>``
+     - ``L1Distance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_laplace`
-     - ``AllDomain<T>``
-     - ``AbsoluteDistance<T>``
-     - ``MaxDivergence<T>``
+     - ``AllDomain<float>``
+     - ``AbsoluteDistance<float>``
+     - ``MaxDivergence<float>``
    * - :func:`opendp.measurements.make_base_laplace`
-     - ``VectorDomain<AllDomain<T>>``
-     - ``L1Distance<T>``
-     - ``MaxDivergence<T>``
+     - ``VectorDomain<AllDomain<float>>``
+     - ``L1Distance<float>``
+     - ``MaxDivergence<float>``
 
 
 There are more granular versions of these constructors, should you need them:
@@ -82,20 +92,20 @@ In addition, the linear-time algorithm supports a constant-time execution mode i
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
-     - ``AllDomain<T>``
-     - ``AbsoluteDistance<T>``
+     - ``AllDomain<int>``
+     - ``AbsoluteDistance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
-     - ``VectorDomain<AllDomain<T>>``
-     - ``L1Distance<T>``
+     - ``VectorDomain<AllDomain<int>>``
+     - ``L1Distance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
-     - ``AllDomain<T>``
-     - ``AbsoluteDistance<T>``
+     - ``AllDomain<int>``
+     - ``AbsoluteDistance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
-     - ``VectorDomain<AllDomain<T>>``
-     - ``L1Distance<T>``
+     - ``VectorDomain<AllDomain<int>>``
+     - ``L1Distance<int>``
      - ``MaxDivergence<QO>``
 
 .. raw:: html
@@ -104,9 +114,9 @@ In addition, the linear-time algorithm supports a constant-time execution mode i
 
 
 Gaussian Noise
---------------
+**************
 
-These algorithms accept L2 sensitivities and measure privacy in terms of rho (zero-concentrated differential privacy). 
+These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
 Use the :func:`opendp.accuracy.gaussian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_gaussian_scale` functions to convert to/from accuracy estimates.
 Refer to :ref:`measure-casting` to convert to approximate DP.
 
@@ -118,25 +128,25 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_base_discrete_gaussian`
-     - ``AllDomain<T>``
+     - ``AllDomain<int>``
      - ``AbsoluteDistance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_gaussian`
-     - ``VectorDomain<AllDomain<T>>``
+     - ``VectorDomain<AllDomain<int>>``
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
    * - :func:`opendp.measurements.make_base_gaussian`
-     - ``AllDomain<T>``
-     - ``AbsoluteDistance<T>``
-     - ``ZeroConcentratedDivergence<T>``
+     - ``AllDomain<float>``
+     - ``AbsoluteDistance<float>``
+     - ``ZeroConcentratedDivergence<float>``
    * - :func:`opendp.measurements.make_base_gaussian`
-     - ``VectorDomain<AllDomain<T>>``
-     - ``L2Distance<T>``
-     - ``ZeroConcentratedDivergence<T>``
+     - ``VectorDomain<AllDomain<float>>``
+     - ``L2Distance<float>``
+     - ``ZeroConcentratedDivergence<float>``
 
 
 Geometric Noise
----------------
+***************
 The geometric mechanism (:func:`make_base_geometric <opendp.measurements.make_base_geometric>`) has been deprecated in favor of the discrete laplace (:func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>`).
 :func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>` is overall more computationally efficient than the previous algorithm.
 If you need constant-time execution to protect against timing side-channels, use :func:`opendp.measurements.make_base_discrete_laplace_linear`, which is equivalent to the previous algorithm.
@@ -146,6 +156,8 @@ Stability Histogram
 -------------------
 The stability histogram is used to release a category set and frequency counts, and is useful when the category set is unknown or very large.
 `make_count_by` is included here because it is currently the only transformation that `make_base_ptr` chains with.
+
+See the `Histograms notebook <../examples/histograms.html>`_ for code examples and more exposition.
 
 .. list-table::
    :header-rows: 1
@@ -165,19 +177,10 @@ The stability histogram is used to release a category set and frequency counts, 
 
 Randomized Response
 -------------------
-These measurements are used to randomize an individual's response to a query. 
+These measurements are used to randomize an individual's response to a query in the local-DP model.
 
-.. testsetup::
+See the `Randomized Response notebook <measurements/randomized-response.html>`_ for code examples and more exposition.
 
-    from opendp.mod import enable_features
-    enable_features('contrib', 'floating-point')
-
-.. doctest::
-
-    >>> from opendp.measurements import make_randomized_response_bool
-    >>> meas = make_randomized_response_bool(prob=0.75)
-    >>> release = meas(True)
-    >>> epsilon = meas.map(1)
 
 .. list-table::
    :header-rows: 1
