@@ -9,9 +9,6 @@ Follow the steps below to get an OpenDP development environment set up, includin
 * Install the `Rust toolchain <https://www.rust-lang.org/tools/install>`_.
 * Install `Python version 3.7 or higher <https://www.python.org>`_.
 
-If you have already installed Rust, make sure that you have installed a version at least as new as the `rust-version` specified in 
-`rust/Cargo.toml <https://github.com/opendp/opendp/blob/main/rust/Cargo.toml>`_.
-
 
 Clone the OpenDP Repo
 ---------------------
@@ -38,7 +35,14 @@ Build OpenDP
 ------------
 
 Next, you'll need to build the Rust binaries. 
-This is done by running ``cargo build`` in the ``rust`` subdirectory of the repo.
+
+Make sure you are on the latest Rust version:
+
+.. code-block:: bash
+
+    rustup update
+
+Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 
 .. code-block:: bash
 
@@ -105,9 +109,9 @@ If you run into problems, please contact us!
 
     You may encounter the following build error on Windows:
 
-    .. code-block:: bash
+    .. code-block::
 
-        thread 'main' panicked at 'Program failed with code 2: "make" "-j" "12" "check"'
+        error: failed to run custom build command for `gmp-mpfr-sys v1.4.10`
 
     There is a more involved `setup guide <https://github.com/opendp/opendp/tree/main/rust/windows>`_ for Windows users.
     You can compromise to simple and vulnerable builds instead, by adding the ``--no-default-features`` flag to cargo commands.
@@ -142,15 +146,32 @@ Change to the ``python`` directory, install dependencies, and then install the P
 
     cd python
 
-    pip install flake8 pytest
+    pip install flake8 pytest wheel
     pip install -e .
 
 The `-e` flag is significant! 
 It stands for "editable", meaning you only have to run this command once.
 That is, you do not need to reinstall the OpenDP Python package if changes are made in the ``/python/src`` folder or to the library binary,
 but you should restart the Python interpreter or kernel.
-At this point, you should be able use OpenDP as a locally installed package. 
 
+At this point, you should be able import OpenDP as a locally installed package:
+
+.. code-block:: python
+
+    import opendp
+
+
+.. note::
+
+    If you encounter the following error on import:
+    
+    .. code-block::
+
+        OSError: dlopen ... (mach-o file, but is an incompatible architecture)
+    
+    You should check that the architecture from ``rustc -vV`` matches your Python architecture.
+    This can occur if you are on a Mac M1 and have an x86_64 Python install.
+    
 
 Testing Python
 --------------
@@ -219,7 +240,7 @@ These tasks can be used to directly build or test OpenDP.
                 "problemMatcher": {
                     "base": "$rustc",
                     "fileLocation": [
-                        "autodetect",
+                        "relative",
                         "${workspaceFolder}/rust"
                     ]
                 },
@@ -243,7 +264,7 @@ These tasks can be used to directly build or test OpenDP.
                 "problemMatcher": {
                     "base": "$rustc",
                     "fileLocation": [
-                        "autodetect",
+                        "relative",
                         "${workspaceFolder}/rust"
                     ]
                 },
@@ -267,7 +288,7 @@ These tasks can be used to directly build or test OpenDP.
                 "problemMatcher": {
                     "base": "$rustc",
                     "fileLocation": [
-                        "autodetect",
+                        "relative",
                         "${workspaceFolder}/rust"
                     ]
                 },
@@ -292,7 +313,7 @@ These tasks can be used to directly build or test OpenDP.
                 "problemMatcher": {
                     "base": "$rustc",
                     "fileLocation": [
-                        "autodetect",
+                        "relative",
                         "${workspaceFolder}/rust"
                     ]
                 },
@@ -316,7 +337,7 @@ These tasks can be used to directly build or test OpenDP.
                 "problemMatcher": {
                     "base": "$rustc",
                     "fileLocation": [
-                        "autodetect",
+                        "relative",
                         "${workspaceFolder}/rust"
                     ],
                     "source": "clippy"
@@ -341,7 +362,7 @@ These tasks can be used to directly build or test OpenDP.
                 "problemMatcher": {
                     "base": "$rustc",
                     "fileLocation": [
-                        "autodetect",
+                        "relative",
                         "${workspaceFolder}/rust"
                     ]
                 },
@@ -365,7 +386,7 @@ These tasks can be used to directly build or test OpenDP.
                 "command": "rustdoc",
                 "problemMatcher": {
                     "base": "$rustc",
-                    "fileLocation": ["autodetect", "${workspaceFolder}/rust"],
+                    "fileLocation": ["relative", "${workspaceFolder}/rust"],
                 },
                 "options": {
                     "cwd": "./rust"

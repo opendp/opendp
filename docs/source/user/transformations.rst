@@ -9,6 +9,7 @@ Refer to the :ref:`transformation` section for an explanation of what a transfor
 As covered in the :ref:`chaining` section, the intermediate :ref:`domains <domains>` need to match when chaining.
 Each transformation has a carefully chosen input domain and output domain that supports their relation.
 
+
 .. note::
   If you pass information collected directly from the dataset into constructors, the privacy budget will be underestimated.
   Constructor arguments should be either:
@@ -243,6 +244,7 @@ You can use combinations of the indicial transformers to map hashable data to in
      - ``VectorDomain<AllDomain<TOA>>``
      - ``SymmetricDistance``
 
+
 Clamping
 --------
 Many aggregators depend on bounded data to limit the influence that perturbing an individual may have on a query.
@@ -393,7 +395,7 @@ Aggregators
 -----------
 Aggregators compute a summary statistic on individual-level data.
 
-Aggregators that produce scalar-valued statistics have a output_metric of ``AbsoluteDistance[TO]``.
+Aggregators that produce scalar-valued statistics have an output_metric of ``AbsoluteDistance[TO]``.
 This output metric can be chained with most noise-addition measurements interchangeably.
 
 However, aggregators that produce vector-valued statistics like :func:`opendp.transformations.make_count_by_categories`
@@ -405,6 +407,16 @@ The constructor :func:`opendp.measurements.make_count_by` does a similar aggrega
 but does not need a category set (you instead chain with :func:`opendp.measurements.make_base_ptr`, which uses the propose-test-release framework).
 
 The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
+
+See the notebooks for code examples and deeper explanations:
+
+.. toctree::
+   :glob:
+   :titlesonly:
+
+   transformations/aggregation-sum
+   transformations/aggregation-mean
+
 
 .. list-table::
    :header-rows: 1
@@ -531,3 +543,18 @@ Sequential summation results in an ``O(n^2)`` increase in sensitivity, while pai
 .. raw:: html
 
    </details>
+  
+
+Quantiles via Trees
+-------------------
+
+Building off of the binning transformation, quantiles can be estimated by privatizing a b-ary tree and then postprocessing.
+See the following notebook for more information:
+
+.. toctree::
+   :glob:
+   :titlesonly:
+
+   transformations/aggregation-quantile
+
+These use :func:`opendp.transformations.make_b_ary_tree`, :func:`opendp.transformations.make_consistent_b_ary_tree` and :func:`opendp.transformations.make_quantiles_from_counts`.
