@@ -9,7 +9,7 @@
 //! The [`Domain`] trait is implemented for all domains used in OpenDP.
 
 // Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.
-#[cfg(feature="contrib")]
+#[cfg(feature = "contrib")]
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -18,7 +18,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::interactive::{Queryable, PolyQueryable};
+use crate::interactive::{DynQueryable, IntoDyn, PolyQueryable, Queryable, DowncastDyn, FromDyn};
 use crate::traits::{CheckNull, CollectionSize, InherentNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
@@ -33,7 +33,11 @@ pub struct QueryableDomain<DQ: Domain, DA: Domain> {
     pub answer_domain: DA,
 }
 
-impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA> where DQ::Carrier: 'static, DA::Carrier: 'static + Sized
+impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA>
+where
+    DQ::Carrier: 'static,
+    DA::Carrier: 'static + Sized,
+    Queryable<DQ::Carrier, DA>: IntoDyn + FromDyn,
 {
     type Carrier = Queryable<DQ::Carrier, DA>;
 
@@ -41,35 +45,16 @@ impl<DQ: Domain, DA: Domain> Domain for QueryableDomain<DQ, DA> where DQ::Carrie
         Ok(true)
     }
 
-    // fn map_queryable(
-    //     member: Box<Self::Carrier>, 
-    //     mapper: &dyn Fn(PolyQueryable) -> PolyQueryable
-    // ) -> Fallible<Box<Self::Carrier>> {
-    //     // you can't convert something that doesn't have a size to poly
-    //     // this associated function needs to be on this Domain impl
-    //     // but DQ needs to be unsized to include unsized domains
-    //     Ok(Box::new(mapper((*member).to_poly()).downcast_qbl()))
-    // }
+    fn map_queryable(
+        member: Box<Self::Carrier>,
+        mapper: &dyn Fn(DynQueryable) -> DynQueryable,
+    ) -> Fallible<Box<Self::Carrier>> {
+        // you can't convert something that doesn't have a size to poly
+        // this associated function needs to be on this Domain impl
+        // but DQ needs to be unsized to include unsized domains
+        Ok(Box::new(mapper((*member).into_dyn()).downcast_dyn()))
+    }
 }
-
-// impl<DA: Domain> Domain for QueryableDomain<DynDomain, DA> where DA::Carrier: 'static + Sized
-// {
-//     type Carrier = Queryable<dyn Any, DA>;
-
-//     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
-//         Ok(true)
-//     }
-
-//     fn map_queryable(
-//         member: Box<Self::Carrier>, 
-//         mapper: &dyn Fn(PolyQueryable) -> PolyQueryable
-//     ) -> Fallible<Box<Self::Carrier>> {
-//         // you can't convert something that doesn't have a size to poly
-//         // this associated function needs to be on this Domain impl
-//         // but DQ needs to be unsized to include unsized domains
-//         Ok(Box::new(mapper((*member).to_poly()).downcast_qbl()))
-//     }
-// }
 
 impl<DQ: Domain, DA: Domain> Debug for QueryableDomain<DQ, DA> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -305,7 +290,8 @@ where
 }
 impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV>
 where
-    DK::Carrier: Eq + Hash + Sized, DV::Carrier: Sized,
+    DK::Carrier: Eq + Hash + Sized,
+    DV::Carrier: Sized,
 {
     type Carrier = HashMap<DK::Carrier, DV::Carrier>;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
@@ -365,8 +351,10 @@ impl<T: 'static + CheckNull> VectorDomain<AllDomain<T>> {
         Self::new(AllDomain::<T>::new())
     }
 }
-impl<D: Domain> Domain for VectorDomain<D> 
-    where D::Carrier: Sized {
+impl<D: Domain> Domain for VectorDomain<D>
+where
+    D::Carrier: Sized,
+{
     type Carrier = Vec<D::Carrier>;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         for e in val {
@@ -557,7 +545,9 @@ impl<D: Domain> Debug for OptionNullDomain<D> {
     }
 }
 impl<D: Domain> Domain for OptionNullDomain<D>
-    where D::Carrier: Sized, {
+where
+    D::Carrier: Sized,
+{
     type Carrier = Option<D::Carrier>;
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         value
@@ -594,7 +584,10 @@ mod contrib {
         }
     }
     impl<D0: Domain, D1: Domain> Domain for PairDomain<D0, D1>
-        where D0::Carrier: Sized, D1::Carrier: Sized {
+    where
+        D0::Carrier: Sized,
+        D1::Carrier: Sized,
+    {
         type Carrier = (D0::Carrier, D1::Carrier);
         fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
             Ok(self.0.member(&val.0)? && self.1.member(&val.1)?)

@@ -4,7 +4,7 @@ use crate::{
     core::{Domain, Function, Measurement, Metric, PrivacyMap},
     domains::{AllDomain, QueryableDomain},
     error::Fallible,
-    interactive::{Answer, PolyQueryable, Query, Queryable},
+    interactive::{Answer, Query, Queryable, DynQueryable, IntoDyn, DowncastDyn},
     traits::TotalOrd,
 };
 
@@ -30,6 +30,7 @@ where
     MI::Distance: 'static + TotalOrd + Copy,
     DI::Carrier: 'static + Clone,
     MO::Distance: 'static + TotalOrd + Copy,
+    // TODO: consider dropping the Sized bound by adding a trait for calling into_dyn
     DQ::Carrier: Sized,
     DA::Carrier: Sized,
 {
@@ -88,37 +89,38 @@ where
                         let child_id = d_mids.len();
 
                         #[derive(Clone)]
-                        struct Func(Rc<RefCell<dyn FnMut(&Func, &PolyQueryable) -> PolyQueryable>>);
+                        struct Func(Rc<RefCell<dyn FnMut(&Func, &DynQueryable) -> DynQueryable>>);
 
                         let self_ = self_.clone();
                         let func = Func(Rc::new(RefCell::new(
-                            move |func: &Func, qbl: &PolyQueryable| -> PolyQueryable {
+                            move |func: &Func, qbl: &DynQueryable| -> DynQueryable {
                                 let mut inner_qbl = qbl.clone();
                                 let mut self_ = self_.clone();
                                 let func = func.clone();
                                 Queryable::new(
-                                    move |_wrapper: &PolyQueryable, query: Query<dyn Any>| {
+                                    move |_wrapper: &DynQueryable, query: Query<dyn Any>| {
                                         self_.eval_internal(&AskPermission(child_id.clone()))?;
 
-                                        Ok(match inner_qbl.eval_query(query)? {
-                                            Answer::External(mut answer, true) => Answer::External(
-                                                inner_qbl.eval_internal(&Wrap(
-                                                    RefCell::new(Some(answer)),
-                                                    Box::new(enclose!(func, move |queryable| {
-                                                        (func.0.borrow_mut())(&func, &queryable)
-                                                    })),
-                                                ))?,
-                                                true,
-                                            ),
-                                            a => a,
-                                        })
+                                        let mut answer = inner_qbl.eval_query(query)?;
+
+                                        // if answer is external and interactive, then wrap it:
+                                        if let Answer::External(value, true) = answer {
+                                            answer = inner_qbl.eval_internal(&Wrap(
+                                                RefCell::new(Some(value)),
+                                                Box::new(enclose!(func, move |queryable| {
+                                                    (func.0.borrow_mut())(&func, &queryable)
+                                                })),
+                                            ))?;
+                                        }
+
+                                        Ok(answer)
                                     },
                                 )
                             },
                         )));
 
                         // wrap the base queryable
-                        answer = (func.0.borrow_mut())(&func, &answer.to_poly()).downcast_qbl();
+                        answer = (func.0.borrow_mut())(&func, &answer.into_dyn()).downcast_dyn();
 
                         // The box allows the return value to be dynamically typed, just like query was.
                         // Necessary because different queries have different return types.
@@ -165,7 +167,7 @@ where
 struct AskPermission(pub usize);
 pub(crate) struct Wrap(
     pub RefCell<Option<Box<dyn Any>>>,
-    pub Box<dyn Fn(PolyQueryable) -> PolyQueryable>,
+    pub Box<dyn Fn(DynQueryable) -> DynQueryable>,
 );
 
 #[cfg(test)]
@@ -184,6 +186,13 @@ mod test {
         // construct sequential compositor IM
         let root = make_sequential_composition(
             AllDomain::new(),
+            // if map is over Poly:
+            // - can't be PolyDomain,     
+            //     because PolyDomain requires Clone for into_poly, and Clone not implemented for Box<dyn Any>
+            // - can't be DynDomain,
+            //     because into_poly requires Sized, but (dyn Any) isn't sized
+            // if map is over Dyn:
+            // - 
             PolyDomain::new(),
             PolyDomain::new(),
             MaxDivergence::default(),
@@ -198,7 +207,7 @@ mod test {
         let rr_query = make_randomized_response_bool(0.5, false)?;
 
         // pass queries into the SC queryable
-        let _answer1: bool = queryable.eval(&rr_poly_query)?.get_poly()?;
+        let _answer1 = queryable.eval(&rr_poly_query)?;
         let _answer2: bool = queryable.eval(&rr_poly_query)?.get_poly()?;
 
         // pass a sequential composition compositor into the original SC compositor
@@ -213,9 +222,7 @@ mod test {
         )?
         .into_poly();
 
-        let v = queryable.eval(&sc_query_3)?;
-
-        let mut answer3 = queryable.eval_poly::<_, QueryableDomain<AllDomain<()>, AllDomain<bool>>>(&sc_query_3)?;
+        let mut answer3 = queryable.eval_dyn::<_, QueryableDomain<AllDomain<()>, AllDomain<bool>>>(&sc_query_3)?;
         let _answer3_1: bool = answer3.eval(&rr_query)?.get()?;
         let _answer3_2: bool = answer3.eval(&rr_query)?.get()?;
 
@@ -223,7 +230,7 @@ mod test {
         // This compositor expects all outputs are in PolyDomain
         let sc_query_4 = make_sequential_composition(
             AllDomain::<bool>::new(),
-            DynDomain::new(),
+            PolyDomain::new(),
             PolyDomain::new(),
             MaxDivergence::default(),
             1,
@@ -232,9 +239,9 @@ mod test {
         .into_poly();
 
         let mut answer4: Queryable<_, QueryableDomain<DynDomain, PolyDomain>> =
-            queryable.eval_poly(&sc_query_4)?;
-        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
-        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+            queryable.eval_dyn(&sc_query_4)?;
+        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_dyn()?;
+        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_dyn()?;
 
         Ok(())
     }

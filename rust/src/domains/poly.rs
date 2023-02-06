@@ -3,7 +3,7 @@ use std::any::{self, type_name};
 
 use crate::core::{Domain, Function, Measure, Metric, Transformation, Measurement};
 use crate::error::*;
-use crate::interactive::Queryable;
+use crate::interactive::{Queryable, FromDyn, DowncastDyn};
 use std::fmt::{Debug, Formatter};
 
 use super::{QueryableDomain, AllDomain, DynDomain};
@@ -89,7 +89,35 @@ where
     DOA::Carrier: 'static + Sized,
 {
     /// Converts this Function into one with polymorphic output.
-    pub fn into_poly_queryable(self) -> Function<DI, QueryableDomain<DynDomain, PolyDomain>> {
+    pub fn into_poly_queryable(self) -> Function<DI, QueryableDomain<PolyDomain, PolyDomain>> {
+        let function = move |arg: &DI::Carrier| -> Fallible<Queryable<Box<dyn Any>, PolyDomain>> {
+            let mut res = self.eval(arg)?;
+            Ok(Queryable::new_external(move |query: &Box<dyn Any>| {
+                let query = query.downcast_ref::<DOQ::Carrier>().ok_or_else(|| {
+                    err!(
+                        FailedFunction,
+                        "failed to downcast query to {}",
+                        type_name::<DOQ::Carrier>()
+                    )
+                })?;
+                res.eval_meta(query).map(|(o, i)| (Box::new(o) as Box<dyn Any>, i))
+            }))
+        };
+        Function::new_fallible(function)
+    }
+}
+
+impl<DI, DOQ, DOA> Function<DI, QueryableDomain<DOQ, DOA>>
+where
+    DI: 'static + Domain,
+    DI::Carrier: 'static,
+    DOQ: 'static + Domain,
+    DOQ::Carrier: 'static + Sized,
+    DOA: 'static + Domain,
+    DOA::Carrier: 'static + Sized,
+{
+    /// Converts this Function into one with polymorphic output.
+    pub fn into_dyn_queryable(self) -> Function<DI, QueryableDomain<DynDomain, PolyDomain>> {
         let function = move |arg: &DI::Carrier| -> Fallible<Queryable<dyn Any, PolyDomain>> {
             let mut res = self.eval(arg)?;
             Ok(Queryable::new_external(move |query: &dyn Any| {
@@ -124,9 +152,42 @@ impl<DI: Domain> Function<DI, PolyDomain> {
 }
 
 impl<QI: 'static + ?Sized> Queryable<QI, QueryableDomain<DynDomain, PolyDomain>> {
-    pub fn eval_poly<Q: 'static + Clone, DA: Domain>(&mut self, arg: &QI) -> Fallible<Queryable<Q, DA>>
+    pub fn eval_dyn<Q: 'static + Clone, DA: Domain>(&mut self, arg: &QI) -> Fallible<Queryable<Q, DA>>
         where DA::Carrier: Sized {
-        self.eval(arg).map(Queryable::downcast_qbl)
+        self.eval(arg).map(Queryable::downcast_dyn)
+    }
+}
+
+// impl<QI: 'static + ?Sized + Clone> Queryable<QI, QueryableDomain<PolyDomain, PolyDomain>> {
+//     pub fn eval_dyn<Q: 'static + Clone, DA: Domain>(&mut self, arg: &QI) -> Fallible<Queryable<Q, DA>>
+//         where DA::Carrier: Sized {
+//         self.eval(arg).map(Queryable::downcast_poly)
+//     }
+// }
+
+impl<DI, DOQ, DOA, MI, MO> Measurement<DI, DOQ, DOA, MI, MO>
+where
+    DI: 'static + Domain,
+    DI::Carrier: 'static,
+    DOQ: 'static + Domain,
+    DOQ::Carrier: 'static + Sized,
+    DOA: 'static + Domain,
+    DOA::Carrier: 'static + Sized,
+    MI: 'static + Metric,
+    MO: 'static + Measure,
+{
+    /// Converts this Measurement into one with polymorphic output. This is useful for composition
+    /// of heterogeneous Measurements.
+    pub fn into_poly(self) -> Measurement<DI, PolyDomain, PolyDomain, MI, MO> {
+        Measurement::new(
+            self.input_domain,
+            PolyDomain::new(), 
+            PolyDomain::new(),
+            self.function.into_poly_queryable(),
+            self.input_metric,
+            self.output_measure,
+            self.privacy_map,
+        )
     }
 }
 
@@ -143,12 +204,12 @@ where
 {
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
-    pub fn into_poly(self) -> Measurement<DI, DynDomain, PolyDomain, MI, MO> {
+    pub fn into_dyn(self) -> Measurement<DI, DynDomain, PolyDomain, MI, MO> {
         Measurement::new(
             self.input_domain,
             AllDomain::new(), 
             PolyDomain::new(),
-            self.function.into_poly_queryable(),
+            self.function.into_dyn_queryable(),
             self.input_metric,
             self.output_measure,
             self.privacy_map,
@@ -188,15 +249,15 @@ mod tests {
     use crate::transformations;
 
     #[test]
-    fn test_poly_measurement() -> Fallible<()> {
+    fn test_dyn_measurement() -> Fallible<()> {
         let op_plain = measurements::make_base_laplace::<AllDomain<_>>(0.0, None)?;
         let arg = 100.;
         let res_plain = op_plain.invoke1(&arg)?;
         assert_eq!(res_plain, arg);
-        let op_poly = op_plain.into_poly();
-        let res_poly = op_poly.invoke1_poly::<AllDomain<f64>>(&arg)?;
+        let op_poly = op_plain.into_dyn();
+        let res_poly = op_poly.invoke_dyn::<(), AllDomain<f64>>(&arg)?.get()?;
         assert_eq!(res_poly, arg);
-        let res_bogus = op_poly.invoke1_poly::<AllDomain<i32>>(&arg);
+        let res_bogus = op_poly.invoke1_dyn::<AllDomain<i32>>(&arg);
         assert_eq!(
             res_bogus.err().unwrap_test().variant,
             ErrorVariant::FailedCast

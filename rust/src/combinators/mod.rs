@@ -45,14 +45,14 @@ mod fix_delta;
 #[cfg(feature = "contrib")]
 pub use crate::combinators::fix_delta::*;
 
-// #[cfg(feature = "contrib")]
-// mod sequential_composition;
-// #[cfg(feature = "contrib")]
-// pub use crate::combinators::sequential_composition::*;
+#[cfg(feature = "contrib")]
+mod sequential_composition;
+#[cfg(feature = "contrib")]
+pub use crate::combinators::sequential_composition::*;
 
 #[cfg(test)]
 pub mod tests {
-    use crate::core::{Function, Measurement, PrivacyMap, StabilityMap, Transformation};
+    use crate::core::{Function, PrivacyMap, StabilityMap, Transformation, Measurement1};
     use crate::measures::MaxDivergence;
     use crate::metrics::SymmetricDistance;
     use crate::domains::AllDomain;

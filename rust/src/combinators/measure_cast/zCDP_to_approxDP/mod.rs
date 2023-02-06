@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
     measures::{SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence},
-    traits::Float,
+    traits::Float, interactive::{IntoDyn, Queryable, FromDyn},
 };
 
 use self::cdp_epsilon::cdp_epsilon;
@@ -33,6 +33,7 @@ where
     DOA::Carrier: Sized,
     MI: 'static + Metric,
     QO: Float,
+    Queryable<DOQ::Carrier, DOA>: IntoDyn + FromDyn
 {
     let Measurement {
         input_domain,

@@ -8,7 +8,7 @@ use crate::core::{
     Transformation,
 };
 use crate::error::{Error, ErrorVariant, Fallible};
-use crate::interactive::Queryable;
+use crate::interactive::{Queryable, IntoDyn, FromDyn};
 use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
@@ -86,6 +86,7 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Measure,
+    Queryable<DOQ::Carrier, DOA>: IntoDyn + FromDyn
 {
     assert_components_match!(
         DomainMismatch,
@@ -194,6 +195,8 @@ where
     MMO: 'static + Measure,
     MTI: 'static + Metric,
     MTO: 'static + Metric,
+    Queryable<DQ::Carrier, DXA>: IntoDyn + FromDyn,
+    Queryable<DQ::Carrier, DOA>: IntoDyn + FromDyn
 {
     assert_components_match!(
         DomainMismatch,
@@ -367,6 +370,7 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Measure,
+    Queryable<DQ::Carrier, DA>: IntoDyn + FromDyn,
 {
     type Output = Fallible<Measurement<DI, DQ, DA, MI, MO>>;
 
@@ -387,6 +391,7 @@ where
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Measure,
+    Queryable<DQ::Carrier, DA>: IntoDyn + FromDyn
 {
     type Output = Fallible<Measurement<DI, DQ, DA, MI, MO>>;
 

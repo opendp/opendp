@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
-    traits::Float,
+    traits::Float, interactive::{IntoDyn, Queryable, FromDyn},
 };
 
 #[cfg(feature = "ffi")]
@@ -32,6 +32,7 @@ where
     DOA::Carrier: Sized,
     MI: 'static + Metric,
     QO: Float,
+    Queryable<DOQ::Carrier, DOA>: IntoDyn + FromDyn
 {
     let Measurement {
         input_domain,

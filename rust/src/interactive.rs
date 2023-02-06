@@ -2,6 +2,7 @@ use std::any::{type_name, Any};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::combinators::Wrap;
 use crate::core::{Domain, Measure, Measurement, Metric, Transformation};
 use crate::domains::PolyDomain;
 use crate::error::*;
@@ -42,7 +43,9 @@ impl<Q: ?Sized, DA: Domain> Clone for Queryable<Q, DA> where DA::Carrier: Sized 
 // type BranchUserQueryable<Q, Q2, A2> = GeneralUserQueryable<Q, Q2, A2, ()>;
 // type LeafUserQueryable<Q, A> = GeneralUserQueryable<Q, (), (), A>;
 
-pub type PolyQueryable = Queryable<dyn Any, PolyDomain>;
+pub type PolyQueryable = Queryable<Box<dyn Any>, PolyDomain>;
+pub type DynQueryable = Queryable<dyn Any, PolyDomain>;
+pub type TempQueryable = DynQueryable;
 
 impl<Q: ?Sized, DA: Domain> Queryable<Q, DA>
     where DA::Carrier: Sized {
@@ -99,63 +102,19 @@ impl<A> From<(A, bool)> for Answer<A> {
 
 impl<Q: ?Sized, DA: Domain> Queryable<Q, DA> where DA::Carrier: Sized {
     pub(crate) fn new(
-        transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<DA::Carrier>> + 'static,
+        mut transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<DA::Carrier>> + 'static,
     ) -> Self {
-        Queryable(Rc::new(RefCell::new(transition)))
-        // Queryable(Rc::new(RefCell::new(move |_self: &Self, query: Query<Q>| {
-        //     if let Query::Internal(q) = &query {
-        //         if let Some(wrap) = q.downcast_ref::<Wrap>() {
-        //             return Ok(Answer::Internal(Box::new()))
-        //         }
-        //     }
-        //     match query {
-        //         Vis::External(_) => todo!(),
-        //         Vis::Internal(_) => todo!(),
-        //     }
-        // })))
+        Queryable(Rc::new(RefCell::new(move |self_: &Self, query: Query<Q>| {
+            if let Query::Internal(q) = &query {
+                if let Some(wrap) = q.downcast_ref::<Wrap>() {
+                    let answer = wrap.0.take().unwrap().downcast::<DA::Carrier>().unwrap();
+                    return Ok(Answer::Internal(DA::map_queryable(answer, &*wrap.1)? as Box<dyn Any>))
+                }
+            }
+
+            transition(self_, query)
+        })))
     }
-
-    // pub(crate) fn new_internal<QI: 'static, AI: 'static>(
-    //     mut transition: impl FnMut(&Self, Vis<Q, (&QI, Nonce)>) -> Fallible<Vis<(DA::Carrier, bool), AI>>
-    //         + 'static,
-    // ) -> Self {
-    //     Queryable::new(
-    //         move |self_: &Self,
-    //               query: Vis<Q, (&dyn Any, Nonce)>|
-    //               -> Fallible<Vis<(DA::Carrier, bool), Box<dyn Any>>> {
-    //             match query {
-    //                 Vis::External(query) => {
-    //                     let answer = transition(self_, Vis::External(query))?;
-
-    //                     if let Vis::External(answer) = answer {
-    //                         Ok(Vis::External(answer))
-    //                     } else {
-    //                         fallible!(
-    //                             FailedFunction,
-    //                             "external queries cannot return internal answers"
-    //                         )
-    //                     }
-    //                 }
-    //                 Vis::Internal((q, nonce)) => {
-    //                     // downcast and upcast
-    //                     let q: &QI = q.downcast_ref().ok_or_else(|| {
-    //                         err!(FailedCast, "could not downcast to {}", type_name::<Q>())
-    //                     })?;
-    //                     let answer = transition(self_, Vis::Internal((q, nonce)))?;
-
-    //                     if let Vis::Internal(answer) = answer {
-    //                         Ok(Vis::Internal(Box::new(answer) as Box<dyn Any>))
-    //                     } else {
-    //                         fallible!(
-    //                             FailedFunction,
-    //                             "internal queries cannot return external answers"
-    //                         )
-    //                     }
-    //                 }
-    //             }
-    //         },
-    //     )
-    // }
 
     pub fn new_external(
         mut transition: impl FnMut(&Q) -> Fallible<(DA::Carrier, bool)> + 'static,
@@ -171,9 +130,53 @@ impl<Q: ?Sized, DA: Domain> Queryable<Q, DA> where DA::Carrier: Sized {
     }
 }
 
+
+impl<DA: Domain> Queryable<(), DA> where DA::Carrier: Sized {
+    pub fn get(&mut self) -> Fallible<DA::Carrier> {
+        self.eval(&())
+    }
+}
+
+pub trait IntoDyn {
+    fn into_dyn(self) -> DynQueryable;
+}
+
+impl<DA: Domain> IntoDyn for Queryable<dyn Any, DA> where DA::Carrier: Sized {
+    fn into_dyn(mut self) -> DynQueryable {
+        Queryable::new(move |_self: &DynQueryable, query: Query<dyn Any>| {
+            Ok(match query {
+                Query::External(q) => {
+                    let (answer, interactive) = self.eval_meta(q)?;
+                    Answer::External(Box::new(answer) as Box<dyn Any>, interactive)
+                }
+                Query::Internal(q) => Answer::Internal(self.eval_internal(q)?),
+            })
+        })
+    }
+}
+
+impl<Q: Sized, DA: Domain> IntoDyn for Queryable<Q, DA> where DA::Carrier: Sized {
+    fn into_dyn(self) -> DynQueryable {
+        Queryable::new(move |_self: &DynQueryable, query: Query<dyn Any>| {
+            Ok(match query {
+                Query::External(q) => {
+                    let (answer, interactive) =
+                        self.eval_meta(q.downcast_ref::<Q>().ok_or_else(|| {
+                            err!(FailedCast, "query must be of type {}", type_name::<Q>())
+                        })?)?;
+                    Answer::External(Box::new(answer) as Box<dyn Any>, interactive)
+                }
+                Query::Internal(q) => Answer::Internal(self.eval_internal(q)?),
+            })
+        })
+    }
+    
+}
+
+
 impl<Q: 'static, DA: Domain> Queryable<Q, DA> where DA::Carrier: Sized {
-    pub fn to_poly(mut self) -> PolyQueryable {
-        Queryable::new(move |_self: &PolyQueryable, query: Query<dyn Any>| {
+    pub fn into_poly(mut self) -> PolyQueryable {
+        Queryable::new(move |_self: &PolyQueryable, query: Query<Box<dyn Any>>| {
             Ok(match query {
                 Query::External(q) => {
                     let (answer, interactive) =
@@ -188,56 +191,100 @@ impl<Q: 'static, DA: Domain> Queryable<Q, DA> where DA::Carrier: Sized {
     }
 }
 
-
-impl<DA: Domain> Queryable<dyn Any, DA> where DA::Carrier: Sized {
-    pub fn to_poly(mut self) -> PolyQueryable {
-        Queryable::new(move |_self: &PolyQueryable, query: Query<dyn Any>| {
-            Ok(match query {
-                Query::External(q) => {
-                    let (answer, interactive) =
-                        self.eval_meta(q)?;
-                    Answer::External(Box::new(answer) as Box<dyn Any>, interactive)
-                }
-                Query::Internal(q) => Answer::Internal(self.eval_internal(q)?),
-            })
-        })
-    }
+pub trait FromDyn {
+    fn from_dyn(v: DynQueryable) -> Self;
 }
 
-impl Queryable<dyn Any, PolyDomain> {
-    pub fn downcast_qbl<Q: 'static, DA: Domain>(mut self) -> Queryable<Q, DA> where DA::Carrier: Sized {
+impl<Q: 'static, DA: Domain> FromDyn for Queryable<Q, DA> where DA::Carrier: Sized {
+    fn from_dyn(self_: DynQueryable) -> Self {
         Queryable::new(move |_self: &Queryable<Q, DA>, query: Query<Q>| {
             Ok(match query {
                 Query::External(query) => {
-                    let (answer, interactive) = self.eval_meta(query as &dyn Any)?;
+                    let (answer, interactive) = self_.eval_meta(query as &dyn Any)?;
 
-                    let answer = *answer.downcast::<DA::Carrier>().unwrap();
+                    let answer = *answer.downcast::<DA::Carrier>()
+                        .map_err(|_| err!(FailedCast, "failed to downcast to {:?}", type_name::<DA::Carrier>()))?;
                     Answer::External(answer, interactive)
                 }
-                Query::Internal(q) => Answer::Internal(self.eval_internal(q)?),
+                Query::Internal(q) => Answer::Internal(self_.eval_internal(q)?),
             })
-            // self.eval(&(Box::new(query.clone()) as Box<dyn Any>))?.downcast()
-            // .map_err(|_| {
-            //     err!(
-            //         FailedCast,
-            //         "Failed downcast of eval_poly result to {}",
-            //         any::type_name::<DA::Carrier>()
-            //     )
-            // })
-            // .map(|res| *res)
         })
     }
 }
 
-impl<DA: Domain> Queryable<(), DA> where DA::Carrier: Sized {
-    pub fn get(&mut self) -> Fallible<DA::Carrier> {
-        self.eval(&())
+impl<DA: Domain> FromDyn for Queryable<dyn Any, DA> where DA::Carrier: Sized {
+    fn from_dyn(self_: DynQueryable) -> Self {
+        Queryable::new(move |_self: &Queryable<dyn Any, DA>, query: Query<dyn Any>| {
+            Ok(match query {
+                Query::External(query) => {
+                    let (answer, interactive) = self_.eval_meta(query)?;
+
+                    let answer = *answer.downcast::<DA::Carrier>()
+                        .map_err(|_| err!(FailedCast, "failed to downcast to {:?}", type_name::<DA::Carrier>()))?;
+                    Answer::External(answer, interactive)
+                }
+                Query::Internal(q) => Answer::Internal(self_.eval_internal(q)?),
+            })
+        })
+    }
+}
+
+pub trait DowncastDyn<Q: ?Sized, DA: Domain> where DA::Carrier: Sized {
+    fn downcast_dyn(self) -> Queryable<Q, DA>;
+}
+
+impl<Q: ?Sized, DA: Domain> DowncastDyn<Q, DA> for DynQueryable 
+    where DA::Carrier: Sized, Queryable<Q, DA>: FromDyn {
+    fn downcast_dyn(self) -> Queryable<Q, DA> {
+        Queryable::<Q, DA>::from_dyn(self)
+    }
+}
+
+
+
+impl<Q: 'static, DA: Domain> From<Queryable<dyn Any, PolyDomain>> for Queryable<Q, DA>
+    where DA::Carrier: Sized {
+    fn from(self_: Queryable<dyn Any, PolyDomain>) -> Self {
+        Queryable::new(move |_self: &Queryable<Q, DA>, query: Query<Q>| {
+            Ok(match query {
+                Query::External(query) => {
+                    let (answer, interactive) = self_.eval_meta(query as &dyn Any)?;
+
+                    let answer = *answer.downcast::<DA::Carrier>()
+                        .map_err(|_| err!(FailedCast, "failed to downcast to {:?}", type_name::<DA::Carrier>()))?;
+                    Answer::External(answer, interactive)
+                }
+                Query::Internal(q) => Answer::Internal(self_.eval_internal(q)?),
+            })
+        })
+    }
+}
+
+
+impl PolyQueryable {
+    /// Evaluates a polymorphic query and downcasts to the given type.
+    pub fn eval_poly<Q: 'static, A: 'static>(&mut self, query: Q) -> Fallible<A> {
+        self.eval(&(Box::new(query) as Box<dyn Any>))?
+            .downcast()
+            .map_err(|_| {
+                err!(
+                    FailedCast,
+                    "failed to downcast to {}",
+                    std::any::type_name::<A>()
+                )
+            })
+            .map(|b| *b)
+    }
+
+    /// Evaluates a polymorphic query and downcasts to the given type.
+    pub fn get_poly<A: 'static>(&mut self) -> Fallible<A> {
+        self.eval_poly(&())
     }
 }
 
 impl Queryable<dyn Any, PolyDomain> {
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn get_poly<A: 'static>(&mut self) -> Fallible<A> {
+    pub fn get_dyn<A: 'static>(&mut self) -> Fallible<A> {
         self.eval(&())?
             .downcast()
             .map_err(|_| {
@@ -253,7 +300,7 @@ impl Queryable<dyn Any, PolyDomain> {
 
 impl<Q: 'static + ?Sized> Queryable<Q, PolyDomain> {
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
+    pub fn eval_dyn<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
         self.eval(query)?
             .downcast()
             .map_err(|_| {
@@ -284,7 +331,8 @@ impl<Q, DA: Domain> CheckNull for Queryable<Q, DA> where DA::Carrier: Sized {
 
 impl<DI: Domain, DOQ: Domain, DOA: Domain, MI: Metric, MO: Measure> CheckNull
     for Measurement<DI, DOQ, DOA, MI, MO> 
-    where DOA::Carrier: Sized
+    where DOA::Carrier: Sized,
+          Queryable<DOQ::Carrier, DOA>: IntoDyn + FromDyn
 {
     fn is_null(&self) -> bool {
         false

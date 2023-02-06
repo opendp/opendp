@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, PrivacyMap},
     measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
-    error::Fallible,
+    error::Fallible, interactive::{IntoDyn, Queryable, FromDyn},
 };
 
 #[cfg(feature = "ffi")]
@@ -29,6 +29,7 @@ where
     DOA::Carrier: Sized,
     MI: 'static + Metric,
     MO: 'static + FixDeltaMeasure,
+    Queryable<DOQ::Carrier, DOA>: IntoDyn + FromDyn
 {
     let Measurement {
         input_domain,

@@ -25,11 +25,12 @@ mod ffi;
 #[cfg(feature = "ffi")]
 pub use ffi::*;
 
+use std::any::Any;
 use std::rc::Rc;
 
 use crate::domains::{AllDomain, PolyDomain, QueryableDomain};
 use crate::error::*;
-use crate::interactive::{Queryable, PolyQueryable};
+use crate::interactive::{Queryable, PolyQueryable, DynQueryable, IntoDyn, FromDyn, DowncastDyn};
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
 
@@ -70,7 +71,7 @@ pub trait Domain: Clone + PartialEq + Debug + 'static {
     // /// The members of most domains are not interactive, so the default implementation returns itself without changes
     fn map_queryable(
         _member: Box<Self::Carrier>,
-        _mapper: &dyn Fn(PolyQueryable) -> PolyQueryable,
+        _mapper: &dyn Fn(DynQueryable) -> DynQueryable,
     ) -> Fallible<Box<Self::Carrier>> {
         fallible!(FailedFunction, "attempted to apply map to a non-queryable")
     }
@@ -255,6 +256,7 @@ pub struct Measurement<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measu
 where
     DQ::Carrier: 'static,
     DA::Carrier: 'static + Sized,
+    Queryable<DQ::Carrier, DA>: IntoDyn + FromDyn
 {
     pub input_domain: DI,
     pub query_domain: DQ,
@@ -268,7 +270,8 @@ where
 pub type Measurement1<DI, DO, MI, MO> = Measurement<DI, AllDomain<()>, DO, MI, MO>;
 
 impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Measurement<DI, DQ, DA, MI, MO> 
-    where DA::Carrier: Sized {
+    where DA::Carrier: Sized,
+    Queryable<DQ::Carrier, DA>: IntoDyn + FromDyn {
     pub fn new(
         input_domain: DI,
         query_domain: DQ,
@@ -346,23 +349,25 @@ where
     }
 }
 
-impl<DI, MI, MO> Measurement<DI, AllDomain<dyn std::any::Any>, PolyDomain, MI, MO>
+impl<DI, MI, MO> Measurement<DI, AllDomain<dyn Any>, PolyDomain, MI, MO>
 where
     DI: 'static + Domain,
     MI: Metric,
     MO: Measure,
 {
-    pub fn invoke_poly<Q: 'static + Clone, DA: Domain + 'static>(
+    pub fn invoke_dyn<Q: 'static + Clone, DA: Domain + 'static>(
         &self,
         arg: &DI::Carrier,
     ) -> Fallible<Queryable<Q, DA>> 
-        where DA::Carrier: Sized {
-        Ok(self.function.eval(arg)?.downcast_qbl())
+        where DA::Carrier: Sized,
+        DynQueryable: DowncastDyn<Q, DA> {
+        Ok(self.function.eval(arg)?.downcast_dyn())
     }
 
-    pub fn invoke1_poly<DA: Domain + 'static>(&self, arg: &DI::Carrier) -> Fallible<DA::Carrier>
-        where DA::Carrier: Sized {
-        self.function.eval(arg)?.downcast_qbl::<(), DA>().eval(&())
+    pub fn invoke1_dyn<DA: Domain + 'static>(&self, arg: &DI::Carrier) -> Fallible<DA::Carrier>
+        where DA::Carrier: Sized,
+        DynQueryable: DowncastDyn<(), DA> {
+        self.function.eval(arg)?.downcast_dyn().eval(&())
     }
 }
 /// A data transformation with certain stability characteristics.
@@ -427,6 +432,7 @@ pub struct Odometer<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure>
 where
     DQ::Carrier: 'static,
     DA::Carrier: 'static + Sized,
+    Queryable<DQ::Carrier, DA>: IntoDyn + FromDyn
 {
     pub input_domain: DI,
     pub query_domain: DQ,
@@ -438,7 +444,8 @@ where
 }
 
 impl<DI: Domain, DQ: Domain, DA: Domain, MI: Metric, MO: Measure> Odometer<DI, DQ, DA, MI, MO> 
-    where DA::Carrier: Sized {
+    where DA::Carrier: Sized,
+          Queryable<DQ::Carrier, DA>: IntoDyn + FromDyn {
     pub fn new(
         input_domain: DI,
         query_domain: DQ,
