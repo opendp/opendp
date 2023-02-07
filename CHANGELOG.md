@@ -32,6 +32,13 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - resolve build warnings from metadata in version tags
 
 
+## [0.6.1] - 2022-10-27
+[0.6.1]: https://github.com/opendp/opendp/compare/v0.6.0...v0.6.1
+
+### Fixed
+- docs.rs failed to render due to Katex dependency
+
+
 ## [0.6.0] - 2022-10-26
 [0.6.0]: https://github.com/opendp/opendp/compare/v0.5.0...v0.6.0
 
