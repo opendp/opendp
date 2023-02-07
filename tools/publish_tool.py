@@ -21,12 +21,9 @@ def run_command(description, args, capture_output=True, shell=True):
 
 def rust(args):
     log(f"*** PUBLISHING RUST LIBRARY ***")
-    os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
-    run_command("Logging into crates.io", f"cargo login")
-    
     if args.dry_run:
         raise NotImplementedError("dry runs aren't supported on workspaces")
-
+    os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     run_command("Publishing opendp_tooling crate", f"cargo publish --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
     run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
