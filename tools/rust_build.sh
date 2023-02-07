@@ -54,9 +54,13 @@ function guess_platform() {
 
 function init_windows() {
   log "Install Rust toolchain"
-  export PATH="$PATH:/c/Rust/.cargo/bin"
+  # If we run rustup immediately, it sometimes fails with "/c/Users/runneradmin/.cargo/bin/rustup: Device or resource busy".
+  # So we hack around it by sleeping to let things settle. (Possible cause: https://github.com/rust-lang/rustup/issues/3189)
+  run sleep 5
   run rustup toolchain install stable-x86_64-pc-windows-gnu
+  run sleep 5
   run rustup set default-host x86_64-pc-windows-gnu
+  run sleep 5
 
 # The lines below copy components from the platform installation of mingw into the Rust toolchain,
 # and build the gmp & mpfr native libraries manually. This isn't necessary anymore, as the build script
