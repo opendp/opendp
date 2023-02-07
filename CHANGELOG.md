@@ -8,6 +8,10 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+
+## [0.6.2] - 2023-02-06
+[0.6.2]: https://github.com/opendp/opendp/compare/v0.6.1...v0.6.2
+
 ### Added
 
 - [support for user-defined callbacks under explicit opt-in](https://docs.opendp.org/en/latest/user/combinators.html#user-defined-callbacks)
@@ -26,13 +30,6 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - clamp negative epsilon in `make_zCDP_to_approxDP` when delta is large [#621](https://github.com/opendp/opendp/issues/621)
     * Reported by Marika Swanberg and Shlomi Hod. Thank you!
 - resolve build warnings from metadata in version tags
-
-
-## [0.6.1] - 2022-10-27
-[0.6.1]: https://github.com/opendp/opendp/compare/v0.6.0...v0.6.1
-
-### Fixed
-- docs.rs failed to render due to Katex dependency
 
 
 ## [0.6.0] - 2022-10-26
