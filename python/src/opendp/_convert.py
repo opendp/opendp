@@ -122,7 +122,10 @@ def c_to_py(value):
             return SMDCurve(value)
         ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
+            py_value = _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
+            if "Queryable" in obj_type:
+                py_value._depends_on = value
+            return py_value
         finally:
             slice_free(ffi_slice)
 
@@ -164,6 +167,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     if type_name == "String":
         return _slice_to_string(raw)
 
+    if type_name == "AnyQueryable":
+        return _slice_to_queryable(raw)
+
     if type_name.origin == "Vec":
         return _slice_to_vector(raw, type_name)
 
@@ -172,9 +178,6 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
 
     if type_name.origin == "Tuple":
         return _slice_to_tuple(raw, type_name)
-
-    if type_name == "Queryable":
-        return _slice_to_queryable(raw)
 
     raise UnknownTypeException(type_name)
 
@@ -192,7 +195,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         return _scalar_to_slice(value, type_name)
     
     if type_name == "AnyMeasurement":
-        return _wrap_in_slice(ctypes.pointer(value), 1)
+        return _wrap_in_slice(value, 1)
 
     if type_name == "String":
         return _string_to_slice(value)
@@ -222,8 +225,8 @@ def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value
 
 
-def _slice_to_queryable(raw: FfiSlicePtr, type_name: str):
-    return ctypes.cast(raw.contents.ptr, Queryable).contents.value
+def _slice_to_queryable(raw: FfiSlicePtr):
+    return ctypes.cast(raw.contents.ptr, Queryable)
 
 
 def _string_to_slice(val: str) -> FfiSlicePtr:

@@ -253,7 +253,7 @@ pub enum Either<L, R> {
 }
 
 impl<Q: 'static, A: QueryableMap> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, AnyMeasure> {
-    pub fn wrap_Q(self) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
+    pub fn into_any_Q(self) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
         let function = self.function;
         Measurement::new(
             self.input_domain,

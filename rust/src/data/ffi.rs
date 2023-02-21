@@ -166,7 +166,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             raw_to_plain,
             [(
                 T,
-                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyQueryable]
+                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable]
             )],
             (raw)
         ),
@@ -291,8 +291,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
             } else { fallible!(FFI, "unrecognized generic {:?}", name) }
         }
-        // This list is explicit because it allows us to avoid including u32 in the @primitives
-        _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement])], (obj)) }
+        // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
+        _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable])], (obj)) }
     }.into()
 }
 
@@ -483,7 +483,7 @@ impl Clone for AnyObject {
         }
 
         match &self.type_.contents {
-            TypeContents::PLAIN(_) => dispatch!(clone_plain, [(self.type_, @primitives)], (self)),
+            TypeContents::PLAIN(_) => dispatch!(clone_plain, [(self.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool])], (self)),
             TypeContents::TUPLE(type_ids) => {
                 if type_ids.len() != 2 {
                     unimplemented!("AnyObject Clone: unrecognized tuple length")

@@ -188,13 +188,15 @@ def make_concurrent_composition(
     """
     assert_features("contrib")
     
-    # No type arguments to standardize.
+    # Standardize type arguments.
+    QO = get_distance_type(output_measure)
+    
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
     c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
-    c_d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=get_distance_type(MI))
-    c_d_mids = py_to_c(d_mids, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyObject]))
+    c_d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=get_distance_type(input_metric))
+    c_d_mids = py_to_c(d_mids, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[QO]))
     
     # Call library function.
     lib_function = lib.opendp_combinators__make_concurrent_composition

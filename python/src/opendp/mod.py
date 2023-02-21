@@ -160,6 +160,9 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
         except (ImportError, TypeError):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
+    
+    def __str__(self) -> str:
+        return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)"
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)):
@@ -326,18 +329,37 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
+    def __str__(self) -> str:
+        return f"Transformation(\n    input_domain   = {self.input_domain},\n    output_domain  = {self.output_domain},\n    input_metric   = {self.input_metric},\n    output_metric  = {self.output_metric}\n)"
+
 class Queryable(ctypes.POINTER(AnyQueryable)):
+    _type_ = AnyQueryable
+
     def __call__(self, query):
         from opendp.core import queryable_eval
         return queryable_eval(self, query)
-        
-    def __del__(self):
-        try:
-            from opendp.core import _queryable_free
-            _queryable_free(self)
-        except (ImportError, TypeError):
-            # ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    
+    def eval(self, query):
+        from opendp.core import queryable_eval
+        return queryable_eval(self, query)
+
+    @property
+    def query_type(self):
+        from opendp.core import queryable_query_type
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(queryable_query_type(self))
+
+    def __str__(self):
+        return f"Queryable(query={self.query_type})"
+
+    # freed by AnyObject
+    # def __del__(self):
+    #     try:
+    #         from opendp.core import _queryable_free
+    #         _queryable_free(self)
+    #     except (ImportError, TypeError):
+    #         # ImportError: sys.meta_path is None, Python is likely shutting down
+    #         pass
         
 
 class Function(ctypes.POINTER(AnyFunction)):

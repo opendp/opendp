@@ -15,7 +15,10 @@ use super::ConcurrentCompositionMeasure;
 #[bootstrap(
     name = "make_concurrent_composition",
     features("contrib"),
-    arguments(d_in(rust_type = "$get_distance_type(MI)", c_type = "AnyObject *"))
+    arguments(
+        d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
+        d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *")),
+    derived_types(QO = "$get_distance_type(output_measure)")
 )]
 /// Construct a queryable that interactively composes interactive measurements.
 ///
@@ -41,7 +44,7 @@ fn make_concurrent_composition(
             d_mids,
         )?;
 
-    Ok(compositor.wrap_Q().into_any_out())
+    Ok(compositor.into_any_Q().into_any_out())
 }
 
 #[no_mangle]
@@ -68,7 +71,7 @@ pub extern "C" fn opendp_combinators__make_concurrent_composition(
     }
 
     let QO = try_!(d_mids.type_.get_atom());
-    let d_mids = try_!(dispatch!(repack_vec, [(QO, @floats)], (d_mids)));
+    let d_mids = try_!(dispatch!(repack_vec, [(QO, @numbers)], (d_mids)));
 
     make_concurrent_composition(input_domain, input_metric, output_measure, d_in, d_mids).into()
 }

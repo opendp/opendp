@@ -485,3 +485,6 @@ def get_dependencies(value):
 
 def get_dependencies_iterable(value):
     return list(map(get_dependencies, value))
+
+def get_distance_type(value):
+    return value.distance_type
