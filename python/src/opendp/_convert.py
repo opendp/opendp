@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve
+from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, Vec
 
 try:
@@ -60,7 +60,7 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
 
     if isinstance(value, c_type):
         return value
-
+    
     if c_type == CallbackFn:
         return _wrap_py_func(value, type_name)
 
@@ -95,7 +95,7 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
     if c_type == FfiSlicePtr:
         assert type_name is not None
         return _py_to_slice(value, type_name)
-
+    
     if isinstance(value, RuntimeType):
         value = str(value)
 
@@ -173,6 +173,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     if type_name.origin == "Tuple":
         return _slice_to_tuple(raw, type_name)
 
+    if type_name == "Queryable":
+        return _slice_to_queryable(raw)
+
     raise UnknownTypeException(type_name)
 
 
@@ -187,6 +190,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     """
     if isinstance(type_name, str) and type_name in ATOM_MAP:
         return _scalar_to_slice(value, type_name)
+    
+    if type_name == "AnyMeasurement":
+        return _wrap_in_slice(ctypes.pointer(value), 1)
 
     if type_name == "String":
         return _string_to_slice(value)
@@ -214,6 +220,10 @@ def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
 
 def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value
+
+
+def _slice_to_queryable(raw: FfiSlicePtr, type_name: str):
+    return ctypes.cast(raw.contents.ptr, Queryable).contents.value
 
 
 def _string_to_slice(val: str) -> FfiSlicePtr:

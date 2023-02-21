@@ -39,15 +39,15 @@ where
         ..
     } = meas;
 
-    Ok(Measurement::new(
+    Ok(Measurement {
         input_domain,
         function,
         input_metric,
-        SmoothedMaxDivergence::default(),
-        PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
+        output_measure: SmoothedMaxDivergence::default(),
+        privacy_map: PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;
             
             Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
         }),
-    ))
+    })
 }

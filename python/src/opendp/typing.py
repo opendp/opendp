@@ -144,7 +144,7 @@ class RuntimeType(object):
         generics = generics or []
         if isinstance(type_name, RuntimeType):
             return type_name
-
+        
         # parse type hints from the typing module
         if isinstance(type_name, _GenericAlias):
             if sys.version_info < (3, 8):
@@ -473,7 +473,6 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 def get_first(value):
     return next(iter(value), None)
-
 
 def parse_or_infer(type_name: RuntimeType, example):
     return RuntimeType.parse_or_infer(type_name, example)

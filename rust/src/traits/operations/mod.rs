@@ -191,7 +191,6 @@ impl<K, V> CollectionSize for HashMap<K, V> {
     }
 }
 
-
 macro_rules! impl_check_null_for_non_nullable {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {

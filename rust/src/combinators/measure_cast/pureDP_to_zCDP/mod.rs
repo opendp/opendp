@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
-    traits::Float,
+    traits::Float
 };
 
 #[cfg(feature = "ffi")]

@@ -63,7 +63,7 @@ pub trait ImputeConstantDomain: Domain {
     
 }
 // how to impute, when null represented as Option<T>
-impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: 'static + CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(default: &'a Self::Carrier, constant: &'a Self::Imputed) -> &'a Self::Imputed {
         default.as_ref().unwrap_or(constant)

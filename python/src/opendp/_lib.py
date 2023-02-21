@@ -84,6 +84,10 @@ class AnyObjectPtr(ctypes.POINTER(AnyObject)):
         object_free(self)
 
 
+class AnyQueryable(ctypes.Structure):
+    pass  # Opaque struct
+
+
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):
     _type_ = FfiSlice
     _dependencies = {}

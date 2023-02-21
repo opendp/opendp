@@ -87,6 +87,7 @@ fn make_population_amplification(
 pub extern "C" fn opendp_combinators__make_population_amplification(
     measurement: *const AnyMeasurement, population_size: c_uint,
 ) -> FfiResult<*mut AnyMeasurement> {
+    println!("population size in Rust: {:?}", population_size);
     make_population_amplification(
         try_as_ref!(measurement),
         population_size as usize).into()

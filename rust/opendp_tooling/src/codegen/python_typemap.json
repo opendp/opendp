@@ -35,6 +35,8 @@
     "const AnyMeasure *": "Measure",
     "AnyMetric *": "Metric",
     "const AnyMetric *": "Metric",
+    "AnyQueryable *": "Queryable",
+    "mut AnyQueryable *": "Queryable",
     "FfiError *": "ctypes.POINTER(FfiError)",
     "const FfiError *": "ctypes.POINTER(FfiError)",
     "FfiResult": "FfiResult",

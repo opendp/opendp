@@ -7,8 +7,8 @@ use opendp_derive::bootstrap;
 
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, IntoAnyFunctionExt};
-use crate::ffi::util::{self, c_bool};
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, IntoAnyFunctionExt, QueryType};
+use crate::ffi::util::{self, c_bool, Type};
 use crate::ffi::util::into_c_char_p;
 
 #[repr(C)]
@@ -588,6 +588,7 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMe
     FfiResult::Ok(try_!(into_c_char_p(this.output_measure.distance_type.descriptor.to_string())))
 }
 
+
 #[bootstrap(
     name = "function_eval",
     arguments(
@@ -614,6 +615,7 @@ pub extern "C" fn opendp_core__function_eval(
     this.eval(arg).into()
 }
 
+
 #[bootstrap(
     name = "_function_free",
     arguments(this(do_not_convert = true)),
@@ -624,6 +626,53 @@ pub extern "C" fn opendp_core__function_eval(
 pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
+
+#[bootstrap(
+    name = "queryable_eval",
+    arguments(
+        queryable(rust_type = b"null"),
+        query(rust_type = "$queryable_query_type(queryable)")
+    )
+)]
+/// Invoke the `queryable` with `query`. Returns a differentially private release.
+/// 
+/// # Arguments
+/// * `queryable` - Queryable to eval.
+/// * `query` - Input data to supply to the measurement. A member of the measurement's input domain.
+#[no_mangle]
+pub extern "C" fn opendp_core__queryable_eval(queryable: *mut AnyQueryable, query: *const AnyObject) -> FfiResult<*mut AnyObject> {
+    let queryable = try_as_mut_ref!(queryable);
+    let query = try_as_ref!(query);
+    queryable.eval(query).into()
+}
+
+#[bootstrap(
+    name = "_queryable_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`.
+#[no_mangle]
+pub extern "C" fn opendp_core___queryable_free(this: *mut AnyQueryable) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
+}
+
+#[bootstrap(
+    name = "queryable_query_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the query type of `queryable`.
+/// 
+/// # Arguments
+/// * `this` - The queryable to retrieve the query type from.
+#[no_mangle]
+pub extern "C" fn opendp_core__queryable_query_type(this: *mut AnyQueryable) -> FfiResult<*mut c_char> {
+    let this = try_as_mut_ref!(this);
+    let answer: Type = try_!(this.eval_internal(&QueryType));
+    FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
+}
+
 
 #[cfg(test)]
 mod tests {

@@ -8,6 +8,7 @@ __all__ = [
     "_error_free",
     "_function_free",
     "_measurement_free",
+    "_queryable_free",
     "_transformation_free",
     "function_eval",
     "measurement_check",
@@ -20,6 +21,8 @@ __all__ = [
     "measurement_map",
     "measurement_output_distance_type",
     "measurement_output_measure",
+    "queryable_eval",
+    "queryable_query_type",
     "transformation_check",
     "transformation_function",
     "transformation_input_carrier_type",
@@ -109,6 +112,32 @@ def _measurement_free(
     # Call library function.
     lib_function = lib.opendp_core___measurement_free
     lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
+
+
+def _queryable_free(
+    this
+):
+    """Internal function. Free the memory associated with `this`.
+    
+    [_queryable_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._queryable_free.html)
+    
+    :param this: 
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = this
+    
+    # Call library function.
+    lib_function = lib.opendp_core___queryable_free
+    lib_function.argtypes = [Queryable]
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
@@ -468,6 +497,64 @@ def measurement_output_measure(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Measure)
+    
+    return output
+
+
+def queryable_eval(
+    queryable,
+    query: Any
+) -> Any:
+    """Invoke the `queryable` with `query`. Returns a differentially private release.
+    
+    [queryable_eval in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.queryable_eval.html)
+    
+    :param queryable: Queryable to eval.
+    :param query: Input data to supply to the measurement. A member of the measurement's input domain.
+    :type query: Any
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_queryable = py_to_c(queryable, c_type=Queryable, type_name=None)
+    c_query = py_to_c(query, c_type=AnyObjectPtr, type_name=queryable_query_type(queryable))
+    
+    # Call library function.
+    lib_function = lib.opendp_core__queryable_eval
+    lib_function.argtypes = [Queryable, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_queryable, c_query), AnyObjectPtr))
+    
+    return output
+
+
+def queryable_query_type(
+    this
+) -> str:
+    """Get the query type of `queryable`.
+    
+    [queryable_query_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.queryable_query_type.html)
+    
+    :param this: The queryable to retrieve the query type from.
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=Queryable, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__queryable_query_type
+    lib_function.argtypes = [Queryable]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
     
     return output
 

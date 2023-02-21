@@ -20,46 +20,47 @@
 // Ordering of generic arguments
 // DI, DO, MI, MO, TI, TO, QI, QO
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 pub use ffi::*;
 
+use std::any::Any;
 use std::rc::Rc;
 
 use crate::error::*;
+use crate::interactive::{PolyQueryable, Queryable, QueryableMap};
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
-
 
 /// A set which constrains the input or output of a [`Function`].
 ///
 /// Domains capture the notion of what values are allowed to be the input or output of a `Function`.
-/// 
+///
 /// # Proof Definition
 /// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain.
 pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
     /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
-    /// 
-    /// On any type `D` for which the `Domain` trait is implemented, 
+    ///
+    /// On any type `D` for which the `Domain` trait is implemented,
     /// the syntax `D::Carrier` refers to this associated type.
     /// For example, consider `D` to be `AllDomain<T>`, the domain of all non-null values of type `T`.
-    /// The implementation of this trait for `AllDomain<T>` designates that `type Carrier = T`. 
+    /// The implementation of this trait for `AllDomain<T>` designates that `type Carrier = T`.
     /// Thus `AllDomain<T>::Carrier` is `T`.
-    /// 
+    ///
     /// # Proof Definition
     /// `Self::Carrier` can represent all values in the set described by `Self`.
     type Carrier;
 
     /// Predicate to test an element for membership in the domain.
     /// Not all possible values of `::Carrier` are a member of the domain.
-    /// 
+    ///
     /// # Proof Definition
-    /// For all settings of the input parameters, 
+    /// For all settings of the input parameters,
     /// returns `Err(e)` if the member check failed,
     /// or `Ok(out)`, where `out` is true if `val` is a member of `self`, otherwise false.
-    /// 
+    ///
     /// # Notes
     /// It generally suffices to treat `Err(e)` as if `val` is not a member of the domain.
     /// It can be useful, however, to see richer debug information via `e` in the event of a failure.
@@ -72,7 +73,9 @@ pub struct Function<TI, TO> {
 }
 impl<TI, TO> Clone for Function<TI, TO> {
     fn clone(&self) -> Self {
-        Function { function: self.function.clone() }
+        Function {
+            function: self.function.clone(),
+        }
     }
 }
 
@@ -99,9 +102,9 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
 }
 
 /// A representation of the distance between two elements in a set.
-/// 
+///
 /// # Proof Definition
-/// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set. 
+/// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set.
 pub trait Metric: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
@@ -109,9 +112,9 @@ pub trait Metric: Default + Clone + PartialEq + Debug {
 }
 
 /// A representation of the distance between two distributions.
-/// 
+///
 /// # Proof Definition
-/// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions. 
+/// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions.
 
 pub trait Measure: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
@@ -123,7 +126,9 @@ pub trait Measure: Default + Clone + PartialEq + Debug {
 ///
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
 /// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
-pub struct PrivacyMap<MI: Metric, MO: Measure>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
+pub struct PrivacyMap<MI: Metric, MO: Measure>(
+    pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
+);
 
 impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
     fn clone(&self) -> Self {
@@ -138,11 +143,14 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         PrivacyMap(Rc::new(map))
     }
-    pub fn new_from_constant(c: MO::Distance) -> Self where
+    pub fn new_from_constant(c: MO::Distance) -> Self
+    where
         MI::Distance: Clone,
-        MO::Distance: DistanceConstant<MI::Distance> {
-        PrivacyMap::new_fallible(move |d_in: &MI::Distance|
-            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c))
+        MO::Distance: DistanceConstant<MI::Distance>,
+    {
+        PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
+            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
+        })
     }
     pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
         (self.0)(input_distance)
@@ -164,7 +172,9 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
 ///
 /// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
 /// and returns the smallest upper bound on distances between output datasets on neighboring input datasets.
-pub struct StabilityMap<MI: Metric, MO: Metric>(pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>);
+pub struct StabilityMap<MI: Metric, MO: Metric>(
+    pub Rc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
+);
 
 impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
     fn clone(&self) -> Self {
@@ -179,11 +189,14 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         StabilityMap(Rc::new(map))
     }
-    pub fn new_from_constant(c: MO::Distance) -> Self where
+    pub fn new_from_constant(c: MO::Distance) -> Self
+    where
         MI::Distance: Clone,
-        MO::Distance: DistanceConstant<MI::Distance> {
-        StabilityMap::new_fallible(move |d_in: &MI::Distance|
-            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c))
+        MO::Distance: DistanceConstant<MI::Distance>,
+    {
+        StabilityMap::new_fallible(move |d_in: &MI::Distance| {
+            MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
+        })
     }
     pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
         (self.0)(input_distance)
@@ -191,21 +204,23 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
 }
 
 impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
-    pub fn make_chain<MX: 'static + Metric>(map1: &StabilityMap<MX, MO>, map0: &StabilityMap<MI, MX>) -> Self {
+    pub fn make_chain<MX: 'static + Metric>(
+        map1: &StabilityMap<MX, MO>,
+        map0: &StabilityMap<MI, MX>,
+    ) -> Self {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
         StabilityMap(Rc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
     }
 }
 
-
 /// A randomized mechanism with certain privacy characteristics.
-/// 
+///
 /// The trait bounds provided by the Rust type system guarantee that:
 /// * `input_domain` and `output_domain` are valid domains
 /// * `input_metric` is a valid metric
 /// * `output_measure` is a valid measure
-/// 
+///
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
@@ -217,6 +232,7 @@ pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
+// the #[derive(Clone)] impl doesn't understand that even if TO: ?Clone, Measurement is still Clone
 impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
     fn clone(&self) -> Self {
         Self { 
@@ -255,17 +271,66 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     }
 
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
-        where MO::Distance: TotalOrd {
+    where
+        MO::Distance: TotalOrd,
+    {
         d_out.total_ge(&self.map(d_in)?)
     }
 }
 
+#[cfg(test)]
+impl<DI: Domain, TO: QueryableMap, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
+    where DI::Carrier: 'static {
+    pub fn interactive(self) -> Measurement<DI, Queryable<(), TO>, MI, MO> {
+        let function = self.function;
+        Measurement::new(
+            self.input_domain,
+            Function::new_fallible(move |arg: &DI::Carrier| {
+                let mut answer = Some(function.eval(&arg)?);
+
+                Ok(Queryable::new_external(move |_query: &()| {
+                    answer
+                        .take()
+                        .ok_or_else(|| err!(FailedFunction, "answer has already been returned"))
+                }))
+            }),
+            self.input_metric,
+            self.output_measure,
+            self.privacy_map,
+        )
+    }
+}
+
+impl<DI: Domain, MI: Metric, MO: Measure> Measurement<DI, Box<dyn Any>, MI, MO> {
+    pub fn invoke_poly<TO: 'static>(&self, arg: &DI::Carrier) -> Fallible<TO> {
+        self.function.eval_poly(arg)
+    }
+}
+
+impl<DI, MI, MO> Measurement<DI, PolyQueryable, MI, MO>
+where
+    DI: Domain,
+    MI: Metric,
+    MO: Measure,
+{
+    pub fn invoke_poly<Q: 'static, A: QueryableMap>(
+        &self,
+        arg: &DI::Carrier,
+    ) -> Fallible<Queryable<Q, A>> {
+        Ok(self.function.eval(arg)?.into_downcast())
+    }
+
+    pub fn invoke1_poly<A: QueryableMap>(&self, arg: &DI::Carrier) -> Fallible<A> {
+        self.invoke_poly::<(), A>(arg)?.get()
+    }
+}
+
 /// A data transformation with certain stability characteristics.
-/// 
+///
 /// The trait bounds provided by the Rust type system guarantee that:
 /// * `input_domain` and `output_domain` are valid domains
 /// * `input_metric` and `output_metric` are valid metrics
-/// 
+///
 /// It is, however, left to constructor functions to prove that:
 /// * metrics are compatible with domains
 /// * `function` is a mapping from the input domain to the output domain
@@ -308,17 +373,56 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     }
 
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
-        where MO::Distance: TotalOrd {
+    where
+        MO::Distance: TotalOrd,
+    {
         d_out.total_ge(&self.map(d_in)?)
     }
 }
 
+pub struct Odometer<DI: Domain, TO, MI: Metric, MO: Measure> {
+    pub input_domain: DI,
+    pub function: Function<DI::Carrier, TO>,
+    pub input_metric: MI,
+    pub output_measure: MO,
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Odometer<DI, TO, MI, MO> {
+    fn clone(&self) -> Self {
+        Self {
+            input_domain: self.input_domain.clone(),
+            function: self.function.clone(),
+            input_metric: self.input_metric.clone(),
+            output_measure: self.output_measure.clone(),
+        }
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO> {
+    pub fn new(
+        input_domain: DI,
+        function: Function<DI::Carrier, TO>,
+        input_metric: MI,
+        output_measure: MO,
+    ) -> Self {
+        Self {
+            input_domain,
+            function,
+            input_metric,
+            output_measure,
+        }
+    }
+
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
+        self.function.eval(arg)
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use crate::metrics::L1Distance;
     use crate::domains::AllDomain;
     use crate::error::ExplainUnwrap;
+    use crate::metrics::L1Distance;
 
     use super::*;
 
@@ -330,7 +434,14 @@ mod tests {
         let input_metric = L1Distance::<i32>::default();
         let output_metric = L1Distance::<i32>::default();
         let stability_map = StabilityMap::new_from_constant(1);
-        let identity = Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map);
+        let identity = Transformation::new(
+            input_domain,
+            output_domain,
+            function,
+            input_metric,
+            output_metric,
+            stability_map,
+        );
         let arg = 99;
         let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);

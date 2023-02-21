@@ -12,6 +12,7 @@ __all__ = [
     "make_chain_mt",
     "make_chain_pm",
     "make_chain_tt",
+    "make_concurrent_composition",
     "make_fix_delta",
     "make_population_amplification",
     "make_pureDP_to_fixed_approxDP",
@@ -159,6 +160,49 @@ def make_chain_tt(
     
     output = c_to_py(unwrap(lib_function(c_transformation1, c_transformation0), Transformation))
     output._depends_on(get_dependencies(transformation1), get_dependencies(transformation0))
+    return output
+
+
+def make_concurrent_composition(
+    input_domain,
+    input_metric,
+    output_measure,
+    d_in: Any,
+    d_mids: Any
+) -> Measurement:
+    """Construct a queryable that interactively composes interactive measurements.
+    
+    [make_concurrent_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_concurrent_composition.html)
+    
+    :param input_domain: indicates the space of valid input datasets
+    :param input_metric: how distances are measured between members of the input domain
+    :param output_measure: how privacy is measured
+    :param d_in: maximum distance between adjacent input datasets
+    :type d_in: Any
+    :param d_mids: maximum privacy expenditure of each query
+    :type d_mids: Any
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
+    c_d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=get_distance_type(MI))
+    c_d_mids = py_to_c(d_mids, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyObject]))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_concurrent_composition
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_d_in, c_d_mids), Measurement))
+    
     return output
 
 

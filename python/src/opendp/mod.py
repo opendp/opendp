@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union, Tuple, Callable, Optional
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyQueryable, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -326,6 +326,19 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
+class Queryable(ctypes.POINTER(AnyQueryable)):
+    def __call__(self, query):
+        from opendp.core import queryable_eval
+        return queryable_eval(self, query)
+        
+    def __del__(self):
+        try:
+            from opendp.core import _queryable_free
+            _queryable_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+        
 
 class Function(ctypes.POINTER(AnyFunction)):
     _type_ = AnyFunction
@@ -782,6 +795,7 @@ def exponential_bounds_search(
             predicate(center)
         except Exception as err:
             error = f". Error at center: {err}"
+        predicate(center)
         
         raise ValueError(f"predicate always fails{error}")
 

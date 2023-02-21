@@ -119,3 +119,4 @@ def test_user_constructors():
     post = make_user_postprocessor(lambda x: x[0], i32)
 
     print((meas >> post)(2))
+test_user_constructors()

@@ -78,7 +78,7 @@ fn reconcile_arguments(
         .map(|(name, arg_type)| {
             // struct of additional metadata for this argument supplied by bootstrap macro
             let boot_type = bootstrap_args.remove(&name).unwrap_or_default();
-
+            
             Ok(Argument {
                 name: Some(name.clone()),
                 // if C type is given in boot_type, use it. Otherwise use the rust type on the function

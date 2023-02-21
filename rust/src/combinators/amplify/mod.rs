@@ -1,7 +1,7 @@
 #[cfg(feature="ffi")]
 mod ffi;
 
-use crate::core::{Domain, Measurement, Metric, PrivacyMap, Measure};
+use crate::core::{Domain, Metric, PrivacyMap, Measure, Measurement};
 use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::domains::{SizedDomain};
 use crate::error::Fallible;
@@ -43,7 +43,7 @@ impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
 /// 
 /// # Generics
 /// * `DIA` - Atomic Input Domain. The domain of individual records in the input dataset.
-/// * `DO` - Output Domain. 
+/// * `TO` - Output Type. 
 /// * `MI` - Input Metric.
 /// * `MO` - Output Metric.
 pub fn make_population_amplification<DIA, TO, MI, MO>(

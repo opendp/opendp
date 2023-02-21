@@ -6,7 +6,7 @@ use opendp_derive::bootstrap;
 use rug::{Integer, Rational};
 
 use crate::{
-    core::{Measure, Measurement, PrivacyMap, Metric},
+    core::{Measure, PrivacyMap, Metric, Measurement},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,

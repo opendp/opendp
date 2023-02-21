@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, PrivacyMap},
     measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
-    error::Fallible,
+    error::Fallible
 };
 
 #[cfg(feature = "ffi")]
