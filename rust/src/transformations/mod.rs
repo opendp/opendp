@@ -19,7 +19,15 @@ mod dataframe;
 pub use crate::transformations::dataframe::*;
 
 #[cfg(feature="contrib")]
-mod manipulation;
+mod postprocess;
+
+#[cfg(feature="contrib")]
+pub mod quantile_score_candidates;
+#[cfg(feature="contrib")]
+pub use crate::transformations::quantile_score_candidates::*;
+
+#[cfg(feature="contrib")]
+pub mod manipulation;
 #[cfg(feature="contrib")]
 pub use crate::transformations::manipulation::*;
 
