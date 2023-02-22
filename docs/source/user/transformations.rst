@@ -339,7 +339,9 @@ and provide the following constructors to convert to/from "bounded"-dp metrics `
 Resizing
 --------
 The resize transformation takes a dataset with unknown size, and a target size (that could itself be estimated with a DP count).
-If the dataset is too short, additional rows will be imputed, and if the dataset is too long, a simple sample of the rows is taken.
+If the dataset has fewer records than the target size, additional rows will be imputed.
+If the dataset has more records than the target size, a simple sample of the rows is taken.
+
 In the case that a neighboring dataset adds one record to the dataset, and it causes one fewer imputation,
 the resulting dataset distance is 2.
 Therefore, the resize transformation is 2-stable: `map(d_in) = 2 * d_in`.
