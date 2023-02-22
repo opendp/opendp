@@ -361,3 +361,24 @@ impl Debug for AgnosticMetric {
 impl Metric for AgnosticMetric {
     type Distance = ();
 }
+/// A distance metric d(s, s') = max_{ij} |(s_i - s'_i) - (s_j - s'_j)|
+/// InfDistance would be d(s, s') = max_i |s_i - s'_i|
+pub struct InfDifferenceDistance<Q>(PhantomData<Q>);
+impl<Q> Default for InfDifferenceDistance<Q> {
+    fn default() -> Self { InfDifferenceDistance(PhantomData) }
+}
+
+impl<Q> Clone for InfDifferenceDistance<Q> {
+    fn clone(&self) -> Self { Self::default() }
+}
+impl<Q> PartialEq for InfDifferenceDistance<Q> {
+    fn eq(&self, _other: &Self) -> bool { true }
+}
+impl<Q> Debug for InfDifferenceDistance<Q> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "InfDifferenceDistance()")
+    }
+}
+impl<Q> Metric for InfDifferenceDistance<Q> {
+    type Distance = Q;
+}
