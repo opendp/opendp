@@ -1,0 +1,206 @@
+\documentclass{article}
+\input{../../mod.sty}
+
+% \externaldocument[trans_mod:]{../mod}
+% \ref{trans_mod:thrm:privacy-proof}
+
+\title{\texttt{def quantile\_score\_candidates}}
+\author{Michael Shoemate \and Christian Covington \and Ira Globus-Harrus}
+\begin{document}
+\maketitle
+
+\section{Function}
+The quantile score function scores each $c$ in a set of candidates $C$.
+
+\begin{equation}
+\begin{array}{rl}
+    s_i &= -|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)|
+\end{array}
+\end{equation}
+
+Where $\#(X < C_i) = |\{x \in X | x < C_i\}|$ is the number of values in $X$ less than $C_i$, 
+and similarly for other variations of inequalities.
+The scalar score function can be equivalently stated:
+\begin{align}
+    s_i &= -|(1 - \alpha) \#(X < c) - \alpha \#(X > c)| \\
+    &= -|(1 - \alpha) \#(X < c) - \alpha * (|X| - \#(X < c) - \#(X = c))| \\
+    &= -|\#(X < c) - \alpha * (|X| - \#(X = c))|
+\end{align}
+
+It has an intuitive interpretation as $-|candidate\_rank - ideal\_rank|$, 
+where the absolute distance between the candidate and ideal rank penalizes the score.
+The ideal rank does not include values in the dataset equal to the candidate.
+The score is maximized at zero when the candidate rank is equivalent to the rank at the ideal $\alpha$-quantile.
+
+The scalar scorer is almost equivalent to Smith's\cite{Smith11}, but adjusts for a source of bias when there are values in the dataset equal to the candidate.
+For comparison, we can equivalently write the OpenDP scorer as if there were some $\alpha$-discount on dataset entries equal to the candidate.
+
+\[
+\begin{array}{cl}
+    OpenDP &-|\#(X < c) + \alpha \#(X = c) - \alpha * |X|| \\
+    Smith &-|\#(X < c) + 1 \#(X = c) - \alpha * |X||
+\end{array}
+\]
+
+Observing that $\#(X \leq c) = \#(X < c) + 1 \#(X = c)$.
+
+
+\subsection{Examples}
+
+Let $X = \{0,1,2,3,4\}$ and $\alpha = 0.5$ (median):
+
+\begin{align*}
+    score(X, 0, \alpha) = -|0 - .5 * (5 - 1)| = -2 \\
+    score(X, 1, \alpha) = -|1 - .5 * (5 - 1)| = -1 \\
+    score(X, 2, \alpha) = -|2 - .5 * (5 - 1)| = -0 \\
+    score(X, 3, \alpha) = -|3 - .5 * (5 - 1)| = -1 \\
+    score(X, 4, \alpha) = -|4 - .5 * (5 - 1)| = -2
+\end{align*}
+
+The score is maximized by the candidate at the true median.
+
+Let $X = \{0,1,2,3,4,5\}$ and $\alpha = 0.5$ (median):
+
+\begin{align*}
+    score(X, 0, \alpha) = -|0 - .5 * (6 - 1)| = -2.5 \\
+    score(X, 1, \alpha) = -|1 - .5 * (6 - 1)| = -1.5 \\
+    score(X, 2, \alpha) = -|2 - .5 * (6 - 1)| = -0.5 \\
+    score(X, 3, \alpha) = -|3 - .5 * (6 - 1)| = -0.5 \\
+    score(X, 4, \alpha) = -|4 - .5 * (6 - 1)| = -1.5 \\
+    score(X, 5, \alpha) = -|5 - .5 * (6 - 1)| = -2.5
+\end{align*}
+
+The two candidates nearest the median are scored equally and highest.
+
+Let $X = \{0,1,2,3,4\}$ and $\alpha = 0.25$ (first quartile):
+
+\begin{align*}
+    score(X, 0, \alpha) = -|0 - .25 * (5 - 1)| = -1 \\
+    score(X, 1, \alpha) = -|1 - .25 * (5 - 1)| = -0 \\
+    score(X, 2, \alpha) = -|2 - .25 * (5 - 1)| = -1 \\
+    score(X, 3, \alpha) = -|3 - .25 * (5 - 1)| = -2 \\
+    score(X, 4, \alpha) = -|4 - .25 * (5 - 1)| = -3
+\end{align*}
+
+As expected, the score is maximized when $c = 1$.
+
+Let $X = \{0,1,2,3,4,5\}$ and $\alpha = 0.25$ (first quartile):
+
+\begin{align*}
+    score(X, 0, \alpha) = -|0 - .25 * (6 - 1)| = -1.25 \\
+    score(X, 1, \alpha) = -|1 - .25 * (6 - 1)| = -0.25 \\
+    score(X, 2, \alpha) = -|2 - .25 * (6 - 1)| = -0.75 \\
+    score(X, 3, \alpha) = -|3 - .25 * (6 - 1)| = -1.75 \\
+    score(X, 4, \alpha) = -|4 - .25 * (6 - 1)| = -2.75 \\
+    score(X, 5, \alpha) = -|5 - .25 * (6 - 1)| = -3.75
+\end{align*}
+
+The ideal rank is 1.25. The nearest candidate, 1, has the greatest score, followed by 2, and then 0. 
+
+\section{Constructor: \texttt{make\_quantile\_score\_candidates}}
+
+\subsection{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting{./pseudocode/make_quantile_score_candidates.py}
+
+\subsection{Appropriate Output Domain}
+\label{sec:approp-output-domain}
+The raw type and domain are equivalent, save for potential nullity in the atomic type. 
+The scalar scorer structurally cannot emit null, because the input argument is non-null.
+
+\subsection{Domain-metric compatibility}
+On the input side, SymmetricDistance is well-defined on VectorDomains. 
+On the output side, InfDifferenceDistance is well-defined on VectorDomains.
+
+\subsection{Stability Guarantee}
+
+We first derive the sensitivity when neighbors differ by an addition or removal of a record.
+\begin{align*}
+    \Delta_{Sym} &= \max\limits_{s \sim s'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| \\
+    &\leq 2 \max\limits_{s \sim s'} \max\limits_{i} |s_i - s'_i| &&\text{$s$ is not monotonic; take looser bound}\\
+    &\leq 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)|
+        \\&\hspace{1cm} - |(1 - \alpha) \#(X' < C_i) - \alpha \#(X' > C_i)||
+\intertext{Consider each of the three cases of adding or removing an element in X.}
+\intertext{Case 1. Assume $X'$ is equal to $X$, but with some $X_j < C_i$ added or removed.}
+    &= 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| 
+        \\&\hspace{1cm} - |(1 - \alpha) (\#(X < C_i) \pm 1) - \alpha \#(X > C_i)|| \\
+    &\leq 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)|
+        \\&\hspace{1cm} - (|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| + |\pm(1 - \alpha)|)| &&\text{by triangle inequality} \\
+    &= 2 \max\limits_{s \sim s'} \max\limits_{i} |1 - \alpha| &&\text{scores cancel}\\
+    &= 2 (1 - \alpha) &&\text{since } \alpha \leq 1
+\intertext{Case 2. Assume $X'$ is equal to $X$, but with some $X_j > C_i$ added or removed.}
+    &= 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| 
+        \\&\hspace{1cm} - |(1 - \alpha) \#(X < C_i) - \alpha (\#(X > C_i) \pm 1)|| \\
+    &\leq 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| 
+        \\&\hspace{1cm} - (|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| + |\pm\alpha|)| &&\text{by triangle inequality} \\
+    &= 2 \max\limits_{s \sim s'} \max\limits_{i} |\alpha| &&\text{scores cancel}\\
+    &= 2 \alpha &&\text{since } \alpha \geq 0
+\intertext{Case 3. Assume $X'$ is equal to $X$, but with some $X_j = C_i$ added or removed.}
+    &= 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| 
+        \\&\hspace{1cm} - |(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)|| \\
+    &= 0 &&\text{no change in score}
+\intertext{Take the union bound over all cases.}
+    \Delta_{Sym} &= 2 max(\alpha, 1 - \alpha)
+\end{align*}
+\label{unsized-stability}
+
+% \begin{theorem}
+%     If \texttt{u}, \texttt{v} are \texttt{d\_in}-close under \texttt{input\_metric}, then \texttt{function(v)}, \texttt{function(u)} are \texttt{d\_out}-close under \texttt{output\_metric}.
+% \end{theorem}
+% 
+% \begin{align*}
+%     \texttt{d\_in} &\leq d_{Sym}(u, v) \\
+%     &\leq d_{InfDiff}(function(u), function(v)) \\
+%     &\leq \texttt{d\_out}
+% \end{align*}
+
+\section{Constructor: \texttt{make\_sized\_quantile\_score\_candidates}}
+
+\subsection{Pseudocode}
+\label{sec:sized-python-pseudocode}
+\lstinputlisting{./pseudocode/make_sized_quantile_score_candidates.py}
+
+\subsection{Appropriate Output Domain}
+The raw type and domain are equivalent, save for potential nullity in the atomic type. 
+The scalar scorer structurally cannot emit null, because the input argument is non-null.
+
+\subsection{Domain-metric compatibility}
+On the input side, SymmetricDistance is well-defined on sized VectorDomains. 
+On the output side, InfDifferenceDistance is well-defined on VectorDomains.
+
+\subsection{Stability Guarantee}
+
+
+We first derive the sensitivity when neighbors differ by changing one record.
+\begin{align*}
+    \Delta_{CO} &= \max\limits_{s \sim s'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| \\
+    &\leq 2 \max\limits_{s \sim s'} \max\limits_{i} |s_i - s'_i| &&\text{$s$ is not monotonic; take looser bound}\\
+    &\leq 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| 
+        \\&\hspace{1cm} - |(1 - \alpha) \#(X' < C_i) - \alpha \#(X' > C_i)||
+\intertext{Consider each of the four cases of changing a row in X.}
+\intertext{Case 1. Assume $X'$ is equal to $X$, but with some $X_j < C_i$ replaced with $X'_j > C_i$.}
+    &= 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| 
+        \\&\hspace{1cm} - (1 - \alpha) (\#(X < C_i) - 1) - \alpha (\#(X > C_i) + 1)|| \\
+    &\leq 2 \max\limits_{s \sim s'} \max\limits_{i} |(|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)|
+        \\&\hspace{1cm} - (|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| + |1|)| &&\text{by triangle inequality} \\
+    &= 2 \max\limits_{s \sim s'} \max\limits_{i} |1| &&\text{scores cancel}\\
+    &= 2
+\intertext{Case 2. Assume $X'$ is equal to $X$, but with some $X_j > C_i$ replaced with $X'_j < C_i$.}
+    &= 2 &&\text{by symmetry, follows from Case 1.}
+\intertext{Case 3. Assume $X'$ is equal to $X$, but with some $X_j \neq C_i$ replaced with $C_i$.}
+    &\leq 2 max(\alpha, 1 - \alpha) &&\text{equivalent to one removal \ref{unsized-stability}} \\
+\intertext{Case 4. Assume $X'$ is equal to $X$, but with some $X_j = C_i$ replaced with $X'_j \neq C_i$.}
+    &\leq 2 max(\alpha, 1 - \alpha) &&\text{equivalent to one addition \ref{unsized-stability}} \\
+\intertext{Take the union bound over all cases.}
+    \Delta_{CO} &= max(2, 2 max(\alpha, 1 - \alpha)) = 2 &&\text{since } max(\alpha, 1 - \alpha) \leq 1
+\intertext{Represent sensitivity where neighbors differ by a symmetric distance of one instead of change one.}
+    \Delta_{Sym} &= 1 &&\text{since one edit is an addition and removal}
+\end{align*}
+
+
+
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}
