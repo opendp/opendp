@@ -9,7 +9,8 @@ What is OpenDP?
 .. _OpenDP: https://opendp.org
 .. _differential privacy: https://opendp.org/about#whatisdifferentialprivacy
 
-Various tools build upon the `OpenDP library`_ and are known (along with the library itself) as the :doc:`/opendp-commons/index`. The OpenDP library and examples of these tools are shown in the diagram below.
+Various tools build upon the `OpenDP library`_ and are known (along with the library itself) as the :doc:`/opendp-commons/index`. 
+The OpenDP library and examples of these tools are shown in the diagram below.
 
 .. _OpenDP library: https://github.com/opendp/opendp
 
@@ -19,10 +20,15 @@ Various tools build upon the `OpenDP library`_ and are known (along with the lib
    :class: img-responsive
 
 
-Getting Help
-------------
+First Steps
+-----------
 
-If you have questions or feedback regarding OpenDP, please feel free to post on `GitHub Discussions`_.
+Head to the :doc:`/user/index` to get started with the OpenDP Library.
+
+If you have an interest in contributing to the OpenDP Library, please contact us!
+You can also use the :doc:`/contributor/index` to get started.
+
+Should you have any questions or feedback regarding OpenDP, please feel free to post on `GitHub Discussions`_.
 
 .. _GitHub Discussions: https://github.com/opendp/opendp/discussions
 
@@ -70,7 +76,7 @@ Documentation for past releases are available in the drop down on the left panel
   :titlesonly:
   :maxdepth: 3
 
-  developer/index
+  contributor/index
   resources/index
   opendp-commons/index
   contact

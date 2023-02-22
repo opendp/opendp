@@ -10,8 +10,7 @@ Function
 --------
 As one would expect, all data processing is handled via a function.
 The function member stored in a Transformation or Measurement struct is straightforward representation of an idealized mathematical function.
-A mathematical function is a binary relation between two sets
-that associates each value in the input set with a value in the output set.
+A mathematical function associates each value in some input set with some value in the output set (or a distribution over such values, in the case of a randomized function).
 In OpenDP, we capture these sets with domains...
 
 .. _domains:
@@ -31,7 +30,7 @@ Some common domains are:
   | ``{-2, -1, 0, 1, 2}``.
 :VectorDomain<D>: | The set of all vectors, where each element of the vector is a member of domain D.
   | For example, ``VectorDomain<AllDomain<bool>>`` describes the set of all boolean vectors:
-  | ``{[True], [False], [True, True], [True, False], ...}``.
+  | ``{[], [True], [False], [True, True], [True, False], ...}``.
 :SizedDomain<D>: | The set of all values in the domain D, that have a specific size.
   | For example, ``SizedDomain<VectorDomain<AllDomain<bool>>>`` of size 2 describe the set of boolean vectors:
   | ``{[True, True], [True, False], [False, True], [False, False]}``.
@@ -50,16 +49,16 @@ These domains serve two purposes:
 #. The relation depends on the input and output domain in its proof to restrict the set of neighboring datasets or distributions.
    An example is the relation for :py:func:`opendp.transformations.make_sized_bounded_sum`,
    which makes use of a ``SizedDomain`` domain descriptor to more tightly bound the sensitivity.
-#. Combinators also use domains to ensure the output is well-defined.
+#. Combinators also use domains to ensure that the output is well-defined.
    For instance, chainer constructors check that intermediate domains are equivalent
-   to guarantee that the output of the interior function is always a valid input to the exterior function.
+   to guarantee that the output of the first function is always a valid input to the second function.
 
 
 .. _metrics:
 
 Metrics
 -------
-A metric is a function that computes the distance between two elements of a set.
+A metric is a function that computes the distance between two elements of a domain.
 
 .. _symmetric-distance:
 
@@ -70,7 +69,8 @@ This is used to count the fewest number of additions or removals to convert one 
 
 Each metric is bundled together with a domain, and ``A`` and ``B`` are members of that domain.
 Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, ``A`` and ``B`` are often vectors.
-In practice, if we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k``.
+In practice, if we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k`` 
+(where ``d_in`` denotes an upper bound on the distance between adjacent inputs).
 
 Another example metric is ``AbsoluteDistance<f64>``.
 This can be read as "the absolute distance metric ``|A - B|``, where distances are expressed in 64-bit floats."
@@ -90,7 +90,7 @@ In OpenDP, a measure is a function for measuring the distance between probabilit
 
 A concrete example is ``MaxDivergence<f64>``,
 read as "the max divergence metric where numbers are expressed in terms of 64-bit floats."
-The max divergence measure has distances that correspond to ``epsilon`` in the pure definition of differential privacy.
+The max divergence measure has distances that correspond to ``epsilon`` in the definition of pure differential privacy.
 
 
 .. _smoothed-max-divergence:
@@ -109,7 +109,7 @@ We assert the privacy properties of a Transformation or Measurement's function v
 Relations accept a ``d_in`` and a ``d_out`` and return a boolean.
 There are a couple equivalent interpretations for when a relation returns True:
 
-* All potential input perturbations do not significantly influence the output.
+* All potential input perturbations by at most ``d_in`` do not influence the output by more than ``d_out``.
 * The transformation or measurement is (``d_in``, ``d_out``)-close.
 
 What does (``d_in``, ``d_out``)-close mean?
@@ -135,8 +135,9 @@ If the relation passes, then it tells you that, for all ``x``, ``x'`` in the inp
 * if ``d_X(x, x') <= d_in`` (if neighboring datasets are at most ``d_in``-close)
 * then ``d_Y(f(x), f(x')) <= d_out`` (then the distance between function outputs is no greater than ``d_out``)
 
-Notice that if the relation passes at ``d_out``, it will pass for any value greater than ``d_out``.
-This is an incredibly useful observation, as we will see in the :ref:`parameter-search` section.
+Notice that if the relation passes at ``d_out``, it will pass for any value greater than ``d_out`` 
+(so long as the relation doesn't throw an error due to numerical overflow).
+This is an incredibly useful behavior, as we will see in the :ref:`parameter-search` section.
 
 Putting this to practice, the following example checks the stability relation on a clamp transformation.
 
@@ -159,7 +160,9 @@ Putting this to practice, the following example checks the stability relation on
 
 Maps
 ----
-A map is a function that takes some ``d_in`` and returns the smallest ``d_out`` that is (``d_in``, ``d_out``)-close.
+A map is a function that takes some ``d_in`` and returns a ``d_out`` that is (``d_in``, ``d_out``)-close.
+The ``d_out`` returned is not necessarily the smallest value that is still "close",
+but every effort is made to make it as small as provably possible.
 
 Maps are a useful shorthand to find privacy properties directly:
 
@@ -180,13 +183,18 @@ Distances
 You can determine what units ``d_in`` and ``d_out`` are expressed in based on the ``input_metric``, and ``output_metric`` or ``output_measure``.
 Follow the links into the example metrics and measures to get more detail on what the distances mean for that kind of metric or measure.
 
-On Transformations, the ``input_metric`` will be a dataset metric like :ref:`SymmetricDistance <symmetric-distance>`.
-The ``output_metric`` will either be some dataset metric (on dataset transformations)
+On Transformations, the ``input_metric`` will typically be a dataset metric like :ref:`SymmetricDistance <symmetric-distance>`.
+The ``output_metric`` will typically be either some dataset metric (on dataset transformations)
 or some kind of global sensitivity metric like :ref:`AbsoluteDistance <absolute-distance>` (on aggregations).
 
 The ``input_metric`` of Measurements is initially only some kind of global sensitivity metric.
 However, once you chain the Measurement with a Transformation, the resulting Measurement will have whatever ``input_metric`` was on the Transformation.
 The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
+
+In some cases distances may not form a total order. 
+For example, in $(\epsilon, \delta)$-DP, $(\epsilon_1, \delta_1) = (1.5, 1e-6)$ is incomparable to $(\epsilon_2, \delta_2) = (1.0, 1e-7)$, 
+so neither $(\epsilon_1, \delta_1) \ge (\epsilon_2, \delta_2)$ nor $(\epsilon_2, \delta_2) \ge (\epsilon_1, \delta_1)$ holds.
+However, $(1.5, 1e-6) \ge (1.0, 1e-6)$ would still hold, as both elements compare greater than or equal.
 
 It is critical that you choose the correct ``d_in`` for the relation,
 whereas you can use :ref:`binary search utilities <parameter-search>` to find the tightest ``d_out``.

@@ -14,16 +14,15 @@ There are many parameters in a typical DP measurement:
 * ``d_out`` output distance (oftentimes the privacy budget)
 * noise scale and any other parameters passed to the constructors
 
-To evaluate a relation, you must fix all of these parameters.
+To evaluate a :ref:`relation <relations>` between ``d_in`` and ``d_out``, you must fix all of these parameters.
 The relation simply returns a boolean indicating if it passed.
-As alluded to in the :ref:`relations` section,
-if the relation passes for a given ``d_out``, it will also pass for any value greater than ``d_out``.
+If the relation passes for a given ``d_out``, it will also pass for any value greater than ``d_out``.
 This behavior makes it possible to solve for any one parameter using a binary search
 because the relation itself acts as your predicate function.
 
 OpenDP comes with some utility functions to make these binary searches easier to conduct:
 
-* :func:`opendp.mod.binary_search_chain`: Pass it a function that makes a chain from one numeric argument, as well as ``d_in`` and ``d_out``. Returns the tightest chain.
+* :func:`opendp.mod.binary_search_chain`: Pass it a function that makes a measurement or transformation from one numeric argument, as well as ``d_in`` and ``d_out``. Returns the tightest chain.
 * :func:`opendp.mod.binary_search_param`: Same as binary_search_chain, but returns the discovered parameter.
 * :func:`opendp.mod.binary_search`: Pass a predicate function and bounds. Returns the discovered parameter. Useful when you just want to solve for ``d_in`` or ``d_out``.
 

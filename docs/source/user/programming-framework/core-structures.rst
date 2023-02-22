@@ -7,17 +7,14 @@ OpenDP is focused on creating computations with specific privacy characteristics
 These computations are modeled with two core structures in OpenDP:
 :py:class:`opendp.mod.Transformation` and :py:class:`opendp.mod.Measurement`.
 These structures are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy.
-By modeling computations in this abstract way, we're able to combine them in flexible arrangements and reason about the resulting programs.
+By modeling computations in this abstract way, we're able to combine them in flexible arrangements and reason about privacy properties at the resulting programs.
 
 A unifying perspective towards OpenDP is that OpenDP is a system for `relating`:
 
-#. an upper bound on distance between neighboring function inputs (to)
-#. an upper bound on distance between respective function outputs (or distributions)
+#. an upper bound on distance between function inputs
+#. an upper bound on distance between respective function outputs (or output distributions)
 
-OpenDP naturally captures the definition of privacy via :ref:`relations <relations>`,
-because the definition of privacy is an upper bound on distance between probability distributions.
-
-Each measurement or transformation is a self-contained structure with a relation, function, and supporting proof.
+Each measurement or transformation is a self-contained structure with a map, function, and supporting proof.
 
 
 .. _measurement:
@@ -26,10 +23,11 @@ Measurement
 -----------
 
 A :py:class:`Measurement <opendp.mod.Measurement>` is a randomized mapping from datasets to outputs of an arbitrary type.
-Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``meas.check(d_in, d_out)``.
-If the code snippet evaluates to True, then ``meas`` is ``d_out``-DP on ``d_in``-close inputs,
-or equivalently "(``d_in``, ``d_out``)-close".
-The code snippet simply checks the privacy relation that comes bundled inside ``meas``.
+Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``d_out = meas.map(d_in)``.
+``meas`` is ``d_out``-DP on ``d_in``-close inputs,
+or equivalently "(``d_in``, ``d_out``)-differentially private".
+The code snippet simply evaluates the privacy map that comes bundled inside ``meas``.
+In this context, the map captures the privacy of a measurement.
 
 The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output measure.
 Depending on the context, ``d_in`` could be a distance bound to neighboring datasets or a global sensitivity,
@@ -37,14 +35,12 @@ and ``d_out`` may be ``epsilon``, ``(epsilon, delta)``, or some other measure of
 More information on distances is available :ref:`here <distances>`.
 
 Each invocation of the measurement's function (via ``meas.invoke(data)`` or ``meas(data)``) is a differentially private release.
-The privacy expenditure of each release is any ``d_out`` that makes the relation pass.
-The tightest privacy expenditure ``d_out`` can be found directly via ``meas.map(d_in)``.
 
 A measurement structure contains the following internal fields:
 
 :input_domain: A :ref:`domain <domains>` that describes the set of all possible input values for the function.
 :output_domain: A :ref:`domain <domains>` that describes the set of all possible output values of the function.
-:function: A :ref:`function <functions>` that computes a differentially-private release on private data.
+:function: A :ref:`function <functions>` that computes a differentially private release on private data.
 :input_metric: A :ref:`metric <metrics>` used to compute distance between two members of the input domain.
 :output_measure: A :ref:`measure <measures>` used to measure distance between two distributions in the output domain.
 :privacy_map: A :ref:`map <maps>` that encapsulates the privacy characteristics of the function.
@@ -63,11 +59,11 @@ A :py:class:`Transformation <opendp.mod.Transformation>` is a (deterministic) ma
 Transformations are used to preprocess and aggregate data before chaining with a measurement.
 
 Similarly to ``meas`` above, say we have an arbitrary instance of a Transformation, called ``trans``,
-and a code snippet ``trans.check(d_in, d_out)``.
-If the code snippet evaluates to True, then ``trans`` is ``d_out``-close on ``d_in``-close inputs,
-or equivalently "(``d_in``, ``d_out``)-close".
-The code snippet simply checks the stability relation that comes bundled inside ``trans``.
-In this context, the relation captures the stability of a transformation.
+and a code snippet ``d_out = trans.map(d_in)``.
+``trans`` is ``d_out``-close on ``d_in``-close inputs,
+or equivalently "(``d_in``, ``d_out``)-stable".
+The code snippet simply evaluates the stability map that comes bundled inside ``trans``.
+In this context, the map captures the stability of a transformation.
 
 The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output metric.
 Depending on the context, ``d_in`` and ``d_out`` could be a distance bound to neighboring datasets or a global sensitivity.

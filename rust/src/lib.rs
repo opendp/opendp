@@ -85,9 +85,9 @@
 //! example().unwrap();
 //! ```
 //!
-//! # Developer Guide
+//! # Contributor Guide
 //!
-//! A more thorough Developer Guide [can be found on the docs website](https://docs.opendp.org/en/stable/developer/index.html).
+//! A more thorough Contributor Guide [can be found on the docs website](https://docs.opendp.org/en/stable/contributor/index.html).
 //! 
 //! ## Adding Constructors
 //!

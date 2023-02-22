@@ -170,3 +170,19 @@
       then $\function(u), \function(v)$ are $\dout$-close under \texttt{output\_metric}.
   \end{enumerate}
 }
+
+
+\newcommand{\validMeasurement}[2]{%
+  For every setting of the input parameters #1 to #2 such that the given preconditions
+  hold, #2 raises an exception (at compile time or run time) or returns a valid measurement. A valid measurement has the following properties:
+  \begin{enumerate}
+      \item \textup{(Domain-metric compatibility).} 
+      The domain \texttt{input\_domain} matches one of the possible domains listed in the definition of \texttt{input\_metric}.
+      
+      \item \textup{(Privacy guarantee).} 
+      For every pair of elements $u, v$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
+      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_measure}, 
+      if $u, v$ are \din-close under \texttt{input\_metric} and $\texttt{privacy\_map}(\din) \leq \dout$, 
+      then $\function(u), \function(v)$ are $\dout$-close under \texttt{output\_measure}.
+  \end{enumerate}
+}

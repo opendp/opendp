@@ -10,7 +10,8 @@ or derive the necessary noise scale to meet a given target accuracy and statisti
 .. note::
 
     This confidence interval is specifically for the input to the noise addition mechanism.
-    We cannot privately compensate for the bias introduced from clipping or other preprocessing.
+    The library currently does not compensate for the bias introduced from clipping or other preprocessing
+    (`[KMRS+23] <https://arxiv.org/pdf/2301.13334.pdf>`_ shows that this is somewhat unavoidable).
     There is a notebook demonstrating this limitation:
 
     .. toctree::
