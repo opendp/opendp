@@ -8,7 +8,7 @@ fn utility_fn(x: &u32) -> f64 {
     *x as f64
 }
 
-fn run_mechanism(n: i64, optimize: bool) -> u32 {
+fn run_mechanism(n: i64) -> u32 {
     let eta = Eta::new(1, 1, 1).unwrap();
     let mut rng = GeneratorOpenDP::default();
     let mut outcomes: Vec<u32> = Vec::new();
@@ -17,7 +17,6 @@ fn run_mechanism(n: i64, optimize: bool) -> u32 {
     }
     let options = ExponentialOptions {
         min_retries: 1,
-        optimized_sample: optimize,
     };
     let result = exponential_mechanism(
         eta, &outcomes, utility_fn, 0, n as u32, n as u32, &mut rng, options,
@@ -26,23 +25,12 @@ fn run_mechanism(n: i64, optimize: bool) -> u32 {
     *result
 }
 
-fn not_optimized(n: i64) -> u32 {
-    run_mechanism(n, false)
-}
-
-fn optimized(n: i64) -> u32 {
-    run_mechanism(n, true)
-}
-
 fn bench_sizes(c: &mut Criterion) {
     let mut group = c.benchmark_group("Outcome Space Size");
     group.sample_size(10);
     for i in [100, 1000, 5000, 10000, 15000, 20000, 25000, 50000].iter() {
-        group.bench_with_input(BenchmarkId::new("Not Optimized", i), i, |b, i| {
-            b.iter(|| not_optimized(*i))
-        });
-        group.bench_with_input(BenchmarkId::new("Optimized", i), i, |b, i| {
-            b.iter(|| optimized(*i))
+        group.bench_with_input(BenchmarkId::new("Default", i), i, |b, i| {
+            b.iter(|| run_mechanism(*i))
         });
     }
     group.finish();

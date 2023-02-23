@@ -37,23 +37,12 @@ fn run_mechanism(n: i64, optimize: bool) -> u32 {
     *result
 }
 
-fn not_optimized(n: i64) -> u32 {
-    run_mechanism(n, false)
-}
-
-fn optimized(n: i64) -> u32 {
-    run_mechanism(n, true)
-}
-
 fn bench_utility(c: &mut Criterion) {
     let mut group = c.benchmark_group("Utility Range");
     group.sample_size(10);
     for i in [100, 1000, 10000, 20000, 30000, 40000, 50000].iter() {
-        group.bench_with_input(BenchmarkId::new("Not Optimized", i), i, |b, i| {
-            b.iter(|| not_optimized(*i))
-        });
-        group.bench_with_input(BenchmarkId::new("Optimized", i), i, |b, i| {
-            b.iter(|| optimized(*i))
+        group.bench_with_input(BenchmarkId::new("Default", i), i, |b, i| {
+            b.iter(|| run_mechanism(*i))
         });
     }
     group.finish();

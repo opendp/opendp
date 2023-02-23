@@ -13,7 +13,6 @@ fn run_mechanism(num_retries: u32, weight_low: bool) -> u32 {
     let mut rng = GeneratorOpenDP::default();
     let mut outcomes: Vec<u32> = Vec::new();
     let n = 256;
-    let optimize = false;
     if weight_low {
         outcomes.push(0);
     } else {
@@ -24,7 +23,6 @@ fn run_mechanism(num_retries: u32, weight_low: bool) -> u32 {
     }
     let options = ExponentialOptions {
         min_retries: num_retries,
-        optimized_sample: optimize,
     };
     let result = exponential_mechanism(
         eta, &outcomes, utility_fn, 0, n as u32, n as u32, &mut rng, options,

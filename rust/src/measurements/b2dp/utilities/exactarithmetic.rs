@@ -118,7 +118,6 @@ pub fn normalized_sample<R: ThreadRandGen>(
     weights: &Vec<Float>,
     arithmetic_config: &ArithmeticConfig,
     rng: &mut R,
-    optimize: bool,
 ) -> Fallible<usize> {
     // Compute the total weight
     let total_weight = arithmetic_config.get_float(Float::sum(weights.iter()));
@@ -131,13 +130,9 @@ pub fn normalized_sample<R: ThreadRandGen>(
     let mut zero_weight: Option<()> = None;
 
     // Iterate through all weights to test to prevent timing channel,
-    // unless `optimize = true`.
     for w in weights.iter() {
         if w.is_zero() {
             zero_weight = Some(());
-            if optimize {
-                return fallible!(FailedFunction, "All weights must be positive.");
-            }
         }
     }
 
@@ -186,16 +181,9 @@ pub fn normalized_sample<R: ThreadRandGen>(
                     cumulative_next = cumulative_next + next_weight;
                     if cumulative_next < next_highest {
                         prec_error = true;
-                        if optimize {
-                            // Only error out immediately if optimized sampling
-                            return fallible!(FailedFunction, "Sampling precision insufficient");
-                        }
                     }
                 }
                 index = Some(i);
-                if optimize {
-                    return Ok(i);
-                }
             }
         }
     }
@@ -474,7 +462,7 @@ mod tests {
         // this example should fail due to zero total weight
         let mut exact = arithmetic_config.enter_exact_scope();
         assert!(exact.is_ok());
-        if let Err(e) = normalized_sample(&weights, &arithmetic_config, &mut rng, false) {
+        if let Err(e) = normalized_sample(&weights, &arithmetic_config, &mut rng) {
             assert_eq!(
                 e.message,
                 Some("Total weight zero. Weights must be positive.".to_string())
@@ -505,7 +493,7 @@ mod tests {
         // this example should fail due to a zero weight
         let mut exact = arithmetic_config.enter_exact_scope();
         assert!(exact.is_ok());
-        if let Err(e) = normalized_sample(&weights, &arithmetic_config, &mut rng, false) {
+        if let Err(e) = normalized_sample(&weights, &arithmetic_config, &mut rng) {
             assert_eq!(e.message.unwrap(), "All weights must be positive.");
         }
         exact = arithmetic_config.exit_exact_scope();
@@ -534,7 +522,7 @@ mod tests {
         // this example should fail due to inexact arithmetic
         let mut exact = arithmetic_config.enter_exact_scope();
         assert!(exact.is_ok());
-        let result = normalized_sample(&weights, &arithmetic_config, &mut rng, false);
+        let result = normalized_sample(&weights, &arithmetic_config, &mut rng);
         let _s = result.unwrap();
         exact = arithmetic_config.exit_exact_scope();
         assert!(exact.is_err());
@@ -866,7 +854,7 @@ mod tests {
         weights.push(c);
         let mut counts = [0; 3];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, true).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng).unwrap();
             counts[j] += 1;
         }
 
@@ -910,7 +898,7 @@ mod tests {
         weights.push(c);
         let mut counts = [0; 3];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, false).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng).unwrap();
             counts[j] += 1;
         }
 
@@ -925,7 +913,7 @@ mod tests {
         weights.push(Float::with_val(arithmetic_config.precision, 0.0625));
         let mut new_counts = [0; 4];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, false).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng).unwrap();
             new_counts[j] += 1;
         }
 
@@ -999,7 +987,7 @@ mod tests {
         weights.push(c);
         let mut counts = [0; 3];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, true).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng).unwrap();
             counts[j] += 1;
         }
 

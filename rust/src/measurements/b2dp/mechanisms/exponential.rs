@@ -16,12 +16,6 @@ pub struct ExponentialOptions {
     /// sampling. The higher the number of retries, the less likely
     /// it is for an adversary to observe useful timing information.
     pub min_retries: u32,
-
-    /// Whether to optimize sampling
-    /// default: `false`
-    /// Optimized sampling exacerbates timing channels, and it's not
-    /// recommended for use in un-trusted settings.
-    pub optimized_sample: bool,
 }
 impl Default for ExponentialOptions {
     /// Default options for the exponential mechanism
@@ -29,7 +23,6 @@ impl Default for ExponentialOptions {
     fn default() -> ExponentialOptions {
         ExponentialOptions {
             min_retries: 1,
-            optimized_sample: false,
         }
     }
 }
@@ -225,7 +218,6 @@ pub fn exponential_mechanism<'a, T, R: ThreadRandGen, F: Fn(&T) -> f64>(
         &weights,
         &exponential_config.arithmetic_config,
         rng,
-        options.optimized_sample,
     )?;
     let sample = &outcomes[sample_index];
 
