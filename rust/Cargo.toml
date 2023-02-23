@@ -93,3 +93,7 @@ rustdoc-args = [
 [[bench]]
 name = "discrete_laplace"
 harness = false
+
+[[bench]]
+name = "b2dp"
+harness = false

@@ -4,7 +4,7 @@
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
 
 #[cfg(all(feature="use-mpfr", feature="contrib"))]
-mod b2dp;
+pub mod b2dp;
 #[cfg(all(feature="use-mpfr", feature="contrib"))]
 pub use crate::measurements::b2dp::*;
 

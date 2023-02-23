@@ -22,17 +22,6 @@ pub struct ExponentialOptions {
     /// Optimized sampling exacerbates timing channels, and it's not
     /// recommended for use in un-trusted settings.
     pub optimized_sample: bool,
-
-    /// Whether to use empirical precision
-    /// default: `false`
-    /// Determination of safe precision given utility bounds and outcome
-    /// set size limits can be done analytically or empirically. Both
-    /// are independent of the dataset. Using `empirical_precision = true`
-    /// determines the required precision via a set of test calculations.
-    /// The timing overhead of these calculations is proportional to the outcome
-    /// set size, and the overhead may outweigh any reduction in required
-    /// precision.
-    pub empirical_precision: bool,
 }
 impl Default for ExponentialOptions {
     /// Default options for the exponential mechanism
@@ -41,7 +30,6 @@ impl Default for ExponentialOptions {
         ExponentialOptions {
             min_retries: 1,
             optimized_sample: false,
-            empirical_precision: false,
         }
     }
 }
@@ -85,7 +73,6 @@ impl ExponentialConfig {
         utility_min: u32,
         utility_max: u32,
         max_outcomes: u32,
-        empirical_precision: bool,
         min_retries: u32,
     ) -> Fallible<ExponentialConfig> {
         // Parameter sanity checking
@@ -101,7 +88,6 @@ impl ExponentialConfig {
             utility_min,
             utility_max,
             max_outcomes,
-            empirical_precision,
             min_retries,
         )?;
 
@@ -201,7 +187,6 @@ pub fn exponential_mechanism<'a, T, R: ThreadRandGen, F: Fn(&T) -> f64>(
         utility_min,
         utility_max,
         max_outcomes,
-        options.empirical_precision,
         options.min_retries,
     )?;
 
@@ -217,7 +202,7 @@ pub fn exponential_mechanism<'a, T, R: ThreadRandGen, F: Fn(&T) -> f64>(
         }
         utilities.push(randomized_round(
             u,
-            &mut exponential_config.arithmetic_config,
+            &exponential_config.arithmetic_config,
             rng,
         ));
     }
@@ -238,7 +223,7 @@ pub fn exponential_mechanism<'a, T, R: ThreadRandGen, F: Fn(&T) -> f64>(
     // Sample
     let sample_index = normalized_sample(
         &weights,
-        &mut exponential_config.arithmetic_config,
+        &exponential_config.arithmetic_config,
         rng,
         options.optimized_sample,
     )?;

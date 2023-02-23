@@ -60,7 +60,7 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
 }
 
 /// A struct that aids in sampling from [`rug`] and [`rand`].
-pub(crate) struct GeneratorOpenDP {
+pub struct GeneratorOpenDP {
     /// If an error happens while sampling, it is packed into this struct and thrown later.
     pub error: Fallible<()>,
 }

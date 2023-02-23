@@ -2,7 +2,7 @@
 //! `unsafe` code to access `mpfr::flags` to determine whether computations
 //! are exact.
 
-use rug::{ops::Pow, rand::ThreadRandGen, rand::ThreadRandState, Assign, Float};
+use rug::{rand::ThreadRandGen, rand::ThreadRandState, Assign, Float};
 
 use crate::error::Fallible;
 
@@ -18,7 +18,7 @@ use gmp_mpfr_sys::mpfr;
 /// `rho` in `[0,1]` and rounding down if `rho > x_fract`, rounding up otherwise.
 pub fn randomized_round<R: ThreadRandGen>(
     x: f64,
-    arithmetic_config: &mut ArithmeticConfig,
+    arithmetic_config: &ArithmeticConfig,
     rng: &mut R,
 ) -> u32 {
     // if x is already integer, return it
@@ -39,7 +39,7 @@ pub fn randomized_round<R: ThreadRandGen>(
 
 /// Determine smallest `k` such that `2^k >= total_weight`.
 /// Returns zero if `total_weight` <= 0.
-fn get_power_bound(total_weight: &Float, arithmetic_config: &mut ArithmeticConfig) -> i32 {
+fn get_power_bound(total_weight: &Float, arithmetic_config: &ArithmeticConfig) -> i32 {
     let mut k: i32 = 0;
     if *total_weight <= 0 {
         return 0;
@@ -116,14 +116,17 @@ fn get_power_bound(total_weight: &Float, arithmetic_config: &mut ArithmeticConfi
 
 pub fn normalized_sample<R: ThreadRandGen>(
     weights: &Vec<Float>,
-    arithmetic_config: &mut ArithmeticConfig,
+    arithmetic_config: &ArithmeticConfig,
     rng: &mut R,
     optimize: bool,
 ) -> Fallible<usize> {
     // Compute the total weight
     let total_weight = arithmetic_config.get_float(Float::sum(weights.iter()));
     if total_weight == 0 {
-        return fallible!(FailedFunction, "Total weight zero. Weights must be positive.");
+        return fallible!(
+            FailedFunction,
+            "Total weight zero. Weights must be positive."
+        );
     }
     let mut zero_weight: Option<()> = None;
 
@@ -244,71 +247,8 @@ impl ArithmeticConfig {
         Ok(config)
     }
 
-    /// Computes the precision necessary for the exponential mechanism
-    /// by computing a set of worst-case sums.
-    /// Does **not** preserve the state of the incoming `mpfr::flags`.
-    unsafe fn get_empirical_precision(
-        eta: &Eta,
-        utility_min: u32,
-        utility_max: u32,
-        max_outcomes: u32,
-        max_precision: u32,
-    ) -> Fallible<u32> {
-        // Clear the flags
-        mpfr::clear_flags();
-        let mut p = mpfr::get_default_prec() as u32;
-        // Get the base with the default precision
-        let mut _base_test = eta.get_base(p);
-
-        while ArithmeticConfig::check_mpfr_flags().is_err() {
-            p *= 2;
-            // Clear the flags
-            mpfr::clear_flags();
-            // Check if the precision has exceeded the maximum allowed
-            if p > max_precision {
-                return fallible!(FailedFunction, "Maximum precision exceeded.");
-            }
-            _base_test = eta.get_base(p);
-        }
-        // Check that we can compute the base with the current precision.
-        mpfr::clear_flags();
-        let base_result = eta.get_base(p);
-
-        ArithmeticConfig::check_mpfr_flags()?;
-        let base = &base_result.unwrap();
-
-        // Loop until we can successfully evaluate the test function.
-        mpfr::clear_flags(); // clear flags
-        mpfr::set_inexflag(); // set the inexact flag
-        let mut opt_p: Option<u32> = None;
-        while ArithmeticConfig::check_mpfr_flags().is_err() {
-            mpfr::clear_flags();
-            // Increase the precision and update the base to the new precision
-            // Only double if we haven't tried at this precision yet.
-            if opt_p.is_none() {
-                opt_p = Some(p);
-            } else {
-                p *= 2;
-            }
-            let new_base = &Float::with_val(p, base);
-            // Check if the precision has exceeded the maximum allowed
-            if p > max_precision {
-                return fallible!(FailedFunction, "Maximum precision exceeded.");
-            }
-
-            for u in utility_min..(utility_max + 1) {
-                let max_weight = Float::with_val(p, new_base.pow(utility_min)).ceil();
-                let u_weight = Float::with_val(p, new_base.pow(u));
-                let _combination = Float::with_val(p, max_weight * max_outcomes + u_weight);
-            }
-        }
-
-        ArithmeticConfig::check_mpfr_flags()?;
-        Ok(p)
-    }
-
     /// Initialize an ArithmeticConfig for the base-2 exponential mechanism.
-    /// This method empirically determines the precision required to compute a linear
+    /// This method determines the precision required to compute a linear
     /// combination of at most `max_outcomes` weights in the provided utility range.
     /// Note that the precision to create Floats in rug/mpfr is given as a `u32`, but the
     /// sizes (min, max, etc) of precision returned (e.g. `mpfr::PREC_MAX`) are `i64`.
@@ -330,46 +270,35 @@ impl ArithmeticConfig {
     /// Returns an error if sufficient precision cannot be determined.
     pub fn for_exponential(
         eta: &Eta,
-        utility_min: u32,
+        _utility_min: u32,
         utility_max: u32,
         max_outcomes: u32,
-        empirical_precision: bool,
         min_retries: u32,
     ) -> Fallible<ArithmeticConfig> {
         let mut p: u32;
 
+        // Clear the flags
         unsafe {
-            // Clear the flags
             mpfr::clear_flags();
+        }
 
-            // Check that the maximum precision does not exceed the maximum value of a
-            // u32. Precision for Float::with_val(precision: u32, val) requires a u32.
-            let mut max_precision = u32::max_value();
-            if mpfr::PREC_MAX < max_precision as i64 {
-                max_precision = mpfr::PREC_MAX as u32;
-            }
-            if !empirical_precision {
-                p = eta.z * eta.y;
-                let mut um = utility_max; //.abs() as u32;
-                if um < 1 {
-                    um += 1;
-                }
-                p = p * um;
-                p = p + 2 + max_outcomes;
+        // Check that the maximum precision does not exceed the maximum value of a
+        // u32. Precision for Float::with_val(precision: u32, val) requires a u32.
+        let mut max_precision = u32::max_value();
+        if mpfr::PREC_MAX < max_precision as i64 {
+            max_precision = mpfr::PREC_MAX as u32;
+        }
+        p = eta.z * eta.y;
+        let mut um = utility_max; //.abs() as u32;
+        if um < 1 {
+            um += 1;
+        }
+        p = p * um;
+        p = p + 2 + max_outcomes;
 
-                if p > max_precision {
-                    return fallible!(FailedFunction, "Maximum precision exceeded.");
-                }
-            } else {
-                p = ArithmeticConfig::get_empirical_precision(
-                    &eta,
-                    utility_min,
-                    utility_max,
-                    max_outcomes,
-                    max_precision,
-                )?;
-            }
-        } // end unsafe block
+        if p > max_precision {
+            return fallible!(FailedFunction, "Maximum precision exceeded.");
+        }
 
         let config = ArithmeticConfig {
             precision: p,
@@ -400,7 +329,10 @@ impl ArithmeticConfig {
                 if mpfr::inexflag_p() > 0 {
                     return fallible!(FailedFunction, "Inexact arithmetic.");
                 } else {
-                    return fallible!(FailedFunction, "Arithmetic error other than inexact (see mpfr::flags)");
+                    return fallible!(
+                        FailedFunction,
+                        "Arithmetic error other than inexact (see mpfr::flags)"
+                    );
                 }
             }
         }
@@ -411,10 +343,6 @@ impl ArithmeticConfig {
     pub fn set_retries(&mut self, retry_min: u32) -> Fallible<()> {
         self.retry_min = retry_min;
         Ok(())
-    }
-    /// Returns whether the config is currently in a valid state
-    pub fn is_valid(&self) -> bool {
-        return !self.inexact_arithmetic;
     }
 
     /// Invalidates the config
@@ -428,7 +356,7 @@ impl ArithmeticConfig {
     ///   * `OK(())` if the scope is successfully entered
     ///   * `Err` if the scope is alread invalid
     pub fn enter_exact_scope(&mut self) -> Fallible<()> {
-        if self.is_valid() == false {
+        if self.inexact_arithmetic {
             // inexact arithmetic has already occurred
             return fallible!(FailedFunction, "ArithmeticConfiguration invalid.");
         }
@@ -454,12 +382,13 @@ impl ArithmeticConfig {
     ///   * `OK(())` if the configuration reports than no inexact arithmetic was performed
     ///   * `Err` if the configuration is invalid (inexact arithmetic performed)
     pub fn exit_exact_scope(&mut self) -> Fallible<()> {
-        if self.is_valid() == false {
+        if !self.exact_scope {
+            return fallible!(FailedFunction, "Not in exact scope.");
+        }
+
+        if self.inexact_arithmetic {
             // Error has already occurred
             return fallible!(FailedFunction, "ArithmeticConfiguration invalid.");
-        }
-        if self.exact_scope == false {
-            return fallible!(FailedFunction, "Not in exact scope.");
         }
 
         let result = ArithmeticConfig::check_mpfr_flags();
@@ -545,8 +474,11 @@ mod tests {
         // this example should fail due to zero total weight
         let mut exact = arithmetic_config.enter_exact_scope();
         assert!(exact.is_ok());
-        if let Err(e) = normalized_sample(&weights, &mut arithmetic_config, &mut rng, false) {
-            assert_eq!(e.message, Some("Total weight zero. Weights must be positive.".to_string()));
+        if let Err(e) = normalized_sample(&weights, &arithmetic_config, &mut rng, false) {
+            assert_eq!(
+                e.message,
+                Some("Total weight zero. Weights must be positive.".to_string())
+            );
         }
 
         exact = arithmetic_config.exit_exact_scope();
@@ -573,7 +505,7 @@ mod tests {
         // this example should fail due to a zero weight
         let mut exact = arithmetic_config.enter_exact_scope();
         assert!(exact.is_ok());
-        if let Err(e) = normalized_sample(&weights, &mut arithmetic_config, &mut rng, false) {
+        if let Err(e) = normalized_sample(&weights, &arithmetic_config, &mut rng, false) {
             assert_eq!(e.message.unwrap(), "All weights must be positive.");
         }
         exact = arithmetic_config.exit_exact_scope();
@@ -602,7 +534,7 @@ mod tests {
         // this example should fail due to inexact arithmetic
         let mut exact = arithmetic_config.enter_exact_scope();
         assert!(exact.is_ok());
-        let result = normalized_sample(&weights, &mut arithmetic_config, &mut rng, false);
+        let result = normalized_sample(&weights, &arithmetic_config, &mut rng, false);
         let _s = result.unwrap();
         exact = arithmetic_config.exit_exact_scope();
         assert!(exact.is_err());
@@ -620,7 +552,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -628,44 +559,44 @@ mod tests {
 
         arithmetic_config.enter_exact_scope().unwrap();
         let mut x = Float::with_val(arithmetic_config.precision, 1.25);
-        let mut r = get_power_bound(&x, &mut arithmetic_config);
+        let mut r = get_power_bound(&x, &arithmetic_config);
         assert_eq!(r, 1);
 
         let y = Float::with_val(arithmetic_config.precision, 1);
-        let s = get_power_bound(&y, &mut arithmetic_config);
+        let s = get_power_bound(&y, &arithmetic_config);
         assert_eq!(s, 0);
 
         let y = Float::with_val(arithmetic_config.precision, 0.5);
-        let s = get_power_bound(&y, &mut arithmetic_config);
+        let s = get_power_bound(&y, &arithmetic_config);
         assert_eq!(s, -1);
 
         let y = Float::with_val(arithmetic_config.precision, 0.35);
-        let s = get_power_bound(&y, &mut arithmetic_config);
+        let s = get_power_bound(&y, &arithmetic_config);
         assert_eq!(s, -1);
 
         x = Float::with_val(arithmetic_config.precision, 0.75);
-        r = get_power_bound(&x, &mut arithmetic_config);
+        r = get_power_bound(&x, &arithmetic_config);
         assert_eq!(r, 0);
 
         x = Float::with_val(arithmetic_config.precision, 5.75);
-        r = get_power_bound(&x, &mut arithmetic_config);
+        r = get_power_bound(&x, &arithmetic_config);
         assert_eq!(r, 3);
 
         x = Float::with_val(arithmetic_config.precision, 0.0625); // 1/16 = 2^(-4)
-        r = get_power_bound(&x, &mut arithmetic_config);
+        r = get_power_bound(&x, &arithmetic_config);
         assert_eq!(r, -4);
 
         x = Float::with_val(arithmetic_config.precision, 16);
-        r = get_power_bound(&x, &mut arithmetic_config);
+        r = get_power_bound(&x, &arithmetic_config);
         assert_eq!(r, 4);
 
         // Test weights <= 0
         let y = Float::with_val(arithmetic_config.precision, 0);
-        let s = get_power_bound(&y, &mut arithmetic_config);
+        let s = get_power_bound(&y, &arithmetic_config);
         assert_eq!(s, 0);
 
         let y = Float::with_val(arithmetic_config.precision, -1);
-        let s = get_power_bound(&y, &mut arithmetic_config);
+        let s = get_power_bound(&y, &arithmetic_config);
         assert_eq!(s, 0);
 
         arithmetic_config.exit_exact_scope().unwrap();
@@ -789,7 +720,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -797,7 +727,7 @@ mod tests {
         assert!(arithmetic_config.precision >= 6000);
 
         let emp_arithmetic_config =
-            ArithmeticConfig::for_exponential(eta, utility_min, utility_max, max_outcomes, true, 1)
+            ArithmeticConfig::for_exponential(eta, utility_min, utility_max, max_outcomes, 1)
                 .unwrap();
         //assert_eq!(arithmetic_config.precision,6402);
         //assert_eq!(emp_arithmetic_config.precision,0);
@@ -815,7 +745,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -824,7 +753,7 @@ mod tests {
         assert!(arithmetic_config.precision >= 90);
 
         let emp_arithmetic_config =
-            ArithmeticConfig::for_exponential(eta, utility_min, utility_max, max_outcomes, true, 1)
+            ArithmeticConfig::for_exponential(eta, utility_min, utility_max, max_outcomes, 1)
                 .unwrap();
 
         assert!(arithmetic_config.precision * 2 >= emp_arithmetic_config.precision);
@@ -842,7 +771,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -861,7 +789,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -921,7 +848,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -940,7 +866,7 @@ mod tests {
         weights.push(c);
         let mut counts = [0; 3];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &mut arithmetic_config, &mut rng, true).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, true).unwrap();
             counts[j] += 1;
         }
 
@@ -966,7 +892,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -985,7 +910,7 @@ mod tests {
         weights.push(c);
         let mut counts = [0; 3];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &mut arithmetic_config, &mut rng, false).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, false).unwrap();
             counts[j] += 1;
         }
 
@@ -1000,7 +925,7 @@ mod tests {
         weights.push(Float::with_val(arithmetic_config.precision, 0.0625));
         let mut new_counts = [0; 4];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &mut arithmetic_config, &mut rng, false).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, false).unwrap();
             new_counts[j] += 1;
         }
 
@@ -1027,7 +952,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             1,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -1036,7 +960,7 @@ mod tests {
         // Enter Exact scope
         arithmetic_config.enter_exact_scope().unwrap();
         let x = 1.25;
-        let r = randomized_round(x, &mut arithmetic_config, &mut rng);
+        let r = randomized_round(x, &arithmetic_config, &mut rng);
         assert!((x - (r as f64)).abs() < 1.0);
 
         // Exit exact scope
@@ -1057,7 +981,6 @@ mod tests {
             utility_min,
             utility_max,
             max_outcomes,
-            false,
             min_retries,
         );
         assert!(arithmetic_config_result.is_ok());
@@ -1076,7 +999,7 @@ mod tests {
         weights.push(c);
         let mut counts = [0; 3];
         for _i in 0..n {
-            let j = normalized_sample(&weights, &mut arithmetic_config, &mut rng, true).unwrap();
+            let j = normalized_sample(&weights, &arithmetic_config, &mut rng, true).unwrap();
             counts[j] += 1;
         }
 
