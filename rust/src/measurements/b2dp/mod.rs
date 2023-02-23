@@ -212,19 +212,3 @@ pub use utilities::exactarithmetic::randomized_round;
 pub use utilities::exactarithmetic::normalized_sample;
 pub use mechanisms::exponential::exponential_mechanism;
 pub use mechanisms::exponential::ExponentialOptions;
-
-// Integer Partitions
-pub use mechanisms::integerpartition::integer_partition_mechanism_with_bounds;
-pub use mechanisms::integerpartition::IntegerPartitionOptions;
-pub use utilities::bounds::{PartitionBound,PartitionBoundOptions};
-
-// Discrete Laplace
-pub use utilities::discretesampling::lazy_threshold;
-pub use utilities::discretesampling::conditional_lazy_threshold;
-pub use utilities::discretesampling::sample_within_bounds;
-
-// Sparse Vector
-pub use mechanisms::sparsevector::sparse_vector;
-pub use mechanisms::sparsevector::sparse_vector_with_gap;
-
-
