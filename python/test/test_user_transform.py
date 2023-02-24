@@ -22,8 +22,8 @@ def make_duplicate(multiplicity, raises=False):
         return d_in * multiplicity
 
     return make_user_transformation(
-        vector_domain(atom_domain(int)),
-        vector_domain(atom_domain(int)),
+        vector_domain(atom_domain(T=int)),
+        vector_domain(atom_domain(T=int)),
         function,
         symmetric_distance(),
         symmetric_distance(),
@@ -58,7 +58,7 @@ def make_constant_mechanism(constant):
         return 0.
 
     return make_user_measurement(
-        atom_domain(int),
+        atom_domain(T=int),
         function,
         absolute_distance(int),
         max_divergence(float),
@@ -88,13 +88,13 @@ def test_make_user_postprocessor():
 def test_user_constructors():
 
     from opendp.combinators import make_user_transformation, make_user_measurement
-    from opendp.domains import bounded_domain, vector_domain, sized_domain, atom_domain
+    from opendp.domains import vector_domain, atom_domain
     from opendp.metrics import symmetric_distance
     from opendp.measures import max_divergence
 
     trans = make_user_transformation(
-        bounded_domain((2, 10)),
-        sized_domain(vector_domain(bounded_domain((2, 10))), 10),
+        atom_domain((2, 10)),
+        vector_domain(atom_domain((2, 10)), 10),
         lambda x: [x] * 10,
         symmetric_distance(),
         symmetric_distance(),
@@ -105,7 +105,7 @@ def test_user_constructors():
 
 
     meas = make_user_measurement(
-        bounded_domain((2, 10)),
+        atom_domain((2, 10)),
         lambda x: [x] * 10,
         symmetric_distance(),
         max_divergence(f64),

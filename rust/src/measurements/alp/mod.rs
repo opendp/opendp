@@ -12,7 +12,7 @@ use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::{fill_bytes, SampleBernoulli};
-use crate::traits::{CheckNull, DistanceConstant, Float as TFloat, InfCast};
+use crate::traits::{CheckAtom, DistanceConstant, Float as TFloat, InfCast};
 use std::collections::hash_map::DefaultHasher;
 
 const ALPHA_DEFAULT: u32 = 4;
@@ -38,11 +38,6 @@ pub struct AlpState<K, T> {
     scale: T,
     h: HashFunctions<K>,
     z: BitVector,
-}
-impl<K, T> CheckNull for AlpState<K, T> {
-    fn is_null(&self) -> bool {
-        false
-    }
 }
 
 // hash function with type: [2^64] -> [2^l]
@@ -220,10 +215,9 @@ pub fn make_base_alp_with_hashers<K, C, T>(
     h: HashFunctions<K>,
 ) -> Fallible<Measurement<SparseDomain<K, C>, AlpState<K, T>, L1Distance<C>, MaxDivergence<T>>>
 where
-    K: 'static + Eq + Hash + CheckNull,
-    C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + ToPrimitive,
+    K: 'static + Eq + Hash + CheckAtom,
+    C: 'static + Clone + Integer + CheckAtom + DistanceConstant<C> + ToPrimitive,
     T: 'static + num::Float + DistanceConstant<T> + InfCast<Float> + InfCast<C>,
-    AlpState<K, T>: CheckNull,
     Float: InfCast<T>,
 {
     if alpha.is_sign_negative() || alpha.is_zero() {
@@ -244,8 +238,8 @@ where
 
     Ok(Measurement::new(
         MapDomain {
-            key_domain: AtomDomain::new(),
-            value_domain: AtomDomain::new(),
+            key_domain: AtomDomain::default(),
+            value_domain: AtomDomain::default(),
         },
         Function::new_fallible(move |x: &HashMap<K, C>| {
             let z = compute_projection(x, &h, alpha, scale, s)?;
@@ -287,10 +281,9 @@ pub fn make_base_alp<K, C, T>(
     beta: C,
 ) -> Fallible<Measurement<SparseDomain<K, C>, AlpState<K, T>, L1Distance<C>, MaxDivergence<T>>>
 where
-    K: 'static + Eq + Hash + Clone + CheckNull,
-    C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
+    K: 'static + Eq + Hash + Clone + CheckAtom,
+    C: 'static + Clone + Integer + CheckAtom + DistanceConstant<C> + InfCast<T> + ToPrimitive,
     T: 'static + num::Float + DistanceConstant<T> + InfCast<Float> + InfCast<C>,
-    AlpState<K, T>: CheckNull,
     Float: InfCast<T>,
 {
     let factor = size_factor.unwrap_or(SIZE_FACTOR_DEFAULT) as f64;
@@ -329,8 +322,8 @@ pub fn make_alp_histogram_post_process<K, C, T>(
     m: &Measurement<SparseDomain<K, C>, AlpState<K, T>, L1Distance<C>, MaxDivergence<T>>,
 ) -> Fallible<Measurement<SparseDomain<K, C>, Queryable<K, T>, L1Distance<C>, MaxDivergence<T>>>
 where
-    K: 'static + Eq + Hash + CheckNull,
-    C: 'static + Clone + CheckNull,
+    K: 'static + Eq + Hash + CheckAtom,
+    C: 'static + Clone + CheckAtom,
     T: 'static + TFloat,
     HashMap<K, C>: Clone,
     AlpState<K, T>: Clone,

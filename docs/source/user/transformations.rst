@@ -118,7 +118,7 @@ Depending on the caster you choose, the output data may be null and you will be 
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_cast_inherent`
      - ``VectorDomain<AtomDomain<TIA>>``
-     - ``VectorDomain<InherentNullDomain<AtomDomain<TOA>>>``
+     - ``VectorDomain<AtomDomain<TOA>>`` (with nullity)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_is_equal`
      - ``VectorDomain<AtomDomain<TIA>>``
@@ -143,7 +143,7 @@ Therefore, most aggregators must be fed completely non-null data.
 We can ensure data is non-null by imputing.
 
 When you cast with :func:`opendp.transformations.make_cast` or :func:`opendp.transformations.make_cast_default`,
-the cast may fail, so the output domain may include null values (``OptionDomain`` and ``InherentNullDomain``).
+the cast may fail, so the output domain may include null values (``OptionDomain`` or ``AtomDomain`` with nullity).
 We have provided imputation transformations to transform the data domain to the non-null ``VectorDomain<AtomDomain<TA>>``.
 
 You may also be in a situation where you want to bypass dataframe loading and casting
@@ -151,7 +151,7 @@ because you already have a vector of floats loaded into memory.
 In this case, you should start your chain with an imputer if the floats are potentially null.
 
 :OptionDomain: A representation of nulls using an Option type (``Option<bool>``, ``Option<i32>``, etc).
-:InherentNullDomain: A representation of nulls using the data type itself (``f32`` and ``f64``).
+:AtomDomain: A representation of nulls using the data type itself (``f32`` and ``f64``).
 
 The :func:`opendp.transformations.make_impute_constant` transformation supports imputing on either of these representations of nullity,
 so long as you pass the DA (atomic domain) type argument.
@@ -168,11 +168,11 @@ so long as you pass the DA (atomic domain) type argument.
      - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_impute_constant`
-     - ``VectorDomain<InherentNullDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>`` (with nullity)
      - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_impute_uniform_float`
-     - ``VectorDomain<InherentNullDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>`` (with nullity)
      - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_drop_null`
@@ -180,7 +180,7 @@ so long as you pass the DA (atomic domain) type argument.
      - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_drop_null`
-     - ``VectorDomain<InherentNullDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>`` (with nullity)
      - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
 
@@ -200,10 +200,11 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. doctest::
 
+    >>> from opendp.domains import option_domain, atom_domain
     >>> finder = (
     ...     make_find(categories=["A", "B", "C"]) >>
     ...     # impute any input datum that are not a part of the categories list as 3
-    ...     make_impute_constant(3, DIA=OptionDomain[AtomDomain["usize"]])
+    ...     make_impute_constant(option_domain(atom_domain(T=usize)), 3)
     ... )
     >>> finder(["A", "B", "C", "A", "D"])
     [0, 1, 2, 0, 3]
@@ -268,11 +269,7 @@ Only chain with a clamp transformation if the aggregator you intend to use needs
      - Input/Output Metric
    * - :func:`opendp.transformations.make_clamp`
      - ``VectorDomain<AtomDomain<TA>>``
-     - ``VectorDomain<BoundedDomain<TA>>``
-     - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_unclamp`
-     - ``VectorDomain<BoundedDomain<TA>>``
-     - ``VectorDomain<AtomDomain<TA>>``
+     - ``VectorDomain<AtomDomain<TA>>`` (with bounds)
      - ``SymmetricDistance``
 
 Dataset Ordering
@@ -420,37 +417,37 @@ See the notebooks for code examples and deeper explanations:
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_count_by_categories`
-     - ``VectorDomain<BoundedDomain<TIA>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
      - ``VectorDomain<AtomDomain<TOA>>``
      - ``SymmetricDistance``
      - ``L1Distance<TOA>/L2Distance<TOA>``
    * - :func:`opendp.transformations.make_count_by`
-     - ``VectorDomain<BoundedDomain<TI>>``
-     - ``MapDomain<AtomDomain<TI>,AtomDomain<TO>>``
+     - ``VectorDomain<AtomDomain<TI>>``
+     - ``MapDomain<AtomDomain<TI>, AtomDomain<TO>>``
      - ``SymmetricDistance``
      - ``L1Distance<TO>``
    * - :func:`opendp.transformations.make_bounded_sum`
-     - ``VectorDomain<BoundedDomain<T>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_sized_bounded_sum`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_sized_bounded_mean`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_sized_bounded_variance`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
    * - make_sized_bounded_covariance (Rust only)
-     - ``SizedDomain<VectorDomain<BoundedDomain<(T,T)>>>``
+     - ``VectorDomain<AtomDomain<(T,T)>>`` (with size and bounds)
      - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
@@ -490,37 +487,37 @@ where ``k`` is the bit length of the mantissa in the floating-point numbers used
      - Input Domain
      - Input Metric
    * - :func:`opendp.transformations.make_sized_bounded_int_checked_sum`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_bounded_int_monotonic_sum`
-     - ``VectorDomain<BoundedDomain<T>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_sized_bounded_int_monotonic_sum`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_bounded_int_ordered_sum`
-     - ``VectorDomain<BoundedDomain<T>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
      - ``InsertDeleteDistance``
    * - :func:`opendp.transformations.make_sized_bounded_int_ordered_sum`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``InsertDeleteDistance``
    * - :func:`opendp.transformations.make_bounded_int_split_sum`
-     - ``VectorDomain<BoundedDomain<T>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_sized_bounded_int_split_sum`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_bounded_float_checked_sum`
-     - ``VectorDomain<BoundedDomain<T>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_sized_bounded_float_checked_sum`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_bounded_float_ordered_sum`
-     - ``VectorDomain<BoundedDomain<T>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with bounds)
      - ``InsertDeleteDistance``
    * - :func:`opendp.transformations.make_sized_bounded_float_ordered_sum`
-     - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
+     - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
      - ``InsertDeleteDistance``
 
 

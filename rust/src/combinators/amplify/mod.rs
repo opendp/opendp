@@ -2,20 +2,22 @@
 mod ffi;
 
 use crate::core::{Domain, Measure, Measurement, Metric, PrivacyMap};
-use crate::domains::SizedDomain;
+use crate::domains::VectorDomain;
 use crate::error::Fallible;
 use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
-use crate::traits::{CollectionSize, ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul};
+use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul};
 
 pub trait IsSizedDomain: Domain {
     fn get_size(&self) -> Fallible<usize>;
 }
-impl<D: Domain> IsSizedDomain for SizedDomain<D>
-where
-    D::Carrier: CollectionSize,
-{
+impl<D: Domain> IsSizedDomain for VectorDomain<D> {
     fn get_size(&self) -> Fallible<usize> {
-        Ok(self.size)
+        self.size.ok_or_else(|| {
+            err!(
+                FailedFunction,
+                "elements of the vector domain have unknown size"
+            )
+        })
     }
 }
 

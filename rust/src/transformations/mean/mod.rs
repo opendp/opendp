@@ -5,7 +5,7 @@ use num::Float;
 use opendp_derive::bootstrap;
 
 use crate::core::{Metric, Transformation};
-use crate::domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, InfMul};
@@ -34,14 +34,7 @@ use super::{
 pub fn make_sized_bounded_mean<MI, T>(
     size: usize,
     bounds: (T, T),
-) -> Fallible<
-    Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<T>>>,
-        AtomDomain<T>,
-        MI,
-        AbsoluteDistance<T>,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<AtomDomain<T>>, AtomDomain<T>, MI, AbsoluteDistance<T>>>
 where
     MI: 'static + Metric,
     T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,

@@ -86,6 +86,7 @@ where
             );
         }
     }
+
     Ok(Function::new_fallible(move |arg: &Vec<TA>| {
         // one fewer args than bin edges, or one greater args than bin edges are allowed
         if abs_diff(bin_edges.len(), arg.len()) != 1 {

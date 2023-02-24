@@ -6,55 +6,28 @@ from opendp.typing import *
 
 __all__ = [
     "atom_domain",
-    "bounded_domain",
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
     "member",
-    "sized_domain",
+    "option_domain",
     "vector_domain"
 ]
 
 
 def atom_domain(
-    T: RuntimeTypeDescriptor
+    bounds: Any = None,
+    nullable: bool = False,
+    T: RuntimeTypeDescriptor = None
 ):
     """Construct an instance of `AtomDomain`.
     
     [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
     
-    :param T: The type of the atom.
-    :type T: :py:ref:`RuntimeTypeDescriptor`
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # Standardize type arguments.
-    T = RuntimeType.parse(type_name=T)
-    
-    # Convert arguments to c types.
-    c_T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_domains__atom_domain
-    lib_function.argtypes = [ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_T), Domain))
-    
-    return output
-
-
-def bounded_domain(
-    bounds: Tuple[Any, Any],
-    T: RuntimeTypeDescriptor = None
-):
-    """Construct an instance of `BoundedDomain`.
-    
-    [bounded_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.bounded_domain.html)
-    
-    :param bounds: A tuple of upper/lower bounds.
-    :type bounds: Tuple[Any, Any]
+    :param bounds: 
+    :type bounds: Any
+    :param nullable: 
+    :type nullable: bool
     :param T: The type of the atom.
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :raises TypeError: if an argument's type differs from the expected type
@@ -65,15 +38,16 @@ def bounded_domain(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])]))
+    c_nullable = py_to_c(nullable, c_type=ctypes.c_bool, type_name=bool)
     c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_domains__bounded_domain
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function = lib.opendp_domains__atom_domain
+    lib_function.argtypes = [AnyObjectPtr, ctypes.c_bool, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_bounds, c_T), Domain))
+    output = c_to_py(unwrap(lib_function(c_bounds, c_nullable, c_T), Domain))
     
     return output
 
@@ -190,44 +164,49 @@ def member(
     return output
 
 
-def sized_domain(
-    inner_domain,
-    size: int
+def option_domain(
+    element_domain,
+    D: RuntimeTypeDescriptor = None
 ):
-    """Construct an instance of `VectorDomain`.
+    """Construct an instance of `OptionDomain`.
     
-    [sized_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.sized_domain.html)
+    [option_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.option_domain.html)
     
-    :param inner_domain: The inner domain.
-    :param size: Number of elements in inner domain.
-    :type size: int
+    :param element_domain: 
+    :param D: The type of the inner domain.
+    :type D: :py:ref:`RuntimeTypeDescriptor`
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
-    # No type arguments to standardize.
+    # Standardize type arguments.
+    D = RuntimeType.parse_or_infer(type_name=D, public_example=element_domain)
+    
     # Convert arguments to c types.
-    c_inner_domain = py_to_c(inner_domain, c_type=Domain, type_name=AnyDomain)
-    c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    c_element_domain = py_to_c(element_domain, c_type=Domain, type_name=D)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_domains__sized_domain
-    lib_function.argtypes = [Domain, ctypes.c_size_t]
+    lib_function = lib.opendp_domains__option_domain
+    lib_function.argtypes = [Domain, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_inner_domain, c_size), Domain))
+    output = c_to_py(unwrap(lib_function(c_element_domain, c_D), Domain))
     
     return output
 
 
 def vector_domain(
-    atom_domain
+    atom_domain,
+    size: Any = None
 ):
     """Construct an instance of `VectorDomain`.
     
     [vector_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.vector_domain.html)
     
     :param atom_domain: The inner domain.
+    :param size: 
+    :type size: Any
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -235,12 +214,13 @@ def vector_domain(
     # No type arguments to standardize.
     # Convert arguments to c types.
     c_atom_domain = py_to_c(atom_domain, c_type=Domain, type_name=AnyDomain)
+    c_size = py_to_c(size, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[i32]))
     
     # Call library function.
     lib_function = lib.opendp_domains__vector_domain
-    lib_function.argtypes = [Domain]
+    lib_function.argtypes = [Domain, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_atom_domain), Domain))
+    output = c_to_py(unwrap(lib_function(c_atom_domain, c_size), Domain))
     
     return output

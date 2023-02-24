@@ -1,6 +1,6 @@
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::{
@@ -54,7 +54,7 @@ pub fn make_bounded_float_checked_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        VectorDomain<BoundedDomain<S::Item>>,
+        VectorDomain<AtomDomain<S::Item>>,
         AtomDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
@@ -78,8 +78,8 @@ where
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed(bounds)?),
-        AtomDomain::new(),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?, None),
+        AtomDomain::default(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
             if arg.len() > size_limit {
@@ -138,7 +138,7 @@ pub fn make_sized_bounded_float_checked_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<S::Item>>>,
+        VectorDomain<AtomDomain<S::Item>>,
         AtomDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
@@ -160,8 +160,8 @@ where
     let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
-        AtomDomain::new(),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
+        AtomDomain::default(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
         SymmetricDistance::default(),
@@ -348,6 +348,7 @@ mod test_checks {
         Ok(())
     }
 
+    #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_sequential() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);
@@ -368,6 +369,7 @@ mod test_checks {
         Ok(())
     }
 
+    #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_pairwise() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);

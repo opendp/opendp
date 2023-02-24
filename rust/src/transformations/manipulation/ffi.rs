@@ -6,16 +6,16 @@ use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Metric, Transformation};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AtomDomain, InherentNullDomain, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
+use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance,
     L1Distance, L2Distance, SymmetricDistance,
 };
-use crate::traits::{CheckNull, DistanceConstant, InherentNull, Primitive};
+use crate::traits::{CheckAtom, DistanceConstant, InherentNull, Primitive};
 use crate::transformations::{make_is_equal, make_is_null};
 
 #[bootstrap(features("contrib"))]
@@ -59,7 +59,7 @@ pub extern "C" fn opendp_transformations__make_identity(
             };
             fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
                 where M: 'static + Metric<Distance=IntDistance>,
-                      T: 'static + Clone + CheckNull {
+                      T: 'static + Clone + CheckAtom {
                 make_identity::<VectorDomain<AtomDomain<T>>, M>().into_any()
             }
             dispatch!(monomorphize, [
@@ -74,10 +74,10 @@ pub extern "C" fn opendp_transformations__make_identity(
             let T = try_!(Type::of_id(&args[0]));
 
             fn monomorphize<T>(M: Type) -> FfiResult<*mut AnyTransformation>
-                where T: 'static + DistanceConstant<T> + CheckNull + One + Clone {
+                where T: 'static + DistanceConstant<T> + CheckAtom + One + Clone {
                 fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
                     where M: 'static + Metric,
-                          M::Distance: CheckNull + DistanceConstant<M::Distance> + One + Clone {
+                          M::Distance: CheckAtom + DistanceConstant<M::Distance> + One + Clone {
                     make_identity::<AtomDomain<M::Distance>, M>().into_any()
                 }
                 dispatch!(monomorphize, [
@@ -111,6 +111,7 @@ pub extern "C" fn opendp_transformations__make_is_equal(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_is_null(
+    input_atom_domain: *const AnyDomain,
     DIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let DIA = try_!(Type::try_from(DIA));
@@ -118,26 +119,36 @@ pub extern "C" fn opendp_transformations__make_is_null(
 
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionDomain" => {
-            fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
+            fn monomorphize<TIA>(
+                input_atom_domain: *const AnyDomain,
+            ) -> FfiResult<*mut AnyTransformation>
             where
-                TIA: 'static + CheckNull,
+                TIA: 'static + CheckAtom,
             {
-                make_is_null::<OptionDomain<AtomDomain<TIA>>>().into_any()
+                let input_atom_domain =
+                    try_!(try_as_ref!(input_atom_domain)
+                        .downcast_ref::<OptionDomain<AtomDomain<TIA>>>())
+                    .clone();
+                make_is_null(input_atom_domain).into_any()
             }
-            dispatch!(monomorphize, [(TIA, @primitives)], ())
+            dispatch!(monomorphize, [(TIA, @primitives)], (input_atom_domain))
         }
-        TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
-            fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
+        TypeContents::GENERIC { name, .. } if name == &"AtomDomain" => {
+            fn monomorphize<TIA>(
+                input_atom_domain: *const AnyDomain,
+            ) -> FfiResult<*mut AnyTransformation>
             where
-                TIA: 'static + InherentNull,
+                TIA: 'static + CheckAtom + InherentNull,
             {
-                make_is_null::<InherentNullDomain<AtomDomain<TIA>>>().into_any()
+                let input_atom_domain =
+                    try_!(try_as_ref!(input_atom_domain).downcast_ref::<AtomDomain<TIA>>()).clone();
+                make_is_null::<AtomDomain<TIA>>(input_atom_domain).into_any()
             }
-            dispatch!(monomorphize, [(TIA, [f64, f32])], ())
+            dispatch!(monomorphize, [(TIA, [f64, f32])], (input_atom_domain))
         }
         _ => err!(
             TypeParse,
-            "DA must be an OptionDomain<AtomDomain<T>> or an InherentNullDomain<AtomDomain<T>>"
+            "DA must be an OptionDomain<AtomDomain<T>> or an AtomDomain<T>"
         )
         .into(),
     }

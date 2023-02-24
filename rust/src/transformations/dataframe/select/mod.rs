@@ -37,8 +37,8 @@ where
     TOA: Primitive,
 {
     Ok(Transformation::new(
-        DataFrameDomain::new_all(),
-        VectorDomain::new_all(),
+        DataFrameDomain::new(),
+        VectorDomain::new(AtomDomain::default(), None),
         Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
             // retrieve column from dataframe and handle error
             arg.get(&key)

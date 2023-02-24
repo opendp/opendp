@@ -69,13 +69,13 @@ def test_bisect_edge():
 def test_bisect_chain():
     from opendp.mod import binary_search_chain, binary_search_param, enable_features
     from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
-    from opendp.domains import bounded_domain
+    from opendp.domains import atom_domain
     from opendp.measurements import make_base_laplace
     enable_features("contrib")
 
     pre = (
         make_clamp(bounds=(0., 1.)) >>
-        make_resize(size=10, atom_domain=bounded_domain((0., 1.)), constant=0.) >>
+        make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
         make_sized_bounded_mean(size=10, bounds=(0., 1.))
     )
     chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)
@@ -116,6 +116,7 @@ def test_function():
     print(mechanism(0.))
 
 
+
 def test_member():
     from opendp.transformations import make_clamp
     clamper = make_clamp((0, 2))
@@ -127,30 +128,37 @@ def test_member():
     assert not mechanism.input_domain.member(float("NaN"))
 
 def test_new_domain():
-    from opendp.domains import atom_domain, bounded_domain, vector_domain, sized_domain
-    domain = atom_domain(i32)
+    from opendp.domains import atom_domain, vector_domain
+    domain = atom_domain(T=i32)
     assert domain.member(3)
-    domain = atom_domain(f64)
+    domain = atom_domain(T=f64)
     assert not domain.member(float("nan"))
-    print(domain)
 
-    domain = bounded_domain((1, 2))
+    domain = atom_domain((1, 2))
     assert domain.member(2)
     assert not domain.member(3)
     print(domain)
 
-    domain = vector_domain(atom_domain(i32))
+    domain = vector_domain(atom_domain(T=i32))
     assert domain.member([2])
     print(domain)
-    domain = vector_domain(bounded_domain((2, 3), i32))
+    domain = vector_domain(atom_domain((2, 3)))
     assert domain.member([2])
     assert not domain.member([2, 4])
     print(domain)
     
-    domain = sized_domain(vector_domain(atom_domain(i32)), 10)
+    domain = vector_domain(atom_domain(T=i32), 10)
     assert domain.member([1] * 10)
     print(domain)
-    domain = sized_domain(vector_domain(bounded_domain((2., 7.))), 10)
+    domain = vector_domain(atom_domain((2., 7.)), 10)
     assert domain.member([3.] * 10)
     assert not domain.member([1.] * 10)
     print(domain)
+
+    null_domain = atom_domain(nullable=True, T=float)
+    print(null_domain)
+    assert null_domain.member(float("nan"))
+
+    not_null_domain = atom_domain(nullable=False, T=float)
+    print(not_null_domain)
+    assert not not_null_domain.member(float("nan"))

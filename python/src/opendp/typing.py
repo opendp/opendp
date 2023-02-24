@@ -164,6 +164,12 @@ class RuntimeType(object):
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
+
+            if "AllDomain" in type_name:
+                import warnings
+                warnings.warn("AllDomain is deprecated. Use AtomDomain instead.", DeprecationWarning)
+                type_name = type_name.replace("AllDomain", "AtomDomain")
+
             type_name = type_name.strip()
             if type_name in generics:
                 return GenericType(type_name)
@@ -189,10 +195,8 @@ class RuntimeType(object):
 
             domain = {
                 'AtomDomain': AtomDomain,
-                'BoundedDomain': BoundedDomain,
                 'VectorDomain': VectorDomain,
                 'OptionDomain': OptionDomain,
-                'InherentNullDomain': InherentNullDomain,
                 'SizedDomain': SizedDomain
             }.get(origin)
             if domain is not None:
@@ -326,6 +330,18 @@ class RuntimeType(object):
         ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
         if isinstance(inferred, UnknownType):
             return
+        
+        # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
+        def is_option(type_name):
+            return isinstance(type_name, RuntimeType) and type_name.origin == "Option"
+        if is_option(expected):
+            expected = expected.args[0]
+            if is_option(inferred):
+                if isinstance(inferred.args[0], UnknownType):
+                    return
+                else:
+                    inferred = inferred.args[0]
+
         if isinstance(expected, str) and isinstance(inferred, str):
             if inferred in ATOM_EQUIVALENCE_CLASSES:
                 if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
@@ -335,10 +351,6 @@ class RuntimeType(object):
                     raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
 
         elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
-            # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
-            if expected.origin == "Option" and inferred.origin != "Option":
-                expected = expected.args[0]
-
             if expected.origin != inferred.origin:
                 raise TypeError(f"inferred type is {inferred.origin}, expected {expected.origin}. See {ERROR_URL_298}")
 
@@ -451,10 +463,8 @@ class DomainDescriptor(RuntimeType):
 
 
 AtomDomain = DomainDescriptor('AtomDomain')
-BoundedDomain = DomainDescriptor('BoundedDomain')
 VectorDomain = DomainDescriptor('VectorDomain')
 OptionDomain = DomainDescriptor('OptionDomain')
-InherentNullDomain = DomainDescriptor('InherentNullDomain')
 SizedDomain = DomainDescriptor('SizedDomain')
 
 
@@ -472,7 +482,9 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 
 def get_first(value):
-    return next(iter(value), None)
+    if value is None or not len(value):
+        return None
+    return next(iter(value))
 
 def parse_or_infer(type_name: RuntimeType, example):
     return RuntimeType.parse_or_infer(type_name, example)
@@ -485,6 +497,9 @@ def get_dependencies(value):
 
 def get_dependencies_iterable(value):
     return list(map(get_dependencies, value))
+
+def get_carrier_type(value):
+    return value.carrier_type
 
 def get_distance_type(value):
     return value.distance_type

@@ -43,6 +43,7 @@ pub trait Domain: Clone + PartialEq + Debug {
     ///
     /// On any type `D` for which the `Domain` trait is implemented,
     /// the syntax `D::Carrier` refers to this associated type.
+    ///
     /// For example, consider `D` to be `AtomDomain<T>`, the domain of all non-null values of type `T`.
     /// The implementation of this trait for `AtomDomain<T>` designates that `type Carrier = T`.
     /// Thus `AtomDomain<T>::Carrier` is `T`.
@@ -345,8 +346,8 @@ mod tests {
 
     #[test]
     fn test_identity() {
-        let input_domain = AtomDomain::<i32>::new();
-        let output_domain = AtomDomain::<i32>::new();
+        let input_domain = AtomDomain::<i32>::default();
+        let output_domain = AtomDomain::<i32>::default();
         let function = Function::new(|arg: &i32| arg.clone());
         let input_metric = L1Distance::<i32>::default();
         let output_metric = L1Distance::<i32>::default();

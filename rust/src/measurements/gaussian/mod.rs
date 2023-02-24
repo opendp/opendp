@@ -7,7 +7,7 @@ use crate::{
     error::Fallible,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::SampleDiscreteGaussianZ2k, CheckNull, ExactIntCast, Float, FloatBits},
+    traits::{samplers::SampleDiscreteGaussianZ2k, CheckAtom, ExactIntCast, Float, FloatBits},
 };
 
 use super::{get_discretization_consts, MappableDomain};
@@ -19,10 +19,10 @@ mod ffi;
 pub trait GaussianDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> GaussianDomain for AtomDomain<T> {
+impl<T: Clone + CheckAtom> GaussianDomain for AtomDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> GaussianDomain for VectorDomain<AtomDomain<T>> {
+impl<T: Clone + CheckAtom> GaussianDomain for VectorDomain<AtomDomain<T>> {
     type InputMetric = L2Distance<T>;
 }
 
