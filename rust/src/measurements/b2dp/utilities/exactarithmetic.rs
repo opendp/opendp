@@ -258,7 +258,6 @@ impl ArithmeticConfig {
     /// Returns an error if sufficient precision cannot be determined.
     pub fn for_exponential(
         eta: &Eta,
-        _utility_min: u32,
         utility_max: u32,
         max_outcomes: u32,
         min_retries: u32,

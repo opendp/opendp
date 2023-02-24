@@ -16,10 +16,27 @@ use rug::Float;
 /// use opendp::traits::AlertingAbs;
 /// assert!(i8::MIN.alerting_abs().is_err());
 /// ```
-pub trait AlertingAbs: Sized {
+pub trait AlertingAbs: CheckedAbs {
     /// # Proof Definition
     /// For any `self` of type `Self`, returns `Ok(out)` where $out = |self|$ or `Err(e)`.
-    fn alerting_abs(&self) -> Fallible<Self>;
+    fn alerting_abs(&self) -> Fallible<Self> {
+        self.checked_abs().ok_or_else(|| err!(FailedFunction,
+            "the corresponding positive value is out of range"))
+    }
+}
+impl<T: CheckedAbs> AlertingAbs for T {}
+
+/// Checked absolute value that returns an None if overflowing.
+/// 
+/// This can return an None when a signed integer is the smallest negative value.
+/// ```
+/// use opendp::traits::CheckedAbs;
+/// assert!(i8::MIN.checked_abs().is_none());
+/// ```
+pub trait CheckedAbs: Sized {
+    /// # Proof Definition
+    /// For any `self` of type `Self`, returns `Ok(out)` where $out = |self|$ or `Err(e)`.
+    fn checked_abs(&self) -> Option<Self>;
 }
 
 /// Fallible addition that returns an error if overflowing.
@@ -299,31 +316,30 @@ pub trait InfExpM1: Sized {
 // BEGIN IMPLEMENTATIONS
 
 // TRAIT AlertingAbs
-macro_rules! impl_alerting_abs_signed_int {
-    ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
-        fn alerting_abs(&self) -> Fallible<Self> {
-            self.checked_abs().ok_or_else(|| err!(FailedFunction,
-                "the corresponding positive value for {} is out of range", self))
+macro_rules! impl_checked_abs_signed_int {
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty {
+        fn checked_abs(&self) -> Option<Self> {
+            <$ty>::checked_abs(*self)
         }
     })+)
 }
-impl_alerting_abs_signed_int!(i8, i16, i32, i64, i128, isize);
-macro_rules! impl_alerting_abs_unsigned_int {
-    ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
-        fn alerting_abs(&self) -> Fallible<Self> {
-            Ok(*self)
+impl_checked_abs_signed_int!(i8, i16, i32, i64, i128, isize);
+macro_rules! impl_checked_abs_unsigned_int {
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty {
+        fn checked_abs(&self) -> Option<Self> {
+            Some(*self)
         }
     })+)
 }
-impl_alerting_abs_unsigned_int!(u8, u16, u32, u64, u128, usize);
-macro_rules! impl_alerting_abs_float {
-    ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
-        fn alerting_abs(&self) -> Fallible<Self> {
-            Ok(self.abs())
+impl_checked_abs_unsigned_int!(u8, u16, u32, u64, u128, usize);
+macro_rules! impl_checked_abs_float {
+    ($($ty:ty),+) => ($(impl CheckedAbs for $ty {
+        fn checked_abs(&self) -> Option<Self> {
+            Some(self.abs())
         }
     })+)
 }
-impl_alerting_abs_float!(f32, f64);
+impl_checked_abs_float!(f32, f64);
 
 
 

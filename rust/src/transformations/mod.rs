@@ -73,6 +73,12 @@ mod lipschitz_mul;
 #[cfg(feature="contrib")]
 pub use crate::transformations::lipschitz_mul::*;
 
+
+#[cfg(feature="contrib")]
+mod lipschitz_exponential_utility;
+#[cfg(feature="contrib")]
+pub use crate::transformations::lipschitz_exponential_utility::*;
+
 #[cfg(feature="contrib")]
 mod clamp;
 #[cfg(feature="contrib")]
