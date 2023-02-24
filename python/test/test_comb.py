@@ -20,7 +20,6 @@ def test_amplification():
     assert amplified.check(2, 1.494)
     assert not amplified.check(2, .494)
 
-
 def test_fix_delta():
     base_gaussian = make_zCDP_to_approxDP(make_base_gaussian(10.))
     print(base_gaussian.map(1.).epsilon(1e-6))

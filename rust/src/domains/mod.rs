@@ -21,7 +21,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::traits::{CheckNull, CollectionSize, InherentNull, TotalOrd};
+use crate::traits::{CheckNull, InherentNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
 #[cfg(feature = "contrib")]
@@ -255,121 +255,60 @@ where
 /// A Domain that contains vectors of (homogeneous) values.
 ///
 /// # Proof Definition
-/// `VectorDomain(inner_domain, D)` is the domain of all vectors of elements drawn from domain `inner_domain`.
-///
+/// `VectorDomain(inner_domain, D, Option<size>)` is the domain of all vectors of elements drawn from domain `inner_domain`. 
+/// If size is specified, then the domain is further restricted to all vectors of the given size.
+/// 
 /// # Example
 /// ```
 /// use opendp::domains::{VectorDomain, AllDomain, BoundedDomain};
 /// use opendp::core::Domain;
 ///
 /// // Represents the domain of all vectors.
-/// let all_domain = VectorDomain::new(AllDomain::new());
+/// let all_domain = VectorDomain::new(AllDomain::default(), None);
 /// assert!(all_domain.member(&vec![1, 2, 3])?);
 ///
 /// // Represents the domain of all bounded vectors.
-/// let bounded_domain = VectorDomain::new(BoundedDomain::new_closed((-10, 10))?);
-///
+/// let bounded_domain = VectorDomain::new(BoundedDomain::new_closed((-10, 10))?, None);
+/// 
 /// // vec![0] is a member, but vec![12] is not, because 12 is out of bounds of the inner domain
 /// assert!(bounded_domain.member(&vec![0])?);
 /// assert!(!bounded_domain.member(&vec![12])?);
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
-#[derive(Clone, PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct VectorDomain<D: Domain> {
     pub element_domain: D,
+    pub size: Option<usize>
 }
 impl<D: Domain> Debug for VectorDomain<D> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "VectorDomain({:?})", self.element_domain)
+        let size_str = self.size
+            .map(|size| format!(", size={:?}", size))
+            .unwrap_or_default();
+        write!(f, "VectorDomain({:?}{})", self.element_domain, size_str)
     }
 }
 impl<D: Domain + Default> Default for VectorDomain<D> {
-    fn default() -> Self {
-        Self::new(D::default())
-    }
+    fn default() -> Self { Self::new(D::default(), None) }
 }
 impl<D: Domain> VectorDomain<D> {
-    pub fn new(element_domain: D) -> Self {
-        VectorDomain { element_domain }
-    }
-}
-impl<T: CheckNull> VectorDomain<AllDomain<T>> {
-    pub fn new_all() -> Self {
-        Self::new(AllDomain::<T>::new())
+    pub fn new(element_domain: D, size: Option<usize>) -> Self {
+        VectorDomain { element_domain, size }
     }
 }
 impl<D: Domain> Domain for VectorDomain<D> {
     type Carrier = Vec<D::Carrier>;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         for e in val {
-            if !self.element_domain.member(e)? {
-                return Ok(false);
+            if !self.element_domain.member(e)? {return Ok(false)}
+        }
+        if let Some(size) = self.size {
+            if size != val.len() {
+                return Ok(false)
             }
         }
         Ok(true)
-    }
-}
-
-/// A Domain that specifies the length of the enclosed domain.
-///
-/// # Proof Definition
-/// `SizedDomain(inner_domain, size, D)` is the domain of `inner_domain` restricted to only elements with size `size`.
-///
-/// # Example
-/// First let `inner_domain` be `VectorDomain::new(AllDomain::<i32>::new())`.
-/// `inner_domain` indicates the set of all i32 vectors.
-///
-/// Then `SizedDomain::new(inner_domain, 3)` indicates the set of all i32 vectors of length 3.
-///
-/// # Example
-/// ```
-/// use opendp::domains::{SizedDomain, VectorDomain};
-/// // Create a domain that includes all i32 vectors.
-/// let vec_domain = VectorDomain::new_all();
-/// // Create a domain that includes all i32 vectors of length 3.
-/// let sized_domain = SizedDomain::new(vec_domain, 3);
-///
-/// // vec![1, 2, 3] is a member of the sized_domain
-/// use opendp::core::Domain;
-/// assert!(sized_domain.member(&vec![1i32, 2, 3])?);
-///
-/// // vec![1, 2] is not a member of the sized_domain
-/// assert!(!sized_domain.member(&vec![1, 2])?);
-/// # opendp::error::Fallible::Ok(())
-/// ```
-#[derive(Clone, PartialEq)]
-pub struct SizedDomain<D: Domain> {
-    pub inner_domain: D,
-    pub size: usize,
-}
-impl<D: Domain> SizedDomain<D> {
-    pub fn new(member_domain: D, size: usize) -> Self {
-        SizedDomain {
-            inner_domain: member_domain,
-            size,
-        }
-    }
-}
-impl<D: Domain> Debug for SizedDomain<D> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "SizedDomain({:?}, size={})",
-            self.inner_domain, self.size
-        )
-    }
-}
-impl<D: Domain> Domain for SizedDomain<D>
-where
-    D::Carrier: CollectionSize,
-{
-    type Carrier = D::Carrier;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        if val.size() != self.size {
-            return Ok(false);
-        }
-        self.inner_domain.member(val)
     }
 }
 

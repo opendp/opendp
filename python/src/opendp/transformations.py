@@ -1845,7 +1845,7 @@ def make_resize(
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<DA>`
-    * Output Domain:  `SizedDomain<VectorDomain<DA>>`
+    * Output Domain:  `VectorDomain<DA>`
     * Input Metric:   `MI`
     * Output Metric:  `MO`
     
@@ -1969,7 +1969,7 @@ def make_sized_bounded_float_checked_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
     * Output Domain:  `AllDomain<S::Item>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
@@ -2038,7 +2038,7 @@ def make_sized_bounded_float_ordered_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
     * Output Domain:  `AllDomain<S::Item>`
     * Input Metric:   `InsertDeleteDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
@@ -2093,7 +2093,7 @@ def make_sized_bounded_int_checked_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
     * Output Domain:  `AllDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
@@ -2146,7 +2146,7 @@ def make_sized_bounded_int_monotonic_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
     * Output Domain:  `AllDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
@@ -2201,7 +2201,7 @@ def make_sized_bounded_int_ordered_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
     * Output Domain:  `AllDomain<T>`
     * Input Metric:   `InsertDeleteDistance`
     * Output Metric:  `AbsoluteDistance<T>`
@@ -2256,7 +2256,7 @@ def make_sized_bounded_int_split_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
     * Output Domain:  `AllDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
@@ -2307,7 +2307,7 @@ def make_sized_bounded_mean(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<T>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
     * Output Domain:  `AllDomain<T>`
     * Input Metric:   `MI`
     * Output Metric:  `AbsoluteDistance<T>`
@@ -2364,6 +2364,13 @@ def make_sized_bounded_sum(
     
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
+    * Output Domain:  `AllDomain<T>`
+    * Input Metric:   `MI`
+    * Output Metric:  `AbsoluteDistance<T>`
     
     :param size: Number of records in input data.
     :type size: int
@@ -2430,7 +2437,7 @@ def make_sized_bounded_sum_of_squared_deviations(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
     * Output Domain:  `AllDomain<S::Item>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
@@ -2487,7 +2494,7 @@ def make_sized_bounded_variance(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<BoundedDomain<S::Item>>>`
+    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
     * Output Domain:  `AllDomain<S::Item>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`

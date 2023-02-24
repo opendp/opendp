@@ -5,7 +5,7 @@ use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::domains::{AllDomain, BoundedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPow, InfSub};
@@ -42,7 +42,7 @@ pub fn make_sized_bounded_variance<S>(
     ddof: usize,
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<S::Item>>>,
+        VectorDomain<BoundedDomain<S::Item>>,
         AllDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,

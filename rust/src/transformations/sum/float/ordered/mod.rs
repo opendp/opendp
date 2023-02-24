@@ -1,8 +1,8 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    core::{Function, Transformation, StabilityMap},
+    domains::{AllDomain, BoundedDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
     traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd},
@@ -68,7 +68,7 @@ where
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed(bounds)?),
+        VectorDomain::new(BoundedDomain::new_closed(bounds)?, None),
         AllDomain::new(),
         Function::new(move |arg: &Vec<S::Item>| {
             S::saturating_sum(&arg[..size_limit.min(arg.len())])
@@ -125,7 +125,7 @@ pub fn make_sized_bounded_float_ordered_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<S::Item>>>,
+        VectorDomain<BoundedDomain<S::Item>>,
         AllDomain<S::Item>,
         InsertDeleteDistance,
         AbsoluteDistance<S::Item>,
@@ -140,7 +140,7 @@ where
     let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
+        VectorDomain::new(BoundedDomain::new_closed(bounds)?, Some(size)),
         AllDomain::new(),
         Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
         InsertDeleteDistance::default(),

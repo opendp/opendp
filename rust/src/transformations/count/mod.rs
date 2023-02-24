@@ -35,7 +35,7 @@ where
     TO: Number,
 {
     Ok(Transformation::new(
-        VectorDomain::new_all(),
+        VectorDomain::new(AllDomain::new(), None),
         AllDomain::new(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
@@ -73,7 +73,7 @@ where
     TO: Number,
 {
     Ok(Transformation::new(
-        VectorDomain::new_all(),
+        VectorDomain::new(AllDomain::new(), None),
         AllDomain::new(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
@@ -143,8 +143,8 @@ where
         return fallible!(MakeTransformation, "categories must be distinct");
     }
     Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
+        VectorDomain::new(AllDomain::new(), None),
+        VectorDomain::new(AllDomain::new(), None),
         Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories
                 .iter()
@@ -225,7 +225,7 @@ where
     TV: Number,
 {
     Ok(Transformation::new(
-        VectorDomain::new_all(),
+        VectorDomain::new(AllDomain::new(), None),
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();

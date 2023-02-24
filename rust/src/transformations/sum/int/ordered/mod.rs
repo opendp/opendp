@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AllDomain, BoundedDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
     traits::Number,
@@ -41,7 +41,7 @@ where
 {
     let (lower, upper) = bounds.clone();
     Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed(bounds)?),
+        VectorDomain::new(BoundedDomain::new_closed(bounds)?, None),
         AllDomain::new(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         InsertDeleteDistance::default(),
@@ -71,7 +71,7 @@ pub fn make_sized_bounded_int_ordered_sum<T>(
     bounds: (T, T),
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<BoundedDomain<T>>>,
+        VectorDomain<BoundedDomain<T>>,
         AllDomain<T>,
         InsertDeleteDistance,
         AbsoluteDistance<T>,
@@ -83,7 +83,7 @@ where
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;
     Ok(Transformation::new(
-        SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
+        VectorDomain::new(BoundedDomain::new_closed(bounds)?, Some(size)),
         AllDomain::new(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         InsertDeleteDistance::default(),

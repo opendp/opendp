@@ -23,9 +23,10 @@ where
     M: Metric<Distance = IntDistance>,
 {
     Ok(Transformation::new(
-        VectorDomain::new(atom_input_domain),
-        VectorDomain::new(atom_output_domain),
-        Function::new(move |arg: &Vec<DIA::Carrier>| arg.iter().map(&atom_function).collect()),
+        VectorDomain::new(atom_input_domain, None),
+        VectorDomain::new(atom_output_domain, None),
+        Function::new(move |arg: &Vec<DIA::Carrier>|
+            arg.iter().map(&atom_function).collect()),
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),
@@ -45,11 +46,10 @@ where
     M: Metric<Distance = IntDistance>,
 {
     Ok(Transformation::new(
-        VectorDomain::new(atom_input_domain),
-        VectorDomain::new(atom_output_domain),
-        Function::new_fallible(move |arg: &Vec<DIA::Carrier>| {
-            arg.iter().map(&atom_function).collect()
-        }),
+        VectorDomain::new(atom_input_domain, None),
+        VectorDomain::new(atom_output_domain, None),
+        Function::new_fallible(move |arg: &Vec<DIA::Carrier>|
+            arg.iter().map(&atom_function).collect()),
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),

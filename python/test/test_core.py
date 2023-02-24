@@ -116,6 +116,7 @@ def test_function():
     print(mechanism(0.))
 
 
+
 def test_member():
     from opendp.transformations import make_clamp
     clamper = make_clamp((0, 2))
@@ -127,7 +128,7 @@ def test_member():
     assert not mechanism.input_domain.member(float("NaN"))
 
 def test_new_domain():
-    from opendp.domains import all_domain, bounded_domain, vector_domain, sized_domain
+    from opendp.domains import all_domain, bounded_domain, vector_domain
     domain = all_domain(i32)
     assert domain.member(3)
     domain = all_domain(f64)
@@ -147,10 +148,10 @@ def test_new_domain():
     assert not domain.member([2, 4])
     print(domain)
     
-    domain = sized_domain(vector_domain(all_domain(i32)), 10)
+    domain = vector_domain(all_domain(i32), 10)
     assert domain.member([1] * 10)
     print(domain)
-    domain = sized_domain(vector_domain(bounded_domain((2., 7.))), 10)
+    domain = vector_domain(bounded_domain((2., 7.)), 10)
     assert domain.member([3.] * 10)
     assert not domain.member([1.] * 10)
     print(domain)

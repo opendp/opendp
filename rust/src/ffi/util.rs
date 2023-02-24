@@ -7,20 +7,11 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::domains::{
-    AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain, VectorDomain,
-};
-use crate::error::*;
+use crate::{error::*, err, fallible};
 use crate::ffi::any::AnyObject;
-use crate::measures::{
-    FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
-    ZeroConcentratedDivergence,
-};
-use crate::metrics::{
-    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance,
-    L2Distance, SymmetricDistance,
-};
-use crate::{err, fallible};
+use crate::domains::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain};
+use crate::measures::{MaxDivergence, SmoothedMaxDivergence, FixedSmoothedMaxDivergence, ZeroConcentratedDivergence, SMDCurve};
+use crate::metrics::{ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance, AbsoluteDistance, L1Distance, L2Distance};
 
 use super::any::{AnyMeasurement, AnyTransformation};
 
@@ -278,9 +269,7 @@ lazy_static! {
             type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64>],
             type_vec![[VectorDomain OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[SizedDomain VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[SizedDomain VectorDomain BoundedDomain], <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
-
+            
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],

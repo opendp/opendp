@@ -46,8 +46,8 @@ where
     // leaf_count is the number of leaves in the final layer of a complete tree
 
     Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
+        VectorDomain::new(AllDomain::new(), None),
+        VectorDomain::new(AllDomain::new(), None),
         Function::new(move |arg: &Vec<TA>| {
             // if arg.len() != num_bins, then user has a bug that will affect utility, but cannot alert
             //    if less data is passed than num_bins, then pad with extra zeros

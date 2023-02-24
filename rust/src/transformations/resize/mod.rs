@@ -3,8 +3,8 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
-use crate::domains::{SizedDomain, VectorDomain};
+use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
+use crate::domains::{VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::samplers::Shuffle;
@@ -49,7 +49,7 @@ pub fn make_resize<DA, MI, MO>(
     size: usize,
     atom_domain: DA,
     constant: DA::Carrier,
-) -> Fallible<Transformation<VectorDomain<DA>, SizedDomain<VectorDomain<DA>>, MI, MO>>
+) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<DA>, MI, MO>>
 where
     DA: 'static + Clone + Domain,
     DA::Carrier: 'static + Clone + CheckNull,
@@ -64,8 +64,8 @@ where
     }
 
     Ok(Transformation::new(
-        VectorDomain::new(atom_domain.clone()),
-        SizedDomain::new(VectorDomain::new(atom_domain), size),
+        VectorDomain::new(atom_domain.clone(), None),
+        VectorDomain::new(atom_domain, Some(size)),
         Function::new_fallible(move |arg: &Vec<DA::Carrier>| {
             Ok(match arg.len().cmp(&size) {
                 Ordering::Less | Ordering::Equal => {

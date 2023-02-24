@@ -326,6 +326,18 @@ class RuntimeType(object):
         ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
         if isinstance(inferred, UnknownType):
             return
+        
+        # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
+        def is_option(type_name):
+            return isinstance(type_name, RuntimeType) and type_name.origin == "Option"
+        if is_option(expected):
+            expected = expected.args[0]
+            if is_option(inferred):
+                if isinstance(inferred.args[0], UnknownType):
+                    return
+                else:
+                    inferred = inferred.args[0]
+
         if isinstance(expected, str) and isinstance(inferred, str):
             if inferred in ATOM_EQUIVALENCE_CLASSES:
                 if expected not in ATOM_EQUIVALENCE_CLASSES[inferred]:
@@ -335,10 +347,6 @@ class RuntimeType(object):
                     raise TypeError(f"inferred type is {inferred}, expected {expected}. See {ERROR_URL_298}")
 
         elif isinstance(expected, RuntimeType) and isinstance(inferred, RuntimeType):
-            # allow extra flexibility around options, as the inferred type of an Option::<T>::Some will just be T
-            if expected.origin == "Option" and inferred.origin != "Option":
-                expected = expected.args[0]
-
             if expected.origin != inferred.origin:
                 raise TypeError(f"inferred type is {inferred.origin}, expected {expected.origin}. See {ERROR_URL_298}")
 

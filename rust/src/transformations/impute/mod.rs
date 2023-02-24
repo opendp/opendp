@@ -217,9 +217,10 @@ where
     DA::Imputed: CheckNull,
 {
     Ok(Transformation::new(
-        VectorDomain::new(DA::default()),
-        VectorDomain::new_all(),
-        Function::new(|arg: &Vec<DA::Carrier>| arg.iter().filter_map(DA::option).collect()),
+        VectorDomain::new(DA::default(), None),
+        VectorDomain::new(AllDomain::new(), None),
+        Function::new(|arg: &Vec<DA::Carrier>|
+            arg.iter().filter_map(DA::option).collect()),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),

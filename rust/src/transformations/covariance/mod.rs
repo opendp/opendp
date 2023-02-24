@@ -1,8 +1,8 @@
 use crate::{
-    core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
-    error::Fallible,
+    core::{StabilityMap, Transformation, Function},
     metrics::{AbsoluteDistance, SymmetricDistance},
+    domains::{AllDomain, BoundedDomain, VectorDomain},
+    error::Fallible,
     traits::{ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub},
 };
 
@@ -13,7 +13,8 @@ use super::UncheckedSum;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-type CovarianceDomain<T> = SizedDomain<VectorDomain<BoundedDomain<(T, T)>>>;
+
+type CovarianceDomain<T> = VectorDomain<BoundedDomain<(T, T)>>;
 
 pub fn make_sized_bounded_covariance<S>(
     size: usize,
@@ -84,13 +85,10 @@ where
     range_0.inf_mul(&range_1)?.inf_mul(&_size)?;
 
     Ok(Transformation::new(
-        SizedDomain::new(
-            VectorDomain::new(BoundedDomain::new_closed((
-                (bounds_0.0, bounds_1.0),
-                (bounds_0.1, bounds_1.1),
-            ))?),
-            size,
-        ),
+        VectorDomain::new(BoundedDomain::new_closed((
+            (bounds_0.0, bounds_1.0),
+            (bounds_0.1, bounds_1.1),
+        ))?, Some(size)),
         AllDomain::new(),
         Function::new(enclose!(_size, move |arg: &Vec<(S::Item, S::Item)>| {
             let (l, r): (Vec<S::Item>, Vec<S::Item>) = arg.iter().copied().unzip();

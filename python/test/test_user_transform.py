@@ -88,13 +88,13 @@ def test_make_user_postprocessor():
 def test_user_constructors():
 
     from opendp.combinators import make_user_transformation, make_user_measurement
-    from opendp.domains import bounded_domain, vector_domain, sized_domain, all_domain
+    from opendp.domains import bounded_domain, vector_domain, all_domain
     from opendp.metrics import symmetric_distance
     from opendp.measures import max_divergence
 
     trans = make_user_transformation(
         bounded_domain((2, 10)),
-        sized_domain(vector_domain(bounded_domain((2, 10))), 10),
+        vector_domain(bounded_domain((2, 10)), 10),
         lambda x: [x] * 10,
         symmetric_distance(),
         symmetric_distance(),
