@@ -2,13 +2,13 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AllDomain, BoundedDomain};
+use crate::domains::{AllDomain};
 use crate::err;
 use crate::ffi::any::Downcast;
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
 use crate::ffi::util::{Type, TypeContents};
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
-use crate::traits::{CheckNull, TotalOrd};
+use crate::traits::CheckAtom;
 use crate::transformations::resize::IsMetricOrdered;
 
 #[no_mangle]
@@ -31,7 +31,7 @@ pub extern "C" fn opendp_transformations__make_resize(
         return err!(FFI, "DA must match atom_domain's type").into();
     }
 
-    fn monomorphize_all<MI, MO, T: 'static + CheckNull + Clone>(
+    fn monomorphize_all<MI, MO, T: 'static + CheckAtom + Clone>(
         size: usize,
         atom_domain: &AnyDomain,
         constant: &AnyObject,
@@ -44,19 +44,6 @@ pub extern "C" fn opendp_transformations__make_resize(
         let constant = try_!(constant.downcast_ref::<T>()).clone();
         super::make_resize::<_, MI, MO>(size, atom_domain, constant).into_any()
     }
-    fn monomorphize_bounded<MI, MO, T: 'static + TotalOrd + Clone + CheckNull>(
-        size: usize,
-        atom_domain: &AnyDomain,
-        constant: &AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
-    where
-        MI: 'static + IsMetricOrdered<Distance = IntDistance>,
-        MO: 'static + IsMetricOrdered<Distance = IntDistance>,
-    {
-        let atom_domain = try_!(atom_domain.downcast_ref::<BoundedDomain<T>>()).clone();
-        let constant = try_!(constant.downcast_ref::<T>()).clone();
-        super::make_resize::<_, MI, MO>(size, atom_domain, constant).into_any()
-    }
 
     match atom_domain.type_.contents {
         TypeContents::GENERIC {
@@ -66,19 +53,7 @@ pub extern "C" fn opendp_transformations__make_resize(
                 (MO, [SymmetricDistance, InsertDeleteDistance]),
                 (atom_domain.carrier_type, @primitives)
             ], (size, atom_domain, constant)),
-        TypeContents::GENERIC {
-            name: "BoundedDomain",
-            ..
-        } => dispatch!(monomorphize_bounded, [
-                (MI, [SymmetricDistance, InsertDeleteDistance]),
-                (MO, [SymmetricDistance, InsertDeleteDistance]),
-                (atom_domain.carrier_type, @numbers)
-            ], (size, atom_domain, constant)),
-        _ => err!(
-            FFI,
-            "VectorDomain constructors only support AllDomain and BoundedDomain atoms"
-        )
-        .into(),
+        _ => err!(FFI, "VectorDomain constructors only supports the AllDomain inner domain").into()
     }
 }
 
@@ -96,7 +71,7 @@ mod tests {
     fn test_make_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyDomain::new(AllDomain::<i32>::new())),
+            util::into_raw(AnyDomain::new(AllDomain::<i32>::default())),
             AnyObject::new_raw(0i32),
             "AllDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
@@ -113,11 +88,9 @@ mod tests {
     fn test_make_bounded_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyDomain::new(
-                BoundedDomain::<i32>::new_closed((0i32, 10)).unwrap(),
-            )),
+            util::into_raw(AnyDomain::new(AllDomain::<i32>::new_closed((0i32, 10)).unwrap())),
             AnyObject::new_raw(0i32),
-            "BoundedDomain<i32>".to_char_p(),
+            "AllDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
             "SymmetricDistance".to_char_p(),
         ))?;

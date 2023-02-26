@@ -10,7 +10,7 @@ use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
-use crate::traits::{CheckNull, ExactIntCast, Float, FloatBits, InfAdd, InfDiv};
+use crate::traits::{ExactIntCast, Float, FloatBits, InfAdd, InfDiv, CheckAtom};
 
 use super::MappableDomain;
 
@@ -18,10 +18,10 @@ use super::MappableDomain;
 pub trait LaplaceDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> LaplaceDomain for AllDomain<T> {
+impl<T: Clone + CheckAtom> LaplaceDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 

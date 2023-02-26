@@ -1,9 +1,9 @@
 use crate::{
     core::{StabilityMap, Transformation, Function},
     metrics::{AbsoluteDistance, SymmetricDistance},
-    domains::{AllDomain, BoundedDomain, VectorDomain},
+    domains::{AllDomain, VectorDomain},
     error::Fallible,
-    traits::{ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub},
+    traits::{ExactIntCast, InfCast, InfAdd, InfDiv, InfMul, InfSub, Float, CheckAtom},
 };
 
 use num::{One, Zero};
@@ -14,7 +14,7 @@ use super::UncheckedSum;
 mod ffi;
 
 
-type CovarianceDomain<T> = VectorDomain<BoundedDomain<(T, T)>>;
+type CovarianceDomain<T> = VectorDomain<AllDomain<(T, T)>>;
 
 pub fn make_sized_bounded_covariance<S>(
     size: usize,
@@ -32,6 +32,7 @@ pub fn make_sized_bounded_covariance<S>(
 where
     S: UncheckedSum,
     S::Item: 'static + Float,
+    (S::Item, S::Item): CheckAtom
 {
     if size == 0 {
         return fallible!(MakeTransformation, "size must be greater than zero");
@@ -85,11 +86,11 @@ where
     range_0.inf_mul(&range_1)?.inf_mul(&_size)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed((
+        VectorDomain::new(AllDomain::new_closed((
             (bounds_0.0, bounds_1.0),
             (bounds_0.1, bounds_1.1),
         ))?, Some(size)),
-        AllDomain::new(),
+        AllDomain::default(),
         Function::new(enclose!(_size, move |arg: &Vec<(S::Item, S::Item)>| {
             let (l, r): (Vec<S::Item>, Vec<S::Item>) = arg.iter().copied().unzip();
             let (sum_l, sum_r) = (S::unchecked_sum(&l), S::unchecked_sum(&r));

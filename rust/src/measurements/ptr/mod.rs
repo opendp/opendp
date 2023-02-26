@@ -61,7 +61,7 @@ where
     let _2 = TV::exact_int_cast(2)?;
     let (k, relaxation) = get_discretization_consts(k)?;
     Ok(Measurement::new(
-        MapDomain::new(AllDomain::new(), AllDomain::new()),
+        MapDomain::new(AllDomain::default(), AllDomain::default()),
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
             data.clone()
                 .into_iter()

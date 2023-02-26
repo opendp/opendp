@@ -5,7 +5,7 @@ use num::{Float as _, One, Zero};
 use opendp_derive::bootstrap;
 
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{AllDomain, BoundedDomain, VectorDomain};
+use crate::domains::{AllDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub};
@@ -49,7 +49,7 @@ pub fn make_sized_bounded_sum_of_squared_deviations<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        VectorDomain<BoundedDomain<S::Item>>,
+        VectorDomain<AllDomain<S::Item>>,
         AllDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
@@ -94,8 +94,8 @@ where
     range.inf_mul(&range)?.inf_mul(&size_)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed(bounds)?, Some(size)),
-        AllDomain::new(),
+        VectorDomain::new(AllDomain::new_closed(bounds)?, Some(size)),
+        AllDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| {
             let mean = S::unchecked_sum(arg) / size_;
             S::unchecked_sum(

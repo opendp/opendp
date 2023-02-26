@@ -1,8 +1,8 @@
 use crate::{
     core::{Function, Transformation, StabilityMap},
-    domains::{AllDomain, BoundedDomain, VectorDomain},
-    error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
+    domains::{AllDomain, VectorDomain},
+    error::Fallible,
     traits::{
         samplers::Shuffle, AlertingAbs, ExactIntCast, InfAdd, InfCast, InfMul, InfSub, TotalOrd,
     },
@@ -54,7 +54,7 @@ pub fn make_bounded_float_checked_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        VectorDomain<BoundedDomain<S::Item>>,
+        VectorDomain<AllDomain<S::Item>>,
         AllDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
@@ -78,8 +78,8 @@ where
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed(bounds)?, None),
-        AllDomain::new(),
+        VectorDomain::new(AllDomain::new_closed(bounds)?, None),
+        AllDomain::default(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
             if arg.len() > size_limit {
@@ -138,7 +138,7 @@ pub fn make_sized_bounded_float_checked_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        VectorDomain<BoundedDomain<S::Item>>,
+        VectorDomain<AllDomain<S::Item>>,
         AllDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
@@ -160,8 +160,8 @@ where
     let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(BoundedDomain::new_closed(bounds)?, Some(size)),
-        AllDomain::new(),
+        VectorDomain::new(AllDomain::new_closed(bounds)?, Some(size)),
+        AllDomain::default(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
         SymmetricDistance::default(),

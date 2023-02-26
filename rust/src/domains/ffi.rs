@@ -4,14 +4,17 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Domain},
-    domains::{AllDomain, BoundedDomain, VectorDomain},
+    domains::{AllDomain, VectorDomain, type_name},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyObject, Downcast},
         util::{self, c_bool, into_c_char_p, Type, TypeContents},
     },
-    traits::{CheckNull, TotalOrd},
+    traits::{CheckAtom, Float, Integer},
 };
+
+use super::{Bounds, Null};
+
 
 #[bootstrap(
     name = "member",
@@ -83,52 +86,70 @@ pub extern "C" fn opendp_domains__domain_carrier_type(
     )))
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyDomain *>"))]
+#[bootstrap(
+    arguments(
+        bounds(rust_type = "Option<(T, T)>", c_type = "AnyObject *"), 
+        nullable(rust_type = "bool", c_type = "bool")),
+    returns(c_type = "FfiResult<AnyDomain *>")
+)]
 /// Construct an instance of `AllDomain`.
 ///
 /// # Generics
 /// * `T` - The type of the atom.
-fn all_domain<T: CheckNull>() -> AllDomain<T> {
-    AllDomain::<T>::new()
+fn all_domain<T: CheckAtom>(bounds: Option<Bounds<T>>, nullable: Option<Null<T>>) -> AllDomain<T> {
+    AllDomain::<T>::new(bounds, nullable)
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_domains__all_domain(T: *const c_char) -> FfiResult<*mut AnyDomain> {
-    fn monomorphize<T: 'static + CheckNull>() -> FfiResult<*mut AnyDomain> {
-        Ok(AnyDomain::new(all_domain::<T>())).into()
-    }
-    let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @primitives)], ())
-}
-
-#[bootstrap(
-    generics(T(example = "$get_first(bounds)")),
-    returns(c_type = "FfiResult<AnyDomain *>")
-)]
-/// Construct an instance of `BoundedDomain`.
-/// # Arguments
-/// * `bounds` - A tuple of upper/lower bounds.
-///
-/// # Generics
-/// * `T` - The type of the atom.
-fn bounded_domain<T: TotalOrd>(bounds: (T, T)) -> Fallible<BoundedDomain<T>> {
-    BoundedDomain::<T>::new_closed(bounds)
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_domains__bounded_domain(
-    bounds: *const AnyObject,
-    T: *const c_char,
+pub extern "C" fn opendp_domains__all_domain(
+    T: *const c_char, 
+    bounds: *const AnyObject, 
+    nullable: c_bool
 ) -> FfiResult<*mut AnyDomain> {
-    fn monomorphize<T: 'static + TotalOrd + Clone>(
-        bounds: *const AnyObject,
-    ) -> Fallible<AnyDomain> {
-        let bounds = try_as_ref!(bounds).downcast_ref::<(T, T)>()?.clone();
-        Ok(AnyDomain::new(bounded_domain::<T>(bounds)?))
+    fn monomorphize_float<T: 'static + Float>(bounds: *const AnyObject, nullable: bool) -> Fallible<AnyDomain> {
+        let bounds = if let Some(bounds) = util::as_ref(bounds) {
+            let tuple = *bounds.downcast_ref::<(T, T)>()?;
+            Some(Bounds::new_closed(tuple)?)
+        } else {
+            None
+        };
+
+        let nullable = nullable.then_some(Null::new());
+        Ok(AnyDomain::new(all_domain::<T>(bounds, nullable)))
+    }
+    fn monomorphize_integer<T: 'static + Integer>(bounds: *const AnyObject, nullable: bool) -> Fallible<AnyDomain> {
+        let bounds = if let Some(bounds) = util::as_ref(bounds) {
+            let tuple = *bounds.downcast_ref::<(T, T)>()?;
+            Some(Bounds::new_closed(tuple)?)
+        } else {
+            None
+        };
+        if nullable {
+            return fallible!(FFI, "integers cannot be null");
+        }
+        Ok(AnyDomain::new(all_domain::<T>(bounds, None)))
+    }
+    fn monomorphize_simple<T: 'static + CheckAtom>(bounds: *const AnyObject, nullable: bool) -> Fallible<AnyDomain> {
+        if util::as_ref(bounds).is_some() {
+            return fallible!(FFI, "{} cannot be bounded", type_name!(T));
+        }
+        if nullable {
+            return fallible!(FFI, "{} cannot be null", type_name!(T));
+        }
+        Ok(AnyDomain::new(all_domain::<T>(None, None)))
     }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], (bounds)).into()
+    let nullable = util::to_bool(nullable);
+
+    if let Ok(domain) = dispatch!(monomorphize_float, [(T, @floats)], (bounds, nullable)) {
+        Ok(domain)
+    } else if let Ok(domain) = dispatch!(monomorphize_integer, [(T, @integers)], (bounds, nullable)) {
+        Ok(domain)
+    } else {
+        dispatch!(monomorphize_simple, [(T, [bool, String])], (bounds, nullable))
+    }.into()
 }
+
 
 #[bootstrap(
     name = "vector_domain",
@@ -142,7 +163,7 @@ pub extern "C" fn opendp_domains__bounded_domain(
 pub extern "C" fn opendp_domains__vector_domain(
     atom_domain: *const AnyDomain, size: *const AnyObject
 ) -> FfiResult<*mut AnyDomain> {
-    fn monomorphize_all<T: 'static + CheckNull>(atom_domain: &AnyDomain, size: *const AnyObject) -> Fallible<AnyDomain> {
+    fn monomorphize_all<T: 'static + CheckAtom>(atom_domain: &AnyDomain, size: *const AnyObject) -> Fallible<AnyDomain> {
         let size = if let Some(size) = util::as_ref(size) {
             Some(*try_!(size.downcast_ref::<i32>()) as usize)
         } else {
@@ -151,25 +172,11 @@ pub extern "C" fn opendp_domains__vector_domain(
         let atom_domain = atom_domain.downcast_ref::<AllDomain<T>>()?.clone();
         Ok(AnyDomain::new(VectorDomain::new(atom_domain, size)))
     }
-    fn monomorphize_bounded<T: 'static + TotalOrd + Clone>(
-        atom_domain: &AnyDomain, size: *const AnyObject
-    ) -> Fallible<AnyDomain> {
-        let size = if let Some(size) = util::as_ref(size) {
-            Some(*try_!(size.downcast_ref::<i32>()) as usize)
-        } else {
-            None
-        };
-        let atom_domain = atom_domain.downcast_ref::<BoundedDomain<T>>()?.clone();
-        Ok(AnyDomain::new(VectorDomain::new(atom_domain, size)))
-    }
-
     let atom_domain = try_as_ref!(atom_domain);
 
     match atom_domain.type_.contents {
         TypeContents::GENERIC { name: "AllDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
-        TypeContents::GENERIC { name: "BoundedDomain", .. } => 
-            dispatch!(monomorphize_bounded, [(atom_domain.carrier_type, @numbers)], (atom_domain, size)),
-        _ => fallible!(FFI, "VectorDomain constructors only support AllDomain and BoundedDomain atoms")
+        _ => fallible!(FFI, "VectorDomain constructors only support AllDomain inner domains")
     }.into()
 }

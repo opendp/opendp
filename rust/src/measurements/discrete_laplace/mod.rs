@@ -4,8 +4,8 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::samplers::SampleDiscreteLaplaceLinear,
-    traits::{CheckNull, Float, InfCast, Integer},
+    traits::{samplers::SampleDiscreteLaplaceLinear, CheckAtom},
+    traits::{Float, InfCast, Integer},
 };
 
 use opendp_derive::bootstrap;
@@ -39,7 +39,7 @@ pub trait MappableDomain: Domain {
     }
 }
 
-impl<T: Clone + CheckNull> MappableDomain for AllDomain<T> {
+impl<T: Clone + CheckAtom> MappableDomain for AllDomain<T> {
     type Atom = T;
     fn map_over(
         arg: &Self::Carrier,
@@ -62,10 +62,10 @@ impl<D: MappableDomain> MappableDomain for VectorDomain<D> {
 pub trait DiscreteLaplaceDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> DiscreteLaplaceDomain for AllDomain<T> {
+impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for AllDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckAtom> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 

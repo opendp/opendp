@@ -11,7 +11,7 @@ use crate::{
     error::Fallible,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::sample_discrete_gaussian, CheckNull, Float, InfCast, Number},
+    traits::{samplers::sample_discrete_gaussian, CheckAtom, Float, InfCast, Number},
 };
 
 #[cfg(feature = "ffi")]
@@ -23,10 +23,10 @@ use super::MappableDomain;
 pub trait DiscreteGaussianDomain<QI>: MappableDomain + Default {
     type InputMetric: Metric<Distance = QI> + Default;
 }
-impl<T: Clone + CheckNull, QI> DiscreteGaussianDomain<QI> for AllDomain<T> {
+impl<T: Clone + CheckAtom, QI> DiscreteGaussianDomain<QI> for AllDomain<T> {
     type InputMetric = AbsoluteDistance<QI>;
 }
-impl<T: Clone + CheckNull, QI> DiscreteGaussianDomain<QI> for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckAtom, QI> DiscreteGaussianDomain<QI> for VectorDomain<AllDomain<T>> {
     type InputMetric = L2Distance<QI>;
 }
 

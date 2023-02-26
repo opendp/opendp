@@ -35,8 +35,8 @@ where
     TO: Number,
 {
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new(), None),
-        AllDomain::new(),
+        VectorDomain::new(AllDomain::default(), None),
+        AllDomain::default(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
             // get size via the CollectionSize trait
@@ -73,8 +73,8 @@ where
     TO: Number,
 {
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new(), None),
-        AllDomain::new(),
+        VectorDomain::new(AllDomain::default(), None),
+        AllDomain::default(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
             TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
@@ -143,8 +143,8 @@ where
         return fallible!(MakeTransformation, "categories must be distinct");
     }
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new(), None),
-        VectorDomain::new(AllDomain::new(), None),
+        VectorDomain::new(AllDomain::default(), None),
+        VectorDomain::new(AllDomain::default(), None),
         Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories
                 .iter()
@@ -225,8 +225,8 @@ where
     TV: Number,
 {
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new(), None),
-        MapDomain::new(AllDomain::new(), AllDomain::new()),
+        VectorDomain::new(AllDomain::default(), None),
+        MapDomain::new(AllDomain::default(), AllDomain::default()),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {

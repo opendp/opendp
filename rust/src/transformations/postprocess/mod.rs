@@ -34,8 +34,8 @@ mod test {
     #[test]
     fn test_postprocess() -> Fallible<()> {
         let post = make_postprocess(
-            AllDomain::new(), 
-            VectorDomain::new(AllDomain::new(), None), 
+            AllDomain::default(), 
+            VectorDomain::new(AllDomain::default(), None), 
             Function::new(|_| vec![12]))?;
 
         assert_eq!(post.invoke(&"A".to_string())?, vec![12]);

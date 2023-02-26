@@ -3,12 +3,12 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Function, StabilityMap, Transformation};
-use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
+use crate::core::{Domain, Transformation, Function, StabilityMap};
+use crate::domains::{AllDomain, VectorDomain, OptionNullDomain};
 use crate::error::Fallible;
 use crate::metrics::SymmetricDistance;
 use crate::traits::samplers::SampleUniform;
-use crate::traits::{CheckNull, Float, InherentNull};
+use crate::traits::{CheckNull, Float, InherentNull, CheckAtom};
 use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 
 #[bootstrap(features("contrib"), generics(TA(example = "$get_first(bounds)")))]
@@ -20,18 +20,9 @@ use crate::transformations::{make_row_by_row, make_row_by_row_fallible};
 /// # Generics
 /// * `TA` - Atomic Type of data being imputed. One of `f32` or `f64`
 pub fn make_impute_uniform_float<TA>(
-    bounds: (TA, TA),
-) -> Fallible<
-    Transformation<
-        VectorDomain<InherentNullDomain<AllDomain<TA>>>,
-        VectorDomain<AllDomain<TA>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
-where
-    TA: Float + SampleUniform,
-{
+    bounds: (TA, TA)
+) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<AllDomain<TA>>, SymmetricDistance, SymmetricDistance>>
+    where TA: Float + SampleUniform {
     let (lower, upper) = bounds;
     if lower.is_nan() {
         return fallible!(MakeTransformation, "lower may not be nan");
@@ -45,16 +36,11 @@ where
     let scale = upper - lower;
 
     make_row_by_row_fallible(
-        InherentNullDomain::new(AllDomain::new()),
-        AllDomain::new(),
-        move |v| {
-            if v.is_null() {
-                TA::sample_standard_uniform(false).map(|v| v * scale + lower)
-            } else {
-                Ok(*v)
-            }
-        },
-    )
+        AllDomain::new_nullable(),
+        AllDomain::default(),
+        move |v| if v.is_null() {
+            TA::sample_standard_uniform(false).map(|v| v * scale + lower)
+        } else { Ok(*v) })
 }
 
 /// Utility trait to impute with a constant, regardless of the representation of nullity.
@@ -82,7 +68,7 @@ pub trait ImputeConstantDomain: Domain {
     ) -> &'a Self::Imputed;
 }
 // how to impute, when null represented as Option<T>
-impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: CheckAtom> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(
         default: &'a Self::Carrier,
@@ -92,7 +78,7 @@ impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
     }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> {
+impl<T: CheckAtom + InherentNull> ImputeConstantDomain for AllDomain<T> {
     type Imputed = Self::Carrier;
     fn impute_constant<'a>(
         default: &'a Self::Carrier,
@@ -115,41 +101,31 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
 /// Make a Transformation that replaces null/None data with `constant`.
 ///
 /// By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
-/// Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types
+/// Set `DA` to `AllDomain<TA>` for imputing on types 
 /// that have an inherent representation of nullity, like floats.
 ///
 /// | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
 /// | ----------------------------------- | ----------------- | -------------- |
 /// | `OptionNullDomain<AllDomain<TA>>`   | `Vec<Option<TA>>` | `TA`           |
-/// | `InherentNullDomain<AllDomain<TA>>` | `Vec<TA>`         | `TA`           |
-///
+/// | `AllDomain<TA>`                     | `Vec<TA>`         | `TA`           |
+/// 
 /// # Arguments
 /// * `constant` - Value to replace nulls with.
 ///
 /// # Generics
 /// * `DIA` - Atomic Input Domain of data being imputed.
 pub fn make_impute_constant<DIA>(
-    constant: DIA::Imputed,
-) -> Fallible<
-    Transformation<
-        VectorDomain<DIA>,
-        VectorDomain<AllDomain<DIA::Imputed>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
-where
-    DIA: ImputeConstantDomain + Default,
-    DIA::Imputed: 'static + Clone + CheckNull,
-    DIA::Carrier: 'static,
-{
-    if constant.is_null() {
-        return fallible!(MakeTransformation, "Constant may not be null.");
-    }
+    constant: DIA::Imputed
+) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AllDomain<DIA::Imputed>>, SymmetricDistance, SymmetricDistance>>
+    where DIA: ImputeConstantDomain + Default,
+          DIA::Imputed: 'static + Clone + CheckAtom,
+          DIA::Carrier: 'static {
+    if constant.is_null() { return fallible!(MakeTransformation, "Constant may not be null.") }
 
-    make_row_by_row(DIA::default(), AllDomain::new(), move |v| {
-        DIA::impute_constant(v, &constant).clone()
-    })
+    make_row_by_row(
+        DIA::default(),
+        AllDomain::default(),
+        move |v| DIA::impute_constant(v, &constant).clone())
 }
 
 /// Utility trait to drop null values from a dataset, regardless of the representation of nullity.
@@ -171,7 +147,7 @@ pub trait DropNullDomain: Domain {
 }
 
 /// how to standardize into an option, when null represented as Option<T>
-impl<T: CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: CheckAtom + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() {
@@ -182,7 +158,7 @@ impl<T: CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
     }
 }
 /// how to standardize into an option, when null represented as T with internal nullity
-impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>> {
+impl<T: CheckAtom + InherentNull + Clone> DropNullDomain for AllDomain<T> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() {
@@ -204,21 +180,13 @@ impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>
 ///
 /// # Generics
 /// * `DA` - atomic domain of input data that contains nulls.
-pub fn make_drop_null<DA>() -> Fallible<
-    Transformation<
-        VectorDomain<DA>,
-        VectorDomain<AllDomain<DA::Imputed>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
-where
-    DA: DropNullDomain + Default,
-    DA::Imputed: CheckNull,
-{
+pub fn make_drop_null<DA>(
+) -> Fallible<Transformation<VectorDomain<DA>, VectorDomain<AllDomain<DA::Imputed>>, SymmetricDistance, SymmetricDistance>>
+    where DA: DropNullDomain + Default, 
+          DA::Imputed: CheckAtom {
     Ok(Transformation::new(
         VectorDomain::new(DA::default(), None),
-        VectorDomain::new(AllDomain::new(), None),
+        VectorDomain::new(AllDomain::default(), None),
         Function::new(|arg: &Vec<DA::Carrier>|
             arg.iter().filter_map(DA::option).collect()),
         SymmetricDistance::default(),
@@ -255,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_impute_constant_inherent() -> Fallible<()> {
-        let imputer = make_impute_constant::<InherentNullDomain<_>>(12.)?;
+        let imputer = make_impute_constant::<AllDomain<_>>(12.)?;
 
         let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 
@@ -276,7 +244,7 @@ mod tests {
     }
     #[test]
     fn test_impute_drop_inherent() -> Fallible<()> {
-        let imputer = make_drop_null::<InherentNullDomain<_>>()?;
+        let imputer = make_drop_null::<AllDomain<_>>()?;
 
         let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 

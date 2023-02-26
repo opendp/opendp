@@ -83,8 +83,8 @@ where
     K: Hashable,
 {
     Ok(Transformation::new(
-        VectorDomain::new(VectorDomain::new(AllDomain::new(), None), None),
-        DataFrameDomain::new_all(),
+        VectorDomain::new(VectorDomain::new(AllDomain::default(), None), None),
+        DataFrameDomain::new(),
         Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
             let arg: Vec<_> = arg.iter().map(|e| vec_string_to_str(e)).collect();
             create_dataframe(col_names.clone(), &arg)
@@ -126,8 +126,8 @@ where
 {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
-        AllDomain::new(),
-        DataFrameDomain::new_all(),
+        AllDomain::default(),
+        DataFrameDomain::new(),
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
@@ -158,8 +158,8 @@ pub fn make_split_lines() -> Fallible<
     >,
 > {
     Ok(Transformation::new(
-        AllDomain::<String>::new(),
-        VectorDomain::new(AllDomain::new(), None),
+        AllDomain::<String>::default(),
+        VectorDomain::new(AllDomain::default(), None),
         Function::new(|arg: &String| -> Vec<String> {
             arg.lines().map(|v| v.to_owned()).collect()
         }),
@@ -199,8 +199,8 @@ pub fn make_split_records(
 > {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new(), None),
-        VectorDomain::new(VectorDomain::new(AllDomain::new(), None), None),
+        VectorDomain::new(AllDomain::default(), None),
+        VectorDomain::new(VectorDomain::new(AllDomain::default(), None), None),
         // move is necessary because it captures `separator`
         Function::new(move |arg: &Vec<String>| -> Vec<Vec<String>> {
             let arg = vec_string_to_str(arg);

@@ -109,8 +109,11 @@ mod test {
 
     #[test]
     fn test() -> Fallible<()> {
-        let trans =
-            make_resize::<_, SymmetricDistance, SymmetricDistance>(3, AllDomain::new(), "x")?;
+        let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
+            3,
+            AllDomain::default(),
+            "x",
+        )?;
         assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
         assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
         assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);

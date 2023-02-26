@@ -47,10 +47,8 @@ where
     }
 
     make_row_by_row(
-        AllDomain::new(),
-        OptionNullDomain::new(AllDomain::new()),
-        move |v| indexes.get(v).cloned(),
-    )
+        AllDomain::default(), OptionNullDomain::new(AllDomain::default()),
+        move |v| indexes.get(v).cloned())
 }
 
 #[bootstrap(features("contrib"))]
@@ -85,14 +83,11 @@ where
     if !edges.windows(2).all(|pair| pair[0] < pair[1]) {
         return fallible!(MakeTransformation, "edges must be unique and ordered");
     }
-    make_row_by_row(AllDomain::new(), AllDomain::new(), move |v| {
-        edges
-            .iter()
-            .enumerate()
-            .find(|(_, edge)| v < edge)
-            .map(|(i, _)| i)
-            .unwrap_or(edges.len())
-    })
+    make_row_by_row(
+        AllDomain::default(), AllDomain::default(),
+        move |v| edges.iter().enumerate()
+            .find(|(_, edge)| v < edge).map(|(i, _)| i)
+            .unwrap_or(edges.len()))
 }
 
 #[bootstrap(features("contrib"))]
@@ -105,22 +100,12 @@ where
 /// # Generics
 /// * `TOA` - Atomic Output Type. Output data will be `Vec<TOA>`.
 pub fn make_index<TOA>(
-    categories: Vec<TOA>,
-    null: TOA,
-) -> Fallible<
-    Transformation<
-        VectorDomain<AllDomain<usize>>,
-        VectorDomain<AllDomain<TOA>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
-where
-    TOA: Primitive,
-{
-    make_row_by_row(AllDomain::new(), AllDomain::new(), move |v| {
-        categories.get(*v).unwrap_or(&null).clone()
-    })
+    categories: Vec<TOA>, null: TOA
+) -> Fallible<Transformation<VectorDomain<AllDomain<usize>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
+    where TOA: Primitive {
+    make_row_by_row(
+        AllDomain::default(), AllDomain::default(),
+        move |v| categories.get(*v).unwrap_or(&null).clone())
 }
 
 #[cfg(test)]

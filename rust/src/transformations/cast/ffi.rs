@@ -5,8 +5,8 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::err;
 use crate::ffi::any::AnyTransformation;
 use crate::ffi::util::Type;
-use crate::traits::InherentNull;
-use crate::traits::{CheckNull, RoundCast};
+use crate::traits::{InherentNull, CheckAtom};
+use crate::traits::RoundCast;
 use crate::transformations::{make_cast, make_cast_default, make_cast_inherent};
 
 #[no_mangle]
@@ -18,10 +18,8 @@ pub extern "C" fn opendp_transformations__make_cast(
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-    where
-        TIA: 'static + Clone + CheckNull,
-        TOA: 'static + RoundCast<TIA> + CheckNull,
-    {
+        where TIA: 'static + Clone + CheckAtom,
+              TOA: 'static + RoundCast<TIA> + CheckAtom {
         make_cast::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
@@ -36,10 +34,8 @@ pub extern "C" fn opendp_transformations__make_cast_default(
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-    where
-        TIA: 'static + Clone + CheckNull,
-        TOA: 'static + RoundCast<TIA> + Default + CheckNull,
-    {
+        where TIA: 'static + Clone + CheckAtom,
+              TOA: 'static + RoundCast<TIA> + Default + CheckAtom {
         make_cast_default::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
@@ -54,10 +50,8 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-    where
-        TIA: 'static + Clone + CheckNull,
-        TOA: 'static + RoundCast<TIA> + InherentNull,
-    {
+        where TIA: 'static + Clone + CheckAtom,
+              TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom {
         make_cast_inherent::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @floats)], ())

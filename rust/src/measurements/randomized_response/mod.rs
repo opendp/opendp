@@ -56,7 +56,7 @@ where
     let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
     Ok(Measurement::new(
-        AllDomain::new(),
+        AllDomain::default(),
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !bool::sample_bernoulli(prob, constant_time)?)
         }),
@@ -128,7 +128,7 @@ where
         .inf_ln()?;
 
     Ok(Measurement::new(
-        AllDomain::new(),
+        AllDomain::default(),
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None
             let index = categories.iter().position(|cat| cat == truth);

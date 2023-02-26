@@ -34,12 +34,12 @@ pub mod tests {
     use crate::domains::AllDomain;
     use crate::measures::MaxDivergence;
     use crate::metrics::SymmetricDistance;
-    use crate::traits::CheckNull;
+    use crate::traits::{CheckAtom};
 
-    pub fn make_test_measurement<T: Clone + CheckNull>(
+    pub fn make_test_measurement<T: Clone + CheckAtom>(
     ) -> Measurement<AllDomain<T>, T, SymmetricDistance, MaxDivergence<f64>> {
         Measurement::new(
-            AllDomain::new(),
+            AllDomain::default(),
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             MaxDivergence::default(),
@@ -47,8 +47,7 @@ pub mod tests {
         )
     }
 
-    pub fn make_test_transformation<T: Clone + CheckNull>(
-    ) -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
+    pub fn make_test_transformation<T: Clone + CheckAtom>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
         Transformation::new(
             AllDomain::default(),
             AllDomain::default(),

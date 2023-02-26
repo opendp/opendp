@@ -345,8 +345,8 @@ mod tests {
 
     #[test]
     fn test_identity() {
-        let input_domain = AllDomain::<i32>::new();
-        let output_domain = AllDomain::<i32>::new();
+        let input_domain = AllDomain::<i32>::default();
+        let output_domain = AllDomain::<i32>::default();
         let function = Function::new(|arg: &i32| arg.clone());
         let input_metric = L1Distance::<i32>::default();
         let output_metric = L1Distance::<i32>::default();

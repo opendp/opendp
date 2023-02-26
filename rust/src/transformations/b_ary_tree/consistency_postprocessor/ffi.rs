@@ -6,7 +6,7 @@ use std::{
 use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
     ffi::{any::AnyFunction, util::Type},
-    traits::{CheckNull, Float, RoundCast},
+    traits::{Float, RoundCast, CheckAtom},
     transformations::make_consistent_b_ary_tree,
 };
 
@@ -18,7 +18,7 @@ pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
 ) -> FfiResult<*mut AnyFunction> {
     fn monomorphize<TIA, TOA>(branching_factor: usize) -> FfiResult<*mut AnyFunction>
     where
-        TIA: 'static + CheckNull + Clone,
+        TIA: 'static + CheckAtom + Clone,
         TOA: Float + RoundCast<TIA>,
     {
         make_consistent_b_ary_tree::<TIA, TOA>(branching_factor).into_any()

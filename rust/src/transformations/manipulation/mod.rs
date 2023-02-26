@@ -7,8 +7,9 @@ use opendp_derive::bootstrap;
 use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{IntDistance, SymmetricDistance};
-use crate::traits::{CheckNull, DistanceConstant};
+use crate::traits::{DistanceConstant, CheckNull, CheckAtom};
+use crate::metrics::{SymmetricDistance, IntDistance};
+
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
 pub(crate) fn make_row_by_row<DIA, DOA, M>(
@@ -83,19 +84,14 @@ where
 /// # Generics
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
 pub fn make_is_equal<TIA>(
-    value: TIA,
-) -> Fallible<
-    Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<bool>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
-where
-    TIA: 'static + PartialEq + CheckNull,
-{
-    make_row_by_row(AllDomain::new(), AllDomain::new(), move |v| v == &value)
+    value: TIA
+) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
+    where TIA: 'static + PartialEq + CheckAtom {
+    make_row_by_row(
+        AllDomain::default(),
+        AllDomain::default(),
+        move |v| v == &value)
+
 }
 
 #[bootstrap(features("contrib"))]
@@ -122,12 +118,12 @@ where
 mod tests {
 
     use super::*;
-    use crate::domains::{AllDomain, InherentNullDomain};
     use crate::metrics::ChangeOneDistance;
+    use crate::domains::{AllDomain};
 
     #[test]
     fn test_identity() {
-        let identity = make_identity(AllDomain::new(), ChangeOneDistance).unwrap_test();
+        let identity = make_identity(AllDomain::default(), ChangeOneDistance).unwrap_test();
         let arg = 99;
         let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);
@@ -138,16 +134,7 @@ mod tests {
         let is_equal = make_is_equal("alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
         let ret = is_equal.invoke(&arg)?;
-        assert_eq!(ret, vec![true, false, false]);
-        assert!(is_equal.check(&1, &1)?);
-        Ok(())
-    }
 
-    #[test]
-    fn test_is_null() -> Fallible<()> {
-        let is_equal = make_is_null::<InherentNullDomain<AllDomain<_>>>()?;
-        let arg = vec![f64::NAN, 1., 2.];
-        let ret = is_equal.invoke(&arg)?;
         assert_eq!(ret, vec![true, false, false]);
         assert!(is_equal.check(&1, &1)?);
         Ok(())

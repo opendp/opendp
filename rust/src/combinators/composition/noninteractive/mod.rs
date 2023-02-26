@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_make_basic_composition() {
-        let input_domain0 = AllDomain::<i32>::new();
+        let input_domain0 = AllDomain::<i32>::default();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f64);
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
@@ -146,7 +146,7 @@ mod tests {
             output_measure0,
             privacy_map0,
         );
-        let input_domain1 = AllDomain::<i32>::new();
+        let input_domain1 = AllDomain::<i32>::default();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();

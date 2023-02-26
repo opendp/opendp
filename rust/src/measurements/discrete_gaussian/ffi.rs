@@ -12,7 +12,7 @@ use crate::measurements::{
     make_base_discrete_gaussian, DiscreteGaussianDomain, DiscreteGaussianMeasure,
 };
 use crate::measures::ZeroConcentratedDivergence;
-use crate::traits::{CheckNull, Float, InfCast, Number};
+use crate::traits::{Float, InfCast, Number, CheckAtom};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
@@ -28,7 +28,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         QI: Type,
     ) -> FfiResult<*mut AnyMeasurement>
     where
-        T: 'static + Clone + CheckNull,
+        T: 'static + CheckAtom + Clone,
         Integer: From<T> + SaturatingCast<T>,
 
         QI: Number,

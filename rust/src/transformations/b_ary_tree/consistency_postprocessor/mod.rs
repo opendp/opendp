@@ -3,7 +3,7 @@ use opendp_derive::bootstrap;
 use crate::{
     core::Function,
     error::Fallible,
-    traits::{CheckNull, Float, RoundCast},
+    traits::{CheckAtom, Float, RoundCast},
 };
 
 use super::{num_layers_from_num_nodes, num_nodes_from_num_layers};
@@ -37,7 +37,7 @@ pub fn make_consistent_b_ary_tree<TIA, TOA>(
     branching_factor: usize,
 ) -> Fallible<Function<Vec<TIA>, Vec<TOA>>>
 where
-    TIA: CheckNull + Clone,
+    TIA: CheckAtom + Clone,
     TOA: Float + RoundCast<TIA>,
 {
     Ok(Function::new_fallible(move |arg: &Vec<TIA>| {
@@ -88,6 +88,7 @@ where
 
                 // postprocess by weighted inverse variance
                 tree[i] = alpha * tree[i] + (TOA::one() - alpha) * child_val;
+
             });
         });
 

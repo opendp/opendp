@@ -6,16 +6,13 @@ use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Metric, Transformation};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
-use crate::err;
 use crate::error::Fallible;
+use crate::metrics::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance, IntDistance};
+use crate::domains::{AllDomain, OptionNullDomain, VectorDomain};
+use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::metrics::{
-    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance,
-    L1Distance, L2Distance, SymmetricDistance,
-};
-use crate::traits::{CheckNull, DistanceConstant, InherentNull, Primitive};
+use crate::traits::{CheckAtom, InherentNull, DistanceConstant, Primitive};
 use crate::transformations::{make_is_equal, make_is_null};
 
 #[bootstrap(features("contrib"))]
@@ -59,7 +56,7 @@ pub extern "C" fn opendp_transformations__make_identity(
             };
             fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
                 where M: 'static + Metric<Distance=IntDistance>,
-                      T: 'static + Clone + CheckNull {
+                      T: 'static + Clone + CheckAtom {
                 make_identity::<VectorDomain<AllDomain<T>>, M>().into_any()
             }
             dispatch!(monomorphize, [
@@ -74,10 +71,10 @@ pub extern "C" fn opendp_transformations__make_identity(
             let T = try_!(Type::of_id(&args[0]));
 
             fn monomorphize<T>(M: Type) -> FfiResult<*mut AnyTransformation>
-                where T: 'static + DistanceConstant<T> + CheckNull + One + Clone {
+                where T: 'static + DistanceConstant<T> + CheckAtom + One + Clone {
                 fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
                     where M: 'static + Metric,
-                          M::Distance: CheckNull + DistanceConstant<M::Distance> + One + Clone {
+                          M::Distance: CheckAtom + DistanceConstant<M::Distance> + One + Clone {
                     make_identity::<AllDomain<M::Distance>, M>().into_any()
                 }
                 dispatch!(monomorphize, [
@@ -119,27 +116,19 @@ pub extern "C" fn opendp_transformations__make_is_null(
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
             fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
-            where
-                TIA: 'static + CheckNull,
-            {
+                where TIA: 'static + CheckAtom {
                 make_is_null::<OptionNullDomain<AllDomain<TIA>>>().into_any()
             }
             dispatch!(monomorphize, [(TIA, @primitives)], ())
         }
-        TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
+        TypeContents::GENERIC { name, .. } if name == &"AllDomain" => {
             fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
-            where
-                TIA: 'static + InherentNull,
-            {
-                make_is_null::<InherentNullDomain<AllDomain<TIA>>>().into_any()
+                where TIA: 'static + CheckAtom + InherentNull {
+                make_is_null::<AllDomain<TIA>>().into_any()
             }
             dispatch!(monomorphize, [(TIA, [f64, f32])], ())
         }
-        _ => err!(
-            TypeParse,
-            "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>"
-        )
-        .into(),
+        _ => err!(TypeParse, "DA must be an OptionNullDomain<AllDomain<T>> or an AllDomain<T>").into()
     }
 }
 

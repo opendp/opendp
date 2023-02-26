@@ -112,8 +112,8 @@
 //!# use opendp::metrics::AbsoluteDistance;
 //!# use opendp::domains::AllDomain;
 //! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
-//!     let input_domain = AllDomain::new();
-//!     let output_domain = AllDomain::new();
+//!     let input_domain = AllDomain::default();
+//!     let output_domain = AllDomain::default();
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = AbsoluteDistance::default();
 //!     let output_metric = AbsoluteDistance::default();

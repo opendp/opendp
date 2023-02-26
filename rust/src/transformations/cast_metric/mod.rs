@@ -172,7 +172,7 @@ mod test {
 
     #[test]
     fn test_ordering() -> Fallible<()> {
-        let domain = VectorDomain::new(AllDomain::new(), None);
+        let domain = VectorDomain::new(AllDomain::default(), None);
         let ord_trans = make_ordered_random::<_, SymmetricDistance>(domain.clone())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(ord_trans.invoke(&data)?.len(), 3);
@@ -184,7 +184,7 @@ mod test {
 
     #[test]
     fn test_bounded() -> Fallible<()> {
-        let domain = VectorDomain::new(AllDomain::new(), Some(3));
+        let domain = VectorDomain::new(AllDomain::default(), Some(3));
         let bdd_trans = make_metric_bounded::<_, SymmetricDistance>(domain.clone())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(bdd_trans.invoke(&data)?.len(), 3);
