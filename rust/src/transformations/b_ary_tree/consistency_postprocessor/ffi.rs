@@ -6,7 +6,7 @@ use std::{
 use crate::{
     core::{FfiResult, IntoAnyFunctionFfiResultExt},
     ffi::{any::AnyFunction, util::Type},
-    traits::{Float, RoundCast, CheckAtom},
+    traits::{CheckAtom, Float, RoundCast},
     transformations::make_consistent_b_ary_tree,
 };
 

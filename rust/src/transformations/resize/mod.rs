@@ -3,8 +3,8 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
-use crate::domains::{VectorDomain};
+use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
+use crate::domains::VectorDomain;
 use crate::error::Fallible;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::samplers::Shuffle;
@@ -105,15 +105,12 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
 
     #[test]
     fn test() -> Fallible<()> {
-        let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
-            3,
-            AllDomain::default(),
-            "x",
-        )?;
+        let trans =
+            make_resize::<_, SymmetricDistance, SymmetricDistance>(3, AtomDomain::default(), "x")?;
         assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
         assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
         assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);

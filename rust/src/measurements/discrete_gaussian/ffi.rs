@@ -5,14 +5,14 @@ use az::SaturatingCast;
 use rug::{Integer, Rational};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::measurements::{
     make_base_discrete_gaussian, DiscreteGaussianDomain, DiscreteGaussianMeasure,
 };
 use crate::measures::ZeroConcentratedDivergence;
-use crate::traits::{Float, InfCast, Number, CheckAtom};
+use crate::traits::{CheckAtom, Float, InfCast, Number};
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
@@ -49,7 +49,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
-            (D, [VectorDomain<AllDomain<T>>, AllDomain<T>]),
+            (D, [VectorDomain<AtomDomain<T>>, AtomDomain<T>]),
             (MO, [ZeroConcentratedDivergence<QO>]),
             (QI, [QI])
         ], (scale))
@@ -82,7 +82,7 @@ mod tests {
     fn test_make_base_discrete_gaussian() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_discrete_gaussian(
             util::into_raw(0.0) as *const c_void,
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "ZeroConcentratedDivergence<f64>".to_char_p(),
             "i32".to_char_p(),
         ))?;

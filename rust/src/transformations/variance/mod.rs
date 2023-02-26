@@ -5,7 +5,7 @@ use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPow, InfSub};
@@ -42,8 +42,8 @@ pub fn make_sized_bounded_variance<S>(
     ddof: usize,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<S::Item>>,
-        AllDomain<S::Item>,
+        VectorDomain<AtomDomain<S::Item>>,
+        AtomDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
     >,
@@ -51,7 +51,7 @@ pub fn make_sized_bounded_variance<S>(
 where
     S: UncheckedSum,
     S::Item: 'static + Float,
-    AllDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
+    AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
     AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
 {
     if ddof >= size {

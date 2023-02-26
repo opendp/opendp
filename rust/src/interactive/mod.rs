@@ -233,7 +233,6 @@ impl<Q: 'static, A: 'static> FromPolyQueryable for Queryable<Q, A> {
     }
 }
 
-
 // The previous impl over all Q has an implicit `Sized` trait bound, whereas this parameterizes Q as dyn Any, which is not Sized.
 // Therefore, the compiler recognizes these impls as disjoint.
 impl FromPolyQueryable for PolyQueryable {

@@ -1,15 +1,24 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use crate::core::{Domain, Measurement, Metric, PrivacyMap, Measure};
+use crate::core::{Domain, Measure, Measurement, Metric, PrivacyMap};
 use crate::domains::VectorDomain;
-use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::error::Fallible;
-use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P, InfDiv};
+use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
+use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul};
 
-pub trait IsSizedDomain: Domain { fn get_size(&self) -> Fallible<usize>; }
+pub trait IsSizedDomain: Domain {
+    fn get_size(&self) -> Fallible<usize>;
+}
 impl<D: Domain> IsSizedDomain for VectorDomain<D> {
-    fn get_size(&self) -> Fallible<usize> { self.size.ok_or_else(|| err!(FailedFunction, "elements of the vector domain have unknown size")) }
+    fn get_size(&self) -> Fallible<usize> {
+        self.size.ok_or_else(|| {
+            err!(
+                FailedFunction,
+                "elements of the vector domain have unknown size"
+            )
+        })
+    }
 }
 
 pub trait AmplifiableMeasure: Measure {

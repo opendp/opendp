@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::SymmetricDistance,
     traits::{Hashable, Primitive},
@@ -27,7 +27,7 @@ pub fn make_select_column<K, TOA>(
 ) -> Fallible<
     Transformation<
         DataFrameDomain<K>,
-        VectorDomain<AllDomain<TOA>>,
+        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -38,7 +38,7 @@ where
 {
     Ok(Transformation::new(
         DataFrameDomain::new(),
-        VectorDomain::new(AllDomain::default(), None),
+        VectorDomain::new(AtomDomain::default(), None),
         Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
             // retrieve column from dataframe and handle error
             arg.get(&key)

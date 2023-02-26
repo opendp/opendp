@@ -56,7 +56,6 @@ __all__ = [
     "make_split_lines",
     "make_split_records",
     "make_subset_by",
-    "make_unclamp",
     "make_unordered"
 ]
 
@@ -108,8 +107,8 @@ def make_b_ary_tree(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TA>>`
-    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TA>>`
     * Input Metric:   `M`
     * Output Metric:  `M`
     
@@ -178,8 +177,8 @@ def make_bounded_float_checked_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
-    * Output Domain:  `AllDomain<S::Item>`
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
     
@@ -247,8 +246,8 @@ def make_bounded_float_ordered_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
-    * Output Domain:  `AllDomain<S::Item>`
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
     * Input Metric:   `InsertDeleteDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
     
@@ -301,8 +300,8 @@ def make_bounded_int_monotonic_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -350,8 +349,8 @@ def make_bounded_int_ordered_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `InsertDeleteDistance`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -399,8 +398,8 @@ def make_bounded_int_split_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -447,6 +446,13 @@ def make_bounded_sum(
     * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
+    * Input Metric:   `MI`
+    * Output Metric:  `AbsoluteDistance<T>`
+    
     :param bounds: Tuple of lower and upper bounds for data in the input domain.
     :type bounds: Tuple[Any, Any]
     :param MI: Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
@@ -492,8 +498,8 @@ def make_cast(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<OptionNullDomain<AllDomain<TOA>>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<OptionDomain<AtomDomain<TOA>>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -545,8 +551,8 @@ def make_cast_default(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -594,8 +600,8 @@ def make_cast_inherent(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<InherentNullDomain<AllDomain<TOA>>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -678,8 +684,8 @@ def make_clamp(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TA>>`
-    * Output Domain:  `VectorDomain<BoundedDomain<TA>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -782,8 +788,8 @@ def make_count(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `AllDomain<TO>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `AtomDomain<TO>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<TO>`
     
@@ -836,8 +842,8 @@ def make_count_by(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TK>>`
-    * Output Domain:  `MapDomain<AllDomain<TK>, AllDomain<TV>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TK>>`
+    * Output Domain:  `MapDomain<AtomDomain<TK>, AtomDomain<TV>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `MO`
     
@@ -894,8 +900,8 @@ def make_count_by_categories(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `MO`
     
@@ -953,8 +959,8 @@ def make_count_distinct(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `AllDomain<TO>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `AtomDomain<TO>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<TO>`
     
@@ -997,7 +1003,7 @@ def make_create_dataframe(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<VectorDomain<AllDomain<String>>>`
+    * Input Domain:   `VectorDomain<VectorDomain<AtomDomain<String>>>`
     * Output Domain:  `DataFrameDomain<K>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
@@ -1145,25 +1151,27 @@ def make_df_is_equal(
 
 
 def make_drop_null(
-    DA: RuntimeTypeDescriptor
+    atom_domain,
+    DA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that drops null values.
     
     
     | `DA`                                | `DA::Imputed` |
     | ----------------------------------- | ------------- |
-    | `OptionNullDomain<AllDomain<TA>>`   | `TA`          |
-    | `InherentNullDomain<AllDomain<TA>>` | `TA`          |
+    | `OptionDomain<AtomDomain<TA>>`      | `TA`          |
+    | `AtomDomain<TA>`                    | `TA`          |
     
     [make_drop_null in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_drop_null.html)
     
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<DA>`
-    * Output Domain:  `VectorDomain<AllDomain<DA::Imputed>>`
+    * Output Domain:  `VectorDomain<AtomDomain<DA::Imputed>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
+    :param atom_domain: 
     :param DA: atomic domain of input data that contains nulls.
     :type DA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1174,17 +1182,18 @@ def make_drop_null(
     assert_features("contrib")
     
     # Standardize type arguments.
-    DA = RuntimeType.parse(type_name=DA)
+    DA = RuntimeType.parse_or_infer(type_name=DA, public_example=atom_domain)
     
     # Convert arguments to c types.
+    c_atom_domain = py_to_c(atom_domain, c_type=Domain, type_name=DA)
     c_DA = py_to_c(DA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_drop_null
-    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.argtypes = [Domain, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_DA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_atom_domain, c_DA), Transformation))
     
     return output
 
@@ -1203,8 +1212,8 @@ def make_find(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<OptionNullDomain<AllDomain<usize>>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<OptionDomain<AtomDomain<usize>>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -1254,8 +1263,8 @@ def make_find_bin(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<AllDomain<usize>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<usize>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -1302,9 +1311,9 @@ def make_identity(
     * Input Metric:   `M`
     * Output Metric:  `M`
     
-    :param D: Domain of the identity function. Must be `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+    :param D: Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
-    :param M: Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
+    :param M: Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
     :type M: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
@@ -1332,29 +1341,31 @@ def make_identity(
 
 
 def make_impute_constant(
+    atom_domain,
     constant: Any,
-    DIA: RuntimeTypeDescriptor = "OptionNullDomain<AllDomain<TA>>"
+    DIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that replaces null/None data with `constant`.
     
     By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
-    Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types
+    Set `DA` to `AtomDomain<TA>` for imputing on types
     that have an inherent representation of nullity, like floats.
     
     | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
     | ----------------------------------- | ----------------- | -------------- |
-    | `OptionNullDomain<AllDomain<TA>>`   | `Vec<Option<TA>>` | `TA`           |
-    | `InherentNullDomain<AllDomain<TA>>` | `Vec<TA>`         | `TA`           |
+    | `OptionDomain<AtomDomain<TA>>`      | `Vec<Option<TA>>` | `TA`           |
+    | `AtomDomain<TA>`                    | `Vec<TA>`         | `TA`           |
     
     [make_impute_constant in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_impute_constant.html)
     
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<DIA>`
-    * Output Domain:  `VectorDomain<AllDomain<DIA::Imputed>>`
+    * Output Domain:  `VectorDomain<AtomDomain<DIA::Imputed>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
+    :param atom_domain: 
     :param constant: Value to replace nulls with.
     :type constant: Any
     :param DIA: Atomic Input Domain of data being imputed.
@@ -1367,20 +1378,19 @@ def make_impute_constant(
     assert_features("contrib")
     
     # Standardize type arguments.
-    DIA = RuntimeType.parse(type_name=DIA, generics=["TA"])
-    TA = get_atom_or_infer(DIA, constant)
-    DIA = DIA.substitute(TA=TA)
+    DIA = RuntimeType.parse_or_infer(type_name=DIA, public_example=atom_domain)
     
     # Convert arguments to c types.
-    c_constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=TA)
+    c_atom_domain = py_to_c(atom_domain, c_type=Domain, type_name=DIA)
+    c_constant = py_to_c(constant, c_type=AnyObjectPtr, type_name=get_atom(get_carrier_type(atom_domain)))
     c_DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_impute_constant
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, AnyObjectPtr, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_constant, c_DIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_atom_domain, c_constant, c_DIA), Transformation))
     
     return output
 
@@ -1395,8 +1405,8 @@ def make_impute_uniform_float(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<InherentNullDomain<AllDomain<TA>>>`
-    * Output Domain:  `VectorDomain<AllDomain<TA>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -1439,8 +1449,8 @@ def make_index(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<usize>>`
-    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Domain:   `VectorDomain<AtomDomain<usize>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -1485,8 +1495,8 @@ def make_is_equal(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<AllDomain<bool>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<bool>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -1519,7 +1529,8 @@ def make_is_equal(
 
 
 def make_is_null(
-    DIA: RuntimeTypeDescriptor
+    input_atom_domain,
+    DIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that checks if each element in a vector is null.
     
@@ -1528,10 +1539,11 @@ def make_is_null(
     **Supporting Elements:**
     
     * Input Domain:   `VectorDomain<DIA>`
-    * Output Domain:  `VectorDomain<AllDomain<bool>>`
+    * Output Domain:  `VectorDomain<AtomDomain<bool>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
+    :param input_atom_domain: 
     :param DIA: Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
     :type DIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1542,17 +1554,18 @@ def make_is_null(
     assert_features("contrib")
     
     # Standardize type arguments.
-    DIA = RuntimeType.parse(type_name=DIA)
+    DIA = RuntimeType.parse_or_infer(type_name=DIA, public_example=input_atom_domain)
     
     # Convert arguments to c types.
+    c_input_atom_domain = py_to_c(input_atom_domain, c_type=Domain, type_name=DIA)
     c_DIA = py_to_c(DIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_is_null
-    lib_function.argtypes = [ctypes.c_char_p]
+    lib_function.argtypes = [Domain, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_DIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_atom_domain, c_DIA), Transformation))
     
     return output
 
@@ -1560,7 +1573,7 @@ def make_is_null(
 def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
-    D: RuntimeTypeDescriptor = "AllDomain<T>",
+    D: RuntimeTypeDescriptor = "AtomDomain<T>",
     M: RuntimeTypeDescriptor = "AbsoluteDistance<T>"
 ) -> Transformation:
     """Make a transformation that multiplies an aggregate by a constant.
@@ -1579,7 +1592,7 @@ def make_lipschitz_float_mul(
     :param constant: The constant to multiply aggregates by.
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
-    :param D: Domain of the function. Must be `AllDomain<T>` or `VectorDomain<AllDomain<T>>`
+    :param D: Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
     :type D: :py:ref:`RuntimeTypeDescriptor`
     :param M: Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
     :type M: :py:ref:`RuntimeTypeDescriptor`
@@ -1904,7 +1917,7 @@ def make_select_column(
     **Supporting Elements:**
     
     * Input Domain:   `DataFrameDomain<K>`
-    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -1969,8 +1982,8 @@ def make_sized_bounded_float_checked_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
-    * Output Domain:  `AllDomain<S::Item>`
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
     
@@ -2038,8 +2051,8 @@ def make_sized_bounded_float_ordered_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
-    * Output Domain:  `AllDomain<S::Item>`
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
     * Input Metric:   `InsertDeleteDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
     
@@ -2093,8 +2106,8 @@ def make_sized_bounded_int_checked_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -2146,8 +2159,8 @@ def make_sized_bounded_int_monotonic_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -2201,8 +2214,8 @@ def make_sized_bounded_int_ordered_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `InsertDeleteDistance`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -2256,8 +2269,8 @@ def make_sized_bounded_int_split_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -2307,8 +2320,8 @@ def make_sized_bounded_mean(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `MI`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -2367,8 +2380,8 @@ def make_sized_bounded_sum(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<T>>`
-    * Output Domain:  `AllDomain<T>`
+    * Input Domain:   `VectorDomain<AtomDomain<T>>`
+    * Output Domain:  `AtomDomain<T>`
     * Input Metric:   `MI`
     * Output Metric:  `AbsoluteDistance<T>`
     
@@ -2437,8 +2450,8 @@ def make_sized_bounded_sum_of_squared_deviations(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
-    * Output Domain:  `AllDomain<S::Item>`
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
     
@@ -2494,8 +2507,8 @@ def make_sized_bounded_variance(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<BoundedDomain<S::Item>>`
-    * Output Domain:  `AllDomain<S::Item>`
+    * Input Domain:   `VectorDomain<AtomDomain<S::Item>>`
+    * Output Domain:  `AtomDomain<S::Item>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<S::Item>`
     
@@ -2547,7 +2560,7 @@ def make_split_dataframe(
     
     **Supporting Elements:**
     
-    * Input Domain:   `AllDomain<String>`
+    * Input Domain:   `AtomDomain<String>`
     * Output Domain:  `DataFrameDomain<K>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
@@ -2592,8 +2605,8 @@ def make_split_lines(
     
     **Supporting Elements:**
     
-    * Input Domain:   `AllDomain<String>`
-    * Output Domain:  `VectorDomain<AllDomain<String>>`
+    * Input Domain:   `AtomDomain<String>`
+    * Output Domain:  `VectorDomain<AtomDomain<String>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -2626,8 +2639,8 @@ def make_split_records(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<String>>`
-    * Output Domain:  `VectorDomain<VectorDomain<AllDomain<String>>>`
+    * Input Domain:   `VectorDomain<AtomDomain<String>>`
+    * Output Domain:  `VectorDomain<VectorDomain<AtomDomain<String>>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `SymmetricDistance`
     
@@ -2697,51 +2710,6 @@ def make_subset_by(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_indicator_column, c_keep_columns, c_TK), Transformation))
-    
-    return output
-
-
-def make_unclamp(
-    bounds: Tuple[Any, Any],
-    TA: RuntimeTypeDescriptor = None
-) -> Transformation:
-    """Make a Transformation that unclamps numeric data in `Vec<T>`.
-    
-    Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
-    
-    [make_unclamp in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_unclamp.html)
-    
-    **Supporting Elements:**
-    
-    * Input Domain:   `VectorDomain<BoundedDomain<TA>>`
-    * Output Domain:  `VectorDomain<AllDomain<TA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
-    
-    :param bounds: Tuple of lower and upper bounds.
-    :type bounds: Tuple[Any, Any]
-    :param TA: Atomic Type
-    :type TA: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    assert_features("contrib")
-    
-    # Standardize type arguments.
-    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
-    
-    # Convert arguments to c types.
-    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
-    c_TA = py_to_c(TA, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_transformations__make_unclamp
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_bounds, c_TA), Transformation))
     
     return output
 

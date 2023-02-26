@@ -2,7 +2,7 @@ from opendp.transformations import *
 from opendp.measurements import *
 from opendp.combinators import *
 
-from opendp.typing import ChangeOneDistance, VectorDomain, AllDomain
+from opendp.typing import ChangeOneDistance, VectorDomain, AtomDomain
 from opendp.mod import enable_features
 enable_features("contrib")
 
@@ -12,7 +12,7 @@ enable_features("contrib")
 def main():
 
     # HELLO WORLD
-    identity = make_identity(D=VectorDomain[AllDomain[str]], M=ChangeOneDistance)
+    identity = make_identity(D=VectorDomain[AtomDomain[str]], M=ChangeOneDistance)
     arg = ["hello, world!"]
     res = identity(arg)
     print(res)
@@ -43,8 +43,6 @@ def main():
     # Compose & chain
     everything = parse_dataframe >> make_basic_composition([noisy_sum_1, noisy_count_2])
     print(everything(arg))
-
-    # TODO: update data unloaders to work recursively, to avoid needing the cast to a string
 
 
 if __name__ == "__main__":

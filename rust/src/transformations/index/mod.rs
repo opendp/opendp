@@ -7,7 +7,7 @@ use std::iter::FromIterator;
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AllDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::SymmetricDistance;
 use crate::traits::{Hashable, Number, Primitive};
@@ -29,8 +29,8 @@ pub fn make_find<TIA>(
     categories: Vec<TIA>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<OptionNullDomain<AllDomain<usize>>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<OptionDomain<AtomDomain<usize>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -47,8 +47,10 @@ where
     }
 
     make_row_by_row(
-        AllDomain::default(), OptionNullDomain::new(AllDomain::default()),
-        move |v| indexes.get(v).cloned())
+        AtomDomain::default(),
+        OptionDomain::new(AtomDomain::default()),
+        move |v| indexes.get(v).cloned(),
+    )
 }
 
 #[bootstrap(features("contrib"))]
@@ -71,8 +73,8 @@ pub fn make_find_bin<TIA>(
     edges: Vec<TIA>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<usize>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<usize>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -83,11 +85,14 @@ where
     if !edges.windows(2).all(|pair| pair[0] < pair[1]) {
         return fallible!(MakeTransformation, "edges must be unique and ordered");
     }
-    make_row_by_row(
-        AllDomain::default(), AllDomain::default(),
-        move |v| edges.iter().enumerate()
-            .find(|(_, edge)| v < edge).map(|(i, _)| i)
-            .unwrap_or(edges.len()))
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
+        edges
+            .iter()
+            .enumerate()
+            .find(|(_, edge)| v < edge)
+            .map(|(i, _)| i)
+            .unwrap_or(edges.len())
+    })
 }
 
 #[bootstrap(features("contrib"))]
@@ -100,12 +105,22 @@ where
 /// # Generics
 /// * `TOA` - Atomic Output Type. Output data will be `Vec<TOA>`.
 pub fn make_index<TOA>(
-    categories: Vec<TOA>, null: TOA
-) -> Fallible<Transformation<VectorDomain<AllDomain<usize>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
-    where TOA: Primitive {
-    make_row_by_row(
-        AllDomain::default(), AllDomain::default(),
-        move |v| categories.get(*v).unwrap_or(&null).clone())
+    categories: Vec<TOA>,
+    null: TOA,
+) -> Fallible<
+    Transformation<
+        VectorDomain<AtomDomain<usize>>,
+        VectorDomain<AtomDomain<TOA>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+>
+where
+    TOA: Primitive,
+{
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
+        categories.get(*v).unwrap_or(&null).clone()
+    })
 }
 
 #[cfg(test)]

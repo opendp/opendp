@@ -4,10 +4,10 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::SymmetricDistance;
-use crate::traits::{TotalOrd, CheckAtom};
+use crate::traits::{CheckAtom, TotalOrd};
 use crate::transformations::make_row_by_row_fallible;
 
 #[bootstrap(features("contrib"), generics(TA(example = "$get_first(bounds)")))]
@@ -25,15 +25,15 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckAtom>(
     bounds: (TA, TA),
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TA>>,
-        VectorDomain<AllDomain<TA>>,
+        VectorDomain<AtomDomain<TA>>,
+        VectorDomain<AtomDomain<TA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 > {
     make_row_by_row_fallible(
-        AllDomain::default(),
-        AllDomain::new_closed(bounds.clone())?,
+        AtomDomain::default(),
+        AtomDomain::new_closed(bounds.clone())?,
         move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()),
     )
 }

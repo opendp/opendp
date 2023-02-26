@@ -186,7 +186,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::core::*;
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
     use crate::error::ExplainUnwrap;
     use crate::measures::MaxDivergence;
     use crate::metrics::L1Distance;
@@ -195,12 +195,13 @@ mod tests {
 
     #[test]
     fn test_make_chain_mt() {
-        let input_domain0 = AllDomain::<u8>::default();
-        let output_domain0 = AllDomain::<i32>::default();
+        let input_domain0 = AtomDomain::<u8>::default();
+        let output_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = L1Distance::<i32>::default();
         let output_metric0 = L1Distance::<i32>::default();
         let stability_map0 = StabilityMap::new_from_constant(1);
+
         let transformation0 = Transformation::new(
             input_domain0,
             output_domain0,
@@ -209,7 +210,7 @@ mod tests {
             output_metric0,
             stability_map0,
         );
-        let input_domain1 = AllDomain::<i32>::default();
+        let input_domain1 = AtomDomain::<i32>::default();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
@@ -234,15 +235,22 @@ mod tests {
 
     #[test]
     fn test_make_chain_tt() {
-        let input_domain0 = AllDomain::<u8>::default();
-        let output_domain0 = AllDomain::<i32>::default();
+        let input_domain0 = AtomDomain::<u8>::default();
+        let output_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = L1Distance::<i32>::default();
         let output_metric0 = L1Distance::<i32>::default();
         let stability_map0 = StabilityMap::new_from_constant(1);
-        let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_map0);
-        let input_domain1 = AllDomain::<i32>::default();
-        let output_domain1 = AllDomain::<f64>::default();
+        let transformation0 = Transformation::new(
+            input_domain0,
+            output_domain0,
+            function0,
+            input_metric0,
+            output_metric0,
+            stability_map0,
+        );
+        let input_domain1 = AtomDomain::<i32>::default();
+        let output_domain1 = AtomDomain::<f64>::default();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_metric1 = L1Distance::<i32>::default();
@@ -267,8 +275,8 @@ mod tests {
     }
 
     #[test]
-    fn test_make_chain_tm() {
-        let input_domain0 = AllDomain::<u8>::default();
+    fn test_make_chain_pm() {
+        let input_domain0 = AtomDomain::<u8>::default();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::<i32>::default();

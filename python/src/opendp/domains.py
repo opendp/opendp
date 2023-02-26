@@ -5,55 +5,29 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
-    "all_domain",
-    "bounded_domain",
+    "atom_domain",
     "domain_carrier_type",
     "domain_debug",
     "domain_type",
     "member",
+    "option_domain",
     "vector_domain"
 ]
 
 
-def all_domain(
-    T: RuntimeTypeDescriptor
-):
-    """Construct an instance of `AllDomain`.
-    
-    [all_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.all_domain.html)
-    
-    :param T: The type of the atom.
-    :type T: :py:ref:`RuntimeTypeDescriptor`
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # Standardize type arguments.
-    T = RuntimeType.parse(type_name=T)
-    
-    # Convert arguments to c types.
-    c_T = py_to_c(T, c_type=ctypes.c_char_p)
-    
-    # Call library function.
-    lib_function = lib.opendp_domains__all_domain
-    lib_function.argtypes = [ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_T), Domain))
-    
-    return output
-
-
-def bounded_domain(
-    bounds: Tuple[Any, Any],
+def atom_domain(
+    bounds: Any = None,
+    nullable: bool = False,
     T: RuntimeTypeDescriptor = None
 ):
-    """Construct an instance of `BoundedDomain`.
+    """Construct an instance of `AtomDomain`.
     
-    [bounded_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.bounded_domain.html)
+    [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
     
-    :param bounds: A tuple of upper/lower bounds.
-    :type bounds: Tuple[Any, Any]
+    :param bounds: 
+    :type bounds: Any
+    :param nullable: 
+    :type nullable: bool
     :param T: The type of the atom.
     :type T: :py:ref:`RuntimeTypeDescriptor`
     :raises TypeError: if an argument's type differs from the expected type
@@ -64,15 +38,16 @@ def bounded_domain(
     T = RuntimeType.parse_or_infer(type_name=T, public_example=get_first(bounds))
     
     # Convert arguments to c types.
-    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[T, T]))
+    c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])]))
+    c_nullable = py_to_c(nullable, c_type=ctypes.c_bool, type_name=bool)
     c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_domains__bounded_domain
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function = lib.opendp_domains__atom_domain
+    lib_function.argtypes = [AnyObjectPtr, ctypes.c_bool, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_bounds, c_T), Domain))
+    output = c_to_py(unwrap(lib_function(c_bounds, c_nullable, c_T), Domain))
     
     return output
 
@@ -185,6 +160,38 @@ def member(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this, c_val), BoolPtr))
+    
+    return output
+
+
+def option_domain(
+    element_domain,
+    D: RuntimeTypeDescriptor = None
+):
+    """Construct an instance of `OptionDomain`.
+    
+    [option_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.option_domain.html)
+    
+    :param element_domain: 
+    :param D: The type of the inner domain.
+    :type D: :py:ref:`RuntimeTypeDescriptor`
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # Standardize type arguments.
+    D = RuntimeType.parse_or_infer(type_name=D, public_example=element_domain)
+    
+    # Convert arguments to c types.
+    c_element_domain = py_to_c(element_domain, c_type=Domain, type_name=D)
+    c_D = py_to_c(D, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_domains__option_domain
+    lib_function.argtypes = [Domain, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_element_domain, c_D), Domain))
     
     return output
 

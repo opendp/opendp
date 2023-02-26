@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::AllDomain;
+use crate::domains::AtomDomain;
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
@@ -37,7 +37,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_variance(
         where
             S: UncheckedSum,
             S::Item: 'static + Float,
-            AllDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
+            AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
             AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
         {
             make_sized_bounded_variance::<S>(size, bounds, ddof).into_any()

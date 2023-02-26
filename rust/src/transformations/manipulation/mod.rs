@@ -5,11 +5,10 @@ use num::One;
 use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
-use crate::traits::{DistanceConstant, CheckNull, CheckAtom};
-use crate::metrics::{SymmetricDistance, IntDistance};
-
+use crate::metrics::{IntDistance, SymmetricDistance};
+use crate::traits::{CheckAtom, CheckNull, DistanceConstant};
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
 pub(crate) fn make_row_by_row<DIA, DOA, M>(
@@ -26,8 +25,7 @@ where
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain, None),
         VectorDomain::new(atom_output_domain, None),
-        Function::new(move |arg: &Vec<DIA::Carrier>|
-            arg.iter().map(&atom_function).collect()),
+        Function::new(move |arg: &Vec<DIA::Carrier>| arg.iter().map(&atom_function).collect()),
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),
@@ -49,8 +47,9 @@ where
     Ok(Transformation::new(
         VectorDomain::new(atom_input_domain, None),
         VectorDomain::new(atom_output_domain, None),
-        Function::new_fallible(move |arg: &Vec<DIA::Carrier>|
-            arg.iter().map(&atom_function).collect()),
+        Function::new_fallible(move |arg: &Vec<DIA::Carrier>| {
+            arg.iter().map(&atom_function).collect()
+        }),
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),
@@ -84,25 +83,37 @@ where
 /// # Generics
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
 pub fn make_is_equal<TIA>(
-    value: TIA
-) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<bool>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + PartialEq + CheckAtom {
-    make_row_by_row(
-        AllDomain::default(),
-        AllDomain::default(),
-        move |v| v == &value)
-
+    value: TIA,
+) -> Fallible<
+    Transformation<
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<bool>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+>
+where
+    TIA: 'static + PartialEq + CheckAtom,
+{
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
+        v == &value
+    })
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(input_atom_domain(c_type = "AnyDomain *"))
+)]
 /// Make a Transformation that checks if each element in a vector is null.
 ///
 /// # Generics
 /// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
-pub fn make_is_null<DIA>() -> Fallible<
+pub fn make_is_null<DIA>(
+    input_atom_domain: DIA,
+) -> Fallible<
     Transformation<
         VectorDomain<DIA>,
-        VectorDomain<AllDomain<bool>>,
+        VectorDomain<AtomDomain<bool>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -111,19 +122,19 @@ where
     DIA: Domain + Default,
     DIA::Carrier: 'static + CheckNull,
 {
-    make_row_by_row(DIA::default(), AllDomain::default(), |v| v.is_null())
+    make_row_by_row(input_atom_domain, AtomDomain::default(), |v| v.is_null())
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use crate::domains::AtomDomain;
     use crate::metrics::ChangeOneDistance;
-    use crate::domains::{AllDomain};
 
     #[test]
     fn test_identity() {
-        let identity = make_identity(AllDomain::default(), ChangeOneDistance).unwrap_test();
+        let identity = make_identity(AtomDomain::default(), ChangeOneDistance).unwrap_test();
         let arg = 99;
         let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);

@@ -28,14 +28,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::domains::{AllDomain, VectorDomain};
+    use crate::domains::{AtomDomain, VectorDomain};
 
     use super::*;
     #[test]
     fn test_postprocess() -> Fallible<()> {
         let post = make_postprocess(
-            AllDomain::default(), 
-            VectorDomain::new(AllDomain::default(), None), 
+            AtomDomain::default(), 
+            VectorDomain::new(AtomDomain::default(), None), 
             Function::new(|_| vec![12]))?;
 
         assert_eq!(post.invoke(&"A".to_string())?, vec![12]);

@@ -38,8 +38,8 @@ Notice that there is a symmetric structure to the additive noise measurements:
 In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
 You can choose whether to construct scalar or vector-valued versions by setting the ``D`` type argument when calling the constructor.
 
-:Scalar: ``D=AllDomain[T]`` (default)
-:Vector: ``D=VectorDomain[AllDomain[T]]``
+:Scalar: ``D=AtomDomain[T]`` (default)
+:Vector: ``D=VectorDomain[AtomDomain[T]]``
 
 Laplacian Noise
 ***************
@@ -55,19 +55,19 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_base_discrete_laplace`
-     - ``AllDomain<int>``
+     - ``AtomDomain<int>``
      - ``AbsoluteDistance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace`
-     - ``VectorDomain<AllDomain<int>>``
+     - ``VectorDomain<AtomDomain<int>>``
      - ``L1Distance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_laplace`
-     - ``AllDomain<float>``
+     - ``AtomDomain<float>``
      - ``AbsoluteDistance<float>``
      - ``MaxDivergence<float>``
    * - :func:`opendp.measurements.make_base_laplace`
-     - ``VectorDomain<AllDomain<float>>``
+     - ``VectorDomain<AtomDomain<float>>``
      - ``L1Distance<float>``
      - ``MaxDivergence<float>``
 
@@ -92,19 +92,19 @@ In addition, the linear-time algorithm supports a constant-time execution mode i
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
-     - ``AllDomain<int>``
+     - ``AtomDomain<int>``
      - ``AbsoluteDistance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_cks20`
-     - ``VectorDomain<AllDomain<int>>``
+     - ``VectorDomain<AtomDomain<int>>``
      - ``L1Distance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
-     - ``AllDomain<int>``
+     - ``AtomDomain<int>``
      - ``AbsoluteDistance<int>``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_laplace_linear`
-     - ``VectorDomain<AllDomain<int>>``
+     - ``VectorDomain<AtomDomain<int>>``
      - ``L1Distance<int>``
      - ``MaxDivergence<QO>``
 
@@ -128,19 +128,19 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_base_discrete_gaussian`
-     - ``AllDomain<int>``
+     - ``AtomDomain<int>``
      - ``AbsoluteDistance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
    * - :func:`opendp.measurements.make_base_discrete_gaussian`
-     - ``VectorDomain<AllDomain<int>>``
+     - ``VectorDomain<AtomDomain<int>>``
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence<QO>``
    * - :func:`opendp.measurements.make_base_gaussian`
-     - ``AllDomain<float>``
+     - ``AtomDomain<float>``
      - ``AbsoluteDistance<float>``
      - ``ZeroConcentratedDivergence<float>``
    * - :func:`opendp.measurements.make_base_gaussian`
-     - ``VectorDomain<AllDomain<float>>``
+     - ``VectorDomain<AtomDomain<float>>``
      - ``L2Distance<float>``
      - ``ZeroConcentratedDivergence<float>``
 
@@ -167,11 +167,11 @@ See the `Histograms notebook <../examples/histograms.html>`_ for code examples a
      - Input Metric
      - Output Metric/Measure
    * - :func:`opendp.transformations.make_count_by`
-     - ``VectorDomain<BoundedDomain<TK>>``
+     - ``VectorDomain<AtomDomain<TK>>``
      - ``SymmetricDistance``
      - ``L1Distance<TV>``
    * - :func:`opendp.measurements.make_base_ptr`
-     - ``MapDomain<AllDomain<TK>, AllDomain<TV>>``
+     - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L1Distance<TV>``
      - ``SmoothedMaxDivergence<TV>``
 
@@ -190,10 +190,10 @@ See the `Randomized Response notebook <measurements/randomized-response.html>`_ 
      - Input Metric
      - Output Measure
    * - :func:`opendp.measurements.make_randomized_response_bool`
-     - ``AllDomain<bool>``
+     - ``AtomDomain<bool>``
      - ``DiscreteDistance``
      - ``MaxDivergence<QO>``
    * - :func:`opendp.measurements.make_randomized_response`
-     - ``AllDomain<T>``
+     - ``AtomDomain<T>``
      - ``DiscreteDistance``
      - ``MaxDivergence<QO>``

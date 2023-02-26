@@ -1,10 +1,10 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Function, Transformation, StabilityMap},
-    metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
-    domains::{AllDomain, VectorDomain},
+    core::{Function, StabilityMap, Transformation},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
+    metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance},
     traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, TotalOrd},
 };
 
@@ -51,8 +51,8 @@ pub fn make_bounded_float_ordered_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<S::Item>>,
-        AllDomain<S::Item>,
+        VectorDomain<AtomDomain<S::Item>>,
+        AtomDomain<S::Item>,
         InsertDeleteDistance,
         AbsoluteDistance<S::Item>,
     >,
@@ -68,8 +68,8 @@ where
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new_closed(bounds)?, None),
-        AllDomain::default(),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?, None),
+        AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| {
             S::saturating_sum(&arg[..size_limit.min(arg.len())])
         }),
@@ -125,8 +125,8 @@ pub fn make_sized_bounded_float_ordered_sum<S>(
     bounds: (S::Item, S::Item),
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<S::Item>>,
-        AllDomain<S::Item>,
+        VectorDomain<AtomDomain<S::Item>>,
+        AtomDomain<S::Item>,
         InsertDeleteDistance,
         AbsoluteDistance<S::Item>,
     >,
@@ -140,8 +140,8 @@ where
     let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new_closed(bounds)?, Some(size)),
-        AllDomain::default(),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
+        AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),

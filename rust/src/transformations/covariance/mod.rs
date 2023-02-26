@@ -1,9 +1,9 @@
 use crate::{
-    core::{StabilityMap, Transformation, Function},
-    metrics::{AbsoluteDistance, SymmetricDistance},
-    domains::{AllDomain, VectorDomain},
+    core::{Function, StabilityMap, Transformation},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    traits::{ExactIntCast, InfCast, InfAdd, InfDiv, InfMul, InfSub, Float, CheckAtom},
+    metrics::{AbsoluteDistance, SymmetricDistance},
+    traits::{CheckAtom, ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub},
 };
 
 use num::{One, Zero};
@@ -13,8 +13,7 @@ use super::UncheckedSum;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-
-type CovarianceDomain<T> = VectorDomain<AllDomain<(T, T)>>;
+type CovarianceDomain<T> = VectorDomain<AtomDomain<(T, T)>>;
 
 pub fn make_sized_bounded_covariance<S>(
     size: usize,
@@ -24,7 +23,7 @@ pub fn make_sized_bounded_covariance<S>(
 ) -> Fallible<
     Transformation<
         CovarianceDomain<S::Item>,
-        AllDomain<S::Item>,
+        AtomDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
     >,
@@ -32,7 +31,7 @@ pub fn make_sized_bounded_covariance<S>(
 where
     S: UncheckedSum,
     S::Item: 'static + Float,
-    (S::Item, S::Item): CheckAtom
+    (S::Item, S::Item): CheckAtom,
 {
     if size == 0 {
         return fallible!(MakeTransformation, "size must be greater than zero");
@@ -86,11 +85,11 @@ where
     range_0.inf_mul(&range_1)?.inf_mul(&_size)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::new_closed((
-            (bounds_0.0, bounds_1.0),
-            (bounds_0.1, bounds_1.1),
-        ))?, Some(size)),
-        AllDomain::default(),
+        VectorDomain::new(
+            AtomDomain::new_closed(((bounds_0.0, bounds_1.0), (bounds_0.1, bounds_1.1)))?,
+            Some(size),
+        ),
+        AtomDomain::default(),
         Function::new(enclose!(_size, move |arg: &Vec<(S::Item, S::Item)>| {
             let (l, r): (Vec<S::Item>, Vec<S::Item>) = arg.iter().copied().unzip();
             let (sum_l, sum_r) = (S::unchecked_sum(&l), S::unchecked_sum(&r));

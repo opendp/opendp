@@ -495,13 +495,13 @@ def binary_search_chain(
     >>> from opendp.mod import binary_search_chain, enable_features
     >>> from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
     >>> from opendp.measurements import make_base_laplace
-    >>> from opendp.domains import bounded_domain
+    >>> from opendp.domains import atom_domain
     >>> enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     ...     make_clamp(bounds=(0., 1.)) >>
-    ...     make_resize(size=10, atom_domain=bounded_domain((0., 1.)), constant=0.) >>
+    ...     make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
     ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
     ...
@@ -621,7 +621,7 @@ def binary_search(
 
     .. testsetup:: *
 
-        from opendp.typing import L2Distance, VectorDomain, AllDomain
+        from opendp.typing import L2Distance, VectorDomain, AtomDomain
         from opendp.transformations import make_sized_bounded_mean
         from opendp.measurements import make_base_gaussian
         from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP

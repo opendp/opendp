@@ -110,10 +110,10 @@
 //! ```
 //!# use opendp::core::{Transformation, StabilityMap, Function};
 //!# use opendp::metrics::AbsoluteDistance;
-//!# use opendp::domains::AllDomain;
-//! pub fn make_i32_identity() -> Transformation<AllDomain<i32>, AllDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
-//!     let input_domain = AllDomain::default();
-//!     let output_domain = AllDomain::default();
+//!# use opendp::domains::AtomDomain;
+//! pub fn make_i32_identity() -> Transformation<AtomDomain<i32>, AtomDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
+//!     let input_domain = AtomDomain::default();
+//!     let output_domain = AtomDomain::default();
 //!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = AbsoluteDistance::default();
 //!     let output_metric = AbsoluteDistance::default();

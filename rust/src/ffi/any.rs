@@ -258,7 +258,6 @@ impl Domain for AnyDomain {
     }
 }
 
-
 impl Debug for AnyDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{:?}", self.domain)
@@ -503,29 +502,29 @@ where
 #[cfg(test)]
 mod tests {
 
-    use crate::metrics::{ChangeOneDistance, SymmetricDistance};
-    use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
     use crate::error::*;
     use crate::measurements;
+    use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
+    use crate::metrics::{ChangeOneDistance, SymmetricDistance};
     use crate::transformations;
 
     use super::*;
 
     #[test]
     fn test_any_domain() -> Fallible<()> {
-        let domain1 = AllDomain::new_closed((0, 1))?;
-        let domain2 = AllDomain::new_closed((0, 1))?;
+        let domain1 = AtomDomain::new_closed((0, 1))?;
+        let domain2 = AtomDomain::new_closed((0, 1))?;
         assert_eq!(domain1, domain2);
 
-        let domain1 = AnyDomain::new(AllDomain::new_closed((0, 1))?);
-        let domain2 = AnyDomain::new(AllDomain::new_closed((0, 1))?);
-        let domain3 = AnyDomain::new(AllDomain::<i32>::default());
+        let domain1 = AnyDomain::new(AtomDomain::new_closed((0, 1))?);
+        let domain2 = AnyDomain::new(AtomDomain::new_closed((0, 1))?);
+        let domain3 = AnyDomain::new(AtomDomain::<i32>::default());
         assert_eq!(domain1, domain2);
         assert_ne!(domain1, domain3);
 
-        let _domain1: AllDomain<i32> = domain1.downcast()?;
-        let domain3: Fallible<AllDomain<i32>> = domain3.downcast();
+        let _domain1: AtomDomain<i32> = domain1.downcast()?;
+        let domain3: Fallible<AtomDomain<i64>> = domain3.downcast();
         assert_eq!(
             domain3.err().unwrap_test().variant,
             ErrorVariant::FailedCast
@@ -583,7 +582,7 @@ mod tests {
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
         let t4 = transformations::make_clamp((0.0f64, 10.0))?.into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = measurements::make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(
+        let m1 = measurements::make_base_gaussian::<AtomDomain<_>, ZeroConcentratedDivergence<_>>(
             0.0, None,
         )?
         .into_any();

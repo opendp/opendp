@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -6,13 +7,13 @@ use num::{Integer, ToPrimitive};
 use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float};
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{AllDomain, MapDomain};
+use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::{fill_bytes, SampleBernoulli};
-use crate::traits::{CheckAtom, DistanceConstant, Float as TFloat, InfCast, CheckNull};
+use crate::traits::{CheckAtom, CheckNull, DistanceConstant, Float as TFloat, InfCast};
 use std::collections::hash_map::DefaultHasher;
 
 const ALPHA_DEFAULT: u32 = 4;
@@ -26,7 +27,7 @@ const SIZE_FACTOR_DEFAULT: u32 = 50;
 /// Available here: arxiv.org/abs/2106.10068
 
 /// Input domain. The mechanism is designed for settings where the domain of K is huge.
-type SparseDomain<K, C> = MapDomain<AllDomain<K>, AllDomain<C>>;
+type SparseDomain<K, C> = MapDomain<AtomDomain<K>, AtomDomain<C>>;
 
 // Types used to store the DP projection.
 type BitVector = Vec<bool>;
@@ -39,7 +40,17 @@ pub struct AlpState<K, T> {
     h: HashFunctions<K>,
     z: BitVector,
 }
-impl<K, T> CheckAtom for AlpState<K, T> {}
+impl<K, T> PartialEq for AlpState<K, T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+impl<K: Clone, T: Clone> CheckAtom for AlpState<K, T> {}
+impl<K, T> Debug for AlpState<K, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AlpState()")
+    }
+}
 impl<K, T> CheckNull for AlpState<K, T> {
     fn is_null(&self) -> bool {
         false
@@ -244,7 +255,10 @@ where
     }
 
     Ok(Measurement::new(
-        MapDomain { key_domain: AllDomain::default(), value_domain: AllDomain::default()},
+        MapDomain {
+            key_domain: AtomDomain::default(),
+            value_domain: AtomDomain::default(),
+        },
         Function::new_fallible(move |x: &HashMap<K, C>| {
             let z = compute_projection(x, &h, alpha, scale, s)?;
             Ok(AlpState {
@@ -256,7 +270,7 @@ where
         }),
         L1Distance::default(),
         MaxDivergence::default(),
-        PrivacyMap::new_from_constant(scale)
+        PrivacyMap::new_from_constant(scale),
     ))
 }
 

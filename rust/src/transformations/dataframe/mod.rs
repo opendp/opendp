@@ -11,9 +11,9 @@ mod subset;
 pub use subset::*;
 
 use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
+use std::marker::PhantomData;
 
 use crate::core::Domain;
 use crate::data::Column;
@@ -33,7 +33,9 @@ impl<K: Hash + Eq> Clone for DataFrameDomain<K> {
 }
 impl<K: Hash + Eq> DataFrameDomain<K> {
     pub fn new() -> Self {
-        DataFrameDomain { _marker: PhantomData }
+        DataFrameDomain {
+            _marker: PhantomData,
+        }
     }
 }
 impl<K: Hash + Eq> Domain for DataFrameDomain<K> {

@@ -71,9 +71,9 @@ Let's look at the Transformation returned from :py:func:`make_bounded_sum(bounds
   >>> from opendp.transformations import make_bounded_sum
   >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
   >>> bounded_sum.input_domain.type
-  'VectorDomain<AllDomain<i32>>'
+  'VectorDomain<AtomDomain<i32>>'
 
-The input domain is ``VectorDomain<AllDomain<i32>>``, or "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
+The input domain is ``VectorDomain<AtomDomain<i32>>``, or "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 
 .. doctest::
 
@@ -81,7 +81,7 @@ The input domain is ``VectorDomain<AllDomain<i32>>``, or "the set of all vectors
   'AllDomain<i32>'
 
 
-The output domain is simply ``AllDomain<i32>``, or "the set of all 32-bit signed integers."
+The output domain is simply ``AtomDomain<i32>``, or "the set of all 32-bit signed integers."
 
 These domains serve two purposes:
 

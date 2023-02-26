@@ -7,12 +7,18 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::{err, fallible};
-use crate::metrics::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, InsertDeleteDistance, HammingDistance};
-use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, SMDCurve, FixedSmoothedMaxDivergence};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
-use crate::ffi::any::{AnyObject};
-use crate::domains::{VectorDomain, AllDomain, OptionNullDomain};
+use crate::ffi::any::AnyObject;
+use crate::measures::{
+    FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
+    ZeroConcentratedDivergence,
+};
+use crate::metrics::{
+    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance,
+    L2Distance, SymmetricDistance,
+};
+use crate::{err, fallible};
 
 use super::any::{AnyMeasurement, AnyTransformation};
 
@@ -253,7 +259,7 @@ lazy_static! {
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
-            // OptionNullDomain<AllDomain<_>>::Carrier
+            // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![AnyMeasurementPtr, AnyTransformationPtr],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
@@ -263,10 +269,10 @@ lazy_static! {
             type_vec![Pairwise, <f32, f64>],
 
             // domains
-            type_vec![AllDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[OptionNullDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![[VectorDomain AllDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            
+            type_vec![AtomDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],

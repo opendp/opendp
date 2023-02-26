@@ -5,12 +5,12 @@ use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
 use crate::core::{Measurement, Metric, PrivacyMap};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
-use crate::traits::{ExactIntCast, Float, FloatBits, InfAdd, InfDiv, CheckAtom};
+use crate::traits::{CheckAtom, ExactIntCast, Float, FloatBits, InfAdd, InfDiv};
 
 use super::MappableDomain;
 
@@ -18,10 +18,10 @@ use super::MappableDomain;
 pub trait LaplaceDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckAtom> LaplaceDomain for AllDomain<T> {
+impl<T: Clone + CheckAtom> LaplaceDomain for AtomDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AtomDomain<T>> {
     type InputMetric = L1Distance<T>;
 }
 
@@ -31,7 +31,7 @@ impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AllDomain<T>> {
         scale(rust_type = "T", c_type = "void *"),
         k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
     generics(
-        D(default = "AllDomain<T>", generics = "T")),
+        D(default = "AtomDomain<T>", generics = "T")),
     derived_types(T = "$get_atom_or_infer(D, scale)")
 )]
 /// Make a Measurement that adds noise from the laplace(`scale`) distribution to a scalar value.
@@ -40,8 +40,8 @@ impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AllDomain<T>> {
 ///
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
 ///
 ///
 /// This function takes a noise granularity in terms of 2^k.
@@ -53,13 +53,14 @@ impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AllDomain<T>> {
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 pub fn make_base_laplace<D>(
     scale: D::Atom,
     k: Option<i32>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
 where
     D: LaplaceDomain,
+    D::Carrier: 'static,
     D::Atom: Float + SampleDiscreteLaplaceZ2k,
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
 {
@@ -133,14 +134,14 @@ mod tests {
 
     #[test]
     fn test_big_laplace() -> Fallible<()> {
-        let chain = make_base_laplace::<AllDomain<f64>>(f64::MAX, None)?;
+        let chain = make_base_laplace::<AtomDomain<f64>>(f64::MAX, None)?;
         println!("{:?}", chain.invoke(&f64::MAX)?);
         Ok(())
     }
 
     #[test]
     fn test_make_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace::<AllDomain<_>>(1.0, None)?;
+        let measurement = make_base_laplace::<AtomDomain<_>>(1.0, None)?;
         let _ret = measurement.invoke(&0.0)?;
 
         assert!(measurement.check(&1., &1.)?);

@@ -31,15 +31,16 @@ pub use crate::combinators::fix_delta::*;
 #[cfg(test)]
 pub mod tests {
     use crate::core::{Function, Measurement, PrivacyMap, StabilityMap, Transformation};
-    use crate::domains::AllDomain;
     use crate::measures::MaxDivergence;
     use crate::metrics::SymmetricDistance;
-    use crate::traits::{CheckAtom};
 
-    pub fn make_test_measurement<T: Clone + CheckAtom>(
-    ) -> Measurement<AllDomain<T>, T, SymmetricDistance, MaxDivergence<f64>> {
+    use crate::domains::AtomDomain;
+    use crate::traits::CheckAtom;
+
+    pub fn make_test_measurement<T: 'static + Clone + CheckAtom>(
+    ) -> Measurement<AtomDomain<T>, T, SymmetricDistance, MaxDivergence<f64>> {
         Measurement::new(
-            AllDomain::default(),
+            AtomDomain::default(),
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             MaxDivergence::default(),
@@ -47,10 +48,11 @@ pub mod tests {
         )
     }
 
-    pub fn make_test_transformation<T: Clone + CheckAtom>() -> Transformation<AllDomain<T>, AllDomain<T>, SymmetricDistance, SymmetricDistance> {
+    pub fn make_test_transformation<T: Clone + CheckAtom>(
+    ) -> Transformation<AtomDomain<T>, AtomDomain<T>, SymmetricDistance, SymmetricDistance> {
         Transformation::new(
-            AllDomain::default(),
-            AllDomain::default(),
+            AtomDomain::default(),
+            AtomDomain::default(),
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
             SymmetricDistance::default(),

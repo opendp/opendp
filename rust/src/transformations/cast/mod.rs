@@ -4,10 +4,10 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::metrics::SymmetricDistance;
-use crate::domains::{AllDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{RoundCast, CheckAtom, InherentNull};
+use crate::metrics::SymmetricDistance;
+use crate::traits::{CheckAtom, InherentNull, RoundCast};
 use crate::transformations::make_row_by_row;
 
 #[bootstrap(features("contrib"))]
@@ -19,13 +19,27 @@ use crate::transformations::make_row_by_row;
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<OptionNullDomain<AllDomain<TOA>>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + Clone + CheckAtom, TOA: 'static + RoundCast<TIA> + CheckAtom {
+pub fn make_cast<TIA, TOA>() -> Fallible<
+    Transformation<
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<OptionDomain<AtomDomain<TOA>>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+>
+where
+    TIA: 'static + Clone + CheckAtom,
+    TOA: 'static + RoundCast<TIA> + CheckAtom,
+{
     make_row_by_row(
-        AllDomain::default(),
-        OptionNullDomain::new(AllDomain::default()),
-        |v| TOA::round_cast(v.clone()).ok()
-            .and_then(|v| if v.is_null() {None} else {Some(v)}))
+        AtomDomain::default(),
+        OptionDomain::new(AtomDomain::default()),
+        |v| {
+            TOA::round_cast(v.clone())
+                .ok()
+                .and_then(|v| if v.is_null() { None } else { Some(v) })
+        },
+    )
 }
 
 #[bootstrap(features("contrib"))]
@@ -43,12 +57,21 @@ pub fn make_cast<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<T
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + Clone + CheckAtom, TOA: 'static + RoundCast<TIA> + Default + CheckAtom {
-    make_row_by_row(
-        AllDomain::default(),
-        AllDomain::default(),
-        |v| TOA::round_cast(v.clone()).unwrap_or_default())
+pub fn make_cast_default<TIA, TOA>() -> Fallible<
+    Transformation<
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<TOA>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+>
+where
+    TIA: 'static + Clone + CheckAtom,
+    TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
+{
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), |v| {
+        TOA::round_cast(v.clone()).unwrap_or_default()
+    })
 }
 
 #[bootstrap(features("contrib"))]
@@ -62,13 +85,21 @@ pub fn make_cast_default<TIA, TOA>() -> Fallible<Transformation<VectorDomain<All
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast_inherent<TIA, TOA>(
-) -> Fallible<Transformation<VectorDomain<AllDomain<TIA>>, VectorDomain<AllDomain<TOA>>, SymmetricDistance, SymmetricDistance>>
-    where TIA: 'static + Clone + CheckAtom, TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom {
-    make_row_by_row(
-        AllDomain::default(),
-        AllDomain::new_nullable(),
-        |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL))
+pub fn make_cast_inherent<TIA, TOA>() -> Fallible<
+    Transformation<
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<TOA>>,
+        SymmetricDistance,
+        SymmetricDistance,
+    >,
+>
+where
+    TIA: 'static + Clone + CheckAtom,
+    TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
+{
+    make_row_by_row(AtomDomain::default(), AtomDomain::new_nullable(), |v| {
+        TOA::round_cast(v.clone()).unwrap_or(TOA::NULL)
+    })
 }
 
 #[cfg(test)]

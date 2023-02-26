@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::ops::{BitAnd, Shl, Shr, Sub, BitOr};
-use std::rc::Rc;
+use std::fmt::Debug;
+use std::ops::{BitAnd, BitOr, Shl, Shr, Sub};
 
 use num::{One, Zero};
 
@@ -20,18 +20,18 @@ pub trait CollectionSize {
     fn size(&self) -> usize;
 }
 
-pub trait CheckAtom: CheckNull + Sized {
-    fn is_bounded(&self, _bounds: Rc<Bounds<Self>>) -> Fallible<bool> {
+pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug {
+    fn is_bounded(&self, _bounds: Bounds<Self>) -> Fallible<bool> {
         fallible!(FailedFunction, "bounds check is not implemented")
     }
-    fn check_member(&self, bounds: Option<Rc<Bounds<Self>>>, nullable: bool) -> Fallible<bool> {
+    fn check_member(&self, bounds: Option<Bounds<Self>>, nullable: bool) -> Fallible<bool> {
         if let Some(bounds) = bounds {
             if !self.is_bounded(bounds)? {
-                return Ok(false)
+                return Ok(false);
             }
         }
         if !nullable && self.is_null() {
-            return Ok(false)
+            return Ok(false);
         }
         Ok(true)
     }
@@ -39,7 +39,7 @@ pub trait CheckAtom: CheckNull + Sized {
 
 /// Checks if a value is null.
 ///
-/// Since [`crate::domains::AllDomain`] only includes non-null values,
+/// Since [`crate::domains::AtomDomain`] may or may not contain null values,
 /// this trait is necessary for its member check.
 pub trait CheckNull {
     /// # Proof Definition
@@ -224,35 +224,33 @@ impl<K, V> CollectionSize for HashMap<K, V> {
     }
 }
 
-
-macro_rules! impl_checkatom_number {
+macro_rules! impl_CheckAtom_number {
     ($($ty:ty)+) => ($(impl CheckAtom for $ty {
-        fn is_bounded(&self, bounds: Rc<Bounds<Self>>) -> Fallible<bool> { 
+        fn is_bounded(&self, bounds: Bounds<Self>) -> Fallible<bool> {
             bounds.member(self)
         }
     })+)
 }
-impl_checkatom_number!(f32 f64 i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
+impl_CheckAtom_number!(f32 f64 i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 impl CheckAtom for (f32, f32) {
-    fn is_bounded(&self, bounds: Rc<Bounds<Self>>) -> Fallible<bool> { 
+    fn is_bounded(&self, bounds: Bounds<Self>) -> Fallible<bool> {
         bounds.member(self)
     }
 }
 impl CheckAtom for (f64, f64) {
-    fn is_bounded(&self, bounds: Rc<Bounds<Self>>) -> Fallible<bool> { 
+    fn is_bounded(&self, bounds: Bounds<Self>) -> Fallible<bool> {
         bounds.member(self)
     }
 }
-#[cfg(feature="use-mpfr")]
-impl_checkatom_number!(rug::Rational rug::Integer);
+#[cfg(feature = "use-mpfr")]
+impl_CheckAtom_number!(rug::Rational rug::Integer);
 
-macro_rules! impl_checkatom_simple {
+macro_rules! impl_CheckAtom_simple {
     ($($ty:ty)+) => ($(impl CheckAtom for $ty {})+)
 }
-impl_checkatom_simple!(bool String char &str);
+impl_CheckAtom_simple!(bool String char &str);
 
-
-macro_rules! impl_check_null_for_non_nullable {
+macro_rules! impl_CheckNull_for_non_nullable {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
             #[inline]
@@ -260,7 +258,9 @@ macro_rules! impl_check_null_for_non_nullable {
         })+
     }
 }
-impl_check_null_for_non_nullable!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize);
+impl_CheckNull_for_non_nullable!(
+    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize
+);
 impl<T1: CheckNull, T2: CheckNull> CheckNull for (T1, T2) {
     fn is_null(&self) -> bool {
         self.0.is_null() || self.1.is_null()
@@ -276,7 +276,7 @@ impl<T: CheckNull> CheckNull for Option<T> {
         }
     }
 }
-macro_rules! impl_check_null_for_float {
+macro_rules! impl_CheckNull_for_float {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
             #[inline]
@@ -284,7 +284,7 @@ macro_rules! impl_check_null_for_float {
         })+
     }
 }
-impl_check_null_for_float!(f64, f32);
+impl_CheckNull_for_float!(f64, f32);
 #[cfg(feature = "use-mpfr")]
 impl CheckNull for rug::Rational {
     fn is_null(&self) -> bool {

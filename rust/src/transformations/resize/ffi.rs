@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AllDomain};
+use crate::domains::AtomDomain;
 use crate::err;
 use crate::ffi::any::Downcast;
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
@@ -40,20 +40,24 @@ pub extern "C" fn opendp_transformations__make_resize(
         MI: 'static + IsMetricOrdered<Distance = IntDistance>,
         MO: 'static + IsMetricOrdered<Distance = IntDistance>,
     {
-        let atom_domain = try_!(atom_domain.downcast_ref::<AllDomain<T>>()).clone();
+        let atom_domain = try_!(atom_domain.downcast_ref::<AtomDomain<T>>()).clone();
         let constant = try_!(constant.downcast_ref::<T>()).clone();
         super::make_resize::<_, MI, MO>(size, atom_domain, constant).into_any()
     }
 
     match atom_domain.type_.contents {
         TypeContents::GENERIC {
-            name: "AllDomain", ..
+            name: "AtomDomain", ..
         } => dispatch!(monomorphize_all, [
                 (MI, [SymmetricDistance, InsertDeleteDistance]),
                 (MO, [SymmetricDistance, InsertDeleteDistance]),
                 (atom_domain.carrier_type, @primitives)
             ], (size, atom_domain, constant)),
-        _ => err!(FFI, "VectorDomain constructors only supports the AllDomain inner domain").into()
+        _ => err!(
+            FFI,
+            "VectorDomain constructors only supports the AtomDomain inner domain"
+        )
+        .into(),
     }
 }
 
@@ -71,9 +75,9 @@ mod tests {
     fn test_make_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyDomain::new(AllDomain::<i32>::default())),
+            util::into_raw(AnyDomain::new(AtomDomain::<i32>::default())),
             AnyObject::new_raw(0i32),
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
             "SymmetricDistance".to_char_p(),
         ))?;
@@ -88,9 +92,11 @@ mod tests {
     fn test_make_bounded_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyDomain::new(AllDomain::<i32>::new_closed((0i32, 10)).unwrap())),
+            util::into_raw(AnyDomain::new(
+                AtomDomain::<i32>::new_closed((0i32, 10)).unwrap(),
+            )),
             AnyObject::new_raw(0i32),
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
             "SymmetricDistance".to_char_p(),
         ))?;

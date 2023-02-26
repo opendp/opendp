@@ -26,7 +26,7 @@ Our transformation will
 .. doctest::
 
     >>> from opendp.transformations import *
-    >>> from opendp.domains import bounded_domain
+    >>> from opendp.domains import atom_domain
     >>> from opendp.mod import enable_features
     >>> enable_features('contrib') # we are using un-vetted constructors
     ...
@@ -44,7 +44,7 @@ Our transformation will
     ...     make_cast(TIA=str, TOA=float) >>
     ...     make_impute_constant(constant=constant) >>
     ...     make_clamp(bounds) >>
-    ...     make_resize(size, bounded_domain(bounds), constant=constant) >>
+    ...     make_resize(size, atom_domain(bounds), constant=constant) >>
     ...     make_sized_bounded_mean(size, bounds)
     ... )
 

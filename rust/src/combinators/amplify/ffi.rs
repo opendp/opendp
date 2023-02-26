@@ -4,12 +4,12 @@ use opendp_derive::bootstrap;
 
 use crate::combinators::{AmplifiableMeasure, IsSizedDomain};
 use crate::core::FfiResult;
-use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
-use crate::traits::{ExactIntCast, InfMul, InfExpM1, InfLn1P, InfDiv, TotalOrd, CheckAtom};
+use crate::measures::{FixedSmoothedMaxDivergence, MaxDivergence};
+use crate::traits::{CheckAtom, ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul, TotalOrd};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
@@ -51,7 +51,9 @@ impl AmplifiableMeasure for AnyMeasure {
 impl IsSizedDomain for AnyDomain {
     fn get_size(&self) -> Fallible<usize> {
         fn monomorphize1<TIA>(domain: &AnyDomain, DIA: Type) -> Fallible<usize>
-            where TIA: 'static + Clone + TotalOrd + CheckAtom {
+        where
+            TIA: 'static + Clone + TotalOrd + CheckAtom,
+        {
             fn monomorphize2<DIA: IsSizedDomain>(domain: &AnyDomain) -> Fallible<usize>
             where
                 DIA: 'static,
@@ -69,9 +71,11 @@ impl IsSizedDomain for AnyDomain {
                     .get_size()
             }
 
-            dispatch!(monomorphize2, [(DIA, [
-                VectorDomain<AllDomain<TIA>>
-            ])], (domain))
+            dispatch!(
+                monomorphize2,
+                [(DIA, [VectorDomain<AtomDomain<TIA>>])],
+                (domain)
+            )
         }
 
         let DI = Type::of_id(&self.domain.value.type_id())?;

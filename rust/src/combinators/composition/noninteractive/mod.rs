@@ -124,7 +124,7 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDiver
 #[cfg(test)]
 mod tests {
     use crate::core::*;
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
     use crate::error::ExplainUnwrap;
     use crate::measurements::make_base_laplace;
     use crate::measures::MaxDivergence;
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_make_basic_composition() {
-        let input_domain0 = AllDomain::<i32>::default();
+        let input_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f64);
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
@@ -146,7 +146,7 @@ mod tests {
             output_measure0,
             privacy_map0,
         );
-        let input_domain1 = AllDomain::<i32>::default();
+        let input_domain1 = AtomDomain::<i32>::default();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_make_basic_composition_2() -> Fallible<()> {
-        let laplace = make_base_laplace::<AllDomain<_>>(1.0f64, None)?;
+        let laplace = make_base_laplace::<AtomDomain<_>>(1.0f64, None)?;
         let measurements = vec![&laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;

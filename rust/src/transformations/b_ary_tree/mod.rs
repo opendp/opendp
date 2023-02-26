@@ -1,6 +1,6 @@
 use crate::{
     core::{Function, Metric, StabilityMap, Transformation},
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::LpDistance,
     traits::{InfCast, Integer, Number},
@@ -27,7 +27,7 @@ use opendp_derive::bootstrap;
 pub fn make_b_ary_tree<M, TA>(
     leaf_count: usize,
     branching_factor: usize,
-) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<AllDomain<TA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
 where
     TA: Integer,
     M: BAryTreeMetric,
@@ -46,8 +46,8 @@ where
     // leaf_count is the number of leaves in the final layer of a complete tree
 
     Ok(Transformation::new(
-        VectorDomain::new(AllDomain::default(), None),
-        VectorDomain::new(AllDomain::default(), None),
+        VectorDomain::new(AtomDomain::default(), None),
+        VectorDomain::new(AtomDomain::default(), None),
         Function::new(move |arg: &Vec<TA>| {
             // if arg.len() != num_bins, then user has a bug that will affect utility, but cannot alert
             //    if less data is passed than num_bins, then pad with extra zeros

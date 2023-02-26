@@ -17,7 +17,7 @@ use super::DiscreteLaplaceDomain;
         scale(c_type = "void *"),
         bounds(rust_type = "OptionT", default = b"null")
     ),
-    generics(D(default = "AllDomain<int>")),
+    generics(D(default = "AtomDomain<int>")),
     derived_types(T = "$get_atom(D)", OptionT = "Option<(T, T)>")
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
@@ -29,8 +29,8 @@ use super::DiscreteLaplaceDomain;
 ///
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
 ///
 ///
 /// # Citations
@@ -41,7 +41,7 @@ use super::DiscreteLaplaceDomain;
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance.
 pub fn make_base_discrete_laplace_linear<D, QO>(
     scale: QO,
@@ -93,7 +93,7 @@ where
         scale(c_type = "void *"),
         bounds(rust_type = "OptionT", default = b"null")
     ),
-    generics(D(default = "AllDomain<int>")),
+    generics(D(default = "AtomDomain<int>")),
     derived_types(T = "$get_atom(D)", OptionT = "Option<(T, T)>")
 )]
 /// Deprecated.
@@ -105,7 +105,7 @@ where
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Arguments
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance
 #[deprecated(
     since = "0.5.0",
@@ -125,14 +125,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::domains::{AllDomain, VectorDomain};
+    use crate::domains::{AtomDomain, VectorDomain};
 
     use super::*;
 
     #[test]
     fn test_make_discrete_laplace_mechanism_bounded() {
         let measurement =
-            make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, Some((200, 210)))
+            make_base_discrete_laplace_linear::<AtomDomain<_>, f64>(10.0, Some((200, 210)))
                 .unwrap_test();
         let arg = 205;
         let _ret = measurement.invoke(&arg).unwrap_test();
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn test_make_discrete_laplace_mechanism() {
         let measurement =
-            make_base_discrete_laplace_linear::<AllDomain<_>, f64>(10.0, None).unwrap_test();
+            make_base_discrete_laplace_linear::<AtomDomain<_>, f64>(10.0, None).unwrap_test();
         let arg = 205;
         let _ret = measurement.invoke(&arg).unwrap_test();
         println!("{:?}", _ret);

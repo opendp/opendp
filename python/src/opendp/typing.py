@@ -188,11 +188,9 @@ class RuntimeType(object):
                 return closeness
 
             domain = {
-                'AllDomain': AllDomain,
-                'BoundedDomain': BoundedDomain,
+                'AtomDomain': AtomDomain,
                 'VectorDomain': VectorDomain,
-                'OptionNullDomain': OptionNullDomain,
-                'InherentNullDomain': InherentNullDomain,
+                'OptionDomain': OptionDomain,
                 'SizedDomain': SizedDomain
             }.get(origin)
             if domain is not None:
@@ -458,11 +456,9 @@ class DomainDescriptor(RuntimeType):
         return DomainDescriptor(self.origin, [self.parse(type_name=subdomain)])
 
 
-AllDomain = DomainDescriptor('AllDomain')
-BoundedDomain = DomainDescriptor('BoundedDomain')
+AtomDomain = DomainDescriptor('AtomDomain')
 VectorDomain = DomainDescriptor('VectorDomain')
-OptionNullDomain = DomainDescriptor('OptionNullDomain')
-InherentNullDomain = DomainDescriptor('InherentNullDomain')
+OptionDomain = DomainDescriptor('OptionDomain')
 SizedDomain = DomainDescriptor('SizedDomain')
 
 
@@ -480,7 +476,7 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 
 def get_first(value):
-    return next(iter(value), None)
+    return next(iter(value or []), None)
 
 def parse_or_infer(type_name: RuntimeType, example):
     return RuntimeType.parse_or_infer(type_name, example)
@@ -493,6 +489,9 @@ def get_dependencies(value):
 
 def get_dependencies_iterable(value):
     return list(map(get_dependencies, value))
+
+def get_carrier_type(value):
+    return value.carrier_type
 
 def get_distance_type(value):
     return value.distance_type

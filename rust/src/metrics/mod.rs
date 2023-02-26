@@ -6,7 +6,7 @@
 //!
 //! # Example
 //!
-//! [`SymmetricDistance`] can be paired with a domain: `VectorDomain(AllDomain(T))`.
+//! [`SymmetricDistance`] can be paired with a domain: `VectorDomain(AtomDomain(T))`.
 //! In this context, the `SymmetricDistance` is used to measure the distance between any two vectors of elements of type `T`.
 //! The `SymmetricDistance` has an associated distance type of [`u32`].
 //! This means that the symmetric distance between vectors is expressed in terms of a [`u32`].
@@ -309,7 +309,7 @@ pub type L2Distance<Q> = LpDistance<2, Q>;
 ///
 /// # Compatible Domains
 ///
-/// * `AllDomain<T>` for any valid `T`
+/// * `AtomDomain<T>` for any valid `T`
 pub struct AbsoluteDistance<Q>(PhantomData<Q>);
 impl<Q> Default for AbsoluteDistance<Q> {
     fn default() -> Self {
@@ -344,7 +344,7 @@ impl<Q> Metric for AbsoluteDistance<Q> {
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two datasets $u, v \in$ `AllDomain<T>` and any $d$ of type [`IntDistance`],
+/// For any two datasets $u, v \in$ `AtomDomain<T>` and any $d$ of type [`IntDistance`],
 /// we say that $u, v$ are $d$-close under the discrete metric (abbreviated as $d_{Eq}$) whenever
 ///
 /// ```math
@@ -356,7 +356,7 @@ impl<Q> Metric for AbsoluteDistance<Q> {
 /// 1 is the expected argument on measurements that use this distance.
 ///
 /// # Compatible Domains
-/// * AllDomain<T> for any valid `T`.
+/// * AtomDomain<T> for any valid `T`.
 #[derive(Clone)]
 pub struct DiscreteDistance;
 

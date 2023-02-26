@@ -88,7 +88,6 @@ where
 
                 // postprocess by weighted inverse variance
                 tree[i] = alpha * tree[i] + (TOA::one() - alpha) * child_val;
-
             });
         });
 

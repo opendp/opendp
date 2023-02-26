@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use opendp_derive::bootstrap;
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::AllDomain;
+use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
@@ -40,7 +40,7 @@ use crate::traits::{Float, Hashable};
 pub fn make_randomized_response_bool<QO>(
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<bool>, bool, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement<AtomDomain<bool>, bool, DiscreteDistance, MaxDivergence<QO>>>
 where
     bool: SampleBernoulli<QO>,
     QO: Float,
@@ -56,7 +56,7 @@ where
     let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
     Ok(Measurement::new(
-        AllDomain::default(),
+        AtomDomain::default(),
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !bool::sample_bernoulli(prob, constant_time)?)
         }),
@@ -95,7 +95,7 @@ pub fn make_randomized_response<T, QO>(
     categories: HashSet<T>,
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement<AtomDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
 where
     T: Hashable,
     bool: SampleBernoulli<QO>,
@@ -128,7 +128,7 @@ where
         .inf_ln()?;
 
     Ok(Measurement::new(
-        AllDomain::default(),
+        AtomDomain::default(),
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None
             let index = categories.iter().position(|cat| cat == truth);
