@@ -1,3 +1,5 @@
+mod serialization;
+
 use std::ffi::{c_char, c_void};
 use std::marker::PhantomData;
 
@@ -69,7 +71,7 @@ impl<T: 'static> CollectionImpl<T> for ExternalCollectionImpl<T> {
     fn map<U: 'static, F: Fn(&T) -> Fallible<U> + 'static>(&self, f: F) -> Fallible<Collection<U>> {
         println!("external map");
         let closure = Closure1::new_fallible(f);
-        // Have to put closure on on the heap?
+        // Put closure on on the heap, because it may be called
         let closure = util::into_raw(closure);
         let T = Type::of::<T>().descriptor;
         let U = Type::of::<U>().descriptor;
