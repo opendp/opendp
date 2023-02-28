@@ -305,7 +305,7 @@ def make_pureDP_to_zCDP(
 
 def make_user_measurement(
     input_domain: Domain,
-    output_domain: Domain,
+    TO: RuntimeTypeDescriptor,
     function,
     input_metric: Metric,
     output_measure: Measure,
@@ -317,8 +317,8 @@ def make_user_measurement(
     
     :param input_domain: 
     :type input_domain: Domain
-    :param output_domain: 
-    :type output_domain: Domain
+    :param TO: 
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
     :param function: A function mapping data from `input_domain` to `output_domain`.
     :param input_metric: 
     :type input_metric: Metric
@@ -332,21 +332,23 @@ def make_user_measurement(
     """
     assert_features("contrib", "honest-but-curious")
     
-    # No type arguments to standardize.
+    # Standardize type arguments.
+    TO = RuntimeType.parse(type_name=TO)
+    
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
-    c_output_domain = py_to_c(output_domain, c_type=Domain, type_name=AnyDomain)
-    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(output_domain))
+    c_TO = py_to_c(TO, c_type=ctypes.c_char_p, type_name=None)
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=pass_through(TO))
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
     c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
     c_privacy_map = py_to_c(privacy_map, c_type=CallbackFn, type_name=measure_distance_type(output_measure))
     
     # Call library function.
     lib_function = lib.opendp_combinators__make_user_measurement
-    lib_function.argtypes = [Domain, Domain, CallbackFn, Metric, Measure, CallbackFn]
+    lib_function.argtypes = [Domain, ctypes.c_char_p, CallbackFn, Metric, Measure, CallbackFn]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_output_domain, c_function, c_input_metric, c_output_measure, c_privacy_map), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_TO, c_function, c_input_metric, c_output_measure, c_privacy_map), Measurement))
     output._depends_on(c_function, c_privacy_map)
     return output
 

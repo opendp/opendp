@@ -1,3 +1,5 @@
+use std::ffi::c_char;
+
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -65,7 +67,8 @@ pub extern "C" fn opendp_combinators__make_user_transformation(
     arguments(
         input_domain(hint = "Domain"),
         output_domain(hint = "Domain"),
-        function(rust_type = "$domain_carrier_type(output_domain)"),
+        TO(is_type = true, rust_type = b"null"),
+        function(rust_type = "$pass_through(TO)"),
         input_metric(hint = "Metric"),
         output_measure(hint = "Measure"),
         privacy_map(rust_type = "$measure_distance_type(output_measure)"),
@@ -80,15 +83,15 @@ pub extern "C" fn opendp_combinators__make_user_transformation(
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_user_measurement(
     input_domain: *const AnyDomain,
-    output_domain: *const AnyDomain,
+    TO: *const c_char,
     function: CallbackFn,
     input_metric: *const AnyMetric,
     output_measure: *const AnyMeasure,
     privacy_map: CallbackFn,
 ) -> FfiResult<*mut AnyMeasurement> {
+    let _TO = TO;
     FfiResult::Ok(util::into_raw(Measurement::new(
         try_as_ref!(input_domain).clone(),
-        try_as_ref!(output_domain).clone(),
         Function::new_fallible(wrap_func(function)),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_measure).clone(),

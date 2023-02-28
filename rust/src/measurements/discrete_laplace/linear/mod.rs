@@ -48,7 +48,7 @@ use super::DiscreteLaplaceDomain;
 pub fn make_base_discrete_laplace_linear<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
@@ -66,7 +66,6 @@ where
     }
 
     Ok(Measurement::new(
-        D::default(),
         D::default(),
         D::new_map_function(move |v: &D::Atom| {
             D::Atom::sample_discrete_laplace_linear(*v, scale, bounds)
@@ -119,7 +118,7 @@ where
 pub fn make_base_geometric<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,

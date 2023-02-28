@@ -15,22 +15,20 @@ mod ffi;
 /// 
 /// # Generics
 /// * `DI` - Input Domain
-/// * `DO` - Output Domain
+/// * `TO` - Output Type
 /// * `MI` - Input Metric. 
 /// * `MO` - Output Measure of the input argument. Must be SmoothedMaxDivergence<Q>
-pub fn make_fix_delta<DI, DO, MI, MO>(
-    measurement: &Measurement<DI, DO, MI, MO>,
+pub fn make_fix_delta<DI, TO, MI, MO>(
+    measurement: &Measurement<DI, TO, MI, MO>,
     delta: MO::Atom,
-) -> Fallible<Measurement<DI, DO, MI, MO::FixedMeasure>>
+) -> Fallible<Measurement<DI, TO, MI, MO::FixedMeasure>>
 where
     DI: Domain,
-    DO: Domain,
     MI: 'static + Metric,
     MO: 'static + FixDeltaMeasure,
 {
     let Measurement {
         input_domain,
-        output_domain,
         function,
         input_metric,
         output_measure,
@@ -39,7 +37,6 @@ where
 
     Ok(Measurement::new(
         input_domain,
-        output_domain,
         function,
         input_metric,
         output_measure.new_fixed_measure()?,

@@ -30,17 +30,17 @@ fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2
 /// # Generics
 /// * `DI` - Input Domain.
 /// * `DX` - Intermediate Domain.
-/// * `DO` - Output Domain.
+/// * `TO` - Output Type.
 /// * `MI` - Input Metric.
 /// * `MX` - Intermediate Metric.
 /// * `MO` - Output Measure.
-pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
-    measurement1: &Measurement<DX, DO, MX, MO>,
+pub fn make_chain_mt<DI, DX, TO, MI, MX, MO>(
+    measurement1: &Measurement<DX, TO, MX, MO>,
     transformation0: &Transformation<DI, DX, MI, MX>
-) -> Fallible<Measurement<DI, DO, MI, MO>>
+) -> Fallible<Measurement<DI, TO, MI, MO>>
     where DI: 'static + Domain,
           DX: 'static + Domain,
-          DO: 'static + Domain,
+          TO: 'static,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
@@ -53,7 +53,6 @@ pub fn make_chain_mt<DI, DX, DO, MI, MX, MO>(
 
     Ok(Measurement::new(
         transformation0.input_domain.clone(),
-        measurement1.output_domain.clone(),
         Function::make_chain(&measurement1.function, &transformation0.function),
         transformation0.input_metric.clone(),
         measurement1.output_measure.clone(),
@@ -120,8 +119,8 @@ pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
 /// * `MTO` - Output Transformation Metric.
 pub fn make_chain_tm<DI, DX, DO, MMI, MMO, MTI, MTO>(
     transformation1: &Transformation<DX, DO, MTI, MTO>,
-    measurement0: &Measurement<DI, DX, MMI, MMO>,
-) -> Fallible<Measurement<DI, DO, MMI, MMO>>
+    measurement0: &Measurement<DI, DX::Carrier, MMI, MMO>,
+) -> Fallible<Measurement<DI, DO::Carrier, MMI, MMO>>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -131,20 +130,8 @@ where
     MTI: 'static + Metric,
     MTO: 'static + Metric,
 {
-    if measurement0.output_domain != transformation1.input_domain {
-        return fallible!(
-            DomainMismatch,
-            mismatch_message(
-                "domain",
-                &measurement0.output_domain,
-                &transformation1.input_domain
-            )
-        );
-    }
-
     Ok(Measurement::new(
         measurement0.input_domain.clone(),
-        transformation1.output_domain.clone(),
         Function::make_chain(&transformation1.function, &measurement0.function),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
@@ -174,12 +161,11 @@ mod tests {
         let stability_map0 = StabilityMap::new_from_constant(1);
         let transformation0 = Transformation::new(input_domain0, output_domain0, function0, input_metric0, output_metric0, stability_map0);
         let input_domain1 = AllDomain::<i32>::new();
-        let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_map1 = PrivacyMap::new(|d_in: &i32| *d_in as f64 + 1.);
-        let measurement1 = Measurement::new(input_domain1, output_domain1, function1, input_metric1, output_measure1, privacy_map1);
+        let measurement1 = Measurement::new(input_domain1, function1, input_metric1, output_measure1, privacy_map1);
         let chain = make_chain_mt(&measurement1, &transformation0).unwrap_test();
 
         let arg = 99_u8;
@@ -221,12 +207,11 @@ mod tests {
     #[test]
     fn test_make_chain_tm() {
         let input_domain0 = AllDomain::<u8>::new();
-        let output_domain0 = AllDomain::<i32>::new();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::<i32>::default();
         let privacy_map0 = PrivacyMap::new_from_constant(1);
-        let measurement0 = Measurement::new(input_domain0, output_domain0, function0, input_metric0, output_measure0, privacy_map0);
+        let measurement0 = Measurement::new(input_domain0, function0, input_metric0, output_measure0, privacy_map0);
         let input_domain1 = AllDomain::<i32>::new();
         let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
@@ -247,30 +232,30 @@ mod tests {
 }
 
 
-impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Transformation<DI, DX, MI, MX>
+impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>> for Transformation<DI, DX, MI, MX>
     where DI: 'static + Domain,
           DX: 'static + Domain,
-          DO: 'static + Domain,
+          TO: 'static,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
-    type Output = Fallible<Measurement<DI, DO, MI, MO>>;
+    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
 
-    fn shr(self, rhs: Measurement<DX, DO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: Measurement<DX, TO, MX, MO>) -> Self::Output {
         make_chain_mt(&rhs, &self)
     }
 }
 
-impl<DI, DX, DO, MI, MX, MO> Shr<Measurement<DX, DO, MX, MO>> for Fallible<Transformation<DI, DX, MI, MX>>
+impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>> for Fallible<Transformation<DI, DX, MI, MX>>
     where DI: 'static + Domain,
           DX: 'static + Domain,
-          DO: 'static + Domain,
+          TO: 'static,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
-    type Output = Fallible<Measurement<DI, DO, MI, MO>>;
+    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
 
-    fn shr(self, rhs: Measurement<DX, DO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: Measurement<DX, TO, MX, MO>) -> Self::Output {
         make_chain_mt(&rhs, &self?)
     }
 }
@@ -304,7 +289,7 @@ impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>> for Fallible<Tr
 }
 
 impl<DI, DX, DO, MMI, MMO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
-    for Measurement<DI, DX, MMI, MMO>
+    for Measurement<DI, DX::Carrier, MMI, MMO>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -314,7 +299,7 @@ where
     MTI: 'static + Metric,
     MTO: 'static + Metric,
 {
-    type Output = Fallible<Measurement<DI, DO, MMI, MMO>>;
+    type Output = Fallible<Measurement<DI, DO::Carrier, MMI, MMO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
         make_chain_tm(&rhs, &self)
@@ -322,7 +307,7 @@ where
 }
 
 impl<DI, DX, DO, MMI, MMO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
-    for Fallible<Measurement<DI, DX, MMI, MMO>>
+    for Fallible<Measurement<DI, DX::Carrier, MMI, MMO>>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -332,7 +317,7 @@ where
     MTI: 'static + Metric,
     MTO: 'static + Metric,
 {
-    type Output = Fallible<Measurement<DI, DO, MMI, MMO>>;
+    type Output = Fallible<Measurement<DI, DO::Carrier, MMI, MMO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
         make_chain_tm(&rhs, &self?)

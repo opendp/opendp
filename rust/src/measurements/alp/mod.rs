@@ -43,7 +43,6 @@ pub struct AlpState<K, T>{
 impl <K,T> CheckNull for AlpState<K,T> {
     fn is_null(&self) -> bool { false }
 }
-type AlpDomain<K, T> = AllDomain<AlpState<K, T>>;
 
 // hash function with type: [2^64] -> [2^l]
 // Computes ((a*x + b) mod 2^64) div 2^(64-l)
@@ -172,7 +171,7 @@ fn compute_estimate<K, T>(state: &AlpState<K, T>, key: &K) -> T
 /// The evaluation time of post-processing is O(h.len()).
 pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: HashFunctions<K>)
         -> Fallible<Measurement<SparseDomain<K, C>,
-                                AlpDomain<K, T>,
+                                AlpState<K, T>,
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + CheckNull,
           C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + ToPrimitive,
@@ -195,7 +194,6 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
     
     Ok(Measurement::new(
         MapDomain { key_domain: AllDomain::new(), value_domain: AllDomain::new()},
-        AllDomain::new(),
         Function::new_fallible(move |x: &HashMap<K, C>| {
             let z = compute_projection(x, &h, alpha, scale, s)?;
             Ok(AlpState { alpha, scale, h:h.clone(), z })
@@ -225,7 +223,7 @@ pub fn make_base_alp_with_hashers<K, C, T>(alpha: T, scale: T, s: usize, h: Hash
 /// * `beta` - Upper bound on values. Entries above beta are clamped.
 pub fn make_base_alp<K, C, T>(total: usize, size_factor: Option<u32>, alpha: Option<T>, scale: T, beta: C) 
         -> Fallible<Measurement<SparseDomain<K, C>, 
-                                AlpDomain<K, T>, 
+                                AlpState<K, T>, 
                                 L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + Clone + CheckNull,
           C: 'static + Clone + Integer + CheckNull + DistanceConstant<C> + InfCast<T> + ToPrimitive,
@@ -264,8 +262,8 @@ pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K,
 
 /// Wrapper Measurement. See [`post_process`].
 pub fn make_alp_histogram_post_process<K, C, T>(
-    m: &Measurement<SparseDomain<K, C>, AlpDomain<K, T>, L1Distance<C>, MaxDivergence<T>>
-) -> Fallible<Measurement<SparseDomain<K, C>, AllDomain<Queryable<AlpState<K, T>, K, T>>, L1Distance<C>, MaxDivergence<T>>>
+    m: &Measurement<SparseDomain<K, C>, AlpState<K, T>, L1Distance<C>, MaxDivergence<T>>
+) -> Fallible<Measurement<SparseDomain<K, C>, Queryable<AlpState<K, T>, K, T>, L1Distance<C>, MaxDivergence<T>>>
     where K: 'static + Eq + Hash + CheckNull,
           C: 'static + Clone + CheckNull,
           T: 'static + num::Float,
@@ -274,7 +272,6 @@ pub fn make_alp_histogram_post_process<K, C, T>(
     let function = m.function.clone();
     Ok(Measurement::new(
         m.input_domain.clone(),
-        AllDomain::new(),
         Function::new_fallible(move |x| function.eval(x).map(post_process)),
         m.input_metric.clone(),
         m.output_measure.clone(),

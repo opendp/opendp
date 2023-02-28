@@ -5,7 +5,6 @@ use num::Zero;
 
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
-    domains::VectorDomain,
     error::Fallible,
     measures::{
         FixedSmoothedMaxDivergence, MaxDivergence,
@@ -29,12 +28,12 @@ use crate::{
 /// * `DO` - Output Domain.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
-pub fn make_basic_composition<DI, DO, MI, MO>(
-    measurements: Vec<&Measurement<DI, DO, MI, MO>>,
-) -> Fallible<Measurement<DI, VectorDomain<DO>, MI, MO>>
+pub fn make_basic_composition<DI, TO, MI, MO>(
+    measurements: Vec<&Measurement<DI, TO, MI, MO>>,
+) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
 where
     DI: 'static + Domain,
-    DO: 'static + Domain,
+    TO: 'static,
     MI: 'static + Metric,
     MO: 'static + BasicCompositionMeasure,
 {
@@ -42,7 +41,6 @@ where
         return fallible!(MakeMeasurement, "Must have at least one measurement");
     }
     let input_domain = measurements[0].input_domain.clone();
-    let output_domain = measurements[0].output_domain.clone();
     let input_metric = measurements[0].input_metric.clone();
     let output_measure = measurements[0].output_measure.clone();
 
@@ -71,7 +69,6 @@ where
 
     Ok(Measurement::new(
         input_domain,
-        VectorDomain::new(output_domain),
         Function::new_fallible(move |arg: &DI::Carrier| {
             functions.iter().map(|f| f.eval(arg)).collect()
         }),
@@ -127,28 +124,24 @@ mod tests {
     #[test]
     fn test_make_basic_composition() {
         let input_domain0 = AllDomain::<i32>::new();
-        let output_domain0 = AllDomain::<f64>::new();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f64);
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
         let privacy_map0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement0 = Measurement::new(
             input_domain0,
-            output_domain0,
             function0,
             input_metric0,
             output_measure0,
             privacy_map0,
         );
         let input_domain1 = AllDomain::<i32>::new();
-        let output_domain1 = AllDomain::<f64>::new();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_map1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
         let measurement1 = Measurement::new(
             input_domain1,
-            output_domain1,
             function1,
             input_metric1,
             output_measure1,

@@ -43,7 +43,7 @@ use crate::traits::{Hashable, Float};
 pub fn make_randomized_response_bool<QO>(
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<bool>, AllDomain<bool>, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement<AllDomain<bool>, bool, DiscreteDistance, MaxDivergence<QO>>>
     where bool: SampleBernoulli<QO>,
           QO: Float {
 
@@ -58,7 +58,6 @@ pub fn make_randomized_response_bool<QO>(
     let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
     Ok(Measurement::new(
-        AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !bool::sample_bernoulli(prob, constant_time)?)
@@ -98,7 +97,7 @@ pub fn make_randomized_response<T, QO>(
     categories: HashSet<T>,
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<T>, AllDomain<T>, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement<AllDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
     where T: Hashable,
           bool: SampleBernoulli<QO>,
           QO: Float {
@@ -130,7 +129,6 @@ pub fn make_randomized_response<T, QO>(
         .inf_ln()?;
 
     Ok(Measurement::new(
-        AllDomain::new(),
         AllDomain::new(),
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None

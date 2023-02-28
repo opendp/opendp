@@ -54,7 +54,7 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
 /// 
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
-pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<D::Atom>>>
+pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
           D::Atom: Float + SampleDiscreteLaplaceZ2k,
           i32: ExactIntCast<<D::Atom as FloatBits>::Bits> {
@@ -65,7 +65,6 @@ pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurem
     let (k, relaxation) = get_discretization_consts(k)?;
 
     Ok(Measurement::new(
-        D::default(),
         D::default(),
         D::new_map_function(move |arg: &D::Atom| D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)),
         D::InputMetric::default(),
