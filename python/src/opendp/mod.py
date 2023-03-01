@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union, Tuple, Callable, Optional
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -86,10 +86,13 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
                 return False
             raise
 
-    def __rshift__(self, other: "Transformation"):
-        if isinstance(other, Transformation):
-            from opendp.combinators import make_chain_tm
-            return make_chain_tm(other, self)
+    def __rshift__(self, other: "Function"):
+        if isinstance(other, (Transformation, Measurement)):
+            other = other.function
+
+        if isinstance(other, Function):
+            from opendp.combinators import make_chain_pm
+            return make_chain_pm(other, self)
 
         raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
 
@@ -107,6 +110,11 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     def output_measure(self) -> "Measure":
         from opendp.core import measurement_output_measure
         return measurement_output_measure(self)
+    
+    @property
+    def function(self) -> "Function":
+        from opendp.core import measurement_function
+        return measurement_function(self)
     
     @property
     def input_distance_type(self):
@@ -267,6 +275,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     def output_metric(self) -> "Metric":
         from opendp.core import transformation_output_metric
         return transformation_output_metric(self)
+    
+    @property
+    def function(self) -> "Function":
+        from opendp.core import transformation_function
+        return transformation_function(self)
 
     @property
     def input_distance_type(self):
@@ -312,6 +325,22 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         except (ImportError, TypeError):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
+
+
+class Function(ctypes.POINTER(AnyFunction)):
+    _type_ = AnyFunction
+
+    def __call__(self, arg):
+        from opendp.core import function_eval
+        return function_eval(self, arg)
+    
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
+    
+    def __del__(self):
+        from opendp.core import _function_free
+        _function_free(self)
 
 
 class Domain(ctypes.POINTER(AnyDomain)):

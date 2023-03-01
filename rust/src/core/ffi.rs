@@ -7,7 +7,7 @@ use opendp_derive::bootstrap;
 
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, AnyDomain, AnyMetric, AnyMeasure};
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, IntoAnyFunctionExt};
 use crate::ffi::util::{self, c_bool};
 use crate::ffi::util::into_c_char_p;
 
@@ -141,6 +141,16 @@ pub trait IntoAnyTransformationFfiResultExt {
 impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible<T> {
     fn into_any(self) -> FfiResult<*mut AnyTransformation> {
         self.map(IntoAnyTransformationExt::into_any).into()
+    }
+}
+
+pub trait IntoAnyFunctionFfiResultExt {
+    fn into_any(self) -> FfiResult<*mut AnyFunction>;
+}
+
+impl<T: IntoAnyFunctionExt> IntoAnyFunctionFfiResultExt for Fallible<T> {
+    fn into_any(self) -> FfiResult<*mut AnyFunction> {
+        self.map(IntoAnyFunctionExt::into_any).into()
     }
 }
 
@@ -289,6 +299,20 @@ pub extern "C" fn opendp_core__measurement_input_metric(this: *mut AnyMeasuremen
 #[no_mangle]
 pub extern "C" fn opendp_core__measurement_output_measure(this: *mut AnyMeasurement) -> FfiResult<*mut AnyMeasure> {
     FfiResult::Ok(util::into_raw(try_as_ref!(this).output_measure.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_function",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyFunction *>", do_not_convert = true)
+)]
+/// Get the function from a measurement.
+/// 
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_function(this: *mut AnyMeasurement) -> FfiResult<*mut AnyFunction> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).function.clone()))
 }
 
 #[bootstrap(
@@ -450,6 +474,20 @@ pub extern "C" fn opendp_core__transformation_invoke(this: *const AnyTransformat
 }
 
 #[bootstrap(
+    name = "transformation_function",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyFunction *>", do_not_convert = true)
+)]
+/// Get the function from a transformation.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_function(this: *mut AnyTransformation) -> FfiResult<*mut AnyFunction> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).function.clone()))
+}
+
+#[bootstrap(
     name = "_transformation_free",
     arguments(this(do_not_convert = true)),
     returns(c_type = "FfiResult<void *>")
@@ -548,6 +586,43 @@ pub extern "C" fn opendp_core__measurement_input_distance_type(this: *mut AnyMea
 pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMeasurement) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.output_measure.distance_type.descriptor.to_string())))
+}
+
+#[bootstrap(
+    name = "function_eval",
+    arguments(
+        this(rust_type = b"null"),
+        arg(rust_type = "$parse_or_infer(TI, arg)"),
+        TI(rust_type = b"null", default = b"null"),
+    )
+)]
+/// Eval the `function` with `arg`.
+/// 
+/// # Arguments
+/// * `this` - Function to invoke.
+/// * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
+/// * `TI` - Input Type.
+#[no_mangle]
+pub extern "C" fn opendp_core__function_eval(
+    this: *const AnyFunction, 
+    arg: *const AnyObject,
+    TI: *const c_char
+) -> FfiResult<*mut AnyObject> {
+    let this = try_as_ref!(this);
+    let arg = try_as_ref!(arg);
+    let _TI = TI;
+    this.eval(arg).into()
+}
+
+#[bootstrap(
+    name = "_function_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`.
+#[no_mangle]
+pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[cfg(test)]

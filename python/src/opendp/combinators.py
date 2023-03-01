@@ -10,7 +10,7 @@ from opendp.measures import *
 __all__ = [
     "make_basic_composition",
     "make_chain_mt",
-    "make_chain_tm",
+    "make_chain_pm",
     "make_chain_tt",
     "make_fix_delta",
     "make_population_amplification",
@@ -91,18 +91,17 @@ def make_chain_mt(
     return output
 
 
-def make_chain_tm(
-    transformation1: Transformation,
+def make_chain_pm(
+    postprocess1,
     measurement0: Measurement
 ) -> Measurement:
-    """Construct the functional composition (`transformation1` ○ `measurement0`).
-    Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
+    """Construct the functional composition (`postprocess1` ○ `measurement0`).
+    Returns a Measurement that when invoked, computes `postprocess1(measurement0(x))`.
     Used to represent non-interactive postprocessing.
     
-    [make_chain_tm in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_tm.html)
+    [make_chain_pm in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_pm.html)
     
-    :param transformation1: outer postprocessing transformation
-    :type transformation1: Transformation
+    :param postprocess1: outer postprocessor
     :param measurement0: inner measurement/mechanism
     :type measurement0: Measurement
     :rtype: Measurement
@@ -114,16 +113,16 @@ def make_chain_tm(
     
     # No type arguments to standardize.
     # Convert arguments to c types.
-    c_transformation1 = py_to_c(transformation1, c_type=Transformation, type_name=None)
+    c_postprocess1 = py_to_c(postprocess1, c_type=Function, type_name=None)
     c_measurement0 = py_to_c(measurement0, c_type=Measurement, type_name=None)
     
     # Call library function.
-    lib_function = lib.opendp_combinators__make_chain_tm
-    lib_function.argtypes = [Transformation, Measurement]
+    lib_function = lib.opendp_combinators__make_chain_pm
+    lib_function.argtypes = [Function, Measurement]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_transformation1, c_measurement0), Measurement))
-    output._depends_on(get_dependencies(transformation1), get_dependencies(measurement0))
+    output = c_to_py(unwrap(lib_function(c_postprocess1, c_measurement0), Measurement))
+    output._depends_on(get_dependencies(postprocess1), get_dependencies(measurement0))
     return output
 
 
@@ -354,38 +353,36 @@ def make_user_measurement(
 
 
 def make_user_postprocessor(
-    input_domain: Domain,
-    output_domain: Domain,
-    function
-) -> Transformation:
+    function,
+    TO: RuntimeTypeDescriptor
+) -> Measurement:
     """Construct a Postprocessor from user-defined callbacks.
     
     [make_user_postprocessor in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_postprocessor.html)
     
-    :param input_domain: 
-    :type input_domain: Domain
-    :param output_domain: 
-    :type output_domain: Domain
-    :param function: A function mapping data from `input_domain` to `output_domain`.
-    :rtype: Transformation
+    :param function: A function mapping data from `input_domain` to `output_domain`
+    :param TO: 
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
     """
     assert_features("contrib")
     
-    # No type arguments to standardize.
+    # Standardize type arguments.
+    TO = RuntimeType.parse(type_name=TO)
+    
     # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
-    c_output_domain = py_to_c(output_domain, c_type=Domain, type_name=AnyDomain)
-    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(output_domain))
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=pass_through(TO))
+    c_TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_combinators__make_user_postprocessor
-    lib_function.argtypes = [Domain, Domain, CallbackFn]
+    lib_function.argtypes = [CallbackFn, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_output_domain, c_function), Transformation))
+    output = c_to_py(unwrap(lib_function(c_function, c_TO), Measurement))
     output._depends_on(c_function)
     return output
 

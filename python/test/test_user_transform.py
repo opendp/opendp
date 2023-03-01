@@ -78,11 +78,7 @@ def make_postprocess_frac():
     def function(arg):
         return arg[0] / arg[1]
 
-    return make_user_postprocessor(
-        vector_domain(all_domain(float)),
-        all_domain(float),
-        function,
-    )
+    return make_user_postprocessor(function, float)
 
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
@@ -120,10 +116,6 @@ def test_user_constructors():
     print(meas.map(1))
 
 
-    post = make_user_postprocessor(
-        sized_domain(vector_domain(bounded_domain((2, 10))), 10),
-        all_domain(i32),
-        lambda x: x[0]
-    )
+    post = make_user_postprocessor(lambda x: x[0], i32)
 
     print((meas >> post)(2))

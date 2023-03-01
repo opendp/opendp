@@ -1,9 +1,9 @@
 use std::{convert::TryFrom, os::raw::c_char};
 
 use crate::{
-    core::{FfiResult, IntoAnyTransformationFfiResultExt},
+    core::{FfiResult, IntoAnyFunctionFfiResultExt},
     ffi::{
-        any::{AnyObject, AnyTransformation, Downcast},
+        any::{AnyObject, Downcast, AnyFunction},
         util::{to_str, Type},
     },
     traits::{Float, Number, RoundCast},
@@ -11,8 +11,8 @@ use crate::{
 };
 
 #[no_mangle]
-pub extern "C" fn opendp_transformations__make_cdf(TA: *const c_char) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TA: Float>() -> FfiResult<*mut AnyTransformation> {
+pub extern "C" fn opendp_transformations__make_cdf(TA: *const c_char) -> FfiResult<*mut AnyFunction> {
+    fn monomorphize<TA: Float>() -> FfiResult<*mut AnyFunction> {
         make_cdf::<TA>().into_any()
     }
     let TA = try_!(Type::try_from(TA));
@@ -28,12 +28,12 @@ pub extern "C" fn opendp_transformations__make_quantiles_from_counts(
     interpolation: *const c_char,
     TA: *const c_char,
     F: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
+) -> FfiResult<*mut AnyFunction> {
     fn monomorphize<TA, F>(
         bin_edges: *const AnyObject,
         alphas: *const AnyObject,
         interpolation: Interpolation,
-    ) -> FfiResult<*mut AnyTransformation>
+    ) -> FfiResult<*mut AnyFunction>
     where
         TA: Number + RoundCast<F>,
         F: Float + RoundCast<TA>,

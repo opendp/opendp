@@ -630,21 +630,18 @@ def make_cast_inherent(
 
 def make_cdf(
     TA: RuntimeTypeDescriptor = "float"
-) -> Transformation:
+):
     """Postprocess a noisy array of float summary counts into a cumulative distribution.
     
     [make_cdf in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_cdf.html)
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TA>>`
-    * Output Domain:  `VectorDomain<AllDomain<TA>>`
-    * Input Metric:   `AgnosticMetric`
-    * Output Metric:  `AgnosticMetric`
+    * Input Type:     `Vec<TA>`
+    * Output Type:    `Vec<TA>`
     
     :param TA: Atomic Type. One of `f32` or `f64`
     :type TA: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -662,7 +659,7 @@ def make_cdf(
     lib_function.argtypes = [ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_TA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_TA), Function))
     
     return output
 
@@ -717,8 +714,8 @@ def make_consistent_b_ary_tree(
     branching_factor: int,
     TIA: RuntimeTypeDescriptor = "int",
     TOA: RuntimeTypeDescriptor = "float"
-) -> Transformation:
-    """Postprocessing transformation that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
+):
+    """Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
     
     The input argument of the function is a balanced `b`-ary tree implicitly stored in breadth-first order
     Tree is assumed to be complete, as in, all leaves on the last layer are on the left.
@@ -735,10 +732,8 @@ def make_consistent_b_ary_tree(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
-    * Input Metric:   `AgnosticMetric`
-    * Output Metric:  `AgnosticMetric`
+    * Input Type:     `Vec<TIA>`
+    * Output Type:    `Vec<TOA>`
     
     :param branching_factor: the maximum number of children
     :type branching_factor: int
@@ -746,7 +741,6 @@ def make_consistent_b_ary_tree(
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic type of the output data. Should be a float type.
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -767,7 +761,7 @@ def make_consistent_b_ary_tree(
     lib_function.argtypes = [ctypes.c_size_t, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_branching_factor, c_TIA, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_branching_factor, c_TIA, c_TOA), Function))
     
     return output
 
@@ -1784,17 +1778,15 @@ def make_quantiles_from_counts(
     interpolation: str = "linear",
     TA: RuntimeTypeDescriptor = None,
     F: RuntimeTypeDescriptor = "float"
-) -> Transformation:
+):
     """Postprocess a noisy array of summary counts into quantiles.
     
     [make_quantiles_from_counts in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_quantiles_from_counts.html)
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TA>>`
-    * Output Domain:  `VectorDomain<AllDomain<TA>>`
-    * Input Metric:   `AgnosticMetric`
-    * Output Metric:  `AgnosticMetric`
+    * Input Type:     `Vec<TA>`
+    * Output Type:    `Vec<TA>`
     
     :param bin_edges: The edges that the input data was binned into before counting.
     :type bin_edges: Any
@@ -1806,7 +1798,6 @@ def make_quantiles_from_counts(
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :param F: Float type of the alpha argument. One of `f32` or `f64`
     :type F: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -1829,7 +1820,7 @@ def make_quantiles_from_counts(
     lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_bin_edges, c_alphas, c_interpolation, c_TA, c_F), Transformation))
+    output = c_to_py(unwrap(lib_function(c_bin_edges, c_alphas, c_interpolation, c_TA, c_F), Function))
     
     return output
 

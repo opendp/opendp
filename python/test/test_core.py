@@ -107,6 +107,15 @@ def test_supporting_elements():
     print(mechanism.output_measure.distance_type)
 
 
+def test_function():
+    from opendp.measurements import make_base_laplace
+    mechanism = make_base_laplace(1.)
+    pow = 4 # add noise 2^pow times
+    for _ in range(pow):
+        mechanism = mechanism >> mechanism
+    print(mechanism(0.))
+
+
 def test_member():
     from opendp.transformations import make_clamp
     clamper = make_clamp((0, 2))

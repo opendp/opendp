@@ -290,7 +290,7 @@ impl Debug for AnyMetric {
     }
 }
 
-type AnyFunction = Function<AnyObject, AnyObject>;
+pub(crate) type AnyFunction = Function<AnyObject, AnyObject>;
 
 pub trait IntoAnyFunctionExt {
     fn into_any(self) -> AnyFunction;

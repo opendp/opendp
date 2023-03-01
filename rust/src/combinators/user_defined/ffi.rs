@@ -7,12 +7,10 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{
-            AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyTransformation,
-            IntoAnyStabilityMapExt,
+            AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyTransformation, AnyFunction,
         },
         util,
     },
-    metrics::AgnosticMetric,
 };
 
 type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>;
@@ -23,6 +21,8 @@ fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
         util::into_owned(func(arg as *const AnyObject))?.into()
     }
 }
+
+
 
 #[bootstrap(
     name = "make_user_transformation",
@@ -70,7 +70,6 @@ pub extern "C" fn opendp_combinators__make_user_transformation(
     features("contrib", "honest-but-curious"),
     arguments(
         input_domain(hint = "Domain"),
-        output_domain(hint = "Domain"),
         function(rust_type = "$pass_through(TO)"),
         input_metric(hint = "Metric"),
         output_measure(hint = "Measure"),
@@ -129,29 +128,27 @@ pub extern "C" fn opendp_combinators__make_user_measurement(
 #[bootstrap(
     name = "make_user_postprocessor",
     features("contrib"),
-    arguments(
-        input_domain(hint = "Domain"),
-        output_domain(hint = "Domain"),
-        function(rust_type = "$domain_carrier_type(output_domain)"),
-    ),
+    arguments(function(rust_type = "$pass_through(TO)")),
     dependencies("c_function")
 )]
 /// Construct a Postprocessor from user-defined callbacks.
 ///
 /// # Arguments
-/// * `function` - A function mapping data from `input_domain` to `output_domain`.
+/// * `TO` - Output Type
+/// * `function` - A function mapping data from `input_domain` to `output_domain`
+#[allow(dead_code)]
+fn make_user_postprocessor<TO>(
+    function: CallbackFn,
+) -> Fallible<AnyMeasurement> {
+    let _ = function;
+    panic!("this signature only exists for code generation")
+}
+
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_user_postprocessor(
-    input_domain: *const AnyDomain,
-    output_domain: *const AnyDomain,
     function: CallbackFn,
-) -> FfiResult<*mut AnyTransformation> {
-    FfiResult::Ok(util::into_raw(Transformation::new(
-        try_as_ref!(input_domain).clone(),
-        try_as_ref!(output_domain).clone(),
-        Function::new_fallible(wrap_func(function)),
-        AnyMetric::new(AgnosticMetric::default()),
-        AnyMetric::new(AgnosticMetric::default()),
-        StabilityMap::<AgnosticMetric, AgnosticMetric>::new(|_| ()).into_any(),
-    )))
+    TO: *const c_char,
+) -> FfiResult<*mut AnyFunction> {
+    let _TO = TO;
+    FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
 }
