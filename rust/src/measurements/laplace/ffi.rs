@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_long, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyStaticMeasurementFfiResultExt};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
@@ -23,7 +23,7 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
     {
         let scale = *try_as_ref!(scale as *const D::Atom);
-        make_base_laplace::<D>(scale, Some(k)).into_any()
+        make_base_laplace::<D>(scale, Some(k)).into_any_static()
     }
     let k = k as i32;
     let D = try_!(Type::try_from(D));

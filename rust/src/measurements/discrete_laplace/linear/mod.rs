@@ -8,6 +8,7 @@ use crate::error::*;
 use crate::measures::MaxDivergence;
 use crate::traits::samplers::SampleDiscreteLaplaceLinear;
 use crate::traits::{Float, InfCast, Integer};
+use crate::interactive::Static;
 
 use super::DiscreteLaplaceDomain;
 
@@ -48,9 +49,10 @@ use super::DiscreteLaplaceDomain;
 pub fn make_base_discrete_laplace_linear<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, Static<D::Carrier>, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    D::Carrier: 'static,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
@@ -65,7 +67,7 @@ where
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
 
-    Ok(Measurement::new(
+    Ok(Measurement::new_static(
         D::default(),
         D::new_map_function(move |v: &D::Atom| {
             D::Atom::sample_discrete_laplace_linear(*v, scale, bounds)
@@ -118,9 +120,10 @@ where
 pub fn make_base_geometric<D, QO>(
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, Static<D::Carrier>, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    D::Carrier: 'static,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {

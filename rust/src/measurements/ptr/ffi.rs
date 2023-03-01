@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_long, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyStaticMeasurementFfiResultExt};
 use crate::err;
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
@@ -29,7 +29,7 @@ pub extern "C" fn opendp_measurements__make_base_ptr(
     {
         let scale = *try_as_ref!(scale as *const TV);
         let threshold = *try_as_ref!(threshold as *const TV);
-        make_base_ptr::<TK, TV>(scale, threshold, Some(k)).into_any()
+        make_base_ptr::<TK, TV>(scale, threshold, Some(k)).into_any_static()
     }
     let k = k as i32;
     let TK = try_!(Type::try_from(TK));

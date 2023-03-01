@@ -8,6 +8,7 @@ use crate::core::{
     Transformation,
 };
 use crate::error::{Error, ErrorVariant, Fallible};
+use crate::interactive::{QueryableMap, Static};
 use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
@@ -77,7 +78,7 @@ pub fn make_chain_mt<DI, DX, TO, MI, MX, MO>(
 ) -> Fallible<Measurement<DI, TO, MI, MO>>
     where DI: 'static + Domain,
           DX: 'static + Domain,
-          TO: 'static,
+          TO: 'static + QueryableMap,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
@@ -169,8 +170,8 @@ where
 /// * `MO` - Output Measure.
 pub fn make_chain_pm<DI, TX, TO, MI, MO>(
     postprocess1: &Function<TX, TO>,
-    measurement0: &Measurement<DI, TX, MI, MO>,
-) -> Fallible<Measurement<DI, TO, MI, MO>>
+    measurement0: &Measurement<DI, Static<TX>, MI, MO>,
+) -> Fallible<Measurement<DI, Static<TO>, MI, MO>>
 where
     DI: 'static + Domain,
     TX: 'static,
@@ -178,9 +179,11 @@ where
     MI: 'static + Metric,
     MO: 'static + Measure,
 {
+    let function1 = postprocess1.function.clone();
+    let function0 = measurement0.function.function.clone();
     Ok(Measurement::new(
         measurement0.input_domain.clone(),
-        Function::make_chain(&postprocess1, &measurement0.function),
+        Function::new_fallible(move |arg| function1(&function0(arg)?.0).map(Static)),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
         measurement0.privacy_map.clone(),
@@ -219,7 +222,7 @@ mod tests {
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_map1 = PrivacyMap::new(|d_in: &i32| *d_in as f64 + 1.);
-        let measurement1 = Measurement::new(input_domain1, function1, input_metric1, output_measure1, privacy_map1);
+        let measurement1 = Measurement::new_static(input_domain1, function1, input_metric1, output_measure1, privacy_map1);
         let chain = make_chain_mt(&measurement1, &transformation0).unwrap_test();
 
         let arg = 99_u8;
@@ -279,7 +282,7 @@ mod tests {
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::<i32>::default();
         let privacy_map0 = PrivacyMap::new_from_constant(1);
-        let measurement0 = Measurement::new(input_domain0, function0, input_metric0, output_measure0, privacy_map0);
+        let measurement0 = Measurement::new_static(input_domain0, function0, input_metric0, output_measure0, privacy_map0);
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
         let chain = make_chain_pm(&function1, &measurement0).unwrap_test();
 
@@ -297,7 +300,7 @@ impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>> for Transformation
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
-    TO: 'static,
+    TO: 'static + QueryableMap,
     MI: 'static + Metric,
     MX: 'static + Metric,
     MO: 'static + Measure,
@@ -313,7 +316,7 @@ where
 impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>> for Fallible<Transformation<DI, DX, MI, MX>>
     where DI: 'static + Domain,
           DX: 'static + Domain,
-          TO: 'static,
+          TO: 'static + QueryableMap,
           MI: 'static + Metric,
           MX: 'static + Metric,
           MO: 'static + Measure {
@@ -357,7 +360,7 @@ where
     }
 }
 
-impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for Measurement<DI, TX, MI, MO>
+impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for Measurement<DI, Static<TX>, MI, MO>
     where
         DI: 'static + Domain,
         TX: 'static,
@@ -365,7 +368,7 @@ impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for Measurement<DI, TX, MI, MO>
         MI: 'static + Metric,
         MO: 'static + Measure,
 {
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
+    type Output = Fallible<Measurement<DI, Static<TO>, MI, MO>>;
 
     fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
         make_chain_pm(&rhs, &self)
@@ -373,7 +376,7 @@ impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for Measurement<DI, TX, MI, MO>
 }
 
 impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>>
-    for Fallible<Measurement<DI, TX, MI, MO>>
+    for Fallible<Measurement<DI, Static<TX>, MI, MO>>
 where
     DI: 'static + Domain,
     TX: 'static,
@@ -381,7 +384,7 @@ where
     MI: 'static + Metric,
     MO: 'static + Measure,
 {
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
+    type Output = Fallible<Measurement<DI, Static<TO>, MI, MO>>;
 
     fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
         make_chain_pm(&rhs, &self?)

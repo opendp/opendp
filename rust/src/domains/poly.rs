@@ -5,12 +5,12 @@ use crate::core::{Domain, Function, Measure, Measurement, Metric};
 use crate::error::*;
 use crate::interactive::{PolyQueryable, Queryable, QueryableFunctor, QueryableMap};
 
-impl<TI: 'static, TO: 'static> Function<TI, TO> {
+impl<TI: 'static, TO: 'static + QueryableMap> Function<TI, TO> {
     /// Converts this Function into one with polymorphic output.
-    pub fn into_poly(self) -> Function<TI, Box<dyn Any>> {
-        let function = move |arg: &TI| -> Fallible<Box<dyn Any>> {
+    pub fn into_poly(self) -> Function<TI, Box<dyn QueryableFunctor>> {
+        let function = move |arg: &TI| -> Fallible<Box<dyn QueryableFunctor>> {
             let res = self.eval(arg);
-            res.map(|o| Box::new(o) as Box<dyn Any>)
+            res.map(|o| Box::new(o) as Box<dyn QueryableFunctor>)
         };
         Function::new_fallible(function)
     }
@@ -29,7 +29,7 @@ impl<TI: 'static, Q: 'static, A: QueryableMap> Function<TI, Queryable<Q, A>> {
                         type_name::<Q>()
                     )
                 })?;
-                res.eval(query)
+                res.eval_mappable(query)
                     .map(|o| Box::new(o) as Box<dyn QueryableFunctor>)
             }))
         };
@@ -37,9 +37,10 @@ impl<TI: 'static, Q: 'static, A: QueryableMap> Function<TI, Queryable<Q, A>> {
     }
 }
 
-impl<TI> Function<TI, Box<dyn Any>> {
+impl<TI> Function<TI, Box<dyn QueryableFunctor>> {
     pub fn eval_poly<TO: 'static>(&self, arg: &TI) -> Fallible<TO> {
         self.eval(arg)?
+            .into_any()
             .downcast()
             .map_err(|_| {
                 err!(
@@ -79,13 +80,13 @@ impl<DI, TO, MI, MO> Measurement<DI, TO, MI, MO>
 where
     DI: 'static + Domain,
     DI::Carrier: 'static,
-    TO: 'static,
+    TO: 'static + QueryableMap,
     MI: 'static + Metric,
     MO: 'static + Measure,
 {
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
-    pub fn into_poly(self) -> Measurement<DI, Box<dyn Any>, MI, MO> {
+    pub fn into_poly(self) -> Measurement<DI, Box<dyn QueryableFunctor>, MI, MO> {
         Measurement::new(
             self.input_domain,
             self.function.into_poly(),
@@ -100,6 +101,7 @@ where
 mod tests {
     use crate::domains::AllDomain;
     use crate::error::*;
+    use crate::interactive::Static;
     use crate::measurements;
 
     #[test]
@@ -111,12 +113,12 @@ mod tests {
 
         // invoke interactively and with type-erasure
         let op_poly = op_plain.clone().interactive().into_poly_queryable();
-        let res_poly = op_poly.invoke_poly::<(), f64>(&arg)?.get()?;
+        let res_poly = op_poly.invoke_poly::<(), Static<f64>>(&arg)?.get()?;
         assert_eq!(res_poly, arg);
 
         // invoke interactively and with type-erasure, but expect the wrong type
         let op_poly = op_plain.clone().interactive().into_poly_queryable();
-        let res_bogus = op_poly.invoke1_poly::<i32>(&arg);
+        let res_bogus = op_poly.invoke1_poly::<Static<i32>>(&arg);
         assert_eq!(
             res_bogus.err().unwrap_test().variant,
             ErrorVariant::FailedCast

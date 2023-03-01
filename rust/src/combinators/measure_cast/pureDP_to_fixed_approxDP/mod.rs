@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
     measures::{MaxDivergence, FixedSmoothedMaxDivergence},
-    traits::Float
+    traits::Float, interactive::QueryableMap
 };
 
 #[cfg(feature = "ffi")]
@@ -24,6 +24,7 @@ pub fn make_pureDP_to_fixed_approxDP<DI, TO, MI, QO>(
 ) -> Fallible<Measurement<DI, TO, MI, FixedSmoothedMaxDivergence<QO>>>
 where
     DI: Domain,
+    TO: QueryableMap,
     MI: 'static + Metric,
     QO: Float,
 {

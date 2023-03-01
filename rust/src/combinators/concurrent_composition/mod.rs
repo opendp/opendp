@@ -96,7 +96,7 @@ where
                     }
 
                     // evaluate the query!
-                    let answer = measurement.invoke(&arg)?;
+                    let answer = measurement.invoke_mappable(&arg)?;
 
                     // we've now consumed the last d_mid. This is our only state modification
                     d_mids.pop();
@@ -133,7 +133,7 @@ impl<Q: Clone> ConcurrentCompositionMeasure for SmoothedMaxDivergence<Q> {}
 mod test {
 
     use crate::{
-        domains::AllDomain, interactive::PolyQueryable, measurements::make_randomized_response_bool, metrics::DiscreteDistance,
+        domains::AllDomain, interactive::{PolyQueryable, Static}, measurements::make_randomized_response_bool, metrics::DiscreteDistance,
     };
 
     use super::*;
@@ -171,7 +171,7 @@ mod test {
 
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are in AllDomain<bool>
-        let cc_query_3 = make_concurrent_composition::<_, Queryable<(), bool>, _, _>(
+        let cc_query_3 = make_concurrent_composition::<_, Queryable<(), Static<bool>>, _, _>(
             AllDomain::<bool>::new(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
@@ -181,7 +181,7 @@ mod test {
         .into_poly_queryable();
 
         println!("\nsubmitting a CC query. This CC compositor is concretely-typed");
-        let mut answer3: Queryable<_, Queryable<(), bool>> = queryable.eval_poly(&cc_query_3)?;
+        let mut answer3: Queryable<_, Queryable<(), Static<bool>>> = queryable.eval_poly(&cc_query_3)?;
 
         println!("\nsubmitting a RR query to child CC compositor with concrete types");
         let _answer3_1: bool = answer3.eval(&rr_query)?.get()?;

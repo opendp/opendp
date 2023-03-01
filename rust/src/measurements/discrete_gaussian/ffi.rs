@@ -4,7 +4,7 @@ use std::os::raw::{c_char, c_void};
 use az::SaturatingCast;
 use rug::{Integer, Rational};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyStaticMeasurementFfiResultExt};
 use crate::domains::{AllDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
@@ -38,7 +38,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_gaussian(
 
             QI: Number
         {
-            make_base_discrete_gaussian::<D, MO, QI>(scale).into_any()
+            make_base_discrete_gaussian::<D, MO, QI>(scale).into_any_static()
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [

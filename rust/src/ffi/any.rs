@@ -5,16 +5,16 @@
 //! This is made possible by glue functions which can take the Any representation and downcast to the
 //! correct concrete type.
 
-use std::any;
 use std::any::Any;
+use std::any::{self, TypeId};
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
     Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
 };
-use crate::err;
+use crate::{err, fallible};
 use crate::error::*;
-use crate::interactive::{Answer, PolyQueryable, Query, Queryable, QueryableMap};
+use crate::interactive::{Answer, PolyQueryable, Query, Queryable, QueryableMap, Static};
 
 use super::glue::Glue;
 use super::util::Type;
@@ -117,7 +117,12 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast
             let other_type = Type::of_id(&type_id)
                 .map(|t| format!(" AnyBox contains {:?}.", t))
                 .unwrap_or_default();
-            err!(FailedCast, "Failed downcast_mut of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+            err!(
+                FailedCast,
+                "Failed downcast_mut of AnyBox to {}.{}",
+                any::type_name::<T>(),
+                other_type
+            )
         })
     }
 }
@@ -212,6 +217,11 @@ impl Downcast for AnyObject {
 }
 
 impl QueryableMap for AnyObject {
+    type Value = Self;
+    fn value(self) -> Self::Value {
+        self
+    }
+    
     fn queryable_map(mut self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
         // move the box out of the AnyObject;
         let value = self.value.value;
@@ -253,7 +263,9 @@ pub enum Either<L, R> {
 }
 
 impl<Q: 'static, A: QueryableMap> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, AnyMeasure> {
-    pub fn into_any_Q(self) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
+    pub fn into_any_Q(
+        self,
+    ) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
         let function = self.function;
         Measurement::new(
             self.input_domain,
@@ -264,11 +276,11 @@ impl<Q: 'static, A: QueryableMap> Measurement<AnyDomain, Queryable<Q, A>, AnyMet
                     Ok(Queryable::new(
                         move |_self, query: Query<AnyObject>| match query {
                             Query::External(query) => inner_qbl
-                                .eval(query.downcast_ref::<Q>()?)
+                                .eval_mappable(query.downcast_ref::<Q>()?)
                                 .map(Answer::External),
                             Query::Internal(query) => {
                                 if query.downcast_ref::<QueryType>().is_some() {
-                                    return Ok(Answer::internal(Type::of::<Q>()))
+                                    return Ok(Answer::internal(Type::of::<Q>()));
                                 }
                                 inner_qbl.eval_internal(query).map(Answer::Internal)
                             }
@@ -430,15 +442,26 @@ pub trait IntoAnyFunctionExt {
     fn into_any(self) -> AnyFunction;
 }
 
-
 impl<TI: 'static, TO: 'static> IntoAnyFunctionExt for Function<TI, TO> {
     fn into_any(self) -> AnyFunction {
-        let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
             let arg = arg.downcast_ref()?;
             let res = self.eval(arg);
             res.map(AnyObject::new)
-        };
-        Function::new_fallible(function)
+        })
+    }
+}
+
+pub trait IntoAnyStaticFunctionExt {
+    fn into_any_static(self) -> AnyFunction;
+}
+
+impl<TI: 'static, TO: 'static> IntoAnyStaticFunctionExt for Function<TI, Static<TO>> {
+    fn into_any_static(self) -> AnyFunction {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
+            let arg = arg.downcast_ref()?;
+            Ok(AnyObject::new(self.eval(arg)?.0))
+        })
     }
 }
 
@@ -453,6 +476,18 @@ impl<TO: 'static> IntoAnyFunctionOutExt for Function<AnyObject, TO> {
             res.map(AnyObject::new)
         };
         Function::new_fallible(function)
+    }
+}
+
+pub trait IntoAnyStaticFunctionOutExt {
+    fn into_any_static_out(self) -> AnyFunction;
+}
+
+impl<TO: 'static> IntoAnyStaticFunctionOutExt for Function<AnyObject, Static<TO>> {
+    fn into_any_static_out(self) -> AnyFunction {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
+            Ok(AnyObject::new(self.eval(arg)?.0))
+        })
     }
 }
 
@@ -493,6 +528,42 @@ where
 /// A Measurement with all generic types filled by Any types. This is the type of Measurements
 /// passed back and forth over FFI.
 pub type AnyMeasurement = Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
+pub type AnyStaticMeasurement = Measurement<AnyDomain, Static<AnyObject>, AnyMetric, AnyMeasure>;
+
+impl AnyMeasurement {
+    pub fn as_static(&self) -> AnyStaticMeasurement {
+        let function = self.function.function.clone();
+        Measurement::new(
+            self.input_domain.clone(),
+            Function::new_fallible(move |arg| {
+                let answer = function(arg)?;
+                let answer_id = answer.type_.id;
+                if answer_id == TypeId::of::<AnyQueryable>()
+                    || answer_id == TypeId::of::<(AnyQueryable, AnyObject)>()
+                    || answer_id == TypeId::of::<Either<AnyQueryable, AnyObject>>()
+                {
+                    return fallible!(FailedFunction, "Static postprocessors cannot be applied to non-static data.")
+                }
+                function(arg).map(Static)
+            }),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+    }
+}
+impl AnyStaticMeasurement {
+    pub fn hide_static(&self) -> AnyMeasurement {
+        let function = self.function.function.clone();
+        Measurement::new(
+            self.input_domain.clone(),
+            Function::new_fallible(move |arg| function(arg).map(|v| v.0)),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+    }
+}
 
 /// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
 /// with blanket implementation, and we need an extension trait to add methods to Measurement.
@@ -500,15 +571,40 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
-    where DI::Carrier: 'static,
-          MI::Distance: 'static,
-          MO::Distance: 'static {
-
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
+where
+    DI::Carrier: 'static,
+    TO: QueryableMap,
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+{
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),
             self.function.into_any(),
+            AnyMetric::new(self.input_metric),
+            AnyMeasure::new(self.output_measure),
+            self.privacy_map.into_any(),
+        )
+    }
+}
+
+pub trait IntoAnyStaticMeasurementExt {
+    fn into_any_static(self) -> AnyMeasurement;
+}
+
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    IntoAnyStaticMeasurementExt for Measurement<DI, Static<TO>, MI, MO>
+where
+    DI::Carrier: 'static,
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+{
+    fn into_any_static(self) -> AnyMeasurement {
+        AnyMeasurement::new(
+            AnyDomain::new(self.input_domain),
+            self.function.into_any_static(),
             AnyMetric::new(self.input_metric),
             AnyMeasure::new(self.output_measure),
             self.privacy_map.into_any(),
@@ -522,11 +618,31 @@ pub trait IntoAnyMeasurementOutExt {
     fn into_any_out(self) -> AnyMeasurement;
 }
 
-impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
+impl<TO: 'static + QueryableMap> IntoAnyMeasurementOutExt
+    for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure>
+{
     fn into_any_out(self) -> AnyMeasurement {
         AnyMeasurement::new(
             self.input_domain,
             self.function.into_any_out(),
+            self.input_metric,
+            self.output_measure,
+            self.privacy_map,
+        )
+    }
+}
+
+pub trait IntoAnyStaticMeasurementOutExt {
+    fn into_any_static_out(self) -> AnyMeasurement;
+}
+
+impl<TO: 'static> IntoAnyStaticMeasurementOutExt
+    for Measurement<AnyDomain, Static<TO>, AnyMetric, AnyMeasure>
+{
+    fn into_any_static_out(self) -> AnyMeasurement {
+        AnyMeasurement::new(
+            self.input_domain,
+            self.function.into_any_static_out(),
             self.input_metric,
             self.output_measure,
             self.privacy_map,
@@ -568,32 +684,6 @@ where
 /// This is the type of Queryables passed back and forth over FFI.
 pub type AnyQueryable = Queryable<AnyObject, AnyObject>;
 
-// pub struct QueryableMapObject {
-//     pub(crate) object: AnyObject,
-//     queryable_map_glue: Rc<fn(Self, &dyn Fn(PolyQueryable) -> PolyQueryable) -> QueryableMapObject>,
-// }
-
-// impl QueryableMap for QueryableMapObject {
-//     fn queryable_map(self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
-//         (self.queryable_map_glue)(self, mapper)
-//     }
-// }
-
-// impl QueryableMapObject {
-//     pub fn new<T: 'static + QueryableMap>(value: T) -> Self {
-//         QueryableMapObject {
-//             object: AnyObject::new(value),
-//             queryable_map_glue: Rc::new(
-//                 |self_: Self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable| QueryableMapObject {
-//                     object: AnyObject::new(
-//                         self_.object.downcast::<T>().unwrap().queryable_map(mapper),
-//                     ),
-//                     queryable_map_glue: self_.queryable_map_glue.clone(),
-//                 },
-//             ),
-//         }
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
@@ -681,7 +771,7 @@ mod tests {
         let m1 = measurements::make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(
             0.0, None,
         )?
-        .into_any();
+        .into_any_static();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg)?;

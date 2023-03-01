@@ -12,6 +12,7 @@ use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
 use crate::traits::samplers::{SampleBernoulli, SampleUniformIntBelow};
 use crate::traits::{Hashable, Float};
+use crate::interactive::Static;
 
 // There are two constructors:
 // 1. make_randomized_response_bool
@@ -43,7 +44,7 @@ use crate::traits::{Hashable, Float};
 pub fn make_randomized_response_bool<QO>(
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<bool>, bool, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement<AllDomain<bool>, Static<bool>, DiscreteDistance, MaxDivergence<QO>>>
     where bool: SampleBernoulli<QO>,
           QO: Float {
 
@@ -57,7 +58,7 @@ pub fn make_randomized_response_bool<QO>(
     //       = min(d_in, 1) * ln(p / (1 - p))
     let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
-    Ok(Measurement::new(
+    Ok(Measurement::new_static(
         AllDomain::new(),
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !bool::sample_bernoulli(prob, constant_time)?)
@@ -97,7 +98,7 @@ pub fn make_randomized_response<T, QO>(
     categories: HashSet<T>,
     prob: QO,
     constant_time: bool,
-) -> Fallible<Measurement<AllDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
+) -> Fallible<Measurement<AllDomain<T>, Static<T>, DiscreteDistance, MaxDivergence<QO>>>
     where T: Hashable,
           bool: SampleBernoulli<QO>,
           QO: Float {
@@ -128,7 +129,7 @@ pub fn make_randomized_response<T, QO>(
         .inf_mul(&num_categories.inf_sub(&QO::one())?)?
         .inf_ln()?;
 
-    Ok(Measurement::new(
+    Ok(Measurement::new_static(
         AllDomain::new(),
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None

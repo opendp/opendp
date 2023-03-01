@@ -2,6 +2,7 @@
 mod ffi;
 
 use crate::core::{Domain, Metric, PrivacyMap, Measure, Measurement};
+use crate::interactive::QueryableMap;
 use crate::measures::{MaxDivergence, FixedSmoothedMaxDivergence};
 use crate::domains::{SizedDomain};
 use crate::error::Fallible;
@@ -51,6 +52,7 @@ pub fn make_population_amplification<DIA, TO, MI, MO>(
     population_size: usize,
 ) -> Fallible<Measurement<DIA, TO, MI, MO>>
     where DIA: IsSizedDomain,
+          TO: QueryableMap,
           MI: 'static + Metric,
           MO: 'static + AmplifiableMeasure {
     let mut measurement = measurement.clone();

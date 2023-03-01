@@ -76,7 +76,7 @@ fn make_chain_pm(
     postprocess1: &AnyFunction,
     measurement0: &AnyMeasurement,
 ) -> Fallible<AnyMeasurement> {
-    super::make_chain_pm(postprocess1, measurement0)
+    Ok(super::make_chain_pm(postprocess1, &measurement0.as_static())?.hide_static())
 }
 
 #[no_mangle]
@@ -94,7 +94,7 @@ mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
     use crate::core;
     use crate::error::Fallible;
-    use crate::ffi::any::{AnyObject, Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+    use crate::ffi::any::{AnyObject, Downcast, IntoAnyTransformationExt, IntoAnyStaticMeasurementExt};
     use crate::ffi::util;
 
     use super::*;
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn test_make_chain_mt_ffi() -> Fallible<()> {
         let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
-        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any_static());
         let chain = Result::from(opendp_combinators__make_chain_mt(
             measurement1,
             transformation0,
@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_make_chain_tm_ffi() -> Fallible<()> {
-        let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any_static());
         let postprocess1 = util::into_raw(make_test_transformation::<i32>().into_any().function);
         let chain = Result::from(opendp_combinators__make_chain_pm(
             postprocess1,

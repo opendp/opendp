@@ -11,7 +11,7 @@ use crate::{
     measurements::{make_base_discrete_laplace_cks20, DiscreteLaplaceDomain},
     traits::InfCast,
 };
-use crate::core::IntoAnyMeasurementFfiResultExt;
+use crate::core::IntoAnyStaticMeasurementFfiResultExt;
 
 
 #[no_mangle]
@@ -35,7 +35,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
             rug::Rational: TryFrom<QO>,
             rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
         {
-            make_base_discrete_laplace_cks20::<D, QO>(scale).into_any()
+            make_base_discrete_laplace_cks20::<D, QO>(scale).into_any_static()
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [

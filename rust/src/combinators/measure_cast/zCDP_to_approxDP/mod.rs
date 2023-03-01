@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
     measures::{SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence},
-    traits::Float,
+    traits::Float, interactive::QueryableMap,
 };
 
 use self::cdp_epsilon::cdp_epsilon;
@@ -28,6 +28,7 @@ pub fn make_zCDP_to_approxDP<DI, TO, MI, QO>(
 ) -> Fallible<Measurement<DI, TO, MI, SmoothedMaxDivergence<QO>>>
 where
     DI: Domain,
+    TO: QueryableMap,
     MI: 'static + Metric,
     QO: Float,
 {

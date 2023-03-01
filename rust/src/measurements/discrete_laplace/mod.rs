@@ -6,6 +6,7 @@ use crate::{
     metrics::{AbsoluteDistance, L1Distance},
     traits::samplers::SampleDiscreteLaplaceLinear,
     traits::{CheckNull, Float, InfCast, Integer},
+    interactive::Static
 };
 
 use opendp_derive::bootstrap;
@@ -98,9 +99,10 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
 #[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, Static<D::Carrier>, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    D::Carrier: 'static,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom> + InfCast<D::Atom>,
     rug::Rational: std::convert::TryFrom<QO>,
@@ -143,9 +145,10 @@ where
 #[cfg(not(feature = "use-mpfr"))]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, Static<D::Carrier>, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
+    D::Carrier: 'static,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {

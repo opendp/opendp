@@ -10,7 +10,7 @@ use crate::{
         FixedSmoothedMaxDivergence, MaxDivergence,
         ZeroConcentratedDivergence,
     },
-    traits::InfAdd,
+    traits::InfAdd, interactive::Static,
 };
 
 /// Construct the DP composition [`measurement0`, `measurement1`, ...].
@@ -29,8 +29,8 @@ use crate::{
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
 pub fn make_basic_composition<DI, TO, MI, MO>(
-    measurements: Vec<&Measurement<DI, TO, MI, MO>>,
-) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
+    measurements: Vec<&Measurement<DI, Static<TO>, MI, MO>>,
+) -> Fallible<Measurement<DI, Static<Vec<TO>>, MI, MO>>
 where
     DI: 'static + Domain,
     TO: 'static,
@@ -70,7 +70,7 @@ where
     Ok(Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &DI::Carrier| {
-            functions.iter().map(|f| f.eval(arg)).collect()
+            functions.iter().map(|f| f.eval(arg).map(|v| v.0)).collect::<Fallible<_>>().map(Static)
         }),
         input_metric,
         output_measure.clone(),
@@ -128,7 +128,7 @@ mod tests {
         let input_metric0 = L1Distance::<i32>::default();
         let output_measure0 = MaxDivergence::default();
         let privacy_map0 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
-        let measurement0 = Measurement::new(
+        let measurement0 = Measurement::new_static(
             input_domain0,
             function0,
             input_metric0,
@@ -140,7 +140,7 @@ mod tests {
         let input_metric1 = L1Distance::<i32>::default();
         let output_measure1 = MaxDivergence::default();
         let privacy_map1 = PrivacyMap::new(|_d_in: &i32| f64::INFINITY);
-        let measurement1 = Measurement::new(
+        let measurement1 = Measurement::new_static(
             input_domain1,
             function1,
             input_metric1,
@@ -159,7 +159,7 @@ mod tests {
         let measurements = vec![&laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;
-        let ret = composition.function.eval(&arg)?;
+        let ret = composition.invoke(&arg)?;
 
         assert_eq!(ret.len(), 2);
         println!("return: {:?}", ret);

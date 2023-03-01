@@ -14,6 +14,7 @@ use crate::domains::{AllDomain, MapDomain};
 use crate::error::Fallible;
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
 use crate::traits::{Float, Hashable, ExactIntCast};
+use crate::interactive::Static;
 
 use super::get_discretization_consts;
 
@@ -45,13 +46,13 @@ use super::get_discretization_consts;
 /// * `TV` - Type of Value. Must be float.
 pub fn make_base_ptr<TK, TV>(
     scale: TV, threshold: TV, k: Option<i32>
-) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, HashMap<TK, TV>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
+) -> Fallible<Measurement<MapDomain<AllDomain<TK>, AllDomain<TV>>, Static<HashMap<TK, TV>>, L1Distance<TV>, SmoothedMaxDivergence<TV>>>
     where TK: Hashable,
           TV: Float + SampleDiscreteLaplaceZ2k,
           i32: ExactIntCast<TV::Bits> {
     let _2 = TV::exact_int_cast(2)?;
     let (k, relaxation) = get_discretization_consts(k)?;
-    Ok(Measurement::new(
+    Ok(Measurement::new_static(
         MapDomain::new(AllDomain::new(), AllDomain::new()),
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
             data.clone().into_iter()

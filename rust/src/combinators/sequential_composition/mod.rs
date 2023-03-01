@@ -95,7 +95,7 @@ where
                         }
 
                         // evaluate the query!
-                        let answer = measurement.invoke(&arg)?;
+                        let answer = measurement.invoke_mappable(&arg)?;
 
                         // we've now consumed the last d_mid. This is our only state modification
                         d_mids.pop();
@@ -183,7 +183,7 @@ mod test {
 
     use super::*;
     use crate::{
-        domains::AllDomain, measurements::make_randomized_response_bool, measures::MaxDivergence,
+        domains::AllDomain, measurements::make_randomized_response_bool, measures::MaxDivergence, interactive::Static,
     };
 
     #[test]
@@ -218,7 +218,7 @@ mod test {
         println!("\nbuild a sequential composition IM and then convert to poly, so that it can be passed to the root queryable");
         // pass a sequential composition compositor into the original SC compositor
         // This compositor expects all outputs are concretely-typed (bool)
-        let sc_query_3 = make_sequential_composition::<_, Queryable<(), bool>, _, _>(
+        let sc_query_3 = make_sequential_composition::<_, Queryable<(), Static<bool>>, _, _>(
             AllDomain::<bool>::new(),
             MaxDivergence::default(),
             1,
@@ -232,19 +232,19 @@ mod test {
         let mut answer3a = queryable.eval(&sc_query_3)?;
 
         println!("\npass an RR query to the child sequential compositor queryable and get a null queryable");
-        let mut rr_null_qbl: Queryable<(), bool> = answer3a.eval_poly(&rr_query)?;
+        let mut rr_null_qbl: Queryable<(), Static<bool>> = answer3a.eval_poly(&rr_query)?;
 
         println!("\nget the value from the null queryable");
         let _answer3a_1: bool = rr_null_qbl.get()?;
 
         println!("\npass a second RR query to the child sequential compositor queryable");
         let _answer3a_2: bool = answer3a
-            .eval_poly::<Queryable<(), bool>>(&rr_query)?
+            .eval_poly::<Queryable<(), Static<bool>>>(&rr_query)?
             .get()?;
 
         println!("\nAPPROACH B: downcast the poly queryable and then send normal queries");
         println!("create the sequential composition queryable as a child of the root queryable, but downcast the queryable itself");
-        let mut answer3b: Queryable<_, Queryable<(), bool>> = queryable.eval_poly(&sc_query_3)?;
+        let mut answer3b: Queryable<_, Queryable<(), Static<bool>>> = queryable.eval_poly(&sc_query_3)?;
 
         println!("\nsend a normal query without any dyn or poly type-erasure");
         let _answer3b_1: bool = answer3b.eval(&rr_query)?.get()?;

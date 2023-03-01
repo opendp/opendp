@@ -46,13 +46,14 @@ pub use crate::combinators::sequential_composition::*;
 #[cfg(test)]
 pub mod tests {
     use crate::core::{Function, PrivacyMap, StabilityMap, Transformation, Measurement};
+    use crate::interactive::{Static};
     use crate::measures::MaxDivergence;
     use crate::metrics::SymmetricDistance;
     use crate::domains::AllDomain;
     use crate::traits::CheckNull;
 
-    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, T, SymmetricDistance, MaxDivergence<f64>> {
-        Measurement::new(
+    pub fn make_test_measurement<T: 'static + Clone + CheckNull>() -> Measurement<AllDomain<T>, Static<T>, SymmetricDistance, MaxDivergence<f64>> {
+        Measurement::new_static(
             AllDomain::new(),
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),

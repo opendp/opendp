@@ -7,7 +7,7 @@ use opendp_derive::bootstrap;
 
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, IntoAnyFunctionExt, QueryType};
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, IntoAnyFunctionExt, QueryType, IntoAnyStaticMeasurementExt};
 use crate::ffi::util::{self, c_bool, Type};
 use crate::ffi::util::into_c_char_p;
 
@@ -128,6 +128,16 @@ pub trait IntoAnyMeasurementFfiResultExt {
 impl<T: IntoAnyMeasurementExt> IntoAnyMeasurementFfiResultExt for Fallible<T> {
     fn into_any(self) -> FfiResult<*mut AnyMeasurement> {
         self.map(IntoAnyMeasurementExt::into_any).into()
+    }
+}
+
+pub trait IntoAnyStaticMeasurementFfiResultExt {
+    fn into_any_static(self) -> FfiResult<*mut AnyMeasurement>;
+}
+
+impl<T: IntoAnyStaticMeasurementExt> IntoAnyStaticMeasurementFfiResultExt for Fallible<T> {
+    fn into_any_static(self) -> FfiResult<*mut AnyMeasurement> {
+        self.map(IntoAnyStaticMeasurementExt::into_any_static).into()
     }
 }
 
@@ -677,7 +687,7 @@ pub extern "C" fn opendp_core__queryable_query_type(this: *mut AnyQueryable) -> 
 #[cfg(test)]
 mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
-    use crate::ffi::any::{Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+    use crate::ffi::any::{Downcast, IntoAnyTransformationExt};
     use crate::ffi::util::ToCharP;
 
     use super::*;
@@ -748,7 +758,7 @@ mod tests {
 
     #[test]
     fn test_measurement_invoke() -> Fallible<()> {
-        let measurement = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement = util::into_raw(make_test_measurement::<i32>().into_any_static());
         let arg = AnyObject::new_raw(999);
         let res = opendp_core__measurement_invoke(measurement, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
@@ -758,7 +768,7 @@ mod tests {
 
     #[test]
     fn test_measurement_invoke_wrong_type() -> Fallible<()> {
-        let measurement = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement = util::into_raw(make_test_measurement::<i32>().into_any_static());
         let arg = AnyObject::new_raw(999.0);
         let res = Fallible::from(opendp_core__measurement_invoke(measurement, arg));
         assert_eq!(res.err().unwrap_test().variant, ErrorVariant::FailedCast);

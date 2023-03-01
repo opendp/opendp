@@ -25,11 +25,10 @@ mod ffi;
 #[cfg(feature = "ffi")]
 pub use ffi::*;
 
-use std::any::Any;
 use std::rc::Rc;
 
 use crate::error::*;
-use crate::interactive::{PolyQueryable, Queryable, QueryableMap};
+use crate::interactive::{PolyQueryable, Queryable, QueryableMap, QueryableFunctor, Static};
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
 
@@ -224,7 +223,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
-pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
+pub struct Measurement<DI: Domain, TO: QueryableMap, MI: Metric, MO: Measure> {
     pub input_domain: DI,
     pub function: Function<DI::Carrier, TO>,
     pub input_metric: MI,
@@ -233,7 +232,7 @@ pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
 }
 
 // the #[derive(Clone)] impl doesn't understand that even if TO: ?Clone, Measurement is still Clone
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, TO: QueryableMap, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
     fn clone(&self) -> Self {
         Self { 
             input_domain: self.input_domain.clone(), 
@@ -245,7 +244,7 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, 
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, TO: QueryableMap, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     pub fn new(
         input_domain: DI,
         function: Function<DI::Carrier, TO>,
@@ -262,8 +261,12 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
         }
     }
 
-    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
+    pub fn invoke_mappable(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval(arg)
+    }
+
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO::Value> {
+        self.function.eval(arg).map(QueryableMap::value)
     }
 
     pub fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance> {
@@ -275,6 +278,25 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
         MO::Distance: TotalOrd,
     {
         d_out.total_ge(&self.map(d_in)?)
+    }
+}
+
+impl<DI: Domain, TO: 'static, MI: Metric, MO: Measure> Measurement<DI, Static<TO>, MI, MO>
+    where DI::Carrier: 'static {
+    pub fn new_static(
+        input_domain: DI,
+        function: Function<DI::Carrier, TO>,
+        input_metric: MI,
+        output_measure: MO,
+        privacy_map: PrivacyMap<MI, MO>,
+    ) -> Self {
+        Self {
+            input_domain,
+            function: Function::new_fallible(move |arg| function.eval(arg).map(Static)),
+            input_metric,
+            output_measure,
+            privacy_map,
+        }
     }
 }
 
@@ -301,7 +323,7 @@ impl<DI: Domain, TO: QueryableMap, MI: Metric, MO: Measure> Measurement<DI, TO, 
     }
 }
 
-impl<DI: Domain, MI: Metric, MO: Measure> Measurement<DI, Box<dyn Any>, MI, MO> {
+impl<DI: Domain, MI: Metric, MO: Measure> Measurement<DI, Box<dyn QueryableFunctor>, MI, MO> {
     pub fn invoke_poly<TO: 'static>(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval_poly(arg)
     }
@@ -320,7 +342,7 @@ where
         Ok(self.function.eval(arg)?.into_downcast())
     }
 
-    pub fn invoke1_poly<A: QueryableMap>(&self, arg: &DI::Carrier) -> Fallible<A> {
+    pub fn invoke1_poly<A: QueryableMap>(&self, arg: &DI::Carrier) -> Fallible<A::Value> {
         self.invoke_poly::<(), A>(arg)?.get()
     }
 }

@@ -8,6 +8,7 @@ use crate::{
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
     traits::{samplers::SampleDiscreteGaussianZ2k, Float, FloatBits, ExactIntCast, CheckNull},
+    interactive::Static,
 };
 
 use super::{get_discretization_consts, MappableDomain};
@@ -86,9 +87,10 @@ where
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
-pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
+pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, Static<D::Carrier>, D::InputMetric, MO>>
 where
     D: GaussianDomain,
+    D::Carrier: 'static,
      
     D::Atom: Float + SampleDiscreteGaussianZ2k,
     MO: GaussianMeasure<D>,
@@ -100,7 +102,7 @@ where
     
     let (k , relaxation) = get_discretization_consts(k)?;
 
-    Ok(Measurement::new(
+    Ok(Measurement::new_static(
         D::default(),
         D::new_map_function(move |arg: &D::Atom| D::Atom::sample_discrete_gaussian_Z2k(*arg, scale, k)),
         D::InputMetric::default(),

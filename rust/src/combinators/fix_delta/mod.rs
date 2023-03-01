@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, PrivacyMap},
     measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
-    error::Fallible
+    error::Fallible, interactive::QueryableMap
 };
 
 #[cfg(feature = "ffi")]
@@ -24,6 +24,7 @@ pub fn make_fix_delta<DI, TO, MI, MO>(
 ) -> Fallible<Measurement<DI, TO, MI, MO::FixedMeasure>>
 where
     DI: Domain,
+    TO: QueryableMap,
     MI: 'static + Metric,
     MO: 'static + FixDeltaMeasure,
 {

@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use std::iter::FromIterator;
 use std::os::raw::{c_char, c_void};
 
-use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
+use crate::core::{FfiResult, IntoAnyStaticMeasurementFfiResultExt};
 use crate::err;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::{c_bool, to_bool, Type};
@@ -21,7 +21,7 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bool(
         where bool: SampleBernoulli<QO>,
               QO: Float {
         let prob = *try_as_ref!(prob as *const QO);
-        make_randomized_response_bool::<QO>(prob, constant_time).into_any()
+        make_randomized_response_bool::<QO>(prob, constant_time).into_any_static()
     }
     let QO = try_!(Type::try_from(QO));
     let constant_time = to_bool(constant_time);
@@ -50,7 +50,7 @@ pub extern "C" fn opendp_measurements__make_randomized_response(
         let prob = *try_as_ref!(prob as *const QO);
         make_randomized_response::<T, QO>(
             HashSet::from_iter(categories.into_iter()),
-            prob, constant_time).into_any()
+            prob, constant_time).into_any_static()
     }
     let T = try_!(Type::try_from(T));
     let QO = try_!(Type::try_from(QO));

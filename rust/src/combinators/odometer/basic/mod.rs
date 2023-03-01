@@ -60,7 +60,7 @@ where
                                     invokable.output_measure()
                                 );
 
-                                let answer = invokable.invoke(
+                                let answer = invokable.invoke_mappable(
                                     &arg,
                                     self_.clone().into_poly(),
                                     child_maps.len(),
@@ -132,7 +132,7 @@ mod test {
 
     use crate::{
         combinators::make_concurrent_composition, core::Measurement, domains::AllDomain,
-        interactive::PolyQueryable, measurements::make_randomized_response_bool,
+        interactive::{PolyQueryable, Static}, measurements::make_randomized_response_bool,
         measures::MaxDivergence, metrics::DiscreteDistance,
     };
 
@@ -160,7 +160,7 @@ mod test {
 
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are in AllDomain<bool>
-        let cc_query_3 = make_concurrent_composition::<_, Queryable<(), bool>, _, _>(
+        let cc_query_3 = make_concurrent_composition::<_, Queryable<(), Static<bool>>, _, _>(
             AllDomain::<bool>::new(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
@@ -170,7 +170,7 @@ mod test {
         .into_poly_queryable();
 
         println!("\nsubmitting a CC query. This CC compositor is concretely-typed");
-        let mut answer3: Queryable<_, Queryable<(), bool>> =
+        let mut answer3: Queryable<_, Queryable<(), Static<bool>>> =
             odometer.eval_invoke(cc_query_3)?.into_downcast();
 
         println!("\nsubmitting a RR query to child CC compositor with concrete types");

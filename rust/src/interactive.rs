@@ -13,9 +13,19 @@ pub struct Queryable<Q: ?Sized, A: QueryableMap>(
 );
 
 impl<Q: ?Sized, A: QueryableMap> Queryable<Q, A> {
-    pub(crate) fn eval(&mut self, query: &Q) -> Fallible<A> {
+    pub(crate) fn eval(&mut self, query: &Q) -> Fallible<A::Value> {
         match self.eval_query(Query::External(query))? {
-            Answer::External(value) => Ok(value),
+            Answer::External(ext) => Ok(ext.value()),
+            Answer::Internal(_) => fallible!(
+                FailedFunction,
+                "cannot return internal answer from an external query"
+            ),
+        }
+    }
+
+    pub(crate) fn eval_mappable(&mut self, query: &Q) -> Fallible<A> {
+        match self.eval_query(Query::External(query))? {
+            Answer::External(ext) => Ok(ext),
             Answer::Internal(_) => fallible!(
                 FailedFunction,
                 "cannot return internal answer from an external query"
@@ -82,7 +92,7 @@ impl<Q: ?Sized, A: QueryableMap> Queryable<Q, A> {
 }
 
 impl<A: QueryableMap> Queryable<(), A> {
-    pub fn get(&mut self) -> Fallible<A> {
+    pub fn get(&mut self) -> Fallible<A::Value> {
         self.eval(&())
     }
 }
@@ -105,7 +115,7 @@ impl<Q: 'static, A: QueryableMap> IntoPolyQueryable for Queryable<Q, A> {
         Queryable::new(move |_self: &PolyQueryable, query: Query<dyn Any>| {
             Ok(match query {
                 Query::External(q) => {
-                    let answer = self.eval(q.downcast_ref::<Q>().ok_or_else(|| {
+                    let answer = self.eval_mappable(q.downcast_ref::<Q>().ok_or_else(|| {
                         err!(FailedCast, "query must be of type {}", type_name::<Q>())
                     })?)?;
                     Answer::External(Box::new(answer))
@@ -198,6 +208,8 @@ impl<QI: ?Sized> Queryable<QI, PolyQueryable> {
 }
 
 pub trait QueryableMap: 'static + Sized {
+    type Value;
+    fn value(self) -> Self::Value;
     fn queryable_map(self, _mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self;
 }
 
@@ -205,35 +217,57 @@ impl<Q: 'static + ?Sized, A: QueryableMap> QueryableMap for Queryable<Q, A>
 where
     Self: IntoPolyQueryable + FromPolyQueryable,
 {
+    type Value = Self;
+    fn value(self) -> Self::Value {
+        self
+    }
     fn queryable_map(self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
         mapper(self.into_poly()).into_downcast()
     }
 }
-
-macro_rules! impl_queryable_map_pass {
-    ($($ty:ty),+) => ($(impl QueryableMap for $ty {
-        fn queryable_map(self, _mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
-            self
-        }
-    })+)
-}
-
-impl_queryable_map_pass!(bool, i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64, String);
-
-impl<T: QueryableMap> QueryableMap for Vec<T> {
-    fn queryable_map(self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
-        self.into_iter().map(|v| v.queryable_map(mapper)).collect()
-    }
-}
-
-pub struct Static<T>(T);
+pub struct Static<T>(pub T);
 impl<T: 'static> QueryableMap for Static<T> {
+    type Value = T;
+    fn value(self) -> Self::Value {
+        self.0
+    }
     fn queryable_map(self, _mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
         self
     }
 }
+pub enum Either<Q, A: QueryableMap, T> {
+    Queryable(Queryable<Q, A>),
+    Static(T)
+}
+impl<Q: 'static, A: QueryableMap, T: 'static> QueryableMap for Either<Q, A, T> {
+    type Value = Self;
+    fn value(self) -> Self {
+        self
+    }
+    fn queryable_map(self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
+        match self {
+            Self::Queryable(qbl) => Self::Queryable(qbl.queryable_map(mapper)),
+            Self::Static(value) => Self::Static(value)
+        }
+    }
+}
+
+impl<Q: 'static, A: QueryableMap, T: 'static> QueryableMap for (Queryable<Q, A>, Static<T>) {
+    type Value = (Queryable<Q, A>, T);
+    fn value(self) -> Self::Value {
+        (self.0, self.1.0)
+    }
+    fn queryable_map(self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
+        (self.0.queryable_map(mapper), self.1)
+    }
+}
 
 impl QueryableMap for Box<dyn QueryableFunctor> {
+    type Value = Self;
+
+    fn value(self) -> Self::Value {
+        self
+    }
     fn queryable_map(self, mapper: &dyn Fn(PolyQueryable) -> PolyQueryable) -> Self {
         self.apply_queryable_map(mapper)
     }

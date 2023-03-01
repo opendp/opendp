@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
-    traits::Float
+    traits::Float, interactive::QueryableMap
 };
 
 #[cfg(feature = "ffi")]
@@ -27,6 +27,7 @@ pub fn make_pureDP_to_zCDP<DI, TO, MI, QO>(
 ) -> Fallible<Measurement<DI, TO, MI, ZeroConcentratedDivergence<QO>>>
 where
     DI: Domain,
+    TO: QueryableMap,
     MI: 'static + Metric,
     QO: Float,
 {

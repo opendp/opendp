@@ -4,7 +4,7 @@ use std::os::raw::{c_char, c_void};
 use crate::core::FfiResult;
 use crate::ffi::any::{AnyMeasurement, AnyObject};
 use crate::{
-    core::IntoAnyMeasurementFfiResultExt,
+    core::IntoAnyStaticMeasurementFfiResultExt,
     ffi::{any::Downcast, util},
 };
 use crate::{
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
             D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
             QO: Float + InfCast<D::Atom>,
         {
-            make_base_discrete_laplace_linear::<D, QO>(scale, bounds).into_any()
+            make_base_discrete_laplace_linear::<D, QO>(scale, bounds).into_any_static()
         }
         let scale = *try_as_ref!(scale as *const QO);
         let bounds = if let Some(bounds) = util::as_ref(bounds) {

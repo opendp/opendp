@@ -11,6 +11,7 @@ use crate::domains::{AllDomain, VectorDomain};
 use crate::error::*;
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
 use crate::traits::{InfDiv, Float, InfAdd, ExactIntCast, FloatBits, CheckNull};
+use crate::interactive::Static;
 
 use super::MappableDomain;
 
@@ -54,8 +55,9 @@ impl<T: Clone + CheckNull> LaplaceDomain for VectorDomain<AllDomain<T>> {
 /// 
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
-pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
+pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, Static<D::Carrier>, D::InputMetric, MaxDivergence<D::Atom>>>
     where D: LaplaceDomain,
+          D::Carrier: 'static,
           D::Atom: Float + SampleDiscreteLaplaceZ2k,
           i32: ExactIntCast<<D::Atom as FloatBits>::Bits> {
     if scale.is_sign_negative() {
@@ -64,7 +66,7 @@ pub fn make_base_laplace<D>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurem
 
     let (k, relaxation) = get_discretization_consts(k)?;
 
-    Ok(Measurement::new(
+    Ok(Measurement::new_static(
         D::default(),
         D::new_map_function(move |arg: &D::Atom| D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)),
         D::InputMetric::default(),

@@ -31,6 +31,12 @@ impl<A: QueryableMap, U: 'static> QueryableMap for OdometerAnswer<A, U> {
             answer => answer,
         }
     }
+
+    type Value = Self;
+
+    fn value(self) -> Self::Value {
+        self
+    }
 }
 
 // convenience eval's for invoking of mapping distances over the odometer queryable
@@ -55,7 +61,7 @@ impl<Q, A: QueryableMap, QU: 'static, AU: 'static>
 
 pub trait Invokable<DI: Domain, MI: Metric, MO: Measure> {
     type Output: QueryableMap;
-    fn invoke(
+    fn invoke_mappable(
         &self,
         value: &DI::Carrier,
         parent: PolyQueryable,
@@ -73,13 +79,13 @@ impl<DI: Domain, TO: QueryableMap, MI: Metric, MO: Measure> Invokable<DI, MI, MO
     for Measurement<DI, TO, MI, MO>
 {
     type Output = TO;
-    fn invoke(
+    fn invoke_mappable(
         &self,
         value: &DI::Carrier,
         _parent: PolyQueryable,
         _id: usize,
     ) -> Fallible<Self::Output> {
-        self.invoke(value)
+        self.invoke_mappable(value)
     }
     fn privacy_map(&self) -> PrivacyMap<MI, MO> {
         self.privacy_map.clone()
@@ -105,7 +111,7 @@ where
     MO::Distance: Zero,
 {
     type Output = TO;
-    fn invoke(
+    fn invoke_mappable(
         &self,
         value: &DI::Carrier,
         parent: PolyQueryable,
