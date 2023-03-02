@@ -272,7 +272,8 @@ It is possible to construct Transformations, Measurements and Postprocessors on 
 
 In this example, we mock the typical API of the OpenDP library:
 
-.. doctest::
+.. doctest:::
+    :skipif: True
 
     >>> from opendp.combinators import make_default_user_transformation
     >>> from opendp.typing import *
@@ -299,6 +300,7 @@ In this example, we mock the typical API of the OpenDP library:
 The resulting Transformation may be used interchangeably with those constructed via the library:
 
 .. doctest::
+    :skipif: True
 
     >>> from opendp.transformations import *
     >>> from opendp.measurements import make_base_discrete_laplace

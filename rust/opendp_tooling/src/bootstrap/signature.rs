@@ -186,6 +186,9 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "Postprocessor" => "AnyTransformation *".to_string(),
                 i if i == "AnyTransformation" => "AnyTransformation *".to_string(),
                 i if i == "AnyMeasurement" => "AnyMeasurement *".to_string(),
+                i if i == "AnyDomain" => "AnyDomain *".to_string(),
+                i if i == "AnyMetric" => "AnyMetric *".to_string(),
+                i if i == "AnyMeasure" => "AnyMeasure *".to_string(),
                 i if i == "CallbackFn" => "CallbackFn".to_string(),
                 i if i == "Fallible" || i == "FfiResult" => {
                     let args = match &segment.arguments {

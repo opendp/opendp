@@ -5,11 +5,10 @@ use std::os::raw::c_char;
 
 use opendp_derive::bootstrap;
 
-use crate::combinators::ffi::{default_domain, default_metric, default_measure};
 use crate::{try_, try_as_ref};
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt};
-use crate::ffi::util::{self, c_bool, Type};
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyTransformation, IntoAnyMeasurementExt, IntoAnyTransformationExt, AnyDomain, AnyMetric, AnyMeasure};
+use crate::ffi::util::{self, c_bool};
 use crate::ffi::util::into_c_char_p;
 
 #[repr(C)]
@@ -191,6 +190,105 @@ impl<T> From<FfiResult<*mut T>> for Fallible<T> {
 #[must_use]
 pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
     util::into_owned(this).is_ok()
+}
+
+
+#[bootstrap(
+    name = "transformation_input_domain",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+)]
+/// Get the input domain from a `transformation`.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_domain(this: *mut AnyTransformation) -> FfiResult<*mut AnyDomain> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_domain.clone()))
+}
+
+#[bootstrap(
+    name = "transformation_output_domain",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+)]
+/// Get the output domain from a `transformation`.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_output_domain(this: *mut AnyTransformation) -> FfiResult<*mut AnyDomain> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_domain.clone()))
+}
+
+#[bootstrap(
+    name = "transformation_input_metric",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+)]
+/// Get the input domain from a `transformation`.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_input_metric(this: *mut AnyTransformation) -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_metric.clone()))
+}
+
+#[bootstrap(
+    name = "transformation_output_metric",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+)]
+/// Get the output domain from a `transformation`.
+/// 
+/// # Arguments
+/// * `this` - The transformation to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__transformation_output_metric(this: *mut AnyTransformation) -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_metric.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_input_domain",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+)]
+/// Get the input domain from a `measurement`.
+/// 
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_domain(this: *mut AnyMeasurement) -> FfiResult<*mut AnyDomain> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_domain.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_input_metric",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+)]
+/// Get the input domain from a `measurement`.
+/// 
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_input_metric(this: *mut AnyMeasurement) -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).input_metric.clone()))
+}
+
+#[bootstrap(
+    name = "measurement_output_measure",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<AnyMeasure *>", do_not_convert = true)
+)]
+/// Get the output domain from a `measurement`.
+/// 
+/// # Arguments
+/// * `this` - The measurement to retrieve the value from.
+#[no_mangle]
+pub extern "C" fn opendp_core__measurement_output_measure(this: *mut AnyMeasurement) -> FfiResult<*mut AnyMeasure> {
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_measure.clone()))
 }
 
 #[bootstrap(
@@ -451,64 +549,6 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(this: *mut AnyMe
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.output_measure.distance_type.descriptor.to_string())))
 }
-
-#[bootstrap(
-    name = "domain_carrier_type",
-    arguments(D(c_type = "char *", rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
-)]
-/// Get the carrier type associated with a domain descriptor
-/// 
-/// # Arguments
-/// * `D` - The domain to get the carrier type from.
-#[no_mangle]
-pub extern "C" fn opendp_core__domain_carrier_type(D: *const c_char) -> FfiResult<*mut c_char> {
-    let D = try_!(Type::try_from(D));
-    let T = try_!(default_domain(D)).carrier_type.to_string();
-    match into_c_char_p(T.to_string()) {
-        Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
-    }
-}
-
-#[bootstrap(
-    name = "metric_distance_type",
-    arguments(M(c_type = "char *", rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
-)]
-/// Get the distance type associated with a metric descriptor
-/// 
-/// # Arguments
-/// * `M` - The metric to get the distance type from.
-#[no_mangle]
-pub extern "C" fn opendp_core__metric_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
-    let M = try_!(Type::try_from(M));
-    let Q = try_!(default_metric(M)).distance_type.to_string();
-    match into_c_char_p(Q.to_string()) {
-        Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
-    }
-}
-
-#[bootstrap(
-    name = "measure_distance_type",
-    arguments(M(c_type = "char *", rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
-)]
-/// Get the distance type associated with a measure descriptor
-/// 
-/// # Arguments
-/// * `M` - The measure to get the distance type from.
-#[no_mangle]
-pub extern "C" fn opendp_core__measure_distance_type(M: *const c_char) -> FfiResult<*mut c_char> {
-    let M = try_!(Type::try_from(M));
-    let Q = try_!(default_measure(M)).distance_type.to_string();
-    match into_c_char_p(Q.to_string()) {
-        Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
-    }
-}
-
 
 #[cfg(test)]
 mod tests {

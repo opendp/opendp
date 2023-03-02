@@ -3,7 +3,7 @@ import typing
 from collections.abc import Hashable
 from typing import Union, Any, Type, List
 
-from opendp.mod import UnknownTypeException, Measurement, Transformation
+from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES
 
 if sys.version_info >= (3, 7):
@@ -239,6 +239,9 @@ class RuntimeType(object):
         """
         if type(public_example) in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type(public_example)]
+        
+        if isinstance(public_example, (Domain, Metric, Measure)):
+            return RuntimeType.parse(public_example.type)
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', list(map(cls.infer, public_example)))
@@ -442,17 +445,17 @@ AnyMeasurementPtr = "AnyMeasurementPtr"
 AnyTransformationPtr = "AnyTransformationPtr"
 
 
-class Domain(RuntimeType):
+class DomainDescriptor(RuntimeType):
     def __getitem__(self, subdomain):
-        return Domain(self.origin, [self.parse(type_name=subdomain)])
+        return DomainDescriptor(self.origin, [self.parse(type_name=subdomain)])
 
 
-AllDomain = Domain('AllDomain')
-BoundedDomain = Domain('BoundedDomain')
-VectorDomain = Domain('VectorDomain')
-OptionNullDomain = Domain('OptionNullDomain')
-InherentNullDomain = Domain('InherentNullDomain')
-SizedDomain = Domain('SizedDomain')
+AllDomain = DomainDescriptor('AllDomain')
+BoundedDomain = DomainDescriptor('BoundedDomain')
+VectorDomain = DomainDescriptor('VectorDomain')
+OptionNullDomain = DomainDescriptor('OptionNullDomain')
+InherentNullDomain = DomainDescriptor('InherentNullDomain')
+SizedDomain = DomainDescriptor('SizedDomain')
 
 
 def get_atom(type_name):

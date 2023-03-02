@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union, Tuple, Callable, Optional
 
-from opendp._lib import AnyMeasurement, AnyTransformation
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -93,6 +93,21 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
         raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
 
+    @property
+    def input_domain(self) -> "Domain":
+        from opendp.core import measurement_input_domain
+        return measurement_input_domain(self)
+    
+    @property
+    def input_metric(self) -> "Metric":
+        from opendp.core import measurement_input_metric
+        return measurement_input_metric(self)
+    
+    @property
+    def output_measure(self) -> "Measure":
+        from opendp.core import measurement_output_measure
+        return measurement_output_measure(self)
+    
     @property
     def input_distance_type(self):
         """Retrieve the distance type of the input metric.
@@ -232,6 +247,28 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
     @property
+    def input_domain(self) -> "Domain":
+        from opendp.core import transformation_input_domain
+        return transformation_input_domain(self)
+    
+
+    @property
+    def output_domain(self) -> "Domain":
+        from opendp.core import transformation_output_domain
+        return transformation_output_domain(self)
+    
+
+    @property
+    def input_metric(self) -> "Metric":
+        from opendp.core import transformation_input_metric
+        return transformation_input_metric(self)
+    
+    @property
+    def output_metric(self) -> "Metric":
+        from opendp.core import transformation_output_metric
+        return transformation_output_metric(self)
+
+    @property
     def input_distance_type(self):
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
@@ -276,6 +313,63 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
+
+class Domain(ctypes.POINTER(AnyDomain)):
+    _type_ = AnyDomain
+
+    def member(self, val):
+        from opendp.domains import member
+        return member(self, val)
+
+    @property
+    def type(self):
+        from opendp.domains import domain_type
+        return domain_type(self)
+    
+    @property
+    def carrier_type(self):
+        from opendp.domains import domain_carrier_type
+        return domain_carrier_type(self)
+
+    def __str__(self):
+        from opendp.domains import domain_debug
+        return domain_debug(self)
+
+
+class Metric(ctypes.POINTER(AnyMetric)):
+    _type_ = AnyMetric
+
+    @property
+    def type(self):
+        from opendp.metrics import metric_type
+        return metric_type(self)
+    
+    @property
+    def distance_type(self):
+        from opendp.metrics import metric_distance_type
+        return metric_distance_type(self)
+
+    def __str__(self):
+        from opendp.metrics import metric_debug
+        return metric_debug(self)
+
+
+class Measure(ctypes.POINTER(AnyMeasure)):
+    _type_ = AnyMeasure
+
+    @property
+    def type(self):
+        from opendp.measures import measure_type
+        return measure_type(self)
+    
+    @property
+    def distance_type(self):
+        from opendp.measures import measure_distance_type
+        return measure_distance_type(self)
+
+    def __str__(self):
+        from opendp.measures import measure_debug
+        return measure_debug(self)
 
 class SMDCurve(object):
     def __init__(self, curve):
