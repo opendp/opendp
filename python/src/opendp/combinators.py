@@ -258,7 +258,7 @@ def make_default_user_postprocessor(
     
     # No type arguments to standardize.
     # Convert arguments to c types.
-    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(DO))
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type())
     c_DI = py_to_c(DI, c_type=ctypes.c_char_p, type_name=None)
     c_DO = py_to_c(DO, c_type=ctypes.c_char_p, type_name=None)
     
