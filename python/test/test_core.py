@@ -68,14 +68,13 @@ def test_bisect_edge():
 
 def test_bisect_chain():
     from opendp.mod import binary_search_chain, binary_search_param, enable_features
-    from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
-    from opendp.domains import bounded_domain
+    from opendp.transformations import make_clamp, make_bounded_resize, make_sized_bounded_mean
     from opendp.measurements import make_base_laplace
     enable_features("contrib")
 
     pre = (
         make_clamp(bounds=(0., 1.)) >>
-        make_resize(size=10, atom_domain=bounded_domain((0., 1.)), constant=0.) >>
+        make_bounded_resize(size=10, bounds=(0., 1.), constant=0.) >>
         make_sized_bounded_mean(size=10, bounds=(0., 1.))
     )
     chain = binary_search_chain(lambda s: pre >> make_base_laplace(scale=s), d_in=1, d_out=1.)

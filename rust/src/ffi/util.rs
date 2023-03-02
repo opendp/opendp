@@ -75,6 +75,7 @@ impl Type {
                 }
                 Type::of_id(&args[0])?.get_atom()
             }
+            TypeContents::VEC(arg) => Type::of_id(arg)?.get_atom(),
             _ => fallible!(TypeParse, "Failed to extract atom type: not a generic")
         }
     }
