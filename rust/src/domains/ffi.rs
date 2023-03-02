@@ -196,7 +196,7 @@ pub extern "C" fn opendp_domains__sized_domain(
             if args.len() != 1 {
                 return err!(FFI, "VectorDomain expects one type argument").into();
             }
-            let atom_type = try_!(inner_domain.carrier_type.get_atom());
+            let atom_type = try_!(inner_domain.type_.get_atom());
             match try_!(Type::of_id(&args[0])).contents {
                 TypeContents::GENERIC { name: "AllDomain", .. } => 
                     dispatch!(monomorphize_all, [(atom_type, @primitives)], (inner_domain, size)),
