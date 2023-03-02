@@ -11,6 +11,9 @@
 //! The `SymmetricDistance` has an associated distance type of [`u32`].
 //! This means that the symmetric distance between vectors is expressed in terms of a [`u32`].
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 use std::{marker::PhantomData};
 
 use crate::{core::Metric, domains::type_name};

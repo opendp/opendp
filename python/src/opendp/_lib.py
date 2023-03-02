@@ -56,6 +56,18 @@ class AnyTransformation(ctypes.Structure):
     pass  # Opaque struct
 
 
+class AnyDomain(ctypes.Structure):
+    pass  # Opaque struct
+
+
+class AnyMetric(ctypes.Structure):
+    pass  # Opaque struct
+
+
+class AnyMeasure(ctypes.Structure):
+    pass  # Opaque struct
+
+
 class BoolPtr(ctypes.POINTER(ctypes.c_bool)):
     _type_ = ctypes.c_bool
 

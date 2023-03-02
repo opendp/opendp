@@ -8,6 +8,8 @@
 //! This means that the symmetric distance between vectors is expressed in terms of the type `Q`.
 //! In this context Q is usually [`f32`] or [`f64`].
 
+#[cfg(feature = "ffi")]
+mod ffi;
 
 use std::{
     fmt::{Debug, Formatter},

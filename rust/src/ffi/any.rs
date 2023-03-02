@@ -145,6 +145,7 @@ impl Downcast for AnyObject {
 
 #[derive(Clone, PartialEq)]
 pub struct AnyDomain {
+    pub type_: Type,
     pub carrier_type: Type,
     pub domain: AnyBoxClonePartialEqDebug,
     member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>>,
@@ -153,6 +154,7 @@ pub struct AnyDomain {
 impl AnyDomain {
     pub fn new<D: 'static + Domain>(domain: D) -> Self {
         Self {
+            type_: Type::of::<D>(),
             carrier_type: Type::of::<D::Carrier>(),
             domain: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(domain),
             member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
@@ -228,15 +230,17 @@ impl Debug for AnyMeasure {
 
 #[derive(Clone, PartialEq)]
 pub struct AnyMetric {
-    pub metric: AnyBoxClonePartialEqDebug,
+    pub type_: Type,
     pub distance_type: Type,
+    pub metric: AnyBoxClonePartialEqDebug,
 }
 
 impl AnyMetric {
     pub fn new<M: 'static + Metric>(metric: M) -> Self {
         Self {
-            metric: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(metric),
+            type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
+            metric: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(metric),
         }
     }
 }
