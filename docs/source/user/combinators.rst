@@ -89,7 +89,7 @@ but the chaining fails because the sum emits floats and the discrete laplace mec
         input_domain:  AllDomain(i32)
 
 Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
-This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_bounded_resize <opendp.transformations.make_bounded_resize>`.
+This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_resize <opendp.transformations.make_resize>`.
 See the section on :ref:`transformation-constructors` for more information on how to preprocess data in OpenDP.
 
 Composition
@@ -248,19 +248,11 @@ It is possible to construct Transformations, Measurements and Postprocessors on 
    * - Component
      - Constructor
    * - Transformation
-     - :func:`opendp.combinators.make_default_user_transformation`
+     - :func:`opendp.combinators.make_user_transformation`
    * - Measurement
-     - :func:`opendp.combinators.make_default_user_measurement`
+     - :func:`opendp.combinators.make_user_measurement`
    * - Postprocessor
-     - :func:`opendp.combinators.make_default_user_postprocessor`
-
-.. note::
-
-    This API is currently limited to domains that have a default. 
-    Domains that carry state do not have a default:
-    ``SizedDomain`` carries a size parameter, and ``BoundedDomain`` carries bounds, so they are not currently supported.
-    The output domain of ``make_basic_composition`` suffers from the same issue.
-    This restriction may be lifted after `#232 <https://github.com/opendp/opendp/issues/232>`_.
+     - :func:`opendp.combinators.make_user_postprocessor`
 
 .. note::
 
@@ -272,10 +264,11 @@ It is possible to construct Transformations, Measurements and Postprocessors on 
 
 In this example, we mock the typical API of the OpenDP library:
 
-.. doctest:::
-    :skipif: True
+.. doctest::
 
-    >>> from opendp.combinators import make_default_user_transformation
+    >>> from opendp.combinators import make_user_transformation
+    >>> from opendp.domains import vector_domain, all_domain
+    >>> from opendp.metrics import symmetric_distance
     >>> from opendp.typing import *
     ...
     >>> def make_repeat(multiplicity):
@@ -288,19 +281,18 @@ In this example, we mock the typical API of the OpenDP library:
     ...         # they can now influence `d_in` * `multiplicity` records
     ...         return d_in * multiplicity
     ...
-    ...     return make_default_user_transformation(
+    ...     return make_user_transformation(
+    ...         vector_domain(all_domain(int)),
+    ...         vector_domain(all_domain(int)),
     ...         function,
+    ...         symmetric_distance(),
+    ...         symmetric_distance(),
     ...         stability_map,
-    ...         DI=VectorDomain[AllDomain[int]],
-    ...         DO=VectorDomain[AllDomain[int]],
-    ...         MI=SymmetricDistance,
-    ...         MO=SymmetricDistance,
     ...     )
     
 The resulting Transformation may be used interchangeably with those constructed via the library:
 
 .. doctest::
-    :skipif: True
 
     >>> from opendp.transformations import *
     >>> from opendp.measurements import make_base_discrete_laplace

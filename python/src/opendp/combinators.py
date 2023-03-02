@@ -4,7 +4,9 @@ from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
 from opendp.core import *
-
+from opendp.domains import *
+from opendp.metrics import *
+from opendp.measures import *
 __all__ = [
     "make_basic_composition",
     "make_chain_mt",
@@ -14,6 +16,9 @@ __all__ = [
     "make_population_amplification",
     "make_pureDP_to_fixed_approxDP",
     "make_pureDP_to_zCDP",
+    "make_user_measurement",
+    "make_user_postprocessor",
+    "make_user_transformation",
     "make_zCDP_to_approxDP"
 ]
 
@@ -295,6 +300,139 @@ def make_pureDP_to_zCDP(
     
     output = c_to_py(unwrap(lib_function(c_measurement), Measurement))
     
+    return output
+
+
+def make_user_measurement(
+    input_domain: Domain,
+    output_domain: Domain,
+    function,
+    input_metric: Metric,
+    output_measure: Measure,
+    privacy_map
+) -> Measurement:
+    """Construct a Measurement from user-defined callbacks.
+    
+    [make_user_measurement in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_measurement.html)
+    
+    :param input_domain: 
+    :type input_domain: Domain
+    :param output_domain: 
+    :type output_domain: Domain
+    :param function: A function mapping data from `input_domain` to `output_domain`.
+    :param input_metric: 
+    :type input_metric: Metric
+    :param output_measure: 
+    :type output_measure: Measure
+    :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "honest-but-curious")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
+    c_output_domain = py_to_c(output_domain, c_type=Domain, type_name=AnyDomain)
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(output_domain))
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
+    c_privacy_map = py_to_c(privacy_map, c_type=CallbackFn, type_name=measure_distance_type(output_measure))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_user_measurement
+    lib_function.argtypes = [Domain, Domain, CallbackFn, Metric, Measure, CallbackFn]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_output_domain, c_function, c_input_metric, c_output_measure, c_privacy_map), Measurement))
+    output._depends_on(c_function, c_privacy_map)
+    return output
+
+
+def make_user_postprocessor(
+    input_domain: Domain,
+    output_domain: Domain,
+    function
+) -> Transformation:
+    """Construct a Postprocessor from user-defined callbacks.
+    
+    [make_user_postprocessor in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_postprocessor.html)
+    
+    :param input_domain: 
+    :type input_domain: Domain
+    :param output_domain: 
+    :type output_domain: Domain
+    :param function: A function mapping data from `input_domain` to `output_domain`.
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
+    c_output_domain = py_to_c(output_domain, c_type=Domain, type_name=AnyDomain)
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(output_domain))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_user_postprocessor
+    lib_function.argtypes = [Domain, Domain, CallbackFn]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_output_domain, c_function), Transformation))
+    output._depends_on(c_function)
+    return output
+
+
+def make_user_transformation(
+    input_domain: Domain,
+    output_domain: Domain,
+    function,
+    input_metric: Metric,
+    output_metric: Metric,
+    stability_map
+) -> Transformation:
+    """Construct a Transformation from user-defined callbacks.
+    
+    [make_user_transformation in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_transformation.html)
+    
+    :param input_domain: 
+    :type input_domain: Domain
+    :param output_domain: 
+    :type output_domain: Domain
+    :param function: A function mapping data from `input_domain` to `output_domain`.
+    :param input_metric: 
+    :type input_metric: Metric
+    :param output_metric: 
+    :type output_metric: Metric
+    :param stability_map: A function mapping distances from `input_metric` to `output_metric`.
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib", "honest-but-curious")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
+    c_output_domain = py_to_c(output_domain, c_type=Domain, type_name=AnyDomain)
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(output_domain))
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
+    c_output_metric = py_to_c(output_metric, c_type=Metric, type_name=AnyMetric)
+    c_stability_map = py_to_c(stability_map, c_type=CallbackFn, type_name=metric_distance_type(output_metric))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_user_transformation
+    lib_function.argtypes = [Domain, Domain, CallbackFn, Metric, Metric, CallbackFn]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_output_domain, c_function, c_input_metric, c_output_metric, c_stability_map), Transformation))
+    output._depends_on(c_function, c_stability_map)
     return output
 
 

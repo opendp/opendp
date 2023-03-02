@@ -22,7 +22,7 @@ use super::{
 /// Make a Transformation that computes the mean of bounded data.
 /// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size.
-/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+/// Use `make_clamp` to bound data and `make_resize` to establish dataset size.
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.

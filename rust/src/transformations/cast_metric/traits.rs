@@ -1,6 +1,6 @@
 use crate::{
     core::Metric,
-    metrics::{ChangeOneDistance, HammingDistance, InsertDeleteDistance, SymmetricDistance},
+    metrics::{ChangeOneDistance, HammingDistance, InsertDeleteDistance, SymmetricDistance}
 };
 
 pub trait UnorderedMetric: Metric {

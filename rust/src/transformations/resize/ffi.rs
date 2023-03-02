@@ -1,148 +1,79 @@
 use std::convert::TryFrom;
-use std::os::raw::{c_char, c_uint, c_void};
+use std::os::raw::{c_char, c_uint};
 
-use opendp_derive::bootstrap;
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Transformation};
-use crate::error::Fallible;
-use crate::metrics::{InsertDeleteDistance, SymmetricDistance, IntDistance};
-use crate::domains::{AllDomain, BoundedDomain, VectorDomain, SizedDomain};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
+use crate::domains::{AllDomain, BoundedDomain};
 use crate::err;
-use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::any::Downcast;
-use crate::ffi::util::Type;
+use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
+use crate::ffi::util::{Type, TypeContents};
+use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::resize::IsMetricOrdered;
 
-#[bootstrap(
-    features("contrib"),
-    generics(
-        MI(default = "SymmetricDistance"),
-        MO(default = "SymmetricDistance")
-    )
-)]
-/// Make a Transformation that either truncates or imputes records 
-/// with `constant` in a `Vec<TA>` to match a provided `size`.
-/// 
-/// # Arguments
-/// * `size` - Number of records in output data.
-/// * `constant` - Value to impute with.
-/// 
-/// # Generics
-/// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// * `TA` - Atomic type. If not passed, `TA` is inferred from the lower bound
-/// 
-/// # Returns
-/// A vector of the same type `TA`, but with the provided `size`.
-fn make_resize<MI, MO, TA>(
-    size: usize,
-    constant: TA,
-) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, SizedDomain<VectorDomain<AllDomain<TA>>>, MI, MO>>
-where
-    MI: 'static + IsMetricOrdered<Distance=IntDistance>,
-    MO: 'static + IsMetricOrdered<Distance=IntDistance>,
-    TA: 'static + Clone + CheckNull,
-{
-    let atom_domain = AllDomain::new();
-    super::make_resize(size, atom_domain, constant)
-}
-
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_resize(
-    size: c_uint, constant: *const AnyObject,
+    size: c_uint,
+    atom_domain: *const AnyDomain,
+    constant: *const AnyObject,
+    DA: *const c_char,
     MI: *const c_char,
     MO: *const c_char,
-    TA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<MI, MO, TA>(
-        size: usize, constant: *const AnyObject,
-    ) -> FfiResult<*mut AnyTransformation>
-        where 
-            MI: 'static + IsMetricOrdered<Distance=IntDistance>,
-            MO: 'static + IsMetricOrdered<Distance=IntDistance>,
-            TA: 'static + Clone + CheckNull, {
-        let constant = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
-        make_resize::<MI, MO, TA>(size, constant).into_any()
-    }
     let size = size as usize;
+    let atom_domain = try_as_ref!(atom_domain);
+    let constant = try_as_ref!(constant);
+    let DA = try_!(Type::try_from(DA));
     let MI = try_!(Type::try_from(MI));
     let MO = try_!(Type::try_from(MO));
-    let TA = try_!(Type::try_from(TA));
-    dispatch!(monomorphize, [
-        (MI, [SymmetricDistance, InsertDeleteDistance]),
-        (MO, [SymmetricDistance, InsertDeleteDistance]),
-        (TA, @numbers)
-    ], (size, constant))
-}
 
-#[bootstrap(
-    features("contrib"),
-    arguments(constant(c_type = "void *")),
-    generics(
-        MI(default = "SymmetricDistance"),
-        MO(default = "SymmetricDistance"),
-        TA(example = "$get_first(bounds)")
-    )
-)]
-/// Make a Transformation that either truncates or imputes records 
-/// with `constant` in a `Vec<TA>` to match a provided `size`.
-/// 
-/// # Arguments
-/// * `size` - Number of records in output data.
-/// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// * `constant` - Value to impute with.
-/// 
-/// # Generics
-/// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// * `TA` - Atomic type. If not passed, `TA` is inferred from the lower bound
-/// 
-/// # Returns
-/// A vector of the same type `TA`, but with the provided `size`.
-pub fn make_bounded_resize<MI, MO, TA>(
-    size: usize,
-    bounds: (TA, TA),
-    constant: TA,
-) -> Fallible<Transformation<VectorDomain<BoundedDomain<TA>>, SizedDomain<VectorDomain<BoundedDomain<TA>>>, MI, MO>>
-where
-    TA: 'static + Clone + CheckNull + TotalOrd,
-    MI: 'static + IsMetricOrdered<Distance=IntDistance>,
-    MO: 'static + IsMetricOrdered<Distance=IntDistance>,
-{
-    let atom_domain = BoundedDomain::new_closed(bounds)?;
-    super::make_resize(size, atom_domain, constant)
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_transformations__make_bounded_resize(
-    size: c_uint, bounds: *const AnyObject,
-    constant: *const c_void,
-    MI: *const c_char,
-    MO: *const c_char,
-    TA: *const c_char,
-) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<MI, MO, TA>(
-        size: usize, bounds: *const AnyObject,
-        constant: *const c_void,
-    ) -> FfiResult<*mut AnyTransformation>
-        where 
-            TA: 'static + Clone + CheckNull + TotalOrd,
-            MI: 'static + IsMetricOrdered<Distance=IntDistance>,
-            MO: 'static + IsMetricOrdered<Distance=IntDistance>, {
-        let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
-        let constant = try_as_ref!(constant as *const TA).clone();
-        make_bounded_resize::<MI, MO, TA>(size, bounds, constant).into_any()
+    if DA != atom_domain.type_ {
+        return err!(FFI, "DA must match atom_domain's type").into()
     }
-    let size = size as usize;
-    let MI = try_!(Type::try_from(MI));
-    let MO = try_!(Type::try_from(MO));
-    let TA = try_!(Type::try_from(TA));
-    dispatch!(monomorphize, [
-        (MI, [SymmetricDistance, InsertDeleteDistance]),
-        (MO, [SymmetricDistance, InsertDeleteDistance]),
-        (TA, @numbers)
-    ], (size, bounds, constant))
+
+    fn monomorphize_all<MI, MO, T: 'static + CheckNull + Clone>(
+        size: usize,
+        atom_domain: &AnyDomain,
+        constant: &AnyObject,
+    ) -> FfiResult<*mut AnyTransformation>
+    where
+        MI: 'static + IsMetricOrdered<Distance = IntDistance>,
+        MO: 'static + IsMetricOrdered<Distance = IntDistance>,
+    {
+        let atom_domain = try_!(atom_domain.downcast_ref::<AllDomain<T>>()).clone();
+        let constant = try_!(constant.downcast_ref::<T>()).clone();
+        super::make_resize::<_, MI, MO>(size, atom_domain, constant).into_any()
+    }
+    fn monomorphize_bounded<MI, MO, T: 'static + TotalOrd + Clone + CheckNull>(
+        size: usize,
+        atom_domain: &AnyDomain,
+        constant: &AnyObject,
+    ) -> FfiResult<*mut AnyTransformation>
+    where
+        MI: 'static + IsMetricOrdered<Distance = IntDistance>,
+        MO: 'static + IsMetricOrdered<Distance = IntDistance>,
+    {
+        let atom_domain = try_!(atom_domain.downcast_ref::<BoundedDomain<T>>()).clone();
+        let constant = try_!(constant.downcast_ref::<T>()).clone();
+        super::make_resize::<_, MI, MO>(size, atom_domain, constant).into_any()
+    }
+
+    match atom_domain.type_.contents {
+        TypeContents::GENERIC { name: "AllDomain", .. } => 
+            dispatch!(monomorphize_all, [
+                (MI, [SymmetricDistance, InsertDeleteDistance]),
+                (MO, [SymmetricDistance, InsertDeleteDistance]),
+                (atom_domain.carrier_type, @primitives)
+            ], (size, atom_domain, constant)),
+        TypeContents::GENERIC { name: "BoundedDomain", .. } => 
+            dispatch!(monomorphize_bounded, [
+                (MI, [SymmetricDistance, InsertDeleteDistance]),
+                (MO, [SymmetricDistance, InsertDeleteDistance]),
+                (atom_domain.carrier_type, @numbers)
+            ], (size, atom_domain, constant)),
+        _ => err!(FFI, "VectorDomain constructors only support AllDomain and BoundedDomain atoms").into()
+    }
 }
 
 
@@ -160,10 +91,11 @@ mod tests {
     fn test_make_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
+            util::into_raw(AnyDomain::new(AllDomain::<i32>::new())),
             AnyObject::new_raw(0i32),
+            "AllDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
             "SymmetricDistance".to_char_p(),
-            "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = opendp_core__transformation_invoke(&transformation, arg);
@@ -172,16 +104,15 @@ mod tests {
         Ok(())
     }
 
-
     #[test]
     fn test_make_bounded_resize() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_bounded_resize(
+        let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyObject::new((0i32, 10))),
-            util::into_raw(0i32) as *const c_void,
+            util::into_raw(AnyDomain::new(BoundedDomain::<i32>::new_closed((0i32, 10)).unwrap())),
+            AnyObject::new_raw(0i32),
+            "BoundedDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),
             "SymmetricDistance".to_char_p(),
-            "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = opendp_core__transformation_invoke(&transformation, arg);

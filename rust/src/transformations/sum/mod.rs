@@ -53,7 +53,7 @@ where
 /// Make a Transformation that computes the sum of bounded data with known dataset size. 
 /// 
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
-/// Use `make_clamp` to bound data and `make_bounded_resize` to establish dataset size.
+/// Use `make_clamp` to bound data and `make_resize` to establish dataset size.
 /// 
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)

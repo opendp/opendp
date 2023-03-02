@@ -285,8 +285,6 @@ It is common for aggregators to be sensitive to the dataset ordering.
 The following transformations are used to relate dataset metrics that are not sensitive to ordering (``SymmetricDistance`` and ``ChangeOneDistance``) 
 to metrics that are sensitive to ordering (``InsertDeleteDistance`` and ``HammingDistance`` respectively).
 
-Take note that there are separate constructors for metric casts on sized vs unsized datasets.
-
 .. list-table::
    :header-rows: 1
 
@@ -298,27 +296,10 @@ Take note that there are separate constructors for metric casts on sized vs unsi
      - ``VectorDomain<AllDomain<TA>>``
      - ``SymmetricDistance``
      - ``InsertDeleteDistance``
-   * - :func:`opendp.transformations.make_sized_ordered_random`
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
-     - ``SymmetricDistance/ChangeOneDistance``
-     - ``InsertDeleteDistance/HammingDistance``
-   * - :func:`opendp.transformations.make_sized_bounded_ordered_random`
-     - ``SizedDomain<VectorDomain<BoundedDomain<TA>>>``
-     - ``SymmetricDistance/ChangeOneDistance``
-     - ``InsertDeleteDistance/HammingDistance``
    * - :func:`opendp.transformations.make_unordered`
      - ``VectorDomain<AllDomain<TA>>``
      - ``InsertDeleteDistance``
      - ``SymmetricDistance``
-   * - :func:`opendp.transformations.make_sized_unordered`
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
-     - ``SymmetricDistance/ChangeOneDistance``
-     - ``InsertDeleteDistance/HammingDistance``
-   * - :func:`opendp.transformations.make_sized_bounded_unordered`
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
-     - ``SymmetricDistance/ChangeOneDistance``
-     - ``InsertDeleteDistance/HammingDistance``
-
 
 Bounded Metrics
 ---------------
@@ -380,12 +361,8 @@ The input and output metrics may be configured to any combination of ``Symmetric
      - Output Domain
      - Input/Output Metric
    * - :func:`opendp.transformations.make_resize`
-     - ``VectorDomain<AllDomain<TA>>``
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
-     - ``SymmetricDistance/InsertDeleteDistance``
-   * - :func:`opendp.transformations.make_bounded_resize`
-     - ``VectorDomain<BoundedDomain<TA>>``
-     - ``VectorDomain<BoundedDomain<TA>>``
+     - ``VectorDomain<DA>``
+     - ``SizedDomain<VectorDomain<DA>>``
      - ``SymmetricDistance/InsertDeleteDistance``
 
 

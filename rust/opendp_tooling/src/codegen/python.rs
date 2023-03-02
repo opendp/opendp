@@ -53,7 +53,10 @@ fn generate_module(
 
     // the comb module needs access to core functions for type introspection on measurements/transformations
     let comb_import = if module_name == "combinators" {
-        "from opendp.core import *\n"
+        r#"from opendp.core import *
+from opendp.domains import *
+from opendp.metrics import *
+from opendp.measures import *"#
     } else {
         ""
     };
