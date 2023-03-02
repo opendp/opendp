@@ -264,7 +264,7 @@ It is possible to construct Transformations, Measurements and Postprocessors on 
 
 In this example, we mock the typical API of the OpenDP library:
 
-.. doctest:::   
+.. doctest::
 
     >>> from opendp.combinators import make_user_transformation
     >>> from opendp.domains import vector_domain, all_domain
