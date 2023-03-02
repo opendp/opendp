@@ -20,6 +20,9 @@ mod measure_cast;
 #[cfg(feature="contrib")]
 pub use crate::combinators::measure_cast::*;
 
+#[cfg(all(feature="contrib", feature="ffi"))]
+mod user_defined;
+
 #[cfg(feature="contrib")]
 mod fix_delta;
 #[cfg(feature="contrib")]

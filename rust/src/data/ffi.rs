@@ -10,6 +10,7 @@ use opendp_derive::bootstrap;
 
 use crate::measures::SMDCurve;
 use crate::traits::TotalOrd;
+use crate::traits::samplers::Shuffle;
 use crate::{err, fallible, try_, try_as_ref};
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
@@ -366,6 +367,76 @@ impl TotalOrd for AnyObject {
         dispatch!(monomorphize, [(type_arg, [
             u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, (f32, f32), (f64, f64)
         ])], (self, other))
+    }
+}
+
+
+impl Clone for AnyObject {
+    fn clone(&self) -> Self {
+        fn clone_plain<T: 'static + Clone>(obj: &AnyObject) -> Fallible<AnyObject> {
+            Ok(AnyObject::new(obj.downcast_ref::<T>()?.clone()))
+        }
+        fn clone_tuple2<T0: 'static + Clone, T1: 'static + Clone>(
+            obj: &AnyObject,
+        ) -> Fallible<AnyObject> {
+            Ok(AnyObject::new(obj.downcast_ref::<(T0, T1)>()?.clone()))
+        }
+        fn clone_hashmap<T0: 'static + Clone, T1: 'static + Clone>(
+            obj: &AnyObject,
+        ) -> Fallible<AnyObject> {
+            Ok(AnyObject::new(obj.downcast_ref::<HashMap<T0, T1>>()?.clone()))
+        }
+        fn clone_vec<T: 'static + Clone>(obj: &AnyObject) -> Fallible<AnyObject> {
+            Ok(AnyObject::new(obj.downcast_ref::<Vec<T>>()?.clone()))
+        }
+
+        match &self.type_.contents {
+            TypeContents::PLAIN(_) => dispatch!(clone_plain, [(self.type_, @primitives)], (self)),
+            TypeContents::TUPLE(type_ids) => {
+                if type_ids.len() != 2 {
+                    unimplemented!("AnyObject Clone: unrecognized tuple length")
+                }
+
+                dispatch!(clone_tuple2, [
+                    (Type::of_id(&type_ids[0]).unwrap(), @primitives), 
+                    (Type::of_id(&type_ids[1]).unwrap(), @primitives)
+                ], (self))
+            }
+            TypeContents::ARRAY { .. } => unimplemented!("AnyObject Clone: attempted to clone array"),
+            TypeContents::SLICE(_) => unimplemented!("AnyObject Clone: attempted to clone slice"),
+            TypeContents::GENERIC { name, args } => {
+                if *name == "HashMap" {
+                    if args.len() != 2 {
+                        panic!("HashMaps should have 2 type arguments");
+                    }
+                    let K = Type::of_id(&args[0]).unwrap();
+                    let V = Type::of_id(&args[1]).unwrap();
+                    dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
+                } else {
+                    unimplemented!("unrecognized generic {:?}", name)
+                }
+            },
+            TypeContents::VEC(type_id) => dispatch!(clone_vec, [(Type::of_id(type_id).unwrap(), @primitives)], (self)),
+        }.expect(&format!("Clone is not implemented for {:?}", self.type_))
+    }
+}
+
+
+
+#[cfg(feature = "ffi")]
+impl Shuffle for AnyObject {
+    fn shuffle(&mut self) -> Fallible<()> {
+        match &self.type_.contents {
+            TypeContents::VEC(arg) => {
+                let atom_type = Type::of_id(&arg)?;
+                fn monomorphize<T: 'static>(object: &mut AnyObject) -> Fallible<()> {
+                    object.downcast_mut::<Vec<T>>()?.shuffle()
+                }
+                dispatch!(monomorphize, [(atom_type, @primitives)], (self))
+                    .map_err(|_| err!(FFI, "Shuffle for Vec is only implemented for primitive types"))
+            },
+            _ => fallible!(FFI, "Shuffle is only implemented for Vec<T>")
+        }
     }
 }
 

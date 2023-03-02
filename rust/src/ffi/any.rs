@@ -20,6 +20,7 @@ use super::util::Type;
 pub trait Downcast {
     fn downcast<T: 'static>(self) -> Fallible<T>;
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T>;
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T>;
 }
 
 /// A struct wrapping a Box<dyn Any>, optionally implementing Clone and/or PartialEq.
@@ -71,6 +72,15 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for A
                 .map(|t| format!(" AnyBox contains {:?}.", t))
                 .unwrap_or_default();
             err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+        })
+    }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        let type_id = self.value.type_id();
+        self.value.downcast_mut().ok_or_else(|| {
+            let other_type = Type::of_id(&type_id)
+                .map(|t| format!(" AnyBox contains {:?}.", t))
+                .unwrap_or_default();
+            err!(FailedCast, "Failed downcast_mut of AnyBox to {}.{}", any::type_name::<T>(), other_type)
         })
     }
 }
@@ -141,6 +151,9 @@ impl Downcast for AnyObject {
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.value.downcast_ref()
     }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        self.value.downcast_mut()
+    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -172,6 +185,9 @@ impl Downcast for AnyDomain {
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.domain.downcast_ref()
+    }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        self.domain.downcast_mut()
     }
 }
 
@@ -212,6 +228,9 @@ impl Downcast for AnyMeasure {
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.measure.downcast_ref()
     }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        self.measure.downcast_mut()
+    }
 }
 
 impl Default for AnyMeasure {
@@ -251,6 +270,9 @@ impl Downcast for AnyMetric {
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.metric.downcast_ref()
+    }
+    fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
+        self.metric.downcast_mut()
     }
 }
 

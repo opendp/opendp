@@ -1,9 +1,11 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{Domain, Function, StabilityMap, Transformation},
     metrics::IntDistance,
-    domains::{SizedDomain},
     error::Fallible, 
-    traits::{samplers::Shuffle, CollectionSize},
+    traits::samplers::Shuffle,
+    combinators::IsSizedDomain
 };
 
 use self::traits::{
@@ -14,6 +16,11 @@ use self::traits::{
 mod ffi;
 mod traits;
 
+#[bootstrap(
+    features("contrib"),
+    arguments(domain(c_type = "AnyDomain *")),
+    generics(D(example = "domain"), MI(default = "SymmetricDistance"))
+)]
 /// Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
 /// to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
 ///
@@ -48,6 +55,11 @@ where
 }
 
 
+#[bootstrap(
+    features("contrib"),
+    arguments(domain(c_type = "AnyDomain *")),
+    generics(D(example = "domain"), MI(default = "InsertDeleteDistance"))
+)]
 /// Make a Transformation that converts the ordered dataset metric `MI`
 /// to the respective ordered dataset metric with a no-op.
 /// 
@@ -75,7 +87,11 @@ where
     ))
 }
 
-
+#[bootstrap(
+    features("contrib"),
+    arguments(domain(c_type = "AnyDomain *")),
+    generics(D(example = "domain"), MI(default = "ChangeOneDistance"))
+)]
 /// Make a Transformation that converts the bounded dataset metric `MI` 
 /// to the respective unbounded dataset metric with a no-op. 
 /// 
@@ -91,13 +107,14 @@ where
 /// * `D` - Domain. The function is a no-op so input and output domains are the same.
 /// * `MI` - Input Metric.
 pub fn make_metric_unbounded<D, MI>(
-    domain: SizedDomain<D>,
-) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::UnboundedMetric>>
+    domain: D,
+) -> Fallible<Transformation<D, D, MI, MI::UnboundedMetric>>
 where
-    D: Domain,
-    D::Carrier: Clone + CollectionSize,
+    D: IsSizedDomain,
+    D::Carrier: Clone,
     MI: BoundedMetric<Distance = IntDistance>,
 {
+    domain.get_size()?;
     Ok(Transformation::new(
         domain.clone(),
         domain,
@@ -108,6 +125,11 @@ where
     ))
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(domain(c_type = "AnyDomain *")),
+    generics(D(example = "domain"), MI(default = "SymmetricDistance"))
+)]
 /// Make a Transformation that converts the unbounded dataset metric `MI` 
 /// to the respective bounded dataset metric with a no-op. 
 /// 
@@ -126,13 +148,14 @@ where
 /// * `D` - Domain
 /// * `MI` - Input Metric
 pub fn make_metric_bounded<D, MI>(
-    domain: SizedDomain<D>,
-) -> Fallible<Transformation<SizedDomain<D>, SizedDomain<D>, MI, MI::BoundedMetric>>
+    domain: D,
+) -> Fallible<Transformation<D, D, MI, MI::BoundedMetric>>
 where
-    D: Domain,
-    D::Carrier: Clone + CollectionSize,
+    D: IsSizedDomain,
+    D::Carrier: Clone,
     MI: UnboundedMetric<Distance = IntDistance>,
 {
+    domain.get_size()?;
     Ok(Transformation::new(
         domain.clone(),
         domain,
@@ -146,7 +169,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::domains::VectorDomain;
+    use crate::domains::{VectorDomain, SizedDomain};
     use crate::metrics::SymmetricDistance;
 
     use super::*;

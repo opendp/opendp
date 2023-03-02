@@ -1,6 +1,8 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use opendp_derive::bootstrap;
+
 use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
 use crate::metrics::{SymmetricDistance, InsertDeleteDistance, IntDistance};
 use crate::domains::{VectorDomain, SizedDomain};
@@ -20,6 +22,16 @@ impl IsMetricOrdered for InsertDeleteDistance {
     const ORDERED: bool = true;
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        atom_domain(c_type = "AnyDomain *", hint = "Domain"), 
+        constant(c_type = "AnyObject *", rust_type = "$get_atom(DA)")),
+    generics(
+        MI(default = "SymmetricDistance"),
+        MO(default = "SymmetricDistance")
+    )
+)]
 /// Make a Transformation that either truncates or imputes records 
 /// with `constant` to match a provided `size`.
 /// 

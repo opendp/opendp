@@ -31,7 +31,7 @@ pub fn make_count<TIA, TO>(
         AllDomain::new(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
-            // get size via the CollectionDomain trait
+            // get size via the CollectionSize trait
             let size = arg.size();
             
             // cast to TO, and if cast fails (due to overflow) fill with largest value
