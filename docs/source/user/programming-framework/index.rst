@@ -21,7 +21,7 @@ There is also an illustrative notebook `A Framework to Understand DP <a-framewor
     Later, when we talk about :doc:`programming elements <core-structures>`, we'll use the capitalized form to refer to the concrete data types that implement these concepts. 
     (The concept names link to their corresponding type descriptions.)
 
-* :ref:`measurements <measurement>` Measurements are randomized mappings from a private, 
+* :ref:`measurements <measurement>` are randomized mappings from a private, 
   potentially sensitive dataset or value to an arbitrary output value that is safe to release.
   They are a controlled means of introducing privacy protection (e.g. noise) to a computation. 
   An example of a measurement is one that adds Laplace noise to a value.
