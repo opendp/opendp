@@ -46,12 +46,11 @@ impl<Q> AmplifiableMeasure for FixedSmoothedMaxDivergence<Q>
 /// * `DO` - Output Domain. 
 /// * `MI` - Input Metric.
 /// * `MO` - Output Metric.
-pub fn make_population_amplification<DIA, DO, MI, MO>(
-    measurement: &Measurement<DIA, DO, MI, MO>,
+pub fn make_population_amplification<DIA, TO, MI, MO>(
+    measurement: &Measurement<DIA, TO, MI, MO>,
     population_size: usize,
-) -> Fallible<Measurement<DIA, DO, MI, MO>>
+) -> Fallible<Measurement<DIA, TO, MI, MO>>
     where DIA: IsSizedDomain,
-          DO: Domain,
           MI: 'static + Metric,
           MO: 'static + AmplifiableMeasure {
     let mut measurement = measurement.clone();

@@ -67,31 +67,31 @@ pub trait Domain: Clone + PartialEq + Debug {
 }
 
 /// A mathematical function which maps values from an input [`Domain`] to an output [`Domain`].
-pub struct Function<DI: Domain, DO: Domain> {
-    pub function: Rc<dyn Fn(&DI::Carrier) -> Fallible<DO::Carrier>>,
+pub struct Function<TI, TO> {
+    pub function: Rc<dyn Fn(&TI) -> Fallible<TO>>,
 }
-impl<DI: Domain, DO: Domain> Clone for Function<DI, DO> {
+impl<TI, TO> Clone for Function<TI, TO> {
     fn clone(&self) -> Self {
         Function { function: self.function.clone() }
     }
 }
 
-impl<DI: Domain, DO: Domain> Function<DI, DO> {
-    pub fn new(function: impl Fn(&DI::Carrier) -> DO::Carrier + 'static) -> Self {
+impl<TI, TO> Function<TI, TO> {
+    pub fn new(function: impl Fn(&TI) -> TO + 'static) -> Self {
         Self::new_fallible(move |arg| Ok(function(arg)))
     }
 
-    pub fn new_fallible(function: impl Fn(&DI::Carrier) -> Fallible<DO::Carrier> + 'static) -> Self {
+    pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
         Self { function: Rc::new(function) }
     }
 
-    pub fn eval(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+    pub fn eval(&self, arg: &TI) -> Fallible<TO> {
         (self.function)(arg)
     }
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain> Function<DI, DO> {
-    pub fn make_chain<XD: 'static + Domain>(function1: &Function<XD, DO>, function0: &Function<DI, XD>) -> Function<DI, DO> {
+impl<TI: 'static, TO: 'static> Function<TI, TO> {
+    pub fn make_chain<TX: 'static>(function1: &Function<TX, TO>, function0: &Function<TI, TX>) -> Function<TI, TO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
         Self::new_fallible(move |arg| function1(&function0(arg)?))
@@ -209,28 +209,36 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
-#[derive(Clone)]
-pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
     pub input_domain: DI,
-    pub output_domain: DO,
-    pub function: Function<DI, DO>,
+    pub function: Function<DI::Carrier, TO>,
     pub input_metric: MI,
     pub output_measure: MO,
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO> {
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
+    fn clone(&self) -> Self {
+        Self { 
+            input_domain: self.input_domain.clone(), 
+            function: self.function.clone(), 
+            input_metric: self.input_metric.clone(), 
+            output_measure: self.output_measure.clone(), 
+            privacy_map: self.privacy_map.clone() 
+        }
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     pub fn new(
         input_domain: DI,
-        output_domain: DO,
-        function: Function<DI, DO>,
+        function: Function<DI::Carrier, TO>,
         input_metric: MI,
         output_measure: MO,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Self {
         Self {
             input_domain,
-            output_domain,
             function,
             input_metric,
             output_measure,
@@ -238,7 +246,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
         }
     }
 
-    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval(arg)
     }
 
@@ -266,7 +274,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Measure> Measurement<DI, DO, MI, MO
 pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
     pub input_domain: DI,
     pub output_domain: DO,
-    pub function: Function<DI, DO>,
+    pub function: Function<DI::Carrier, DO::Carrier>,
     pub input_metric: MI,
     pub output_metric: MO,
     pub stability_map: StabilityMap<MI, MO>,
@@ -276,7 +284,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     pub fn new(
         input_domain: DI,
         output_domain: DO,
-        function: Function<DI, DO>,
+        function: Function<DI::Carrier, DO::Carrier>,
         input_metric: MI,
         output_metric: MO,
         stability_map: StabilityMap<MI, MO>,

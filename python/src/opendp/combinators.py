@@ -305,26 +305,26 @@ def make_pureDP_to_zCDP(
 
 def make_user_measurement(
     input_domain: Domain,
-    output_domain: Domain,
     function,
     input_metric: Metric,
     output_measure: Measure,
-    privacy_map
+    privacy_map,
+    TO: RuntimeTypeDescriptor
 ) -> Measurement:
     """Construct a Measurement from user-defined callbacks.
     
     [make_user_measurement in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_measurement.html)
     
-    :param input_domain: 
+    :param input_domain: A domain describing the set of valid inputs for the function.
     :type input_domain: Domain
-    :param output_domain: 
-    :type output_domain: Domain
-    :param function: A function mapping data from `input_domain` to `output_domain`.
-    :param input_metric: 
+    :param function: A function mapping data from `input_domain` to a release of type `TO`.
+    :param input_metric: The metric from which distances between adjacent inputs are measured.
     :type input_metric: Metric
-    :param output_measure: 
+    :param output_measure: The measure from which distances between adjacent output distributions are measured.
     :type output_measure: Measure
     :param privacy_map: A function mapping distances from `input_metric` to `output_measure`.
+    :param TO: The data type of outputs from the function.
+    :type TO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -332,21 +332,23 @@ def make_user_measurement(
     """
     assert_features("contrib", "honest-but-curious")
     
-    # No type arguments to standardize.
+    # Standardize type arguments.
+    TO = RuntimeType.parse(type_name=TO)
+    
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
-    c_output_domain = py_to_c(output_domain, c_type=Domain, type_name=AnyDomain)
-    c_function = py_to_c(function, c_type=CallbackFn, type_name=domain_carrier_type(output_domain))
+    c_function = py_to_c(function, c_type=CallbackFn, type_name=pass_through(TO))
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
     c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
     c_privacy_map = py_to_c(privacy_map, c_type=CallbackFn, type_name=measure_distance_type(output_measure))
+    c_TO = py_to_c(TO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_combinators__make_user_measurement
-    lib_function.argtypes = [Domain, Domain, CallbackFn, Metric, Measure, CallbackFn]
+    lib_function.argtypes = [Domain, CallbackFn, Metric, Measure, CallbackFn, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_input_domain, c_output_domain, c_function, c_input_metric, c_output_measure, c_privacy_map), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_function, c_input_metric, c_output_measure, c_privacy_map, c_TO), Measurement))
     output._depends_on(c_function, c_privacy_map)
     return output
 
@@ -400,14 +402,14 @@ def make_user_transformation(
     
     [make_user_transformation in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_transformation.html)
     
-    :param input_domain: 
+    :param input_domain: A domain describing the set of valid inputs for the function.
     :type input_domain: Domain
-    :param output_domain: 
+    :param output_domain: A domain describing the set of valid outputs of the function.
     :type output_domain: Domain
     :param function: A function mapping data from `input_domain` to `output_domain`.
-    :param input_metric: 
+    :param input_metric: The metric from which distances between adjacent inputs are measured.
     :type input_metric: Metric
-    :param output_metric: 
+    :param output_metric: The metric from which distances between outputs of adjacent inputs are measured.
     :type output_metric: Metric
     :param stability_map: A function mapping distances from `input_metric` to `output_metric`.
     :rtype: Transformation

@@ -9,7 +9,7 @@ use crate::{
 pub(crate) fn make_postprocess<DI, DO>(
     input_domain: DI,
     output_domain: DO,
-    function: Function<DI, DO>,
+    function: Function<DI::Carrier, DO::Carrier>,
 ) -> Fallible<Transformation<DI, DO, AgnosticMetric, AgnosticMetric>>
 where
     DI: Domain,

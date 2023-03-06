@@ -478,6 +478,9 @@ def get_first(value):
 def parse_or_infer(type_name: RuntimeType, example):
     return RuntimeType.parse_or_infer(type_name, example)
 
+def pass_through(value):
+    return value
+
 def get_dependencies(value):
     return getattr(value, "_dependencies", None)
 

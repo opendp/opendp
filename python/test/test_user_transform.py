@@ -59,11 +59,11 @@ def make_constant_mechanism(constant):
 
     return make_user_measurement(
         all_domain(int),
-        all_domain(int),
         function,
         absolute_distance(int),
         max_divergence(float),
-        stability_map
+        stability_map,
+        int,
     )
 
 def test_make_user_measurement():
@@ -110,11 +110,11 @@ def test_user_constructors():
 
     meas = make_user_measurement(
         bounded_domain((2, 10)),
-        sized_domain(vector_domain(bounded_domain((2, 10))), 10),
         lambda x: [x] * 10,
         symmetric_distance(),
         max_divergence(f64),
-        lambda d_in: float(d_in * 10)
+        lambda d_in: float(d_in * 10),
+        Vec[int],
     )
     print(meas(2))
     print(meas.map(1))

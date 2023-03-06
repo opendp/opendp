@@ -62,7 +62,7 @@ impl Argument {
     }
     /// retrieve the python ctypes corresponding to the origin of a type (subtypes/args omitted)
     pub fn python_origin_ctype(&self, typemap: &HashMap<String, String>) -> String {
-        typemap.get(&self.c_type_origin()).cloned().expect("ctype not recognized in typemap")
+        typemap.get(&self.c_type_origin()).cloned().expect(&format!("ctype not recognized in typemap: {:?}", self.c_type_origin()))
     }
     pub fn python_type_hint(&self, hierarchy: &HashMap<String, Vec<String>>) -> Option<String> {
         if self.hint.is_some() {

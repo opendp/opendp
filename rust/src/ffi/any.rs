@@ -290,19 +290,17 @@ impl Debug for AnyMetric {
     }
 }
 
-type AnyFunction = Function<AnyDomain, AnyDomain>;
+type AnyFunction = Function<AnyObject, AnyObject>;
 
 pub trait IntoAnyFunctionExt {
     fn into_any(self) -> AnyFunction;
 }
 
-impl<DI, DO> IntoAnyFunctionExt for Function<DI, DO>
-    where DI: 'static + Domain,
-          DI::Carrier: 'static,
-          DO: 'static + Domain,
-          DO::Carrier: 'static {
+impl<TI, TO> IntoAnyFunctionExt for Function<TI, TO>
+    where TI: 'static,
+          TO: 'static {
     fn into_any(self) -> AnyFunction {
-        let function = move |arg: &<AnyDomain as Domain>::Carrier| -> Fallible<<AnyDomain as Domain>::Carrier> {
+        let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
             let arg = arg.downcast_ref()?;
             let res = self.eval(arg);
             res.map(AnyObject::new)
@@ -315,11 +313,9 @@ pub trait IntoAnyFunctionOutExt {
     fn into_any_out(self) -> AnyFunction;
 }
 
-impl<DO> IntoAnyFunctionOutExt for Function<AnyDomain, DO>
-    where DO: 'static + Domain,
-          DO::Carrier: 'static {
+impl<TO: 'static> IntoAnyFunctionOutExt for Function<AnyObject, TO> {
     fn into_any_out(self) -> AnyFunction {
-        let function = move |arg: &<AnyDomain as Domain>::Carrier| -> Fallible<<AnyDomain as Domain>::Carrier> {
+        let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
             let res = self.eval(arg);
             res.map(AnyObject::new)
         };
@@ -359,7 +355,7 @@ impl<MI: Metric, MO: Metric> IntoAnyStabilityMapExt for StabilityMap<MI, MO>
 
 /// A Measurement with all generic types filled by Any types. This is the type of Measurements
 /// passed back and forth over FFI.
-pub type AnyMeasurement = Measurement<AnyDomain, AnyDomain, AnyMetric, AnyMeasure>;
+pub type AnyMeasurement = Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
 /// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
 /// with blanket implementation, and we need an extension trait to add methods to Measurement.
@@ -367,15 +363,13 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, DO, MI, MO>
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
     where DI::Carrier: 'static,
-          DO::Carrier: 'static,
           MI::Distance: 'static,
           MO::Distance: 'static {
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),
-            AnyDomain::new(self.output_domain),
             self.function.into_any(),
             AnyMetric::new(self.input_metric),
             AnyMeasure::new(self.output_measure),
@@ -390,12 +384,10 @@ pub trait IntoAnyMeasurementOutExt {
     fn into_any_out(self) -> AnyMeasurement;
 }
 
-impl<DO: 'static + Domain> IntoAnyMeasurementOutExt for Measurement<AnyDomain, DO, AnyMetric, AnyMeasure>
-    where DO::Carrier: 'static {
+impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
     fn into_any_out(self) -> AnyMeasurement {
         AnyMeasurement::new(
             self.input_domain,
-            AnyDomain::new(self.output_domain),
             self.function.into_any_out(),
             self.input_metric,
             self.output_measure,

@@ -34,7 +34,7 @@ pub trait MappableDomain: Domain {
 
     fn new_map_function(
         func: impl Fn(&Self::Atom) -> Fallible<Self::Atom> + 'static,
-    ) -> Function<Self, Self> {
+    ) -> Function<Self::Carrier, Self::Carrier> {
         Function::new_fallible(move |arg: &Self::Carrier| Self::map_over(arg, &func))
     }
 }
@@ -98,7 +98,7 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
 #[cfg(feature = "use-mpfr")]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
@@ -143,7 +143,7 @@ where
 #[cfg(not(feature = "use-mpfr"))]
 pub fn make_base_discrete_laplace<D, QO>(
     scale: QO,
-) -> Fallible<Measurement<D, D, D::InputMetric, MaxDivergence<QO>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
     D: DiscreteLaplaceDomain,
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
