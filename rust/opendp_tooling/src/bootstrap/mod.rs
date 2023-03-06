@@ -95,7 +95,7 @@ fn reconcile_arguments(
                 description: doc_comments.remove(&name),
                 hint: boot_type.hint,
                 default: boot_type.default,
-                is_type: boot_type.is_type,
+                is_type: false,
                 do_not_convert: boot_type.do_not_convert,
                 example: None,
             })

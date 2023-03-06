@@ -40,7 +40,11 @@ fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
 /// Construct a Transformation from user-defined callbacks.
 ///
 /// # Arguments
+/// * `input_domain` - A domain describing the set of valid inputs for the function.
+/// * `output_domain` - A domain describing the set of valid outputs of the function.
 /// * `function` - A function mapping data from `input_domain` to `output_domain`.
+/// * `input_metric` - The metric from which distances between adjacent inputs are measured.
+/// * `output_metric` - The metric from which distances between outputs of adjacent inputs are measured.
 /// * `stability_map` - A function mapping distances from `input_metric` to `output_metric`.
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_user_transformation(
@@ -67,7 +71,6 @@ pub extern "C" fn opendp_combinators__make_user_transformation(
     arguments(
         input_domain(hint = "Domain"),
         output_domain(hint = "Domain"),
-        TO(is_type = true, rust_type = b"null"),
         function(rust_type = "$pass_through(TO)"),
         input_metric(hint = "Metric"),
         output_measure(hint = "Measure"),
@@ -78,16 +81,40 @@ pub extern "C" fn opendp_combinators__make_user_transformation(
 /// Construct a Measurement from user-defined callbacks.
 ///
 /// # Arguments
-/// * `function` - A function mapping data from `input_domain` to `output_domain`.
+/// * `input_domain` - A domain describing the set of valid inputs for the function.
+/// * `function` - A function mapping data from `input_domain` to a release of type `TO`.
+/// * `input_metric` - The metric from which distances between adjacent inputs are measured.
+/// * `output_measure` - The measure from which distances between adjacent output distributions are measured.
 /// * `privacy_map` - A function mapping distances from `input_metric` to `output_measure`.
+/// 
+/// # Generics
+/// * `TO` - The data type of outputs from the function.
+#[allow(dead_code)]
+fn make_user_measurement<TO>(
+    input_domain: AnyDomain,
+    function: CallbackFn,
+    input_metric: AnyMetric,
+    output_measure: AnyMeasure,
+    privacy_map: CallbackFn,
+) -> Fallible<AnyMeasurement> {
+    let _ = (
+        input_domain,
+        function,
+        input_metric,
+        output_measure,
+        privacy_map,
+    );
+    panic!("this signature only exists for code generation")
+}
+
 #[no_mangle]
 pub extern "C" fn opendp_combinators__make_user_measurement(
     input_domain: *const AnyDomain,
-    TO: *const c_char,
     function: CallbackFn,
     input_metric: *const AnyMetric,
     output_measure: *const AnyMeasure,
     privacy_map: CallbackFn,
+    TO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let _TO = TO;
     FfiResult::Ok(util::into_raw(Measurement::new(
