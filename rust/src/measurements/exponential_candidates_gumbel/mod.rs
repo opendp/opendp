@@ -6,7 +6,7 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::InfDifferenceDistance,
-    traits::{CheckNull, InfDiv, InfMul, samplers::SampleUniform},
+    traits::{CheckNull, InfDiv, InfMul, samplers::SampleUniform}, interactive::Static,
 };
 
 pub fn make_base_exponential_candidates_gumbel<TI>(
@@ -15,7 +15,7 @@ pub fn make_base_exponential_candidates_gumbel<TI>(
 ) -> Fallible<
     Measurement<
         VectorDomain<AllDomain<TI>>,
-        usize,
+        Static<usize>,
         InfDifferenceDistance<TI>,
         MaxDivergence<TI>,
     >,
@@ -23,7 +23,7 @@ pub fn make_base_exponential_candidates_gumbel<TI>(
 where
     TI: 'static + CheckNull + Float + SampleUniform + InfMul + InfDiv,
 {
-    Ok(Measurement::new(
+    Ok(Measurement::new_static(
         VectorDomain::new_all(),
         Function::new_fallible(move |arg: &Vec<TI>| {
             arg.iter()
