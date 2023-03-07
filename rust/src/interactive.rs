@@ -168,7 +168,7 @@ impl FromPolyQueryable for PolyQueryable {
 
 impl PolyQueryable {
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn eval_poly<A: 'static>(&mut self, query: &dyn Any) -> Fallible<A> {
+    pub fn eval_poly<A: 'static + QueryableMap>(&mut self, query: &dyn Any) -> Fallible<A::Value> {
         self.eval(query)?
             .into_any()
             .downcast()
@@ -179,12 +179,12 @@ impl PolyQueryable {
                     std::any::type_name::<A>()
                 )
             })
-            .map(|b| *b)
+            .map(|b: Box<A>| (*b).value())
     }
 
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn get_poly<A: 'static>(&mut self) -> Fallible<A> {
-        self.eval_poly(&())
+    pub fn get_poly<A: 'static + QueryableMap>(&mut self) -> Fallible<A::Value> {
+        self.eval_poly::<A>(&())
     }
 
     pub fn into_downcast<Q: ?Sized, A: QueryableMap>(self) -> Queryable<Q, A>

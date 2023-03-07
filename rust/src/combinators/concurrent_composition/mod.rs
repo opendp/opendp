@@ -164,10 +164,10 @@ mod test {
         let mut answer1a = queryable.eval(&rr_poly_query)?;
 
         println!("\nretrieving value from RR query");
-        let _answer1b: bool = answer1a.get_poly()?;
+        let _answer1b: bool = answer1a.get_poly::<Static<_>>()?;
 
         println!("\nsubmitting and retrieving a second RR query");
-        let _answer2: bool = queryable.eval(&rr_poly_query)?.get_poly()?;
+        let _answer2: bool = queryable.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
 
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are in AllDomain<bool>
@@ -204,8 +204,8 @@ mod test {
         let mut answer4 = queryable.eval_poly::<_, PolyQueryable>(&cc_query_4)?;
 
         println!("\nsubmitting a RR query to child CC compositor");
-        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
-        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
+        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
 
         Ok(())
     }

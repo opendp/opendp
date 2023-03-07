@@ -301,9 +301,9 @@ impl<DI: Domain, TO: 'static, MI: Metric, MO: Measure> Measurement<DI, Static<TO
 }
 
 #[cfg(test)]
-impl<DI: Domain, TO: QueryableMap, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
+impl<DI: Domain, TO: 'static, MI: Metric, MO: Measure> Measurement<DI, Static<TO>, MI, MO>
     where DI::Carrier: 'static {
-    pub fn interactive(self) -> Measurement<DI, Queryable<(), TO>, MI, MO> {
+    pub fn interactive(self) -> Measurement<DI, Queryable<(), Static<TO>>, MI, MO> {
         let function = self.function;
         Measurement::new(
             self.input_domain,

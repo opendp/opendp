@@ -155,8 +155,8 @@ mod test {
         let rr_query = make_randomized_response_bool(0.5, false)?.interactive();
 
         // pass queries into the odometer queryable
-        let _answer1: bool = odometer.eval_invoke(rr_poly_query.clone())?.get_poly()?;
-        let _answer2: bool = odometer.eval_invoke(rr_poly_query.clone())?.get_poly()?;
+        let _answer1: bool = odometer.eval_invoke(rr_poly_query.clone())?.get_poly::<Static<_>>()?;
+        let _answer2: bool = odometer.eval_invoke(rr_poly_query.clone())?.get_poly::<Static<_>>()?;
 
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are in AllDomain<bool>
@@ -195,8 +195,8 @@ mod test {
             odometer.eval_invoke(cc_query_4)?.into_downcast();
 
         println!("\nsubmitting a RR query to child CC compositor");
-        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
-        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
+        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
 
         let total_usage = odometer.eval_map(1)?;
         println!("total usage: {:?}", total_usage);

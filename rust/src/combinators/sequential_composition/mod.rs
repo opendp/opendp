@@ -210,10 +210,10 @@ mod test {
         let mut answer1: PolyQueryable = queryable.eval(&rr_poly_query)?;
 
         println!("\nsubmit a second query, which should freeze the first. Retrieve the value");
-        let _answer2: bool = queryable.eval(&rr_poly_query)?.get_poly()?;
+        let _answer2: bool = queryable.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
 
         println!("\ncan no longer execute the first queryable, because a second query has been passed to its parent");
-        assert!(answer1.get_poly::<bool>().is_err());
+        assert!(answer1.get_poly::<Static<bool>>().is_err());
 
         println!("\nbuild a sequential composition IM and then convert to poly, so that it can be passed to the root queryable");
         // pass a sequential composition compositor into the original SC compositor
@@ -232,7 +232,7 @@ mod test {
         let mut answer3a = queryable.eval(&sc_query_3)?;
 
         println!("\npass an RR query to the child sequential compositor queryable and get a null queryable");
-        let mut rr_null_qbl: Queryable<(), Static<bool>> = answer3a.eval_poly(&rr_query)?;
+        let mut rr_null_qbl = answer3a.eval_poly::<Queryable<(), Static<bool>>>(&rr_query)?;
 
         println!("\nget the value from the null queryable");
         let _answer3a_1: bool = rr_null_qbl.get()?;
@@ -266,10 +266,10 @@ mod test {
         let mut answer4: Queryable<_, PolyQueryable> = queryable.eval(&sc_query_4)?.into_downcast();
 
         println!("\nsend a dyn query");
-        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+        let _answer4_1: bool = answer4.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
 
         println!("\nsend another dyn query");
-        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly()?;
+        let _answer4_2: bool = answer4.eval(&rr_poly_query)?.get_poly::<Static<_>>()?;
 
         Ok(())
     }

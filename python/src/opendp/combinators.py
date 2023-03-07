@@ -9,6 +9,7 @@ from opendp.metrics import *
 from opendp.measures import *
 __all__ = [
     "make_basic_composition",
+    "make_basic_composition",
     "make_chain_mt",
     "make_chain_pm",
     "make_chain_tt",
@@ -30,6 +31,38 @@ def make_basic_composition(
     """Construct the DP composition [`measurement0`, `measurement1`, ...]. 
     Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
     
+    All metrics and domains must be equivalent, except for the output domain.
+    
+    [make_basic_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_basic_composition.html)
+    
+    :param measurements: A vector of Measurements to compose.
+    :type measurements: Any
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_measurements = py_to_c(measurements, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[AnyMeasurementPtr]))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_basic_composition
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_measurements), Measurement))
+    output._depends_on(get_dependencies_iterable(measurements))
+    return output
+
+
+def make_basic_composition(
+    measurements: Any
+) -> Measurement:
+    """Construct the DP composition [`measurement0`, `measurement1`, ...].
+    Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
     All metrics and domains must be equivalent, except for the output domain.
     
     [make_basic_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_basic_composition.html)
