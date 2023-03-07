@@ -83,7 +83,7 @@ def make_postprocess_frac():
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
     print(mech([12., 100.]))
-test_make_user_postprocessor()
+
 
 def test_user_constructors():
 
