@@ -355,15 +355,14 @@ def make_user_measurement(
 def make_user_postprocessor(
     function,
     TO: RuntimeTypeDescriptor
-) -> Measurement:
+):
     """Construct a Postprocessor from user-defined callbacks.
     
     [make_user_postprocessor in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_postprocessor.html)
     
-    :param function: A function mapping data from `input_domain` to `output_domain`
-    :param TO: 
+    :param function: A function mapping data to a value of type `TO`
+    :param TO: Output Type
     :type TO: :py:ref:`RuntimeTypeDescriptor`
-    :rtype: Measurement
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -382,7 +381,7 @@ def make_user_postprocessor(
     lib_function.argtypes = [CallbackFn, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_function, c_TO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_function, c_TO), Function))
     output._depends_on(c_function)
     return output
 

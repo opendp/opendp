@@ -134,12 +134,14 @@ pub extern "C" fn opendp_combinators__make_user_measurement(
 /// Construct a Postprocessor from user-defined callbacks.
 ///
 /// # Arguments
+/// * `function` - A function mapping data to a value of type `TO`
+/// 
+/// # Generics
 /// * `TO` - Output Type
-/// * `function` - A function mapping data from `input_domain` to `output_domain`
 #[allow(dead_code)]
 fn make_user_postprocessor<TO>(
     function: CallbackFn,
-) -> Fallible<AnyMeasurement> {
+) -> Fallible<AnyFunction> {
     let _ = function;
     panic!("this signature only exists for code generation")
 }
