@@ -86,7 +86,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
                 return False
             raise
 
-    def __rshift__(self, other: "Function"):
+    def __rshift__(self, other: Union["Function", "Transformation"]):
+        if isinstance(other, Transformation):
+            other = other.function
+
         if isinstance(other, Function):
             from opendp.combinators import make_chain_pm
             return make_chain_pm(other, self)
