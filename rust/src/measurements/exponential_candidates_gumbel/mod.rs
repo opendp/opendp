@@ -15,7 +15,7 @@ pub fn make_base_exponential_candidates_gumbel<TI>(
 ) -> Fallible<
     Measurement<
         VectorDomain<AllDomain<TI>>,
-        AllDomain<usize>,
+        usize,
         InfDifferenceDistance<TI>,
         MaxDivergence<TI>,
     >,
@@ -25,7 +25,6 @@ where
 {
     Ok(Measurement::new(
         VectorDomain::new_all(),
-        AllDomain::new(),
         Function::new_fallible(move |arg: &Vec<TI>| {
             arg.iter()
                 .copied()
