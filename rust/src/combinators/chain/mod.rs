@@ -393,7 +393,7 @@ where
 
 
 impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
-    for Measurement<DI, DX::Carrier, MI, MO>
+    for Measurement<DI, Static<DX::Carrier>, MI, MO>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -403,7 +403,7 @@ where
     MTI: 'static + Metric,
     MTO: 'static + Metric,
 {
-    type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
+    type Output = Fallible<Measurement<DI, Static<DO::Carrier>, MI, MO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
         make_chain_pm(&rhs.function, &self)
@@ -411,7 +411,7 @@ where
 }
 
 impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
-    for Fallible<Measurement<DI, DX::Carrier, MI, MO>>
+    for Fallible<Measurement<DI, Static<DX::Carrier>, MI, MO>>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -421,7 +421,7 @@ where
     MTI: 'static + Metric,
     MTO: 'static + Metric,
 {
-    type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
+    type Output = Fallible<Measurement<DI, Static<DO::Carrier>, MI, MO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
         make_chain_pm(&rhs.function, &self?)

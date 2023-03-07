@@ -7,7 +7,7 @@ from opendp.measurements import make_base_discrete_laplace
 from opendp.combinators import make_concurrent_composition
 
 from opendp.domains import *
-from opendp.metrics import symmetric_distance, absolute_distance
+from opendp.metrics import symmetric_distance
 from opendp.measures import max_divergence
 
 def test_concurrent_composition():
@@ -43,5 +43,3 @@ def test_concurrent_composition():
     print("root release: ", cc_qbl(sum_query))
     print("child release:", exact_sum_cc_qbl(noise_query))
 
-
-test_concurrent_composition()

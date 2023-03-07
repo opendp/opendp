@@ -70,7 +70,7 @@ pub extern "C" fn opendp_combinators__make_concurrent_composition(
             .collect())
     }
 
-    let QO = try_!(d_mids.type_.get_atom());
+    let QO = try_!(output_measure.type_.get_atom());
     let d_mids = try_!(dispatch!(repack_vec, [(QO, @numbers)], (d_mids)));
 
     make_concurrent_composition(input_domain, input_metric, output_measure, d_in, d_mids).into()
