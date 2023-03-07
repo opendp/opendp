@@ -112,7 +112,7 @@ def test_function():
     mechanism = make_base_laplace(1.)
     pow = 4 # add noise 2^pow times
     for _ in range(pow):
-        mechanism = mechanism >> mechanism
+        mechanism = mechanism >> mechanism.function
     print(mechanism(0.))
 
 

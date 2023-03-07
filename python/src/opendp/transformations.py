@@ -630,7 +630,7 @@ def make_cast_inherent(
 
 def make_cdf(
     TA: RuntimeTypeDescriptor = "float"
-):
+) -> Function:
     """Postprocess a noisy array of float summary counts into a cumulative distribution.
     
     [make_cdf in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_cdf.html)
@@ -642,6 +642,7 @@ def make_cdf(
     
     :param TA: Atomic Type. One of `f32` or `f64`
     :type TA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -714,7 +715,7 @@ def make_consistent_b_ary_tree(
     branching_factor: int,
     TIA: RuntimeTypeDescriptor = "int",
     TOA: RuntimeTypeDescriptor = "float"
-):
+) -> Function:
     """Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
     
     The input argument of the function is a balanced `b`-ary tree implicitly stored in breadth-first order
@@ -741,6 +742,7 @@ def make_consistent_b_ary_tree(
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic type of the output data. Should be a float type.
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -1778,7 +1780,7 @@ def make_quantiles_from_counts(
     interpolation: str = "linear",
     TA: RuntimeTypeDescriptor = None,
     F: RuntimeTypeDescriptor = "float"
-):
+) -> Function:
     """Postprocess a noisy array of summary counts into quantiles.
     
     [make_quantiles_from_counts in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_quantiles_from_counts.html)
@@ -1798,6 +1800,7 @@ def make_quantiles_from_counts(
     :type TA: :py:ref:`RuntimeTypeDescriptor`
     :param F: Float type of the alpha argument. One of `f32` or `f64`
     :type F: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library

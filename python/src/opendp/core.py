@@ -63,13 +63,14 @@ def _error_free(
 
 
 def _function_free(
-    this
+    this: Function
 ):
     """Internal function. Free the memory associated with `this`.
     
     [_function_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._function_free.html)
     
     :param this: 
+    :type this: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -143,7 +144,7 @@ def _transformation_free(
 
 
 def function_eval(
-    this,
+    this: Function,
     arg: Any,
     TI: str = None
 ) -> Any:
@@ -152,6 +153,7 @@ def function_eval(
     [function_eval in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.function_eval.html)
     
     :param this: Function to invoke.
+    :type this: Function
     :param arg: Input data to supply to the measurement. A member of the measurement's input domain.
     :type arg: Any
     :param TI: Input Type.
@@ -215,13 +217,14 @@ def measurement_check(
 
 def measurement_function(
     this: Measurement
-):
+) -> Function:
     """Get the function from a measurement.
     
     [measurement_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.measurement_function.html)
     
     :param this: The measurement to retrieve the value from.
     :type this: Measurement
+    :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
@@ -507,13 +510,14 @@ def transformation_check(
 
 def transformation_function(
     this: Transformation
-):
+) -> Function:
     """Get the function from a transformation.
     
     [transformation_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.transformation_function.html)
     
     :param this: The transformation to retrieve the value from.
     :type this: Transformation
+    :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library

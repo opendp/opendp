@@ -87,6 +87,9 @@ impl Argument {
             if c_type.ends_with("AnyMeasurement *") {
                 return Some("Measurement".to_string())
             }
+            if c_type.ends_with("AnyFunction *") {
+                return Some("Function".to_string())
+            }
             if c_type.ends_with("AnyObject *") {
                 // py_to_object converts Any to AnyObjectPtr
                 return Some("Any".to_string())

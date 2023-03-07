@@ -92,7 +92,7 @@ def make_chain_mt(
 
 
 def make_chain_pm(
-    postprocess1,
+    postprocess1: Function,
     measurement0: Measurement
 ) -> Measurement:
     """Construct the functional composition (`postprocess1` ○ `measurement0`).
@@ -102,6 +102,7 @@ def make_chain_pm(
     [make_chain_pm in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_chain_pm.html)
     
     :param postprocess1: outer postprocessor
+    :type postprocess1: Function
     :param measurement0: inner measurement/mechanism
     :type measurement0: Measurement
     :rtype: Measurement
@@ -355,7 +356,7 @@ def make_user_measurement(
 def make_user_postprocessor(
     function,
     TO: RuntimeTypeDescriptor
-):
+) -> Function:
     """Construct a Postprocessor from user-defined callbacks.
     
     [make_user_postprocessor in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_user_postprocessor.html)
@@ -363,6 +364,7 @@ def make_user_postprocessor(
     :param function: A function mapping data to a value of type `TO`
     :param TO: Output Type
     :type TO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Function
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
     :raises OpenDPException: packaged error from the core OpenDP library
