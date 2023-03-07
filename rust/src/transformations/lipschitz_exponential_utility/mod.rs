@@ -51,32 +51,7 @@ where
         }),
         InfDifferenceDistance::default(),
         InfDifferenceDistance::default(),
-        // TODO: is this result from the paper right? Doesn't seem to hold
         StabilityMap::new(|d_in| *d_in),
-    ))
-}
-
-pub fn make_lipschitz_cast_integer<TI, TO>() -> Fallible<
-    Transformation<
-        VectorDomain<AllDomain<TI>>,
-        VectorDomain<AllDomain<TO>>,
-        InfDifferenceDistance<TI>,
-        InfDifferenceDistance<TO>,
-    >,
->
-where
-    TI: Float,
-    TO: Integer + RoundCast<TI> + InfCast<TI>,
-{
-    Ok(Transformation::new(
-        VectorDomain::new_all(),
-        VectorDomain::new_all(),
-        Function::new_fallible(|arg: &Vec<TI>| {
-            arg.iter().cloned().map(RoundCast::round_cast).collect()
-        }),
-        InfDifferenceDistance::default(),
-        InfDifferenceDistance::default(),
-        StabilityMap::new_fallible(|d_in| TO::inf_cast(*d_in)),
     ))
 }
 

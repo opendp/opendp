@@ -188,16 +188,12 @@ pub fn normalized_sample<R: ThreadRandGen>(
         }
     }
 
-    if prec_error == true {
+    if prec_error {
         return fallible!(FailedFunction, "Sampling precision insufficient");
     }
-    if index.is_some() {
-        return Ok(index.unwrap());
-    }
-
     // Return an error if we are unable to sample
     // Caller can choose an index at random if needed
-    fallible!(FailedFunction, "Unable to sample.")
+    index.ok_or_else(|| err!(FailedFunction, "Unable to sample."))
 }
 
 /// The exact arithmetic configuration. Includes the precision of all
