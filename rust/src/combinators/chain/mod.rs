@@ -313,6 +313,44 @@ where
 }
 
 
+impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
+    for Measurement<DI, DX::Carrier, MI, MO>
+where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    DO: 'static + Domain,
+    MI: 'static + Metric,
+    MO: 'static + Measure,
+    MTI: 'static + Metric,
+    MTO: 'static + Metric,
+{
+    type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
+
+    fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
+        make_chain_pm(&rhs.function, &self)
+    }
+}
+
+impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
+    for Fallible<Measurement<DI, DX::Carrier, MI, MO>>
+where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    DO: 'static + Domain,
+    MI: 'static + Metric,
+    MO: 'static + Measure,
+    MTI: 'static + Metric,
+    MTO: 'static + Metric,
+{
+    type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
+
+    fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
+        make_chain_pm(&rhs.function, &self?)
+    }
+}
+
+
+
 #[cfg(test)]
 mod tests_shr {
     use crate::measurements::make_base_discrete_laplace;
