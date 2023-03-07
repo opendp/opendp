@@ -16,7 +16,7 @@ fn run_mechanism(n: i64) -> u32 {
         outcomes.push(i as u32);
     }
     let result = exponential_mechanism(
-        eta, &outcomes, 0, n as u32, n as u32, &mut rng, None,
+        eta, &outcomes, utility_fn, 0, n as u32, n as u32, &mut rng, ExponentialOptions { min_retries: 1 },
     )
     .unwrap();
     *result

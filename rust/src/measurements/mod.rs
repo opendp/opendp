@@ -28,9 +28,9 @@ mod gaussian;
 #[cfg(all(feature="floating-point", feature="contrib", feature="use-mpfr"))]
 pub use crate::measurements::gaussian::*;
 
-#[cfg(all(feature="contrib"))]
+#[cfg(all(feature="use-mpfr", feature="contrib"))]
 pub mod exponential_candidates_b2dp;
-#[cfg(all(feature="contrib"))]
+#[cfg(all(feature="use-mpfr", feature="contrib"))]
 pub use crate::measurements::exponential_candidates_b2dp::*;
 
 #[cfg(all(feature="floating-point", feature="contrib"))]

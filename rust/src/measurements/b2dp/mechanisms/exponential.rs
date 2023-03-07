@@ -78,7 +78,6 @@ impl ExponentialConfig {
 
         let arithmetic_config = ArithmeticConfig::for_exponential(
             &eta,
-            utility_min,
             utility_max,
             max_outcomes,
             min_retries,

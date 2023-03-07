@@ -422,7 +422,6 @@ impl ArithmeticConfig {
 mod tests {
     use super::*;
     use crate::traits::samplers::GeneratorOpenDP;
-    use rug::ops::Pow;
 
     #[test]
     fn test_get_float() {
@@ -531,12 +530,10 @@ mod tests {
     fn test_power_bound() {
         // Generate an arithmetic config
         let eta = &Eta::new(1, 1, 1).unwrap();
-        let utility_min = 0;
         let utility_max = 100;
         let max_outcomes = 10;
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -699,12 +696,10 @@ mod tests {
     #[test]
     fn test_high_precision_arithmetic_config_for_exponential() {
         let eta = &Eta::new(1, 2, 3).unwrap();
-        let utility_min = 0;
         let utility_max = 2u32.pow(10);
         let max_outcomes = 2u32.pow(8);
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -714,7 +709,7 @@ mod tests {
         assert!(arithmetic_config.precision >= 6000);
 
         let emp_arithmetic_config =
-            ArithmeticConfig::for_exponential(eta, utility_min, utility_max, max_outcomes, 1)
+            ArithmeticConfig::for_exponential(eta, utility_max, max_outcomes, 1)
                 .unwrap();
         //assert_eq!(arithmetic_config.precision,6402);
         //assert_eq!(emp_arithmetic_config.precision,0);
@@ -724,12 +719,10 @@ mod tests {
     #[test]
     fn test_high_precision_eta_arithmetic_config_for_exponential() {
         let eta = &Eta::new(31, 5, 18).unwrap();
-        let utility_min = 0;
         let utility_max = 1;
         let max_outcomes = 1;
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -740,7 +733,7 @@ mod tests {
         assert!(arithmetic_config.precision >= 90);
 
         let emp_arithmetic_config =
-            ArithmeticConfig::for_exponential(eta, utility_min, utility_max, max_outcomes, 1)
+            ArithmeticConfig::for_exponential(eta, utility_max, max_outcomes, 1)
                 .unwrap();
 
         assert!(arithmetic_config.precision * 2 >= emp_arithmetic_config.precision);
@@ -750,12 +743,10 @@ mod tests {
     #[test]
     fn test_arithmetic_config_for_exponential() {
         let eta = &Eta::new(1, 1, 1).unwrap();
-        let utility_min = 0;
         let utility_max = 100;
         let max_outcomes = 10;
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -768,12 +759,10 @@ mod tests {
     #[test]
     fn test_exact_scope() {
         let eta = &Eta::new(1, 1, 1).unwrap();
-        let utility_min = 0;
         let utility_max = 100;
         let max_outcomes = 10;
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -789,12 +778,10 @@ mod tests {
 
         // Do some arithmetic that should all be exact
         // Do some exact arithmetic
-        let base_result = eta.get_base(working_precision);
-        let base = &base_result.unwrap();
         let mut weight_sum = Float::with_val(working_precision, 0);
         for _i in 0..max_outcomes {
             let new_weight_sum =
-                weight_sum + Float::with_val(working_precision, base.pow(utility_min));
+                weight_sum + Float::with_val(working_precision, 1);
             weight_sum = new_weight_sum;
         }
         assert_eq!(10, weight_sum);
@@ -826,13 +813,11 @@ mod tests {
     fn test_optimized_normalized_sample() {
         // Generate an arithmetic config
         let eta = &Eta::new(1, 1, 1).unwrap();
-        let utility_min = 0;
         let utility_max = 10;
         let max_outcomes = 10;
         let mut rng = GeneratorOpenDP::default();
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -870,13 +855,11 @@ mod tests {
     fn test_normalized_sample() {
         // Generate an arithmetic config
         let eta = &Eta::new(1, 1, 1).unwrap();
-        let utility_min = 0;
         let utility_max = 10;
         let max_outcomes = 10;
         let mut rng = GeneratorOpenDP::default();
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -930,13 +913,11 @@ mod tests {
     fn test_randomized_round() {
         // Generate an arithmetic config
         let eta = &Eta::new(1, 1, 1).unwrap();
-        let utility_min = 0;
         let utility_max = 100;
         let max_outcomes = 10;
         let mut rng = GeneratorOpenDP::default();
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             1,
@@ -958,14 +939,12 @@ mod tests {
     fn test_min_retries() {
         // Generate an arithmetic config
         let eta = &Eta::new(1, 1, 1).unwrap();
-        let utility_min = 0;
         let utility_max = 10;
         let max_outcomes = 10;
         let mut rng = GeneratorOpenDP::default();
         let min_retries = 5;
         let arithmetic_config_result = ArithmeticConfig::for_exponential(
             eta,
-            utility_min,
             utility_max,
             max_outcomes,
             min_retries,
