@@ -29,6 +29,11 @@ mod manipulation;
 pub use crate::transformations::manipulation::*;
 
 #[cfg(feature="contrib")]
+mod proportion_ci;
+#[cfg(feature="contrib")]
+pub use crate::transformations::proportion_ci::*;
+
+#[cfg(feature="contrib")]
 mod sum;
 #[cfg(feature="contrib")]
 pub use crate::transformations::sum::*;

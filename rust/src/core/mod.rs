@@ -27,6 +27,7 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
+use crate::metrics::AgnosticMetric;
 use crate::error::*;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
@@ -304,6 +305,8 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
         d_out.total_ge(&self.map(d_in)?)
     }
 }
+
+pub type Postprocessor<DI, DO> = Transformation<DI, DO, AgnosticMetric, AgnosticMetric>;
 
 
 #[cfg(test)]

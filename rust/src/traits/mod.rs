@@ -148,9 +148,11 @@ pub trait Number:
     + DivAssign
     + FiniteBounds
     + ExactIntCast<usize>
+    + ExactIntCast<IntDistance>
     + ExactIntCast<i32>
     + InfCast<IntDistance>
     + InfCast<usize>
+    + RoundCast<usize>
     + std::iter::Sum<Self>
     + for<'a> std::iter::Sum<&'a Self>
     + DistanceConstant<Self>
@@ -177,9 +179,11 @@ impl<T> Number for T where
         + DivAssign
         + FiniteBounds
         + ExactIntCast<usize>
+        + ExactIntCast<IntDistance>
         + ExactIntCast<i32>
         + InfCast<IntDistance>
         + InfCast<usize>
+        + RoundCast<usize>
         + std::iter::Sum<Self>
         + for<'a> std::iter::Sum<&'a Self>
         + DistanceConstant<Self>
@@ -255,6 +259,7 @@ pub trait Float:
     + FloatBits
     + ExactIntCast<Self::Bits>
     + RoundCast<f64>
+    + From<u8>
 {
 }
 impl<T> Float for T where
@@ -271,5 +276,6 @@ impl<T> Float for T where
         + FloatBits
         + ExactIntCast<Self::Bits>
         + RoundCast<f64>
+        + From<u8>
 {
 }
