@@ -38,7 +38,7 @@ def make_base_discrete_gaussian(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
@@ -105,7 +105,7 @@ def make_base_discrete_laplace(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
@@ -164,7 +164,7 @@ def make_base_discrete_laplace_cks20(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
@@ -225,7 +225,7 @@ def make_base_discrete_laplace_linear(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
@@ -289,7 +289,7 @@ def make_base_gaussian(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MO`
     
@@ -345,7 +345,7 @@ def make_base_geometric(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
@@ -409,7 +409,7 @@ def make_base_laplace(
     **Supporting Elements:**
     
     * Input Domain:   `D`
-    * Output Domain:  `D`
+    * Output Type:    `D::Carrier`
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<D::Atom>`
     
@@ -462,7 +462,7 @@ def make_base_ptr(
     **Supporting Elements:**
     
     * Input Domain:   `MapDomain<AllDomain<TK>, AllDomain<TV>>`
-    * Output Domain:  `MapDomain<AllDomain<TK>, AllDomain<TV>>`
+    * Output Type:    `HashMap<TK, TV>`
     * Input Metric:   `L1Distance<TV>`
     * Output Measure: `SmoothedMaxDivergence<TV>`
     
@@ -516,7 +516,7 @@ def make_randomized_response(
     **Supporting Elements:**
     
     * Input Domain:   `AllDomain<T>`
-    * Output Domain:  `AllDomain<T>`
+    * Output Type:    `T`
     * Input Metric:   `DiscreteDistance`
     * Output Measure: `MaxDivergence<QO>`
     
@@ -569,7 +569,7 @@ def make_randomized_response_bool(
     **Supporting Elements:**
     
     * Input Domain:   `AllDomain<bool>`
-    * Output Domain:  `AllDomain<bool>`
+    * Output Type:    `bool`
     * Input Metric:   `DiscreteDistance`
     * Output Measure: `MaxDivergence<QO>`
     

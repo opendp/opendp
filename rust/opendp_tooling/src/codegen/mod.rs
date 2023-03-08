@@ -57,12 +57,13 @@ fn flatten_type_recipe(type_recipe: &TypeRecipe, derived_types: &Vec<Argument>) 
 impl Argument {
     /// retrieve the python ctype corresponding to the type inside FfiResult<*>
     pub fn python_unwrapped_ctype(&self, typemap: &HashMap<String, String>) -> String {
-        assert_eq!(&self.c_type()[..9], "FfiResult");
-        typemap.get(&self.c_type()[10..self.c_type().len() - 1]).unwrap().clone()
+        let c_type = self.c_type();
+        assert_eq!(&c_type[..9], "FfiResult");
+        typemap.get(&c_type[10..c_type.len() - 1]).expect(format!("unrecognized c_type: {c_type}").as_str()).clone()
     }
     /// retrieve the python ctypes corresponding to the origin of a type (subtypes/args omitted)
     pub fn python_origin_ctype(&self, typemap: &HashMap<String, String>) -> String {
-        typemap.get(&self.c_type_origin()).cloned().expect("ctype not recognized in typemap")
+        typemap.get(&self.c_type_origin()).cloned().expect(&format!("ctype not recognized in typemap: {:?}", self.c_type_origin()))
     }
     pub fn python_type_hint(&self, hierarchy: &HashMap<String, Vec<String>>) -> Option<String> {
         if self.hint.is_some() {
@@ -85,6 +86,9 @@ impl Argument {
             }
             if c_type.ends_with("AnyMeasurement *") {
                 return Some("Measurement".to_string())
+            }
+            if c_type.ends_with("AnyFunction *") {
+                return Some("Function".to_string())
             }
             if c_type.ends_with("AnyObject *") {
                 // py_to_object converts Any to AnyObjectPtr

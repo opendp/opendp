@@ -59,11 +59,11 @@ def make_constant_mechanism(constant):
 
     return make_user_measurement(
         all_domain(int),
-        all_domain(int),
         function,
         absolute_distance(int),
         max_divergence(float),
-        stability_map
+        stability_map,
+        int,
     )
 
 def test_make_user_measurement():
@@ -78,11 +78,7 @@ def make_postprocess_frac():
     def function(arg):
         return arg[0] / arg[1]
 
-    return make_user_postprocessor(
-        vector_domain(all_domain(float)),
-        all_domain(float),
-        function,
-    )
+    return make_user_postprocessor(function, float)
 
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
@@ -110,20 +106,16 @@ def test_user_constructors():
 
     meas = make_user_measurement(
         bounded_domain((2, 10)),
-        sized_domain(vector_domain(bounded_domain((2, 10))), 10),
         lambda x: [x] * 10,
         symmetric_distance(),
         max_divergence(f64),
-        lambda d_in: float(d_in * 10)
+        lambda d_in: float(d_in * 10),
+        Vec[int],
     )
     print(meas(2))
     print(meas.map(1))
 
 
-    post = make_user_postprocessor(
-        sized_domain(vector_domain(bounded_domain((2, 10))), 10),
-        all_domain(i32),
-        lambda x: x[0]
-    )
+    post = make_user_postprocessor(lambda x: x[0], i32)
 
     print((meas >> post)(2))

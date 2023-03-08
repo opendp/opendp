@@ -27,6 +27,8 @@
     "const AnyMeasurement *": "Measurement",
     "AnyTransformation *": "Transformation",
     "const AnyTransformation *": "Transformation",
+    "AnyFunction *": "Function",
+    "const AnyFunction *": "Function",
     "AnyDomain *": "Domain",
     "const AnyDomain *": "Domain",
     "AnyMeasure *": "Measure",

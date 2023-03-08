@@ -198,10 +198,10 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                 )
             }
         }),
-        i if i == "Transformation" || i == "Measurement" || i == "Postprocessor" => {
+        i if i == "Transformation" || i == "Measurement" || i == "Function" => {
             match arguments {
                 syn::PathArguments::AngleBracketed(ab) => {
-                    let num_args = if i == "Postprocessor" { 2 } else { 4 };
+                    let num_args = if i == "Function" { 2 } else { 4 };
 
                     if ab.args.len() != num_args {
                         return Err(Error::custom(format!(
@@ -220,12 +220,26 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                             .replace(",", ", ")
                     };
 
+                    let input_label = match i {
+                        i if i == "Transformation" => "Domain:",
+                        i if i == "Measurement" => "Domain:",
+                        i if i == "Function" => "Type:  ",
+                        _ => unreachable!(),
+                    };
+
+                    let output_label = match i {
+                        i if i == "Transformation" => "Domain:",
+                        i if i == "Measurement" => "Type:  ",
+                        i if i == "Function" => "Type:  ",
+                        _ => unreachable!(),
+                    };
+
                     let mut lines = vec![
-                        format!("* Input Domain:   `{}`", pprint(input_domain)),
-                        format!("* Output Domain:  `{}`", pprint(output_domain)),
+                        format!("* Input {}   `{}`", input_label, pprint(input_domain)),
+                        format!("* Output {}  `{}`", output_label, pprint(output_domain)),
                     ];
 
-                    if i != "Postprocessor" {
+                    if i != "Function" {
 
                         let output_distance = match i {
                             i if i == "Transformation" => "Metric: ",

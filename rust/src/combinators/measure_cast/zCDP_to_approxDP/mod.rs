@@ -20,21 +20,19 @@ mod cdp_epsilon;
 /// 
 /// # Generics
 /// * `DI` - Input Domain
-/// * `DO` - Output Domain
+/// * `TO` - Output Type
 /// * `MI` - Input Metric
 /// * `QO` - Output distance type. One of `f32` or `f64`.
-pub fn make_zCDP_to_approxDP<DI, DO, MI, QO>(
-    meas: Measurement<DI, DO, MI, ZeroConcentratedDivergence<QO>>,
-) -> Fallible<Measurement<DI, DO, MI, SmoothedMaxDivergence<QO>>>
+pub fn make_zCDP_to_approxDP<DI, TO, MI, QO>(
+    meas: Measurement<DI, TO, MI, ZeroConcentratedDivergence<QO>>,
+) -> Fallible<Measurement<DI, TO, MI, SmoothedMaxDivergence<QO>>>
 where
     DI: Domain,
-    DO: Domain,
     MI: 'static + Metric,
     QO: Float,
 {
     let Measurement {
         input_domain,
-        output_domain,
         function,
         input_metric,
         privacy_map,
@@ -43,7 +41,6 @@ where
 
     Ok(Measurement::new(
         input_domain,
-        output_domain,
         function,
         input_metric,
         SmoothedMaxDivergence::default(),

@@ -246,7 +246,7 @@ pub mod test_b_trees {
 
         let noisy_tree = meas.invoke(&vec![1; 10])?;
         // casting should not lose data, as noise was integral
-        let consi_leaves = post.invoke(&noisy_tree)?.into_iter().map(|v| v as i32).collect();
+        let consi_leaves = post.eval(&noisy_tree)?.into_iter().map(|v| v as i32).collect();
         let consi_tree = make_b_ary_tree::<L1Distance<f64>, i32>(10, b)?.invoke(&consi_leaves)?;
 
         println!("noisy      leaves {:?}", noisy_tree[15..].to_vec());

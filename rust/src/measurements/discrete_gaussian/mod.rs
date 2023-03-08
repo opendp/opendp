@@ -99,7 +99,7 @@ where
 /// * `QI` - Input distance. The type of sensitivities. Can be any integer or float.
 pub fn make_base_discrete_gaussian<D, MO, QI>(
     scale: MO::Atom,
-) -> Fallible<Measurement<D, D, D::InputMetric, MO>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
 where
     D: DiscreteGaussianDomain<QI>,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
@@ -114,7 +114,6 @@ where
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
     Ok(Measurement::new(
-        D::default(),
         D::default(),
         if scale.is_zero() {
             D::new_map_function(move |arg: &D::Atom| Ok(arg.clone()))
@@ -137,7 +136,7 @@ where
 
 pub fn make_base_discrete_gaussian_rug<D>(
     scale: Rational,
-) -> Fallible<Measurement<D, D, D::InputMetric, ZeroConcentratedDivergence<Rational>>>
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, ZeroConcentratedDivergence<Rational>>>
 where
     D: DiscreteGaussianDomain<Rational, Atom = Integer>,
 {
@@ -146,7 +145,6 @@ where
     }
 
     Ok(Measurement::new(
-        D::default(),
         D::default(),
         D::new_map_function(enclose!(scale, move |arg: &Integer| {
             sample_discrete_gaussian(scale.clone()).map(|n| arg + n)

@@ -38,9 +38,8 @@ pub mod tests {
     use crate::domains::AllDomain;
     use crate::traits::CheckNull;
 
-    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, AllDomain<T>, SymmetricDistance, MaxDivergence<f64>> {
+    pub fn make_test_measurement<T: Clone + CheckNull>() -> Measurement<AllDomain<T>, T, SymmetricDistance, MaxDivergence<f64>> {
         Measurement::new(
-            AllDomain::new(),
             AllDomain::new(),
             Function::new(|arg: &T| arg.clone()),
             SymmetricDistance::default(),
