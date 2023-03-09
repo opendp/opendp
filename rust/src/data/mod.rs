@@ -8,6 +8,7 @@ use std::fmt::Debug;
 use crate::domains::type_name;
 use crate::error::*;
 use crate::traits::CheckNull;
+use std::fmt::Formatter;
 
 pub trait IsVec: Debug {
     // Not sure if we need into_any() (which consumes the Form), keeping it for now.
@@ -33,6 +34,18 @@ impl<T> IsVec for Vec<T> where
     }
 }
 
+impl PartialEq for dyn IsVec {
+    fn eq(&self, other: &Self) -> bool {
+        self.eq(other.as_any())
+    }
+ }
+
+ impl Clone for Box<dyn IsVec> {
+    fn clone(&self) -> Self {
+        self.box_clone()
+    }
+ }
+
 impl<T> From<Vec<T>> for Column
     where T: 'static + Debug + Clone + PartialEq {
     fn from(src: Vec<T>) -> Self {
@@ -41,7 +54,7 @@ impl<T> From<Vec<T>> for Column
 }
 
 
-#[derive(Debug)]
+//#[derive(PartialEq)]
 pub struct Column(Box<dyn IsVec>);
 impl CheckNull for Column {
     fn is_null(&self) -> bool { false }
@@ -71,11 +84,17 @@ impl Clone for Column {
     }
 }
 
-impl PartialEq for Column {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.eq(other.0.as_any())
+impl Debug for Column {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Column is ({:?})", self.0.box_clone())
     }
 }
+
+ impl PartialEq for Column {
+     fn eq(&self, other: &Self) -> bool {
+         self.0.eq(other.0.as_any())
+     }
+ }
 
 
 #[cfg(test)]
