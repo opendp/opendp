@@ -1,17 +1,29 @@
 # type: ignore
-def make_base_exponential_candidates_gumbel(temperature: TI):
-    def function(scores: List[TI]):
-        noisy_score = lambda i: scores[i] * temperature -ln( -ln(sample_uniform())) 
+def make_base_exponential_candidates_gumbel(temperature: TIA):
+    if temperature <= 0 {
+        raise ValueError("temperature must be positive")
+    }
+    def function(scores: List[TIA]):
+        noisy_score = lambda i: scores[i] / temperature -ln( -ln(sample_uniform())) 
         return max(range(len(scores)), key=noisy_score)
     
-    def privacy_relation(d_in: u32, d_out: TO):
-        return d_out * temperature >= d_in
+    def privacy_map(d_in: TIA):
+        d_in = QO.inf_cast(d_in)
+        if d_in < 0 {
+            raise ValueError("input distance must be non-negative")
+        }
+        if d_in == 0 {
+            return 0
+        }
+        if temperature == 0 {
+            return QO("inf")
+        }
+        return d_in.inf_div(temperature)
 
-    return Transformation(
-        input_domain=VectorDomain(AllDomain(TI)),
-        output_domain=AllDomain(TO),
+    return Measurement(
+        input_domain=VectorDomain(AllDomain(TIA)),
         function=function,
-        input_metric=InfDifferenceDistance(TI),
-        output_metric=MaxDivergence(TI),
-        privacy_relation=privacy_relation,
-    )
+        input_metric=InfDifferenceDistance(TIA),
+        output_metric=MaxDivergence(QO),
+        privacy_map=privacy_map,
+    )   
