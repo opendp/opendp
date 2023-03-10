@@ -39,6 +39,7 @@ __all__ = [
     "make_metric_bounded",
     "make_metric_unbounded",
     "make_ordered_random",
+    "make_quantile_score_candidates",
     "make_quantiles_from_counts",
     "make_resize",
     "make_select_column",
@@ -52,6 +53,7 @@ __all__ = [
     "make_sized_bounded_sum",
     "make_sized_bounded_sum_of_squared_deviations",
     "make_sized_bounded_variance",
+    "make_sized_quantile_score_candidates",
     "make_split_dataframe",
     "make_split_lines",
     "make_split_records",
@@ -1775,6 +1777,62 @@ def make_ordered_random(
     return output
 
 
+def make_quantile_score_candidates(
+    candidates: Any,
+    alpha: Any,
+    TIA: RuntimeTypeDescriptor = None,
+    TOA: RuntimeTypeDescriptor = "float"
+) -> Transformation:
+    """Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
+    
+    [make_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_quantile_score_candidates.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `InfDifferenceDistance<TOA>`
+    
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+    
+    :param candidates: Potential quantiles to score
+    :type candidates: Any
+    :param alpha: a value in [0, 1]. Choose 0.5 for median
+    :type alpha: Any
+    :param TIA: Atomic Input Type. Type of elements in the input vector
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type. Type of elements in the score vector
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(candidates))
+    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=alpha)
+    
+    # Convert arguments to c types.
+    c_candidates = py_to_c(candidates, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    c_alpha = py_to_c(alpha, c_type=AnyObjectPtr, type_name=TOA)
+    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_quantile_score_candidates
+    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_candidates, c_alpha, c_TIA, c_TOA), Transformation))
+    
+    return output
+
+
 def make_quantiles_from_counts(
     bin_edges: Any,
     alphas: Any,
@@ -2524,6 +2582,66 @@ def make_sized_bounded_variance(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_size, c_bounds, c_ddof, c_S), Transformation))
+    
+    return output
+
+
+def make_sized_quantile_score_candidates(
+    size: int,
+    candidates: Any,
+    alpha: Any,
+    TIA: RuntimeTypeDescriptor = None,
+    TOA: RuntimeTypeDescriptor = "float"
+) -> Transformation:
+    """Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
+    
+    [make_sized_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_quantile_score_candidates.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TIA>>>`
+    * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `InfDifferenceDistance<TOA>`
+    
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/quantile_score_candidates/make_sized_quantile_score_candidates.pdf)
+    
+    :param size: Number of elements in the input dataset
+    :type size: int
+    :param candidates: Potential quantiles to score
+    :type candidates: Any
+    :param alpha: a value in [0, 1]. Choose 0.5 for median
+    :type alpha: Any
+    :param TIA: Atomic Input Type. Type of elements in the input vector
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param TOA: Atomic Output Type. Type of elements in the score vector
+    :type TOA: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(candidates))
+    TOA = RuntimeType.parse_or_infer(type_name=TOA, public_example=alpha)
+    
+    # Convert arguments to c types.
+    c_size = py_to_c(size, c_type=ctypes.c_size_t, type_name=usize)
+    c_candidates = py_to_c(candidates, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    c_alpha = py_to_c(alpha, c_type=AnyObjectPtr, type_name=TOA)
+    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_sized_quantile_score_candidates
+    lib_function.argtypes = [ctypes.c_size_t, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_size, c_candidates, c_alpha, c_TIA, c_TOA), Transformation))
     
     return output
 

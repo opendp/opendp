@@ -172,3 +172,11 @@ def test_randomized_response_bool():
     import math
     assert meas.check(1, math.log(3.))
     assert not meas.check(1, math.log(2.999))
+
+
+def test_discrete_exponential():
+    from opendp.measurements import make_base_discrete_exponential
+
+    meas = make_base_discrete_exponential(1., TIA=int)
+    print(meas(list(range(10))))
+    print(meas.map(2))

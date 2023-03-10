@@ -1,72 +1,91 @@
-use num::{Float, One};
 use std::cmp::Ordering;
+
+use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    metrics::{IntDistance, InfDifferenceDistance, SymmetricDistance},
     domains::{AllDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{CheckNull, DistanceConstant, ExactIntCast, InfSub},
+    metrics::{InfDifferenceDistance, SymmetricDistance},
+    traits::{ExactIntCast, Float, Number},
 };
 
-/// Makes a [Transformation] that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
-pub fn make_quantile_score_candidates<TI, TO>(
-    candidates: Vec<TI>,
-    alpha: TO,
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(features("contrib"), generics(TOA(default = "float")))]
+/// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
+///
+/// # Arguments
+/// * `candidates` - Potential quantiles to score
+/// * `alpha` - a value in [0, 1]. Choose 0.5 for median
+///
+/// # Generics
+/// * `TIA` - Atomic Input Type. Type of elements in the input vector
+/// * `TOA` - Atomic Output Type. Type of elements in the score vector
+pub fn make_quantile_score_candidates<TIA: Number, TOA: Float>(
+    candidates: Vec<TIA>,
+    alpha: TOA,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TI>>,
-        VectorDomain<AllDomain<TO>>,
+        VectorDomain<AllDomain<TIA>>,
+        VectorDomain<AllDomain<TOA>>,
         SymmetricDistance,
-        InfDifferenceDistance<TO>,
+        InfDifferenceDistance<TOA>,
     >,
->
-where
-    TI: 'static + CheckNull + Clone + PartialOrd,
-    TO: CheckNull + DistanceConstant<IntDistance> + Float + ExactIntCast<usize> + InfSub,
-    IntDistance: DistanceConstant<TO>,
-{
-    let abs_dist_const = alpha.max(TO::one().inf_sub(&alpha)?);
-    let inf_diff_dist_const = (TO::one() + TO::one()).inf_mul(&abs_dist_const)?;
-
+> {
+    let abs_dist_const = alpha.max(TOA::one().inf_sub(&alpha)?);
+    let inf_diff_dist_const = (TOA::one() + TOA::one()).inf_mul(&abs_dist_const)?;
+    if candidates.windows(2).any(|w| w[0] >= w[1]) {
+        return fallible!(MakeTransformation, "candidates must be increasing");
+    }
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<TI>| score(arg.clone(), &candidates, alpha.clone())),
+        Function::new_fallible(move |arg: &Vec<TIA>| {
+            score(arg.clone(), &candidates, alpha.clone())
+        }),
         SymmetricDistance::default(),
         InfDifferenceDistance::default(),
         StabilityMap::new_from_constant(inf_diff_dist_const),
     ))
 }
 
-/// Makes a [Transformation] that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
-pub fn make_sized_quantile_score_candidates<TI, TO>(
+#[bootstrap(features("contrib"), generics(TOA(default = "float")))]
+/// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
+///
+/// # Arguments
+/// * `size` - Number of elements in the input dataset
+/// * `candidates` - Potential quantiles to score
+/// * `alpha` - a value in [0, 1]. Choose 0.5 for median
+///
+/// # Generics
+/// * `TIA` - Atomic Input Type. Type of elements in the input vector
+/// * `TOA` - Atomic Output Type. Type of elements in the score vector
+pub fn make_sized_quantile_score_candidates<TIA: Number, TOA: Float>(
     size: usize,
-    candidates: Vec<TI>,
-    alpha: TO,
+    candidates: Vec<TIA>,
+    alpha: TOA,
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<AllDomain<TI>>>,
-        VectorDomain<AllDomain<TO>>,
+        SizedDomain<VectorDomain<AllDomain<TIA>>>,
+        VectorDomain<AllDomain<TOA>>,
         SymmetricDistance,
-        InfDifferenceDistance<TO>,
+        InfDifferenceDistance<TOA>,
     >,
->
-where
-    TI: 'static + CheckNull + Clone + PartialOrd,
-    TO: CheckNull + DistanceConstant<IntDistance> + One + Float + ExactIntCast<usize>,
-    IntDistance: DistanceConstant<TO>,
-{
+> {
     if candidates.windows(2).any(|w| w[0] >= w[1]) {
         return fallible!(MakeTransformation, "candidates must be increasing");
     }
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), size),
         VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<TI>| score(arg.clone(), &candidates, alpha.clone())),
+        Function::new_fallible(move |arg: &Vec<TIA>| {
+            score(arg.clone(), &candidates, alpha.clone())
+        }),
         SymmetricDistance::default(),
         InfDifferenceDistance::default(),
-        StabilityMap::new_from_constant(TO::one()),
+        StabilityMap::new_from_constant(TOA::one() + TOA::one()),
     ))
 }
 
@@ -205,7 +224,11 @@ fn count_lt_eq<TI: PartialOrd>(x: &[TI], target: &TI) -> (usize, usize) {
     // println!("lower {:?}, upper {:?}", lower, upper);
     // println!("len {:?}", x.len());
 
-    let eq = if lower == upper || &x[lower] == target { upper } else { lower } - lt;
+    let eq = if lower == upper || &x[lower] == target {
+        upper
+    } else {
+        lower
+    } - lt;
 
     // println!("lt {:?}, eq {:?}", lt, eq);
     (lt, eq)
@@ -307,7 +330,7 @@ mod test_scorer {
 
 #[cfg(test)]
 mod test_trans {
-    use crate::measurements::make_base_exponential_candidates_gumbel;
+    use crate::measurements::make_base_discrete_exponential;
 
     use super::*;
 
@@ -316,7 +339,7 @@ mod test_trans {
         let candidates = vec![7, 12, 14, 72, 76];
         let trans = make_quantile_score_candidates(candidates.clone(), 0.75)?;
         let trans_sized = make_sized_quantile_score_candidates(100, candidates, 0.75)?;
-        let exp_mech = make_base_exponential_candidates_gumbel(1., false)?;
+        let exp_mech = make_base_discrete_exponential(1.)?;
 
         let quantile_meas = (trans >> exp_mech.clone())?;
         let idx = quantile_meas.invoke(&(0..100).collect())?;

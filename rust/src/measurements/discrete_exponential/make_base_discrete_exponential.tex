@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../lib.sty}
 
-\title{\texttt{fn make\_base\_exponential\_candidates\_gumbel}}
+\title{\texttt{fn make\_base\_discrete\_exponential}}
 \author{Michael Shoemate}
 \begin{document} 
 \maketitle
@@ -9,9 +9,9 @@
 \contrib
 \floatingPoint
 
-Proves soundness of \rustdoc{measurements/fn}{make\_base\_exponential\_candidates\_gumbel} 
+Proves soundness of \rustdoc{measurements/fn}{make\_base\_discrete\_exponential} 
 in \asOfCommit{mod.rs}{f5bb719}.
-\texttt{make\_base\_exponential\_candidates\_gumbel} returns a Measurement that 
+\texttt{make\_base\_discrete\_exponential} returns a Measurement that 
 noisily selects the index of the greatest score, from a vector of input scores.
 
 This released index can be later be used to index into a public candidate set (postprocessing).
@@ -127,7 +127,7 @@ If $X_1 \sim Exp(\lambda_1)$, $X_2 \sim Exp(\lambda_2)$, then $P(X_1 \leq X_2) =
 \subsection{Metric}
 We need a metric that captures the distance between score vectors $s$ and $s'$ respectively on neighboring datasets. 
 The $i^{th}$ element of each score vector is the score for the $i^{th}$ candidate.
-Traditionally, the sensitivity of the scoring function is measured in terms of \texttt{InfDistance}, 
+Traditionally, the sensitivity of the scoring function is measured in terms of some metric \texttt{InfDistance}, 
 the greatest that any one score may change (or more formally, the $L_\infty$ norm on distances).
 The sensitivity is defined as follows:
 \begin{equation}
@@ -139,7 +139,7 @@ However, this loosening is not necessary if we can prove that the scoring functi
 
 We instead use a slight adjustment to this metric, \texttt{InfDifferenceDistance}, with sensitivity as follows:
 \begin{equation}
-    \Delta_{\infty'} = \max\limits_{s \sim s'} \max\limits_{ij} \abs{(s_i - s'_i) - (s_j - s'_j)}
+    \Delta_{IDD} = \max\limits_{s \sim s'} \max\limits_{ij} \abs{(s_i - s'_i) - (s_j - s'_j)}
 \end{equation}
 Consider when the scoring function is not monotonic.
 The sensitivity is maximized when $s_i - s'_i$ and $s_j - s'_j$ vary maximally in opposite directions, resulting in the same loosening factor of 2.
@@ -164,11 +164,11 @@ It is shown in \ref{privacy-guarantee} that a tighter analysis of the exponentia
 
 \subsection*{Function}
 \label{sec:python-pseudocode}
-\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_base_exponential_candidates_gumbel.py}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_base_discrete_exponential.py}
 
 \subsection*{Postcondition}
 
-\validMeasurement{\texttt{temperature}}{\texttt{make\_base\_exponential\_candidates\_gumbel}} 
+\validMeasurement{\texttt{temperature}}{\texttt{make\_base\_discrete\_exponential}} 
 
 \section{Proof}
 \subsection{Domain-metric compatibility} 

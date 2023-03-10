@@ -1,5 +1,5 @@
 # type: ignore
-def make_base_exponential_candidates_gumbel(temperature: TIA):
+def make_base_discrete_exponential(temperature: TIA):
     if temperature <= 0 {
         raise ValueError("temperature must be positive")
     }

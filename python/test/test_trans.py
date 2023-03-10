@@ -371,3 +371,13 @@ def test_lipschitz_b_ary_tree():
     print(meas_quantiles(data))
 
     assert meas_cdf.map(1) == 4.
+
+
+def test_quantile_score_candidates():
+    from opendp.transformations import make_quantile_score_candidates
+
+    trans = make_quantile_score_candidates([20, 33, 40, 50, 72, 100], alpha=0.5)
+    scores = trans(list(range(100)))
+    print(scores)
+
+    assert trans.map(1) >= 1.

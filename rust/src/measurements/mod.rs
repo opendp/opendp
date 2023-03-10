@@ -23,9 +23,9 @@ mod gaussian;
 pub use crate::measurements::gaussian::*;
 
 #[cfg(all(feature="floating-point", feature="contrib"))]
-pub mod exponential_candidates_gumbel;
+pub mod discrete_exponential;
 #[cfg(all(feature="floating-point", feature="contrib"))]
-pub use crate::measurements::exponential_candidates_gumbel::*;
+pub use crate::measurements::discrete_exponential::*;
 
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod ptr;

@@ -380,8 +380,20 @@ impl Metric for DiscreteDistance {
     type Distance = IntDistance;
 }
 
-/// A distance metric d(s, s') = max_{ij} |(s_i - s'_i) - (s_j - s'_j)|
-/// InfDistance would be d(s, s') = max_i |s_i - s'_i|
+/// Distance between score vectors for the exponential mechanism.
+/// 
+/// # Proof Definition
+/// 
+/// ### `d`-closeness
+/// For any two datasets $u, v \in$ `VectorDomain<AllDomain<T>>` and any $d$ of type `T`, 
+/// we say that $u, v$ are $d$-close under the inf-difference metric (abbreviated as $d_{IDD}$) whenever
+/// 
+/// ```math
+/// d_{IDD}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
+/// ```
+/// 
+/// # Compatible Domains
+/// * VectorDomain<AllDomain<T>> for any numeric `T`.
 pub struct InfDifferenceDistance<Q>(PhantomData<Q>);
 impl<Q> Default for InfDifferenceDistance<Q> {
     fn default() -> Self { InfDifferenceDistance(PhantomData) }
