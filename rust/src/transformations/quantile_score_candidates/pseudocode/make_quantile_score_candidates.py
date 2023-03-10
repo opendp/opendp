@@ -1,10 +1,13 @@
 # type: ignore
 def make_quantile_score_candidates(candidates: List[TIA], alpha: TOA):
-    abs_dist_const = max(alpha, (1).inf_sub(alpha))
-    sup_dist_const = abs_dist_const.inf_mul(2)
     
     for i in range(len(candidates) - 1):
-        assert candidates[i] > candidates[i + 1]
+        assert candidates[i] < candidates[i + 1]
+
+    assert 0 <= alpha <= 1
+
+    abs_dist_const = max(alpha, (1).inf_sub(alpha))
+    sup_dist_const = abs_dist_const.inf_mul(2)
 
     def function(arg: List[TIA]):
         return score(arg, candidates, alpha)

@@ -34,11 +34,16 @@ pub fn make_quantile_score_candidates<TIA: Number, TOA: Float>(
         InfDifferenceDistance<TOA>,
     >,
 > {
-    let abs_dist_const = alpha.max(TOA::one().inf_sub(&alpha)?);
-    let inf_diff_dist_const = (TOA::one() + TOA::one()).inf_mul(&abs_dist_const)?;
     if candidates.windows(2).any(|w| w[0] >= w[1]) {
         return fallible!(MakeTransformation, "candidates must be increasing");
     }
+    if alpha.is_sign_negative() || alpha > TOA::one() {
+        return fallible!(MakeTransformation, "alpha must be within [0, 1]")
+    }
+
+    let abs_dist_const = alpha.max(TOA::one().inf_sub(&alpha)?);
+    let inf_diff_dist_const = (TOA::one() + TOA::one()).inf_mul(&abs_dist_const)?;
+
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
@@ -77,6 +82,10 @@ pub fn make_sized_quantile_score_candidates<TIA: Number, TOA: Float>(
     if candidates.windows(2).any(|w| w[0] >= w[1]) {
         return fallible!(MakeTransformation, "candidates must be increasing");
     }
+    if alpha.is_sign_negative() || alpha > TOA::one() {
+        return fallible!(MakeTransformation, "alpha must be within [0, 1]")
+    }
+    
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), size),
         VectorDomain::new_all(),

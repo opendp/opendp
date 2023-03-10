@@ -40,6 +40,10 @@ The unsized version has a more thorough explanation of the utility function.
 \label{sec:sized-python-pseudocode}
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/make_sized_quantile_score_candidates.py}
 
+\subsection*{Postcondition}
+\validTransformation{(\texttt{size}, \texttt{candidates}, \texttt{alpha})}{\texttt{make\_sized\_quantile\_score\_candidates}}
+
+\section{Proof}
 \subsection{Appropriate Output Domain}
 The raw type and domain are equivalent, save for potential nullity in the atomic type. 
 The scalar scorer structurally cannot emit null, because the input argument is non-null.

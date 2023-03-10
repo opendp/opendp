@@ -1,7 +1,9 @@
 # type: ignore
 def make_sized_quantile_score_candidates(size: usize, candidates: List[TIA], alpha: TOA):
     for i in range(len(candidates) - 1):
-        assert candidates[i] > candidates[i + 1]
+        assert candidates[i] < candidates[i + 1]
+    
+    assert 0 <= alpha <= 1
 
     def function(arg: List[TIA]):
         return score(arg, candidates, alpha)
