@@ -92,7 +92,7 @@ impl Debug for Column {
 
  impl PartialEq for Column {
      fn eq(&self, other: &Self) -> bool {
-         self.0.eq(other.0.as_any())
+         self.0.eq(&other.0)
      }
  }
 

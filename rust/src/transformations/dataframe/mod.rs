@@ -12,8 +12,8 @@ pub use subset::*;
 
 use std::hash::Hash;
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
-//use std::collections::hash_map::Entry;
+use std::fmt::{Debug};
+use std::collections::hash_map::Entry;
 
 use crate::core::Domain;
 use crate::data::{Column, IsVec};
@@ -32,19 +32,19 @@ pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 /// colName_domain (colunms names) are elements of key_domain (of type DK) and
 /// values are elements of value_domain (of type DV).
 /// 
-/// NC: Categorical Colunm names
+/// TC: Categorical Colunm names
 /// CA: Colunms Categories 
 /// Counts: CaN Counts for Sized dataframe
 /// # Example
-#[derive(PartialEq, Clone)]
-pub struct SizedDataFrameDomain<NC: Eq + Hash + Clone>
+#[derive(PartialEq, Clone, Debug)]
+pub struct SizedDataFrameDomain<TC: Eq + Hash + Clone>
 {
-    pub categories_keys: HashMap<NC, Box<dyn IsVec>>,
-    pub categories_counts: HashMap<NC, Vec<usize>>
+    pub categories_keys: HashMap<TC, Box<dyn IsVec>>,
+    pub categories_counts: HashMap<TC, Vec<usize>>
 }
 
-impl<NC: Eq + Hash + Clone> SizedDataFrameDomain<NC> {
-    pub fn new<CA: 'static + Eq + Hash + Debug + Clone>(categories_keys: HashMap<NC, Vec<CA>>, categories_counts: HashMap<NC, Vec<usize>>) -> Fallible<Self> {
+impl<TC: Eq + Hash + Clone> SizedDataFrameDomain<TC> {
+    pub fn new<CA: 'static + Eq + Hash + Debug + Clone>(categories_keys: HashMap<TC, Vec<CA>>, categories_counts: HashMap<TC, Vec<usize>>) -> Fallible<Self> {
         if categories_keys.len() == categories_counts.len() && !categories_keys.keys().all(|k| categories_counts.contains_key(k)) {
             return fallible!(FailedFunction, "Set of colunms with keys and counts must be indentical.")
         }
@@ -59,7 +59,7 @@ impl<NC: Eq + Hash + Clone> SizedDataFrameDomain<NC> {
     }
 }
 
-impl<NC: CheckNull> SizedDataFrameDomain<NC> where NC: Eq + Hash + Clone {
+impl<TC: CheckNull> SizedDataFrameDomain<TC> where TC: Eq + Hash + Clone {
     pub fn Default() -> Self  {
         SizedDataFrameDomain {
             categories_keys: HashMap::new(),
@@ -68,8 +68,8 @@ impl<NC: CheckNull> SizedDataFrameDomain<NC> where NC: Eq + Hash + Clone {
     }
 }
 
-impl<NC: Eq + Hash> SizedDataFrameDomain<NC> where NC: Clone {
-    pub fn add_categorical_colunm<CA: 'static + Eq + Hash + Debug + Clone>(&mut self, col_name: NC, column_categories: Vec<CA>, colummn_counts: Vec<usize>) -> Fallible<bool>  {
+impl<TC: Eq + Hash> SizedDataFrameDomain<TC> where TC: Clone {
+    pub fn add_categorical_colunm<CA: 'static + Eq + Hash + Debug + Clone>(&mut self, col_name: TC, column_categories: Vec<CA>, colummn_counts: Vec<usize>) -> Fallible<bool>  {
         if column_categories.len() != colummn_counts.len() {
             return fallible!(FailedFunction, "Colunm categories and counts must be indentical.")
         }
@@ -79,15 +79,8 @@ impl<NC: Eq + Hash> SizedDataFrameDomain<NC> where NC: Clone {
     }
 }
 
-
- impl<NC: Eq + Hash + Debug + Clone> Debug for SizedDataFrameDomain<NC> {
-     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-         write!(f, "Categorical columns and associated colunms are ({:?})", (self.categories_keys.clone(), self.categories_counts.clone()))
-     }
- }
-
-impl<NC: CheckNull + Debug + Clone> Domain for SizedDataFrameDomain<NC> where NC: Eq + Hash {
-    type Carrier = HashMap<NC, Column>;
+impl<TC: CheckNull + Debug + Clone> Domain for SizedDataFrameDomain<TC> where TC: Eq + Hash {
+    type Carrier = HashMap<TC, Column>;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         // To be impletemented later
         Ok(true)
@@ -99,22 +92,22 @@ pub trait CatVec: IsVec {
     fn counts(&self, cats: &dyn CatVec) -> Option<Vec<usize>>;
 }
 
-// impl<T: 'static + Eq + Hash> CatVec for Vec<T>
-// where
-//     Vec<T>: IsVec,
-// {
-//     fn counts(&self, cats: &dyn CatVec) -> Option<Vec<usize>> {
-//         let cats = cats.as_any().downcast_ref::<Vec<T>>()?;
-//         let mut counts: HashMap<&T, usize> = cats.into_iter().map(|cat| (cat, 0)).collect();
+impl<T: 'static + Eq + Hash> CatVec for Vec<T>
+where
+    Vec<T>: IsVec,
+{
+    fn counts(&self, cats: &dyn CatVec) -> Option<Vec<usize>> {
+        let cats = cats.as_any().downcast_ref::<Vec<T>>()?;
+        let mut counts: HashMap<&T, usize> = cats.into_iter().map(|cat| (cat, 0)).collect();
         
-//         self.iter().try_for_each(|v| match counts.entry(v) {
-//             Entry::Occupied(v) => {
-//                 *v.get_mut() += 1;
-//                 Some(())
-//             },
-//             Entry::Vacant(_) => None,
-//         })?;
+        self.iter().try_for_each(|v| match counts.entry(v) {
+            Entry::Occupied(v) => {
+                *v.into_mut() += 1;
+                Some(())
+            },
+            Entry::Vacant(_) => None,
+        })?;
 
-//         Some(cats.iter().map(|c| counts.remove(c).unwrap()).collect())
-//     }
-// }
+        Some(cats.iter().map(|c| counts.remove(c).unwrap()).collect())
+    }
+}
