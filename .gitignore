@@ -170,6 +170,3 @@ Cargo.lock
 out/
 
 /python/wheelhouse
-
-out/
-out_deps/
