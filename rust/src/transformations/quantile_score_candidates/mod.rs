@@ -47,6 +47,7 @@ where
     }
 }
 
+#[bootstrap(features("contrib"))]
 /// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
 ///
 /// # Arguments
@@ -92,7 +93,7 @@ pub fn make_quantile_score_candidates<TIA: Number, F: IntoFrac>(
     ))
 }
 
-#[bootstrap(features("contrib"), generics(TOA(default = "float")))]
+#[bootstrap(features("contrib"))]
 /// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
 ///
 /// # Arguments
@@ -179,12 +180,11 @@ fn score<TIA: PartialOrd>(
     // now that we have num_lte and num_eq, score all candidates
     num_lt
         .into_iter()
-        .map(|lt| lt.min(size_limit))
-        .zip(num_eq.into_iter().map(|eq| eq.min(size_limit)))
+        .zip(num_eq.into_iter())
         // score function cannot overflow.
         //     lt <= size_limit, so 0 <= alpha_denom * lt <= usize::MAX
-        //     eq <= size_limit, so 0 <= size_limit - eq
-        .map(|(lt, eq)| (alpha_den * lt).abs_diff(alpha_num * (size_limit - eq)))
+        //     n - eq <= size_limit, so 0 <= size_limit - eq
+        .map(|(lt, eq)| (alpha_den * lt.min(size_limit)).abs_diff(alpha_num * (x.len() - eq).min(size_limit)))
         .collect()
 }
 

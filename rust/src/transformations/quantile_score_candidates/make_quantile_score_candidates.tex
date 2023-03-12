@@ -140,7 +140,7 @@ $\alpha_{den}$ is chosen sufficiently small such that $\alpha_{den} \cdot l$ is 
 Instead of sampling the dataset size down, limit both counts to be at most $l$ and replace $|X|$ with $l$.
 
 \begin{equation}
-    \textrm{score}(X, c, \alpha_{num}, \alpha_{den}, l) = \mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < c), l), \alpha_{num} \cdot (l - \min(\#(X = c), l)))
+    \textrm{score}(X, c, \alpha_{num}, \alpha_{den}, l) = \mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < c), l), \alpha_{num} \cdot \min(|X| - \#(X = c), l))
 \end{equation}
 
 Should we compute counts with a 64-bit integer, we might choose $\alpha_{den}$ to be 10,000.
@@ -186,10 +186,10 @@ For convenience, let $s = \function(X)$.
 
 \begin{align*}
     d_\infty(s_i, s'_i) &= \max\limits_{i} |s_i - s'_i| &&\text{by definition of } d_\infty \\
-    &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < C_i), l), \alpha_{num} \cdot (l - \min(\#(X = C_i), l)))
-        \\&\hspace{1cm}\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X' < C_i), l), \alpha_{num} \cdot (l - \min(\#(X' = C_i), l)))| \\
-    &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(X < C_i), l) - \alpha \cdot (l - \min(\#(X = C_i), l))|
-        \\&\hspace{1cm}|\min(\#(X' < C_i), l) - \alpha \cdot (l - \min(\#(X' = C_i), l))|| \\
+    &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < C_i), l), \alpha_{num} \cdot \min(|X| - \#(X = C_i), l)) &&\text{by definition of } \function
+        \\&\hspace{1cm}\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X' < C_i), l), \alpha_{num} \cdot \min(|X'| - \#(X' = C_i), l))| \\
+    &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(X < C_i), l) - \alpha \cdot \min(|X| - \#(X = C_i), l)|
+        \\&\hspace{1cm}|\min(\#(X' < C_i), l) - \alpha \cdot \min(|X'| - \#(X' = C_i), l)|| \\
     &\le \alpha_{den} \cdot \max\limits_{i} ||\#(X < C_i) - \alpha \cdot (|X| - \#(X = C_i))|
         \\&\hspace{1cm}|\#(X' < C_i) - \alpha \cdot (|X| - \#(X' = C_i))|| \\
 \intertext{Consider each of the three cases of adding or removing an element in X.}

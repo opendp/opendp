@@ -39,6 +39,7 @@ __all__ = [
     "make_metric_bounded",
     "make_metric_unbounded",
     "make_ordered_random",
+    "make_quantile_score_candidates",
     "make_quantiles_from_counts",
     "make_resize",
     "make_select_column",
@@ -1772,6 +1773,62 @@ def make_ordered_random(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_domain, c_D, c_MI), Transformation))
+    
+    return output
+
+
+def make_quantile_score_candidates(
+    candidates: Any,
+    alpha: Any,
+    TIA: RuntimeTypeDescriptor = None,
+    F: RuntimeTypeDescriptor = None
+) -> Transformation:
+    """Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
+    
+    [make_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_quantile_score_candidates.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AllDomain<usize>>`
+    * Input Metric:   `SymmetricDistance`
+    * Output Metric:  `InfDifferenceDistance<usize>`
+    
+    **Proof Definition:**
+    
+    [(Proof Document)](https://docs.opendp.org/en/latest/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+    
+    :param candidates: Potential quantiles to score
+    :type candidates: Any
+    :param alpha: a value in [0, 1]. Choose 0.5 for median
+    :type alpha: Any
+    :param TIA: Atomic Input Type. Type of elements in the input vector
+    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param F: 
+    :type F: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Transformation
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=get_first(candidates))
+    F = RuntimeType.parse_or_infer(type_name=F, public_example=alpha)
+    
+    # Convert arguments to c types.
+    c_candidates = py_to_c(candidates, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[TIA]))
+    c_alpha = py_to_c(alpha, c_type=AnyObjectPtr, type_name=F)
+    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_F = py_to_c(F, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_transformations__make_quantile_score_candidates
+    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_candidates, c_alpha, c_TIA, c_F), Transformation))
     
     return output
 

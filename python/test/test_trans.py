@@ -380,4 +380,4 @@ def test_quantile_score_candidates():
     scores = trans(list(range(100)))
     print(scores)
 
-    assert trans.map(1) >= 1.
+    assert trans.map(1) == 10_000

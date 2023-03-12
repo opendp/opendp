@@ -42,7 +42,7 @@ def make_base_discrete_exponential(
     
     :param temperature: Higher temperatures are more private.
     :type temperature: Any
-    :param optimize: 
+    :param optimize: Indicate whether to privately return the "Max" or "Min"
     :type optimize: str
     :param TIA: Atom Input Type. Type of each element in the score vector.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`

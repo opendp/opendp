@@ -30,7 +30,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_exponential(
     let TIA = try_!(Type::try_from(TIA));
     let QO = try_!(Type::try_from(QO));
     dispatch!(monomorphize, [
-        (TIA, @numbers),
+        (TIA, [u32, u64, i32, i64, usize, f32, f64]),
         (QO, @floats)
     ], (temperature, optimize))
 }
