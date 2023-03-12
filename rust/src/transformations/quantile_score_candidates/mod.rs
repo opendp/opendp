@@ -7,13 +7,46 @@ use crate::{
     domains::{AllDomain, SizedDomain, VectorDomain},
     error::Fallible,
     metrics::{InfDifferenceDistance, SymmetricDistance},
-    traits::{ExactIntCast, Float, Number},
+    traits::{AlertingMul, ExactIntCast, Float, InfDiv, Number, RoundCast},
 };
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[bootstrap(features("contrib"), generics(TOA(default = "float")))]
+pub trait IntoFrac {
+    fn into_frac(self, size: Option<usize>) -> Fallible<(usize, usize)>;
+}
+impl<T> IntoFrac for (T, T)
+where
+    usize: ExactIntCast<T>,
+{
+    fn into_frac(self, _size: Option<usize>) -> Fallible<(usize, usize)> {
+        Ok((
+            usize::exact_int_cast(self.0)?,
+            usize::exact_int_cast(self.1)?,
+        ))
+    }
+}
+
+impl<F: Float + RoundCast<usize>> IntoFrac for F
+where
+    usize: RoundCast<F>,
+{
+    fn into_frac(self, size: Option<usize>) -> Fallible<(usize, usize)> {
+        let denom = if let Some(size) = size {
+            // choose the finest granularity that won't overflow
+            // must have that size * denom < MAX, so let denom = MAX // size
+            (usize::MAX).neg_inf_div(&size)?
+        } else {
+            // default to an alpha granularity of .0001
+            10_000
+        };
+        // numer = alpha * denom
+        let numer = usize::round_cast(self * F::round_cast(denom.clone())?)?;
+        Ok((numer, denom))
+    }
+}
+
 /// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
 ///
 /// # Arguments
@@ -23,32 +56,35 @@ mod ffi;
 /// # Generics
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
 /// * `TOA` - Atomic Output Type. Type of elements in the score vector
-pub fn make_quantile_score_candidates<TIA: Number, TOA: Float>(
+pub fn make_quantile_score_candidates<TIA: Number, F: IntoFrac>(
     candidates: Vec<TIA>,
-    alpha: TOA,
+    alpha: F,
 ) -> Fallible<
     Transformation<
         VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<TOA>>,
+        VectorDomain<AllDomain<usize>>,
         SymmetricDistance,
-        InfDifferenceDistance<TOA>,
+        InfDifferenceDistance<usize>,
     >,
 > {
     if candidates.windows(2).any(|w| w[0] >= w[1]) {
         return fallible!(MakeTransformation, "candidates must be increasing");
     }
-    if alpha.is_sign_negative() || alpha > TOA::one() {
-        return fallible!(MakeTransformation, "alpha must be within [0, 1]")
+    let (alpha_num, alpha_den) = alpha.into_frac(None)?;
+    if alpha_num > alpha_den || alpha_den == 0 {
+        return fallible!(MakeTransformation, "alpha must be within [0, 1]");
     }
 
-    let abs_dist_const = alpha.max(TOA::one().inf_sub(&alpha)?);
-    let inf_diff_dist_const = (TOA::one() + TOA::one()).inf_mul(&abs_dist_const)?;
+    let size_limit = (usize::MAX).neg_inf_div(&alpha_den)?;
+
+    let abs_dist_const = alpha_num.max(alpha_den - alpha_num);
+    let inf_diff_dist_const = abs_dist_const.alerting_mul(&2)?;
 
     Ok(Transformation::new(
         VectorDomain::new_all(),
         VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<TIA>| {
-            score(arg.clone(), &candidates, alpha.clone())
+        Function::new(move |arg: &Vec<TIA>| {
+            score(arg.clone(), &candidates, alpha_num, alpha_den, size_limit)
         }),
         SymmetricDistance::default(),
         InfDifferenceDistance::default(),
@@ -66,35 +102,43 @@ pub fn make_quantile_score_candidates<TIA: Number, TOA: Float>(
 ///
 /// # Generics
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
-/// * `TOA` - Atomic Output Type. Type of elements in the score vector
-pub fn make_sized_quantile_score_candidates<TIA: Number, TOA: Float>(
+/// * `TOA` - Atomic Output Type (Integer). Type of elements in the score vector
+pub fn make_sized_quantile_score_candidates<TIA: Number, F: IntoFrac>(
     size: usize,
     candidates: Vec<TIA>,
-    alpha: TOA,
+    alpha: F,
 ) -> Fallible<
     Transformation<
         SizedDomain<VectorDomain<AllDomain<TIA>>>,
-        VectorDomain<AllDomain<TOA>>,
+        VectorDomain<AllDomain<usize>>,
         SymmetricDistance,
-        InfDifferenceDistance<TOA>,
+        InfDifferenceDistance<usize>,
     >,
 > {
     if candidates.windows(2).any(|w| w[0] >= w[1]) {
         return fallible!(MakeTransformation, "candidates must be increasing");
     }
-    if alpha.is_sign_negative() || alpha > TOA::one() {
-        return fallible!(MakeTransformation, "alpha must be within [0, 1]")
+    let (alpha_num, alpha_den) = alpha.into_frac(Some(size))?;
+    if alpha_num > alpha_den || alpha_den == 0 {
+        return fallible!(MakeTransformation, "alpha must be within [0, 1]");
     }
-    
+
+    // ensures that there is no overflow
+    size.alerting_mul(&alpha_den)?;
+
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new_all(), size),
         VectorDomain::new_all(),
-        Function::new_fallible(move |arg: &Vec<TIA>| {
-            score(arg.clone(), &candidates, alpha.clone())
+        Function::new(move |arg: &Vec<TIA>| {
+            score(arg.clone(), &candidates, alpha_num, alpha_den, size)
         }),
         SymmetricDistance::default(),
         InfDifferenceDistance::default(),
-        StabilityMap::new_from_constant(TOA::one() + TOA::one()),
+        StabilityMap::new_fallible(move |d_in| {
+            usize::exact_int_cast(d_in / 2)?
+                .alerting_mul(&4)?
+                .alerting_mul(&alpha_den)
+        }),
     ))
 }
 
@@ -111,11 +155,13 @@ pub fn make_sized_quantile_score_candidates<TIA: Number, TOA: Float>(
 ///
 /// # Returns
 /// Score of each candidate
-fn score<TI, TO>(mut x: Vec<TI>, candidates: &Vec<TI>, alpha: TO) -> Fallible<Vec<TO>>
-where
-    TI: PartialOrd,
-    TO: Float + ExactIntCast<usize>,
-{
+fn score<TIA: PartialOrd>(
+    mut x: Vec<TIA>,
+    candidates: &Vec<TIA>,
+    alpha_num: usize,
+    alpha_den: usize,
+    size_limit: usize,
+) -> Vec<usize> {
     // x must be sorted because counts are done via binary search
     x.sort_by(|a, b| a.partial_cmp(&b).unwrap_or(Ordering::Equal));
 
@@ -130,13 +176,15 @@ where
         0,
     );
 
-    // now that we have num_lte, score all candidates
-    let n = TO::exact_int_cast(x.len())?;
+    // now that we have num_lte and num_eq, score all candidates
     num_lt
         .into_iter()
-        .map(TO::exact_int_cast)
-        .zip(num_eq.into_iter().map(TO::exact_int_cast))
-        .map(|(lt, eq)| Ok(-(lt? - alpha * (n - eq?)).abs()))
+        .map(|lt| lt.min(size_limit))
+        .zip(num_eq.into_iter().map(|eq| eq.min(size_limit)))
+        // score function cannot overflow.
+        //     lt <= size_limit, so 0 <= alpha_denom * lt <= usize::MAX
+        //     eq <= size_limit, so 0 <= size_limit - eq
+        .map(|(lt, eq)| (alpha_den * lt).abs_diff(alpha_num * (size_limit - eq)))
         .collect()
 }
 
@@ -327,11 +375,11 @@ mod test_scorer {
         let edges = vec![-1, 2, 4, 7, 12, 22];
 
         let x = vec![0, 2, 2, 3, 5, 7, 7, 7];
-        let scores = score(x, &edges, 0.5)?;
+        let scores = score(x, &edges, 1, 2, 8);
         println!("{:?}", scores);
 
         let x = vec![0, 2, 2, 3, 4, 7, 7, 7];
-        let scores = score(x, &edges, 0.5)?;
+        let scores = score(x, &edges, 1, 2, 8);
         println!("{:?}", scores);
         Ok(())
     }
@@ -339,7 +387,7 @@ mod test_scorer {
 
 #[cfg(test)]
 mod test_trans {
-    use crate::measurements::make_base_discrete_exponential;
+    use crate::measurements::{make_base_discrete_exponential, Optimize};
 
     use super::*;
 
@@ -348,7 +396,7 @@ mod test_trans {
         let candidates = vec![7, 12, 14, 72, 76];
         let trans = make_quantile_score_candidates(candidates.clone(), 0.75)?;
         let trans_sized = make_sized_quantile_score_candidates(100, candidates, 0.75)?;
-        let exp_mech = make_base_discrete_exponential(1.)?;
+        let exp_mech = make_base_discrete_exponential(1., Optimize::Min)?;
 
         let quantile_meas = (trans >> exp_mech.clone())?;
         let idx = quantile_meas.invoke(&(0..100).collect())?;

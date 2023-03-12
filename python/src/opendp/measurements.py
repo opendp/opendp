@@ -21,10 +21,11 @@ __all__ = [
 
 def make_base_discrete_exponential(
     temperature: Any,
+    optimize: str,
     TIA: RuntimeTypeDescriptor,
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that approximately selects the best index from a vector of scores.
+    """Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
     
     [make_base_discrete_exponential in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_exponential.html)
     
@@ -41,6 +42,8 @@ def make_base_discrete_exponential(
     
     :param temperature: Higher temperatures are more private.
     :type temperature: Any
+    :param optimize: 
+    :type optimize: str
     :param TIA: Atom Input Type. Type of each element in the score vector.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Output Distance Type.
@@ -58,15 +61,16 @@ def make_base_discrete_exponential(
     
     # Convert arguments to c types.
     c_temperature = py_to_c(temperature, c_type=AnyObjectPtr, type_name=QO)
+    c_optimize = py_to_c(optimize, c_type=ctypes.c_char_p, type_name=String)
     c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_discrete_exponential
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_temperature, c_TIA, c_QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_temperature, c_optimize, c_TIA, c_QO), Measurement))
     
     return output
 

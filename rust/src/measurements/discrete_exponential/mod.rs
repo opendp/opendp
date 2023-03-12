@@ -12,17 +12,27 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[bootstrap(features("contrib", "floating-point"))]
+pub enum Optimize {
+    Max,
+    Min,
+}
+
+#[bootstrap(
+    features("contrib", "floating-point"),
+    arguments(optimize(c_type = "char *", rust_type = "String"))
+)]
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
-/// 
+///
 /// # Arguments
 /// * `temperature` - Higher temperatures are more private.
-/// 
+/// * `optimize` - Indicate whether to privately return the "Max" or "Min"
+///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
 /// * `QO` - Output Distance Type.
 pub fn make_base_discrete_exponential<TIA, QO>(
     temperature: QO,
+    optimize: Optimize,
 ) -> Fallible<
     Measurement<VectorDomain<AllDomain<TIA>>, usize, InfDifferenceDistance<TIA>, MaxDivergence<QO>>,
 >
@@ -33,12 +43,18 @@ where
     if temperature.is_sign_negative() || temperature.is_zero() {
         return fallible!(MakeMeasurement, "temperature must be positive");
     }
+
+    let sign = match optimize {
+        Optimize::Max => QO::one(),
+        Optimize::Min => QO::one().neg(),
+    };
+
     Ok(Measurement::new(
         VectorDomain::new_all(),
         Function::new_fallible(move |arg: &Vec<TIA>| {
             arg.iter()
                 .cloned()
-                .map(|v| QO::round_cast(v).map(|v| v / temperature))
+                .map(|v| QO::round_cast(v).map(|v| sign * v / temperature))
                 // enumerate before sampling so that indexes are inside the result
                 .enumerate()
                 // gumbel samples are porous
@@ -60,6 +76,9 @@ where
             if d_in.is_sign_negative() {
                 return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }
+            if d_in.is_zero() {
+                return Ok(QO::zero());
+            }
             // d_out >= d_in / temperature
             d_in.inf_div(&temperature)
         }),
@@ -73,7 +92,7 @@ pub mod test_exponential {
 
     #[test]
     fn test_exponential() -> Fallible<()> {
-        let de = make_base_discrete_exponential(1.)?;
+        let de = make_base_discrete_exponential(1., Optimize::Max)?;
         let release = de.invoke(&vec![1., 2., 3., 2., 1.])?;
         println!("{:?}", release);
 

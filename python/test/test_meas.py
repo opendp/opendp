@@ -177,6 +177,6 @@ def test_randomized_response_bool():
 def test_discrete_exponential():
     from opendp.measurements import make_base_discrete_exponential
 
-    meas = make_base_discrete_exponential(1., TIA=int)
+    meas = make_base_discrete_exponential(1., "maximize", TIA=int)
     print(meas(list(range(10))))
     print(meas.map(2))

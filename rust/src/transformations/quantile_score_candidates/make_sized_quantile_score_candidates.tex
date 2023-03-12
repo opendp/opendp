@@ -49,8 +49,8 @@ The raw type and domain are equivalent, save for potential nullity in the atomic
 The scalar scorer structurally cannot emit null, because the input argument is non-null.
 
 \subsection{Domain-metric compatibility}
-On the input side, SymmetricDistance is well-defined on sized VectorDomains. 
-On the output side, InfDifferenceDistance is well-defined on VectorDomains.
+On the input side, \rustdoc{metrics/struct}{SymmetricDistance} is well-defined on \rustdoc{domains/struct}{VectorDomain}. 
+On the output side, \rustdoc{metrics/struct}{InfDifferenceDistance} is well-defined on \rustdoc{domains/struct}{VectorDomain} consisting of numeric elements.
 
 \subsection{Stability Guarantee}
 
@@ -63,24 +63,30 @@ On the output side, InfDifferenceDistance is well-defined on VectorDomains.
 \begin{proof}
 Assume $d_{CO}(X, X') \le 1$. 
 For convenience, let $s = \function(X)$.
-Consider each of the four cases of changing a row in X. 
 \begin{align*}
     d_\infty(s_i, s'_i) &= \max\limits_{i} |s_i - s'_i| &&\text{by definition of } d_\infty \\
+    &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X < C_i), l), \alpha_{num} \cdot (l - \min(\#(X = C_i), l))) &&\text{by definition of } \function
+        \\&\hspace{1cm}\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(X' < C_i), l), \alpha_{num} \cdot (l - \min(\#(X' = C_i), l)))| \\
+    &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(X < C_i), l) - \alpha \cdot (l - \min(\#(X = C_i), l))|
+        \\&\hspace{1cm}|\min(\#(X' < C_i), l) - \alpha \cdot (l - \min(\#(X' = C_i), l))|| \\
+    &= \alpha_{den} \cdot \max\limits_{i} ||\#(X < C_i) - \alpha \cdot (|X| - \#(X = C_i))|
+        \\&\hspace{1cm}|\#(X' < C_i) - \alpha \cdot (|X| - \#(X' = C_i))|| \\
+\intertext{Consider each of the four cases of changing a row in X.}
 \intertext{Case 1. Assume $X'$ is equal to $X$, but with some $X_j < C_i$ replaced with $X'_j > C_i$.}
-    &= 2 \max\limits_{X \sim X'} \max\limits_{i} ||(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| 
-        \\&\hspace{1cm} - (1 - \alpha) (\#(X < C_i) - 1) - \alpha (\#(X > C_i) + 1)|| &&\text{by definition of }\function \\
-    &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} ||(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)|
-        \\&\hspace{1cm} - (|(1 - \alpha) \#(X < C_i) - \alpha \#(X > C_i)| + |1|)| &&\text{by triangle inequality} \\
-    &= 2 \max\limits_{X \sim X'} \max\limits_{i} |1| &&\text{scores cancel}\\
-    &= 2
+    &= 2 \cdot \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(X < C_i) - \alpha \cdot \#(X > C_i)| 
+        \\&\hspace{1cm} - (1 - \alpha) \cdot (\#(X < C_i) - 1) - \alpha \cdot (\#(X > C_i) + 1)|| &&\text{by definition of }\function \\
+    &\leq 2 \cdot \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(X < C_i) - \alpha \cdot \#(X > C_i)|
+        \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(X < C_i) - \alpha \cdot \#(X > C_i)| + |1|)| &&\text{by triangle inequality} \\
+    &= 2 \cdot \alpha_{den} \cdot \max\limits_{i} |1| &&\text{scores cancel}\\
+    &= 2 \cdot \alpha_{den}
 \intertext{Case 2. Assume $X'$ is equal to $X$, but with some $X_j > C_i$ replaced with $X'_j < C_i$.}
-    &= 2 &&\text{by symmetry, follows from Case 1.}
+    &= 2 \cdot \alpha_{den} &&\text{by symmetry, follows from Case 1.}
 \intertext{Case 3. Assume $X'$ is equal to $X$, but with some $X_j \neq C_i$ replaced with $C_i$.}
-    &\leq 2 max(\alpha, 1 - \alpha) &&\text{equivalent to one removal (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})} \\
+    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{equivalent to one removal (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})} \\
 \intertext{Case 4. Assume $X'$ is equal to $X$, but with some $X_j = C_i$ replaced with $X'_j \neq C_i$.}
-    &\leq 2 max(\alpha, 1 - \alpha) &&\text{equivalent to one addition (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})} \\
+    &\leq 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{equivalent to one addition (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})} \\
 \intertext{Take the union bound over all cases.}
-    d_\infty(s_i, s'_i) &\le max(2, 2 max(\alpha, 1 - \alpha)) = 2 &&\text{since } max(\alpha, 1 - \alpha) \leq 1
+    d_\infty(s_i, s'_i) &\le \max(2 \cdot \alpha_{den}, 2 \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num})) = 2 \cdot \alpha_{den} &&\text{since } \max(\alpha, 1 - \alpha) \leq 1
 \end{align*}
 \end{proof}
 
@@ -93,8 +99,8 @@ Assume $X, X'$ are \din-close under \texttt{input\_metric} and that $\texttt{sta
     &= \max\limits_{X \sim X'} \max\limits_{ij} |(s_i - s'_i) - (s_j - s'_j)| &&\text{by definition of }\rustdoc{metrics/struct}{InfDifferenceDistance} \\
     &\leq 2 \max\limits_{X \sim X'} \max\limits_{i} |s_i - s'_i| &&\text{$s$ is not monotonic; take looser bound}\\
     &\leq 2 \sum_j^{\din // 2} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property where } d_{CO}(Z_i, Z_{i+1}) = 1, X = Z_0 \text{ and } Z_\din = X' \\
-    &\leq 2 \sum_j^{\din // 2} 2 &&\text{by \ref{single-change-stab}} \\
-    &\leq 4 (\din // 2) \\
+    &\leq 2 \sum_j^{\din // 2} 2 \cdot \alpha_{den} &&\text{by \ref{single-change-stab}} \\
+    &\leq 4 (\din // 2) \cdot \alpha_{den} \\
 \end{align*}
 
 
