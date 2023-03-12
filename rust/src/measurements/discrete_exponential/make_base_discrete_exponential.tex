@@ -153,13 +153,11 @@ It is shown in \ref{privacy-guarantee} that a tighter analysis of the exponentia
 \section{Hoare Triple}
 \subsection*{Precondition}
 \begin{itemize}
-    \item \texttt{TIA} (input atom type) is a type with trait \rustdoc{traits/trait}{Number}.
+    \item \texttt{TIA} (input atom type) is a type with traits \rustdoc{traits/trait}{Number} and \rustdoc{traits/samplers/trait}{CastInternalRational}
 
     \item \texttt{QO} (output distance type) is a type with traits \rustdoc{traits/trait}{Float}, 
-    \rustdoc{traits/trait}{InfCast} from type \texttt{TIA}, 
-    \rustdoc{traits/trait}{RoundCast} from type \texttt{TIA}, 
-    and \rustdoc{traits/samplers/trait}{SampleUniform}
-        
+    \rustdoc{traits/samplers/trait}{CastInternalRational} and
+    \rustdoc{traits/trait}{DistanceConstant} from type \texttt{TIA}
 \end{itemize}
 
 \subsection*{Function}
