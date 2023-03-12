@@ -387,27 +387,20 @@ mod test_scorer {
 
 #[cfg(test)]
 mod test_trans {
-    use crate::measurements::{make_base_discrete_exponential, Optimize};
-
     use super::*;
 
     #[test]
-    fn test_int() -> Fallible<()> {
+    fn test_scorer() -> Fallible<()> {
         let candidates = vec![7, 12, 14, 72, 76];
         let trans = make_quantile_score_candidates(candidates.clone(), 0.75)?;
         let trans_sized = make_sized_quantile_score_candidates(100, candidates, 0.75)?;
-        let exp_mech = make_base_discrete_exponential(1., Optimize::Min)?;
 
-        let quantile_meas = (trans >> exp_mech.clone())?;
-        let idx = quantile_meas.invoke(&(0..100).collect())?;
-        println!("idx {:?}", idx);
-        println!("{:?}", quantile_meas.check(&2, &2.)?);
+        let _scores = trans.invoke(&(0..100).collect())?;
+        let _scores_sized = trans_sized.invoke(&(0..100).collect())?;
 
-        let quantile_sized_meas = (trans_sized >> exp_mech)?;
-        let idx = quantile_sized_meas.invoke(&(0..100).collect())?;
-        println!("idx sized {:?}", idx);
-        println!("{:?}", quantile_sized_meas.check(&2, &2.)?);
-
+        println!("      map: {:?}", trans.map(&1)?);
+        println!("sized map: {:?}", trans_sized.map(&2)?);
+        
         Ok(())
     }
 }

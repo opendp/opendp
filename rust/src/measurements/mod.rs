@@ -22,9 +22,9 @@ mod gaussian;
 #[cfg(all(feature = "floating-point", feature = "contrib", feature = "use-mpfr"))]
 pub use crate::measurements::gaussian::*;
 
-#[cfg(all(feature="floating-point", feature="contrib"))]
+#[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub mod discrete_exponential;
-#[cfg(all(feature="floating-point", feature="contrib"))]
+#[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub use crate::measurements::discrete_exponential::*;
 
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
