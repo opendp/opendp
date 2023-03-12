@@ -44,6 +44,4 @@ impl SampleDiscreteGaussianZ2k for f32 {
 }
 
 pub trait CastInternalRational {}
-
-impl CastInternalRational for f32 {}
-impl CastInternalRational for f64 {}
+impl<T> CastInternalRational for T {}

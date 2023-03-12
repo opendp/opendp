@@ -387,8 +387,11 @@ mod test_scorer {
     }
 }
 
-#[cfg(test)]
+// feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
+#[cfg(all(test, feature = "use-mpfr"))]
 mod test_trans {
+    use crate::measurements::{make_base_discrete_exponential, Optimize};
+
     use super::*;
 
     #[test]
@@ -402,6 +405,33 @@ mod test_trans {
 
         println!("      map: {:?}", trans.map(&1)?);
         println!("sized map: {:?}", trans_sized.map(&2)?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_release() -> Fallible<()> {
+        let candidates = vec![7, 12, 14, 72, 76];
+        let trans = make_quantile_score_candidates(candidates, 0.75)?;
+        let exp_mech = make_base_discrete_exponential(trans.map(&1)? as f64, Optimize::Min)?;
+
+        let quantile_meas = (trans >> exp_mech.clone())?;
+        let idx = quantile_meas.invoke(&(0..100).collect())?;
+        println!("idx {:?}", idx);
+        assert!(quantile_meas.check(&1, &1.)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_release_sized() -> Fallible<()> {
+        let candidates = vec![7, 12, 14, 72, 76];
+        let trans_sized = make_sized_quantile_score_candidates(100, candidates, 0.75)?;
+        let exp_mech = make_base_discrete_exponential(trans_sized.map(&2)? as f64, Optimize::Min)?;
+
+        let quantile_sized_meas = (trans_sized >> exp_mech)?;
+        let idx = quantile_sized_meas.invoke(&(0..100).collect())?;
+        println!("idx sized {:?}", idx);
+        assert!(quantile_sized_meas.check(&1, &1.)?);
 
         Ok(())
     }

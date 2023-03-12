@@ -2,6 +2,12 @@
 //!
 //! The different [`crate::core::Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
+
+#[cfg(feature = "contrib")]
+mod discrete_exponential;
+#[cfg(feature = "contrib")]
+pub use crate::measurements::discrete_exponential::*;
+
 #[cfg(all(feature = "use-mpfr", feature = "contrib"))]
 mod discrete_gaussian;
 #[cfg(all(feature = "use-mpfr", feature = "contrib"))]

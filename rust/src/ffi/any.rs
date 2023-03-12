@@ -545,8 +545,10 @@ pub type AnyQueryable = Queryable<AnyObject, AnyObject>;
 mod tests {
     use crate::domains::{AtomDomain, BoundedDomain};
     use crate::error::*;
+    use crate::measurements;
     use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
+    use crate::transformations;
 
     use super::*;
 
@@ -616,20 +618,13 @@ mod tests {
     #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_any_chain() -> Fallible<()> {
-        use crate::measurements;
-        use crate::measures::ZeroConcentratedDivergence;
-        use crate::transformations;
-
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
         let t4 = transformations::make_clamp((0.0, 10.0))?.into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = measurements::make_base_gaussian::<AtomDomain<_>, ZeroConcentratedDivergence<_>>(
-            0.0, None,
-        )?
-        .into_any();
+        let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg)?;

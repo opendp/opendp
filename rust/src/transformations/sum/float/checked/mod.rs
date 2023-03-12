@@ -348,6 +348,8 @@ mod test_checks {
         Ok(())
     }
 
+    // feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
+    #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_sequential() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);
@@ -368,6 +370,8 @@ mod test_checks {
         Ok(())
     }
 
+    // feature-gated because non-mpfr InfCast errors on numbers greater than 2^52
+    #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_float_sum_overflows_pairwise() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);

@@ -1,11 +1,10 @@
-use crate::traits::ExactIntCast;
+use crate::{error::Fallible, traits::ExactIntCast};
 #[cfg(feature = "use-mpfr")]
 use rug::{
     ops::{AddAssignRound, DivAssignRound, MulAssignRound, PowAssignRound, SubAssignRound},
     Float,
 };
 
-use crate::error::Fallible;
 #[cfg(feature = "use-mpfr")]
 use crate::traits::InfCast;
 
@@ -184,6 +183,22 @@ pub trait InfSqrt: Sized {
     /// `self.neg_inf_log2()` either returns `Ok(out)`,
     /// where $out \le \sqrt{self}$, or `Err(e)`.
     fn neg_inf_sqrt(self) -> Fallible<Self>;
+}
+
+/// Fallible recip with specified rounding.
+///
+/// Throws an error if the ideal output is not finite or representable.
+pub trait InfRecip: Sized {
+    /// # Proof Definition
+    /// For any `self` of type `Self`,
+    /// `self.inf_recip()` either returns `Ok(out)`,
+    /// where $out \ge 1 / self$, or `Err(e)`.
+    fn inf_recip(self) -> Fallible<Self>;
+    /// # Proof Definition
+    /// For any `self` of type `Self`,
+    /// `self.neg_inf_recip()` either returns `Ok(out)`,
+    /// where $out \le 1 / self$, or `Err(e)`.
+    fn neg_inf_recip(self) -> Fallible<Self>;
 }
 
 /// Fallibly raise self to the power with specified rounding.
@@ -504,6 +519,7 @@ impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp_round, exp);
 impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p_round, ln_1p);
 impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1_round, exp_m1);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt_round, sqrt);
+impl_float_inf_uni!(f64, f32; InfRecip, inf_recip, neg_inf_recip, recip_round, recip);
 
 // TRAIT InfAdd, InfSub, InfMul, InfDiv (bivariate)
 macro_rules! impl_int_inf {
