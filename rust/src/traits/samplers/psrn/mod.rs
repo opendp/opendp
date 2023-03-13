@@ -69,10 +69,22 @@ impl GumbelPSRN {
     /// Computes the inverse cdf of the standard Gumbel with controlled rounding:
     /// $-ln(-ln(u))$ where $u \sim \mathrm{Uniform}(0, 1)$
     fn inverse_cdf(mut sample: Float, round: Round) -> Float {
+        fn complement(value: Round) -> Round {
+            match value {
+                Round::Up => Round::Down,
+                Round::Down => Round::Up,
+                _ => panic!("complement is only supported for Up/Down"),
+            }
+        }
+
+        // This round is behind two negations, so the rounding direction is preserved
         sample.ln_round(round);
         sample.neg_assign();
-        sample.ln_round(round);
+        
+        // This round is behind a negation, so the rounding direction is reversed
+        sample.ln_round(complement(round));
         sample.neg_assign();
+
         sample
     }
 
