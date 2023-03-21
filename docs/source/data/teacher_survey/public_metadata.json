@@ -1,9 +1,13 @@
 {
     "column_names": [
-        "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
+        "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
         "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
     ],
     "column_metadata": {
+        "name": {
+            "description": "name of individual",
+            "comment": "this column was randomly generated"
+        },
         "sex": {
             "keys": [1, 2, 3],
             "key_labels": ["Male", "Female", "Other"]
