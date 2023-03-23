@@ -18,7 +18,7 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(null_partition(default = false)),
-    generics(TK(default = "String"), TV(example = "$get_first(partition_keys)"))
+    generics(CA(default = "String"), TV(example = "$get_first(partition_keys)"))
 )]
 /// Make a Transformation that partitions a dataframe by a given column.
 /// 
@@ -30,40 +30,47 @@ mod ffi;
 /// 
 /// # Generics
 /// * `TC` - Type of column names.
-/// * `TK` - Type of values in the identifier column.
-pub fn make_sized_partition_by<TC: Hashable, TK: Hashable>(
+/// * `CA` - Type of values in the identifier column.
+pub fn make_sized_partition_by<TC: Hashable, CA: Hashable, MI: Metric>(
+    inputDomain: SizedDataFrameDomain<TC>,
+    inputMetric: MI,
     identifier_column: TC,
     keep_columns: Vec<TC>,
-    partition_number: usize,
     null_partition: bool,
 ) -> Fallible<
     Transformation<
-    DataFrameDomain2<TC>,
-        ProductDomain<DataFrameDomain2<TC>>,
+    SizedDataFrameDomain<TC>,
+        ProductDomain<SizedDataFrameDomain<TC>>,
         SymmetricDistance,
         ProductMetric<SymmetricDistance>,
     >,
 > {
-    let true_partitions = partition_number + 1;
-    let output_partitions = partition_number + if null_partition { 1 } else { 0 };
+    if !inputDomain.categories_keys.contains_key(identifier_column){
+        return fallible!(FailedFunction, "Data frame domain does not list the desired colunm as categorical variable.")
+    }
+
+    let partion_size = inputDomain.categories_keys.get(identifier_column).unwrap().len();
+    let true_partitions = partion_size + 1;
+    let output_partitions = partion_size + if null_partition { 1 } else { 0 };
     let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?;
 
-    // Create SizedDataFrameDomain with / without null partition
-    //let df_domain = SizedDataFrameDomain::new(HashMap::from([(identifier_column, column_categories)]), HashMap::from([(identifier_column, colummn_counts)]));
-    
     // Create Product<SizedDataFrameDomain>
-    let product_df_domain  = ProductDomain::new(
+    let mut product_df_domain  = ProductDomain::new(
         (0..output_partitions)
-            .map(|v| DataFrameDomain2<TK>::new(true,true))
+            .map(|v| inputDomain.clone())
             .collect(),
     );
+    (0..output_partitions)
+            .map(|v| (0..output_partitions).map( |d|
+                 if d != v {
+                    product_df_domain.inner_domains[v].categories_counts.get(identifier_column).unwrap()[d] = 0;
+                }));
 
     Ok(Transformation::new(
-        //df_domain,
-        DataFrameDomain2<TK>::new(true,true),
+        inputDomain,
         product_df_domain,
-        Function::new_fallible(move |df: &DataFrame2<TC>| {
-            let partition_indexes: HashMap<TK, usize> = df.categories_keys
+        Function::new_fallible(move |data: &DataFrame<TC>| {
+            let partition_indexes: HashMap<CA, usize> = inputDomain.categories_keys.get(identifier_column).unwrap()
         .iter()
         .cloned()
         .enumerate()
@@ -71,24 +78,24 @@ pub fn make_sized_partition_by<TC: Hashable, TK: Hashable>(
         .collect();
 
             // the partition to move each row into
-            let partition_ids: Vec<usize> = (df.data.get(&identifier_column))
+            let partition_ids: Vec<usize> = (data.get(&identifier_column))
                 .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
-                .as_form::<Vec<TV>>()?
+                .as_form::<Vec<CA>>()?
                 .iter()
                 .map(|v| {
                     (partition_indexes.get(v))
                         .cloned()
-                        .unwrap_or(df.categories_keys.len()) // Last index for unknown cat
+                        .unwrap_or(data.len()) // Last index for unknown cat
                 })
                 .collect();
 
             // where to collect partitioned data
-            let mut partitioned_data = std::vec::from_elem(DataFrame2::new(DataFrame::new()), true_partitions);
+            let mut partitioned_data = std::vec::from_elem(DataFrame::new(), true_partitions);
 
             // iteratively partition each column
             keep_columns.iter().try_for_each(|column_name| {
                 // retrieve a Column from the dataframe
-                let column = df.data.get(&column_name).ok_or_else(|| {
+                let column = data.get(&column_name).ok_or_else(|| {
                     err!(FailedFunction, "{:?} does not exist in the input dataframe")
                 })?;
 
@@ -99,7 +106,7 @@ pub fn make_sized_partition_by<TC: Hashable, TK: Hashable>(
                     .into_iter()
                     .zip(partitioned_data.iter_mut())
                     .for_each(|(subset, df)| {
-                        df.data.insert(column_name.clone(), subset);
+                        data.insert(column_name.clone(), subset);
                     });
 
                 Fallible::Ok(())
@@ -111,8 +118,8 @@ pub fn make_sized_partition_by<TC: Hashable, TK: Hashable>(
 
             Ok(partitioned_data)
         }),
-        SymmetricDistance::default(),
-        ProductMetric::new(SymmetricDistance::default()),
+        inputMetric,
+        ProductMetric::new(inputMetric),
         StabilityMap::new(move |d_in: &IntDistance| (*d_in, *d_in.min(&d_output_partitions))),
     ))
 }
