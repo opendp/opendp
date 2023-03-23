@@ -8,12 +8,11 @@ use crate::{
     error::Fallible,
     metrics::{SymmetricDistance, ProductMetric, IntDistance},
     traits::{Hashable, ExactIntCast},
+    transformations::{DataFrame, SizedDataFrameDomain}
 };
 
-use super::{DataFrame, DataFrameDomain, DataFrame2, DataFrameDomain2, SizedDataFrameDomain};
-
-#[cfg(feature = "ffi")]
-mod ffi;
+// #[cfg(feature = "ffi")]
+// mod ffi;
 
 #[bootstrap(
     features("contrib"),
@@ -30,10 +29,8 @@ mod ffi;
 /// 
 /// # Generics
 /// * `TC` - Type of column names.
-/// * `CA` - Type of values in the identifier column.
-pub fn make_sized_partition_by<TC: Hashable, CA: Hashable, MI: Metric>(
+pub fn make_sized_partition_by<TC: Hashable>(
     inputDomain: SizedDataFrameDomain<TC>,
-    inputMetric: MI,
     identifier_column: TC,
     keep_columns: Vec<TC>,
     null_partition: bool,
@@ -45,11 +42,11 @@ pub fn make_sized_partition_by<TC: Hashable, CA: Hashable, MI: Metric>(
         ProductMetric<SymmetricDistance>,
     >,
 > {
-    if !inputDomain.categories_keys.contains_key(identifier_column){
+    if !inputDomain.categories_keys.contains_key(&identifier_column){
         return fallible!(FailedFunction, "Data frame domain does not list the desired colunm as categorical variable.")
     }
 
-    let partion_size = inputDomain.categories_keys.get(identifier_column).unwrap().len();
+    let partion_size = inputDomain.categories_keys.get(&identifier_column).unwrap().len();
     let true_partitions = partion_size + 1;
     let output_partitions = partion_size + if null_partition { 1 } else { 0 };
     let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?;
@@ -63,14 +60,14 @@ pub fn make_sized_partition_by<TC: Hashable, CA: Hashable, MI: Metric>(
     (0..output_partitions)
             .map(|v| (0..output_partitions).map( |d|
                  if d != v {
-                    product_df_domain.inner_domains[v].categories_counts.get(identifier_column).unwrap()[d] = 0;
+                    product_df_domain.inner_domains[v].categories_counts.get(&identifier_column).unwrap()[d] = 0;
                 }));
 
     Ok(Transformation::new(
         inputDomain,
         product_df_domain,
         Function::new_fallible(move |data: &DataFrame<TC>| {
-            let partition_indexes: HashMap<CA, usize> = inputDomain.categories_keys.get(identifier_column).unwrap()
+            let partition_indexes: HashMap<TC, usize> = inputDomain.categories_keys.get(&identifier_column).unwrap()
         .iter()
         .cloned()
         .enumerate()
@@ -118,8 +115,35 @@ pub fn make_sized_partition_by<TC: Hashable, CA: Hashable, MI: Metric>(
 
             Ok(partitioned_data)
         }),
-        inputMetric,
-        ProductMetric::new(inputMetric),
+        SymmetricDistance::default(),
+        ProductMetric::new(SymmetricDistance::default()),
         StabilityMap::new(move |d_in: &IntDistance| (*d_in, *d_in.min(&d_output_partitions))),
     ))
+}
+
+
+#[cfg(test)]
+mod test {
+    use crate::transformations::make_create_dataframe;
+
+    use super::*;
+
+    #[test]
+    fn test_dataFrame_partition() -> Fallible<()> {
+
+        let transformation = make_create_dataframe(vec!["colA", "colB"]).unwrap();
+
+        let data_string = vec![
+            vec!["1".to_owned(), "A".to_owned()],
+            vec!["4".to_owned(), "A".to_owned()],
+            vec!["2".to_owned(), "B".to_owned()],
+            vec!["0".to_owned(), "A".to_owned()],
+            vec!["0".to_owned(), "B".to_owned()],
+        ];
+        let df = transformation.invoke(&data_string).unwrap();
+
+        println!("{:?}", df);
+
+        Ok(())
+    }
 }

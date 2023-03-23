@@ -32,9 +32,7 @@ pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 /// colName_domain (colunms names) are elements of key_domain (of type DK) and
 /// values are elements of value_domain (of type DV).
 /// 
-/// TC: Categorical Colunm names
-/// CA: Colunms Categories 
-/// Counts: CaN Counts for Sized dataframe
+/// TC: Categorical Colunm names type
 /// # Example
 #[derive(PartialEq, Clone, Debug)]
 pub struct SizedDataFrameDomain<TC: Hashable>
@@ -90,7 +88,7 @@ impl<TC: Hashable> SizedDataFrameDomain<TC> where TC: Clone {
 impl<TC: Hashable> Domain for SizedDataFrameDomain<TC> {
     type Carrier = HashMap<TC, Column>;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
-        // To be impletemented later
+        // TO DO: using CatVec?
         Ok(true)
     }
 }
@@ -165,6 +163,7 @@ pub fn make_add_categorical_column_with_counts<TC: Hashable, CA: Hashable>(
         DataFrameDomain::new_all(),
         df_domain,
         Function::new_fallible(move |data: &DataFrame<TC>| {
+            // No-op function but request for now cloning data. Might be possible to modify to work on pointer only.
             Ok(data.clone())
         }),
         SymmetricDistance::default(),
