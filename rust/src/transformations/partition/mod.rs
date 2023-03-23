@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
 use opendp_derive::bootstrap;
+
+use std::collections::HashMap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
@@ -46,7 +46,8 @@ pub fn make_sized_partition_by<TC: Hashable>(
         return fallible!(FailedFunction, "Data frame domain does not list the desired colunm as categorical variable.")
     }
 
-    let partion_size = inputDomain.categories_keys.get(&identifier_column).unwrap().len();
+    let partion_keys = inputDomain.categories_keys.get(&identifier_column).unwrap().as_any().downcast_ref::<Vec<TC>>().expect("Domain does not contain partion keys");
+    let partion_size = partion_keys.len();
     let true_partitions = partion_size + 1;
     let output_partitions = partion_size + if null_partition { 1 } else { 0 };
     let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?;
@@ -58,7 +59,7 @@ pub fn make_sized_partition_by<TC: Hashable>(
             .collect(),
     );
     (0..output_partitions)
-            .map(|v| (0..output_partitions).map( |d|
+            .map(|v| (0..partion_size).map( |d|
                  if d != v {
                     product_df_domain.inner_domains[v].categories_counts.get(&identifier_column).unwrap()[d] = 0;
                 }));
@@ -67,17 +68,17 @@ pub fn make_sized_partition_by<TC: Hashable>(
         inputDomain,
         product_df_domain,
         Function::new_fallible(move |data: &DataFrame<TC>| {
-            let partition_indexes: HashMap<TC, usize> = inputDomain.categories_keys.get(&identifier_column).unwrap()
-        .iter()
-        .cloned()
-        .enumerate()
-        .map(|(i, k)| (k, i))
-        .collect();
+            let partition_indexes: HashMap<TC, usize> = partion_keys
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(i, k)| (k, i))
+                .collect();
 
             // the partition to move each row into
             let partition_ids: Vec<usize> = (data.get(&identifier_column))
                 .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
-                .as_form::<Vec<CA>>()?
+                .as_form::<Vec<TC>>()?
                 .iter()
                 .map(|v| {
                     (partition_indexes.get(v))

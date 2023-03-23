@@ -95,7 +95,6 @@ impl<TC: Hashable> Domain for SizedDataFrameDomain<TC> {
 
 /// Vectors of keys encoding categorical variables (For membership function impl).
 pub trait CatVec: IsVec {
-    fn box_clone(&self) -> Box<dyn CatVec>;
     fn counts(&self, cats: &dyn CatVec) -> Option<Vec<usize>>;
 }
 
@@ -115,7 +114,6 @@ impl<T: 'static + Hashable> CatVec for Vec<T>
 where
     Vec<T>: IsVec,
 {
-    fn box_clone(&self) -> Box<dyn CatVec> { Box::new(self.clone()) }
     fn counts(&self, cats: &dyn CatVec) -> Option<Vec<usize>> {
         let cats = cats.as_any().downcast_ref::<Vec<T>>()?;
         let mut counts: HashMap<&T, usize> = cats.into_iter().map(|cat| (cat, 0)).collect();
