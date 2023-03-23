@@ -28,12 +28,11 @@ pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 /// A Domain that contains dataframes.
 /// 
 /// # Proof Definition
-/// `DataFrameDomain(K)` consists of all datasets where 
-/// colName_domain (colunms names) are elements of key_domain (of type DK) and
-/// values are elements of value_domain (of type DV).
+/// `SizedDataFrameDomain(TC)` consists of all datasets where
+/// `categories_keys` contains the columns names of categorical variable with their categories (keys) and
+/// `categories_counts`contains the columns names of categorical variable with cateogries counts.
 /// 
-/// TC: Categorical Colunm names type
-/// # Example
+/// `TC`: Categorical Colunm names type
 #[derive(PartialEq, Clone, Debug)]
 pub struct SizedDataFrameDomain<TC: Hashable>
 {
@@ -88,12 +87,12 @@ impl<TC: Hashable> SizedDataFrameDomain<TC> where TC: Clone {
 impl<TC: Hashable> Domain for SizedDataFrameDomain<TC> {
     type Carrier = HashMap<TC, Column>;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
-        // TO DO: using CatVec?
+        // TO BE IMPLEMENTED.
         Ok(true)
     }
 }
 
-/// Vectors of keys encoding categorical variables (For membership function impl).
+/// Vector type for categorical variables.
 pub trait CatVec: IsVec {
     fn counts(&self, cats: &dyn CatVec) -> Option<Vec<usize>>;
 }
