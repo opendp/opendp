@@ -136,7 +136,7 @@ Putting this to practice, the following example invokes the stability map on a c
     >>> # The maximum number of records that any one individual may influence in your dataset
     >>> in_symmetric_distance = 3
     >>> # clamp is a 1-stable transformation, so this should pass for any symmetric_distance >= 3
-    >>> assert clamp.map(d_in=in_symmetric_distance)
+    >>> clamp.map(d_in=in_symmetric_distance)
     3
 
 There is also a relation check predicate function that simply compares the output of the map with ``d_out`` as follows: ``d_out >= map(d_in)``.
@@ -144,8 +144,7 @@ There is also a relation check predicate function that simply compares the outpu
 .. doctest::
 
     >>> # reusing the prior clamp transformation
-    >>> clamp.check(d_in=3, d_out=3)
-    True
+    >>> assert clamp.check(d_in=3, d_out=3)
 
 This should be sufficient to make use of the library, but a more mathematical treatment may help give a more thorough understanding.
 Consider ``d_X`` the input metric, ``d_Y`` the output metric or measure,
