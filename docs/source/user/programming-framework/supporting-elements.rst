@@ -101,45 +101,27 @@ where distances are ``(epsilon, delta)`` tuples.
 
 Every Measurement (:ref:`see listing <measurement-constructors>`) contains an output_measure, and compositors are always typed by a Measure.
 
-.. _relations:
 
-Relations
----------
-We assert the privacy properties of a Transformation or Measurement's function via a relation.
-Relations accept a ``d_in`` and a ``d_out`` and return a boolean.
-There are a couple equivalent interpretations for when a relation returns True:
+.. _maps:
 
-* All potential input perturbations by at most ``d_in`` do not influence the output by more than ``d_out``.
-* The transformation or measurement is (``d_in``, ``d_out``)-close.
+Maps
+----
+A map is a function that takes some ``d_in`` and returns a ``d_out`` that is (``d_in``, ``d_out``)-close.
 
-What does (``d_in``, ``d_out``)-close mean?
+``d_in`` is a distance in terms of the input metric, and ``d_out`` is a distance in terms of the output metric or measure.
+Refer to :ref:`distances` below for more details on what ``d_in`` and ``d_out`` are.
+
 If a measurement is (``d_in``, ``d_out``)-close,
-then the output is ``d_out``-DP when the input is changed by at most ``d_in``.
+then the output is ``d_out``-DP when the input may change by at most ``d_in``.
 If a transformation is (``d_in``, ``d_out``)-close,
-then the output can change by at most ``d_out`` when the input is changed by at most ``d_in``.
+then the output can change by at most ``d_out`` when the input may change by at most ``d_in``.
 
-.. The relation tells you if the function is (``d_in``, ``d_out``)-close for any choice of ``d_in`` and ``d_out``.
+The ``d_out`` returned is not necessarily the smallest value that is still "close",
+but every effort is made to make it as small as provably possible.
 
-What are ``d_in`` and ``d_out``?
-``d_in`` and ``d_out`` are distances in terms of the input and output metric or measure.
-Refer to :ref:`distances` below for more details.
+Maps are a useful tool to find stability or privacy properties directly.
 
-This should be enough rope to work with, but let's still touch quickly on the mathematical side.
-Refer to the programming framework paper itself if you want a deeper understanding.
-Consider ``d_X`` the input metric, ``d_Y`` the output metric or measure,
-and ``f`` the function in the Transformation or Measurement.
-
-A slightly more mathematical way to express this is:
-If the relation passes, then it tells you that, for all ``x``, ``x'`` in the input domain:
-
-* if ``d_X(x, x') <= d_in`` (if neighboring datasets are at most ``d_in``-close)
-* then ``d_Y(f(x), f(x')) <= d_out`` (then the distance between function outputs is no greater than ``d_out``)
-
-Notice that if the relation passes at ``d_out``, it will pass for any value greater than ``d_out`` 
-(so long as the relation doesn't throw an error due to numerical overflow).
-This is an incredibly useful behavior, as we will see in the :ref:`parameter-search` section.
-
-Putting this to practice, the following example checks the stability relation on a clamp transformation.
+Putting this to practice, the following example invokes the stability map on a clamp transformation.
 
 .. testsetup::
 
@@ -154,26 +136,30 @@ Putting this to practice, the following example checks the stability relation on
     >>> # The maximum number of records that any one individual may influence in your dataset
     >>> in_symmetric_distance = 3
     >>> # clamp is a 1-stable transformation, so this should pass for any symmetric_distance >= 3
-    >>> assert clamp.check(d_in=in_symmetric_distance, d_out=4)
+    >>> assert clamp.map(d_in=in_symmetric_distance)
+    3
 
-.. _maps:
-
-Maps
-----
-A map is a function that takes some ``d_in`` and returns a ``d_out`` that is (``d_in``, ``d_out``)-close.
-The ``d_out`` returned is not necessarily the smallest value that is still "close",
-but every effort is made to make it as small as provably possible.
-
-Maps are a useful shorthand to find privacy properties directly:
+There is also a relation check predicate function that simply compares the output of the map with ``d_out`` as follows: ``d_out >= map(d_in)``.
 
 .. doctest::
 
     >>> # reusing the prior clamp transformation
-    >>> clamp.map(d_in=3)
-    3
+    >>> clamp.check(d_in=3, d_out=3)
+    True
 
-The relation check predicate function simply compares the output of the map with ``d_out`` as follows: ``d_out >= map(d_in)``.
-For a more thorough understanding of maps, please read the :ref:`relations <relations>` section.
+This should be sufficient to make use of the library, but a more mathematical treatment may help give a more thorough understanding.
+Consider ``d_X`` the input metric, ``d_Y`` the output metric or measure,
+and ``f`` the function in the Transformation or Measurement.
+
+If the relation check passes, then it tells you that, for all ``x``, ``x'`` in the input domain:
+
+* if ``d_X(x, x') <= d_in`` (if neighboring datasets are at most ``d_in``-close)
+* then ``d_Y(f(x), f(x')) <= d_out`` (then the distance between function outputs is no greater than ``d_out``)
+
+Notice that if the relation passes at ``d_out``, it will pass for any value greater than ``d_out`` 
+(so long as the relation doesn't throw an error due to numerical overflow).
+The usefulness of this property is shown in the :ref:`parameter-search` section.
+
 
 .. _distances:
 
@@ -191,10 +177,10 @@ The ``input_metric`` of Measurements is initially only some kind of global sensi
 However, once you chain the Measurement with a Transformation, the resulting Measurement will have whatever ``input_metric`` was on the Transformation.
 The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
 
-In some cases distances may not form a total order. 
-For example, in $(\epsilon, \delta)$-DP, $(\epsilon_1, \delta_1) = (1.5, 1e-6)$ is incomparable to $(\epsilon_2, \delta_2) = (1.0, 1e-7)$, 
-so neither $(\epsilon_1, \delta_1) \ge (\epsilon_2, \delta_2)$ nor $(\epsilon_2, \delta_2) \ge (\epsilon_1, \delta_1)$ holds.
-However, $(1.5, 1e-6) \ge (1.0, 1e-6)$ would still hold, as both elements compare greater than or equal.
+In some cases, distances may not form a total order. 
+For example, in :math:`(\epsilon, \delta)`-DP, :math:`(\epsilon_1, \delta_1) = (1.5, 1e-6)` is incomparable to :math:`(\epsilon_2, \delta_2) = (1.0, 1e-7)`, 
+so neither :math:`(\epsilon_1, \delta_1) \ge (\epsilon_2, \delta_2)` nor :math:`(\epsilon_2, \delta_2) \ge (\epsilon_1, \delta_1)` holds.
+However, :math:`(1.5, 1e-6) \ge (1.0, 1e-6)` would still hold, as both elements compare greater than or equal.
 
 It is critical that you choose the correct ``d_in`` for the relation,
 whereas you can use :ref:`binary search utilities <parameter-search>` to find the tightest ``d_out``.

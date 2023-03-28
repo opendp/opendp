@@ -14,7 +14,7 @@ There are many parameters in a typical DP measurement:
 * ``d_out`` output distance (oftentimes the privacy budget)
 * noise scale and any other parameters passed to the constructors
 
-To evaluate a :ref:`relation <relations>` between ``d_in`` and ``d_out``, you must fix all of these parameters.
+To evaluate a :ref:`privacy relation <maps>`, you must fix all of these parameters.
 The relation simply returns a boolean indicating if it passed.
 If the relation passes for a given ``d_out``, it will also pass for any value greater than ``d_out``.
 This behavior makes it possible to solve for any one parameter using a binary search

@@ -7,8 +7,7 @@ OpenDP is focused on creating computations with specific privacy characteristics
 These computations are modeled with two core structures in OpenDP:
 :py:class:`opendp.mod.Transformation` and :py:class:`opendp.mod.Measurement`.
 These structures are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy.
-By modeling computations in this abstract way, we're able to combine them in flexible arrangements and reason about privacy properties at the resulting programs.
-
+By modeling computations in this abstract way, we're able to combine them in flexible arrangements and reason about the privacy properties of the resulting programs.
 A unifying perspective towards OpenDP is that OpenDP is a system for `relating`:
 
 #. an upper bound on distance between function inputs
@@ -23,9 +22,14 @@ Measurement
 -----------
 
 A :py:class:`Measurement <opendp.mod.Measurement>` is a randomized mapping from datasets to outputs of an arbitrary type.
-Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet ``d_out = meas.map(d_in)``.
-``meas`` is ``d_out``-DP on ``d_in``-close inputs,
-or equivalently "(``d_in``, ``d_out``)-differentially private".
+Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet:
+
+.. code-block:: python
+
+    d_out = meas.map(d_in)
+
+Outputs of ``meas`` are ``d_out``-DP when inputs are ``d_in``-close,
+or equivalently, invocations of ``meas`` are "(``d_in``, ``d_out``)-differentially private".
 The code snippet simply evaluates the privacy map that comes bundled inside ``meas``.
 In this context, the map captures the privacy of a measurement.
 
@@ -59,9 +63,14 @@ A :py:class:`Transformation <opendp.mod.Transformation>` is a (deterministic) ma
 Transformations are used to preprocess and aggregate data before chaining with a measurement.
 
 Similarly to ``meas`` above, say we have an arbitrary instance of a Transformation, called ``trans``,
-and a code snippet ``d_out = trans.map(d_in)``.
-``trans`` is ``d_out``-close on ``d_in``-close inputs,
-or equivalently "(``d_in``, ``d_out``)-stable".
+and a code snippet:
+
+.. code-block:: python
+
+    d_out = trans.map(d_in)
+
+Outputs of ``trans`` are ``d_out``-close when inputs are ``d_in``-close,
+or equivalently, invocations of ``trans`` are "(``d_in``, ``d_out``)-stable".
 The code snippet simply evaluates the stability map that comes bundled inside ``trans``.
 In this context, the map captures the stability of a transformation.
 
