@@ -95,8 +95,8 @@ These domains serve two purposes:
 
 .. _metrics:
 
-Metrics
--------
+Metric
+------
 A metric is a function that computes the distance between two elements of a domain.
 Transformations have both an ``input_metric`` and ``output_metric``, while measurements only have an ``input_metric``.
 
@@ -122,8 +122,8 @@ However, there are situations where constructors accept a metric for specifying 
 
 .. _measures:
 
-Measures
---------
+Measure
+-------
 In OpenDP, a measure is a function for measuring the distance between probability distributions.
 Transformations don't make use of a measure, but measurements do have an ``output_measure``.
 
@@ -145,8 +145,8 @@ Every Measurement (:ref:`see listing <measurement-constructors>`) contains an ou
 
 .. _maps:
 
-Maps
-----
+Stability/Privacy Map
+---
 A map is a function that takes some ``d_in`` and returns a ``d_out`` that is (``d_in``, ``d_out``)-close.
 
 ``d_in`` is a distance in terms of the input metric, and ``d_out`` is a distance in terms of the output metric or measure.
@@ -203,8 +203,8 @@ The usefulness of this property is shown in the :ref:`parameter-search` section.
 
 .. _distances:
 
-Distances
----------
+Distance
+--------
 
 You can determine what units ``d_in`` and ``d_out`` are expressed in based on the ``input_metric``, and ``output_metric`` or ``output_measure``.
 Follow the links into the example metrics and measures to get more detail on what the distances mean for that kind of metric or measure.
