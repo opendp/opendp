@@ -15,38 +15,77 @@ In OpenDP, we capture these sets with domains...
 
 .. _domains:
 
-Domains
--------
+Domain
+------
 A domain describes the set of all possible input values of a function, or all possible output values of a function.
-Two domains (``input_domain`` and ``output_domain``) are bundled within each Transformation or Measurement to describe all possible inputs and outputs of the function.
+Transformations have both an ``input_domain`` and ``output_domain``, while measurements only have an ``input_domain``.
 
-Some common domains are:
+A commonly-used domain is ``all_domain(T)``, which describes the set of all possible non-null values of type ``T``.
+The following example creates a domain consisting of all possible non-null 64-bit floats, 
+and checks that 1.0 is a member of the domain, but NaN is not.
 
-:AllDomain<T>: | The set of all non-null values in the type T.
-  | For example, ``AllDomain<u8>`` describes the set of all possible unsigned 8-bit integers:
-  | ``{0, 1, 2, 3, ..., 127}``.
-:BoundedDomain<T>: | The set of all non-null values in the type T, bounded between some L and U.
-  | For example, ``BoundedDomain<i32>`` between -2 and 2:
-  | ``{-2, -1, 0, 1, 2}``.
-:VectorDomain<D>: | The set of all vectors, where each element of the vector is a member of domain D.
-  | For example, ``VectorDomain<AllDomain<bool>>`` describes the set of all boolean vectors:
-  | ``{[], [True], [False], [True, True], [True, False], ...}``.
-:SizedDomain<D>: | The set of all values in the domain D, that have a specific size.
-  | For example, ``SizedDomain<VectorDomain<AllDomain<bool>>>`` of size 2 describe the set of boolean vectors:
-  | ``{[True, True], [True, False], [False, True], [False, False]}``.
+.. doctest::
 
-In many cases, you provide some qualities about the underlying domain and the rest is automatically chosen by the constructor.
+  >>> from opendp.domains import all_domain
+  >>> f64_all_domain = all_domain(float)  # float defaults to f64, a double-precision 64-bit float
+  >>> assert f64_all_domain.member(1.0)
+  >>> assert not f64_all_domain.member(float('nan'))
+
+Similarly, ``all_domain(u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``,
+and ``bounded_domain((-2, 2))`` consists of all possible 32-bit signed integers bounded between -2 and 2: ``{-2, -1, 0, 1, 2}``.
+
+.. doctest::
+
+  >>> from opendp.domains import bounded_domain
+  >>> i32_bounded_domain = bounded_domain((-2, 2))  # int defaults to i32, a 32-bit signed integer
+  >>> assert i32_bounded_domain.member(-2)
+  >>> assert not i32_bounded_domain.member(3)
+
+Domains may also be used to construct higher-level domains.
+For instance, ``vector_domain(all_domain(bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
+
+.. doctest::
+
+  >>> from opendp.domains import vector_domain
+  >>> bool_vector_domain = vector_domain(all_domain(bool))
+  >>> assert bool_vector_domain.member([])
+  >>> assert bool_vector_domain.member([True, False])
+
+``sized_domain(vector_domain(all_domain(bool)), 2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
+
+.. doctest::
+
+  >>> from opendp.domains import sized_domain
+  >>> bool_vector_2_domain = sized_domain(bool_vector_domain, 2)
+  >>> assert bool_vector_2_domain.member([True, True])
+  >>> assert not bool_vector_2_domain.member([True, True, True])
+
+In most cases, the constructors in the OpenDP Library build the domains for you.
 
 Let's look at the Transformation returned from :py:func:`make_bounded_sum(bounds=(0, 1)) <opendp.transformations.make_bounded_sum>`.
-The input domain has type ``VectorDomain<BoundedDomain<i32>>``,
-read as "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
-The bounds argument to the constructor provides L and U, and since TIA (atomic input type) is not passed,
-TIA is inferred from the type of the public bounds.
+
+.. doctest::
+
+  >>> from opendp.mod import enable_features
+  >>> enable_features('contrib')
+  >>> from opendp.transformations import make_bounded_sum
+  >>> bounded_sum = make_bounded_sum(bounds=(0, 1))
+  >>> bounded_sum.input_domain.type
+  'VectorDomain<BoundedDomain<i32>>'
+
+The input domain is ``VectorDomain<BoundedDomain<i32>>``, or "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
+
+.. doctest::
+
+  >>> bounded_sum.output_domain.type
+  'AllDomain<i32>'
+
+
 The output domain is simply ``AllDomain<i32>``, or "the set of all 32-bit signed integers."
 
 These domains serve two purposes:
 
-#. The relation depends on the input and output domain in its proof to restrict the set of neighboring datasets or distributions.
+#. The stability map or privacy map depends on the input domain in its proof to restrict the set of neighboring datasets or distributions.
    An example is the relation for :py:func:`opendp.transformations.make_sized_bounded_sum`,
    which makes use of a ``SizedDomain`` domain descriptor to more tightly bound the sensitivity.
 #. Combinators also use domains to ensure that the output is well-defined.
@@ -59,6 +98,7 @@ These domains serve two purposes:
 Metrics
 -------
 A metric is a function that computes the distance between two elements of a domain.
+Transformations have both an ``input_metric`` and ``output_metric``, while measurements only have an ``input_metric``.
 
 .. _symmetric-distance:
 
@@ -69,14 +109,14 @@ This is used to count the fewest number of additions or removals to convert one 
 
 Each metric is bundled together with a domain, and ``A`` and ``B`` are members of that domain.
 Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, ``A`` and ``B`` are often vectors.
-In practice, if we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k`` 
+If we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k`` 
 (where ``d_in`` denotes an upper bound on the distance between adjacent inputs).
 
 Another example metric is ``AbsoluteDistance<f64>``.
 This can be read as "the absolute distance metric ``|A - B|``, where distances are expressed in 64-bit floats."
 This metric is used to represent global sensitivities
 (an upper bound on how much an aggregated value can change if you were to perturb an individual in the original dataset).
-In practice, most users will not have a need to provide global sensitivities to privacy relations,
+In practice, you may not have a need to provide global sensitivities to stability/privacy maps,
 because they are a midway distance bound encountered while relating dataset distances and privacy distances.
 However, there are situations where constructors accept a metric for specifying the metric for sensitivities.
 
@@ -85,6 +125,7 @@ However, there are situations where constructors accept a metric for specifying 
 Measures
 --------
 In OpenDP, a measure is a function for measuring the distance between probability distributions.
+Transformations don't make use of a measure, but measurements do have an ``output_measure``.
 
 .. _max-divergence:
 
