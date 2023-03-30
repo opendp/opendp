@@ -425,6 +425,7 @@ impl PartialOrd for AnyObject {
 }
 
 impl TotalOrd for AnyObject {
+    #[rustfmt::skip]
     fn total_cmp(&self, other: &Self) -> Fallible<std::cmp::Ordering> {
         fn monomorphize<T: 'static + TotalOrd>(
             this: &AnyObject,
@@ -436,7 +437,6 @@ impl TotalOrd for AnyObject {
 
         let type_arg = &self.type_;
         // type list is explicit because (f32, f32), (f64, f64) are not in @numbers
-        #[rustfmt::skip]
         dispatch!(monomorphize, [(type_arg, [
             u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, (f32, f32), (f64, f64)
         ])], (self, other))
