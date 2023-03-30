@@ -31,6 +31,19 @@ It is written in Rust and has bindings for Python.
 
 The OpenDP library is currently under development and the source code can be found at https://github.com/opendp/opendp
 
+
+SmartNoise
+----------
+
+SmartNoise is a set of tools for creating differentially private reports, dashboards, synopses, and synthetic data releases. 
+It includes a SQL processing layer, supporting queries over Spark and popular database engines, and a collection of synthesizers.
+
+- `Documentation: https://docs.smartnoise.org/ <https://docs.smartnoise.org/>`_
+- `Source Code and Contributions: Github <https://github.com/opendp/smartnoise-sdk>`_
+   * `smartnoise-sql <https://github.com/opendp/smartnoise-sdk/tree/main/sql>`_: Run differentially private SQL queries
+   * `smartnoise-synth <https://github.com/opendp/smartnoise-sdk/tree/main/synth>`_: Generate differentially private synthetic data
+
+
 DP Creator
 ----------
 
@@ -62,7 +75,7 @@ Many of the people involved with OpenDP are also- or have been- involved with th
 and have experience building earlier iterations of differential privacy libraries.
 
 * `psilence (R package) and PSI (Private Sharing Interface) <https://github.com/privacytoolsproject/PSI-Library>`_
-* `SmartNoise-Core <https://github.com/opendp/smartnoise-core>`_
+* `SmartNoise-Core (deprecated) <https://github.com/opendp/smartnoise-core>`_
 
 We don't recommend using these libraries for new projects,
 but we have gained much in the process of building them.

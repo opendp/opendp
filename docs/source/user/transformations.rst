@@ -11,7 +11,7 @@ Each transformation has a carefully chosen input domain and output domain that s
 
 
 .. note::
-  If you pass information collected directly from the dataset into constructors, the privacy budget will be underestimated.
+  If you pass information collected directly from the dataset into constructors, the differential privacy guarantees may be compromised.
   Constructor arguments should be either:
 
   * Public information, like information from a codebook or prior domain expertise
@@ -136,8 +136,10 @@ Imputation
 Null values are tricky to handle in a differentially private manner.
 If we were to allow aggregations to propagate null,
 then aggregations provide a non-differentially-private bit revealing the existence of nullity in the dataset.
-If we were to implicitly drop nulls from sized aggregations, then the sensitivity of non-null individuals is underestimated.
-Therefore, aggregators must be fed completely non-null data.
+If we were to implicitly drop nulls from sized aggregations
+(like a dataset mean where we divide by the number of non-null elements),
+then the sensitivity of non-null individuals is underestimated.
+Therefore, most aggregators must be fed completely non-null data.
 We can ensure data is non-null by imputing.
 
 When you cast with :func:`opendp.transformations.make_cast` or :func:`opendp.transformations.make_cast_default`,
@@ -185,7 +187,7 @@ so long as you pass the DA (atomic domain) type argument.
 Indexing
 --------
 Indexing operations provide a way to relabel categorical data, or bin numeric data into categorical data.
-These operations work with `usize` data types: an integral data type representing an index.
+These operations work with `usize` data types: an integer data type representing an index.
 :func:`opendp.transformations.make_find` finds the index of each input datum in a set of categories.
 In other words, it transforms a categorical data vector to a vector of numeric indices.
 
@@ -254,7 +256,7 @@ This relation states that adding or removing ``d_in`` records may influence the 
 Any aggregator that needs bounded data will indicate it in the function name.
 In these kinds of aggregators the relations make use of the clamping bounds ``L`` and ``U`` to translate ``d_in`` to ``d_out``.
 
-Clamping happens after casting and imputation but before resizing.
+Clamping generally happens after casting and imputation but before resizing.
 Only chain with a clamp transformation if the aggregator you intend to use needs bounded data.
 
 .. list-table::
@@ -277,7 +279,7 @@ Dataset Ordering
 ----------------
 Most dataset-to-dataset transformations are not sensitive to the order of elements within the dataset.
 This includes all row-by-row transformations. 
-These transformations that are not sensitive to operate with SymmetricDistances.
+These transformations are written to operate with symmetric distances.
 
 Transformations that are sensitive to the order of elements in the dataset use the InsertDeleteDistance metric instead.
 It is common for aggregators to be sensitive to the dataset ordering.
@@ -336,20 +338,24 @@ and provide the following constructors to convert to/from "bounded"-dp metrics `
 
 Resizing
 --------
-Similarly to data bounds, many aggregators depend on a known dataset size in their relation as well.
-For example, the relation downstream for the :func:`opendp.transformations.make_sized_bounded_mean` aggregator is ``d_out >= d_in * (U - L) / n / 2``.
+The resize transformation takes a dataset with unknown size, and a target size (that could itself be estimated with a DP count).
+If the dataset has fewer records than the target size, additional rows will be imputed.
+If the dataset has more records than the target size, a simple sample of the rows is taken.
+
+In the case that a neighboring dataset adds one record to the dataset, and it causes one fewer imputation,
+the resulting dataset distance is 2.
+Therefore, the resize transformation is 2-stable: `map(d_in) = 2 * d_in`.
+
+Similarly to data bounds, many aggregators calibrate their stability map based on knowledge of a known dataset size.
+For example, the relation downstream for the :func:`opendp.transformations.make_sized_bounded_mean` aggregator is ``map(d_in) = d_in // 2 * (U - L) / n``.
 Notice that any addition and removal may, in the worst case, change a record from ``L`` to ``U``.
 Such a substitution would influence the mean by ``(U - L) / n``.
 
 Any aggregator that needs sized data will indicate it in the function name.
 In these kinds of aggregators, the relations need knowledge about the dataset size ``n`` to translate ``d_in`` to ``d_out``.
 
-Resizing happens after clamping.
+Resizing generally happens after clamping.
 Only chain with a resize transformation if the aggregator you intend to use needs sized data.
-
-At this time, there are two separate resize transforms:
-one that works on unbounded data, and one that works on bounded data.
-We intend to merge these in the future.
 
 The input and output metrics may be configured to any combination of ``SymmetricDistance`` and ``InsertDeleteDistance``.
 
@@ -473,7 +479,8 @@ There are separate constructors for integers and floats, because floats addition
 The increase in float sensitivity accounts for inexact floating-point arithmetic, and is calibrated according to the length of the mantissa and underlying summation algorithm. 
 
 Floating-point summation may be further configured to either ``Sequential<T>`` or ``Pairwise<T>`` (default).
-Sequential summation results in an ``O(n^2)`` increase in sensitivity, while pairwise summation results only in a ``O(log_2(n)n))`` increase.
+Sequential summation results in an ``O(n^2 / 2^k)`` increase in sensitivity, while pairwise summation results only in a ``O(log_2(n)n / 2^k))`` increase, 
+where ``k`` is the bit length of the mantissa in the floating-point numbers used.
 
 
 .. list-table::

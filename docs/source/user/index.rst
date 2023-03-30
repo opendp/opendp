@@ -5,12 +5,12 @@ User Guide
 Who Should Read This Guide?
 ---------------------------
 
-This guide is intended primarily for developers or data scientists who want to make programmatic use of the OpenDP library or its Python bindings.
+This guide is intended primarily for researchers or data scientists who want to make programmatic use of the OpenDP library or its Python bindings.
 
-Data scientists and others who are more interested in a graphical user interface should review the offerings in the :doc:`/opendp-commons/index`.
+Data scientists and others who are more interested in tools built on top of the OpenDP Library should review the :doc:`/opendp-commons/index`.
 
-Potential contributors to OpenDP should read the :doc:`/developer/index`.
-
+Potential contributors to OpenDP should read the :doc:`/contributor/index`.
+   
 
 .. toctree::
    :glob:
