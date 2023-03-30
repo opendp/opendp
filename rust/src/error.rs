@@ -30,21 +30,20 @@ macro_rules! err {
     // args to format into message
     ($variant:ident, $template:expr, $($args:expr),+) =>
         (err!($variant, format!($template, $($args,)+)));
-    
+
     // always resolve backtraces in debug mode
-    (@backtrace) => (if cfg!(debug_assertions) { 
+    (@backtrace) => (if cfg!(debug_assertions) {
         backtrace::Backtrace::new()
     } else {
-        backtrace::Backtrace::new_unresolved() 
+        backtrace::Backtrace::new_unresolved()
     });
 }
-
 
 #[derive(thiserror::Error, Debug)]
 pub struct Error {
     pub variant: ErrorVariant,
     pub message: Option<String>,
-    pub backtrace: _Backtrace
+    pub backtrace: _Backtrace,
 }
 
 impl PartialEq for Error {
@@ -106,7 +105,7 @@ impl fmt::Display for Error {
 }
 
 // simplify error creation from vega_lite_4
-#[cfg(all(test, feature="test-plot"))]
+#[cfg(all(test, feature = "test-plot"))]
 impl From<String> for Error {
     fn from(v: String) -> Self {
         err!(FailedFunction, v)
@@ -115,7 +114,11 @@ impl From<String> for Error {
 
 impl From<ErrorVariant> for Error {
     fn from(variant: ErrorVariant) -> Self {
-        Self { variant, message: None, backtrace: _Backtrace::new() }
+        Self {
+            variant,
+            message: None,
+            backtrace: _Backtrace::new(),
+        }
     }
 }
 

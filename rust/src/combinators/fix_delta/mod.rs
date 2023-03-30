@@ -1,22 +1,22 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, PrivacyMap},
-    measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
     error::Fallible,
+    measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
 };
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 /// Fix the delta parameter in the privacy map of a `measurement` with a `SmoothedMaxDivergence` output measure.
-/// 
+///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy curve to be fixed
 /// * `delta` - parameter to fix the privacy curve with
-/// 
+///
 /// # Generics
 /// * `DI` - Input Domain
 /// * `TO` - Output Type
-/// * `MI` - Input Metric. 
+/// * `MI` - Input Metric.
 /// * `MO` - Output Measure of the input argument. Must be SmoothedMaxDivergence<Q>
 pub fn make_fix_delta<DI, TO, MI, MO>(
     measurement: &Measurement<DI, TO, MI, MO>,
@@ -54,7 +54,7 @@ pub trait FixDeltaMeasure: Measure {
 
     // This fn is used for FFI support
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure>;
-    
+
     fn fix_delta(
         &self,
         curve: &Self::Distance,

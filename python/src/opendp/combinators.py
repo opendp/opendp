@@ -26,7 +26,7 @@ __all__ = [
 def make_basic_composition(
     measurements: Any
 ) -> Measurement:
-    """Construct the DP composition [`measurement0`, `measurement1`, ...]. 
+    """Construct the DP composition [`measurement0`, `measurement1`, ...].
     Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
     
     All metrics and domains must be equivalent, except for the output domain.
@@ -201,12 +201,12 @@ def make_population_amplification(
     population_size: int
 ) -> Measurement:
     """Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
-    This measurement does not perform any sampling. 
+    This measurement does not perform any sampling.
     It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
     
     The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
     
-    Protected by the "honest-but-curious" feature flag 
+    Protected by the "honest-but-curious" feature flag
     because a dishonest adversary could set the population size to be arbitrarily large.
     
     [make_population_amplification in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_population_amplification.html)

@@ -7,7 +7,6 @@ use crate::{Argument, TypeRecipe};
 
 pub mod python;
 
-
 #[allow(dead_code)]
 pub fn write_bindings(files: HashMap<PathBuf, String>) {
     let base_dir = canonicalize("../python/src/opendp").unwrap();
@@ -53,28 +52,33 @@ fn flatten_type_recipe(type_recipe: &TypeRecipe, derived_types: &Vec<Argument>) 
     }
 }
 
-
 impl Argument {
     /// retrieve the python ctype corresponding to the type inside FfiResult<*>
     pub fn python_unwrapped_ctype(&self, typemap: &HashMap<String, String>) -> String {
         let c_type = self.c_type();
         assert_eq!(&c_type[..9], "FfiResult");
-        typemap.get(&c_type[10..c_type.len() - 1]).expect(format!("unrecognized c_type: {c_type}").as_str()).clone()
+        typemap
+            .get(&c_type[10..c_type.len() - 1])
+            .expect(format!("unrecognized c_type: {c_type}").as_str())
+            .clone()
     }
     /// retrieve the python ctypes corresponding to the origin of a type (subtypes/args omitted)
     pub fn python_origin_ctype(&self, typemap: &HashMap<String, String>) -> String {
-        typemap.get(&self.c_type_origin()).cloned().expect(&format!("ctype not recognized in typemap: {:?}", self.c_type_origin()))
+        typemap.get(&self.c_type_origin()).cloned().expect(&format!(
+            "ctype not recognized in typemap: {:?}",
+            self.c_type_origin()
+        ))
     }
     pub fn python_type_hint(&self, hierarchy: &HashMap<String, Vec<String>>) -> Option<String> {
         if self.hint.is_some() {
-            return self.hint.clone()
+            return self.hint.clone();
         }
         if self.is_type {
-            return Some("RuntimeTypeDescriptor".to_string())
+            return Some("RuntimeTypeDescriptor".to_string());
         }
         if let Some(TypeRecipe::Nest { origin, args }) = &self.rust_type {
             if origin == "Tuple" {
-                return Some(format!("Tuple[{}]", vec!["Any"; args.len()].join(", ")))
+                return Some(format!("Tuple[{}]", vec!["Any"; args.len()].join(", ")));
             }
         }
         self.c_type.clone().and_then(|mut c_type| {
@@ -82,70 +86,83 @@ impl Argument {
                 c_type = c_type[10..c_type.len() - 1].to_string();
             }
             if c_type.ends_with("AnyTransformation *") {
-                return Some("Transformation".to_string())
+                return Some("Transformation".to_string());
             }
             if c_type.ends_with("AnyMeasurement *") {
-                return Some("Measurement".to_string())
+                return Some("Measurement".to_string());
             }
             if c_type.ends_with("AnyFunction *") {
-                return Some("Function".to_string())
+                return Some("Function".to_string());
             }
             if c_type.ends_with("AnyObject *") {
                 // py_to_object converts Any to AnyObjectPtr
-                return Some("Any".to_string())
+                return Some("Any".to_string());
             }
             if c_type.ends_with("FfiSlice *") {
                 // py_to_c converts Any to FfiSlicePtr
-                return Some("Any".to_string())
+                return Some("Any".to_string());
             }
 
-            hierarchy.iter()
+            hierarchy
+                .iter()
                 .find(|(_k, members)| members.contains(&c_type))
-                .and_then(|(k, _)| Some(match k.as_str() {
-                    k if k == "integer" => "int",
-                    k if k == "float" => "float",
-                    k if k == "string" => "str",
-                    k if k == "bool" => "bool",
-                    _ => return None
-                }))
+                .and_then(|(k, _)| {
+                    Some(match k.as_str() {
+                        k if k == "integer" => "int",
+                        k if k == "float" => "float",
+                        k if k == "string" => "str",
+                        k if k == "bool" => "bool",
+                        _ => return None,
+                    })
+                })
                 .map(|v| v.to_string())
         })
     }
 }
 
-
 impl Argument {
     pub fn name(&self) -> String {
-        self.name.clone().expect("unknown name when parsing argument")
+        self.name
+            .clone()
+            .expect("unknown name when parsing argument")
     }
     pub fn c_type(&self) -> String {
         if self.is_type {
-            return "char *".to_string()
+            return "char *".to_string();
         }
-        self.c_type.clone().expect("unknown c_type when parsing argument")
+        self.c_type
+            .clone()
+            .expect("unknown c_type when parsing argument")
     }
     pub fn c_type_origin(&self) -> String {
         self.c_type().split('<').next().unwrap().to_string()
     }
 }
 
-
-
 impl TypeRecipe {
     /// translate the abstract derived_types info into python RuntimeType constructors
     pub fn to_python(&self) -> String {
         match self {
-            Self::Name(name) =>
-                name.clone(),
-            Self::Function { function, params } =>
-                format!("{function}({params})", function = function, params = params.iter()
+            Self::Name(name) => name.clone(),
+            Self::Function { function, params } => format!(
+                "{function}({params})",
+                function = function,
+                params = params
+                    .iter()
                     .map(|v| v.to_python())
-                    .collect::<Vec<_>>().join(", ")),
-            Self::Nest { origin, args } =>
-                format!("RuntimeType(origin='{origin}', args=[{args}])",
-                        origin = origin,
-                        args = args.iter().map(|arg| arg.to_python()).collect::<Vec<_>>().join(", ")),
-            Self::None => "None".to_string()
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            Self::Nest { origin, args } => format!(
+                "RuntimeType(origin='{origin}', args=[{args}])",
+                origin = origin,
+                args = args
+                    .iter()
+                    .map(|arg| arg.to_python())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            Self::None => "None".to_string(),
         }
     }
 }

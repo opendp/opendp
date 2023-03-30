@@ -9,29 +9,27 @@ pub use float::*;
 use opendp_derive::bootstrap;
 
 use crate::core::{Metric, Transformation};
-use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
+use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{CheckNull, TotalOrd};
 use crate::transformations::{make_ordered_random, make_unordered};
 
 #[bootstrap(
     features("contrib"),
-    generics(
-        MI(default = "SymmetricDistance"),
-        T(example = "$get_first(bounds)")),
+    generics(MI(default = "SymmetricDistance"), T(example = "$get_first(bounds)")),
     returns(c_type = "FfiResult<AnyTransformation *>")
 )]
-/// Make a Transformation that computes the sum of bounded data. 
+/// Make a Transformation that computes the sum of bounded data.
 /// Use `make_clamp` to bound data.
-/// 
+///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
 /// * `T` - Atomic Input Type and Output Type.
@@ -45,24 +43,22 @@ where
 
 #[bootstrap(
     features("contrib"),
-    generics(
-        MI(default = "SymmetricDistance"),
-        T(example = "$get_first(bounds)")),
+    generics(MI(default = "SymmetricDistance"), T(example = "$get_first(bounds)")),
     returns(c_type = "FfiResult<AnyTransformation *>")
 )]
-/// Make a Transformation that computes the sum of bounded data with known dataset size. 
-/// 
-/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+/// Make a Transformation that computes the sum of bounded data with known dataset size.
+///
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
 /// Use `make_clamp` to bound data and `make_resize` to establish dataset size.
-/// 
+///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`.
 /// * `T` - Atomic Input Type and Output Type.
@@ -247,7 +243,6 @@ macro_rules! impl_make_sized_bounded_sum_float {
     };
 }
 impl_make_sized_bounded_sum_float! { f32 f64 }
-
 
 #[cfg(test)]
 mod tests {

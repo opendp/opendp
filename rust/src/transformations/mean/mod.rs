@@ -20,7 +20,7 @@ use super::{
     generics(MI(default = "SymmetricDistance"), T(example = "$get_first(bounds)"))
 )]
 /// Make a Transformation that computes the mean of bounded data.
-/// 
+///
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size.
 /// Use `make_clamp` to bound data and `make_resize` to establish dataset size.
 ///

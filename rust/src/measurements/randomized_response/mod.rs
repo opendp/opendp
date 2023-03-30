@@ -11,7 +11,7 @@ use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
 use crate::traits::samplers::{SampleBernoulli, SampleUniformIntBelow};
-use crate::traits::{Hashable, Float};
+use crate::traits::{Float, Hashable};
 
 // There are two constructors:
 // 1. make_randomized_response_bool
@@ -25,28 +25,26 @@ use crate::traits::{Hashable, Float};
 // In the case of privatizing a balanced coin flip,
 //     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
 
-
 #[bootstrap(
     features("contrib"),
-    arguments(
-        prob(c_type = "void *"), 
-        constant_time(default = false))
+    arguments(prob(c_type = "void *"), constant_time(default = false))
 )]
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1)`
 /// * `constant_time` - Set to true to enable constant time. Slower.
-/// 
+///
 /// # Generics
 /// * `QO` - Data type of probability and output distance.
 pub fn make_randomized_response_bool<QO>(
     prob: QO,
     constant_time: bool,
 ) -> Fallible<Measurement<AllDomain<bool>, bool, DiscreteDistance, MaxDivergence<QO>>>
-    where bool: SampleBernoulli<QO>,
-          QO: Float {
-
+where
+    bool: SampleBernoulli<QO>,
+    QO: Float,
+{
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(QO::exact_int_cast(2)?.recip()..QO::one()).contains(&prob) {
         return fallible!(MakeTransformation, "probability must be within [0.5, 1)");
@@ -78,10 +76,10 @@ pub fn make_randomized_response_bool<QO>(
     features("contrib"),
     arguments(
         categories(rust_type = "Vec<T>"),
-        prob(c_type = "void *"), 
-        constant_time(default = false)),
-    generics(
-        T(example = "$get_first(categories)"))
+        prob(c_type = "void *"),
+        constant_time(default = false)
+    ),
+    generics(T(example = "$get_first(categories)"))
 )]
 /// Make a Measurement that implements randomized response on a categorical value.
 ///
@@ -89,7 +87,7 @@ pub fn make_randomized_response_bool<QO>(
 /// * `categories` - Set of valid outcomes
 /// * `prob` - Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
 /// * `constant_time` - Set to true to enable constant time. Slower.
-/// 
+///
 /// # Generics
 /// * `T` - Data type of a category.
 /// * `QO` - Data type of probability and output distance.
@@ -98,10 +96,11 @@ pub fn make_randomized_response<T, QO>(
     prob: QO,
     constant_time: bool,
 ) -> Fallible<Measurement<AllDomain<T>, T, DiscreteDistance, MaxDivergence<QO>>>
-    where T: Hashable,
-          bool: SampleBernoulli<QO>,
-          QO: Float {
-
+where
+    T: Hashable,
+    bool: SampleBernoulli<QO>,
+    QO: Float,
+{
     let categories = categories.into_iter().collect::<Vec<_>>();
     if categories.len() < 2 {
         return fallible!(
@@ -167,8 +166,8 @@ pub fn make_randomized_response<T, QO>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::iter::FromIterator;
     use num::Float as _;
+    use std::iter::FromIterator;
 
     #[test]
     fn test_bool() -> Fallible<()> {

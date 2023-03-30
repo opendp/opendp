@@ -6,10 +6,7 @@ use num::Zero;
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     error::Fallible,
-    measures::{
-        FixedSmoothedMaxDivergence, MaxDivergence,
-        ZeroConcentratedDivergence,
-    },
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
 

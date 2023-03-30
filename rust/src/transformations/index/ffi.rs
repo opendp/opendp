@@ -3,8 +3,8 @@ use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::err;
-use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::any::Downcast;
+use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::Type;
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::{make_find, make_find_bin, make_index};
@@ -14,10 +14,10 @@ pub extern "C" fn opendp_transformations__make_find(
     categories: *const AnyObject,
     TIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TIA>(
-        categories: *const AnyObject
-    ) -> FfiResult<*mut AnyTransformation>
-        where TIA: Hashable {
+    fn monomorphize<TIA>(categories: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+    where
+        TIA: Hashable,
+    {
         let categories = try_!(try_as_ref!(categories).downcast_ref::<Vec<TIA>>()).clone();
         make_find::<TIA>(categories).into_any()
     }
@@ -32,10 +32,10 @@ pub extern "C" fn opendp_transformations__make_find_bin(
     edges: *const AnyObject,
     TIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TIA>(
-        edges: *const AnyObject
-    ) -> FfiResult<*mut AnyTransformation>
-        where TIA: Number {
+    fn monomorphize<TIA>(edges: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+    where
+        TIA: Number,
+    {
         let edges = try_!(try_as_ref!(edges).downcast_ref::<Vec<TIA>>()).clone();
         make_find_bin::<TIA>(edges).into_any()
     }
@@ -55,7 +55,9 @@ pub extern "C" fn opendp_transformations__make_index(
         edges: *const AnyObject,
         null: *const AnyObject,
     ) -> FfiResult<*mut AnyTransformation>
-        where TOA: Primitive {
+    where
+        TOA: Primitive,
+    {
         let edges = try_!(try_as_ref!(edges).downcast_ref::<Vec<TOA>>()).clone();
         let null = try_!(try_as_ref!(null).downcast_ref::<TOA>()).clone();
         make_index::<TOA>(edges, null).into_any()

@@ -4,9 +4,9 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
+    metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::{Number, SaturatingAdd},
 };
 
@@ -48,21 +48,17 @@ macro_rules! impl___signed_int_split_sat_sum {
 impl_unsigned_int_split_sat_sum! { u8 u16 u32 u64 u128 usize }
 impl___signed_int_split_sat_sum! { i8 i16 i32 i64 i128 isize }
 
-
-#[bootstrap(
-    features("contrib"),
-    generics(T(example = "$get_first(bounds)"))
-)]
-/// Make a Transformation that computes the sum of bounded ints. 
+#[bootstrap(features("contrib"), generics(T(example = "$get_first(bounds)")))]
+/// Make a Transformation that computes the sum of bounded ints.
 /// Adds the saturating sum of the positives to the saturating sum of the negatives.
-/// 
+///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `T` - Atomic Input Type and Output Type
 pub fn make_bounded_int_split_sum<T>(
@@ -76,7 +72,7 @@ pub fn make_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: Number + SplitSatSum + AddIsExact
+    T: Number + SplitSatSum + AddIsExact,
 {
     let (lower, upper) = bounds.clone();
 
@@ -90,23 +86,20 @@ where
     ))
 }
 
-#[bootstrap(
-    features("contrib"),
-    generics(T(example = "$get_first(bounds)"))
-)]
-/// Make a Transformation that computes the sum of bounded ints with known dataset size. 
-/// 
-/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+#[bootstrap(features("contrib"), generics(T(example = "$get_first(bounds)")))]
+/// Make a Transformation that computes the sum of bounded ints with known dataset size.
+///
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
 /// Adds the saturating sum of the positives to the saturating sum of the negatives.
-/// 
+///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `T` - Atomic Input Type and Output Type
 pub fn make_sized_bounded_int_split_sum<T>(
@@ -121,7 +114,7 @@ pub fn make_sized_bounded_int_split_sum<T>(
     >,
 >
 where
-    T: Number + SplitSatSum + AddIsExact
+    T: Number + SplitSatSum + AddIsExact,
 {
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;
@@ -171,7 +164,7 @@ mod test {
         let trans = make_sized_bounded_int_split_sum(4, (1i32, 10))?;
         let sum = trans.invoke(&vec![1, 2, 3, 4])?;
         assert_eq!(sum, 10);
-        
+
         Ok(())
     }
 }

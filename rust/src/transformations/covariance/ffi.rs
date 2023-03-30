@@ -1,4 +1,7 @@
-use std::{os::raw::{c_char, c_uint}, convert::TryFrom};
+use std::{
+    convert::TryFrom,
+    os::raw::{c_char, c_uint},
+};
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
@@ -6,8 +9,8 @@ use crate::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
+    traits::Float,
     transformations::{make_sized_bounded_covariance, Pairwise, Sequential, UncheckedSum},
-    traits::Float
 };
 
 // no entry in bootstrap.json because there's no way to get data into it

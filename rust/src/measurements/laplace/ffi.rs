@@ -7,7 +7,7 @@ use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::measurements::{make_base_laplace, LaplaceDomain};
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
-use crate::traits::{ExactIntCast, FloatBits, Float};
+use crate::traits::{ExactIntCast, Float, FloatBits};
 use crate::{err, try_, try_as_ref};
 
 #[no_mangle]
@@ -18,9 +18,9 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(scale: *const c_void, k: i32) -> FfiResult<*mut AnyMeasurement>
     where
-    D: 'static + LaplaceDomain,
-    D::Atom: Float + SampleDiscreteLaplaceZ2k,
-    i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
+        D: 'static + LaplaceDomain,
+        D::Atom: Float + SampleDiscreteLaplaceZ2k,
+        i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
     {
         let scale = *try_as_ref!(scale as *const D::Atom);
         make_base_laplace::<D>(scale, Some(k)).into_any()

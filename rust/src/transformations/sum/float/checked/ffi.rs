@@ -8,8 +8,8 @@ use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Float;
 use crate::transformations::{
-    make_bounded_float_checked_sum, make_sized_bounded_float_checked_sum, Pairwise,
-    Sequential, UncheckedSum, CanFloatSumOverflow,
+    make_bounded_float_checked_sum, make_sized_bounded_float_checked_sum, CanFloatSumOverflow,
+    Pairwise, Sequential, UncheckedSum,
 };
 
 #[no_mangle]
@@ -25,8 +25,8 @@ pub extern "C" fn opendp_transformations__make_bounded_float_checked_sum(
     ) -> FfiResult<*mut AnyTransformation>
     where
         T: 'static + Float,
-        Sequential<T>: CanFloatSumOverflow<Item=T>, 
-        Pairwise<T>: CanFloatSumOverflow<Item=T>
+        Sequential<T>: CanFloatSumOverflow<Item = T>,
+        Pairwise<T>: CanFloatSumOverflow<Item = T>,
     {
         fn monomorphize2<S>(
             size_limit: usize,
@@ -80,8 +80,6 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_float_checked_sum(
     dispatch!(monomorphize, [(T, @floats)], (S, size, bounds))
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use crate::core;
@@ -108,11 +106,13 @@ mod tests {
 
     #[test]
     fn test_make_sized_bounded_float_checked_sum_ffi() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_sized_bounded_float_checked_sum(
-            3 as c_uint,
-            util::into_raw(AnyObject::new((0., 10.))),
-            "Sequential<f64>".to_char_p(),
-        ))?;
+        let transformation = Result::from(
+            opendp_transformations__make_sized_bounded_float_checked_sum(
+                3 as c_uint,
+                util::into_raw(AnyObject::new((0., 10.))),
+                "Sequential<f64>".to_char_p(),
+            ),
+        )?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: f64 = Fallible::from(res)?.downcast()?;

@@ -3,10 +3,10 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Transformation, Function, StabilityMap, Domain, Metric};
-use crate::metrics::{SymmetricDistance, InsertDeleteDistance, IntDistance};
-use crate::domains::{VectorDomain, SizedDomain};
+use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
+use crate::domains::{SizedDomain, VectorDomain};
 use crate::error::Fallible;
+use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::samplers::Shuffle;
 use crate::traits::CheckNull;
 use std::cmp::Ordering;
@@ -25,26 +25,24 @@ impl IsMetricOrdered for InsertDeleteDistance {
 #[bootstrap(
     features("contrib"),
     arguments(
-        atom_domain(c_type = "AnyDomain *", hint = "Domain"), 
-        constant(c_type = "AnyObject *", rust_type = "$get_atom(DA)")),
-    generics(
-        MI(default = "SymmetricDistance"),
-        MO(default = "SymmetricDistance")
-    )
+        atom_domain(c_type = "AnyDomain *", hint = "Domain"),
+        constant(c_type = "AnyObject *", rust_type = "$get_atom(DA)")
+    ),
+    generics(MI(default = "SymmetricDistance"), MO(default = "SymmetricDistance"))
 )]
-/// Make a Transformation that either truncates or imputes records 
+/// Make a Transformation that either truncates or imputes records
 /// with `constant` to match a provided `size`.
-/// 
+///
 /// # Arguments
 /// * `size` - Number of records in output data.
 /// * `atom_domain` - Domain of elements.
 /// * `constant` - Value to impute with.
-/// 
+///
 /// # Generics
 /// * `DA` - Atomic Domain.
 /// * `MI` - Input Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
 /// * `MO` - Output Metric. One of `InsertDeleteDistance` or `SymmetricDistance`
-/// 
+///
 /// # Returns
 /// A vector of the same type `TA`, but with the provided `size`.
 pub fn make_resize<DA, MI, MO>(
@@ -111,11 +109,8 @@ mod test {
 
     #[test]
     fn test() -> Fallible<()> {
-        let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
-            3,
-            AllDomain::new(),
-            "x",
-        )?;
+        let trans =
+            make_resize::<_, SymmetricDistance, SymmetricDistance>(3, AllDomain::new(), "x")?;
         assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
         assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
         assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);

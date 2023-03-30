@@ -1,18 +1,24 @@
 use opendp_derive::bootstrap;
 
-use crate::{core::{Transformation, Function, StabilityMap}, error::Fallible, domains::{VectorDomain, AllDomain}, metrics::SymmetricDistance, traits::{Hashable, Primitive}};
+use crate::{
+    core::{Function, StabilityMap, Transformation},
+    domains::{AllDomain, VectorDomain},
+    error::Fallible,
+    metrics::SymmetricDistance,
+    traits::{Hashable, Primitive},
+};
 
-use super::{DataFrameDomain, DataFrame};
+use super::{DataFrame, DataFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that retrieves the column `key` from a dataframe as `Vec<TOA>`.
-/// 
+///
 /// # Arguments
 /// * `key` - categorical/hashable data type of the key/column name
-/// 
+///
 /// # Generics
 /// * `K` - data type of key
 /// * `TOA` - Atomic Output Type to downcast vector to
@@ -50,7 +56,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{error::ExplainUnwrap, data::Column};
+    use crate::{data::Column, error::ExplainUnwrap};
 
     #[test]
     fn test_make_select_column() {

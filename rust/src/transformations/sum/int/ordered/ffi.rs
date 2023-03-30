@@ -7,7 +7,9 @@ use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Number;
-use crate::transformations::{make_bounded_int_ordered_sum, make_sized_bounded_int_ordered_sum, AddIsExact};
+use crate::transformations::{
+    make_bounded_int_ordered_sum, make_sized_bounded_int_ordered_sum, AddIsExact,
+};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_bounded_int_ordered_sum(
@@ -70,11 +72,12 @@ mod tests {
 
     #[test]
     fn test_make_sized_bounded_int_ordered_sum_ffi() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_sized_bounded_int_ordered_sum(
-            3 as c_uint,
-            util::into_raw(AnyObject::new((0i32, 10))),
-            "i32".to_char_p(),
-        ))?;
+        let transformation =
+            Result::from(opendp_transformations__make_sized_bounded_int_ordered_sum(
+                3 as c_uint,
+                util::into_raw(AnyObject::new((0i32, 10))),
+                "i32".to_char_p(),
+            ))?;
         let arg = AnyObject::new_raw(vec![1i32, 2, 3]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;

@@ -21,7 +21,11 @@ pub struct BootstrapDocstring {
 }
 
 impl BootstrapDocstring {
-    pub fn from_attrs(attrs: Vec<Attribute>, output: &ReturnType, path: Option<(&str, &str)>) -> Result<BootstrapDocstring> {
+    pub fn from_attrs(
+        attrs: Vec<Attribute>,
+        output: &ReturnType,
+        path: Option<(&str, &str)>,
+    ) -> Result<BootstrapDocstring> {
         let mut doc_sections = parse_docstring_sections(attrs)?;
 
         if let Some(sup_elements) = parse_sig_output(output)? {
@@ -35,7 +39,7 @@ impl BootstrapDocstring {
             description.push(String::new());
             description.push(make_rustdoc_link(module, name)?)
         }
-        
+
         let mut add_section_to_description = |section_name: &str| {
             doc_sections.remove(section_name).map(|section| {
                 description.push(format!("\n**{section_name}:**\n"));
@@ -67,11 +71,11 @@ impl BootstrapDocstring {
 }
 
 /// Parses a section that is delimited by bullets into a hashmap.
-/// 
+///
 /// The keys are the arg names and values are the descriptions.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```text
 /// # Arguments
 /// * `a` - a description for argument a
@@ -79,14 +83,14 @@ impl BootstrapDocstring {
 ///         ...multiple lines of description
 /// * `c` - a description for argument c
 /// ```
-/// 
+///
 fn parse_docstring_args(args: String) -> HashMap<String, String> {
     // split by newlines
     let mut args = args
         .split("\n")
         .map(ToString::to_string)
         .collect::<Vec<_>>();
-    
+
     // add a trailing delimiter so that we can use .windows
     args.push("* `".to_string());
 
@@ -120,7 +124,7 @@ fn parse_docstring_args(args: String) -> HashMap<String, String> {
 }
 
 /// Break a vector of syn Attributes into a hashmap.
-/// 
+///
 /// Keys represent section names, and values are the text under the section
 fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, String>> {
     let mut docstrings = (attrs.into_iter())
@@ -128,7 +132,13 @@ fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Str
         .map(parse_doc_attribute)
         .collect::<Result<Vec<_>>>()?
         .into_iter()
-        .filter_map(|v| v.starts_with(" ").then(|| v[1..].to_string()))
+        .filter_map(|v| {
+            if v.is_empty() {
+                Some(String::new())
+            } else {
+                v.starts_with(" ").then(|| v[1..].to_string())
+            }
+        })
         .collect::<Vec<String>>();
 
     // wrap in headers to prepare for parsing
@@ -240,7 +250,6 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                     ];
 
                     if i != "Function" {
-
                         let output_distance = match i {
                             i if i == "Transformation" => "Metric: ",
                             i if i == "Measurement" => "Measure:",
@@ -349,17 +358,15 @@ fn new_comment_attribute(comment: &str) -> Attribute {
     }
 }
 
-
 pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
-    
     // link from foreign library docs to rust docs
     let proof_uri = if let Ok(rustdoc_port) = std::env::var("OPENDP_RUSTDOC_PORT") {
         format!("http://localhost:{rustdoc_port}")
     } else {
         // find the docs uri
-        let docs_uri = env::var("OPENDP_REMOTE_RUSTDOC_URI")
-            .unwrap_or_else(|_| "https://docs.rs".to_string());
-    
+        let docs_uri =
+            env::var("OPENDP_REMOTE_RUSTDOC_URI").unwrap_or_else(|_| "https://docs.rs".to_string());
+
         // find the version
         let mut version = env!("CARGO_PKG_VERSION");
         if version == "0.0.0+development" {
@@ -369,5 +376,7 @@ pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
         format!("{docs_uri}/opendp/{version}")
     };
 
-    Ok(format!("[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"))
+    Ok(format!(
+        "[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"
+    ))
 }

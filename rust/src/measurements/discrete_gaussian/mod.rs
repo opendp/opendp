@@ -6,7 +6,7 @@ use opendp_derive::bootstrap;
 use rug::{Integer, Rational};
 
 use crate::{
-    core::{Measure, Measurement, PrivacyMap, Metric},
+    core::{Measure, Measurement, Metric, PrivacyMap},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
@@ -72,27 +72,27 @@ where
 
 #[bootstrap(
     features("contrib"),
-    arguments(
-        scale(rust_type = "QO", c_type = "void *")),
+    arguments(scale(rust_type = "QO", c_type = "void *")),
     generics(
         D(default = "AllDomain<int>"),
         MO(default = "ZeroConcentratedDivergence<QO>", generics = "QO"),
-        QI(default = "int")),
+        QI(default = "int")
+    ),
     derived_types(QO = "$get_atom_or_infer(MO, scale)")
 )]
 /// Make a Measurement that adds noise from the discrete_gaussian(`scale`) distribution to the input.
-/// 
+///
 /// Set `D` to change the input data type and input metric:
-/// 
+///
 /// | `D`                          | input type   | `D::InputMetric`        |
 /// | ---------------------------- | ------------ | ----------------------- |
 /// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
 /// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
-/// 
+///
 /// # Arguments
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-/// * `k` - The noise granularity in terms of 2^k. 
-/// 
+/// * `k` - The noise granularity in terms of 2^k.
+///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
 /// * `MO` - Output measure. The only valid measure is `ZeroConcentratedDivergence<QO>`, but QO can be any float.
@@ -166,16 +166,21 @@ mod test {
 
     #[test]
     fn test_make_base_discrete_gaussian() -> Fallible<()> {
-        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>, f32>(1e30f64)?;
+        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>, f32>(
+            1e30f64,
+        )?;
         println!("{:?}", meas.invoke(&0)?);
         assert!(meas.check(&1., &1e30f64.recip().powi(2))?);
 
-        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>, i32>(0.)?;
+        let meas =
+            make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>, i32>(0.)?;
         assert_eq!(meas.invoke(&0)?, 0);
         assert_eq!(meas.map(&0)?, 0.);
         assert_eq!(meas.map(&1)?, f64::INFINITY);
 
-        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>, f64>(f64::MAX)?;
+        let meas = make_base_discrete_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>, f64>(
+            f64::MAX,
+        )?;
         println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
 
         Ok(())

@@ -220,7 +220,7 @@ def discrete_laplacian_scale_to_accuracy(
     $\alpha = P[Y \ge accuracy]$, where $Y = |X - z|$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
     That is, $X$ is a discrete Laplace random variable and $Y$ is the distribution of the errors.
     
-    This function returns a float accuracy. 
+    This function returns a float accuracy.
     You can take the floor without affecting the coverage probability.
     
     [discrete_laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/latest/opendp/accuracy/fn.discrete_laplacian_scale_to_accuracy.html)

@@ -13,7 +13,7 @@ mod ffi;
 ///
 /// # Citations
 /// - [BS16 Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds](https://arxiv.org/pdf/1605.02065.pdf#subsection.3.1)
-/// 
+///
 /// # Arguments
 /// * `meas` - a measurement with a privacy curve to be casted
 ///
@@ -46,7 +46,9 @@ where
         input_metric,
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map.eval(d_in).and_then(|eps| eps.inf_pow(&_2)?.inf_div(&_2))
+            privacy_map
+                .eval(d_in)
+                .and_then(|eps| eps.inf_pow(&_2)?.inf_div(&_2))
         }),
     ))
 }

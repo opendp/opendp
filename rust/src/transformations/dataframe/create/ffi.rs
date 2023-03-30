@@ -1,4 +1,4 @@
-use std::{os::raw::c_char, convert::TryFrom};
+use std::{convert::TryFrom, os::raw::c_char};
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
@@ -62,7 +62,6 @@ pub extern "C" fn opendp_transformations__make_split_dataframe(
 
     dispatch!(monomorphize, [(K, @hashable)], (separator, col_names))
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -4,33 +4,40 @@ use std::os::raw::c_char;
 use num::One;
 use opendp_derive::bootstrap;
 
-use crate::core::{Transformation, Metric, Domain};
+use crate::core::{Domain, Metric, Transformation};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::error::Fallible;
-use crate::metrics::{AbsoluteDistance, L1Distance, L2Distance, ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance, IntDistance};
 use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
 use crate::err;
+use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::traits::{CheckNull, InherentNull, DistanceConstant, Primitive};
+use crate::metrics::{
+    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance,
+    L1Distance, L2Distance, SymmetricDistance,
+};
+use crate::traits::{CheckNull, DistanceConstant, InherentNull, Primitive};
 use crate::transformations::{make_is_equal, make_is_null};
-
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation representing the identity function.
-/// 
+///
 /// # Generics
 /// * `D` - Domain of the identity function. Must be `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 /// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
 fn make_identity<D, M>() -> Fallible<Transformation<D, D, M, M>>
-    where D: Domain + Default, D::Carrier: Clone,
-          M: Metric, M::Distance: DistanceConstant<M::Distance> + One + Clone {
+where
+    D: Domain + Default,
+    D::Carrier: Clone,
+    M: Metric,
+    M::Distance: DistanceConstant<M::Distance> + One + Clone,
+{
     super::make_identity(Default::default(), Default::default())
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_identity(
-    D: *const c_char, M: *const c_char,
+    D: *const c_char,
+    M: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let M = try_!(Type::try_from(M));
     let D = try_!(Type::try_from(D));
@@ -92,8 +99,10 @@ pub extern "C" fn opendp_transformations__make_is_equal(
 ) -> FfiResult<*mut AnyTransformation> {
     let TIA = try_!(Type::try_from(TIA));
 
-    fn monomorphize<TIA>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation> where
-        TIA: Primitive {
+    fn monomorphize<TIA>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+    where
+        TIA: Primitive,
+    {
         let value: TIA = try_!(try_as_ref!(value).downcast_ref::<TIA>()).clone();
         make_is_equal::<TIA>(value).into_any()
     }
@@ -110,22 +119,29 @@ pub extern "C" fn opendp_transformations__make_is_null(
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
             fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
-                where TIA: 'static + CheckNull {
+            where
+                TIA: 'static + CheckNull,
+            {
                 make_is_null::<OptionNullDomain<AllDomain<TIA>>>().into_any()
             }
             dispatch!(monomorphize, [(TIA, @primitives)], ())
         }
         TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
             fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
-                where TIA: 'static + InherentNull {
+            where
+                TIA: 'static + InherentNull,
+            {
                 make_is_null::<InherentNullDomain<AllDomain<TIA>>>().into_any()
             }
             dispatch!(monomorphize, [(TIA, [f64, f32])], ())
         }
-        _ => err!(TypeParse, "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>").into()
+        _ => err!(
+            TypeParse,
+            "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>"
+        )
+        .into(),
     }
 }
-
 
 #[cfg(test)]
 mod tests {

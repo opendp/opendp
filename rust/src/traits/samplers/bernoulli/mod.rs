@@ -59,10 +59,10 @@ impl SampleStandardBernoulli for bool {
 /// ```
 pub trait SampleBernoulli<T>: Sized {
     /// # Proof Definition
-    /// For any setting of `prob`, returns `Ok(out)`, 
-    /// where `out` is a sample from the Bernoulli(prob) distribution, 
+    /// For any setting of `prob`, returns `Ok(out)`,
+    /// where `out` is a sample from the Bernoulli(prob) distribution,
     /// or `Err(e)` if there is not enough system entropy.
-    /// 
+    ///
     /// If `constant_time` is set, the algorithm should also run in constant time.
     fn sample_bernoulli(prob: T, constant_time: bool) -> Fallible<Self>;
 }

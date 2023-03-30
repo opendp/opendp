@@ -72,11 +72,13 @@ mod tests {
 
     #[test]
     fn test_make_sized_bounded_int_monotonic_sum_ffi() -> Fallible<()> {
-        let transformation = Result::from(opendp_transformations__make_sized_bounded_int_monotonic_sum(
-            3 as c_uint,
-            util::into_raw(AnyObject::new((0i32, 10))),
-            "i32".to_char_p(),
-        ))?;
+        let transformation = Result::from(
+            opendp_transformations__make_sized_bounded_int_monotonic_sum(
+                3 as c_uint,
+                util::into_raw(AnyObject::new((0i32, 10))),
+                "i32".to_char_p(),
+            ),
+        )?;
         let arg = AnyObject::new_raw(vec![1i32, 2, 3]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;

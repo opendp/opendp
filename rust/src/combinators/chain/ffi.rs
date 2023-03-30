@@ -3,12 +3,18 @@ use opendp_derive::bootstrap;
 use crate::core::FfiResult;
 
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasurement, AnyTransformation, AnyFunction};
+use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyTransformation};
 
 #[bootstrap(
     features("contrib"),
-    arguments(measurement1(rust_type = b"null"), transformation0(rust_type = b"null")),
-    dependencies("$get_dependencies(measurement1)", "$get_dependencies(transformation0)")
+    arguments(
+        measurement1(rust_type = b"null"),
+        transformation0(rust_type = b"null")
+    ),
+    dependencies(
+        "$get_dependencies(measurement1)",
+        "$get_dependencies(transformation0)"
+    )
 )]
 /// Construct the functional composition (`measurement1` ○ `transformation0`).
 /// Returns a Measurement that when invoked, computes `measurement1(transformation0(x))`.
@@ -35,8 +41,14 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
 
 #[bootstrap(
     features("contrib"),
-    arguments(transformation1(rust_type = b"null"), transformation0(rust_type = b"null")),
-    dependencies("$get_dependencies(transformation1)", "$get_dependencies(transformation0)")
+    arguments(
+        transformation1(rust_type = b"null"),
+        transformation0(rust_type = b"null")
+    ),
+    dependencies(
+        "$get_dependencies(transformation1)",
+        "$get_dependencies(transformation0)"
+    )
 )]
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
 /// Returns a Transformation that when invoked, computes `transformation1(transformation0(x))`.

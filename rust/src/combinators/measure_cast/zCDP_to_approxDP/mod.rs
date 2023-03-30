@@ -12,12 +12,12 @@ mod ffi;
 
 mod cdp_epsilon;
 
-/// Constructs a new output measurement where the output measure 
+/// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
-/// 
+///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
-/// 
+///
 /// # Generics
 /// * `DI` - Input Domain
 /// * `TO` - Output Type
@@ -46,7 +46,7 @@ where
         SmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;
-            
+
             Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
         }),
     ))

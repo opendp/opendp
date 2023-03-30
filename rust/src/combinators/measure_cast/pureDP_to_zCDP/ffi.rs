@@ -14,11 +14,10 @@ use crate::{
 ///
 /// # Citations
 /// - [BS16 Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds](https://arxiv.org/pdf/1605.02065.pdf#subsection.3.1)
-/// 
+///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
 fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-    
     fn monomorphize<QO: Float>(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let AnyMeasurement {
             input_domain,
@@ -27,7 +26,7 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
             output_measure,
             privacy_map,
         } = measurement.clone();
-    
+
         let measurement = Measurement {
             input_domain,
             function,
@@ -37,9 +36,9 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
                 privacy_map.eval(d_in)?.downcast::<QO>()
             }),
         };
-    
+
         let measurement = super::make_pureDP_to_zCDP(measurement)?;
-    
+
         let Measurement {
             input_domain,
             function,
@@ -47,7 +46,7 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
             output_measure,
             privacy_map,
         } = measurement;
-    
+
         Ok(AnyMeasurement {
             input_domain,
             function,

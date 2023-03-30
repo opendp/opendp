@@ -6,7 +6,9 @@ use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Float;
-use crate::transformations::{make_sized_bounded_sum_of_squared_deviations, UncheckedSum, Sequential, Pairwise};
+use crate::transformations::{
+    make_sized_bounded_sum_of_squared_deviations, Pairwise, Sequential, UncheckedSum,
+};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_sized_bounded_sum_of_squared_deviations(
