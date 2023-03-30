@@ -1,40 +1,41 @@
 use opendp_derive::bootstrap;
 
-use crate::{error::Fallible, core::{Function}, traits::{Float, CheckNull, RoundCast}};
+use crate::{
+    core::Function,
+    error::Fallible,
+    traits::{CheckNull, Float, RoundCast},
+};
 
 use super::{num_layers_from_num_nodes, num_nodes_from_num_layers};
 
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
-
 
 #[bootstrap(
     features("contrib"),
     generics(TIA(default = "int"), TOA(default = "float"))
 )]
 /// Postprocessor that makes a noisy b-ary tree internally consistent, and returns the leaf layer.
-/// 
+///
 /// The input argument of the function is a balanced `b`-ary tree implicitly stored in breadth-first order
 /// Tree is assumed to be complete, as in, all leaves on the last layer are on the left.
 /// Non-existent leaves are assumed to be zero.
-/// 
+///
 /// The output remains consistent even when leaf nodes are missing.
 /// This is due to an adjustment to the original algorithm to apportion corrections to children relative to their variance.
-/// 
+///
 /// # Citations
 /// * [HRMS09 Boosting the Accuracy of Differentially Private Histograms Through Consistency, section 4.1](https://arxiv.org/pdf/0904.0942.pdf)
-/// 
+///
 /// # Arguments
 /// * `branching_factor` - the maximum number of children
-/// 
+///
 /// # Generics
 /// * `TIA` - Atomic type of the input data. Should be an integer type.
 /// * `TOA` - Atomic type of the output data. Should be a float type.
 pub fn make_consistent_b_ary_tree<TIA, TOA>(
     branching_factor: usize,
-) -> Fallible<
-    Function<Vec<TIA>, Vec<TOA>>
->
+) -> Fallible<Function<Vec<TIA>, Vec<TOA>>>
 where
     TIA: CheckNull + Clone,
     TOA: Float + RoundCast<TIA>,
@@ -69,7 +70,8 @@ where
                     return;
                 }
 
-                let child_slice = i * branching_factor + 1..i * branching_factor + 1 + branching_factor;
+                let child_slice =
+                    i * branching_factor + 1..i * branching_factor + 1 + branching_factor;
 
                 let child_var: TOA = vars[child_slice.clone()].iter().sum();
                 let child_val: TOA = tree[child_slice].iter().sum();
@@ -96,7 +98,8 @@ where
 
             (0..branching_factor.pow(l as u32)).for_each(|offset| {
                 let i = l_start + offset;
-                let child_slice = i * branching_factor + 1..i * branching_factor + 1 + branching_factor;
+                let child_slice =
+                    i * branching_factor + 1..i * branching_factor + 1 + branching_factor;
                 let child_vars = vars[child_slice.clone()].to_vec();
 
                 // children need to be adjusted by this amount to be consistent with parent
@@ -120,4 +123,3 @@ where
         Ok(h_b[leaf_start..leaf_end].to_vec())
     }))
 }
-

@@ -2,12 +2,12 @@ use num::Float as _;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measure, Measurement, PrivacyMap, Metric},
+    core::{Measure, Measurement, Metric, PrivacyMap},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::SampleDiscreteGaussianZ2k, Float, FloatBits, ExactIntCast, CheckNull},
+    traits::{samplers::SampleDiscreteGaussianZ2k, CheckNull, ExactIntCast, Float, FloatBits},
 };
 
 use super::{get_discretization_consts, MappableDomain};
@@ -40,10 +40,10 @@ where
         let _2 = Q::one() + Q::one();
         PrivacyMap::new_fallible(move |d_in: &Q| {
             if d_in.is_sign_negative() {
-                return fallible!(InvalidDistance, "sensitivity must be non-negative")
+                return fallible!(InvalidDistance, "sensitivity must be non-negative");
             }
             if scale.is_zero() {
-                return Ok(Q::infinity())
+                return Ok(Q::infinity());
             }
 
             // d_in is loosened by the size of the granularization
@@ -66,42 +66,47 @@ where
     derived_types(T = "$get_atom_or_infer(D, scale)")
 )]
 /// Make a Measurement that adds noise from the gaussian(`scale`) distribution to the input.
-/// 
+///
 /// Set `D` to change the input data type and input metric:
 ///
-/// 
+///
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
 /// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
 /// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
-/// 
-/// This function takes a noise granularity in terms of 2^k. 
-/// Larger granularities are more computationally efficient, but have a looser privacy map. 
+///
+/// This function takes a noise granularity in terms of 2^k.
+/// Larger granularities are more computationally efficient, but have a looser privacy map.
 /// If k is not set, k defaults to the smallest granularity.
-/// 
+///
 /// # Arguments
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
-/// * `k` - The noise granularity in terms of 2^k. 
-/// 
+/// * `k` - The noise granularity in terms of 2^k.
+///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
-pub fn make_base_gaussian<D, MO>(scale: D::Atom, k: Option<i32>) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
+pub fn make_base_gaussian<D, MO>(
+    scale: D::Atom,
+    k: Option<i32>,
+) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
 where
     D: GaussianDomain,
     D::Atom: Float + SampleDiscreteGaussianZ2k,
     MO: GaussianMeasure<D>,
-    i32: ExactIntCast<<D::Atom as FloatBits>::Bits>
+    i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
 {
     if scale.is_sign_negative() {
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
-    
-    let (k , relaxation) = get_discretization_consts(k)?;
+
+    let (k, relaxation) = get_discretization_consts(k)?;
 
     Ok(Measurement::new(
         D::default(),
-        D::new_map_function(move |arg: &D::Atom| D::Atom::sample_discrete_gaussian_Z2k(*arg, scale, k)),
+        D::new_map_function(move |arg: &D::Atom| {
+            D::Atom::sample_discrete_gaussian_Z2k(*arg, scale, k)
+        }),
         D::InputMetric::default(),
         MO::default(),
         MO::new_forward_map(scale, relaxation),

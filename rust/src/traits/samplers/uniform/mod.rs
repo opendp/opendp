@@ -1,15 +1,18 @@
 use std::{mem::size_of, ops::Sub};
 
-use crate::{error::Fallible, traits::{FloatBits, ExactIntCast, InfDiv}};
+use crate::{
+    error::Fallible,
+    traits::{ExactIntCast, FloatBits, InfDiv},
+};
 
 use super::{fill_bytes, sample_geometric_buffer};
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 use super::GeneratorOpenDP;
 
 use num::One;
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 use rug::rand::ThreadRandState;
 
 /// Sample exactly from the uniform distribution.
@@ -17,8 +20,8 @@ pub trait SampleUniform: Sized {
     /// # Proof Definition
     /// Return `Err(e)` if there is insufficient system entropy, or
     /// `Ok(sample)`, where `sample` is a draw from Uniform[0,1).
-    /// 
-    /// For non-uniform data types like floats, 
+    ///
+    /// For non-uniform data types like floats,
     /// the probability of sampling each value is proportional to the distance to the next neighboring float.
     ///
     /// # Example
@@ -31,7 +34,6 @@ pub trait SampleUniform: Sized {
     /// ```
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self>;
 }
-
 
 /// This algorithm is taken from [Mironov (2012)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.366.5957&rep=rep1&type=pdf)
 /// and is important for making some of the guarantees in the paper.
@@ -46,25 +48,25 @@ pub trait SampleUniform: Sized {
 /// Once the precision band has been selected, floating numbers numbers are generated uniformly within the band
 /// by generating a 52-bit mantissa uniformly at random.
 impl<T, B> SampleUniform for T
-    where 
-        T: SampleMantissa<Bits=B>,
-        B: ExactIntCast<usize> + Sub<Output=B> + One,
-        usize: ExactIntCast<B> {
-
+where
+    T: SampleMantissa<Bits = B>,
+    B: ExactIntCast<usize> + Sub<Output = B> + One,
+    usize: ExactIntCast<B>,
+{
     fn sample_standard_uniform(constant_time: bool) -> Fallible<Self> {
-        // The unbiased exponent of Uniform([0, 1)) is in 
+        // The unbiased exponent of Uniform([0, 1)) is in
         //   f64: [-1023, -1]; f32: [-127, -1]
         //
         // # Lower bound:
         // Zero and subnormal numbers have a biased exponent of 0 -> an unbiased exponent of -1023 or -127
-        // 
+        //
         // # Upper bound of -1:
         // A saturated mantissa is ~2, so the unbiased exponent must be <= -1, because Uniform([0, 1)) is < 1.
         //   sign     exp    mantissa
         //   (-1)^0 * 2^-1 * 1.9999... ~ 1
 
         let max_coin_flips = usize::exact_int_cast(T::EXPONENT_BIAS)? - 1;
-        
+
         // round up to the next number of bytes. 128 for f64, 16 for f32
         let buffer_len = max_coin_flips.inf_div(&8)?;
 
@@ -78,7 +80,7 @@ impl<T, B> SampleUniform for T
 
             if let Some(e) = sample {
                 // cast to the bits type. This cast is lossless and infallible
-                break B::exact_int_cast(e)?
+                break B::exact_int_cast(e)?;
             }
         };
 
@@ -94,26 +96,28 @@ impl<T, B> SampleUniform for T
 trait SampleMantissa: FloatBits {
     /// # Proof Definition
     /// Returns `Err(e)` if there is insufficient system entropy, or
-    /// `Some(sample)`, where `sample` is a bit-vector of zeros, 
+    /// `Some(sample)`, where `sample` is a bit-vector of zeros,
     /// but the last Self::MANTISSA_BITS are iid Bernoulli(p=0.5) draws.
     fn sample_mantissa() -> Fallible<Self::Bits>;
 }
 
 macro_rules! impl_sample_mantissa {
-    ($ty:ty, $mask:literal) => (impl SampleMantissa for $ty {
-        fn sample_mantissa() -> Fallible<Self::Bits> {
-            // Of a 64 or 32 bit buffer, we want the first 12 or 9 bits to be zero, 
-            //    and the last 52 or 23 bits to be uniformly random
-            let mut mantissa_buffer = [0u8; size_of::<Self>()];
-            // Fill the last 56 or 24 bits with randomness.
-            fill_bytes(&mut mantissa_buffer[1..])?;
-            // Clear the leftmost 4 or 1 bits of the second byte
-            mantissa_buffer[1] &= $mask;
-    
-            // convert buffer to integer bits
-            Ok(Self::Bits::from_be_bytes(mantissa_buffer))
+    ($ty:ty, $mask:literal) => {
+        impl SampleMantissa for $ty {
+            fn sample_mantissa() -> Fallible<Self::Bits> {
+                // Of a 64 or 32 bit buffer, we want the first 12 or 9 bits to be zero,
+                //    and the last 52 or 23 bits to be uniformly random
+                let mut mantissa_buffer = [0u8; size_of::<Self>()];
+                // Fill the last 56 or 24 bits with randomness.
+                fill_bytes(&mut mantissa_buffer[1..])?;
+                // Clear the leftmost 4 or 1 bits of the second byte
+                mantissa_buffer[1] &= $mask;
+
+                // convert buffer to integer bits
+                Ok(Self::Bits::from_be_bytes(mantissa_buffer))
+            }
         }
-    })
+    };
 }
 
 impl_sample_mantissa!(f64, 0b00001111);
@@ -130,7 +134,7 @@ pub trait SampleUniformInt: Sized {
 /// Sample an integer uniformly over `[Self::MIN, upper]`
 pub trait SampleUniformIntBelow: Sized {
     /// # Proof Definition
-    /// For any setting of `upper`, 
+    /// For any setting of `upper`,
     /// return either `Err(e)` if there is insufficient system entropy,
     /// or `Some(sample)`, where `sample` is uniformly distributed over `[Self::MIN, upper]`.
     fn sample_uniform_int_below(upper: Self) -> Fallible<Self>;
@@ -162,7 +166,7 @@ macro_rules! impl_sample_uniform_unsigned_int {
 }
 impl_sample_uniform_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 impl SampleUniformIntBelow for rug::Integer {
     fn sample_uniform_int_below(upper: Self) -> Fallible<Self> {
         let mut rng = GeneratorOpenDP::new();

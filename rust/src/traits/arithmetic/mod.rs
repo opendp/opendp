@@ -1,15 +1,13 @@
-#[cfg(feature = "use-mpfr")]
-use rug::ops::{AddAssignRound, DivAssignRound, MulAssignRound, SubAssignRound, PowAssignRound};
 use crate::traits::{ExactIntCast, InfCast};
+#[cfg(feature = "use-mpfr")]
+use rug::ops::{AddAssignRound, DivAssignRound, MulAssignRound, PowAssignRound, SubAssignRound};
 
 use crate::error::Fallible;
-#[cfg(feature="use-mpfr")]
+#[cfg(feature = "use-mpfr")]
 use rug::Float;
 
-
-
 /// Fallible absolute value that returns an error if overflowing.
-/// 
+///
 /// This can return an error when a signed integer is the smallest negative value.
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
@@ -23,7 +21,7 @@ pub trait AlertingAbs: Sized {
 }
 
 /// Fallible addition that returns an error if overflowing.
-/// 
+///
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
 /// use opendp::traits::AlertingAdd;
@@ -37,7 +35,7 @@ pub trait AlertingAdd: Sized {
 }
 
 /// Fallible subtraction that returns an error if overflowing.
-/// 
+///
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
 /// use opendp::traits::AlertingSub;
@@ -51,7 +49,7 @@ pub trait AlertingSub: Sized {
 }
 
 /// Fallible multiplication that returns an error if overflowing.
-/// 
+///
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
 /// use opendp::traits::AlertingMul;
@@ -65,7 +63,7 @@ pub trait AlertingMul: Sized {
 }
 
 /// Fallible division that returns an error if overflowing.
-/// 
+///
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
 /// use opendp::traits::AlertingDiv;
@@ -79,8 +77,8 @@ pub trait AlertingDiv: Sized {
 }
 
 /// Fallibly raise to the power.
-/// 
-/// Returns an error if overflowing. 
+///
+/// Returns an error if overflowing.
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
 /// use opendp::traits::AlertingPow;
@@ -94,7 +92,7 @@ pub trait AlertingPow: Sized {
 }
 
 /// Addition that saturates at the numeric bounds instead of overflowing.
-/// 
+///
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
 /// use opendp::traits::SaturatingAdd;
@@ -108,7 +106,7 @@ pub trait SaturatingAdd: Sized {
 }
 
 /// Multiplication that saturates at the numeric bounds instead of overflowing.
-/// 
+///
 /// Avoids unrecoverable panics that could leak private information.
 /// ```
 /// use opendp::traits::SaturatingMul;
@@ -122,176 +120,176 @@ pub trait SaturatingMul: Sized {
 }
 
 /// Fallible exponentiation with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfExp: Sized {
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.inf_exp()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.inf_exp()` either returns `Ok(out)`,
     /// where $out \ge \exp(self)$, or `Err(e)`.
     fn inf_exp(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.neg_inf_exp()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.neg_inf_exp()` either returns `Ok(out)`,
     /// where $out \le \exp(self)$, or `Err(e)`.
     fn neg_inf_exp(self) -> Fallible<Self>;
 }
 
 /// Fallible natural logarithm with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfLn: Sized {
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.inf_ln()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.inf_ln()` either returns `Ok(out)`,
     /// where $out \ge \ln(self)$, or `Err(e)`.
     fn inf_ln(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.neg_inf_ln()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.neg_inf_ln()` either returns `Ok(out)`,
     /// where $out \le \ln(self)$, or `Err(e)`.
     fn neg_inf_ln(self) -> Fallible<Self>;
 }
 
 /// Fallible base-2 logarithm with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfLog2: Sized {
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.inf_log2()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.inf_log2()` either returns `Ok(out)`,
     /// where $out \ge \log_2(self)$, or `Err(e)`.
     fn inf_log2(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.neg_inf_log2()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.neg_inf_log2()` either returns `Ok(out)`,
     /// where $out \le \log_2(self)$, or `Err(e)`.
     fn neg_inf_log2(self) -> Fallible<Self>;
 }
 
 /// Fallible square root with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfSqrt: Sized {
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.inf_log2()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.inf_log2()` either returns `Ok(out)`,
     /// where $out \ge \sqrt{self}$, or `Err(e)`.
     fn inf_sqrt(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.neg_inf_log2()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.neg_inf_log2()` either returns `Ok(out)`,
     /// where $out \le \sqrt{self}$, or `Err(e)`.
     fn neg_inf_sqrt(self) -> Fallible<Self>;
 }
 
 /// Fallibly raise self to the power with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfPow: Sized + AlertingPow {
     /// # Proof Definition
-    /// For any two values `self` and `p` of type `Self`, 
-    /// `self.inf_pow(p)` either returns `Ok(out)`, 
+    /// For any two values `self` and `p` of type `Self`,
+    /// `self.inf_pow(p)` either returns `Ok(out)`,
     /// where $out \ge self^{p}$, or `Err(e)`.
     fn inf_pow(&self, p: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `self` and `p` of type `Self`, 
-    /// `self.neg_inf_pow(p)` either returns `Ok(out)`, 
+    /// For any two values `self` and `p` of type `Self`,
+    /// `self.neg_inf_pow(p)` either returns `Ok(out)`,
     /// where $out \le self^{p}$, or `Err(e)`.
     fn neg_inf_pow(&self, p: &Self) -> Fallible<Self>;
 }
 
 /// Fallible addition with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfAdd: Sized + AlertingAdd {
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.inf_add(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.inf_add(v)` either returns `Ok(out)`,
     /// where $out \ge self + v$, or `Err(e)`.
     fn inf_add(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.neg_inf_add(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.neg_inf_add(v)` either returns `Ok(out)`,
     /// where $out \le self + v$, or `Err(e)`.
     fn neg_inf_add(&self, v: &Self) -> Fallible<Self>;
 }
 
 /// Fallible subtraction with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfSub: Sized + AlertingSub {
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.inf_sub(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.inf_sub(v)` either returns `Ok(out)`,
     /// where $out \ge self - v$, or `Err(e)`.
     fn inf_sub(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.neg_inf_sub(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.neg_inf_sub(v)` either returns `Ok(out)`,
     /// where $out \le self - v$, or `Err(e)`.
     fn neg_inf_sub(&self, v: &Self) -> Fallible<Self>;
 }
 
 /// Fallible multiplication with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfMul: Sized + AlertingMul {
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.inf_mul(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.inf_mul(v)` either returns `Ok(out)`,
     /// where $out \ge self \cdot v$, or `Err(e)`.
     fn inf_mul(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.neg_inf_mul(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.neg_inf_mul(v)` either returns `Ok(out)`,
     /// where $out \le self \cdot v$, or `Err(e)`.
     fn neg_inf_mul(&self, v: &Self) -> Fallible<Self>;
 }
 
 /// Fallible division with specified rounding.
-/// 
+///
 /// Throws an error if the ideal output is not finite or representable.
 pub trait InfDiv: Sized + AlertingDiv {
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.inf_div(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.inf_div(v)` either returns `Ok(out)`,
     /// where $out \ge self / v$, or `Err(e)`.
     fn inf_div(&self, v: &Self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any two values `self` and `v` of type `Self`, 
-    /// `self.neg_inf_div(v)` either returns `Ok(out)`, 
+    /// For any two values `self` and `v` of type `Self`,
+    /// `self.neg_inf_div(v)` either returns `Ok(out)`,
     /// where $out \le self / v$, or `Err(e)`.
     fn neg_inf_div(&self, v: &Self) -> Fallible<Self>;
 }
 
- /// Fallibly exponentiate and subtract one with specified rounding.
- /// 
- /// Throws an error if the ideal output is not finite or representable.
- /// This provides more numerical stability than computing the quantity outright.
+/// Fallibly exponentiate and subtract one with specified rounding.
+///
+/// Throws an error if the ideal output is not finite or representable.
+/// This provides more numerical stability than computing the quantity outright.
 pub trait InfExpM1: Sized {
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.inf_exp_m1()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.inf_exp_m1()` either returns `Ok(out)`,
     /// where $out \ge \exp(self) - 1$, or `Err(e)`.
     fn inf_exp_m1(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.neg_inf_exp_m1()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.neg_inf_exp_m1()` either returns `Ok(out)`,
     /// where $out \le \exp(self) - 1$, or `Err(e)`.
     fn neg_inf_exp_m1(self) -> Fallible<Self>;
 }
 
- /// Fallible logarithm of the argument plus one with specified rounding.
- pub trait InfLn1P: Sized {
+/// Fallible logarithm of the argument plus one with specified rounding.
+pub trait InfLn1P: Sized {
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.inf_ln_1p()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.inf_ln_1p()` either returns `Ok(out)`,
     /// where $out \ge \ln(self + 1)$, or `Err(e)`.
     fn inf_ln_1p(self) -> Fallible<Self>;
     /// # Proof Definition
-    /// For any `self` of type `Self`, 
-    /// `self.neg_inf_ln_1p()` either returns `Ok(out)`, 
+    /// For any `self` of type `Self`,
+    /// `self.neg_inf_ln_1p()` either returns `Ok(out)`,
     /// where $out \le \ln(self + 1)$, or `Err(e)`.
     fn neg_inf_ln_1p(self) -> Fallible<Self>;
 }
@@ -324,8 +322,6 @@ macro_rules! impl_alerting_abs_float {
     })+)
 }
 impl_alerting_abs_float!(f32, f64);
-
-
 
 // TRAIT Alerting*, Saturating*
 macro_rules! impl_alerting_int {
@@ -453,7 +449,6 @@ macro_rules! impl_alerting_float {
 }
 impl_alerting_float!(f32, f64);
 
-
 // TRAIT InfSqrt, InfLn, InfExp (univariate)
 macro_rules! impl_float_inf_uni {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident, $fallback:ident) => {
@@ -506,7 +501,6 @@ impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp_round, exp);
 impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p_round, ln_1p);
 impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1_round, exp_m1);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt_round, sqrt);
-
 
 // TRAIT InfAdd, InfSub, InfMul, InfDiv (bivariate)
 macro_rules! impl_int_inf {

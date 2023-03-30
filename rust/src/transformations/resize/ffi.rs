@@ -1,7 +1,6 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
-
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AllDomain, BoundedDomain};
 use crate::err;
@@ -29,7 +28,7 @@ pub extern "C" fn opendp_transformations__make_resize(
     let MO = try_!(Type::try_from(MO));
 
     if DA != atom_domain.type_ {
-        return err!(FFI, "DA must match atom_domain's type").into()
+        return err!(FFI, "DA must match atom_domain's type").into();
     }
 
     fn monomorphize_all<MI, MO, T: 'static + CheckNull + Clone>(
@@ -60,22 +59,28 @@ pub extern "C" fn opendp_transformations__make_resize(
     }
 
     match atom_domain.type_.contents {
-        TypeContents::GENERIC { name: "AllDomain", .. } => 
-            dispatch!(monomorphize_all, [
+        TypeContents::GENERIC {
+            name: "AllDomain", ..
+        } => dispatch!(monomorphize_all, [
                 (MI, [SymmetricDistance, InsertDeleteDistance]),
                 (MO, [SymmetricDistance, InsertDeleteDistance]),
                 (atom_domain.carrier_type, @primitives)
             ], (size, atom_domain, constant)),
-        TypeContents::GENERIC { name: "BoundedDomain", .. } => 
-            dispatch!(monomorphize_bounded, [
+        TypeContents::GENERIC {
+            name: "BoundedDomain",
+            ..
+        } => dispatch!(monomorphize_bounded, [
                 (MI, [SymmetricDistance, InsertDeleteDistance]),
                 (MO, [SymmetricDistance, InsertDeleteDistance]),
                 (atom_domain.carrier_type, @numbers)
             ], (size, atom_domain, constant)),
-        _ => err!(FFI, "VectorDomain constructors only support AllDomain and BoundedDomain atoms").into()
+        _ => err!(
+            FFI,
+            "VectorDomain constructors only support AllDomain and BoundedDomain atoms"
+        )
+        .into(),
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -108,7 +113,9 @@ mod tests {
     fn test_make_bounded_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             4 as c_uint,
-            util::into_raw(AnyDomain::new(BoundedDomain::<i32>::new_closed((0i32, 10)).unwrap())),
+            util::into_raw(AnyDomain::new(
+                BoundedDomain::<i32>::new_closed((0i32, 10)).unwrap(),
+            )),
             AnyObject::new_raw(0i32),
             "BoundedDomain<i32>".to_char_p(),
             "SymmetricDistance".to_char_p(),

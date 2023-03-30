@@ -3,15 +3,14 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation},
-    metrics::{AbsoluteDistance, LpDistance},
     domains::{AllDomain, VectorDomain},
     error::Fallible,
+    metrics::{AbsoluteDistance, LpDistance},
     traits::{
-        AlertingAbs, CheckNull, ExactIntCast, FloatBits, InfAdd, InfMul, InfPow, InfSub,
-        SaturatingMul, TotalOrd, Float
+        AlertingAbs, CheckNull, ExactIntCast, Float, FloatBits, InfAdd, InfMul, InfPow, InfSub,
+        SaturatingMul, TotalOrd,
     },
 };
-
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -19,21 +18,23 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(
-        constant(rust_type = "T", c_type = "void *"), 
-        bounds(rust_type = "(T, T)")),
+        constant(rust_type = "T", c_type = "void *"),
+        bounds(rust_type = "(T, T)")
+    ),
     generics(
         D(default = "AllDomain<T>", generics = "T"),
-        M(default = "AbsoluteDistance<T>", generics = "T")),
+        M(default = "AbsoluteDistance<T>", generics = "T")
+    ),
     derived_types(T = "$get_atom_or_infer(D, constant)")
 )]
 /// Make a transformation that multiplies an aggregate by a constant.
-/// 
+///
 /// The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
-/// 
+///
 /// # Arguments
 /// * `constant` - The constant to multiply aggregates by.
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
-/// 
+///
 /// # Generics
 /// * `D` - Domain of the function. Must be `AllDomain<T>` or `VectorDomain<AllDomain<T>>`
 /// * `M` - Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`

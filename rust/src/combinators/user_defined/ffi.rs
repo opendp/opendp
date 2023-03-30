@@ -7,7 +7,8 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{
-            AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyTransformation, AnyFunction,
+            AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
+            AnyTransformation,
         },
         util,
     },
@@ -21,8 +22,6 @@ fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
         util::into_owned(func(arg as *const AnyObject))?.into()
     }
 }
-
-
 
 #[bootstrap(
     name = "make_user_transformation",
@@ -85,7 +84,7 @@ pub extern "C" fn opendp_combinators__make_user_transformation(
 /// * `input_metric` - The metric from which distances between adjacent inputs are measured.
 /// * `output_measure` - The measure from which distances between adjacent output distributions are measured.
 /// * `privacy_map` - A function mapping distances from `input_metric` to `output_measure`.
-/// 
+///
 /// # Generics
 /// * `TO` - The data type of outputs from the function.
 #[allow(dead_code)]
@@ -135,13 +134,11 @@ pub extern "C" fn opendp_combinators__make_user_measurement(
 ///
 /// # Arguments
 /// * `function` - A function mapping data to a value of type `TO`
-/// 
+///
 /// # Generics
 /// * `TO` - Output Type
 #[allow(dead_code)]
-fn make_user_postprocessor<TO>(
-    function: CallbackFn,
-) -> Fallible<AnyFunction> {
+fn make_user_postprocessor<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
     let _ = function;
     panic!("this signature only exists for code generation")
 }

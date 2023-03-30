@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measurement, Metric, PrivacyMap},
     error::Fallible,
-    measures::{MaxDivergence, FixedSmoothedMaxDivergence},
+    measures::{FixedSmoothedMaxDivergence, MaxDivergence},
     traits::Float,
 };
 

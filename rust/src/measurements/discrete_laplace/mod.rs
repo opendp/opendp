@@ -75,23 +75,23 @@ impl<T: Clone + CheckNull> DiscreteLaplaceDomain for VectorDomain<AllDomain<T>> 
     generics(D(default = "AllDomain<int>"))
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
-/// 
+///
 /// Set `D` to change the input data type and input metric:
-/// 
+///
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
 /// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
 /// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
-/// 
+///
 /// This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
-/// 
+///
 /// # Arguments
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-/// 
+///
 /// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
 /// * `QO` - Data type of the output distance and scale. `f32` or `f64`.

@@ -17,7 +17,7 @@ pub trait SampleGeometric<P>: Sized {
     /// ```text
     ///     [Self::MIN, Self::MAX]
     /// ```
-    /// 
+    ///
     /// If `trials` is Some, execution runs in constant time, and the support is
     /// ```text
     ///     [Self::MIN, Self::MAX] ∩ {shift ± {0, 1, 2, ..., trials}}
@@ -110,7 +110,7 @@ pub trait SampleDiscreteLaplaceLinear<P>: SampleGeometric<P> {
     /// ```text
     ///     [Self::MIN, Self::MAX]
     /// ```
-    /// 
+    ///
     /// If `bounds` is Some, execution runs in constant time, and the support is
     /// ```text
     ///     [Self::MIN, Self::MAX] ∩ {shift ± {1, 2, 3, ..., trials}}
@@ -204,15 +204,15 @@ where
 }
 
 /// Sample from a specific discrete/geometric distribution.
-/// 
+///
 /// Used for exact bernoulli samples.
-/// 
+///
 /// # Proof Definition
-/// For any setting of the input arguments, return 
+/// For any setting of the input arguments, return
 /// `Err(e)` if there is insufficient system entropy, or
 /// `Ok(sample)` where `sample` is from a discrete distribution.
-/// 
-/// `sample` is either 
+///
+/// `sample` is either
 /// `None` with probability $2^{-buffer_len * 8}$, or
 /// `Some(geo)` where `geo` is a sample from the Geometric(p=0.5) distribution.
 ///
@@ -249,12 +249,11 @@ pub(super) fn sample_geometric_buffer(
     })
 }
 
-
-#[cfg(all(test, feature="test-plot"))]
+#[cfg(all(test, feature = "test-plot"))]
 mod test_plotting {
-    use crate::traits::samplers::Fallible;
-    use crate::error::ExplainUnwrap;
     use super::*;
+    use crate::error::ExplainUnwrap;
+    use crate::traits::samplers::Fallible;
     #[test]
     fn plot_geometric() -> Fallible<()> {
         let shift = 0;

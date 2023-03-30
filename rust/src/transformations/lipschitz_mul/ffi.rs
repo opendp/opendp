@@ -1,17 +1,16 @@
 use std::{convert::TryFrom, ffi::c_void, os::raw::c_char};
 
-
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
-    metrics::{AbsoluteDistance, L1Distance, L2Distance},
     domains::{AllDomain, VectorDomain},
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
+    metrics::{AbsoluteDistance, L1Distance, L2Distance},
+    traits::Float,
     traits::SaturatingMul,
     transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric},
-    traits::Float
 };
 
 #[no_mangle]

@@ -22,7 +22,7 @@ pub struct Function {
     // metadata for return type
     pub ret: Argument,
     // references to values that should share the same lifetime
-    pub dependencies: Vec<TypeRecipe>
+    pub dependencies: Vec<TypeRecipe>,
 }
 
 // Metadata for function arguments, derived types and returns.
@@ -49,9 +49,8 @@ pub struct Argument {
     //  to prevent the returned AnyObject from getting converted back to python
     pub do_not_convert: bool,
     // when is_type, use this as an example to infer the type
-    pub example: Option<TypeRecipe>
+    pub example: Option<TypeRecipe>,
 }
-
 
 // TypeRecipe contains the metadata to generate code that evaluates to a rust type name
 #[derive(Debug, PartialEq, Clone)]
@@ -59,11 +58,17 @@ pub enum TypeRecipe {
     // reference an existing type
     Name(String),
     // build up a rust type from other rust types
-    Nest { origin: String, args: Vec<TypeRecipe> },
+    Nest {
+        origin: String,
+        args: Vec<TypeRecipe>,
+    },
     // explicitly absent
     None,
     // construct the rust type via function call
-    Function { function: String, params: Vec<TypeRecipe> },
+    Function {
+        function: String,
+        params: Vec<TypeRecipe>,
+    },
 }
 
 // holds literal values, like for default

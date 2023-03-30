@@ -42,18 +42,18 @@
 // This file is derived from the following implementation by Thomas Steinke:
 //     https://github.com/IBM/discrete-gaussian-differential-privacy/blob/cb190d2a990a78eff6e21159203bc888e095f01b/discretegauss.py
 
-use opendp_derive::proven;
-use rug::{Rational, Integer};
-use crate::traits::samplers::SampleBernoulli;
 use crate::error::Fallible;
+use crate::traits::samplers::SampleBernoulli;
+use opendp_derive::proven;
+use rug::{Integer, Rational};
 
-use num::{Zero, One};
+use num::{One, Zero};
 
-use super::{SampleUniformIntBelow, SampleStandardBernoulli};
+use super::{SampleStandardBernoulli, SampleUniformIntBelow};
 
 #[proven]
 /// Sample exactly from the Bernoulli(exp(-x)) distribution, where $x \in [0, 1]$.
-/// 
+///
 /// # Proof Definition
 /// For any rational number in [0, 1], `x`,
 /// `sample_bernoulli_exp1` either returns `Err(e)`, due to a lack of system entropy,
@@ -71,9 +71,9 @@ fn sample_bernoulli_exp1(x: Rational) -> Fallible<bool> {
 
 #[proven]
 /// Sample exactly from the Bernoulli(exp(-x)) distribution, where $x \ge 0$.
-/// 
+///
 /// # Proof Definition
-/// For any non-negative finite rational `x`, 
+/// For any non-negative finite rational `x`,
 /// `sample_bernoulli_exp` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Bernoulli(exp(-x))$.
 
@@ -91,8 +91,8 @@ fn sample_bernoulli_exp(mut x: Rational) -> Fallible<bool> {
 }
 
 #[proven]
-/// Sample exactly from the geometric distribution (slow). 
-/// 
+/// Sample exactly from the geometric distribution (slow).
+///
 /// # Proof Definition
 /// For any non-negative rational `x`,
 /// `sample_geometric_exp_slow` either returns `Err(e)` due to a lack of system entropy,
@@ -109,8 +109,8 @@ fn sample_geometric_exp_slow(x: Rational) -> Fallible<Integer> {
 }
 
 #[proven]
-/// Sample exactly from the geometric distribution (fast). 
-/// 
+/// Sample exactly from the geometric distribution (fast).
+///
 /// # Proof Definition
 /// For any non-negative rational `x`,
 /// `sample_geometric_exp_fast` either returns `Err(e)` due to a lack of system entropy,
@@ -131,36 +131,32 @@ fn sample_geometric_exp_fast(x: Rational) -> Fallible<Integer> {
 
 #[proven]
 /// Sample exactly from the discrete laplace distribution with arbitrary precision.
-/// 
+///
 /// # Proof Definition
 /// For any `scale` that is a non-negative rational number,
 /// `sample_discrete_laplace` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$.
-/// 
+///
 /// Specifically, the probability of returning any `x` of type [`rug::Integer`] is
 /// ```math
 /// \forall x \in \mathbb{Z}, \quad  
-/// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad 
+/// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
-/// 
+///
 /// # Citation
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
 pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
     if scale.is_zero() {
-        return Ok(0.into())
+        return Ok(0.into());
     }
     let inv_scale = scale.recip();
-    
+
     loop {
         let positive = bool::sample_standard_bernoulli()?;
         let magnitude = sample_geometric_exp_fast(inv_scale.clone())?;
         if positive || !magnitude.is_zero() {
-            return Ok(if positive {
-                magnitude
-            } else {
-                -magnitude
-            })
+            return Ok(if positive { magnitude } else { -magnitude });
         }
     }
 }
@@ -171,20 +167,20 @@ pub fn sample_discrete_laplace(scale: Rational) -> Fallible<Integer> {
 /// For any `scale` that is a non-negative rational number,
 /// `sample_discrete_gaussian` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
-/// 
+///
 /// Specifically, the probability of returning any `x` of type [`rug::Integer`] is
 /// ```math
 /// \forall x \in \mathbb{Z}, \quad  
-/// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad 
+/// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad
 /// \text{where } X \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)
 /// ```
 /// where $\sigma = scale$.
-/// 
+///
 /// # Citation
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
 pub fn sample_discrete_gaussian(scale: Rational) -> Fallible<Integer> {
     if scale.is_zero() {
-        return Ok(0.into())
+        return Ok(0.into());
     }
     let t = scale.clone().floor() + 1i8;
     let sigma2 = scale.square();

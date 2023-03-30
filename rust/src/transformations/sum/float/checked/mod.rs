@@ -1,19 +1,20 @@
 use crate::{
-    core::{Function, Transformation, StabilityMap},
-    metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
+    core::{Function, StabilityMap, Transformation},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{InfAdd, InfCast, InfMul, InfSub, TotalOrd, AlertingAbs, ExactIntCast, samplers::Shuffle},
+    metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
+    traits::{
+        samplers::Shuffle, AlertingAbs, ExactIntCast, InfAdd, InfCast, InfMul, InfSub, TotalOrd,
+    },
 };
 
-use num::{Zero, One};
+use num::{One, Zero};
 use opendp_derive::bootstrap;
 
 use super::{Float, Pairwise, Sequential, SumRelaxation};
 
 #[cfg(feature = "ffi")]
 mod ffi;
-
 
 #[bootstrap(
     features("contrib"),
@@ -22,30 +23,30 @@ mod ffi;
     returns(c_type = "FfiResult<AnyTransformation *>"),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
-/// Make a Transformation that computes the sum of bounded data with known dataset size. 
-/// 
-/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+/// Make a Transformation that computes the sum of bounded data with known dataset size.
+///
+/// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
 /// Use `make_clamp` to bound data and `make_resize` to establish dataset size.
-/// 
+///
 /// | S (summation algorithm) | input type     |
 /// | ----------------------- | -------------- |
 /// | `Sequential<S::Item>`   | `Vec<S::Item>` |
 /// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
-/// 
-/// `S::Item` is the type of all of the following: 
+///
+/// `S::Item` is the type of all of the following:
 /// each bound, each element in the input data, the output data, and the output sensitivity.
-/// 
+///
 /// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
 /// set `S` to `Pairwise<f32>`.
-/// 
+///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `size_limit` - Upper bound on number of records to keep in the input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `S` - Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 pub fn make_bounded_float_checked_sum<S>(
@@ -71,7 +72,9 @@ where
     }
 
     let (lower, upper) = bounds;
-    let ideal_sensitivity = upper.inf_sub(&lower)?.total_max(lower.alerting_abs()?.total_max(upper)?)?;
+    let ideal_sensitivity = upper
+        .inf_sub(&lower)?
+        .total_max(lower.alerting_abs()?.total_max(upper)?)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
@@ -105,29 +108,29 @@ where
     returns(c_type = "FfiResult<AnyTransformation *>"),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
-/// Make a Transformation that computes the sum of bounded floats with known dataset size. 
-/// 
+/// Make a Transformation that computes the sum of bounded floats with known dataset size.
+///
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
-/// 
+///
 /// | S (summation algorithm) | input type     |
 /// | ----------------------- | -------------- |
 /// | `Sequential<S::Item>`   | `Vec<S::Item>` |
 /// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
-/// 
-/// `S::Item` is the type of all of the following: 
+///
+/// `S::Item` is the type of all of the following:
 /// each bound, each element in the input data, the output data, and the output sensitivity.
-/// 
+///
 /// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
 /// set `S` to `Pairwise<f32>`.
-/// 
+///
 /// # Citations
-/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
+/// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-/// 
+///
 /// # Arguments
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
-/// 
+///
 /// # Generics
 /// * `S` - Summation algorithm to use over some data type `T` (`T` is shorthand for `S::Item`)
 pub fn make_sized_bounded_float_checked_sum<S>(
@@ -290,7 +293,6 @@ where
     _2.inf_pow(&pow)
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -328,8 +330,6 @@ mod test {
     }
 }
 
-
-
 #[cfg(test)]
 mod test_checks {
     use super::*;
@@ -357,7 +357,7 @@ mod test_checks {
         // should barely fail first check and significantly fail second check
         let can_of = Sequential::<f64>::float_sum_can_overflow(largest_size, (0., ulp_max / 2.))?;
         assert!(can_of);
-        
+
         // should barely pass first check
         let can_of = Sequential::<f64>::float_sum_can_overflow(largest_size, (0., ulp_max / 4.))?;
         assert!(!can_of);
@@ -367,7 +367,7 @@ mod test_checks {
         assert!(!can_of);
         Ok(())
     }
-    
+
     #[test]
     fn test_float_sum_overflows_pairwise() -> Fallible<()> {
         let almost_max = f64::from_bits(f64::MAX.to_bits() - 1);
@@ -379,15 +379,22 @@ mod test_checks {
         assert!(can_of);
 
         // should barely fail first check and pass second check
-        let can_of = Pairwise::<f64>::float_sum_can_overflow(largest_size, (0., ulp_max / (largest_size as f64)))?;
+        let can_of = Pairwise::<f64>::float_sum_can_overflow(
+            largest_size,
+            (0., ulp_max / (largest_size as f64)),
+        )?;
         assert!(!can_of);
-        
+
         // should barely pass first check
-        let can_of = Pairwise::<f64>::float_sum_can_overflow(largest_size, (0., ulp_max / (largest_size as f64) / 2.))?;
+        let can_of = Pairwise::<f64>::float_sum_can_overflow(
+            largest_size,
+            (0., ulp_max / (largest_size as f64) / 2.),
+        )?;
         assert!(!can_of);
 
         // should barely fail first check and significantly pass second check
-        let can_of = Pairwise::<f64>::float_sum_can_overflow(10, (0., ulp_max / (largest_size as f64)))?;
+        let can_of =
+            Pairwise::<f64>::float_sum_can_overflow(10, (0., ulp_max / (largest_size as f64)))?;
         assert!(!can_of);
         Ok(())
     }

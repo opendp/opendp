@@ -1,19 +1,17 @@
 use crate::{
-    core::{StabilityMap, Transformation, Function},
-    metrics::{AbsoluteDistance, SymmetricDistance},
+    core::{Function, StabilityMap, Transformation},
     domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
-    traits::{ExactIntCast, InfCast, InfAdd, InfDiv, InfMul, InfSub, Float},
+    metrics::{AbsoluteDistance, SymmetricDistance},
+    traits::{ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub},
 };
 
-use num::{Zero, One};
+use num::{One, Zero};
 
 use super::UncheckedSum;
 
-
-#[cfg(feature="ffi")]
+#[cfg(feature = "ffi")]
 mod ffi;
-
 
 type CovarianceDomain<T> = SizedDomain<VectorDomain<BoundedDomain<(T, T)>>>;
 
@@ -32,13 +30,13 @@ pub fn make_sized_bounded_covariance<S>(
 >
 where
     S: UncheckedSum,
-    S::Item: 'static + Float
+    S::Item: 'static + Float,
 {
     if size == 0 {
-        return fallible!(MakeTransformation, "size must be greater than zero")
+        return fallible!(MakeTransformation, "size must be greater than zero");
     }
     if ddof >= size {
-        return fallible!(MakeTransformation, "size - ddof must be greater than zero")
+        return fallible!(MakeTransformation, "size - ddof must be greater than zero");
     }
     let _size = S::Item::exact_int_cast(size)?;
     let _ddof = S::Item::exact_int_cast(ddof)?;
@@ -99,9 +97,13 @@ where
             let (sum_l, sum_r) = (S::unchecked_sum(&l), S::unchecked_sum(&r));
             let (mean_l, mean_r) = (sum_l / _size, sum_r / _size);
 
-            let ssd = S::unchecked_sum(&arg.iter().copied()
-                .map(|(v_l, v_r)| (v_l - mean_l) * (v_r - mean_r)).collect::<Vec<S::Item>>());
-            
+            let ssd = S::unchecked_sum(
+                &arg.iter()
+                    .copied()
+                    .map(|(v_l, v_r)| (v_l - mean_l) * (v_r - mean_r))
+                    .collect::<Vec<S::Item>>(),
+            );
+
             ssd / (_size - _ddof)
         })),
         SymmetricDistance::default(),
@@ -137,8 +139,7 @@ mod test {
         let ret = transformation_pop.invoke(&arg)?;
         let expected = 2.0;
         assert_eq!(ret, expected);
-        assert!(transformation_pop
-            .check(&1, &(100. * 4. / 25.))?);
+        assert!(transformation_pop.check(&1, &(100. * 4. / 25.))?);
         Ok(())
     }
 }

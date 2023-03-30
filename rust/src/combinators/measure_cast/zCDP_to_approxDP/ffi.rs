@@ -8,17 +8,13 @@ use crate::{
     traits::Float,
 };
 
-#[bootstrap(
-    features("contrib"),
-    dependencies("$get_dependencies(measurement)")
-)]
+#[bootstrap(features("contrib"), dependencies("$get_dependencies(measurement)"))]
 /// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence<QO>` to `SmoothedMaxDivergence<QO>`.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
 fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-    
     fn monomorphize<QO: Float>(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let AnyMeasurement {
             input_domain,
@@ -27,7 +23,7 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
             output_measure,
             privacy_map,
         } = measurement.clone();
-    
+
         let measurement = Measurement {
             input_domain,
             function,
@@ -37,9 +33,9 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
                 privacy_map.eval(d_in)?.downcast::<QO>()
             }),
         };
-    
+
         let measurement = super::make_zCDP_to_approxDP(measurement)?;
-    
+
         let Measurement {
             input_domain,
             function,
@@ -47,7 +43,7 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
             output_measure,
             privacy_map,
         } = measurement;
-    
+
         Ok(AnyMeasurement {
             input_domain,
             function,

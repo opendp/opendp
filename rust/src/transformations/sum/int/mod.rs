@@ -27,7 +27,9 @@ pub trait CanIntSumOverflow: Sized {
     fn int_sum_can_overflow(size: usize, bounds: (Self, Self)) -> Fallible<bool>;
 }
 
-impl<T: ExactIntCast<usize> + AlertingAbs + TotalOrd + InfMul + AddIsExact> CanIntSumOverflow for T {
+impl<T: ExactIntCast<usize> + AlertingAbs + TotalOrd + InfMul + AddIsExact> CanIntSumOverflow
+    for T
+{
     fn int_sum_can_overflow(size: usize, (lower, upper): (Self, Self)) -> Fallible<bool> {
         let size = T::exact_int_cast(size)?;
         let mag = lower.alerting_abs()?.total_max(upper)?;

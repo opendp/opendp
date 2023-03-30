@@ -14,11 +14,11 @@ mod ffi;
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that subsets a dataframe by a boolean column.
-/// 
+///
 /// # Arguments
 /// * `indicator_column` - name of the boolean column that indicates inclusion in the subset
 /// * `keep_columns` - list of column names to apply subset to
-/// 
+///
 /// # Generics
 /// * `TK` - Type of the column name
 pub fn make_subset_by<TK: Hashable>(

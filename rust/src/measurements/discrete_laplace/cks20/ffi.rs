@@ -4,6 +4,7 @@ use std::os::raw::{c_char, c_void};
 use az::SaturatingCast;
 
 use crate::core::FfiResult;
+use crate::core::IntoAnyMeasurementFfiResultExt;
 use crate::ffi::any::AnyMeasurement;
 use crate::{
     domains::{AllDomain, VectorDomain},
@@ -11,8 +12,6 @@ use crate::{
     measurements::{make_base_discrete_laplace_cks20, DiscreteLaplaceDomain},
     traits::InfCast,
 };
-use crate::core::IntoAnyMeasurementFfiResultExt;
-
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
@@ -20,7 +19,11 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
     D: *const c_char,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
-    fn monomorphize<T, QO>(scale: *const c_void, D: Type, QO: Type) -> FfiResult<*mut AnyMeasurement>
+    fn monomorphize<T, QO>(
+        scale: *const c_void,
+        D: Type,
+        QO: Type,
+    ) -> FfiResult<*mut AnyMeasurement>
     where
         T: crate::traits::Integer,
         QO: crate::traits::Float + InfCast<T>,
@@ -51,8 +54,6 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         (QO, @floats)
     ], (scale, D, QO))
 }
-
-
 
 #[cfg(test)]
 mod tests {

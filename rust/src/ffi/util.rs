@@ -2,38 +2,52 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
-use std::ffi::{CStr, IntoStringError, NulError};
 use std::ffi::CString;
+use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::{err, fallible};
-use crate::metrics::{ChangeOneDistance, L1Distance, L2Distance, SymmetricDistance, AbsoluteDistance, InsertDeleteDistance, HammingDistance};
-use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, SMDCurve, FixedSmoothedMaxDivergence};
+use crate::domains::{
+    AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain, VectorDomain,
+};
 use crate::error::*;
 use crate::ffi::any::AnyObject;
-use crate::domains::{VectorDomain, AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain};
+use crate::measures::{
+    FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
+    ZeroConcentratedDivergence,
+};
+use crate::metrics::{
+    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, L1Distance,
+    L2Distance, SymmetricDistance,
+};
+use crate::{err, fallible};
 
 use super::any::{AnyMeasurement, AnyTransformation};
 
-// If untrusted is not enabled, then these structs don't exist. 
-#[cfg(feature="untrusted")]
-use crate::transformations::{Sequential, Pairwise};
-#[cfg(not(feature="untrusted"))]
+// If untrusted is not enabled, then these structs don't exist.
+#[cfg(feature = "untrusted")]
+use crate::transformations::{Pairwise, Sequential};
+#[cfg(not(feature = "untrusted"))]
 use std::marker::PhantomData;
-#[cfg(not(feature="untrusted"))]
+#[cfg(not(feature = "untrusted"))]
 pub struct Sequential<T>(PhantomData<T>);
-#[cfg(not(feature="untrusted"))]
+#[cfg(not(feature = "untrusted"))]
 pub struct Pairwise<T>(PhantomData<T>);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeContents {
     PLAIN(&'static str),
     TUPLE(Vec<TypeId>),
-    ARRAY { element_id: TypeId, len: usize },
+    ARRAY {
+        element_id: TypeId,
+        len: usize,
+    },
     SLICE(TypeId),
-    GENERIC { name: &'static str, args: Vec<TypeId> },
-    VEC(TypeId),  // This is a convenience specialization of GENERIC, used until we switch to slices.
+    GENERIC {
+        name: &'static str,
+        args: Vec<TypeId>,
+    },
+    VEC(TypeId), // This is a convenience specialization of GENERIC, used until we switch to slices.
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -45,7 +59,11 @@ pub struct Type {
 
 impl Type {
     pub fn new<S: AsRef<str>>(id: TypeId, descriptor: S, contents: TypeContents) -> Self {
-        Self { id, descriptor: descriptor.as_ref().to_string(), contents }
+        Self {
+            id,
+            descriptor: descriptor.as_ref().to_string(),
+            contents,
+        }
     }
 
     pub fn of<T: 'static + ?Sized>() -> Self {
@@ -57,11 +75,18 @@ impl Type {
 
     fn of_unregistered<T: 'static + ?Sized>() -> Self {
         let descriptor = any::type_name::<T>();
-        Self::new(TypeId::of::<T>(), descriptor, TypeContents::PLAIN(descriptor))
+        Self::new(
+            TypeId::of::<T>(),
+            descriptor,
+            TypeContents::PLAIN(descriptor),
+        )
     }
 
     pub fn of_id(id: &TypeId) -> Fallible<Self> {
-        TYPE_ID_TO_TYPE.get(id).cloned().ok_or_else(|| err!(TypeParse, "unrecognized type id"))
+        TYPE_ID_TO_TYPE
+            .get(id)
+            .cloned()
+            .ok_or_else(|| err!(TypeParse, "unrecognized type id"))
     }
 }
 
@@ -71,30 +96,43 @@ impl Type {
             TypeContents::PLAIN(_) => Ok(self.clone()),
             TypeContents::GENERIC { args, .. } => {
                 if args.len() != 1 {
-                    return fallible!(TypeParse, "Failed to extract atom type: expected one argument, got {:?} arguments", args.len())
+                    return fallible!(
+                        TypeParse,
+                        "Failed to extract atom type: expected one argument, got {:?} arguments",
+                        args.len()
+                    );
                 }
                 Type::of_id(&args[0])?.get_atom()
             }
-            _ => fallible!(TypeParse, "Failed to extract atom type: not a generic")
+            _ => fallible!(TypeParse, "Failed to extract atom type: not a generic"),
         }
     }
 }
 impl ToString for Type {
     fn to_string(&self) -> String {
-        let get_id_str = |type_id: &TypeId| Type::of_id(type_id)
-            .as_ref().map(ToString::to_string)
-            .unwrap_or_else(|_| format!("{:?} {:?}", type_id, TypeId::of::<f64>()));
+        let get_id_str = |type_id: &TypeId| {
+            Type::of_id(type_id)
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|_| format!("{:?} {:?}", type_id, TypeId::of::<f64>()))
+        };
 
         match &self.contents {
             TypeContents::PLAIN(v) => v.to_string(),
-            TypeContents::TUPLE(args) => format!("({})", args.iter()
-                .map(get_id_str).collect::<Vec<_>>().join(", ")),
-            TypeContents::ARRAY { element_id, len } =>
-                format!("[{}; {}]", get_id_str(element_id), len),
+            TypeContents::TUPLE(args) => format!(
+                "({})",
+                args.iter().map(get_id_str).collect::<Vec<_>>().join(", ")
+            ),
+            TypeContents::ARRAY { element_id, len } => {
+                format!("[{}; {}]", get_id_str(element_id), len)
+            }
             TypeContents::SLICE(type_id) => format!("&[{}]", get_id_str(type_id)),
-            TypeContents::GENERIC { name, args } => format!("{}<{}>", name, args.iter()
-                .map(get_id_str).collect::<Vec<_>>().join(", ")),
-            TypeContents::VEC(v) => format!("Vec<{}>", get_id_str(v))
+            TypeContents::GENERIC { name, args } => format!(
+                "{}<{}>",
+                name,
+                args.iter().map(get_id_str).collect::<Vec<_>>().join(", ")
+            ),
+            TypeContents::VEC(v) => format!("Vec<{}>", get_id_str(v)),
         }
     }
 }
@@ -124,7 +162,11 @@ macro_rules! nest {
     });
 }
 
-macro_rules! replace {($from:ident, $to:literal) => {$to};}
+macro_rules! replace {
+    ($from:ident, $to:literal) => {
+        $to
+    };
+}
 
 /// Builds a [`Type`] from a compact invocation, choosing an appropriate [`TypeContents`].
 /// * `t!(Foo)` => `TypeContents::PLAIN`
@@ -260,13 +302,15 @@ lazy_static! {
     };
 }
 lazy_static! {
-    static ref TYPE_ID_TO_TYPE: HashMap<TypeId, Type> = {
-        TYPES.iter().map(|e| (e.id, e.clone())).collect()
-    };
+    static ref TYPE_ID_TO_TYPE: HashMap<TypeId, Type> =
+        TYPES.iter().map(|e| (e.id, e.clone())).collect();
 }
 lazy_static! {
     static ref DESCRIPTOR_TO_TYPE: HashMap<&'static str, Type> = {
-        TYPES.iter().map(|e| (e.descriptor.as_str(), e.clone())).collect()
+        TYPES
+            .iter()
+            .map(|e| (e.descriptor.as_str(), e.clone()))
+            .collect()
     };
 }
 
@@ -274,7 +318,9 @@ impl TryFrom<&str> for Type {
     type Error = Error;
     fn try_from(value: &str) -> Fallible<Self> {
         let type_ = DESCRIPTOR_TO_TYPE.get(value);
-        type_.cloned().ok_or_else(|| err!(TypeParse, "failed to parse type: {}", value))
+        type_
+            .cloned()
+            .ok_or_else(|| err!(TypeParse, "failed to parse type: {}", value))
     }
 }
 
@@ -285,13 +331,13 @@ impl TryFrom<*const c_char> for Type {
     }
 }
 
-
 pub fn into_raw<T>(o: T) -> *mut T {
     Box::into_raw(Box::<T>::new(o))
 }
 
 pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
-    (!p.is_null()).then(|| *unsafe { Box::<T>::from_raw(p) })
+    (!p.is_null())
+        .then(|| *unsafe { Box::<T>::from_raw(p) })
         .ok_or_else(|| err!(FFI, "attempted to consume a null pointer"))
 }
 
@@ -302,8 +348,13 @@ pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {
     CString::new(s)
         .map(CString::into_raw)
-        .map_err(|e: NulError|
-            err!(FFI, "Nul byte detected when reading C string at position {:?}", e.nul_position()))
+        .map_err(|e: NulError| {
+            err!(
+                FFI,
+                "Nul byte detected when reading C string at position {:?}",
+                e.nul_position()
+            )
+        })
 }
 
 pub fn into_string(p: *mut c_char) -> Fallible<String> {
@@ -311,7 +362,8 @@ pub fn into_string(p: *mut c_char) -> Fallible<String> {
         return fallible!(FFI, "Attempted to load a string from a null pointer");
     }
     let s = unsafe { CString::from_raw(p) };
-    s.into_string().map_err(|e: IntoStringError| err!(FFI, "{:?} ", e.utf8_error()))
+    s.into_string()
+        .map_err(|e: IntoStringError| err!(FFI, "{:?} ", e.utf8_error()))
 }
 
 pub fn to_str<'a>(p: *const c_char) -> Fallible<&'a str> {
@@ -331,16 +383,19 @@ pub fn to_option_str<'a>(p: *const c_char) -> Fallible<Option<&'a str>> {
 }
 
 #[allow(non_camel_case_types)]
-pub type c_bool = u8;  // PLATFORM DEPENDENT!!!
+pub type c_bool = u8; // PLATFORM DEPENDENT!!!
 
 pub fn to_bool(b: c_bool) -> bool {
     b != 0
 }
 
 pub fn from_bool(b: bool) -> c_bool {
-    if b {1} else {0}
+    if b {
+        1
+    } else {
+        0
+    }
 }
-
 
 #[cfg(test)]
 pub trait ToCharP {
@@ -362,6 +417,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[rustfmt::skip]
     fn test_type_of() {
         let i32_t = TypeId::of::<i32>();
         assert_eq!(Type::of::<()>(), Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));
@@ -375,6 +431,7 @@ mod tests {
     }
 
     #[test]
+    #[rustfmt::skip]
     fn test_type_try_from() -> Fallible<()> {
         let i32_t = TypeId::of::<i32>();
         assert_eq!(TryInto::<Type>::try_into("()")?, Type::new(TypeId::of::<()>(), "()", TypeContents::PLAIN("()")));

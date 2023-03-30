@@ -16,11 +16,11 @@ pub trait ExactIntCast<TI>: Sized + ExactIntBounds {
     /// returns `Err(e)` if `v` is smaller than `Self::MIN_CONSECUTIVE` or greater than `Self::MAX_CONSECUTIVE`,
     /// or `Ok(out)` where $out = v$.
     fn exact_int_cast(v: TI) -> Fallible<Self>;
-} 
+}
 
 /// Consts representing the maximum and minimum finite consecutive values.
-/// 
-/// This is also implemented for floats, 
+///
+/// This is also implemented for floats,
 /// as neighboring floating point values may differ by more than 1 when the mantissa is exhausted.
 pub trait ExactIntBounds {
     /// # Proof Definition
@@ -32,7 +32,7 @@ pub trait ExactIntBounds {
 }
 
 /// Fallible casting where the casted value rounds towards infinity.
-/// 
+///
 /// This preserves the invariant that the casted value is gte the original value.
 /// For example, casting a 128_u8 to i8 doesn't saturate to i8::MAX (127), it errors.
 pub trait InfCast<TI>: Sized {
@@ -49,7 +49,7 @@ pub trait InfCast<TI>: Sized {
 /// Fallible casting where the casted value is rounded to nearest.
 pub trait RoundCast<TI>: Sized {
     /// # Proof Definition
-    /// For any `v` of type `TI`, `Self::inf_cast(v)` either returns `Err(e)`, 
+    /// For any `v` of type `TI`, `Self::inf_cast(v)` either returns `Err(e)`,
     /// or `Ok(out)` where $out = argmin_{x \in TI} |x - v|$.
     fn round_cast(v: TI) -> Fallible<Self>;
 }
@@ -92,27 +92,42 @@ macro_rules! cartesian {
 }
 pub(crate) use cartesian;
 
-
 // TRAIT ExactIntCast
 macro_rules! impl_exact_int_cast_from {
-    ($ti:ty, $to:ty) => (impl ExactIntCast<$ti> for $to {
-        #[inline]
-        fn exact_int_cast(v: $ti) -> Fallible<Self> {Ok(From::from(v))}
-    })
+    ($ti:ty, $to:ty) => {
+        impl ExactIntCast<$ti> for $to {
+            #[inline]
+            fn exact_int_cast(v: $ti) -> Fallible<Self> {
+                Ok(From::from(v))
+            }
+        }
+    };
 }
 macro_rules! impl_exact_int_cast_try_from {
-    ($ti:ty, $to:ty) => (impl ExactIntCast<$ti> for $to {
-        fn exact_int_cast(v: $ti) -> Fallible<Self> {
-            TryFrom::try_from(v).map_err(|e| err!(FailedCast, "{:?}", e))
+    ($ti:ty, $to:ty) => {
+        impl ExactIntCast<$ti> for $to {
+            fn exact_int_cast(v: $ti) -> Fallible<Self> {
+                TryFrom::try_from(v).map_err(|e| err!(FailedCast, "{:?}", e))
+            }
         }
-    })
+    };
 }
 // top left
 cartesian! {[u8, u16, u32, u64, u128], impl_exact_int_cast_try_from, impl_exact_int_cast_from, impl_exact_int_cast_from}
 // top right
-cartesian!([u8, u16, u32, u64, u128], [i8, i16, i32, i64, i128], impl_exact_int_cast_try_from, impl_exact_int_cast_try_from, impl_exact_int_cast_from);
+cartesian!(
+    [u8, u16, u32, u64, u128],
+    [i8, i16, i32, i64, i128],
+    impl_exact_int_cast_try_from,
+    impl_exact_int_cast_try_from,
+    impl_exact_int_cast_from
+);
 // bottom left
-cartesian!([i8, i16, i32, i64, i128], [u8, u16, u32, u64, u128], impl_exact_int_cast_try_from);
+cartesian!(
+    [i8, i16, i32, i64, i128],
+    [u8, u16, u32, u64, u128],
+    impl_exact_int_cast_try_from
+);
 // bottom right
 cartesian! {[i8, i16, i32, i64, i128], impl_exact_int_cast_try_from, impl_exact_int_cast_from, impl_exact_int_cast_from}
 
@@ -130,37 +145,62 @@ macro_rules! impl_exact_int_cast_int_float {
 }
 
 cartesian!([u8, u16, i8, i16], [f32, f64], impl_exact_int_cast_from);
-cartesian!([u64, u128, i64, i128, usize, isize], [f32, f64], impl_exact_int_cast_int_float);
+cartesian!(
+    [u64, u128, i64, i128, usize, isize],
+    [f32, f64],
+    impl_exact_int_cast_int_float
+);
 impl_exact_int_cast_int_float!(u32, f32);
 impl_exact_int_cast_from!(u32, f64);
 impl_exact_int_cast_int_float!(i32, f32);
 impl_exact_int_cast_from!(i32, f64);
 
 // usize conversions
-cartesian!([usize, isize], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_exact_int_cast_try_from);
-cartesian!([u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], [usize, isize], impl_exact_int_cast_try_from);
+cartesian!(
+    [usize, isize],
+    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128],
+    impl_exact_int_cast_try_from
+);
+cartesian!(
+    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128],
+    [usize, isize],
+    impl_exact_int_cast_try_from
+);
 impl_exact_int_cast_from!(usize, usize);
 impl_exact_int_cast_from!(isize, isize);
 impl_exact_int_cast_try_from!(usize, isize);
 impl_exact_int_cast_try_from!(isize, usize);
 
-
 // TRAIT InfCast
 macro_rules! impl_inf_cast_exact {
-    ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
-        fn inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
-        fn neg_inf_cast(v: $ti) -> Fallible<Self> { ExactIntCast::exact_int_cast(v) }
-    })
+    ($ti:ty, $to:ty) => {
+        impl InfCast<$ti> for $to {
+            fn inf_cast(v: $ti) -> Fallible<Self> {
+                ExactIntCast::exact_int_cast(v)
+            }
+            fn neg_inf_cast(v: $ti) -> Fallible<Self> {
+                ExactIntCast::exact_int_cast(v)
+            }
+        }
+    };
 }
-cartesian!([u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize], impl_inf_cast_exact);
-
+cartesian!(
+    [u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize],
+    impl_inf_cast_exact
+);
 
 macro_rules! impl_inf_cast_from {
-    ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
-        #[inline]
-        fn inf_cast(v: $ti) -> Fallible<Self> { Ok(From::from(v)) }
-        fn neg_inf_cast(v: $ti) -> Fallible<Self> { Ok(From::from(v)) }
-    })
+    ($ti:ty, $to:ty) => {
+        impl InfCast<$ti> for $to {
+            #[inline]
+            fn inf_cast(v: $ti) -> Fallible<Self> {
+                Ok(From::from(v))
+            }
+            fn neg_inf_cast(v: $ti) -> Fallible<Self> {
+                Ok(From::from(v))
+            }
+        }
+    };
 }
 
 macro_rules! impl_exact_int_bounds {
@@ -181,22 +221,22 @@ impl ExactIntBounds for f32 {
 }
 
 macro_rules! impl_inf_cast_int_float {
-    ($int:ty, $float:ty) => (
-        #[cfg(feature="use-mpfr")]
+    ($int:ty, $float:ty) => {
+        #[cfg(feature = "use-mpfr")]
         impl InfCast<$int> for $float {
             fn inf_cast(v_int: $int) -> Fallible<Self> {
-                use rug::{Float, float::Round};
+                use rug::{float::Round, Float};
                 let float = Float::with_val_round(Self::MANTISSA_DIGITS, v_int, Round::Up).0;
                 Self::inf_cast(float)
             }
             fn neg_inf_cast(v_int: $int) -> Fallible<Self> {
-                use rug::{Float, float::Round};
+                use rug::{float::Round, Float};
                 let float = Float::with_val_round(Self::MANTISSA_DIGITS, v_int, Round::Down).0;
                 Self::neg_inf_cast(float)
             }
         }
         // cast from int to float with controlled rounding, or fail
-        #[cfg(not(feature="use-mpfr"))]
+        #[cfg(not(feature = "use-mpfr"))]
         impl InfCast<$int> for $float {
             fn inf_cast(v_int: $int) -> Fallible<Self> {
                 // defer to exact int cast implementation
@@ -206,11 +246,15 @@ macro_rules! impl_inf_cast_int_float {
                 Self::exact_int_cast(v_int)
             }
         }
-    )
+    };
 }
 
 cartesian!([u8, u16, i8, i16], [f32, f64], impl_inf_cast_from);
-cartesian!([u64, u128, i64, i128, usize], [f32, f64], impl_inf_cast_int_float);
+cartesian!(
+    [u64, u128, i64, i128, usize],
+    [f32, f64],
+    impl_inf_cast_int_float
+);
 impl_inf_cast_int_float!(u32, f32);
 impl_inf_cast_from!(u32, f64);
 impl_inf_cast_int_float!(i32, f32);
@@ -221,7 +265,9 @@ impl_inf_cast_from!(f32, f64);
 
 impl InfCast<f64> for f32 {
     fn inf_cast(vf64: f64) -> Fallible<Self> {
-        if vf64.is_nan() { return Ok(f32::NAN) }
+        if vf64.is_nan() {
+            return Ok(f32::NAN);
+        }
         // cast with rounding towards nearest, ties toward even
         // https://doc.rust-lang.org/reference/expressions/operator-expr.html#semantics
         let vf32 = vf64 as f32;
@@ -233,13 +279,15 @@ impl InfCast<f64> for f32 {
                 vf32.to_bits() - 1
             } else {
                 vf32.to_bits() + 1
-            }))
+            }));
         }
         Ok(vf32)
     }
 
     fn neg_inf_cast(vf64: f64) -> Fallible<Self> {
-        if vf64.is_nan() { return Ok(f32::NAN) }
+        if vf64.is_nan() {
+            return Ok(f32::NAN);
+        }
         // cast with rounding towards nearest, ties toward even
         // https://doc.rust-lang.org/reference/expressions/operator-expr.html#semantics
         let vf32 = vf64 as f32;
@@ -251,7 +299,7 @@ impl InfCast<f64> for f32 {
                 vf32.to_bits() + 1
             } else {
                 vf32.to_bits() - 1
-            }))
+            }));
         }
         Ok(vf32)
     }
@@ -279,29 +327,38 @@ macro_rules! impl_inf_cast_float_int {
         }
     })
 }
-cartesian!([f32, f64], [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128], impl_inf_cast_float_int);
+cartesian!(
+    [f32, f64],
+    [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128],
+    impl_inf_cast_float_int
+);
 
 #[cfg(test)]
 mod test_inf_cast {
     use crate::traits::InfCast;
 
     #[allow(dead_code)]
-    enum Diff { Equal, Prev, Next, Less, Greater }
+    enum Diff {
+        Equal,
+        Prev,
+        Next,
+        Less,
+        Greater,
+    }
 
     fn check_rounded_cast(input: f64, diff: Diff) {
         let casted = f32::inf_cast(input).unwrap() as f64;
         if input.is_nan() {
             assert!(casted.is_nan());
-            return
+            return;
         }
 
         let error = match diff {
-            Diff::Equal => (casted != input)
-                .then(|| "casted value must be equal to input"),
-            Diff::Greater => (casted <= input)
-                .then(|| "casted value must be greater than input value"),
-            Diff::Less => (casted >= input)
-                .then(|| "casted value must be less than input value"),
+            Diff::Equal => (casted != input).then(|| "casted value must be equal to input"),
+            Diff::Greater => {
+                (casted <= input).then(|| "casted value must be greater than input value")
+            }
+            Diff::Less => (casted >= input).then(|| "casted value must be less than input value"),
             Diff::Next => (f64::from_bits(input.to_bits() + 1) != casted)
                 .then(|| "casted must be one step greater than input"),
             Diff::Prev => (f64::from_bits(input.to_bits() - 1) != casted)
@@ -342,7 +399,6 @@ mod test_inf_cast {
     }
 }
 
-
 // TRAIT RoundCast
 macro_rules! impl_round_cast_num {
     ($TI:ty, $TO:ty) => {
@@ -351,21 +407,25 @@ macro_rules! impl_round_cast_num {
                 <$TO as NumCast>::from(v).ok_or_else(|| err!(FailedCast))
             }
         }
-    }
+    };
 }
 
 macro_rules! impl_round_cast_self_string_bool {
     ($T:ty, $_T:ty) => {
         impl RoundCast<$T> for $T {
-            fn round_cast(v: $T) -> Fallible<Self> {Ok(v)}
+            fn round_cast(v: $T) -> Fallible<Self> {
+                Ok(v)
+            }
         }
         impl RoundCast<bool> for $T {
             fn round_cast(v: bool) -> Fallible<Self> {
-                Ok(if v {Self::one()} else {Self::zero()})
+                Ok(if v { Self::one() } else { Self::zero() })
             }
         }
         impl RoundCast<$T> for bool {
-            fn round_cast(v: $T) -> Fallible<Self> {Ok(!v.is_zero())}
+            fn round_cast(v: $T) -> Fallible<Self> {
+                Ok(!v.is_zero())
+            }
         }
         impl RoundCast<String> for $T {
             fn round_cast(v: String) -> Fallible<Self> {
@@ -373,20 +433,38 @@ macro_rules! impl_round_cast_self_string_bool {
             }
         }
         impl RoundCast<$T> for String {
-            fn round_cast(v: $T) -> Fallible<Self> {Ok(v.to_string())}
+            fn round_cast(v: $T) -> Fallible<Self> {
+                Ok(v.to_string())
+            }
         }
-    }
+    };
 }
 cartesian! {[u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64], impl_round_cast_num, impl_round_cast_self_string_bool, impl_round_cast_num}
 
 // final four casts among bool and string
-impl RoundCast<bool> for bool { fn round_cast(v: bool) -> Fallible<Self> { Ok(v) } }
+impl RoundCast<bool> for bool {
+    fn round_cast(v: bool) -> Fallible<Self> {
+        Ok(v)
+    }
+}
 
-impl RoundCast<String> for String { fn round_cast(v: String) -> Fallible<Self> { Ok(v) } }
+impl RoundCast<String> for String {
+    fn round_cast(v: String) -> Fallible<Self> {
+        Ok(v)
+    }
+}
 
-impl RoundCast<String> for bool { fn round_cast(v: String) -> Fallible<Self> { Ok(!v.is_empty()) } }
+impl RoundCast<String> for bool {
+    fn round_cast(v: String) -> Fallible<Self> {
+        Ok(!v.is_empty())
+    }
+}
 
-impl RoundCast<bool> for String { fn round_cast(v: bool) -> Fallible<Self> { Ok(v.to_string()) } }
+impl RoundCast<bool> for String {
+    fn round_cast(v: bool) -> Fallible<Self> {
+        Ok(v.to_string())
+    }
+}
 
 #[cfg(feature = "use-mpfr")]
 impl InfCast<f32> for Float {

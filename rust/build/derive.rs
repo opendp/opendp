@@ -13,7 +13,7 @@ pub fn main() {
     // rebuild if link paths change
     println!("cargo:rerun-if-env-changed=OPENDP_SPHINX_PORT");
     println!("cargo:rerun-if-env-changed=OPENDP_RUSTDOC_PORT");
-    
+
     println!("cargo:rerun-if-env-changed=OPENDP_REMOTE_SPHINX_URI");
     println!("cargo:rerun-if-env-changed=OPENDP_REMOTE_RUSTDOC_URI");
 
@@ -72,7 +72,7 @@ fn parse_crate(
 fn parse_file_tree(
     dir: &Path,
     proof_paths: &HashMap<String, Option<String>>,
-    module_name: &str
+    module_name: &str,
 ) -> std::io::Result<Option<Vec<Function>>> {
     // use here to shadow syn::File
     use std::{fs::File, io::Read};

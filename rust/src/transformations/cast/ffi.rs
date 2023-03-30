@@ -2,23 +2,26 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::traits::InherentNull;
 use crate::err;
 use crate::ffi::any::AnyTransformation;
 use crate::ffi::util::Type;
+use crate::traits::InherentNull;
 use crate::traits::{CheckNull, RoundCast};
 use crate::transformations::{make_cast, make_cast_default, make_cast_inherent};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cast(
-    TIA: *const c_char, TOA: *const c_char,
+    TIA: *const c_char,
+    TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let TIA = try_!(Type::try_from(TIA));
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + Clone + CheckNull,
-              TOA: 'static + RoundCast<TIA> + CheckNull {
+    where
+        TIA: 'static + Clone + CheckNull,
+        TOA: 'static + RoundCast<TIA> + CheckNull,
+    {
         make_cast::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
@@ -26,14 +29,17 @@ pub extern "C" fn opendp_transformations__make_cast(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cast_default(
-    TIA: *const c_char, TOA: *const c_char,
+    TIA: *const c_char,
+    TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let TIA = try_!(Type::try_from(TIA));
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + Clone + CheckNull,
-              TOA: 'static + RoundCast<TIA> + Default + CheckNull {
+    where
+        TIA: 'static + Clone + CheckNull,
+        TOA: 'static + RoundCast<TIA> + Default + CheckNull,
+    {
         make_cast_default::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
@@ -41,19 +47,21 @@ pub extern "C" fn opendp_transformations__make_cast_default(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cast_inherent(
-    TIA: *const c_char, TOA: *const c_char,
+    TIA: *const c_char,
+    TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let TIA = try_!(Type::try_from(TIA));
     let TOA = try_!(Type::try_from(TOA));
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
-        where TIA: 'static + Clone + CheckNull,
-              TOA: 'static + RoundCast<TIA> + InherentNull {
+    where
+        TIA: 'static + Clone + CheckNull,
+        TOA: 'static + RoundCast<TIA> + InherentNull,
+    {
         make_cast_inherent::<TIA, TOA>().into_any()
     }
     dispatch!(monomorphize, [(TIA, @primitives), (TOA, @floats)], ())
 }
-
 
 #[cfg(test)]
 mod tests {

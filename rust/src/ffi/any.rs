@@ -9,7 +9,9 @@ use std::any;
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
-use crate::core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation};
+use crate::core::{
+    Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
+};
 use crate::err;
 use crate::error::*;
 
@@ -31,19 +33,30 @@ pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: boo
     debug_glue: Option<Glue<fn(&Self) -> String>>,
 }
 
-impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> AnyBoxBase<CLONE, PARTIALEQ, DEBUG> {
+impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
+    AnyBoxBase<CLONE, PARTIALEQ, DEBUG>
+{
     fn new_base<T: 'static>(
         value: T,
         clone_glue: Option<Glue<fn(&Self) -> Self>>,
         eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
         debug_glue: Option<Glue<fn(&Self) -> String>>,
     ) -> Self {
-        Self { value: Box::new(value), clone_glue, eq_glue, debug_glue }
+        Self {
+            value: Box::new(value),
+            clone_glue,
+            eq_glue,
+            debug_glue,
+        }
     }
     fn make_clone_glue<T: 'static + Clone>() -> Glue<fn(&Self) -> Self> {
         Glue::new(|self_: &Self| {
             Self::new_base(
-                self_.value.downcast_ref::<T>().unwrap_assert("Failed downcast of AnyBox value").clone(),
+                self_
+                    .value
+                    .downcast_ref::<T>()
+                    .unwrap_assert("Failed downcast of AnyBox value")
+                    .clone(),
                 self_.clone_glue.clone(),
                 self_.eq_glue.clone(),
                 self_.debug_glue.clone(),
@@ -57,21 +70,44 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> AnyBoxBase<CLO
         })
     }
     fn make_debug_glue<T: 'static + Debug>() -> Glue<fn(&Self) -> String> {
-        Glue::new(|self_: &Self| format!("{:?}", self_.value.downcast_ref::<T>()
-            .unwrap_assert("Failed downcast of AnyBox value")))
+        Glue::new(|self_: &Self| {
+            format!(
+                "{:?}",
+                self_
+                    .value
+                    .downcast_ref::<T>()
+                    .unwrap_assert("Failed downcast of AnyBox value")
+            )
+        })
     }
 }
 
-impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for AnyBoxBase<CLONE, PARTIALEQ, DEBUG> {
+impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast
+    for AnyBoxBase<CLONE, PARTIALEQ, DEBUG>
+{
     fn downcast<T: 'static>(self) -> Fallible<T> {
-        self.value.downcast().map_err(|_| err!(FailedCast, "Failed downcast of AnyBox to {}", any::type_name::<T>())).map(|x| *x)
+        self.value
+            .downcast()
+            .map_err(|_| {
+                err!(
+                    FailedCast,
+                    "Failed downcast of AnyBox to {}",
+                    any::type_name::<T>()
+                )
+            })
+            .map(|x| *x)
     }
     fn downcast_ref<T: 'static>(&self) -> Fallible<&T> {
         self.value.downcast_ref().ok_or_else(|| {
             let other_type = Type::of_id(&self.value.type_id())
                 .map(|t| format!(" AnyBox contains {:?}.", t))
                 .unwrap_or_default();
-            err!(FailedCast, "Failed downcast_ref of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+            err!(
+                FailedCast,
+                "Failed downcast_ref of AnyBox to {}.{}",
+                any::type_name::<T>(),
+                other_type
+            )
         })
     }
     fn downcast_mut<T: 'static>(&mut self) -> Fallible<&mut T> {
@@ -80,26 +116,48 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> Downcast for A
             let other_type = Type::of_id(&type_id)
                 .map(|t| format!(" AnyBox contains {:?}.", t))
                 .unwrap_or_default();
-            err!(FailedCast, "Failed downcast_mut of AnyBox to {}.{}", any::type_name::<T>(), other_type)
+            err!(
+                FailedCast,
+                "Failed downcast_mut of AnyBox to {}.{}",
+                any::type_name::<T>(),
+                other_type
+            )
         })
     }
 }
 
 impl<const PARTIALEQ: bool, const DEBUG: bool> Clone for AnyBoxBase<true, PARTIALEQ, DEBUG> {
     fn clone(&self) -> Self {
-        (self.clone_glue.as_ref().unwrap_assert("clone_glue always exists for CLONE=true AnyBoxBase"))(self)
+        (self
+            .clone_glue
+            .as_ref()
+            .unwrap_assert("clone_glue always exists for CLONE=true AnyBoxBase"))(self)
     }
 }
 
 impl<const CLONE: bool, const DEBUG: bool> PartialEq for AnyBoxBase<CLONE, true, DEBUG> {
     fn eq(&self, other: &Self) -> bool {
-        (self.eq_glue.as_ref().unwrap_assert("eq_glue always exists for PARTIALEQ=true AnyBoxBase"))(self, other)
+        (self
+            .eq_glue
+            .as_ref()
+            .unwrap_assert("eq_glue always exists for PARTIALEQ=true AnyBoxBase"))(
+            self, other
+        )
     }
 }
 
 impl<const CLONE: bool, const PARTIALEQ: bool> Debug for AnyBoxBase<CLONE, PARTIALEQ, true> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}", (self.debug_glue.as_ref().unwrap_assert("debug_glue always exists for DEBUG=true AnyBoxBase"))(self))
+        write!(
+            f,
+            "{}",
+            (self
+                .debug_glue
+                .as_ref()
+                .unwrap_assert("debug_glue always exists for DEBUG=true AnyBoxBase"))(
+                self
+            )
+        )
     }
 }
 
@@ -120,7 +178,8 @@ impl AnyBoxClonePartialEqDebug {
             value,
             Some(Self::make_clone_glue::<T>()),
             Some(Self::make_eq_glue::<T>()),
-            Some(Self::make_debug_glue::<T>()))
+            Some(Self::make_debug_glue::<T>()),
+        )
     }
 }
 
@@ -171,7 +230,8 @@ impl AnyDomain {
             carrier_type: Type::of::<D::Carrier>(),
             domain: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(domain),
             member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
-                let self_ = self_.downcast_ref::<D>()
+                let self_ = self_
+                    .downcast_ref::<D>()
                     .unwrap_assert("downcast of AnyDomain to constructed type will always work");
                 self_.member(val.downcast_ref::<D::Carrier>()?)
             }),
@@ -216,7 +276,7 @@ impl AnyMeasure {
         Self {
             measure: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(measure),
             type_: Type::of::<M>(),
-            distance_type: Type::of::<M::Distance>()
+            distance_type: Type::of::<M::Distance>(),
         }
     }
 }
@@ -234,7 +294,9 @@ impl Downcast for AnyMeasure {
 }
 
 impl Default for AnyMeasure {
-    fn default() -> Self { unimplemented!("called AnyMeasure::default()") }
+    fn default() -> Self {
+        unimplemented!("called AnyMeasure::default()")
+    }
 }
 
 impl Measure for AnyMeasure {
@@ -277,7 +339,9 @@ impl Downcast for AnyMetric {
 }
 
 impl Default for AnyMetric {
-    fn default() -> Self { unimplemented!("called AnyMetric::default()") }
+    fn default() -> Self {
+        unimplemented!("called AnyMetric::default()")
+    }
 }
 
 impl Metric for AnyMetric {
@@ -297,8 +361,10 @@ pub trait IntoAnyFunctionExt {
 }
 
 impl<TI, TO> IntoAnyFunctionExt for Function<TI, TO>
-    where TI: 'static,
-          TO: 'static {
+where
+    TI: 'static,
+    TO: 'static,
+{
     fn into_any(self) -> AnyFunction {
         let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
             let arg = arg.downcast_ref()?;
@@ -330,8 +396,10 @@ pub trait IntoAnyPrivacyMapExt {
 }
 
 impl<MI: Metric, MO: Measure> IntoAnyPrivacyMapExt for PrivacyMap<MI, MO>
-    where MI::Distance: 'static,
-          MO::Distance: 'static {
+where
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+{
     fn into_any(self) -> AnyPrivacyMap {
         let map = self.0;
         AnyPrivacyMap::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
@@ -345,8 +413,10 @@ pub trait IntoAnyStabilityMapExt {
 }
 
 impl<MI: Metric, MO: Metric> IntoAnyStabilityMapExt for StabilityMap<MI, MO>
-    where MI::Distance: 'static,
-          MO::Distance: 'static {
+where
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+{
     fn into_any(self) -> AnyStabilityMap {
         let map = self.0;
         AnyStabilityMap::new_fallible(move |d_in| map(d_in.downcast_ref()?).map(AnyObject::new))
@@ -363,10 +433,13 @@ pub trait IntoAnyMeasurementExt {
     fn into_any(self) -> AnyMeasurement;
 }
 
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure> IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
-    where DI::Carrier: 'static,
-          MI::Distance: 'static,
-          MO::Distance: 'static {
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
+where
+    DI::Carrier: 'static,
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+{
     fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain),
@@ -406,11 +479,14 @@ pub trait IntoAnyTransformationExt {
     fn into_any(self) -> AnyTransformation;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric> IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
-    where DI::Carrier: 'static,
-          DO::Carrier: 'static,
-          MI::Distance: 'static,
-          MO::Distance: 'static {
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
+    IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
+where
+    DI::Carrier: 'static,
+    DO::Carrier: 'static,
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+{
     fn into_any(self) -> AnyTransformation {
         AnyTransformation::new(
             AnyDomain::new(self.input_domain),
@@ -425,11 +501,11 @@ impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'stat
 
 #[cfg(test)]
 mod tests {
-    use crate::metrics::{ChangeOneDistance, SymmetricDistance};
-    use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
     use crate::domains::{AllDomain, BoundedDomain};
     use crate::error::*;
     use crate::measurements;
+    use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
+    use crate::metrics::{ChangeOneDistance, SymmetricDistance};
     use crate::transformations;
 
     use super::*;
@@ -448,7 +524,10 @@ mod tests {
 
         let _domain1: BoundedDomain<i32> = domain1.downcast()?;
         let domain3: Fallible<BoundedDomain<i32>> = domain3.downcast();
-        assert_eq!(domain3.err().unwrap_test().variant, ErrorVariant::FailedCast);
+        assert_eq!(
+            domain3.err().unwrap_test().variant,
+            ErrorVariant::FailedCast
+        );
         Ok(())
     }
 
@@ -466,7 +545,10 @@ mod tests {
 
         let _metric1: SymmetricDistance = metric1.downcast()?;
         let metric3: Fallible<SymmetricDistance> = metric3.downcast();
-        assert_eq!(metric3.err().unwrap_test().variant, ErrorVariant::FailedCast);
+        assert_eq!(
+            metric3.err().unwrap_test().variant,
+            ErrorVariant::FailedCast
+        );
         Ok(())
     }
 
@@ -484,18 +566,25 @@ mod tests {
 
         let _measure1: MaxDivergence<f64> = measure1.downcast()?;
         let measure3: Fallible<MaxDivergence<f64>> = measure3.downcast();
-        assert_eq!(measure3.err().unwrap_test().variant, ErrorVariant::FailedCast);
+        assert_eq!(
+            measure3.err().unwrap_test().variant,
+            ErrorVariant::FailedCast
+        );
         Ok(())
     }
 
     #[test]
     fn test_any_chain() -> Fallible<()> {
-        let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?.into_any();
+        let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
+            .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
         let t4 = transformations::make_clamp((0.0, 10.0))?.into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = measurements::make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(0.0, None)?.into_any();
+        let m1 = measurements::make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(
+            0.0, None,
+        )?
+        .into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg);

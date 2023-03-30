@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use darling::{Error, Result};
 use syn::{
-    FnArg, GenericArgument, GenericParam, Pat, Path, PathArguments, Signature, Type, TypeParam,
-    TypePath, TypePtr, TypeReference, ReturnType,
+    FnArg, GenericArgument, GenericParam, Pat, Path, PathArguments, ReturnType, Signature, Type,
+    TypeParam, TypePath, TypePtr, TypeReference,
 };
 
 use crate::TypeRecipe;
@@ -25,19 +25,29 @@ pub struct BootSigArgType {
 
 impl BootstrapSignature {
     pub fn from_syn(sig: Signature) -> Result<Self> {
-        let generics = sig.generics.params.into_iter().map(|generic| {
-            syn_generic_to_syn_type_param(&generic).map(|v| v.ident.to_string())
-        }).collect::<Result<Vec<_>>>()?;
+        let generics = sig
+            .generics
+            .params
+            .into_iter()
+            .map(|generic| syn_generic_to_syn_type_param(&generic).map(|v| v.ident.to_string()))
+            .collect::<Result<Vec<_>>>()?;
         Ok(BootstrapSignature {
             name: sig.ident.to_string(),
-            arguments: sig.inputs.into_iter().map(|fn_arg| {
-                let (pat, ty) = syn_fnarg_to_syn_pattype(fn_arg)?;
-                
-                Ok((syn_pat_to_string(&pat)?, BootSigArgType {
-                    rust_type: syn_type_to_type_recipe(&ty),
-                    c_type: syn_type_to_c_type(ty, &HashSet::from_iter(generics.clone())),
-                }))
-            }).collect::<Result<Vec<_>>>()?,
+            arguments: sig
+                .inputs
+                .into_iter()
+                .map(|fn_arg| {
+                    let (pat, ty) = syn_fnarg_to_syn_pattype(fn_arg)?;
+
+                    Ok((
+                        syn_pat_to_string(&pat)?,
+                        BootSigArgType {
+                            rust_type: syn_type_to_type_recipe(&ty),
+                            c_type: syn_type_to_c_type(ty, &HashSet::from_iter(generics.clone())),
+                        },
+                    ))
+                })
+                .collect::<Result<Vec<_>>>()?,
             generics: generics.clone(),
             output_c_type: syn_type_to_c_type(
                 match sig.output {

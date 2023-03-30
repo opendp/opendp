@@ -1,16 +1,14 @@
 use opendp_derive::bootstrap;
 
 use crate::{
+    combinators::IsSizedDomain,
     core::{Domain, Function, StabilityMap, Transformation},
+    error::Fallible,
     metrics::IntDistance,
-    error::Fallible, 
     traits::samplers::Shuffle,
-    combinators::IsSizedDomain
 };
 
-use self::traits::{
-    BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric,
-};
+use self::traits::{BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -28,7 +26,7 @@ mod traits;
 /// | ----------------- | -------------------- |
 /// | SymmetricDistance | InsertDeleteDistance |
 /// | ChangeOneDistance | HammingDistance      |
-/// 
+///
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric
@@ -54,7 +52,6 @@ where
     ))
 }
 
-
 #[bootstrap(
     features("contrib"),
     arguments(domain(c_type = "AnyDomain *")),
@@ -62,12 +59,12 @@ where
 )]
 /// Make a Transformation that converts the ordered dataset metric `MI`
 /// to the respective ordered dataset metric with a no-op.
-/// 
+///
 /// | `MI`                 | `MI::UnorderedMetric` |
 /// | -------------------- | --------------------- |
 /// | InsertDeleteDistance | SymmetricDistance     |
 /// | HammingDistance      | ChangeOneDistance     |
-/// 
+///
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric
@@ -92,17 +89,17 @@ where
     arguments(domain(c_type = "AnyDomain *")),
     generics(D(example = "domain"), MI(default = "ChangeOneDistance"))
 )]
-/// Make a Transformation that converts the bounded dataset metric `MI` 
-/// to the respective unbounded dataset metric with a no-op. 
-/// 
+/// Make a Transformation that converts the bounded dataset metric `MI`
+/// to the respective unbounded dataset metric with a no-op.
+///
 /// | `MI`              | `MI::UnboundedMetric` |
 /// | ----------------- | --------------------- |
 /// | ChangeOneDistance | SymmetricDistance     |
 /// | HammingDistance   | InsertDeleteDistance  |
-/// 
+///
 /// # Arguments
 /// * `size` - Number of records in input data.
-/// 
+///
 /// # Generics
 /// * `D` - Domain. The function is a no-op so input and output domains are the same.
 /// * `MI` - Input Metric.
@@ -130,12 +127,12 @@ where
     arguments(domain(c_type = "AnyDomain *")),
     generics(D(example = "domain"), MI(default = "SymmetricDistance"))
 )]
-/// Make a Transformation that converts the unbounded dataset metric `MI` 
-/// to the respective bounded dataset metric with a no-op. 
-/// 
-/// The constructor enforces that the input domain has known size, 
+/// Make a Transformation that converts the unbounded dataset metric `MI`
+/// to the respective bounded dataset metric with a no-op.
+///
+/// The constructor enforces that the input domain has known size,
 /// because it must have known size to be valid under a bounded dataset metric.
-/// 
+///
 /// | `MI`                 | `MI::BoundedMetric` |
 /// | -------------------- | ------------------- |
 /// | SymmetricDistance    | ChangeOneDistance   |
@@ -143,7 +140,7 @@ where
 ///
 /// # Arguments
 /// * `size` - Number of records in input data.
-/// 
+///
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric
@@ -166,10 +163,9 @@ where
     ))
 }
 
-
 #[cfg(test)]
 mod test {
-    use crate::domains::{VectorDomain, SizedDomain};
+    use crate::domains::{SizedDomain, VectorDomain};
     use crate::metrics::SymmetricDistance;
 
     use super::*;
@@ -180,7 +176,6 @@ mod test {
         let ord_trans = make_ordered_random::<_, SymmetricDistance>(domain.clone())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(ord_trans.invoke(&data)?.len(), 3);
-
 
         let ident_trans = (ord_trans >> make_unordered(domain)?)?;
         assert_eq!(ident_trans.invoke(&data)?.len(), 3);
@@ -193,7 +188,6 @@ mod test {
         let bdd_trans = make_metric_bounded::<_, SymmetricDistance>(domain.clone())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(bdd_trans.invoke(&data)?.len(), 3);
-
 
         let ident_trans = (bdd_trans >> make_metric_unbounded(domain)?)?;
         assert_eq!(ident_trans.invoke(&data)?.len(), 3);

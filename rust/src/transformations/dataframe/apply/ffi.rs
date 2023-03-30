@@ -38,7 +38,6 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
     ], (column_name))
 }
 
-
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_df_is_equal(
     column_name: *const AnyObject,
@@ -67,14 +66,12 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
     ], (column_name, value))
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
     use crate::data::Column;
-    use crate::error::{Fallible, ExplainUnwrap};
+    use crate::error::{ExplainUnwrap, Fallible};
     use crate::transformations::DataFrame;
 
     use crate::core;
@@ -99,22 +96,18 @@ mod tests {
             "String".to_char_p(),
             "bool".to_char_p(),
         ))?;
-        let arg = AnyObject::new_raw(dataframe(vec![
-            ("A", Column::new(to_owned(&["1", "", "1"]))),
-        ]));
+        let arg = AnyObject::new_raw(dataframe(vec![(
+            "A",
+            Column::new(to_owned(&["1", "", "1"])),
+        )]));
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: HashMap<String, Column> = Fallible::from(res)?.downcast()?;
-        
-        let subset = res
-            .get("A")
-            .unwrap_test()
-            .as_form::<Vec<bool>>()?
-            .clone();
-        
+
+        let subset = res.get("A").unwrap_test().as_form::<Vec<bool>>()?.clone();
+
         assert_eq!(subset, vec![true, false, true]);
         Ok(())
     }
-
 
     #[test]
     fn test_df_is_equal() -> Fallible<()> {
@@ -124,18 +117,15 @@ mod tests {
             "String".to_char_p(),
             "String".to_char_p(),
         ))?;
-        let arg = AnyObject::new_raw(dataframe(vec![
-            ("A", Column::new(to_owned(&["yes", "no", "yes"]))),
-        ]));
+        let arg = AnyObject::new_raw(dataframe(vec![(
+            "A",
+            Column::new(to_owned(&["yes", "no", "yes"])),
+        )]));
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: HashMap<String, Column> = Fallible::from(res)?.downcast()?;
-        
-        let subset = res
-            .get("A")
-            .unwrap_test()
-            .as_form::<Vec<bool>>()?
-            .clone();
-        
+
+        let subset = res.get("A").unwrap_test().as_form::<Vec<bool>>()?.clone();
+
         assert_eq!(subset, vec![true, false, true]);
         Ok(())
     }

@@ -24,7 +24,8 @@ pub extern "C" fn opendp_transformations__make_subset_by(
     {
         let indicator_column: TK =
             try_!(try_as_ref!(indicator_column).downcast_ref::<TK>()).clone();
-        let keep_columns: Vec<TK> = try_!(try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()).clone();
+        let keep_columns: Vec<TK> =
+            try_!(try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()).clone();
         make_subset_by::<TK>(indicator_column, keep_columns).into_any()
     }
     let TK = try_!(Type::try_from(TK));
@@ -34,13 +35,12 @@ pub extern "C" fn opendp_transformations__make_subset_by(
     ], (indicator_column, keep_columns))
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
     use crate::data::Column;
-    use crate::error::{Fallible, ExplainUnwrap};
+    use crate::error::{ExplainUnwrap, Fallible};
     use crate::transformations::DataFrame;
 
     use crate::core;
@@ -66,17 +66,13 @@ mod tests {
         ))?;
         let arg = AnyObject::new_raw(dataframe(vec![
             ("A", Column::new(vec![true, false, false])),
-            ("B", Column::new(to_owned(&["1.0", "2.0", "3.0"])))
+            ("B", Column::new(to_owned(&["1.0", "2.0", "3.0"]))),
         ]));
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: HashMap<String, Column> = Fallible::from(res)?.downcast()?;
-        
-        let subset = res
-            .get("B")
-            .unwrap_test()
-            .as_form::<Vec<String>>()?
-            .clone();
-        
+
+        let subset = res.get("B").unwrap_test().as_form::<Vec<String>>()?.clone();
+
         assert_eq!(subset, vec!["1.0".to_string()]);
         Ok(())
     }
