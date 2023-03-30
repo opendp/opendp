@@ -21,7 +21,7 @@ __all__ = [
 def bool_free(
     this
 ):
-    """Internal function. Free the memory associated with `this`, a bool. 
+    """Internal function. Free the memory associated with `this`, a bool.
     Used to clean up after the relation check.
     
     [bool_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.bool_free.html)
@@ -169,7 +169,7 @@ def slice_as_object(
     :type raw: FfiSlicePtr
     :param T: 
     :type T: str
-    :return: An AnyObject that contains the data in `slice`. 
+    :return: An AnyObject that contains the data in `slice`.
     The AnyObject also captures rust type information.
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type
@@ -196,7 +196,7 @@ def slice_as_object(
 def slice_free(
     this: Any
 ):
-    """Internal function. Free the memory associated with `this`, an FfiSlicePtr. 
+    """Internal function. Free the memory associated with `this`, an FfiSlicePtr.
     Used to clean up after object_as_slice.
     Frees the slice, but not what the slice references!
     
@@ -258,7 +258,7 @@ def smd_curve_epsilon(
 def str_free(
     this: str
 ):
-    """Internal function. Free the memory associated with `this`, a string. 
+    """Internal function. Free the memory associated with `this`, a string.
     Used to clean up after the type getter functions.
     
     [str_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.str_free.html)

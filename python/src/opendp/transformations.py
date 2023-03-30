@@ -64,7 +64,7 @@ __all__ = [
 def choose_branching_factor(
     size_guess: int
 ) -> int:
-    """Returns an approximation to the ideal `branching_factor` for a dataset of a given size, 
+    """Returns an approximation to the ideal `branching_factor` for a dataset of a given size,
     that minimizes error in cdf and quantile estimates based on b-ary trees.
     
     [choose_branching_factor in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.choose_branching_factor.html)
@@ -101,7 +101,7 @@ def make_b_ary_tree(
     M: RuntimeTypeDescriptor,
     TA: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
-    """Expand a vector of counts into a b-ary tree of counts, 
+    """Expand a vector of counts into a b-ary tree of counts,
     where each branch is the sum of its `b` immediate children.
     
     [make_b_ary_tree in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_b_ary_tree.html)
@@ -153,9 +153,9 @@ def make_bounded_float_checked_sum(
     bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    """Make a Transformation that computes the sum of bounded data with known dataset size.
     
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
     
     | S (summation algorithm) | input type     |
@@ -163,7 +163,7 @@ def make_bounded_float_checked_sum(
     | `Sequential<S::Item>`   | `Vec<S::Item>` |
     | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
-    `S::Item` is the type of all of the following: 
+    `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
     
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
@@ -221,7 +221,7 @@ def make_bounded_float_ordered_sum(
     bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with known ordering. 
+    """Make a Transformation that computes the sum of bounded floats with known ordering.
     
     Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
     You may need to use `make_ordered_random` to impose an ordering on the data.
@@ -232,7 +232,7 @@ def make_bounded_float_ordered_sum(
     | `Sequential<S::Item>`   | `Vec<S::Item>` |
     | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
-    `S::Item` is the type of all of the following: 
+    `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
     
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
@@ -289,7 +289,7 @@ def make_bounded_int_monotonic_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints, 
+    """Make a Transformation that computes the sum of bounded ints,
     where all values share the same sign.
     
     [make_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_bounded_int_monotonic_sum.html)
@@ -387,7 +387,7 @@ def make_bounded_int_split_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints. 
+    """Make a Transformation that computes the sum of bounded ints.
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
     [make_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_bounded_int_split_sum.html)
@@ -437,7 +437,7 @@ def make_bounded_sum(
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data. 
+    """Make a Transformation that computes the sum of bounded data.
     Use `make_clamp` to bound data.
     
     [make_bounded_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_bounded_sum.html)
@@ -530,7 +530,7 @@ def make_cast_default(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`. 
+    """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
     Any element that fails to cast is filled with default.
     
     
@@ -583,7 +583,7 @@ def make_cast_inherent(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
-    """Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`. 
+    """Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`.
     If cast fails, fill with `TOA`'s null value.
     
     | `TIA`  | `TIA::default()` |
@@ -671,7 +671,7 @@ def make_clamp(
 ) -> Transformation:
     """Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
     
-    If datum is less than lower, let datum be lower. 
+    If datum is less than lower, let datum be lower.
     If datum is greater than upper, let datum be upper.
     
     [make_clamp in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_clamp.html)
@@ -825,7 +825,7 @@ def make_count_by(
     TK: RuntimeTypeDescriptor,
     TV: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
-    """Make a Transformation that computes the count of each unique value in data. 
+    """Make a Transformation that computes the count of each unique value in data.
     This assumes that the category set is unknown.
     
     [make_count_by in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_count_by.html)
@@ -882,7 +882,7 @@ def make_count_by_categories(
     TIA: RuntimeTypeDescriptor = None,
     TOA: RuntimeTypeDescriptor = "int"
 ) -> Transformation:
-    """Make a Transformation that computes the number of times each category appears in the data. 
+    """Make a Transformation that computes the number of times each category appears in the data.
     This assumes that the category set is known.
     
     [make_count_by_categories in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_count_by_categories.html)
@@ -1036,7 +1036,7 @@ def make_df_cast_default(
     TOA: RuntimeTypeDescriptor,
     TK: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`. 
+    """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`.
     If cast fails, fill with default.
     
     
@@ -1243,7 +1243,7 @@ def make_find_bin(
     """Make a transformation that finds the bin index in a monotonically increasing vector of edges.
     
     For each value in the input vector, finds the index of the bin the value falls into.
-    `edges` splits the entire range of `TIA` into bins. 
+    `edges` splits the entire range of `TIA` into bins.
     The first bin at index zero ranges from negative infinity to the first edge, non-inclusive.
     The last bin at index `edges.len()` ranges from the last bin, inclusive, to positive infinity.
     
@@ -1338,7 +1338,7 @@ def make_impute_constant(
     """Make a Transformation that replaces null/None data with `constant`.
     
     By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
-    Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types 
+    Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types
     that have an inherent representation of nullity, like floats.
     
     | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
@@ -1618,10 +1618,10 @@ def make_metric_bounded(
     D: RuntimeTypeDescriptor = None,
     MI: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
-    """Make a Transformation that converts the unbounded dataset metric `MI` 
-    to the respective bounded dataset metric with a no-op. 
+    """Make a Transformation that converts the unbounded dataset metric `MI`
+    to the respective bounded dataset metric with a no-op.
     
-    The constructor enforces that the input domain has known size, 
+    The constructor enforces that the input domain has known size,
     because it must have known size to be valid under a bounded dataset metric.
     
     | `MI`                 | `MI::BoundedMetric` |
@@ -1674,8 +1674,8 @@ def make_metric_unbounded(
     D: RuntimeTypeDescriptor = None,
     MI: RuntimeTypeDescriptor = "ChangeOneDistance"
 ) -> Transformation:
-    """Make a Transformation that converts the bounded dataset metric `MI` 
-    to the respective unbounded dataset metric with a no-op. 
+    """Make a Transformation that converts the bounded dataset metric `MI`
+    to the respective unbounded dataset metric with a no-op.
     
     | `MI`              | `MI::UnboundedMetric` |
     | ----------------- | --------------------- |
@@ -1729,6 +1729,7 @@ def make_ordered_random(
 ) -> Transformation:
     """Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
     to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
+    
     | `MI`              | `MI::OrderedMetric`  |
     | ----------------- | -------------------- |
     | SymmetricDistance | InsertDeleteDistance |
@@ -1836,7 +1837,7 @@ def make_resize(
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
     MO: RuntimeTypeDescriptor = "SymmetricDistance"
 ) -> Transformation:
-    """Make a Transformation that either truncates or imputes records 
+    """Make a Transformation that either truncates or imputes records
     with `constant` to match a provided `size`.
     
     [make_resize in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_resize.html)
@@ -1944,7 +1945,7 @@ def make_sized_bounded_float_checked_sum(
     bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with known dataset size. 
+    """Make a Transformation that computes the sum of bounded floats with known dataset size.
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
@@ -1953,7 +1954,7 @@ def make_sized_bounded_float_checked_sum(
     | `Sequential<S::Item>`   | `Vec<S::Item>` |
     | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
-    `S::Item` is the type of all of the following: 
+    `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
     
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
@@ -1963,7 +1964,7 @@ def make_sized_bounded_float_checked_sum(
     
     **Citations:**
     
-    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf) 
+    * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
     * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
     
     **Supporting Elements:**
@@ -2011,10 +2012,10 @@ def make_sized_bounded_float_ordered_sum(
     bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded floats with known ordering and dataset size. 
+    """Make a Transformation that computes the sum of bounded floats with known ordering and dataset size.
     
     Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
     | S (summation algorithm) | input type     |
@@ -2022,7 +2023,7 @@ def make_sized_bounded_float_ordered_sum(
     | `Sequential<S::Item>`   | `Vec<S::Item>` |
     | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
-    `S::Item` is the type of all of the following: 
+    `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
     
     For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
@@ -2080,7 +2081,7 @@ def make_sized_bounded_int_checked_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints. 
+    """Make a Transformation that computes the sum of bounded ints.
     The effective range is reduced, as (bounds * size) must not overflow.
     
     [make_sized_bounded_int_checked_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_int_checked_sum.html)
@@ -2133,7 +2134,7 @@ def make_sized_bounded_int_monotonic_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints, 
+    """Make a Transformation that computes the sum of bounded ints,
     where all values share the same sign.
     
     [make_sized_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_int_monotonic_sum.html)
@@ -2186,9 +2187,9 @@ def make_sized_bounded_int_ordered_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints with known dataset size. 
+    """Make a Transformation that computes the sum of bounded ints with known dataset size.
     
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
     [make_sized_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_int_ordered_sum.html)
@@ -2241,9 +2242,9 @@ def make_sized_bounded_int_split_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded ints with known dataset size. 
+    """Make a Transformation that computes the sum of bounded ints with known dataset size.
     
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Adds the saturating sum of the positives to the saturating sum of the negatives.
     
     [make_sized_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_int_split_sum.html)
@@ -2352,9 +2353,9 @@ def make_sized_bounded_sum(
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
     T: RuntimeTypeDescriptor = None
 ) -> Transformation:
-    """Make a Transformation that computes the sum of bounded data with known dataset size. 
+    """Make a Transformation that computes the sum of bounded data with known dataset size.
     
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
     
     [make_sized_bounded_sum in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_sum.html)
@@ -2404,16 +2405,17 @@ def make_sized_bounded_sum_of_squared_deviations(
     bounds: Tuple[Any, Any],
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the sum of squared deviations of bounded data. 
+    """Make a Transformation that computes the sum of squared deviations of bounded data.
     
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
+    
     | S (summation algorithm) | input type     |
     | ----------------------- | -------------- |
     | `Sequential<S::Item>`   | `Vec<S::Item>` |
     | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
-    `S::Item` is the type of all of the following: 
+    `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
     
     For example, to construct a transformation that computes the SSD of `f32` half-precision floats,
@@ -2472,9 +2474,9 @@ def make_sized_bounded_variance(
     ddof: int = 1,
     S: RuntimeTypeDescriptor = "Pairwise<T>"
 ) -> Transformation:
-    """Make a Transformation that computes the variance of bounded data. 
+    """Make a Transformation that computes the variance of bounded data.
     
-    This uses a restricted-sensitivity proof that takes advantage of known dataset size. 
+    This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
     
     [make_sized_bounded_variance in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_sized_bounded_variance.html)

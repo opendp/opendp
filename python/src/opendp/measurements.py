@@ -145,10 +145,11 @@ def make_base_discrete_laplace_cks20(
     D: RuntimeTypeDescriptor = "AllDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using an efficient algorithm on rational bignums.
     
     Set `D` to change the input data type and input metric:
+    
     
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
@@ -205,11 +206,12 @@ def make_base_discrete_laplace_linear(
     D: RuntimeTypeDescriptor = "AllDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input, 
+    """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using a linear-time algorithm on finite data types.
     
     This algorithm can be executed in constant time if bounds are passed.
     Set `D` to change the input data type and input metric:
+    
     
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
@@ -275,13 +277,14 @@ def make_base_gaussian(
     
     Set `D` to change the input data type and input metric:
     
+    
     | `D`                          | input type   | `D::InputMetric`       |
     | ---------------------------- | ------------ | ---------------------- |
     | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
     | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
     
-    This function takes a noise granularity in terms of 2^k. 
-    Larger granularities are more computationally efficient, but have a looser privacy map. 
+    This function takes a noise granularity in terms of 2^k.
+    Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
     [make_base_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_gaussian.html)
@@ -336,8 +339,8 @@ def make_base_geometric(
     D: RuntimeTypeDescriptor = "AllDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Deprecated. 
-    Use `make_base_discrete_laplace` instead (more efficient). 
+    """Deprecated.
+    Use `make_base_discrete_laplace` instead (more efficient).
     `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
     
     [make_base_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_geometric.html)
@@ -400,8 +403,8 @@ def make_base_laplace(
     | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     
-    This function takes a noise granularity in terms of 2^k. 
-    Larger granularities are more computationally efficient, but have a looser privacy map. 
+    This function takes a noise granularity in terms of 2^k.
+    Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
     [make_base_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_laplace.html)
@@ -453,8 +456,9 @@ def make_base_ptr(
     TV: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
-    This function takes a noise granularity in terms of 2^k. 
-    Larger granularities are more computationally efficient, but have a looser privacy map. 
+    
+    This function takes a noise granularity in terms of 2^k.
+    Larger granularities are more computationally efficient, but have a looser privacy map.
     If k is not set, k defaults to the smallest granularity.
     
     [make_base_ptr in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_ptr.html)
