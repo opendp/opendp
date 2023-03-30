@@ -132,12 +132,13 @@ fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, Str
         .map(parse_doc_attribute)
         .collect::<Result<Vec<_>>>()?
         .into_iter()
-        .filter_map(|v|
+        .filter_map(|v| {
             if v.is_empty() {
                 Some(String::new())
             } else {
                 v.starts_with(" ").then(|| v[1..].to_string())
-            })
+            }
+        })
         .collect::<Vec<String>>();
 
     // wrap in headers to prepare for parsing
