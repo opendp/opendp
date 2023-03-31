@@ -60,7 +60,7 @@ impl<T> From<Vec<T>> for Column
 }
 
 
-//#[derive(PartialEq)]
+#[derive(Debug)]
 pub struct Column(Box<dyn IsVec>);
 impl CheckNull for Column {
     fn is_null(&self) -> bool { false }
@@ -93,11 +93,11 @@ impl Clone for Column {
     }
 }
 
-impl Debug for Column {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Column is ({:?})", self.0.box_clone())
-    }
-}
+// impl Debug for Column {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+//         write!(f, "Column is ({:?})", self.0.box_clone())
+//     }
+// }
 
  impl PartialEq for Column {
      fn eq(&self, other: &Self) -> bool {
@@ -115,6 +115,54 @@ mod tests {
     fn test_vec() {
         let form = vec![1, 2, 3];
         test_round_trip(form);
+
+        use crate::{transformations::make_create_dataframe};
+
+        fn print_type_of<T>(_: &T) {
+            println!("{}", std::any::type_name::<T>())
+        }
+
+        let transformation = make_create_dataframe::<&str>(vec!["colA", "colB"]).unwrap();
+
+        let data_string = vec![
+            vec!["1".to_owned(), "A".to_owned()],
+            vec!["4".to_owned(), "A".to_owned()],
+            vec!["2".to_owned(), "B".to_owned()],
+            vec!["0".to_owned(), "A".to_owned()],
+            vec!["10".to_owned(), "B".to_owned()],
+        ];
+        
+        let df = transformation.invoke(&data_string).unwrap();
+
+        let records = vec!["A","A","B","A","B"];
+
+        let data = Column(Box::new(records));
+        println!("{:?}", data);
+        
+        let col = df.get("colB").unwrap_test()
+                .to_owned();
+        println!("{:?}", col);
+
+
+        let tmp = data.0.box_clone();
+        print_type_of(&tmp);
+        let tmp: &Vec<&str> = tmp.as_any().downcast_ref().unwrap_test();
+        print_type_of(&tmp);
+        println!("{:?}", tmp);
+        
+        let tmp2 = col.0.box_clone();
+        print_type_of(&tmp2);
+        let tmp2: &Vec<&str> = tmp2.as_any().downcast_ref().unwrap_test();
+        print_type_of(&tmp2);
+        println!("{:?}", tmp2);
+
+        let cat = col        
+                .as_form::<Vec<&str>>()
+                .unwrap_test();
+        assert_eq!(data, col);
+
+        println!("{:?}", cat);
+
     }
 
     // #[test]
@@ -130,4 +178,5 @@ mod tests {
         assert_eq!(&form, data.as_form().unwrap_test());
         assert_eq!(form, data.into_form().unwrap_test())
     }
+
 }

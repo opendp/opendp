@@ -54,11 +54,6 @@ pub fn make_sized_partition_by<TC: Hashable>(
     let d_output_partitions = IntDistance::exact_int_cast(output_partitions)?;
 
     // Create Product<SizedDataFrameDomain>
-    // let product_df_domain  = ProductDomain::new(
-    //     (0..output_partitions)
-    //         .map(|_v| input_domain.clone())
-    //         .collect(),
-    // );
     let mut vector_partition_domains = vec![SizedDataFrameDomain::Default(); output_partitions];
     for i in 0..output_partitions {
         let mut partition_counts: Vec<usize> = vec![0; partion_size];
@@ -68,11 +63,6 @@ pub fn make_sized_partition_by<TC: Hashable>(
         vector_partition_domains[i].add_categorical_colunm(identifier_column.clone(), partion_keys.clone(), partition_counts).unwrap();
     }
     let product_df_domain = ProductDomain::new(vector_partition_domains);
-    // (0..output_partitions)
-    //         .map(|v| (0..partion_size).map(|d|
-    //              if d != v {
-    //                 product_df_domain.inner_domains[v].categories_counts.get(&identifier_column).unwrap()[d] = 0;
-    //             }));
 
     Ok(Transformation::new(
         input_domain,
@@ -85,40 +75,47 @@ pub fn make_sized_partition_by<TC: Hashable>(
                 .map(|(i, k)| (k, i))
                 .collect();
 
-            // the partition to move each row into
-            let partition_ids: Vec<usize> = (data.get(&identifier_column))
+            // // the partition to move each row into
+            // let debug_message = (data.get(&identifier_column))
+            // .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
+            // .as_any().downcast_ref::<Vec<TC>>()
+            // .expect("Failed casting to Vec<str> - custom fail");
+
+            let partition_ids_buff = (data.get(&identifier_column))
                 .ok_or_else(|| err!(FailedFunction, "{:?} does not exist in the input dataframe"))?
-                .as_form::<Vec<TC>>()?
-                .iter()
-                .map(|v| {
-                    (partition_indexes.get(v))
-                        .cloned()
-                        .unwrap_or(data.len()) // Last index for unknown cat
-                })
-                .collect();
+                .as_form::<Vec<TC>>()
+                .expect("HERE IS THE BUG");
+
+            //  let partition_ids: Vec<usize> =  partition_ids_buff.iter()
+            //     .map(|v| {
+            //         (partition_indexes.get(v))
+            //             .cloned()
+            //             .unwrap_or(data.len()) // Last index for unknown cat
+            //     })
+            //     .collect();
 
             // where to collect partitioned data
             let mut partitioned_data = std::vec::from_elem(DataFrame::new(), true_partitions);
 
             // iteratively partition each column
-            keep_columns.iter().try_for_each(|column_name| {
-                // retrieve a Column from the dataframe
-                let column = data.get(column_name).ok_or_else(|| {
-                    err!(FailedFunction, "{:?} does not exist in the input dataframe")
-                })?;
+            // keep_columns.iter().try_for_each(|column_name| {
+            //     // retrieve a Column from the dataframe
+            //     let column = data.get(column_name).ok_or_else(|| {
+            //         err!(FailedFunction, "{:?} does not exist in the input dataframe")
+            //     })?;
 
-                // partition the column by the partition ids,
-                //    then insert each subset into the respective partitioned dataframe
-                column
-                    .partition(&partition_ids, true_partitions)
-                    .into_iter()
-                    .zip(partitioned_data.iter_mut())
-                    .for_each(|(subset, df)| {
-                        df.insert(column_name.clone(), subset);
-                    });
+            //     // partition the column by the partition ids,
+            //     //    then insert each subset into the respective partitioned dataframe
+            //     column
+            //         .partition(&partition_ids, true_partitions)
+            //         .into_iter()
+            //         .zip(partitioned_data.iter_mut())
+            //         .for_each(|(subset, df)| {
+            //             df.insert(column_name.clone(), subset);
+            //         });
 
-                Fallible::Ok(())
-            })?;
+            //     Fallible::Ok(())
+            // })?;
 
             if !null_partition {
                 partitioned_data.pop(); // Remove last position if no unknown class
@@ -135,7 +132,7 @@ pub fn make_sized_partition_by<TC: Hashable>(
 
 #[cfg(test)]
 mod test {
-    use crate::transformations::make_create_dataframe;
+    use crate::{transformations::make_create_dataframe, error::ExplainUnwrap};
 
     use super::*;
 
@@ -153,8 +150,15 @@ mod test {
         ];
         let df = transformation.invoke(&data_string).unwrap();
 
+        let df_domain = SizedDataFrameDomain::create_categorical_df_domain("colB", vec!["A","B"], vec![3,2]).unwrap();
+
         println!("{:?}", df);
 
+        let partitioner = make_sized_partition_by(df_domain, "colB", vec!["colA"], false).unwrap();
+
+        let partition = partitioner.invoke(&df).unwrap();
+
+        println!("{:?}", partition);
         Ok(())
     }
 }
