@@ -6,6 +6,7 @@ use num::Zero;
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     error::Fallible,
+    interactive::{wrap, Queryable},
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
@@ -22,7 +23,7 @@ use crate::{
 ///
 /// # Generics
 /// * `DI` - Input Domain.
-/// * `DO` - Output Domain.
+/// * `TO` - Output Type.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
 pub fn make_basic_composition<DI, TO, MI, MO>(
@@ -67,7 +68,20 @@ where
     Ok(Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &DI::Carrier| {
-            functions.iter().map(|f| f.eval(arg)).collect()
+            wrap(
+                |_qbl| {
+                    Queryable::new(|_self, _query| {
+                        fallible!(
+                            FailedFunction,
+                            "cannot evaluate queryables from a noninteractive compositor"
+                        )
+                    })
+                },
+                || functions
+                    .iter()
+                    .map(|f| f.eval(arg))
+                    .collect::<Fallible<_>>(),
+            )
         }),
         input_metric,
         output_measure.clone(),
@@ -156,7 +170,7 @@ mod tests {
         let measurements = vec![&laplace; 2];
         let composition = make_basic_composition(measurements)?;
         let arg = 99.;
-        let ret = composition.function.eval(&arg)?;
+        let ret = composition.invoke(&arg)?;
 
         assert_eq!(ret.len(), 2);
         println!("return: {:?}", ret);

@@ -12,7 +12,7 @@ use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
 use crate::metrics::L1Distance;
 use crate::traits::samplers::{fill_bytes, SampleBernoulli};
-use crate::traits::{CheckNull, DistanceConstant, InfCast};
+use crate::traits::{CheckNull, DistanceConstant, Float as TFloat, InfCast};
 use std::collections::hash_map::DefaultHasher;
 
 const ALPHA_DEFAULT: u32 = 4;
@@ -316,31 +316,22 @@ where
 ///
 /// The Queryable object works similar to a dictionary.
 /// Note that the access time is O(state.h.len()).
-pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<AlpState<K, T>, K, T>
+pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<K, T>
 where
-    T: num::Float,
+    T: 'static + TFloat,
+    K: 'static,
 {
-    Queryable::new(state, move |state: AlpState<K, T>, key: &K| {
-        let estimate = compute_estimate(&state, key);
-        Ok((state, estimate))
-    })
+    Queryable::new_external(move |key: &K| Ok(compute_estimate(&state, key)))
 }
 
 /// Wrapper Measurement. See [`post_process`].
 pub fn make_alp_histogram_post_process<K, C, T>(
     m: &Measurement<SparseDomain<K, C>, AlpState<K, T>, L1Distance<C>, MaxDivergence<T>>,
-) -> Fallible<
-    Measurement<
-        SparseDomain<K, C>,
-        Queryable<AlpState<K, T>, K, T>,
-        L1Distance<C>,
-        MaxDivergence<T>,
-    >,
->
+) -> Fallible<Measurement<SparseDomain<K, C>, Queryable<K, T>, L1Distance<C>, MaxDivergence<T>>>
 where
     K: 'static + Eq + Hash + CheckNull,
     C: 'static + Clone + CheckNull,
-    T: 'static + num::Float,
+    T: 'static + TFloat,
     HashMap<K, C>: Clone,
     AlpState<K, T>: Clone,
 {

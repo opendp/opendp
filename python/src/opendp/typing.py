@@ -474,7 +474,6 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 def get_first(value):
     return next(iter(value), None)
 
-
 def parse_or_infer(type_name: RuntimeType, example):
     return RuntimeType.parse_or_infer(type_name, example)
 
@@ -486,3 +485,6 @@ def get_dependencies(value):
 
 def get_dependencies_iterable(value):
     return list(map(get_dependencies, value))
+
+def get_distance_type(value):
+    return value.distance_type

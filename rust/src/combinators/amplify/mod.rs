@@ -77,7 +77,7 @@ where
 ///
 /// # Generics
 /// * `DIA` - Atomic Input Domain. The domain of individual records in the input dataset.
-/// * `DO` - Output Domain.
+/// * `TO` - Output Type.
 /// * `MI` - Input Metric.
 /// * `MO` - Output Metric.
 pub fn make_population_amplification<DIA, TO, MI, MO>(

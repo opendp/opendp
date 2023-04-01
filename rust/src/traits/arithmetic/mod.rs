@@ -1,10 +1,13 @@
-use crate::traits::{ExactIntCast, InfCast};
+use crate::traits::ExactIntCast;
 #[cfg(feature = "use-mpfr")]
-use rug::ops::{AddAssignRound, DivAssignRound, MulAssignRound, PowAssignRound, SubAssignRound};
+use rug::{
+    ops::{AddAssignRound, DivAssignRound, MulAssignRound, PowAssignRound, SubAssignRound},
+    Float,
+};
 
 use crate::error::Fallible;
 #[cfg(feature = "use-mpfr")]
-use rug::Float;
+use crate::traits::InfCast;
 
 /// Fallible absolute value that returns an error if overflowing.
 ///
