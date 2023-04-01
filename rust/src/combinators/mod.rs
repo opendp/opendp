@@ -28,6 +28,11 @@ mod fix_delta;
 #[cfg(feature = "contrib")]
 pub use crate::combinators::fix_delta::*;
 
+#[cfg(feature = "contrib")]
+mod sequential_composition;
+#[cfg(feature = "contrib")]
+pub use crate::combinators::sequential_composition::*;
+
 #[cfg(test)]
 pub mod tests {
     use crate::core::{Function, Measurement, PrivacyMap, StabilityMap, Transformation};
