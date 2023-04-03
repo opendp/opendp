@@ -44,6 +44,7 @@ pub fn generate_lib_c(modules: &HashMap<String, Vec<Function>>) -> String {
 SEXP AnyObject_tag;
 SEXP AnyTransformation_tag;
 SEXP AnyMeasurement_tag;
+SEXP AnyOdometer_tag;
 SEXP AnyDomain_tag;
 SEXP AnyMetric_tag;
 SEXP AnyMeasure_tag;
@@ -61,6 +62,7 @@ void R_init_opendp(DllInfo *dll)
     AnyObject_tag = install("AnyObject_TAG");
     AnyTransformation_tag = install("AnyTransformation_TAG");
     AnyMeasurement_tag = install("AnyMeasurement_TAG");
+    AnyOdometer_tag = install("AnyOdometer_TAG");
     AnyDomain_tag = install("AnyDomain_TAG");
     AnyMetric_tag = install("AnyMetric_TAG");
     AnyMeasure_tag = install("AnyMeasure_TAG");
@@ -112,6 +114,7 @@ pub fn generate_Ropendp_h(modules: &HashMap<String, Vec<Function>>) -> String {
 extern SEXP AnyObject_tag;
 extern SEXP AnyTransformation_tag;
 extern SEXP AnyMeasurement_tag;
+extern SEXP AnyOdometer_tag;
 extern SEXP AnyDomain_tag;
 extern SEXP AnyMetric_tag;
 extern SEXP AnyMeasure_tag;
@@ -292,6 +295,7 @@ fn r_to_c(arg: &Argument) -> String {
         ty if ty == "AnyObject *" => format!("sexp_to_anyobjectptr({name}, {rust_type})"),
         ty if ty == "AnyTransformation *" => format!("sexp_to_anytransformationptr({name})"),
         ty if ty == "AnyMeasurement *" => format!("sexp_to_anymeasurementptr({name})"),
+        ty if ty == "AnyOdometer *" => format!("sexp_to_anyodometerptr({name})"),
         ty if ty == "AnyDomain *" => format!("sexp_to_anydomainptr({name})"),
         ty if ty == "AnyMetric *" => format!("sexp_to_anymetricptr({name})"),
         ty if ty == "AnyMeasure *" => format!("sexp_to_anymeasureptr({name})"),
@@ -357,6 +361,7 @@ fn c_to_r(arg: Argument) -> String {
         ty if ty == "AnyObject *" => format!("anyobjectptr_to_sexp({name})"),
         ty if ty == "AnyTransformation *" => format!("anytransformationptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, log)"),
+        ty if ty == "AnyOdometer *" => format!("anyodometerptr_to_sexp({name}, log)"),
         ty if ty == "AnyDomain *" => format!("anydomainptr_to_sexp({name}, log)"),
         ty if ty == "AnyMetric *" => format!("anymetricptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasure *" => format!("anymeasureptr_to_sexp({name}, log)"),
