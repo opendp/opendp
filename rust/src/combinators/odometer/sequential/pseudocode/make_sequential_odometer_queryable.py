@@ -1,5 +1,5 @@
 # type: ignore
-def make_sequential_odometer_queryable(
+def make_composition_odometer_queryable(
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,

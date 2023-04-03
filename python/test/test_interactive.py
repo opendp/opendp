@@ -121,3 +121,58 @@ def test_plugin_queryable_error():
 
     with pytest.raises(TypeError):
         qbl(2)
+
+def test_sequential_odometer():
+    max_influence = 1
+    o_sc = dp.c.make_composition_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(),
+    )
+
+    assert str(o_sc) == """Odometer(
+    input_domain   = VectorDomain(AtomDomain(T=i32)),
+    input_metric   = SymmetricDistance(),
+    output_measure = MaxDivergence)"""
+
+    o_sc.invoke([1] * 200)
+    oqbl_sc: dp.Queryable = o_sc([1] * 200)
+
+    print("SeqComp IM:", oqbl_sc)
+    sum_query = o_sc.input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
+
+    print("evaluating")
+    print(oqbl_sc(sum_query))
+
+    noise_query = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.)
+    exact_sum = o_sc.input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
+    print("exact sum:", exact_sum)
+    sum_compositor = exact_sum >> dp.c.then_sequential_composition(
+        output_measure=dp.max_divergence(),
+        d_in=exact_sum.map(max_influence),
+        d_mids=[0.2, 0.09]
+    )
+    exact_sum_sc_qbl = oqbl_sc(sum_compositor)
+
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("root release: ", oqbl_sc(sum_query))
+
+    print("privacy usage", oqbl_sc.map(1))
+
+def test_odometer_supporting_elements():
+    sc_odo = dp.c.make_composition_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(),
+    )
+
+    assert sc_odo.input_domain == dp.vector_domain(dp.atom_domain(T=int))
+    assert sc_odo.input_metric == dp.symmetric_distance()
+    assert sc_odo.output_measure == dp.max_divergence()
+    assert sc_odo.input_space == (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    assert sc_odo.input_distance_type == dp.u32
+    assert sc_odo.output_distance_type == dp.f64
+    assert sc_odo.input_carrier_type == dp.Vec[dp.i32]
+
+    

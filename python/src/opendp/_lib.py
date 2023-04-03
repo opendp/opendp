@@ -130,6 +130,10 @@ class AnyMeasurement(ctypes.Structure):
     pass  # Opaque struct
 
 
+class AnyOdometer(ctypes.Structure):
+    pass  # Opaque struct
+
+
 class AnyTransformation(ctypes.Structure):
     pass  # Opaque struct
 

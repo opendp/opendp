@@ -36,6 +36,11 @@ typedef struct Function_AnyObject__AnyObject Function_AnyObject__AnyObject;
 typedef struct Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure Measurement_AnyDomain__AnyObject__AnyMetric__AnyMeasure;
 
 /**
+ * A privacy odometer that can track privacy loss over multiple queries.
+ */
+typedef struct Odometer_AnyDomain__AnyObject__AnyMetric__AnyMeasure Odometer_AnyDomain__AnyObject__AnyMetric__AnyMeasure;
+
+/**
  * A data transformation with certain stability characteristics.
  *
  * The trait bounds provided by the Rust type system guarantee that:
@@ -128,6 +133,78 @@ typedef struct FfiSlice {
   uintptr_t len;
 } FfiSlice;
 
+/**
+ * An Odometer with all generic types filled by Any types. This is the type of Odometers
+ * passed back and forth over FFI.
+ */
+typedef struct Odometer_AnyDomain__AnyObject__AnyMetric__AnyMeasure AnyOdometer;
+
+enum FfiResult_____AnyOdometer_Tag {
+  Ok_____AnyOdometer,
+  Err_____AnyOdometer,
+};
+typedef uint32_t FfiResult_____AnyOdometer_Tag;
+
+typedef struct FfiResult_____AnyOdometer {
+  FfiResult_____AnyOdometer_Tag tag;
+  union {
+    struct {
+      AnyOdometer *ok;
+    };
+    struct {
+      struct FfiError *err;
+    };
+  };
+} FfiResult_____AnyOdometer;
+
+enum FfiResult_____AnyFunction_Tag {
+  Ok_____AnyFunction,
+  Err_____AnyFunction,
+};
+typedef uint32_t FfiResult_____AnyFunction_Tag;
+
+typedef struct FfiResult_____AnyFunction {
+  FfiResult_____AnyFunction_Tag tag;
+  union {
+    struct {
+      AnyFunction *ok;
+    };
+    struct {
+      struct FfiError *err;
+    };
+  };
+} FfiResult_____AnyFunction;
+
+typedef bool (*RefCountFn)(const void*, bool);
+
+typedef struct ExtrinsicObject {
+  const void *ptr;
+  RefCountFn count;
+} ExtrinsicObject;
+
+typedef struct CallbackFn {
+  struct FfiResult_____AnyObject *(*callback)(const struct AnyObject*);
+  struct ExtrinsicObject lifeline;
+} CallbackFn;
+
+enum FfiResult_____c_void_Tag {
+  Ok_____c_void,
+  Err_____c_void,
+};
+typedef uint32_t FfiResult_____c_void_Tag;
+
+typedef struct FfiResult_____c_void {
+  FfiResult_____c_void_Tag tag;
+  union {
+    struct {
+      void *ok;
+    };
+    struct {
+      struct FfiError *err;
+    };
+  };
+} FfiResult_____c_void;
+
 enum FfiResult_____AnyDomain_Tag {
   Ok_____AnyDomain,
   Err_____AnyDomain,
@@ -182,24 +259,6 @@ typedef struct FfiResult_____AnyMeasure {
   };
 } FfiResult_____AnyMeasure;
 
-enum FfiResult_____AnyFunction_Tag {
-  Ok_____AnyFunction,
-  Err_____AnyFunction,
-};
-typedef uint32_t FfiResult_____AnyFunction_Tag;
-
-typedef struct FfiResult_____AnyFunction {
-  FfiResult_____AnyFunction_Tag tag;
-  union {
-    struct {
-      AnyFunction *ok;
-    };
-    struct {
-      struct FfiError *err;
-    };
-  };
-} FfiResult_____AnyFunction;
-
 typedef uint8_t c_bool;
 
 enum FfiResult_____c_bool_Tag {
@@ -220,24 +279,6 @@ typedef struct FfiResult_____c_bool {
   };
 } FfiResult_____c_bool;
 
-enum FfiResult_____c_void_Tag {
-  Ok_____c_void,
-  Err_____c_void,
-};
-typedef uint32_t FfiResult_____c_void_Tag;
-
-typedef struct FfiResult_____c_void {
-  FfiResult_____c_void_Tag tag;
-  union {
-    struct {
-      void *ok;
-    };
-    struct {
-      struct FfiError *err;
-    };
-  };
-} FfiResult_____c_void;
-
 enum FfiResult_____c_char_Tag {
   Ok_____c_char,
   Err_____c_char,
@@ -255,18 +296,6 @@ typedef struct FfiResult_____c_char {
     };
   };
 } FfiResult_____c_char;
-
-typedef bool (*RefCountFn)(const void*, bool);
-
-typedef struct ExtrinsicObject {
-  const void *ptr;
-  RefCountFn count;
-} ExtrinsicObject;
-
-typedef struct CallbackFn {
-  struct FfiResult_____AnyObject *(*callback)(const struct AnyObject*);
-  struct ExtrinsicObject lifeline;
-} CallbackFn;
 
 typedef struct FfiResult_____AnyObject *(*TransitionFn)(const struct AnyObject*, c_bool);
 
@@ -357,6 +386,10 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_approximate(const A
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_pureDP_to_zCDP(const AnyMeasurement *measurement);
 
+struct FfiResult_____AnyOdometer opendp_combinators__make_sequential_odometer(const struct AnyDomain *input_domain,
+                                                                              const struct AnyMetric *input_metric,
+                                                                              const struct AnyMeasure *output_measure);
+
 struct FfiResult_____AnyMeasurement opendp_combinators__make_fix_delta(const AnyMeasurement *measurement,
                                                                        double delta);
 
@@ -368,37 +401,25 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_fix_delta(const Any
  */
 bool opendp_core___error_free(struct FfiError *this_);
 
-/**
- * Get the input domain from a `transformation`.
- *
- * # Arguments
- * * `this` - The transformation to retrieve the value from.
- */
-struct FfiResult_____AnyDomain opendp_core__transformation_input_domain(AnyTransformation *this_);
+struct FfiResult_____AnyFunction opendp_core__new_function(const struct CallbackFn *function,
+                                                           const char *TO);
 
 /**
- * Get the output domain from a `transformation`.
+ * Eval the `function` with `arg`.
  *
  * # Arguments
- * * `this` - The transformation to retrieve the value from.
+ * * `this` - Function to invoke.
+ * * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
+ * * `TI` - Input Type.
  */
-struct FfiResult_____AnyDomain opendp_core__transformation_output_domain(AnyTransformation *this_);
+struct FfiResult_____AnyObject opendp_core__function_eval(const AnyFunction *this_,
+                                                          const struct AnyObject *arg,
+                                                          const char *TI);
 
 /**
- * Get the input domain from a `transformation`.
- *
- * # Arguments
- * * `this` - The transformation to retrieve the value from.
+ * Internal function. Free the memory associated with `this`.
  */
-struct FfiResult_____AnyMetric opendp_core__transformation_input_metric(AnyTransformation *this_);
-
-/**
- * Get the output domain from a `transformation`.
- *
- * # Arguments
- * * `this` - The transformation to retrieve the value from.
- */
-struct FfiResult_____AnyMetric opendp_core__transformation_output_metric(AnyTransformation *this_);
+struct FfiResult_____c_void opendp_core___function_free(AnyFunction *this_);
 
 /**
  * Get the input domain from a `measurement`.
@@ -431,31 +452,6 @@ struct FfiResult_____AnyMeasure opendp_core__measurement_output_measure(AnyMeasu
  * * `this` - The measurement to retrieve the value from.
  */
 struct FfiResult_____AnyFunction opendp_core__measurement_function(AnyMeasurement *this_);
-
-/**
- * Use the `transformation` to map a given `d_in` to `d_out`.
- *
- * # Arguments
- * * `transformation` - Transformation to check the map distances with.
- * * `distance_in` - Distance in terms of the input metric.
- */
-struct FfiResult_____AnyObject opendp_core__transformation_map(const AnyTransformation *transformation,
-                                                               const struct AnyObject *distance_in);
-
-/**
- * Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
- *
- * # Arguments
- * * `measurement` - Measurement to check the privacy relation of.
- * * `d_in` - Distance in terms of the input metric.
- * * `d_out` - Distance in terms of the output metric.
- *
- * # Returns
- * True indicates that the relation passed at the given distance.
- */
-struct FfiResult_____c_bool opendp_core__transformation_check(const AnyTransformation *transformation,
-                                                              const struct AnyObject *distance_in,
-                                                              const struct AnyObject *distance_out);
 
 /**
  * Use the `measurement` to map a given `d_in` to `d_out`.
@@ -498,6 +494,162 @@ struct FfiResult_____AnyObject opendp_core__measurement_invoke(const AnyMeasurem
 struct FfiResult_____c_void opendp_core___measurement_free(AnyMeasurement *this_);
 
 /**
+ * Get the input (carrier) data type of `this`.
+ *
+ * # Arguments
+ * * `this` - The measurement to retrieve the type from.
+ */
+struct FfiResult_____c_char opendp_core__measurement_input_carrier_type(AnyMeasurement *this_);
+
+/**
+ * Get the input distance type of `measurement`.
+ *
+ * # Arguments
+ * * `this` - The measurement to retrieve the type from.
+ */
+struct FfiResult_____c_char opendp_core__measurement_input_distance_type(AnyMeasurement *this_);
+
+/**
+ * Get the output distance type of `measurement`.
+ *
+ * # Arguments
+ * * `this` - The measurement to retrieve the type from.
+ */
+struct FfiResult_____c_char opendp_core__measurement_output_distance_type(AnyMeasurement *this_);
+
+/**
+ * Get the input domain from a `odometer`.
+ *
+ * # Arguments
+ * * `this` - The odometer to retrieve the value from.
+ */
+struct FfiResult_____AnyDomain opendp_core__odometer_input_domain(AnyOdometer *this_);
+
+/**
+ * Get the input domain from a `odometer`.
+ *
+ * # Arguments
+ * * `this` - The odometer to retrieve the value from.
+ */
+struct FfiResult_____AnyMetric opendp_core__odometer_input_metric(AnyOdometer *this_);
+
+/**
+ * Get the output domain from a `odometer`.
+ *
+ * # Arguments
+ * * `this` - The odometer to retrieve the value from.
+ */
+struct FfiResult_____AnyMeasure opendp_core__odometer_output_measure(AnyOdometer *this_);
+
+/**
+ * Invoke the `odometer` with `arg`. Returns a differentially private release.
+ *
+ * # Arguments
+ * * `this` - Odometer to invoke.
+ * * `arg` - Input data to supply to the odometer. A member of the odometer's input domain.
+ */
+struct FfiResult_____AnyObject opendp_core__odometer_invoke(const AnyOdometer *this_,
+                                                            const struct AnyObject *arg);
+
+/**
+ * Internal function. Free the memory associated with `this`.
+ */
+struct FfiResult_____c_void opendp_core___odometer_free(AnyOdometer *this_);
+
+/**
+ * Eval the odometer `queryable` with an invoke `query`.
+ *
+ * # Arguments
+ * * `queryable` - Queryable to eval.
+ * * `query` - Invoke query to supply to the queryable.
+ */
+struct FfiResult_____AnyObject opendp_core__odometer_queryable_invoke(struct AnyObject *queryable,
+                                                                      const struct AnyObject *query);
+
+/**
+ * Get the invoke query type of an odometer `queryable`.
+ *
+ * # Arguments
+ * * `this` - The queryable to retrieve the query type from.
+ */
+struct FfiResult_____c_char opendp_core__odometer_queryable_invoke_type(struct AnyObject *this_);
+
+/**
+ * Get the map query type of an odometer `queryable`.
+ *
+ * # Arguments
+ * * `this` - The queryable to retrieve the query type from.
+ */
+struct FfiResult_____c_char opendp_core__odometer_queryable_map_type(struct AnyObject *this_);
+
+/**
+ * Eval the odometer `queryable` with a map `query`. Returns the current d_out.
+ *
+ * # Arguments
+ * * `queryable` - Queryable to eval.
+ * * `query` - Map query to supply to the queryable.
+ */
+struct FfiResult_____AnyObject opendp_core__odometer_queryable_map(struct AnyObject *queryable,
+                                                                   const struct AnyObject *query);
+
+/**
+ * Get the input domain from a `transformation`.
+ *
+ * # Arguments
+ * * `this` - The transformation to retrieve the value from.
+ */
+struct FfiResult_____AnyDomain opendp_core__transformation_input_domain(AnyTransformation *this_);
+
+/**
+ * Get the output domain from a `transformation`.
+ *
+ * # Arguments
+ * * `this` - The transformation to retrieve the value from.
+ */
+struct FfiResult_____AnyDomain opendp_core__transformation_output_domain(AnyTransformation *this_);
+
+/**
+ * Get the input domain from a `transformation`.
+ *
+ * # Arguments
+ * * `this` - The transformation to retrieve the value from.
+ */
+struct FfiResult_____AnyMetric opendp_core__transformation_input_metric(AnyTransformation *this_);
+
+/**
+ * Get the output domain from a `transformation`.
+ *
+ * # Arguments
+ * * `this` - The transformation to retrieve the value from.
+ */
+struct FfiResult_____AnyMetric opendp_core__transformation_output_metric(AnyTransformation *this_);
+
+/**
+ * Use the `transformation` to map a given `d_in` to `d_out`.
+ *
+ * # Arguments
+ * * `transformation` - Transformation to check the map distances with.
+ * * `distance_in` - Distance in terms of the input metric.
+ */
+struct FfiResult_____AnyObject opendp_core__transformation_map(const AnyTransformation *transformation,
+                                                               const struct AnyObject *distance_in);
+
+/**
+ * Check the privacy relation of the `measurement` at the given `d_in`, `d_out`
+ *
+ * # Arguments
+ * * `measurement` - Measurement to check the privacy relation of.
+ * * `d_in` - Distance in terms of the input metric.
+ * * `d_out` - Distance in terms of the output metric.
+ *
+ * # Returns
+ * True indicates that the relation passed at the given distance.
+ */
+struct FfiResult_____c_bool opendp_core__transformation_check(const AnyTransformation *transformation,
+                                                              const struct AnyObject *distance_in,
+                                                              const struct AnyObject *distance_out);
+
+/**
  * Invoke the `transformation` with `arg`. Returns a differentially private release.
  *
  * # Arguments
@@ -529,14 +681,6 @@ struct FfiResult_____c_void opendp_core___transformation_free(AnyTransformation 
 struct FfiResult_____c_char opendp_core__transformation_input_carrier_type(AnyTransformation *this_);
 
 /**
- * Get the input (carrier) data type of `this`.
- *
- * # Arguments
- * * `this` - The measurement to retrieve the type from.
- */
-struct FfiResult_____c_char opendp_core__measurement_input_carrier_type(AnyMeasurement *this_);
-
-/**
  * Get the input distance type of `transformation`.
  *
  * # Arguments
@@ -553,47 +697,11 @@ struct FfiResult_____c_char opendp_core__transformation_input_distance_type(AnyT
 struct FfiResult_____c_char opendp_core__transformation_output_distance_type(AnyTransformation *this_);
 
 /**
- * Get the input distance type of `measurement`.
- *
- * # Arguments
- * * `this` - The measurement to retrieve the type from.
- */
-struct FfiResult_____c_char opendp_core__measurement_input_distance_type(AnyMeasurement *this_);
-
-/**
- * Get the output distance type of `measurement`.
- *
- * # Arguments
- * * `this` - The measurement to retrieve the type from.
- */
-struct FfiResult_____c_char opendp_core__measurement_output_distance_type(AnyMeasurement *this_);
-
-struct FfiResult_____AnyFunction opendp_core__new_function(const struct CallbackFn *function,
-                                                           const char *TO);
-
-/**
- * Eval the `function` with `arg`.
- *
- * # Arguments
- * * `this` - Function to invoke.
- * * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
- * * `TI` - Input Type.
- */
-struct FfiResult_____AnyObject opendp_core__function_eval(const AnyFunction *this_,
-                                                          const struct AnyObject *arg,
-                                                          const char *TI);
-
-/**
- * Internal function. Free the memory associated with `this`.
- */
-struct FfiResult_____c_void opendp_core___function_free(AnyFunction *this_);
-
-/**
- * Invoke the `queryable` with `query`. Returns a differentially private release.
+ * Eval the `queryable` with `query`. Returns a differentially private release.
  *
  * # Arguments
  * * `queryable` - Queryable to eval.
- * * `query` - Input data to supply to the measurement. A member of the measurement's input domain.
+ * * `query` - The input to the queryable.
  */
 struct FfiResult_____AnyObject opendp_core__queryable_eval(struct AnyObject *queryable,
                                                            const struct AnyObject *query);
@@ -605,6 +713,14 @@ struct FfiResult_____AnyObject opendp_core__queryable_eval(struct AnyObject *que
  * * `this` - The queryable to retrieve the query type from.
  */
 struct FfiResult_____c_char opendp_core__queryable_query_type(struct AnyObject *this_);
+
+/**
+ * Get the query odometer map type of `queryable`.
+ *
+ * # Arguments
+ * * `this` - The queryable to retrieve the type from.
+ */
+struct FfiResult_____c_char opendp_core__queryable_query_odometer_map_type(struct AnyObject *this_);
 
 struct FfiResult_____AnyObject opendp_core__new_queryable(TransitionFn transition,
                                                           const char *Q,
