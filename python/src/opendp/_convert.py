@@ -250,6 +250,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     :return: pointer to an FfiSlice owned by Python.
     """
     if isinstance(type_name, str):
+        if type_name == "AnyMeasurementPtr":
+            return _wrap_in_slice(value, 1)
+        
         if type_name in ATOM_MAP:
             return _scalar_to_slice(value, type_name)
         

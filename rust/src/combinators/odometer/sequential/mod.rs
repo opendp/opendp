@@ -10,6 +10,9 @@ use super::{OdometerCompositor, OdometerQuery};
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 /// Construct an odometer that can spawn a compositor queryable.
 ///
 /// # Arguments

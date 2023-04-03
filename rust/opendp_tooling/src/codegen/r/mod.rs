@@ -20,6 +20,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "_function_free",
     "_measurement_free",
     "_transformation_free",
+    "_odometer_free",
     "_function_free",
     "_metric_free",
     "_measure_free",

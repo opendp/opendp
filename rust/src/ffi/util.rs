@@ -7,6 +7,7 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
+use crate::combinators::ffi::{AnyOdometerAnswer, AnyOdometerQuery};
 use crate::domains::ffi::UserDomain;
 use crate::domains::{AtomDomain, BitVector, CategoricalDomain, OptionDomain, VectorDomain};
 use crate::error::*;
@@ -26,7 +27,7 @@ use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 
-use super::any::{AnyMeasurement, AnyTransformation};
+use super::any::{AnyMeasurement, AnyOdometer, AnyTransformation};
 
 // If untrusted is not enabled, then these structs don't exist.
 #[cfg(feature = "untrusted")]
@@ -310,6 +311,7 @@ macro_rules! type_vec {
 }
 
 pub type AnyMeasurementPtr = *const AnyMeasurement;
+pub type AnyOdometerPtr = *const AnyOdometer;
 pub type AnyTransformationPtr = *const AnyTransformation;
 
 lazy_static! {
@@ -337,8 +339,9 @@ lazy_static! {
             type_vec![Vec, <(DslPlan, Expr)>],
             type_vec![Vec<Expr>],
 
-            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
-            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, SeriesDomain>],
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyOdometerPtr, AnyQueryable, AnyMeasurement, AnyOdometer],
+            type_vec![AnyOdometerQuery, AnyOdometerAnswer],
+            type_vec![Vec, <SeriesDomain>],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],

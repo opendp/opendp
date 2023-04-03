@@ -508,3 +508,6 @@ def get_value_type(type_name):
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     return value.distance_type
+
+def get_input_domain(value):
+    return value.input_domain
