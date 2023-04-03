@@ -17,6 +17,7 @@ __all__ = [
     "make_pureDP_to_fixed_approxDP",
     "make_pureDP_to_zCDP",
     "make_sequential_composition",
+    "make_sequential_odometer",
     "make_user_measurement",
     "make_user_postprocessor",
     "make_user_transformation",
@@ -354,6 +355,47 @@ def make_sequential_composition(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_d_in, c_d_mids), Measurement))
+    
+    return output
+
+
+@versioned
+def make_sequential_odometer(
+    input_domain,
+    input_metric,
+    output_measure,
+    Q: RuntimeTypeDescriptor
+):
+    """Construct a sequential odometer queryable that interactively composes odometers or interactive measurements.
+    
+    [make_sequential_odometer in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_sequential_odometer.html)
+    
+    :param input_domain: indicates the space of valid input datasets
+    :param input_metric: how distances are measured between members of the input domain
+    :param output_measure: how privacy is measured
+    :param Q: 
+    :type Q: :py:ref:`RuntimeTypeDescriptor`
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    Q = RuntimeType.parse(type_name=Q)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
+    c_Q = py_to_c(Q, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_sequential_odometer
+    lib_function.argtypes = [Domain, Metric, Measure, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_Q), Odometer))
     
     return output
 

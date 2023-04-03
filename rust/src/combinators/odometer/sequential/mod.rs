@@ -9,6 +9,9 @@ use crate::{
 
 use super::{ChildChange, Invokable, OdometerQuery, OdometerQueryable};
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 /// Construct a sequential odometer queryable that interactively composes odometers or interactive measurements.
 ///
 /// # Arguments

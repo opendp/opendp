@@ -9,9 +9,10 @@ use std::any;
 use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
+use crate::combinators::{OdometerAnswer, OdometerQuery};
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
-    Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, PrivacyMap,
+    StabilityMap, Transformation,
 };
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
@@ -255,6 +256,62 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
             self.output_measure.clone(),
             self.privacy_map.clone(),
         ).expect("AnyDomain is not checked for compatibility")
+    }
+}
+
+impl<Q: 'static + Clone, A: 'static>
+    Odometer<
+        AnyDomain,
+        Queryable<OdometerQuery<Q, AnyObject>, OdometerAnswer<A, AnyObject>>,
+        AnyMetric,
+        AnyMeasure,
+    >
+{
+    pub fn into_any_QA(
+        self,
+    ) -> Odometer<AnyDomain, Queryable<AnyObject, AnyObject>, AnyMetric, AnyMeasure> {
+        let function = self.function;
+        Odometer::new(
+            self.input_domain,
+            Function::new_fallible(
+                move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyObject>> {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Queryable::new(
+                        move |_self, query: Query<AnyObject>| match query {
+                            Query::External(query) => inner_qbl
+                                .eval(&match query
+                                    .downcast_ref::<OdometerQuery<AnyObject, AnyObject>>()?
+                                {
+                                    OdometerQuery::Invoke(invokable) => OdometerQuery::Invoke(
+                                        invokable.downcast_ref::<Q>()?.clone(),
+                                    ),
+                                    OdometerQuery::Map(d_in) => OdometerQuery::Map(d_in.clone()),
+                                })
+                                .map(|answer| match answer {
+                                    OdometerAnswer::Invoke(answer) => {
+                                        OdometerAnswer::Invoke(AnyObject::new(answer))
+                                    }
+                                    OdometerAnswer::Map(d_in) => OdometerAnswer::Map(d_in),
+                                })
+                                .map(AnyObject::new)
+                                .map(Answer::External),
+                            Query::Internal(query) => {
+                                if query.downcast_ref::<QueryType>().is_some() {
+                                    return Ok(Answer::internal(Type::of::<Q>()));
+                                }
+                                let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
+                                    return fallible!(FailedFunction, "internal query returned external answer")
+                                };
+                                Ok(Answer::Internal(a))
+                            }
+                        },
+                    )
+                },
+            ),
+            self.input_metric,
+            self.output_measure,
+        ).expect("compatibility check already passed")
     }
 }
 
@@ -628,6 +685,50 @@ mod partials {
 }
 #[cfg(feature = "partials")]
 pub use partials::*;
+
+/// An Odometer with all generic types filled by Any types. This is the type of Odometers
+/// passed back and forth over FFI.
+pub type AnyOdometer = Odometer<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
+
+/// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
+/// with blanket implementation, and we need an extension trait to add methods to Measurement.
+pub trait IntoAnyOdometerExt {
+    fn into_any(self) -> AnyOdometer;
+}
+
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    IntoAnyOdometerExt for Odometer<DI, TO, MI, MO>
+where
+    DI::Carrier: 'static,
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+{
+    fn into_any(self) -> AnyOdometer {
+        AnyOdometer::new(
+            AnyDomain::new(self.input_domain),
+            self.function.into_any(),
+            AnyMetric::new(self.input_metric),
+            AnyMeasure::new(self.output_measure),
+        ).expect("compatibility check already passed")
+    }
+}
+
+/// A trait for turning a Odometer into an AnyOdometer, when only the output side needs to be wrapped.
+/// Used for composition.
+pub trait IntoAnyOdometerOutExt {
+    fn into_any_out(self) -> AnyOdometer;
+}
+
+impl<TO: 'static> IntoAnyOdometerOutExt for Odometer<AnyDomain, TO, AnyMetric, AnyMeasure> {
+    fn into_any_out(self) -> AnyOdometer {
+        AnyOdometer::new(
+            self.input_domain,
+            self.function.into_any_out(),
+            self.input_metric,
+            self.output_measure,
+        ).expect("compatibility check already passed")
+    }
+}
 
 /// A Queryable with all generic types filled by Any types.
 /// This is the type of Queryables passed back and forth over FFI.
