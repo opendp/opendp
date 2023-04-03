@@ -5,10 +5,7 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{FfiResult, FfiSlice, Measurement},
     error::Fallible,
-    ffi::{
-        any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-        util::AnyMeasurementPtr,
-    },
+    ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
     measures::{ffi::TypedMeasure, Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
 
@@ -44,7 +41,7 @@ pub extern "C" fn opendp_combinators__make_basic_composition(
     let measurements = try_as_ref!(measurements);
     let measurements = try_!(unsafe {
         slice::from_raw_parts(
-            measurements.ptr as *const AnyMeasurementPtr,
+            measurements.ptr as *const *const AnyMeasurement,
             measurements.len,
         )
     }

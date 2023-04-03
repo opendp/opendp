@@ -23,7 +23,7 @@ mod polars;
 use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::any::{AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, ExtrinsicObject};
 use crate::ffi::util::{c_bool, Type, TypeContents};
 use crate::measures::SMDCurve;
@@ -317,7 +317,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             raw_to_plain,
             [(
                 T,
-                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable]
+                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyOdometer, AnyQueryable]
             )],
             (raw)
         )},
@@ -841,7 +841,8 @@ impl Clone for AnyObject {
                             f64,
                             bool,
                             String,
-                            ExtrinsicObject
+                            ExtrinsicObject,
+                            AnyMeasurement
                         ]
                     )],
                     (self)
