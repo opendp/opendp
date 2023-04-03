@@ -403,6 +403,44 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     }
 }
 
+pub struct Odometer<DI: Domain, TO, MI: Metric, MO: Measure> {
+    pub input_domain: DI,
+    pub function: Function<DI::Carrier, TO>,
+    pub input_metric: MI,
+    pub output_measure: MO,
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Odometer<DI, TO, MI, MO> {
+    fn clone(&self) -> Self {
+        Self {
+            input_domain: self.input_domain.clone(),
+            function: self.function.clone(),
+            input_metric: self.input_metric.clone(),
+            output_measure: self.output_measure.clone(),
+        }
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO> {
+    pub fn new(
+        input_domain: DI,
+        function: Function<DI::Carrier, TO>,
+        input_metric: MI,
+        output_measure: MO,
+    ) -> Self {
+        Self {
+            input_domain,
+            function,
+            input_metric,
+            output_measure,
+        }
+    }
+
+    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
+        self.function.eval(arg)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::domains::AtomDomain;

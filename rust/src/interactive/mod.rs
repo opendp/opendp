@@ -1,4 +1,4 @@
-use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
+use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace, Odometer};
 use std::any::{type_name, Any};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -95,6 +95,16 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
 where
     (DI, MI): MetricSpace,
 {
+    pub fn invoke_wrap(
+        &self,
+        arg: &DI::Carrier,
+        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
+    ) -> Fallible<TO> {
+        wrap(wrapper, || self.invoke(arg))
+    }
+}
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO> {
     pub fn invoke_wrap(
         &self,
         arg: &DI::Carrier,
