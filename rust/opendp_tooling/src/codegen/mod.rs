@@ -106,6 +106,9 @@ impl Argument {
             if c_type.ends_with("AnyMeasurement *") {
                 return Some("Measurement".to_string());
             }
+            if c_type.ends_with("AnyOdometer *") {
+                return Some("Odometer".to_string());
+            }
             if c_type.ends_with("AnyFunction *") {
                 return Some("Function".to_string());
             }
