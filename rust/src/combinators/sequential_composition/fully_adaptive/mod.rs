@@ -1,4 +1,4 @@
-use opendp_derive::proven;
+use opendp_derive::{bootstrap, proven};
 
 use crate::{
     combinators::{
@@ -15,6 +15,17 @@ use crate::{
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        d_in(c_type = "AnyObject *", rust_type = "$get_distance_type(input_metric)")
+    ),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
+)]
 /// Construct an odometer that can spawn a compositor queryable.
 ///
 /// # Arguments
@@ -35,7 +46,7 @@ pub fn make_fully_adaptive_composition<
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, TO, MI, MO>, TO>>
 where
     DI::Carrier: Clone,
-    MI::Distance: Clone + Send + Sync,
+    MI::Distance: Send + Sync,
     MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
