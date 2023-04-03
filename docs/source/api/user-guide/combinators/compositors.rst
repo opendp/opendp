@@ -194,11 +194,166 @@ sum and count:
     except for approximate zCDP and approximate Renyi-DP.
 
 
+.. _fully-adaptive-composition:
+
+Fully Adaptive Composition
+--------------------------
+
+Where adaptive composition allows for queries to be chosen adaptively,
+fully adaptive composition also allows for the privacy loss of queries to be chosen adaptively.
+The API for fully adaptive composition matches that of adaptive composition,
+but drops the ``d_mids`` argument, as these will be chosen as you go.
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> odom_fully_adaptive_comp = dp.c.make_fully_adaptive_composition(
+            ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+            ...     input_metric=dp.symmetric_distance(),
+            ...     output_measure=dp.max_divergence(),
+            ... )
+            
+
+When the adaptive composition odometer (``odom_fully_adaptive_comp``) is invoked, 
+it returns an *odometer queryable*.
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            >>> qbl_fully_adaptive_comp = odom_fully_adaptive_comp(int_dataset)
+            
+
+You can check the privacy loss over all queries submitted to the queryable at any time.
+Since no queries have been submitted yet, the privacy loss is 0.
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> qbl_fully_adaptive_comp.map(1)
+            0.0
+
+Similarly as before, we now interactively submit queries to estimate the
+sum and count:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> print("dp sum:", qbl_fully_adaptive_comp(meas_sum))
+            dp sum: ...
+            >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
+            dp count: ...
+
+Now that we have submitted two queries, we can see that the privacy loss has increased commensurately:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> qbl_fully_adaptive_comp.map(1)
+            3.0
+
+Privacy Filter
+--------------
+You can convert any odometer into a measurement by setting an upper bound on the privacy loss.
+The following example converts the fully adaptive composition odometer into a privacy filter
+that rejects any query that would cause the privacy loss to exceed 2.0:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> meas_fully_adaptive_comp = dp.c.make_privacy_filter(
+            ...     odom_fully_adaptive_comp,
+            ...     d_in=1,
+            ...     d_out=2.0,
+            ... )
+
+Privacy filters are measurements, meaning that they can be passed into :func:`make_composition <opendp.combinators.make_composition>`, 
+adaptive composition queryables, or into other combinators.
+However, they have the added benefit of not needing to specify privacy-loss parameters ahead-of-time.
+When the privacy filter (``meas_fully_adaptive_comp``) is invoked, 
+it still returns an *odometer queryable*, but this time the queryable will limit the overall privacy loss.
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            >>> qbl_fully_adaptive_comp = meas_fully_adaptive_comp(int_dataset)
+            
+Similarly as before, we now interactively submit queries to estimate the
+sum and count:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
+            dp count: ...
+            >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
+            dp count: ...
+
+Now that we have submitted two queries, we can see that the privacy loss has increased commensurately:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> qbl_fully_adaptive_comp.map(1)
+            2.0
+
+Since the privacy loss is capped at 2.0, any more queries will be rejected:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: python
+
+            >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
+            Traceback (most recent call last):
+            ...
+            opendp.mod.OpenDPException: 
+              FailedFunction("insufficient privacy budget: 3.0 > 2.0")
+
 Chaining
 --------
 
-Since all compositors are just “plain-old-measurements” they also
-support chaining.
+Since non-adaptive compositors, adaptive compositors and privacy filters are just "plain-old-measurements," 
+they also support chaining.
 
 .. tab-set::
 
@@ -247,9 +402,9 @@ on a known ``d_in`` for the sum transformation.
 Nesting
 -------
 
-Just like in chaining, since all compositors are
-“plain-old-measurements” they can also be used as arguments to
-interactive compositors. In this example, we nest a zCDP adaptive
+Just like in chaining, since non-adaptive compositors, adaptive compositors and privacy filters are
+"plain-old-measurements" they can also be used as arguments to
+interactive compositors and other combinators. In this example, we nest a zCDP adaptive
 compositor inside an approximate-DP adaptive compositor.
 
 We first make the approximate-DP adaptive compositor, accepting two

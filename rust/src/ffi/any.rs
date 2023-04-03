@@ -9,11 +9,14 @@ use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
-    Domain, FfiResult, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap,
+    AnyOdometerAnswer, AnyOdometerQuery, Domain, FfiResult, Function, Measure, Measurement, Metric,
+    MetricSpace, Odometer, OdometerAnswer, OdometerQuery, OdometerQueryable, PrivacyMap,
     StabilityMap, Transformation,
 };
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
+use crate::measures::ffi::TypedMeasure;
+use crate::metrics::ffi::TypedMetric;
 use crate::{err, fallible};
 
 use super::util::{ExtrinsicObject, Type, into_owned};
@@ -177,6 +180,168 @@ impl PartialEq for ElementBox {
 impl Debug for ElementBox {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{}", (self.debug_glue)(self))
+    }
+}
+
+pub struct QueryType;
+
+impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
+    Measurement<DI, Queryable<Q, A>, MI, MO>
+where
+    DI::Carrier: 'static,
+    (DI, MI): MetricSpace,
+{
+    pub fn into_any_Q(self) -> Measurement<DI, Queryable<AnyObject, A>, MI, MO> {
+        let function = self.function.clone();
+
+        Measurement::new(
+            self.input_domain.clone(),
+            Function::new_fallible(
+                move |arg: &DI::Carrier| -> Fallible<Queryable<AnyObject, A>> {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
+                        Query::External(query) => inner_qbl
+                            .eval(query.downcast_ref::<Q>()?)
+                            .map(Answer::External),
+                        Query::Internal(query) => {
+                            if query.downcast_ref::<QueryType>().is_some() {
+                                return Ok(Answer::internal(Type::of::<Q>()));
+                            }
+                            let Answer::Internal(a) =
+                                inner_qbl.eval_query(Query::Internal(query))?
+                            else {
+                                return fallible!(
+                                    FailedFunction,
+                                    "internal query returned external answer"
+                                );
+                            };
+                            Ok(Answer::Internal(a))
+                        }
+                    })
+                },
+            ),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+        .expect("AnyDomain is not checked for compatibility")
+    }
+}
+
+impl<DI: Domain, Q: 'static, A: 'static + Send + Sync, MI: Metric, MO: Measure>
+    Measurement<DI, Queryable<Q, A>, MI, MO>
+where
+    DI::Carrier: 'static,
+    (DI, MI): MetricSpace,
+{
+    pub fn into_any_A(self) -> Measurement<DI, Queryable<Q, AnyObject>, MI, MO> {
+        let function = self.function.clone();
+
+        Measurement::new(
+            self.input_domain.clone(),
+            Function::new_fallible(
+                move |arg: &DI::Carrier| -> Fallible<Queryable<Q, AnyObject>> {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Queryable::new(move |_self, query: Query<Q>| match query {
+                        Query::External(query) => inner_qbl
+                            .eval(query)
+                            .map(AnyObject::new)
+                            .map(Answer::External),
+                        Query::Internal(query) => {
+                            let Answer::Internal(a) =
+                                inner_qbl.eval_query(Query::Internal(query))?
+                            else {
+                                return fallible!(
+                                    FailedFunction,
+                                    "internal query returned external answer"
+                                );
+                            };
+                            Ok(Answer::Internal(a))
+                        }
+                    })
+                },
+            ),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+        .expect("AnyDomain is not checked for compatibility")
+    }
+}
+
+pub struct QueryOdometerInvokeType;
+pub struct QueryOdometerMapType;
+
+impl<QI: 'static + Clone + Send + Sync, QO: 'static + Clone>
+    Odometer<
+        AnyDomain,
+        TypedMetric<QI>,
+        TypedMeasure<QO>,
+        Measurement<AnyDomain, AnyObject, TypedMetric<QI>, TypedMeasure<QO>>,
+        AnyObject,
+    >
+{
+    pub fn into_any(self) -> Fallible<AnyOdometer> {
+        let function = self.function.clone();
+
+        Odometer::new(
+            self.input_domain.clone(),
+            self.input_metric.metric.clone(),
+            self.output_measure.measure.clone(),
+            Function::new_fallible(
+                move |arg: &AnyObject| -> Fallible<Queryable<AnyOdometerQuery, AnyOdometerAnswer>> {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Ok(Queryable::new_raw(
+                        move |_self, query: Query<AnyOdometerQuery>| match query {
+                            Query::External(OdometerQuery::Invoke(meas)) => {
+                                let meas = meas.downcast_ref::<AnyMeasurement>()?;
+                                let privacy_map = meas.privacy_map.clone();
+                                let meas = meas.with_map(
+                                    TypedMetric::<QI>::new(meas.input_metric.clone())?,
+                                    TypedMeasure::<QO>::new(meas.output_measure.clone())?,
+                                    PrivacyMap::new_fallible(move |d_in: &QI| {
+                                        privacy_map
+                                            .eval(&AnyObject::new(d_in.clone()))?
+                                            .downcast::<QO>()
+                                    }),
+                                )?;
+                                let answer = inner_qbl.invoke(meas)?;
+                                Ok(Answer::External(OdometerAnswer::Invoke(answer)))
+                            }
+                            Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                                let answer = AnyObject::new(
+                                    inner_qbl.map(d_in.downcast_ref::<QI>()?.clone())?,
+                                );
+                                Ok(Answer::External(OdometerAnswer::PrivacyLoss(answer)))
+                            }
+                            Query::Internal(query) => {
+                                if query.downcast_ref::<QueryType>().is_some() {
+                                    return Ok(Answer::internal(Type::of::<AnyOdometerQuery>()));
+                                }
+                                if query.downcast_ref::<QueryOdometerInvokeType>().is_some() {
+                                    return Ok(Answer::internal(Type::of::<AnyMeasurement>()));
+                                }
+                                if query.downcast_ref::<QueryOdometerMapType>().is_some() {
+                                    return Ok(Answer::internal(Type::of::<QI>()));
+                                }
+                                let Answer::Internal(answer) =
+                                    inner_qbl.eval_query(Query::Internal(query))?
+                                else {
+                                    return fallible!(
+                                        FailedFunction,
+                                        "internal query returned external answer"
+                                    );
+                                };
+                                Ok(Answer::Internal(answer))
+                            }
+                        },
+                    ))
+                },
+            ),
+        )
     }
 }
 
@@ -361,94 +526,6 @@ pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject>
     }
 }
 
-impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
-    Measurement<DI, Queryable<Q, A>, MI, MO>
-where
-    DI::Carrier: 'static,
-    (DI, MI): MetricSpace,
-{
-    pub fn into_any_Q(self) -> Measurement<DI, Queryable<AnyObject, A>, MI, MO> {
-        let function = self.function.clone();
-
-        Measurement::new(
-            self.input_domain.clone(),
-            Function::new_fallible(
-                move |arg: &DI::Carrier| -> Fallible<Queryable<AnyObject, A>> {
-                    let mut inner_qbl = function.eval(arg)?;
-
-                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
-                        Query::External(query) => inner_qbl
-                            .eval(query.downcast_ref::<Q>()?)
-                            .map(Answer::External),
-                        Query::Internal(query) => {
-                            if query.downcast_ref::<QueryType>().is_some() {
-                                return Ok(Answer::internal(Type::of::<Q>()));
-                            }
-                            let Answer::Internal(a) =
-                                inner_qbl.eval_query(Query::Internal(query))?
-                            else {
-                                return fallible!(
-                                    FailedFunction,
-                                    "internal query returned external answer"
-                                );
-                            };
-                            Ok(Answer::Internal(a))
-                        }
-                    })
-                },
-            ),
-            self.input_metric.clone(),
-            self.output_measure.clone(),
-            self.privacy_map.clone(),
-        )
-        .expect("AnyDomain is not checked for compatibility")
-    }
-}
-
-pub struct QueryType;
-
-impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
-    Measurement<DI, Queryable<Q, A>, MI, MO>
-where
-    DI::Carrier: 'static,
-    (DI, MI): MetricSpace,
-{
-    pub fn into_any_A(self) -> Measurement<DI, Queryable<Q, AnyObject>, MI, MO> {
-        let function = self.function.clone();
-
-        Measurement::new(
-            self.input_domain.clone(),
-            Function::new_fallible(
-                move |arg: &DI::Carrier| -> Fallible<Queryable<Q, AnyObject>> {
-                    let mut inner_qbl = function.eval(arg)?;
-
-                    Queryable::new(move |_self, query: Query<Q>| match query {
-                        Query::External(query) => inner_qbl
-                            .eval(query)
-                            .map(AnyObject::new)
-                            .map(Answer::External),
-                        Query::Internal(query) => {
-                            let Answer::Internal(a) =
-                                inner_qbl.eval_query(Query::Internal(query))?
-                            else {
-                                return fallible!(
-                                    FailedFunction,
-                                    "internal query returned external answer"
-                                );
-                            };
-                            Ok(Answer::Internal(a))
-                        }
-                    })
-                },
-            ),
-            self.input_metric.clone(),
-            self.output_measure.clone(),
-            self.privacy_map.clone(),
-        )
-        .expect("AnyDomain is not checked for compatibility")
-    }
-}
-
 pub(crate) type AnyFunction = Function<AnyObject, AnyObject>;
 
 impl<M: Metric> MetricSpace for (AnyDomain, M) {
@@ -461,20 +538,16 @@ impl<M: Metric> MetricSpace for (AnyDomain, M) {
 impl<TI: 'static, TO: 'static> Function<TI, TO> {
     pub fn into_any(self) -> AnyFunction {
         Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
-            let arg = arg.downcast_ref()?;
-            let res = self.eval(arg);
-            res.map(AnyObject::new)
+            self.eval(arg.downcast_ref()?).map(AnyObject::new)
         })
     }
 }
 
 impl<TO: 'static> Function<AnyObject, TO> {
     pub fn into_any_out(self) -> AnyFunction {
-        let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
-            let res = self.eval(arg);
-            res.map(AnyObject::new)
-        };
-        Function::new_fallible(function)
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
+            self.eval(arg).map(AnyObject::new)
+        })
     }
 }
 
@@ -635,6 +708,17 @@ mod partials {
 }
 #[cfg(feature = "partials")]
 pub use partials::*;
+
+/// An Odometer with all generic types filled by Any types. This is the type of Odometers
+/// passed back and forth over FFI.
+pub type AnyOdometer = Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyObject, AnyObject>;
+pub type AnyOdometerQueryable = OdometerQueryable<AnyObject, AnyObject, AnyObject, AnyObject>;
+
+impl From<AnyOdometerQueryable> for AnyObject {
+    fn from(value: AnyOdometerQueryable) -> Self {
+        AnyObject::new(value)
+    }
+}
 
 /// A Queryable with all generic types filled by Any types.
 /// This is the type of Queryables passed back and forth over FFI.

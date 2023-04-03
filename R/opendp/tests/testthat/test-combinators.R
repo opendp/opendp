@@ -110,16 +110,75 @@ test_that("make_adaptive_composition", {
 test_that("make_sequential_composition", {
   meas_rr <- make_randomized_response_bool(prob = 0.75)
 
-  meas_sc <- make_sequential_composition(
-    input_domain = meas_rr("input_domain"),
-    input_metric = meas_rr("input_metric"),
-    output_measure = meas_rr("output_measure"),
-    d_mids = c(2, 2),
-    d_in = 1L
-  )
+  expect_warning({
+    meas_sc <- make_sequential_composition(
+      input_domain = meas_rr("input_domain"),
+      input_metric = meas_rr("input_metric"),
+      output_measure = meas_rr("output_measure"),
+      d_mids = c(2, 2),
+      d_in = 1L
+    )
+  })
 
   sc_qbl <- meas_sc(arg = TRUE)
   expect_type(sc_qbl(query = meas_rr), "logical")
   expect_type(sc_qbl(query = meas_rr), "logical")
   expect_error(sc_qbl(query = meas_rr))
+})
+
+test_that("test_sequential_odometer", {
+  max_influence <- 1L
+  space <- c(vector_domain(atom_domain(.T = "i32")), symmetric_distance())
+  o_sc <- space |> then_fully_adaptive_composition(max_divergence())
+
+  expect_equal(toString(o_sc), paste0(
+    "Odometer(\n",
+    "  input_domain=VectorDomain(AtomDomain(T=i32)),\n",
+    "  input_metric=SymmetricDistance(),\n",
+    "  output_measure=MaxDivergence\n",
+    ")"
+  ))
+
+  oqbl_sc <- o_sc(arg = rep(1L, 200))
+  expect_equal(oqbl_sc(d_in = max_influence), 0.0)
+
+  m_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum() |> then_laplace(100.)
+
+  # evaluating
+  expect_type(oqbl_sc(query = m_sum), "integer")
+  expect_equal(oqbl_sc(d_in = max_influence), m_sum(d_in = max_influence))
+
+  m_lap <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 200.)
+  t_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum()
+  expect_warning({
+    m_sum_compositor <- t_sum |> then_sequential_composition(
+      output_measure = max_divergence(),
+      d_in = t_sum(d_in = max_influence),
+      d_mids = c(0.2, 0.09)
+    )
+  })
+  qbl_summed <- oqbl_sc(query = m_sum_compositor)
+  # it's slightly larger, checking greater than will do
+  expect_gt(oqbl_sc(d_in = max_influence), m_sum(d_in = max_influence) + 0.2 + 0.09)
+
+  expect_type(qbl_summed(query = m_lap), "integer") # child release
+  expect_type(qbl_summed(query = m_lap), "integer") # child release
+  expect_type(oqbl_sc(query = m_sum), "integer") # root release
+
+  # it's slightly larger, checking greater than will do
+  expect_gt(oqbl_sc(d_in = max_influence), m_sum(d_in = max_influence) * 2 + 0.2 + 0.09)
+})
+
+
+test_that("test_odometer_supporting_elements", {
+  sc_odo <- make_fully_adaptive_composition(
+    vector_domain(atom_domain(.T = "i32")),
+    symmetric_distance(),
+    max_divergence()
+  )
+
+  expect_s3_class(sc_odo(arg = 1L), "odometer_queryable")
+  expect_equal(toString(sc_odo("input_domain")), toString(vector_domain(atom_domain(.T = "i32"))))
+  expect_equal(toString(sc_odo("input_metric")), toString(symmetric_distance()))
+  expect_equal(toString(sc_odo("output_measure")), toString(max_divergence()))
 })
