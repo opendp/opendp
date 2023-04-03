@@ -13,7 +13,7 @@ from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optio
 import importlib
 import json
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, import_optional_dependency, get_opendp_version
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
 
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
@@ -24,7 +24,9 @@ if TYPE_CHECKING:
 __all__ = [
     'Measurement',
     'Transformation',
+    'Odometer',
     'Queryable',
+    'OdometerQueryable',
     'Function',
     'Domain',
     'AtomDomain',
@@ -258,6 +260,125 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         # this overrides the implementation of __iter__ on POINTER, 
         # which yields infinitely on zero-sized types
         raise ValueError("Measurement does not support iteration")  # pragma: no cover
+    
+
+class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
+    """A differentially private unit of computation with no privacy limit.
+    An odometer contains a function that returns a queryable with a function and a relation.
+    Differentially private queries may be passed to the queryable,
+    as well as queries to check the current privacy usage.
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
+    ...
+    >>> base_rr = dp.m.make_randomized_response_bool(prob=0.6)
+    ...
+    >>> # create an Odometer representing a fully adaptive compositor
+    >>> o_comp = dp.c.make_fully_adaptive_composition(
+    ...     input_domain=base_rr.input_domain,
+    ...     input_metric=base_rr.input_metric,
+    ...     output_measure=base_rr.output_measure,
+    ... )
+    ...
+    >>> # invoke the odometer to get a queryable
+    >>> qbl_comp = o_comp(True)
+    ...
+    >>> # evaluate the queryable (eval and __call__ are equivalent)
+    >>> _ = qbl_comp(base_rr) # -> True wp 0.6
+    ...
+    >>> # pass a second query to the same queryable and get a second release
+    >>> _ = qbl_comp(base_rr) # -> True wp 0.6
+    ...
+    >>> # determine the odometer's privacy consumption (in terms of ε)
+    >>> # when the input dataset may differ by discrete distance 1
+    >>> qbl_comp.map(1)
+    0.8109302162163288
+    """
+    _type_ = AnyOdometer
+
+    def __call__(self, arg):
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    def invoke(self, arg):
+        """Create a differentially-private release with `arg`.
+
+        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release. 
+        
+        :param arg: Input to the measurement.
+        :return: differentially-private release
+        :raises OpenDPException: packaged error from the core OpenDP library
+        """
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    @property
+    def input_domain(self) -> "Domain":
+        from opendp.core import odometer_input_domain
+        return odometer_input_domain(self)
+    
+    @property
+    def input_metric(self) -> "Metric":
+        from opendp.core import odometer_input_metric
+        return odometer_input_metric(self)
+    
+    @property
+    def input_space(self) -> tuple["Domain", "Metric"]:
+        return self.input_domain, self.input_metric
+    
+    @property
+    def output_measure(self) -> "Measure":
+        from opendp.core import odometer_output_measure
+        return odometer_output_measure(self)
+    
+    @property
+    def input_distance_type(self) -> Union["RuntimeType", str]:
+        """Retrieve the distance type of the input metric.
+        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
+        
+        :return: distance type
+        """
+        return self.input_metric.distance_type
+
+    @property
+    def output_distance_type(self) -> Union["RuntimeType", str]:
+        """Retrieve the distance type of the output measure.
+        This is the type that the budget is expressed in.
+        
+        :return: distance type
+        """
+        return self.output_measure.distance_type
+
+    @property
+    def input_carrier_type(self) -> Union["RuntimeType", str]:
+        """Retrieve the carrier type of the input domain.
+        Any member of the input domain is a member of the carrier type.
+        
+        :return: carrier type
+        """
+        return self.input_domain.carrier_type
+
+    def __del__(self):
+        try:
+            from opendp.core import _odometer_free
+            _odometer_free(self)
+        except (ImportError, TypeError): # pragma: no cover
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+    
+    def __repr__(self) -> str:
+        return f"""Odometer(
+    input_domain   = {self.input_domain},
+    input_metric   = {self.input_metric},
+    output_measure = {self.output_measure})"""
+
+    def __iter__(self):
+        # this overrides the implementation of __iter__ on POINTER, 
+        # which yields infinitely on zero-sized types
+        raise ValueError("Odometer does not support iteration")  # pragma: no cover
+
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
@@ -513,9 +634,37 @@ class Queryable(object):
     def __call__(self, query):
         from opendp.core import queryable_eval
         return queryable_eval(self.value, query)
-
+    
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
+
+class OdometerQueryable(object):
+    '''
+    Odometer Queryables are used for instances of odometers like :ref:`fully adaptive composition <fully-adaptive-composition>`.
+
+    Can be created via :py:func:`make_fully_adaptive_composition <opendp.combinators.make_fully_adaptive_composition>`.
+    '''
+    def __init__(self, value):
+        from opendp.core import odometer_queryable_invoke_type, odometer_queryable_map_type
+        from opendp.typing import RuntimeType
+        self.value = value
+        self.invoke_type = RuntimeType.parse(odometer_queryable_invoke_type(value))
+        self.map_type = RuntimeType.parse(odometer_queryable_map_type(value))
+
+    def __call__(self, query):
+        from opendp.core import odometer_queryable_invoke
+        return odometer_queryable_invoke(self.value, query)
+    
+    def invoke(self, query):
+        from opendp.core import odometer_queryable_invoke
+        return odometer_queryable_invoke(self.value, query)
+    
+    def map(self, d_in):
+        from opendp.core import odometer_queryable_map
+        return odometer_queryable_map(self.value, d_in)
+
+    def __repr__(self) -> str:
+        return f"OdometerQueryable(Q={self.invoke_type}, QB={self.map_type})"
 
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
