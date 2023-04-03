@@ -20,6 +20,8 @@ __all__ = [
     "measurement_map",
     "measurement_output_distance_type",
     "measurement_output_measure",
+    "queryable_eval",
+    "queryable_query_type",
     "transformation_check",
     "transformation_function",
     "transformation_input_carrier_type",
@@ -468,6 +470,66 @@ def measurement_output_measure(
     lib_function.restype = FfiResult
     
     output = unwrap(lib_function(c_this), Measure)
+    
+    return output
+
+
+def queryable_eval(
+    queryable: Any,
+    query: Any
+) -> Any:
+    """Invoke the `queryable` with `query`. Returns a differentially private release.
+    
+    [queryable_eval in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.queryable_eval.html)
+    
+    :param queryable: Queryable to eval.
+    :type queryable: Any
+    :param query: Input data to supply to the measurement. A member of the measurement's input domain.
+    :type query: Any
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_queryable = py_to_c(queryable, c_type=AnyObjectPtr, type_name=None)
+    c_query = py_to_c(query, c_type=AnyObjectPtr, type_name=queryable_query_type(queryable))
+    
+    # Call library function.
+    lib_function = lib.opendp_core__queryable_eval
+    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_queryable, c_query), AnyObjectPtr))
+    
+    return output
+
+
+def queryable_query_type(
+    this: Any
+) -> str:
+    """Get the query type of `queryable`.
+    
+    [queryable_query_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.queryable_query_type.html)
+    
+    :param this: The queryable to retrieve the query type from.
+    :type this: Any
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__queryable_query_type
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
     
     return output
 
