@@ -1,5 +1,5 @@
 # type: ignore
-def make_sequential_odometer(
+def make_fully_adaptive_composition(
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,

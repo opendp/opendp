@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     combinators::{assert_components_match, BasicCompositionMeasure},
     core::{
@@ -11,6 +13,14 @@ use crate::{
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(
+    features("contrib"),
+    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null")),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
+)]
 /// Construct an odometer that can spawn a compositor queryable.
 ///
 /// # Arguments
