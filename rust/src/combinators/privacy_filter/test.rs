@@ -19,15 +19,15 @@ fn test_privacy_filter() -> Fallible<()> {
 
     let q1 = qbl_filter.invoke(make_randomized_response_bool(0.51, false)?);
     assert!(q1.is_ok());
-    assert_eq!(qbl_filter.privacy_loss(1)?, 0.040005334613699206);
+    assert_eq!(qbl_filter.map(1)?, 0.040005334613699206);
 
     let q2 = qbl_filter.invoke(make_randomized_response_bool(0.51, false)?);
     assert!(q2.is_ok());
-    assert_eq!(qbl_filter.privacy_loss(1)?, 0.08001066922739841);
+    assert_eq!(qbl_filter.map(1)?, 0.08001066922739841);
 
     let q3 = qbl_filter.invoke(make_randomized_response_bool(0.75, false)?);
     assert!(q3.is_err());
-    assert_eq!(qbl_filter.privacy_loss(1)?, 0.08001066922739841);
+    assert_eq!(qbl_filter.map(1)?, 0.08001066922739841);
 
     Ok(())
 }

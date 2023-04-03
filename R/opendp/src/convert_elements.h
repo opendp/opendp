@@ -9,6 +9,10 @@ SEXP anytransformationptr_to_sexp(AnyTransformation *input, SEXP info);
 AnyMeasurement *sexp_to_anymeasurementptr(SEXP data);
 SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP info);
 
+// odometer
+AnyOdometer *sexp_to_anyodometerptr(SEXP data);
+SEXP anyodometerptr_to_sexp(AnyOdometer *input, SEXP info);
+
 // domain
 AnyDomain *sexp_to_anydomainptr(SEXP data);
 SEXP anydomainptr_to_sexp(AnyDomain *input, SEXP info);
@@ -32,3 +36,7 @@ SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info);
 // queryable
 AnyObject *sexp_to_anyqueryableptr(SEXP data);
 SEXP anyqueryableptr_to_sexp(AnyObject *input, SEXP info);
+
+// odometer queryable
+AnyObject *sexp_to_anyodometerqueryableptr(SEXP data);
+SEXP anyodometerqueryableptr_to_sexp(AnyObject *input, SEXP info);
