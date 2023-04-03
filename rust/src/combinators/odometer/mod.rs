@@ -3,12 +3,15 @@ pub mod sequential;
 pub mod filter;
 pub use filter::*;
 
+#[cfg(feature = "ffi")]
+pub(crate) mod ffi;
+
 use std::any::Any;
 
 use crate::{
     core::{Measure, Metric},
     error::Fallible,
-    interactive::Queryable,
+    interactive::{Queryable, Wrapper},
 };
 
 pub type OdometerQueryable<MI, MO, Q, A> = Queryable<
@@ -30,6 +33,15 @@ pub enum OdometerAnswer<AI, AM> {
 impl<QI, QM: 'static, AI, AM: 'static> Queryable<OdometerQuery<QI, QM>, OdometerAnswer<AI, AM>> {
     pub fn eval_invoke(&mut self, query: QI) -> Fallible<AI> {
         if let OdometerAnswer::Invoke(answer) = self.eval(&OdometerQuery::Invoke(query))? {
+            Ok(answer)
+        } else {
+            fallible!(FailedCast, "return type is not an answer")
+        }
+    }
+    pub(crate) fn eval_invoke_wrap(&mut self, query: QI, wrapper: Option<Wrapper>) -> Fallible<AI> {
+        if let OdometerAnswer::Invoke(answer) =
+            self.eval_wrap(&OdometerQuery::Invoke(query), wrapper)?
+        {
             Ok(answer)
         } else {
             fallible!(FailedCast, "return type is not an answer")

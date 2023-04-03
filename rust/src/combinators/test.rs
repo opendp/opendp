@@ -1,10 +1,45 @@
-use crate::core::{Function, Measurement, PrivacyMap, StabilityMap, Transformation};
+use crate::core::{Function, Measurement, Odometer, PrivacyMap, StabilityMap, Transformation};
 use crate::error::Fallible;
+use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{IntDistance, SymmetricDistance};
 
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::traits::CheckAtom;
+
+use super::{OdometerAnswer, OdometerQuery};
+
+pub fn make_test_odometer<T: 'static + Clone + CheckAtom>() -> Fallible<
+    Odometer<
+        VectorDomain<AtomDomain<T>>,
+        SymmetricDistance,
+        MaxDivergence,
+        Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence>,
+        T,
+    >,
+> {
+    Odometer::new(
+        VectorDomain::new(AtomDomain::default()),
+        Function::new_interactive(|arg: &Vec<T>, wrapper| {
+            let data = arg.clone();
+            Queryable::new_external(
+                move |query: &OdometerQuery<
+                    Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence>,
+                    IntDistance,
+                >,
+                      _| {
+                    Ok(match query {
+                        OdometerQuery::Invoke(meas) => OdometerAnswer::Invoke(meas.invoke(&data)?),
+                        OdometerQuery::Map(d_in) => OdometerAnswer::Map(*d_in as f64 + 1.),
+                    })
+                },
+            )
+            .wrap(wrapper)
+        }),
+        SymmetricDistance::default(),
+        MaxDivergence::default(),
+    )
+}
 
 pub fn make_test_measurement<T: 'static + Clone + CheckAtom>(
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence>> {

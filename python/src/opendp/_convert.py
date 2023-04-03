@@ -2,7 +2,7 @@ from typing import Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable, Function
+from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable, Function, OdometerQueryable
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -153,7 +153,15 @@ def c_to_py(value: Any) -> Any:
         if "PrivacyProfile" == obj_type:
             return PrivacyProfile(value)
         
-        if "Queryable" in obj_type:
+        if obj_type == "AnyOdometerQueryable":
+            from opendp.core import odometer_queryable_invoke_type, odometer_queryable_map_type
+            invoke_type = RuntimeType.parse(odometer_queryable_invoke_type(value))
+            map_type = RuntimeType.parse(odometer_queryable_map_type(value))
+
+            return OdometerQueryable(value, invoke_type, map_type)
+
+        
+        if obj_type == "AnyQueryable":
             from opendp.core import queryable_query_type
             query_type = RuntimeType.parse(queryable_query_type(value))
             
