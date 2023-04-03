@@ -1,9 +1,6 @@
-// use std::any::Any;
-
-pub mod basic;
 pub mod filter;
+pub mod sequential;
 
-use num::Zero;
 use std::any::Any;
 
 use crate::{
@@ -68,7 +65,7 @@ pub trait Invokable<DI: Domain, MI: Metric, MO: Measure> {
     ) -> Fallible<(Self::Output, PrivacyMap<MI, MO>)>;
 
     // still used to determine privacy usage after running new invokable
-    fn one_time_privacy_map(&self) -> PrivacyMap<MI, MO>;
+    fn one_time_privacy_map(&self) -> Option<PrivacyMap<MI, MO>>;
 
     fn input_domain(&self) -> DI;
     fn input_metric(&self) -> MI;
@@ -84,11 +81,11 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Invokable<DI, MI, MO>
         value: &DI::Carrier,
         _wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
     ) -> Fallible<(Self::Output, PrivacyMap<MI, MO>)> {
-        Ok((self.invoke(value)?, self.one_time_privacy_map()))
+        Ok((self.invoke(value)?, self.privacy_map.clone()))
     }
 
-    fn one_time_privacy_map(&self) -> PrivacyMap<MI, MO> {
-        self.privacy_map.clone()
+    fn one_time_privacy_map(&self) -> Option<PrivacyMap<MI, MO>> {
+        Some(self.privacy_map.clone())
     }
 
     fn input_domain(&self) -> DI {
@@ -109,7 +106,6 @@ impl<DI: Domain + 'static, Q: 'static, A: 'static, MI: Metric + 'static, MO: Mea
     for Odometer<DI, OdometerQueryable<Q, A, MI::Distance, MO::Distance>, MI, MO>
 where
     MI::Distance: Clone,
-    MO::Distance: Zero,
 {
     type Output = OdometerQueryable<Q, A, MI::Distance, MO::Distance>;
     fn invoke_wrap_and_map(
@@ -126,8 +122,8 @@ where
         Ok((answer, map))
     }
 
-    fn one_time_privacy_map(&self) -> PrivacyMap<MI, MO> {
-        PrivacyMap::new(|_d_in| MO::Distance::zero())
+    fn one_time_privacy_map(&self) -> Option<PrivacyMap<MI, MO>> {
+        None
     }
 
     fn input_domain(&self) -> DI {

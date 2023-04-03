@@ -4,18 +4,25 @@ use crate::{
     },
     core::{Domain, Function, Metric, Odometer, PrivacyMap},
     error::Fallible,
-    interactive::{Answer, Query, Queryable},
+    interactive::{Answer, Query, Queryable, WrapFn},
 };
 
 use super::{ChildChange, Invokable, OdometerQuery, OdometerQueryable};
 
-pub fn make_basic_odometer<
+/// Construct a sequential odometer queryable that interactively composes odometers or interactive measurements.
+///
+/// # Arguments
+/// * `input_domain` - indicates the space of valid input datasets
+/// * `input_metric` - how distances are measured between members of the input domain
+/// * `output_measure` - how privacy is measured
+pub fn make_sequential_odometer<
     DI: 'static + Domain,
     Q: 'static + Invokable<DI, MI, MO>,
-    MI: 'static + Metric + Default,
+    MI: 'static + Metric,
     MO: 'static + BasicCompositionMeasure,
 >(
     input_domain: DI,
+    input_metric: MI,
     output_measure: MO,
 ) -> Fallible<Odometer<DI, OdometerQueryable<Q, Q::Output, MI::Distance, MO::Distance>, MI, MO>>
 where
@@ -23,8 +30,6 @@ where
     DI::Carrier: Clone,
     MO::Distance: Clone,
 {
-    let input_metric = MI::default();
-
     Ok(Odometer::new(
         input_domain.clone(),
         Function::new_fallible(enclose!(
@@ -40,7 +45,12 @@ where
                 let mut child_maps: Vec<PrivacyMap<MI, MO>> = vec![];
 
                 Queryable::new(
-                    move |_self: &Queryable<_, _>, query: Query<OdometerQuery<Q, MI::Distance>>| {
+                    move |sc_qbl: &Queryable<_, _>,
+                          query: Query<OdometerQuery<Q, MI::Distance>>| {
+                        // this queryable and wrapped children communicate via an AskPermission query
+                        // defined here, where no-one else can access the type
+                        struct AskPermission(pub usize);
+
                         Ok(match query {
                             // evaluate external invoke query
                             Query::External(OdometerQuery::Invoke(invokable)) => {
@@ -63,16 +73,22 @@ where
                                 );
 
                                 let child_id = child_maps.len();
+                                let mut sc_qbl = sc_qbl.clone();
+                                let sequentiality_constraint = WrapFn::new_pre_hook(move || {
+                                    sc_qbl.eval_internal(&AskPermission(child_id))
+                                })
+                                .as_map();
+
                                 let (answer, privacy_map) =
                                     invokable.invoke_wrap_and_map(&arg, move |mut inner_qbl| {
-                                        Queryable::new(move |_, query| {
+                                        sequentiality_constraint(Queryable::new(move |_, query| {
                                             if let Query::Internal(int) = query {
                                                 if int.downcast_ref::<GetId>().is_some() {
                                                     return Ok(Answer::internal(child_id));
                                                 }
                                             };
                                             inner_qbl.eval_query(query)
-                                        })
+                                        }))
                                     })?;
 
                                 child_maps.push(privacy_map);
@@ -121,7 +137,9 @@ where
                                     query.downcast_ref::<OdometerQuery<Q, MI::Distance>>()
                                 {
                                     let mut pending_child_maps = child_maps.clone();
-                                    pending_child_maps.push(query.one_time_privacy_map());
+                                    if let Some(privacy_map) = query.one_time_privacy_map() {
+                                        pending_child_maps.push(privacy_map);
+                                    }
 
                                     let pending_map: PrivacyMap<MI, MO> =
                                         PrivacyMap::new_fallible(enclose!(
@@ -137,6 +155,19 @@ where
                                         ));
 
                                     return Ok(Answer::internal(pending_map));
+                                }
+
+                                // check if the query is from a child queryable who is asking for permission to execute
+                                if let Some(AskPermission(id)) = query.downcast_ref() {
+                                    // deny permission if the sequential compositor has moved on
+                                    if *id != child_maps.len() {
+                                        return fallible!(
+                                            FailedFunction,
+                                            "sequential compositor has received a new query"
+                                        );
+                                    }
+                                    // otherwise, return Ok to approve the change
+                                    return Ok(Answer::internal(()));
                                 }
 
                                 return fallible!(FailedFunction, "query not recognized");
@@ -167,8 +198,9 @@ mod test {
     #[test]
     fn test_privacy_odometer() -> Fallible<()> {
         // construct concurrent compositor IM
-        let root = make_basic_odometer::<_, Measurement<_, _, _, _>, _, _>(
+        let root = make_sequential_odometer::<_, Measurement<_, _, _, _>, _, _>(
             AllDomain::new(),
+            DiscreteDistance::default(),
             MaxDivergence::default(),
         )?;
 
