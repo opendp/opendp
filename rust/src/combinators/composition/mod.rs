@@ -7,3 +7,9 @@ pub use noninteractive::*;
 mod sequential;
 #[cfg(feature = "contrib")]
 pub use sequential::*;
+
+#[cfg(feature = "contrib")]
+mod concurrent;
+#[cfg(feature = "contrib")]
+pub use concurrent::*;
+
