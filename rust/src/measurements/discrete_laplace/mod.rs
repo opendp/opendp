@@ -8,6 +8,7 @@ use crate::{
     traits::{Float, InfCast, Integer},
 };
 
+#[cfg(feature = "use-mpfr")]
 use opendp_derive::bootstrap;
 
 #[cfg(feature = "use-mpfr")]

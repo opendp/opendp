@@ -505,7 +505,7 @@ mod tests {
     use crate::domains::AtomDomain;
     use crate::error::*;
     use crate::measurements;
-    use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
+    use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
     use crate::transformations;
 
@@ -582,7 +582,7 @@ mod tests {
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
         let t4 = transformations::make_clamp((0.0f64, 10.0))?.into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = measurements::make_base_gaussian::<AtomDomain<_>, ZeroConcentratedDivergence<_>>(
+        let m1 = measurements::make_base_laplace::<AtomDomain<_>>(
             0.0, None,
         )?
         .into_any();

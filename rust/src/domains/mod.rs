@@ -325,9 +325,9 @@ where
 /// use opendp::domains::{VectorDomain, AtomDomain};
 /// use opendp::core::Domain;
 ///
-/// // Represents the domain of all vectors.
-/// let all_domain = VectorDomain::new(AtomDomain::default(), None);
-/// assert!(all_domain.member(&vec![1, 2, 3])?);
+/// // Represents the domain of vectors.
+/// let vec_domain = VectorDomain::new(AtomDomain::default(), None);
+/// assert!(vec_domain.member(&vec![1, 2, 3])?);
 ///
 /// // Represents the domain of all vectors of bounded elements.
 /// let bounded_domain = VectorDomain::new(AtomDomain::new_closed((-10, 10))?, None);

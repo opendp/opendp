@@ -186,11 +186,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.transformations import make_split_lines, make_cast, make_impute_constant
+    >>> from opendp.transformations import make_split_lines, make_cast_default
     >>> chained = (
     ...     make_split_lines() >>
-    ...     make_cast(TIA=str, TOA=int) >>
-    ...     make_impute_constant(constant=0) >>
+    ...     make_cast_default(TIA=str, TOA=int) >>
     ...     count
     ... )
     ...

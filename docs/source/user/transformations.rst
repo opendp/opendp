@@ -200,10 +200,11 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
 .. doctest::
 
+    >>> from opendp.domains import option_domain, atom_domain
     >>> finder = (
     ...     make_find(categories=["A", "B", "C"]) >>
     ...     # impute any input datum that are not a part of the categories list as 3
-    ...     make_impute_constant(3, DIA=OptionDomain[AtomDomain["usize"]])
+    ...     make_impute_constant(option_domain(atom_domain(T=usize)), 3)
     ... )
     >>> finder(["A", "B", "C", "A", "D"])
     [0, 1, 2, 0, 3]
