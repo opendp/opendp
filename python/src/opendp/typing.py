@@ -482,7 +482,7 @@ def get_atom_or_infer(type_name: RuntimeType, example):
 
 
 def get_first(value):
-    if not len(value):
+    if value is None or not len(value):
         return None
     return next(iter(value))
 
