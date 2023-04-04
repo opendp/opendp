@@ -10,9 +10,7 @@ mod chain;
 #[cfg(feature = "contrib")]
 pub use crate::combinators::chain::*;
 
-#[cfg(feature = "contrib")]
 mod composition;
-#[cfg(feature = "contrib")]
 pub use crate::combinators::composition::*;
 
 #[cfg(feature = "contrib")]
@@ -27,11 +25,6 @@ mod user_defined;
 mod fix_delta;
 #[cfg(feature = "contrib")]
 pub use crate::combinators::fix_delta::*;
-
-#[cfg(feature = "contrib")]
-mod sequential_composition;
-#[cfg(feature = "contrib")]
-pub use crate::combinators::sequential_composition::*;
 
 #[cfg(test)]
 pub mod tests {
