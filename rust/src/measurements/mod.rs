@@ -37,3 +37,8 @@ pub use randomized_response::*;
 mod alp;
 #[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
 pub use alp::*;
+
+#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+mod sparse_vector_int_trans;
+#[cfg(all(feature = "use-mpfr", feature = "floating-point", feature = "contrib"))]
+pub use crate::measurements::sparse_vector_int_trans::*;
