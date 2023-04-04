@@ -164,6 +164,12 @@ class RuntimeType(object):
 
         # parse a string-- "Vec<f32>",
         if isinstance(type_name, str):
+
+            if "AllDomain" in type_name:
+                import warnings
+                warnings.warn("AllDomain is deprecated. Use AtomDomain instead.", DeprecationWarning)
+                type_name = type_name.replace("AllDomain", "AtomDomain")
+
             type_name = type_name.strip()
             if type_name in generics:
                 return GenericType(type_name)
