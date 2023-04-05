@@ -8,8 +8,8 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{
-            AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyOdometer, 
-            IntoAnyOdometerOutExt, 
+            AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyOdometer,
+            IntoAnyOdometerOutExt,
         },
         util::Type,
     },
@@ -64,14 +64,19 @@ pub extern "C" fn opendp_combinators__make_sequential_odometer(
             monomorphize::<AnyMeasurement>(input_domain, input_metric, output_measure)
         }
         x if x == std::any::TypeId::of::<AnyOdometer>() => {
-
             // TODO: is this valid?
-            monomorphize::<Odometer<AnyDomain, OdometerQueryable<AnyObject, AnyObject, AnyObject, AnyObject>, AnyMetric, AnyMeasure>>(input_domain, input_metric, output_measure)
-
+            monomorphize::<
+                Odometer<
+                    AnyDomain,
+                    OdometerQueryable<AnyObject, AnyObject, AnyObject, AnyObject>,
+                    AnyMetric,
+                    AnyMeasure,
+                >,
+            >(input_domain, input_metric, output_measure)
         }
         _ => panic!("Type not supported"),
-    }.into()
-    
+    }
+    .into()
 
     // dispatch!(
     //     monomorphize,

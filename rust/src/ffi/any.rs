@@ -277,36 +277,34 @@ impl<Q: 'static + Clone, A: 'static>
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
 
-                    Queryable::new(
-                        move |_self, query: Query<AnyObject>| match query {
-                            Query::External(query) => inner_qbl
-                                .eval(&match query
-                                    .downcast_ref::<OdometerQuery<AnyObject, AnyObject>>()?
-                                {
-                                    OdometerQuery::Invoke(invokable) => OdometerQuery::Invoke(
-                                        invokable.downcast_ref::<Q>()?.clone(),
-                                    ),
-                                    OdometerQuery::Map(d_in) => OdometerQuery::Map(d_in.clone()),
-                                })
-                                .map(|answer| match answer {
-                                    OdometerAnswer::Invoke(answer) => {
-                                        OdometerAnswer::Invoke(AnyObject::new(answer))
-                                    }
-                                    OdometerAnswer::Map(d_in) => OdometerAnswer::Map(d_in),
-                                })
-                                .map(AnyObject::new)
-                                .map(Answer::External),
-                            Query::Internal(query) => {
-                                if query.downcast_ref::<QueryType>().is_some() {
-                                    return Ok(Answer::internal(Type::of::<Q>()));
+                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
+                        Query::External(query) => inner_qbl
+                            .eval(&match query
+                                .downcast_ref::<OdometerQuery<AnyObject, AnyObject>>()?
+                            {
+                                OdometerQuery::Invoke(invokable) => {
+                                    OdometerQuery::Invoke(invokable.downcast_ref::<Q>()?.clone())
                                 }
-                                let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
+                                OdometerQuery::Map(d_in) => OdometerQuery::Map(d_in.clone()),
+                            })
+                            .map(|answer| match answer {
+                                OdometerAnswer::Invoke(answer) => {
+                                    OdometerAnswer::Invoke(AnyObject::new(answer))
+                                }
+                                OdometerAnswer::Map(d_in) => OdometerAnswer::Map(d_in),
+                            })
+                            .map(AnyObject::new)
+                            .map(Answer::External),
+                        Query::Internal(query) => {
+                            if query.downcast_ref::<QueryType>().is_some() {
+                                return Ok(Answer::internal(Type::of::<Q>()));
+                            }
+                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
                                     return fallible!(FailedFunction, "internal query returned external answer")
                                 };
-                                Ok(Answer::Internal(a))
-                            }
-                        },
-                    )
+                            Ok(Answer::Internal(a))
+                        }
+                    })
                 },
             ),
             self.input_metric,
