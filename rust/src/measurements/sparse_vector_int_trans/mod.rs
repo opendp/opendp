@@ -135,7 +135,7 @@ mod test {
             3,    // limit on number of queries released
         )?;
 
-        let mut sv = sv_meas.invoke(&Queryable::new_external(|query: &f64| Ok(*query)))?;
+        let mut sv = sv_meas.invoke(&Queryable::new_external(|query: &f64| Ok(*query))?)?;
 
         println!("too small       : {:?}", sv.eval(&1.)?);
         println!("maybe true      : {:?}", sv.eval(&100.)?);
