@@ -81,14 +81,16 @@ where
 
                                 let (answer, privacy_map) =
                                     invokable.invoke_wrap_and_map(&arg, move |mut inner_qbl| {
-                                        sequentiality_constraint(Queryable::new(move |_, query| {
-                                            if let Query::Internal(int) = query {
-                                                if int.downcast_ref::<GetId>().is_some() {
-                                                    return Ok(Answer::internal(child_id));
-                                                }
-                                            };
-                                            inner_qbl.eval_query(query)
-                                        }))
+                                        sequentiality_constraint(Queryable::new(
+                                            move |_, query| {
+                                                if let Query::Internal(int) = query {
+                                                    if int.downcast_ref::<GetId>().is_some() {
+                                                        return Ok(Answer::internal(child_id));
+                                                    }
+                                                };
+                                                inner_qbl.eval_query(query)
+                                            },
+                                        )?)
                                     })?;
 
                                 child_maps.push(privacy_map);
