@@ -316,7 +316,7 @@ where
 ///
 /// The Queryable object works similar to a dictionary.
 /// Note that the access time is O(state.h.len()).
-pub fn post_process<K, T>(state: AlpState<K, T>) -> Queryable<K, T>
+pub fn post_process<K, T>(state: AlpState<K, T>) -> Fallible<Queryable<K, T>>
 where
     T: 'static + TFloat,
     K: 'static,
@@ -338,7 +338,7 @@ where
     let function = m.function.clone();
     Ok(Measurement::new(
         m.input_domain.clone(),
-        Function::new_fallible(move |x| function.eval(x).map(post_process)),
+        Function::new_fallible(move |x| function.eval(x).and_then(post_process)),
         m.input_metric.clone(),
         m.output_measure.clone(),
         m.privacy_map.clone(),
@@ -505,7 +505,7 @@ mod tests {
 
         let state = alp.function.eval(&x)?;
 
-        let mut query = post_process(state);
+        let mut query = post_process(state)?;
 
         query.eval(&0)?;
         query.eval(&42)?;

@@ -22,7 +22,11 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
         }
     }
 
-    pub fn eval_wrap(&mut self, query: &Q, wrapper: impl Fn(PolyQueryable) -> PolyQueryable + 'static) -> Fallible<A> {
+    pub fn eval_wrap(
+        &mut self,
+        query: &Q,
+        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
+    ) -> Fallible<A> {
         wrap(wrapper, || self.eval(query))
     }
 
@@ -66,17 +70,17 @@ impl<A> Answer<A> {
 }
 
 thread_local! {
-    static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> PolyQueryable>>> = RefCell::new(None);
+    static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
 }
 
 pub(crate) fn wrap<T, F: FnOnce() -> T>(
-    wrapper: impl Fn(PolyQueryable) -> PolyQueryable + 'static,
+    wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
     f: F,
 ) -> T {
     let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
 
     let new_wrapper = Some(if let Some(prev) = prev_wrapper.clone() {
-        Rc::new(move |qbl| (wrapper)((prev)(qbl))) as Rc<_>
+        Rc::new(move |qbl| (wrapper)((prev)(qbl)?)) as Rc<_>
     } else {
         Rc::new(wrapper) as Rc<_>
     });
@@ -91,37 +95,46 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     pub fn invoke_wrap(
         &self,
         arg: &DI::Carrier,
-        wrapper: impl Fn(PolyQueryable) -> PolyQueryable + 'static,
+        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
     ) -> Fallible<TO> {
         wrap(wrapper, || self.invoke(arg))
     }
 }
 
+/// WrapFn is a utility for constructing a closure that wraps a PolyQueryable,
+/// in a way that recursively wraps any PolyQueryables that are returned.
+///
+/// The use of a struct avoids an infinite recursion in the type system,
+/// as the first argument to the closure is the same type as the closure itself.
 #[derive(Clone)]
-pub(crate) struct WrapFn(pub Rc<dyn Fn(WrapFn, PolyQueryable) -> PolyQueryable>);
+pub(crate) struct WrapFn(pub Rc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable>>);
 impl WrapFn {
     // constructs a closure that wraps a PolyQueryable
-    pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> PolyQueryable {
+    pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> Fallible<PolyQueryable> {
         let wrap_logic = self.clone();
         move |qbl| (wrap_logic.0)(wrap_logic.clone(), qbl)
     }
 
-    pub(crate) fn new(logic: impl Fn(WrapFn, PolyQueryable) -> PolyQueryable + 'static) -> Self {
+    pub(crate) fn new(
+        logic: impl Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + 'static,
+    ) -> Self {
         WrapFn(Rc::new(logic))
     }
 
     pub(crate) fn new_pre_hook(pre_hook: impl FnMut() -> Fallible<()> + 'static) -> Self {
         let pre_hook = Rc::new(RefCell::new(pre_hook));
-        WrapFn(Rc::new(move |wrap_logic, mut inner_qbl| {
+        WrapFn::new(move |wrap_logic, mut inner_qbl| {
             let pre_hook = pre_hook.clone();
-            Queryable::new_raw(move |_wrapper_qbl, query: Query<dyn Any>| {
-                // ask the sequential compositor for permission to execute
-                (pre_hook.as_ref().borrow_mut())()?;
+            Ok(Queryable::new_raw(
+                move |_wrapper_qbl, query: Query<dyn Any>| {
+                    // check the pre_hook for permission to execute
+                    (pre_hook.as_ref().borrow_mut())()?;
 
-                // evaluate the query and wrap the answer
-                wrap(wrap_logic.as_map(), || inner_qbl.eval_query(query))
-            })
-        }))
+                    // evaluate the query and wrap the answer
+                    wrap(wrap_logic.as_map(), || inner_qbl.eval_query(query))
+                },
+            ))
+        })
     }
 }
 
@@ -131,13 +144,13 @@ where
 {
     pub(crate) fn new(
         transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
-    ) -> Self {
-        let queryable = Queryable(Rc::new(RefCell::new(transition)));
+    ) -> Fallible<Self> {
+        let queryable = Queryable::new_raw(transition);
         let wrapper = WRAPPER.with(|w| w.borrow().clone());
-        match wrapper {
+        Ok(match wrapper {
             None => queryable,
-            Some(w) => w(queryable.into_poly()).into_downcast(),
-        }
+            Some(w) => Queryable::from_poly(w(queryable.into_poly())?),
+        })
     }
 
     pub(crate) fn new_raw(
@@ -146,7 +159,9 @@ where
         Queryable(Rc::new(RefCell::new(transition)))
     }
 
-    pub(crate) fn new_external(mut transition: impl FnMut(&Q) -> Fallible<A> + 'static) -> Self {
+    pub(crate) fn new_external(
+        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
+    ) -> Fallible<Self> {
         Queryable::new(
             move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {
                 match query {
@@ -240,14 +255,5 @@ impl<Q: ?Sized> Queryable<Q, Box<dyn Any>> {
                 )
             })
             .map(|b| *b)
-    }
-}
-
-impl PolyQueryable {
-    pub fn into_downcast<Q: ?Sized, A>(self) -> Queryable<Q, A>
-    where
-        Queryable<Q, A>: FromPolyQueryable,
-    {
-        Queryable::<Q, A>::from_poly(self)
     }
 }

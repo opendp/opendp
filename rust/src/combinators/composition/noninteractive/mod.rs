@@ -6,7 +6,7 @@ use num::Zero;
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
     error::Fallible,
-    interactive::{wrap, Queryable},
+    interactive::wrap,
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
@@ -70,17 +70,17 @@ where
         Function::new_fallible(move |arg: &DI::Carrier| {
             wrap(
                 |_qbl| {
-                    Queryable::new(|_self, _query| {
-                        fallible!(
-                            FailedFunction,
-                            "cannot evaluate queryables from a noninteractive compositor"
-                        )
-                    })
+                    fallible!(
+                        FailedFunction,
+                        "cannot return queryables from a noninteractive compositor"
+                    )
                 },
-                || functions
-                    .iter()
-                    .map(|f| f.eval(arg))
-                    .collect::<Fallible<_>>(),
+                || {
+                    functions
+                        .iter()
+                        .map(|f| f.eval(arg))
+                        .collect::<Fallible<_>>()
+                },
             )
         }),
         input_metric,
