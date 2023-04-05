@@ -43,7 +43,7 @@ where
             let scale_release = scale_release.clone();
             let mut query_limit = query_limit.clone();
 
-            Ok(Queryable::new_external(move |query: &DI::Carrier| {
+            Queryable::new_external(move |query: &DI::Carrier| {
                 if query_limit == 0 {
                     return fallible!(FailedFunction, "queries exhausted");
                 }
@@ -61,7 +61,7 @@ where
                     aggregate,
                     scale_release.clone(),
                 )?)
-            }))
+            })
         })),
         AbsoluteDistance::default(),
         MaxDivergence::default(),
