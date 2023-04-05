@@ -49,7 +49,7 @@ where
 
     Ok(Measurement::new(
         input_domain.clone(),
-        Function::new(enclose!(
+        Function::new_fallible(enclose!(
             (d_in, input_metric, output_measure),
             move |arg: &DI::Carrier| {
                 // a new copy of the state variables is made each time the Function is called:

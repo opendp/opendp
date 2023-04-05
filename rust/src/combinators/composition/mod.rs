@@ -12,4 +12,3 @@ pub use sequential::*;
 mod concurrent;
 #[cfg(feature = "contrib")]
 pub use concurrent::*;
-
