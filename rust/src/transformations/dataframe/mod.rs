@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use std::fmt::{Debug};
 use std::collections::hash_map::Entry;
 
+use polars::prelude::*;
+
 use crate::core::{Domain, Function, StabilityMap, Transformation};
 use crate::data::{Column, IsVec};
 use crate::domains::{AllDomain, MapDomain};
@@ -25,6 +27,8 @@ use crate::error::Fallible;
 pub type DataFrame<K> = HashMap<K, Column>;
 pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 
+pub type SizedDataFrame = polars::prelude::DataFrame;
+
 /// A Domain that contains dataframes.
 /// 
 /// # Proof Definition
@@ -34,16 +38,18 @@ pub type DataFrameDomain<K> = MapDomain<AllDomain<K>, AllDomain<Column>>;
 /// 
 /// `TC`: Categorical Colunm names type
 #[derive(PartialEq, Clone, Debug)]
-pub struct SizedDataFrameDomain<TC: Hashable>
+pub struct SizedDataFrameDomain
 {
-    pub categories_keys: HashMap<TC, Box<dyn IsVec>>,
-    pub categories_counts: HashMap<TC, Vec<usize>>
+    //pub categories_keys: HashMap<&'static str, polars::prelude::Series>,
+    //pub categories_counts: HashMap<&'static str, Vec<usize>>
+    pub categories_keys: Vec<polars::prelude::Series>,
+    pub categories_counts: HashMap<&'static str, Vec<usize>>
 }
 
 
-impl<TC: Hashable> SizedDataFrameDomain<TC> {
-    pub fn new(categories_keys: HashMap<TC, Box<dyn IsVec>>, categories_counts: HashMap<TC, Vec<usize>>) -> Fallible<Self> {
-        if categories_keys.len() == categories_counts.len() && !categories_keys.keys().all(|k| categories_counts.contains_key(k)) {
+impl SizedDataFrameDomain {
+    pub fn new(categories_keys: Vec<polars::prelude::Series>, categories_counts: HashMap<&'static str, Vec<usize>>) -> Fallible<Self> {
+        if categories_keys.len() == categories_counts.len() && !categories_keys.iter().map(|s| categories_counts.contains_key(s.name())).all(|k| k) {
             return fallible!(FailedFunction, "Set of colunms with keys and counts must be indentical.")
         }
         // if categories_counts.keys().into_iter().any(|k| categories_counts.get(k).unwrap().len() != categories_counts.get(k).unwrap().len()) {
@@ -56,36 +62,39 @@ impl<TC: Hashable> SizedDataFrameDomain<TC> {
     }
 }
 
-impl<TC: Hashable> SizedDataFrameDomain<TC> where TC: Eq + Hash + Clone {
+impl SizedDataFrameDomain {
     pub fn Default() -> Self  {
         SizedDataFrameDomain {
-            categories_keys: HashMap::new(),
-            categories_counts: HashMap::new(),
+            categories_keys: Vec::<polars::prelude::Series>::new(),
+            categories_counts: HashMap::<&'static str, Vec<usize>>::new(),
         }
     }
 }
 
-impl<TC: Hashable> SizedDataFrameDomain<TC> where TC: Clone {
-    pub fn add_categorical_colunm<CA: 'static + Hashable>(&mut self, col_name: TC, column_categories: Vec<CA>, colummn_counts: Vec<usize>) -> Fallible<bool>  {
+impl SizedDataFrameDomain {
+    pub fn add_categorical_colunm(&mut self, column_categories: &polars::prelude::Series, colummn_counts: Vec<usize>) -> Fallible<bool>  {
         if column_categories.len() != colummn_counts.len() {
             return fallible!(FailedFunction, "Colunm categories and counts must be indentical.")
         }
-        self.categories_keys.insert(col_name.clone(), Box::new(column_categories) as Box<dyn IsVec>);
-        self.categories_counts.insert(col_name.clone(), colummn_counts);
+        // To be checked if that is a correct way to proceed!!!
+        let col_name = Box::leak(column_categories.name().to_string().into_boxed_str());
+        self.categories_keys.push(column_categories.clone());
+        self.categories_counts.insert(col_name, colummn_counts);
         Ok(true)
     }
 }
 
-impl<TC: Hashable> SizedDataFrameDomain<TC> where TC: Clone {
-    pub fn create_categorical_df_domain<CA: 'static + Hashable>(cat_col_name: TC, column_categories: Vec<CA>, colummn_counts: Vec<usize>) -> Fallible<SizedDataFrameDomain<TC>>  {
-        let mut df: SizedDataFrameDomain<TC> = SizedDataFrameDomain::Default();
-        df.add_categorical_colunm(cat_col_name, column_categories, colummn_counts).unwrap();
+impl SizedDataFrameDomain {
+    pub fn create_categorical_df_domain(column_categories: &polars::prelude::Series, colummn_counts: Vec<usize>) -> Fallible<SizedDataFrameDomain>  {
+        let mut df: SizedDataFrameDomain = SizedDataFrameDomain::Default();
+        df.add_categorical_colunm(column_categories, colummn_counts).unwrap();
         Ok(df)
     }
 }
 
-impl<TC: Hashable> Domain for SizedDataFrameDomain<TC> {
-    type Carrier = HashMap<TC, Column>;
+impl Domain for SizedDataFrameDomain {
+    //type Carrier = HashMap<TC, Column>;
+    type Carrier = polars::prelude::DataFrame;
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
         // TO BE IMPLEMENTED.
         Ok(true)
@@ -141,33 +150,33 @@ where
 /// # Generics
 /// * `TC` - Type of column names.
 /// * `CA` - Type of values in the identifier column.
-pub fn make_add_categorical_column_with_counts<TC: Hashable, CA: Hashable>(
-    categorical_column_names: TC,
-    column_categories: Vec<CA>,
-    colummn_counts: Vec<usize>,
-) -> Fallible<
-    Transformation<
-    DataFrameDomain<TC>,
-    SizedDataFrameDomain<TC>,
-    SymmetricDistance,
-    SymmetricDistance,
-    >,
-> {
-    // Create SizedDataFrameDomain with / without null partition
-    let df_domain = SizedDataFrameDomain::create_categorical_df_domain(categorical_column_names,column_categories, colummn_counts).unwrap();
+// pub fn make_add_categorical_column_with_counts<TC: Hashable, CA: Hashable>(
+//     categorical_column_names: TC,
+//     column_categories: Vec<CA>,
+//     colummn_counts: Vec<usize>,
+// ) -> Fallible<
+//     Transformation<
+//     DataFrameDomain<TC>,
+//     SizedDataFrameDomain<TC>,
+//     SymmetricDistance,
+//     SymmetricDistance,
+//     >,
+// > {
+//     // Create SizedDataFrameDomain with / without null partition
+//     let df_domain = SizedDataFrameDomain::create_categorical_df_domain(categorical_column_names,column_categories, colummn_counts).unwrap();
     
-    Ok(Transformation::new(
-        DataFrameDomain::new_all(),
-        df_domain,
-        Function::new_fallible(move |data: &DataFrame<TC>| {
-            // No-op function but request for now cloning data. Might be possible to modify to work on pointer only.
-            Ok(data.clone())
-        }),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
-        StabilityMap::new(move |d_in: &IntDistance|  *d_in),
-    ))
-}
+//     Ok(Transformation::new(
+//         DataFrameDomain::new_all(),
+//         df_domain,
+//         Function::new_fallible(move |data: &SizedDataFrame| {
+//             // No-op function but request for now cloning data. Might be possible to modify to work on pointer only.
+//             Ok(data.clone())
+//         }),
+//         SymmetricDistance::default(),
+//         SymmetricDistance::default(),
+//         StabilityMap::new(move |d_in: &IntDistance|  *d_in),
+//     ))
+// }
 
 
 #[cfg(test)]
@@ -177,15 +186,17 @@ mod test {
     #[test]
     fn test_dataFrameDomain() -> Fallible<()> {
         let categorical_colNames:Vec<&str> = vec!["colA","colB"];
-        let categories_colA: Vec<usize> = vec![1, 2, 3, 4];
-        let categories_colB: Vec<&str> =  vec!["A", "B", "C"];
-
+        
+        let categorical_colA = polars::prelude::Series::new(categorical_colNames[0], [1, 2, 3, 4]);
+        let categorical_colB = polars::prelude::Series::new(categorical_colNames[1], ["A", "B", "C"]);
+       
+       
         let counts_colA: Vec<usize> = vec![223, 234, 4525, 34];
         let counts_colB: Vec<usize> = vec![218, 4229, 569];
 
-        let mut col_categories = HashMap::new();
-        col_categories.insert(categorical_colNames[0], Box::new(categories_colA.clone()) as Box<dyn IsVec>);
-        col_categories.insert(categorical_colNames[1], Box::new(categories_colB.clone()) as Box<dyn IsVec>);
+        let mut col_categories = Vec::<polars::prelude::Series>::new();
+        col_categories.push(categorical_colA.clone());
+        col_categories.push(categorical_colB.clone());
 
         let mut col_counts = HashMap::new();
         col_counts.insert(categorical_colNames[0], counts_colA.clone());
@@ -193,11 +204,16 @@ mod test {
 
         assert_eq!(SizedDataFrameDomain::new(col_categories, col_counts).is_err(), false);
        
-        let mut inputDomain = SizedDataFrameDomain::Default();
-        inputDomain.add_categorical_colunm(categorical_colNames[0], categories_colA.clone(), counts_colA.clone()).unwrap();
-        inputDomain.add_categorical_colunm(categorical_colNames[1], categories_colB, counts_colB).unwrap();
+        //let domain_test = SizedDataFrameDomain::new(col_categories, col_counts);
+        //println!("{:?}", domain_test);
 
-        assert_eq!(SizedDataFrameDomain::create_categorical_df_domain(categorical_colNames[0], categories_colA, counts_colA).is_err(), false);
+        let mut inputDomain = SizedDataFrameDomain::Default();
+        inputDomain.add_categorical_colunm(&categorical_colA, counts_colA.clone()).unwrap();
+        inputDomain.add_categorical_colunm(&categorical_colB, counts_colB).unwrap();
+
+        //println!("{:?}", inputDomain);
+
+        assert_eq!(SizedDataFrameDomain::create_categorical_df_domain(&categorical_colA, counts_colA).is_err(), false);
     
         Ok(())
     }
