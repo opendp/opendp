@@ -11,9 +11,9 @@ mod chain;
 pub use crate::combinators::chain::*;
 
 #[cfg(feature = "contrib")]
-mod compose;
+mod composition;
 #[cfg(feature = "contrib")]
-pub use crate::combinators::compose::*;
+pub use crate::combinators::composition::*;
 
 #[cfg(feature = "contrib")]
 mod measure_cast;

@@ -5,6 +5,7 @@ use std::ops::{BitAnd, BitOr, Shl, Shr, Sub};
 use num::{One, Zero};
 
 use crate::error::Fallible;
+use crate::interactive::Queryable;
 
 use super::ExactIntCast;
 
@@ -242,6 +243,12 @@ impl CheckNull for rug::Rational {
 }
 #[cfg(feature = "use-mpfr")]
 impl CheckNull for rug::Integer {
+    fn is_null(&self) -> bool {
+        false
+    }
+}
+impl<Q, A> CheckNull for Queryable<Q, A> {
+    #[inline]
     fn is_null(&self) -> bool {
         false
     }

@@ -54,6 +54,7 @@ pub use poly::*;
 pub struct AllDomain<T> {
     _marker: PhantomData<T>,
 }
+
 impl<T> Debug for AllDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "AllDomain({})", type_name!(T))
@@ -560,7 +561,7 @@ mod contrib {
     }
     impl<D: Domain> Domain for DataDomain<D>
     where
-        D::Carrier: 'static + Any,
+        D::Carrier: 'static,
     {
         type Carrier = Box<dyn Any>;
         fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
