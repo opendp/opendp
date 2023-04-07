@@ -56,7 +56,7 @@ where
     //       = min(d_in, 1) * ln(p / (1 - p))
     let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         AtomDomain::default(),
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !bool::sample_bernoulli(prob, constant_time)?)
@@ -70,7 +70,7 @@ where
                 privacy_constant
             }
         }),
-    ))
+    )
 }
 
 #[bootstrap(
@@ -128,7 +128,7 @@ where
         .inf_mul(&num_categories.inf_sub(&QO::one())?)?
         .inf_ln()?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         AtomDomain::default(),
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None
@@ -161,7 +161,7 @@ where
                 privacy_constant
             }
         }),
-    ))
+    )
 }
 
 #[cfg(test)]

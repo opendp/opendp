@@ -64,7 +64,7 @@ where
         return fallible!(MakeMeasurement, "lower may not be greater than upper");
     }
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(move |v: &D::Atom| {
             D::Atom::sample_discrete_laplace_linear(*v, scale, bounds)
@@ -85,7 +85,7 @@ where
             // d_in / scale
             d_in.inf_div(&scale)
         }),
-    ))
+    )
 }
 
 #[bootstrap(

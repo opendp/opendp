@@ -48,14 +48,14 @@ where
 
     let (lower, upper) = bounds.clone();
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
-    ))
+    )
 }
 
 #[bootstrap(features("contrib"), generics(T(example = "$get_first(bounds)")))]
@@ -96,7 +96,7 @@ where
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
@@ -107,7 +107,7 @@ where
             //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2).and_then(|d_in| d_in.inf_mul(&range)),
         ),
-    ))
+    )
 }
 
 #[doc(hidden)]

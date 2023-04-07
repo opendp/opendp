@@ -29,7 +29,7 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
 > {
     let function = transformation.function.clone();
 
-    Ok(Transformation::new(
+    Transformation::new(
         DataFrameDomain::new(),
         DataFrameDomain::new(),
         Function::new_fallible(move |arg: &DataFrame<K>| {
@@ -47,7 +47,7 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[bootstrap(features("contrib"))]

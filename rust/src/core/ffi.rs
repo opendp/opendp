@@ -818,7 +818,7 @@ mod tests {
 
     #[test]
     fn test_measurement_invoke() -> Fallible<()> {
-        let measurement = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement = util::into_raw(make_test_measurement::<i32>()?.into_any());
         let arg = AnyObject::new_raw(vec![999]);
         let res = opendp_core__measurement_invoke(measurement, arg);
         let res: i32 = Fallible::from(res)?.downcast()?;
@@ -828,7 +828,7 @@ mod tests {
 
     #[test]
     fn test_measurement_invoke_wrong_type() -> Fallible<()> {
-        let measurement = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement = util::into_raw(make_test_measurement::<i32>()?.into_any());
         let arg = AnyObject::new_raw(vec![999.0]);
         let res = Fallible::from(opendp_core__measurement_invoke(measurement, arg));
         assert_eq!(res.err().unwrap_test().variant, ErrorVariant::FailedCast);
@@ -837,7 +837,7 @@ mod tests {
 
     #[test]
     fn test_transformation_invoke() -> Fallible<()> {
-        let transformation = util::into_raw(make_test_transformation::<i32>().into_any());
+        let transformation = util::into_raw(make_test_transformation::<i32>()?.into_any());
         let arg = AnyObject::new_raw(vec![999]);
         let res = opendp_core__transformation_invoke(transformation, arg);
         let res: Vec<i32> = Fallible::from(res)?.downcast()?;
@@ -847,7 +847,7 @@ mod tests {
 
     #[test]
     fn test_transformation_invoke_wrong_type() -> Fallible<()> {
-        let transformation = util::into_raw(make_test_transformation::<i32>().into_any());
+        let transformation = util::into_raw(make_test_transformation::<i32>()?.into_any());
         let arg = AnyObject::new_raw(999.0);
         let res = Fallible::from(opendp_core__transformation_invoke(transformation, arg));
         assert_eq!(res.err().unwrap_test().variant, ErrorVariant::FailedCast);

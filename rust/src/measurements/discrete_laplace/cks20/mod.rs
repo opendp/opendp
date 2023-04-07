@@ -58,7 +58,7 @@ where
     let scale_rational =
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         if scale.is_zero() {
             D::new_map_function(move |arg: &D::Atom| Ok(*arg))
@@ -85,7 +85,7 @@ where
             // d_in / scale
             d_in.inf_div(&scale)
         }),
-    ))
+    )
 }
 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
@@ -117,7 +117,7 @@ where
         return fallible!(MakeMeasurement, "scale must be positive");
     }
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(enclose!(scale, move |arg: &Integer| {
             sample_discrete_laplace(scale.clone()).map(|n| arg + n)
@@ -125,7 +125,7 @@ where
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new(move |d_in: &Integer| (d_in / &scale).complete()),
-    ))
+    )
 }
 
 #[cfg(test)]

@@ -70,7 +70,7 @@ where
 
     let (k, relaxation) = get_discretization_consts(k)?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(move |arg: &D::Atom| {
             D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)
@@ -91,7 +91,7 @@ where
             // d_in / scale
             d_in.inf_div(&scale)
         }),
-    ))
+    )
 }
 
 // proof should show that the return is always a valid (k, relaxation) pairing

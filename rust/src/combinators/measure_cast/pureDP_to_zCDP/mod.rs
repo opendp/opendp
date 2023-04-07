@@ -41,7 +41,7 @@ where
 
     let _2 = QO::one() + QO::one();
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         function,
         input_metric,
@@ -51,5 +51,5 @@ where
                 .eval(d_in)
                 .and_then(|eps| eps.inf_pow(&_2)?.inf_div(&_2))
         }),
-    ))
+    )
 }

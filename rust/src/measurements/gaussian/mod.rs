@@ -103,7 +103,7 @@ where
 
     let (k, relaxation) = get_discretization_consts(k)?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(move |arg: &D::Atom| {
             D::Atom::sample_discrete_gaussian_Z2k(*arg, scale, k)
@@ -111,7 +111,7 @@ where
         D::InputMetric::default(),
         MO::default(),
         MO::new_forward_map(scale, relaxation),
-    ))
+    )
 }
 
 #[cfg(test)]

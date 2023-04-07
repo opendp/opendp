@@ -66,7 +66,7 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &DI::Carrier| {
             wrap(
@@ -93,7 +93,7 @@ where
                     .collect::<Fallible<_>>()?,
             )
         }),
-    ))
+    )
 }
 
 pub trait BasicCompositionMeasure: Measure {
@@ -126,7 +126,6 @@ impl<Q: InfAdd + Zero + Clone> BasicCompositionMeasure for ZeroConcentratedDiver
 mod tests {
     use crate::core::*;
     use crate::domains::AtomDomain;
-    use crate::error::ExplainUnwrap;
     use crate::measurements::make_base_laplace;
     use crate::measures::MaxDivergence;
     use crate::metrics::AbsoluteDistance;
@@ -134,7 +133,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_basic_composition() {
+    fn test_make_basic_composition() -> Fallible<()> {
         let input_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|arg: &i32| (arg + 1) as f64);
         let input_metric0 = AbsoluteDistance::<i32>::default();
@@ -146,7 +145,7 @@ mod tests {
             input_metric0,
             output_measure0,
             privacy_map0,
-        );
+        )?;
         let input_domain1 = AtomDomain::<i32>::default();
         let function1 = Function::new(|arg: &i32| (arg - 1) as f64);
         let input_metric1 = AbsoluteDistance::<i32>::default();
@@ -158,11 +157,13 @@ mod tests {
             input_metric1,
             output_measure1,
             privacy_map1,
-        );
-        let composition = make_basic_composition(vec![&measurement0, &measurement1]).unwrap_test();
+        )?;
+        let composition = make_basic_composition(vec![&measurement0, &measurement1])?;
         let arg = 99;
-        let ret = composition.invoke(&arg).unwrap_test();
+        let ret = composition.invoke(&arg)?;
         assert_eq!(ret, vec![100_f64, 98_f64]);
+
+        Ok(())
     }
 
     #[test]

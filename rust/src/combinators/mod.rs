@@ -31,6 +31,7 @@ pub use crate::combinators::user_defined::*;
 #[cfg(test)]
 pub mod tests {
     use crate::core::{Function, Measurement, PrivacyMap, StabilityMap, Transformation};
+    use crate::error::Fallible;
     use crate::measures::MaxDivergence;
     use crate::metrics::SymmetricDistance;
 
@@ -38,7 +39,8 @@ pub mod tests {
     use crate::traits::CheckAtom;
 
     pub fn make_test_measurement<T: 'static + Clone + CheckAtom>(
-    ) -> Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence<f64>> {
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence<f64>>>
+    {
         Measurement::new(
             VectorDomain::new(AtomDomain::default()),
             Function::new(|arg: &Vec<T>| arg[0].clone()),
@@ -48,11 +50,13 @@ pub mod tests {
         )
     }
 
-    pub fn make_test_transformation<T: Clone + CheckAtom>() -> Transformation<
-        VectorDomain<AtomDomain<T>>,
-        VectorDomain<AtomDomain<T>>,
-        SymmetricDistance,
-        SymmetricDistance,
+    pub fn make_test_transformation<T: Clone + CheckAtom>() -> Fallible<
+        Transformation<
+            VectorDomain<AtomDomain<T>>,
+            VectorDomain<AtomDomain<T>>,
+            SymmetricDistance,
+            SymmetricDistance,
+        >,
     > {
         Transformation::new(
             VectorDomain::new(AtomDomain::default()),

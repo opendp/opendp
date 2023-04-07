@@ -114,7 +114,7 @@ where
     let scale_rational =
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         if scale.is_zero() {
             D::new_map_function(move |arg: &D::Atom| Ok(arg.clone()))
@@ -132,7 +132,7 @@ where
         D::InputMetric::default(),
         MO::default(),
         MO::new_forward_map(scale)?,
-    ))
+    )
 }
 
 pub fn make_base_discrete_gaussian_rug<D>(
@@ -146,7 +146,7 @@ where
         return fallible!(MakeMeasurement, "scale must be positive");
     }
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(enclose!(scale, move |arg: &Integer| {
             sample_discrete_gaussian(scale.clone()).map(|n| arg + n)
@@ -154,7 +154,7 @@ where
         D::InputMetric::default(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new(move |d_in: &Rational| (d_in.clone() / &scale).pow(2) / 2),
-    ))
+    )
 }
 
 #[cfg(test)]

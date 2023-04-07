@@ -115,8 +115,8 @@ mod tests {
 
     #[test]
     fn test_make_chain_mt_ffi() -> Fallible<()> {
-        let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
-        let measurement1 = util::into_raw(make_test_measurement::<i32>().into_any());
+        let transformation0 = util::into_raw(make_test_transformation::<i32>()?.into_any());
+        let measurement1 = util::into_raw(make_test_measurement::<i32>()?.into_any());
         let chain = Result::from(opendp_combinators__make_chain_mt(
             measurement1,
             transformation0,
@@ -135,8 +135,8 @@ mod tests {
 
     #[test]
     fn test_make_chain_tt() -> Fallible<()> {
-        let transformation0 = util::into_raw(make_test_transformation::<i32>().into_any());
-        let transformation1 = util::into_raw(make_test_transformation::<i32>().into_any());
+        let transformation0 = util::into_raw(make_test_transformation::<i32>()?.into_any());
+        let transformation1 = util::into_raw(make_test_transformation::<i32>()?.into_any());
         let chain = Result::from(opendp_combinators__make_chain_tt(
             transformation1,
             transformation0,
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_make_chain_pm_ffi() -> Fallible<()> {
-        let measurement0 = util::into_raw(make_test_measurement::<i32>().into_any());
+        let measurement0 = util::into_raw(make_test_measurement::<i32>()?.into_any());
         let postprocess1 = util::into_raw(Function::new(|arg: &i32| arg.clone()).into_any());
         let chain = Result::from(opendp_combinators__make_chain_pm(
             postprocess1,

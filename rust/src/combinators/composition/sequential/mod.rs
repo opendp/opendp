@@ -38,7 +38,7 @@ where
 
     let d_out = output_measure.compose(d_mids.clone())?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain.clone(),
         Function::new_fallible(enclose!(
             (d_in, input_metric, output_measure),
@@ -147,7 +147,7 @@ where
                 Ok(d_out.clone())
             }
         }),
-    ))
+    )
 }
 
 #[cfg(test)]

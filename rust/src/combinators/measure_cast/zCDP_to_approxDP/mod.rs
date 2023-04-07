@@ -40,7 +40,7 @@ where
         ..
     } = meas;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         function,
         input_metric,
@@ -50,5 +50,5 @@ where
 
             Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
         }),
-    ))
+    )
 }

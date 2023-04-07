@@ -96,13 +96,13 @@ where
         measurement1.input_metric
     );
 
-    Ok(Measurement::new(
+    Measurement::new(
         transformation0.input_domain.clone(),
         Function::make_chain(&measurement1.function, &transformation0.function),
         transformation0.input_metric.clone(),
         measurement1.output_measure.clone(),
         PrivacyMap::make_chain(&measurement1.privacy_map, &transformation0.stability_map),
-    ))
+    )
 }
 
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
@@ -146,7 +146,7 @@ where
         transformation1.input_metric
     );
 
-    Ok(Transformation::new(
+    Transformation::new(
         transformation0.input_domain.clone(),
         transformation1.output_domain.clone(),
         Function::make_chain(&transformation1.function, &transformation0.function),
@@ -156,7 +156,7 @@ where
             &transformation1.stability_map,
             &transformation0.stability_map,
         ),
-    ))
+    )
 }
 
 /// Construct the functional composition (`postprocess1` ○ `measurement0`).
@@ -185,13 +185,13 @@ where
     MO: 'static + Measure,
     (DI, MI): MetricSpace,
 {
-    Ok(Measurement::new(
+    Measurement::new(
         measurement0.input_domain.clone(),
         Function::make_chain(postprocess1, &measurement0.function),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
         measurement0.privacy_map.clone(),
-    ))
+    )
 }
 
 // UNIT TESTS
@@ -206,7 +206,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_chain_mt() {
+    fn test_make_chain_mt() -> Fallible<()> {
         let input_domain0 = AtomDomain::<u8>::default();
         let output_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
@@ -221,7 +221,7 @@ mod tests {
             input_metric0,
             output_metric0,
             stability_map0,
-        );
+        )?;
         let input_domain1 = AtomDomain::<i32>::default();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
         let input_metric1 = AbsoluteDistance::<i32>::default();
@@ -233,8 +233,8 @@ mod tests {
             input_metric1,
             output_measure1,
             privacy_map1,
-        );
-        let chain = make_chain_mt(&measurement1, &transformation0).unwrap_test();
+        )?;
+        let chain = make_chain_mt(&measurement1, &transformation0)?;
 
         let arg = 99_u8;
         let ret = chain.invoke(&arg).unwrap_test();
@@ -243,10 +243,12 @@ mod tests {
         let d_in = 99_i32;
         let d_out = chain.map(&d_in).unwrap_test();
         assert_eq!(d_out, 100.);
+
+        Ok(())
     }
 
     #[test]
-    fn test_make_chain_tt() {
+    fn test_make_chain_tt() -> Fallible<()> {
         let input_domain0 = AtomDomain::<u8>::default();
         let output_domain0 = AtomDomain::<i32>::default();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
@@ -260,7 +262,7 @@ mod tests {
             input_metric0,
             output_metric0,
             stability_map0,
-        );
+        )?;
         let input_domain1 = AtomDomain::<i32>::default();
         let output_domain1 = AtomDomain::<f64>::default();
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
@@ -274,7 +276,7 @@ mod tests {
             input_metric1,
             output_metric1,
             stability_map1,
-        );
+        )?;
         let chain = make_chain_tt(&transformation1, &transformation0).unwrap_test();
 
         let arg = 99_u8;
@@ -284,10 +286,12 @@ mod tests {
         let d_in = 99_i32;
         let d_out = chain.map(&d_in).unwrap_test();
         assert_eq!(d_out, 99);
+
+        Ok(())
     }
 
     #[test]
-    fn test_make_chain_pm() {
+    fn test_make_chain_pm() -> Fallible<()> {
         let input_domain0 = AtomDomain::<u8>::default();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = AbsoluteDistance::<i32>::default();
@@ -299,17 +303,19 @@ mod tests {
             input_metric0,
             output_measure0,
             privacy_map0,
-        );
+        )?;
         let function1 = Function::new(|a: &i32| (a + 1) as f64);
-        let chain = make_chain_pm(&function1, &measurement0).unwrap_test();
+        let chain = make_chain_pm(&function1, &measurement0)?;
 
         let arg = 99_u8;
-        let ret = chain.invoke(&arg).unwrap_test();
+        let ret = chain.invoke(&arg)?;
         assert_eq!(ret, 101.0);
 
         let d_in = 99_i32;
-        let d_out = chain.map(&d_in).unwrap_test();
+        let d_out = chain.map(&d_in)?;
         assert_eq!(d_out, 99);
+
+        Ok(())
     }
 }
 

@@ -223,14 +223,14 @@ where
     DA: DropNullDomain + Default,
     DA::Imputed: CheckAtom,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(atom_domain),
         VectorDomain::new(AtomDomain::default()),
         Function::new(|arg: &Vec<DA::Carrier>| arg.iter().filter_map(DA::option).collect()),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[cfg(test)]
