@@ -10,52 +10,72 @@ use crate::error::*;
 use crate::metrics::{IntDistance, SymmetricDistance};
 use crate::traits::{CheckAtom, CheckNull, DistanceConstant};
 
-/// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
-pub(crate) fn make_row_by_row<DIA, DOA, M>(
-    atom_input_domain: DIA,
-    atom_output_domain: DOA,
-    atom_function: impl 'static + Fn(&DIA::Carrier) -> DOA::Carrier,
-) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
-where
-    DIA: Domain,
-    DOA: Domain,
-    DIA::Carrier: 'static,
-    M: Metric<Distance = IntDistance>,
-    (VectorDomain<DIA>, M): MetricSpace,
-    (VectorDomain<DOA>, M): MetricSpace,
-{
-    Transformation::new(
-        VectorDomain::new(atom_input_domain, None),
-        VectorDomain::new(atom_output_domain, None),
-        Function::new(move |arg: &Vec<DIA::Carrier>| arg.iter().map(&atom_function).collect()),
-        M::default(),
-        M::default(),
-        StabilityMap::new_from_constant(1),
-    )
+pub trait DatasetDomain: Domain {
+    type RowDomain: Domain;
+}
+
+impl<D: Domain> DatasetDomain for VectorDomain<D> {
+    type RowDomain = D;
+}
+
+pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
+    fn apply_rows(
+        value: &Self::Carrier,
+        row_function: &impl Fn(
+            &<Self::RowDomain as Domain>::Carrier,
+        ) -> Fallible<<DO::RowDomain as Domain>::Carrier>,
+    ) -> Fallible<DO::Carrier>;
+}
+
+impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for VectorDomain<DIA> {
+    fn apply_rows(
+        value: &Self::Carrier,
+        row_function: &impl Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>,
+    ) -> Fallible<Vec<DOA::Carrier>> {
+        value.iter().map(row_function).collect()
+    }
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
-pub(crate) fn make_row_by_row_fallible<DIA, DOA, M>(
-    atom_input_domain: DIA,
-    atom_output_domain: DOA,
-    atom_function: impl 'static + Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>,
-) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<DOA>, M, M>>
+pub(crate) fn make_row_by_row<DI, DO, M>(
+    input_domain: DI,
+    input_metric: M,
+    output_domain: DO,
+    row_function: impl 'static
+        + Fn(&<DI::RowDomain as Domain>::Carrier) -> <DO::RowDomain as Domain>::Carrier,
+) -> Fallible<Transformation<DI, DO, M, M>>
 where
-    DIA: Domain,
-    DOA: Domain,
-    DIA::Carrier: 'static,
+    DI: RowByRowDomain<DO>,
+    DO: DatasetDomain,
     M: Metric<Distance = IntDistance>,
-    (VectorDomain<DIA>, M): MetricSpace,
-    (VectorDomain<DOA>, M): MetricSpace,
+    (DI, M): MetricSpace,
+    (DO, M): MetricSpace,
+{
+    let row_function = move |arg: &<DI::RowDomain as Domain>::Carrier| Ok(row_function(arg));
+    make_row_by_row_fallible(input_domain, input_metric, output_domain, row_function)
+}
+
+/// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
+pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
+    input_domain: DI,
+    input_metric: M,
+    output_domain: DO,
+    row_function: impl 'static
+        + Fn(&<DI::RowDomain as Domain>::Carrier) -> Fallible<<DO::RowDomain as Domain>::Carrier>,
+) -> Fallible<Transformation<DI, DO, M, M>>
+where
+    DI: RowByRowDomain<DO>,
+    DO: DatasetDomain,
+    M: Metric<Distance = IntDistance>,
+    (DI, M): MetricSpace,
+    (DO, M): MetricSpace,
 {
     Transformation::new(
-        VectorDomain::new(atom_input_domain, None),
-        VectorDomain::new(atom_output_domain, None),
-        Function::new_fallible(move |arg: &Vec<DIA::Carrier>| {
-            arg.iter().map(&atom_function).collect()
-        }),
-        M::default(),
-        M::default(),
+        input_domain,
+        output_domain,
+        Function::new_fallible(move |arg: &DI::Carrier| DI::apply_rows(arg, &row_function)),
+        input_metric.clone(),
+        input_metric,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -100,9 +120,12 @@ pub fn make_is_equal<TIA>(
 where
     TIA: 'static + PartialEq + CheckAtom,
 {
-    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
-        v == &value
-    })
+    make_row_by_row(
+        VectorDomain::new(AtomDomain::default(), None),
+        SymmetricDistance::default(),
+        VectorDomain::new(AtomDomain::default(), None),
+        move |v| v == &value,
+    )
 }
 
 #[bootstrap(
@@ -127,7 +150,12 @@ where
     DIA: Domain + Default,
     DIA::Carrier: 'static + CheckNull,
 {
-    make_row_by_row(input_atom_domain, AtomDomain::default(), |v| v.is_null())
+    make_row_by_row(
+        VectorDomain::new(input_atom_domain, None),
+        SymmetricDistance::default(),
+        VectorDomain::new(AtomDomain::default(), None),
+        |v| v.is_null(),
+    )
 }
 
 #[cfg(test)]
