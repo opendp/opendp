@@ -49,7 +49,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
-        VectorDomain::new(OptionDomain::new(AtomDomain::default())),
+        OptionDomain::new(AtomDomain::default()),
         move |v| indexes.get(v).cloned(),
     )
 }
@@ -89,7 +89,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default()),
+        AtomDomain::default(),
         move |v| {
             edges
                 .iter()
@@ -127,7 +127,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default()),
+        AtomDomain::default(),
         move |v| categories.get(*v).unwrap_or(&null).clone(),
     )
 }

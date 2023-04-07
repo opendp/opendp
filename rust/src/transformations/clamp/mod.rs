@@ -34,7 +34,7 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckAtom>(
     make_row_by_row_fallible(
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::new_closed(bounds.clone())?),
+        AtomDomain::new_closed(bounds.clone())?,
         move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()),
     )
 }
