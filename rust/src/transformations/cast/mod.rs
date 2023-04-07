@@ -34,7 +34,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default(), None),
         SymmetricDistance::default(),
-        VectorDomain::new(OptionDomain::new(AtomDomain::default()), None),
+        OptionDomain::new(AtomDomain::default()),
         |v| {
             TOA::round_cast(v.clone())
                 .ok()
@@ -73,7 +73,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default(), None),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default(), None),
+        AtomDomain::default(),
         |v| TOA::round_cast(v.clone()).unwrap_or_default(),
     )
 }
@@ -104,7 +104,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default(), None),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default(), None),
+        AtomDomain::default(),
         |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
     )
 }

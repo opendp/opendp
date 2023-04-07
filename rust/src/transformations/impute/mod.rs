@@ -47,7 +47,7 @@ where
     make_row_by_row_fallible(
         VectorDomain::new(AtomDomain::new_nullable(), None),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default(), None),
+        AtomDomain::default(),
         move |v| {
             if v.is_null() {
                 TA::sample_standard_uniform(false).map(|v| v * scale + lower)
@@ -156,7 +156,7 @@ where
     make_row_by_row(
         VectorDomain::new(atom_domain, None),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default(), None),
+        AtomDomain::default(),
         move |v| DIA::impute_constant(v, &constant).clone(),
     )
 }

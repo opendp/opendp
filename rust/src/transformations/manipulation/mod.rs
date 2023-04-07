@@ -28,6 +28,7 @@ impl DatasetMetric for ChangeOneDistance {}
 impl DatasetMetric for HammingDistance {}
 
 pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
+    fn translate(&self, output_row_domain: DO::RowDomain) -> DO;
     fn apply_rows(
         value: &Self::Carrier,
         row_function: &impl Fn(
@@ -37,6 +38,13 @@ pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
 }
 
 impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for VectorDomain<DIA> {
+    fn translate(
+        &self,
+        output_row_domain: <VectorDomain<DOA> as DatasetDomain>::RowDomain,
+    ) -> VectorDomain<DOA> {
+        VectorDomain::new(output_row_domain, self.size.clone())
+    }
+
     fn apply_rows(
         value: &Self::Carrier,
         row_function: &impl Fn(&DIA::Carrier) -> Fallible<DOA::Carrier>,
@@ -49,7 +57,7 @@ impl<DIA: Domain, DOA: Domain> RowByRowDomain<VectorDomain<DOA>> for VectorDomai
 pub(crate) fn make_row_by_row<DI, DO, M>(
     input_domain: DI,
     input_metric: M,
-    output_domain: DO,
+    output_row_domain: DO::RowDomain,
     row_function: impl 'static
         + Fn(&<DI::RowDomain as Domain>::Carrier) -> <DO::RowDomain as Domain>::Carrier,
 ) -> Fallible<Transformation<DI, DO, M, M>>
@@ -61,14 +69,14 @@ where
     (DO, M): MetricSpace,
 {
     let row_function = move |arg: &<DI::RowDomain as Domain>::Carrier| Ok(row_function(arg));
-    make_row_by_row_fallible(input_domain, input_metric, output_domain, row_function)
+    make_row_by_row_fallible(input_domain, input_metric, output_row_domain, row_function)
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
 pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     input_domain: DI,
     input_metric: M,
-    output_domain: DO,
+    output_row_domain: DO::RowDomain,
     row_function: impl 'static
         + Fn(&<DI::RowDomain as Domain>::Carrier) -> Fallible<<DO::RowDomain as Domain>::Carrier>,
 ) -> Fallible<Transformation<DI, DO, M, M>>
@@ -79,6 +87,7 @@ where
     (DI, M): MetricSpace,
     (DO, M): MetricSpace,
 {
+    let output_domain = input_domain.translate(output_row_domain);
     Transformation::new(
         input_domain,
         output_domain,
@@ -132,7 +141,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default(), None),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default(), None),
+        AtomDomain::default(),
         move |v| v == &value,
     )
 }
@@ -162,7 +171,7 @@ where
     make_row_by_row(
         VectorDomain::new(input_atom_domain, None),
         SymmetricDistance::default(),
-        VectorDomain::new(AtomDomain::default(), None),
+        AtomDomain::default(),
         |v| v.is_null(),
     )
 }
