@@ -104,7 +104,7 @@ where
     make_row_by_row(
         VectorDomain::new(AtomDomain::default(), None),
         SymmetricDistance::default(),
-        AtomDomain::default(),
+        AtomDomain::new_nullable(),
         |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
     )
 }
