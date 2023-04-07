@@ -7,7 +7,9 @@ use opendp_derive::bootstrap;
 use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{IntDistance, SymmetricDistance};
+use crate::metrics::{
+    ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
+};
 use crate::traits::{CheckAtom, CheckNull, DistanceConstant};
 
 pub trait DatasetDomain: Domain {
@@ -17,6 +19,13 @@ pub trait DatasetDomain: Domain {
 impl<D: Domain> DatasetDomain for VectorDomain<D> {
     type RowDomain = D;
 }
+
+pub trait DatasetMetric: Metric<Distance = IntDistance> {}
+
+impl DatasetMetric for SymmetricDistance {}
+impl DatasetMetric for InsertDeleteDistance {}
+impl DatasetMetric for ChangeOneDistance {}
+impl DatasetMetric for HammingDistance {}
 
 pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
     fn apply_rows(
@@ -47,7 +56,7 @@ pub(crate) fn make_row_by_row<DI, DO, M>(
 where
     DI: RowByRowDomain<DO>,
     DO: DatasetDomain,
-    M: Metric<Distance = IntDistance>,
+    M: DatasetMetric<Distance = IntDistance>,
     (DI, M): MetricSpace,
     (DO, M): MetricSpace,
 {
@@ -66,7 +75,7 @@ pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
 where
     DI: RowByRowDomain<DO>,
     DO: DatasetDomain,
-    M: Metric<Distance = IntDistance>,
+    M: DatasetMetric<Distance = IntDistance>,
     (DI, M): MetricSpace,
     (DO, M): MetricSpace,
 {
