@@ -118,7 +118,7 @@
 //!     let input_metric = AbsoluteDistance::default();
 //!     let output_metric = AbsoluteDistance::default();
 //!     let stability_map = StabilityMap::new_from_constant(1);
-//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map)
+//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map).unwrap()
 //! }
 //! make_i32_identity();
 //! ```
