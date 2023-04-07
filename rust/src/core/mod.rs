@@ -264,14 +264,15 @@ where
         input_metric: MI,
         output_measure: MO,
         privacy_map: PrivacyMap<MI, MO>,
-    ) -> Self {
-        Self {
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        Ok(Self {
             input_domain,
             function,
             input_metric,
             output_measure,
             privacy_map,
-        }
+        })
     }
 
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
@@ -337,15 +338,17 @@ where
         input_metric: MI,
         output_metric: MO,
         stability_map: StabilityMap<MI, MO>,
-    ) -> Self {
-        Self {
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        (output_domain.clone(), output_metric.clone()).assert_compatible()?;
+        Ok(Self {
             input_domain,
             output_domain,
             function,
             input_metric,
             output_metric,
             stability_map,
-        }
+        })
     }
 
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
@@ -367,13 +370,12 @@ where
 #[cfg(test)]
 mod tests {
     use crate::domains::AtomDomain;
-    use crate::error::ExplainUnwrap;
     use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
     #[test]
-    fn test_identity() {
+    fn test_identity() -> Fallible<()> {
         let input_domain = AtomDomain::<i32>::default();
         let output_domain = AtomDomain::<i32>::default();
         let function = Function::new(|arg: &i32| arg.clone());
@@ -387,9 +389,10 @@ mod tests {
             input_metric,
             output_metric,
             stability_map,
-        );
+        )?;
         let arg = 99;
-        let ret = identity.invoke(&arg).unwrap_test();
+        let ret = identity.invoke(&arg)?;
         assert_eq!(ret, 99);
+        Ok(())
     }
 }

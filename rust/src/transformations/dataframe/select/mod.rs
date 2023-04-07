@@ -36,7 +36,7 @@ where
     K: Hashable,
     TOA: Primitive,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         DataFrameDomain::new(),
         VectorDomain::new(AtomDomain::default(), None),
         Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
@@ -50,7 +50,7 @@ where
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[cfg(test)]

@@ -93,7 +93,7 @@ where
     // The squared difference from the mean is bounded above by range^2
     range.inf_mul(&range)?.inf_mul(&size_)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
         AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| {
@@ -112,7 +112,7 @@ where
                 .inf_mul(&sensitivity)?
                 .inf_add(&relaxation)
         }),
-    ))
+    )
 }
 
 #[cfg(test)]

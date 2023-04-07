@@ -34,7 +34,7 @@ where
     TIA: Primitive,
     TO: Number,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::default(), None),
         AtomDomain::default(),
         // think of this as: min(arg.len(), TO::max_value())
@@ -48,7 +48,7 @@ where
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
-    ))
+    )
 }
 
 #[bootstrap(features("contrib"), generics(TO(default = "int")))]
@@ -72,7 +72,7 @@ where
     TIA: Hashable,
     TO: Number,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::default(), None),
         AtomDomain::default(),
         Function::new(move |arg: &Vec<TIA>| {
@@ -82,7 +82,7 @@ where
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
-    ))
+    )
 }
 
 #[doc(hidden)]
@@ -143,7 +143,7 @@ where
     if categories.iter().any(move |x| !uniques.insert(x)) {
         return fallible!(MakeTransformation, "categories must be distinct");
     }
-    Ok(Transformation::<_, _, SymmetricDistance, MO>::new(
+    Transformation::<_, _, SymmetricDistance, MO>::new(
         VectorDomain::new(AtomDomain::default(), None),
         VectorDomain::new(AtomDomain::default(), None),
         Function::new(move |data: &Vec<TIA>| {
@@ -178,7 +178,7 @@ where
         SymmetricDistance::default(),
         MO::default(),
         StabilityMap::new_from_constant(MO::get_stability_constant()),
-    ))
+    )
 }
 
 #[doc(hidden)]
@@ -227,7 +227,7 @@ where
     (VectorDomain<AtomDomain<TK>>, SymmetricDistance): MetricSpace,
     (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::default(), None),
         MapDomain::new(AtomDomain::default(), AtomDomain::default()),
         Function::new(move |data: &Vec<TK>| {
@@ -241,7 +241,7 @@ where
         SymmetricDistance::default(),
         MO::default(),
         StabilityMap::new_from_constant(MO::get_stability_constant()?),
-    ))
+    )
 }
 
 #[cfg(test)]

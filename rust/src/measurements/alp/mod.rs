@@ -237,7 +237,7 @@ where
         );
     }
 
-    Ok(Measurement::new(
+    Measurement::new(
         MapDomain {
             key_domain: AtomDomain::default(),
             value_domain: AtomDomain::default(),
@@ -254,7 +254,7 @@ where
         L1Distance::default(),
         MaxDivergence::default(),
         PrivacyMap::new_from_constant(scale),
-    ))
+    )
 }
 
 /// Measurement to compute a DP projection of bounded sparse data.
@@ -332,13 +332,13 @@ where
     (SparseDomain<K, C>, L1Distance<C>): MetricSpace,
 {
     let function = m.function.clone();
-    Ok(Measurement::new(
+    Measurement::new(
         m.input_domain.clone(),
         Function::new_fallible(move |x| function.eval(x).and_then(post_process)),
         m.input_metric.clone(),
         m.output_measure.clone(),
         m.privacy_map.clone(),
-    ))
+    )
 }
 
 #[cfg(test)]

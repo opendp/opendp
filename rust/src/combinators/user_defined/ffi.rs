@@ -54,14 +54,15 @@ pub extern "C" fn opendp_combinators__make_user_transformation(
     output_metric: *const AnyMetric,
     stability_map: CallbackFn,
 ) -> FfiResult<*mut AnyTransformation> {
-    FfiResult::Ok(util::into_raw(Transformation::new(
+    Transformation::new(
         try_as_ref!(input_domain).clone(),
         try_as_ref!(output_domain).clone(),
         Function::new_fallible(wrap_func(function)),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_metric).clone(),
         StabilityMap::new_fallible(wrap_func(stability_map)),
-    )))
+    )
+    .into()
 }
 
 #[bootstrap(
@@ -115,13 +116,14 @@ pub extern "C" fn opendp_combinators__make_user_measurement(
     TO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let _TO = TO;
-    FfiResult::Ok(util::into_raw(Measurement::new(
+    Measurement::new(
         try_as_ref!(input_domain).clone(),
         Function::new_fallible(wrap_func(function)),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_measure).clone(),
         PrivacyMap::new_fallible(wrap_func(privacy_map)),
-    )))
+    )
+    .into()
 }
 
 #[bootstrap(

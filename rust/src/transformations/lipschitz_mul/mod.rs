@@ -77,7 +77,7 @@ where
     // greatest possible error is the ulp of the greatest possible output
     let output_ulp = _2.inf_pow(&max_unbiased_exponent.inf_sub(&mantissa_bits)?)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         D::default(),
         D::default(),
         Function::new_fallible(move |arg: &D::Carrier| D::transform(&constant, &bounds, arg)),
@@ -86,7 +86,7 @@ where
         StabilityMap::new_fallible(move |d_in| {
             constant.alerting_abs()?.inf_mul(d_in)?.inf_add(&output_ulp)
         }),
-    ))
+    )
 }
 
 /// Implemented for any domain that supports multiplication lipschitz extensions

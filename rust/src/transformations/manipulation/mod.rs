@@ -24,14 +24,14 @@ where
     (VectorDomain<DIA>, M): MetricSpace,
     (VectorDomain<DOA>, M): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(atom_input_domain, None),
         VectorDomain::new(atom_output_domain, None),
         Function::new(move |arg: &Vec<DIA::Carrier>| arg.iter().map(&atom_function).collect()),
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -48,7 +48,7 @@ where
     (VectorDomain<DIA>, M): MetricSpace,
     (VectorDomain<DOA>, M): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(atom_input_domain, None),
         VectorDomain::new(atom_output_domain, None),
         Function::new_fallible(move |arg: &Vec<DIA::Carrier>| {
@@ -57,7 +57,7 @@ where
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 /// Constructs a [`Transformation`] representing the identity function.
@@ -69,14 +69,14 @@ where
     M::Distance: DistanceConstant<M::Distance> + One + Clone,
     (D, M): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         domain.clone(),
         domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
         metric.clone(),
         metric,
         StabilityMap::new_from_constant(M::Distance::one()),
-    ))
+    )
 }
 
 #[bootstrap(features("contrib"))]

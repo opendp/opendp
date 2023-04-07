@@ -27,7 +27,7 @@ pub fn make_subset_by<TK: Hashable>(
 ) -> Fallible<
     Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
 > {
-    Ok(Transformation::new(
+    Transformation::new(
         DataFrameDomain::new(),
         DataFrameDomain::new(),
         Function::new_fallible(move |data: &DataFrame<TK>| {
@@ -56,7 +56,7 @@ pub fn make_subset_by<TK: Hashable>(
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[cfg(test)]

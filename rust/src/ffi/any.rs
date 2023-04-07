@@ -488,13 +488,13 @@ where
     (DI, MI): MetricSpace,
 {
     fn into_any(self) -> AnyMeasurement {
-        AnyMeasurement::new(
-            AnyDomain::new(self.input_domain),
-            self.function.into_any(),
-            AnyMetric::new(self.input_metric),
-            AnyMeasure::new(self.output_measure),
-            self.privacy_map.into_any(),
-        )
+        AnyMeasurement {
+            input_domain: AnyDomain::new(self.input_domain),
+            function: self.function.into_any(),
+            input_metric: AnyMetric::new(self.input_metric),
+            output_measure: AnyMeasure::new(self.output_measure),
+            privacy_map: self.privacy_map.into_any(),
+        }
     }
 }
 
@@ -506,13 +506,13 @@ pub trait IntoAnyMeasurementOutExt {
 
 impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
     fn into_any_out(self) -> AnyMeasurement {
-        AnyMeasurement::new(
-            self.input_domain,
-            self.function.into_any_out(),
-            self.input_metric,
-            self.output_measure,
-            self.privacy_map,
-        )
+        AnyMeasurement {
+            input_domain: self.input_domain,
+            function: self.function.into_any_out(),
+            input_metric: self.input_metric,
+            output_measure: self.output_measure,
+            privacy_map: self.privacy_map,
+        }
     }
 }
 
@@ -537,14 +537,14 @@ where
     (DO, MO): MetricSpace,
 {
     fn into_any(self) -> AnyTransformation {
-        AnyTransformation::new(
-            AnyDomain::new(self.input_domain),
-            AnyDomain::new(self.output_domain),
-            self.function.into_any(),
-            AnyMetric::new(self.input_metric),
-            AnyMetric::new(self.output_metric),
-            self.stability_map.into_any(),
-        )
+        AnyTransformation {
+            input_domain: AnyDomain::new(self.input_domain),
+            output_domain: AnyDomain::new(self.output_domain),
+            function: self.function.into_any(),
+            input_metric: AnyMetric::new(self.input_metric),
+            output_metric: AnyMetric::new(self.output_metric),
+            stability_map: self.stability_map.into_any(),
+        }
     }
 }
 

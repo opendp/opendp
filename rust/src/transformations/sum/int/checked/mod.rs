@@ -54,7 +54,7 @@ where
 
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().sum()),
@@ -65,7 +65,7 @@ where
             //    so floor division is acceptable
             move |d_in: &IntDistance| T::inf_cast(d_in / 2).and_then(|d_in| d_in.inf_mul(&range)),
         ),
-    ))
+    )
 }
 
 #[cfg(test)]

@@ -36,7 +36,7 @@ where
         ..
     } = meas;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         function,
         input_metric,
@@ -44,5 +44,5 @@ where
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map.eval(d_in).map(|eps| (eps, QO::zero()))
         }),
-    ))
+    )
 }

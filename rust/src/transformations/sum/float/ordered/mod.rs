@@ -67,7 +67,7 @@ where
         .total_max(lower.alerting_abs()?.total_max(upper)?)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?, None),
         AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| {
@@ -84,7 +84,7 @@ where
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
         }),
-    ))
+    )
 }
 
 #[bootstrap(
@@ -139,7 +139,7 @@ where
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     let relaxation = S::relaxation(size, lower, upper)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
         AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
@@ -154,7 +154,7 @@ where
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
         }),
-    ))
+    )
 }
 
 #[doc(hidden)]

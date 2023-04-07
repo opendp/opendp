@@ -36,7 +36,7 @@ where
         privacy_map,
     } = measurement.clone();
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         function,
         input_metric,
@@ -46,7 +46,7 @@ where
             let curve = privacy_map.eval(d_in)?;
             output_measure.fix_delta(&curve, &delta)
         }),
-    ))
+    )
 }
 
 pub trait FixDeltaMeasure: Measure {

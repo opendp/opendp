@@ -82,7 +82,7 @@ pub fn make_create_dataframe<K>(
 where
     K: Hashable,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(VectorDomain::new(AtomDomain::default(), None), None),
         DataFrameDomain::new(),
         Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
@@ -92,7 +92,7 @@ where
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> DataFrame<K> {
@@ -125,14 +125,14 @@ where
     K: Hashable,
 {
     let separator = separator.unwrap_or(",").to_owned();
-    Ok(Transformation::new(
+    Transformation::new(
         AtomDomain::default(),
         DataFrameDomain::new(),
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 fn vec_string_to_str(src: &[String]) -> Vec<&str> {
@@ -157,7 +157,7 @@ pub fn make_split_lines() -> Fallible<
         SymmetricDistance,
     >,
 > {
-    Ok(Transformation::new(
+    Transformation::new(
         AtomDomain::<String>::default(),
         VectorDomain::new(AtomDomain::default(), None),
         Function::new(|arg: &String| -> Vec<String> {
@@ -166,7 +166,7 @@ pub fn make_split_lines() -> Fallible<
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 fn split_records<'a>(separator: &str, lines: &[&'a str]) -> Vec<Vec<&'a str>> {
@@ -198,7 +198,7 @@ pub fn make_split_records(
     >,
 > {
     let separator = separator.unwrap_or(",").to_owned();
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::default(), None),
         VectorDomain::new(VectorDomain::new(AtomDomain::default(), None), None),
         // move is necessary because it captures `separator`
@@ -210,7 +210,7 @@ pub fn make_split_records(
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[cfg(test)]

@@ -77,7 +77,7 @@ where
         .total_max(lower.alerting_abs()?.total_max(upper)?)?;
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?, None),
         AtomDomain::default(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
@@ -98,7 +98,7 @@ where
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
         }),
-    ))
+    )
 }
 
 #[bootstrap(
@@ -159,7 +159,7 @@ where
     let ideal_sensitivity = upper.inf_sub(&lower)?;
     let relaxation = S::relaxation(size, lower, upper)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
         AtomDomain::default(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
@@ -175,7 +175,7 @@ where
                 .inf_mul(&ideal_sensitivity)?
                 .inf_add(&relaxation)
         }),
-    ))
+    )
 }
 
 #[doc(hidden)]

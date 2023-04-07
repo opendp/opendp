@@ -87,9 +87,9 @@ mod tests {
     #[test]
     fn test_make_basic_composition_ffi() -> Fallible<()> {
         let measurement0 =
-            util::into_raw(make_test_measurement::<i32>().into_any()) as AnyMeasurementPtr;
+            util::into_raw(make_test_measurement::<i32>()?.into_any()) as AnyMeasurementPtr;
         let measurement1 =
-            util::into_raw(make_test_measurement::<i32>().into_any()) as AnyMeasurementPtr;
+            util::into_raw(make_test_measurement::<i32>()?.into_any()) as AnyMeasurementPtr;
         let measurements = vec![measurement0, measurement1];
         let basic_composition = Result::from(opendp_combinators__make_basic_composition(
             AnyObject::new_raw(measurements),
