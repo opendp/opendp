@@ -80,16 +80,6 @@ def make_count():
     Thus, in all cases, the function (from line \ref{line:try-catch}) returns a non-null value of type \texttt{TO}.
 \end{proof}
 
-\begin{proof} \textbf{(Part 2 -- domain-metric compatibility).}
-    Our \texttt{input\_metric} of \rustdoc{metrics/struct}{SymmetricDistance} is compatible with any domain of the form \texttt{VectorDomain(inner\_domain)}, 
-    and our \texttt{input\_domain} of \\\texttt{VectorDomain(AtomDomain(TIA))} is of this form. 
-    Therefore our \texttt{input\_domain} and \texttt{input\_metric} are compatible.
-
-    Our \texttt{output\_metric} of \rustdoc{metrics/struct}{AbsoluteDistance} is compatible with any domain of the form \texttt{AtomDomain(T)} where \texttt{T} has the trait \texttt{InfSub}, 
-    and our \texttt{output\_domain} of \texttt{AtomDomain(TO)} is of this form and \texttt{TO} has the necessary trait.
-    Therefore our \texttt{input\_domain} and \texttt{input\_metric} are compatible.
-\end{proof}
-
 Before proceeding with proving the validity of the stability map, we provide a couple lemmas.
 
 \begin{lemma}
@@ -131,7 +121,7 @@ Before proceeding with proving the validity of the stability map, we provide a c
     Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is equivalent to \texttt{size}.
 \end{proof}
 
-\begin{proof} \textbf{(Part 3 -- stability map).} 
+\begin{proof} \textbf{(Part 2 -- stability map).} 
     Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$, 
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
     Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
