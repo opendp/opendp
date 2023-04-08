@@ -8,12 +8,13 @@ use opendp_derive::bootstrap;
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
     AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
-    AnyTransformation, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt,
-    IntoAnyTransformationExt, QueryType,
+    AnyTransformation, Downcast, QueryType,
 };
 use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
 use crate::{try_, try_as_ref};
+
+use super::{Domain, Function, Measure, Measurement, Metric, MetricSpace, Transformation};
 
 #[repr(C)]
 pub struct FfiSlice {
@@ -144,9 +145,13 @@ pub trait IntoAnyMeasurementFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyMeasurement>;
 }
 
-impl<T: IntoAnyMeasurementExt> IntoAnyMeasurementFfiResultExt for Fallible<T> {
+impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
+    IntoAnyMeasurementFfiResultExt for Fallible<Measurement<DI, TO, MI, MO>>
+where
+    (DI, MI): MetricSpace,
+{
     fn into_any(self) -> FfiResult<*mut AnyMeasurement> {
-        self.map(IntoAnyMeasurementExt::into_any).into()
+        self.map(Measurement::into_any).into()
     }
 }
 
@@ -157,9 +162,14 @@ pub trait IntoAnyTransformationFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyTransformation>;
 }
 
-impl<T: IntoAnyTransformationExt> IntoAnyTransformationFfiResultExt for Fallible<T> {
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
+    IntoAnyTransformationFfiResultExt for Fallible<Transformation<DI, DO, MI, MO>>
+where
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
     fn into_any(self) -> FfiResult<*mut AnyTransformation> {
-        self.map(IntoAnyTransformationExt::into_any).into()
+        self.map(Transformation::into_any).into()
     }
 }
 
@@ -167,9 +177,9 @@ pub trait IntoAnyFunctionFfiResultExt {
     fn into_any(self) -> FfiResult<*mut AnyFunction>;
 }
 
-impl<T: IntoAnyFunctionExt> IntoAnyFunctionFfiResultExt for Fallible<T> {
+impl<TI: 'static, TO: 'static> IntoAnyFunctionFfiResultExt for Fallible<Function<TI, TO>> {
     fn into_any(self) -> FfiResult<*mut AnyFunction> {
-        self.map(IntoAnyFunctionExt::into_any).into()
+        self.map(Function::into_any).into()
     }
 }
 
@@ -740,7 +750,7 @@ pub extern "C" fn opendp_core__queryable_query_type(
 #[cfg(test)]
 mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
-    use crate::ffi::any::{Downcast, IntoAnyTransformationExt};
+    use crate::ffi::any::Downcast;
     use crate::ffi::util::ToCharP;
 
     use super::*;

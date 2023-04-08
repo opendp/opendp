@@ -3,10 +3,7 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{FfiResult, Measurement},
     error::Fallible,
-    ffi::any::{
-        AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast,
-        IntoAnyMeasurementOutExt,
-    },
+    ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
     interactive::Queryable,
 };
 
