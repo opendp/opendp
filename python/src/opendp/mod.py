@@ -245,7 +245,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
                 return False
             raise
 
-    def __rshift__(self, other: Union["Measurement", "Transformation"]):
+    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]):
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -253,6 +253,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
         if isinstance(other, Transformation):
             from opendp.combinators import make_chain_tt
             return make_chain_tt(other, self)
+        
+        if isinstance(other, PartialConstructor):
+            return other(self.input_domain, self.input_metric)
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
@@ -434,6 +437,22 @@ class SMDCurve(object):
     def epsilon(self, delta):
         from opendp._data import smd_curve_epsilon
         return smd_curve_epsilon(self.curve, delta)
+
+
+class PartialConstructor(object):
+    def __init__(self, constructor):
+        self.constructor = constructor
+    
+    def __call__(self, input_domain: Domain, input_metric: Metric):
+        return self.constructor(input_domain, input_metric)
+    
+    def __rshift__(self, other):
+        return PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other)
+
+    def __rrshift__(self, other):
+        if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
+            return self(other[0], other[1])
+        raise TypeError(f"Cannot chain {type(self)} with {type(other)}")
 
 
 class UnknownTypeException(Exception):

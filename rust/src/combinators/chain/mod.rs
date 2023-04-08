@@ -4,8 +4,8 @@ mod ffi;
 use std::ops::Shr;
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
-    Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, PartialTransformation, PrivacyMap,
+    StabilityMap, Transformation,
 };
 use crate::error::{Error, ErrorVariant, Fallible};
 use std::fmt::Debug;
@@ -375,6 +375,65 @@ where
     }
 }
 
+impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
+    for Transformation<DI, DX, MI, MX>
+where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    DO: 'static + Domain,
+    MI: 'static + Metric,
+    MX: 'static + Metric,
+    MO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
+    (DO, MO): MetricSpace,
+{
+    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
+
+    fn shr(self, rhs: PartialTransformation<DX, DO, MX, MO>) -> Self::Output {
+        let rhs = (rhs).fix(self.output_domain.clone(), self.output_metric.clone())?;
+        make_chain_tt(&rhs, &self)
+    }
+}
+
+impl<DI, DO, MI, MO> Shr<PartialTransformation<DI, DO, MI, MO>> for (DI, MI)
+where
+    DI: 'static + Domain,
+    DO: 'static + Domain,
+    MI: 'static + Metric,
+    MO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
+    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
+
+    fn shr(self, rhs: PartialTransformation<DI, DO, MI, MO>) -> Self::Output {
+        (rhs).fix(self.0, self.1)
+    }
+}
+
+impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
+    for Fallible<Transformation<DI, DX, MI, MX>>
+where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    DO: 'static + Domain,
+    MI: 'static + Metric,
+    MX: 'static + Metric,
+    MO: 'static + Metric,
+    (DI, MI): MetricSpace,
+    (DX, MX): MetricSpace,
+    (DO, MO): MetricSpace,
+{
+    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
+
+    fn shr(self, rhs: PartialTransformation<DX, DO, MX, MO>) -> Self::Output {
+        let lhs = self?;
+        let rhs = (rhs).fix(lhs.output_domain.clone(), lhs.output_metric.clone())?;
+        make_chain_tt(&rhs, &lhs)
+    }
+}
+
 impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>>
     for Fallible<Transformation<DI, DX, MI, MX>>
 where
@@ -473,7 +532,7 @@ where
 mod tests_shr {
     use crate::measurements::make_base_discrete_laplace;
     use crate::transformations::{
-        make_bounded_sum, make_cast_default, make_clamp, make_split_lines,
+        make_bounded_sum, make_cast_default, make_split_lines, partial_clamp,
     };
 
     use super::*;
@@ -482,7 +541,7 @@ mod tests_shr {
     fn test_shr() -> Fallible<()> {
         (make_split_lines()?
             >> make_cast_default()?
-            >> make_clamp((0, 1))?
+            >> partial_clamp((0, 1))
             >> make_bounded_sum((0, 1))?
             >> make_base_discrete_laplace(1.)?)
         .map(|_| ())

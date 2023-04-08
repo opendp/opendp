@@ -7,6 +7,8 @@ pub mod arguments;
 pub mod docstring;
 pub mod signature;
 
+pub mod partial;
+
 use darling::{Error, Result};
 
 use crate::bootstrap::{arguments::BootstrapArguments, docstring::BootstrapDocstring};
@@ -71,6 +73,7 @@ pub fn reconcile_function(
         )?,
         derived_types: reconcile_derived_types(bootstrap.derived_types),
         dependencies: bootstrap.dependencies.0,
+        supports_partial: signature.supports_partial,
     })
 }
 

@@ -23,6 +23,8 @@ pub struct Function {
     pub ret: Argument,
     // references to values that should share the same lifetime
     pub dependencies: Vec<TypeRecipe>,
+    // set to true if the first two arguments are input domain and input metric
+    pub supports_partial: bool,
 }
 
 // Metadata for function arguments, derived types and returns.

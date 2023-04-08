@@ -10,8 +10,8 @@ use std::any::Any;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
-    Transformation,
+    Domain, Function, Measure, Measurement, Metric, MetricSpace, PartialTransformation, PrivacyMap,
+    StabilityMap, Transformation,
 };
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
@@ -407,12 +407,12 @@ impl<M: Metric> MetricSpace for (AnyDomain, M) {
     }
 }
 
-pub trait IntoAnyFunctionExt {
-    fn into_any(self) -> AnyFunction;
-}
-
-impl<TI: 'static, TO: 'static> IntoAnyFunctionExt for Function<TI, TO> {
-    fn into_any(self) -> AnyFunction {
+impl<TI, TO> Function<TI, TO>
+where
+    TI: 'static,
+    TO: 'static,
+{
+    pub fn into_any(self) -> AnyFunction {
         Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
             let arg = arg.downcast_ref()?;
             let res = self.eval(arg);
@@ -421,12 +421,8 @@ impl<TI: 'static, TO: 'static> IntoAnyFunctionExt for Function<TI, TO> {
     }
 }
 
-pub trait IntoAnyFunctionOutExt {
-    fn into_any_out(self) -> AnyFunction;
-}
-
-impl<TO: 'static> IntoAnyFunctionOutExt for Function<AnyObject, TO> {
-    fn into_any_out(self) -> AnyFunction {
+impl<TO: 'static> Function<AnyObject, TO> {
+    pub fn into_any_out(self) -> AnyFunction {
         let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
             let res = self.eval(arg);
             res.map(AnyObject::new)
@@ -473,21 +469,16 @@ where
 /// passed back and forth over FFI.
 pub type AnyMeasurement = Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
-/// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
-/// with blanket implementation, and we need an extension trait to add methods to Measurement.
-pub trait IntoAnyMeasurementExt {
-    fn into_any(self) -> AnyMeasurement;
-}
-
+/// Turn a Measurement into an AnyMeasurement.
 impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-    IntoAnyMeasurementExt for Measurement<DI, TO, MI, MO>
+    Measurement<DI, TO, MI, MO>
 where
     DI::Carrier: 'static,
     MI::Distance: 'static,
     MO::Distance: 'static,
     (DI, MI): MetricSpace,
 {
-    fn into_any(self) -> AnyMeasurement {
+    pub fn into_any(self) -> AnyMeasurement {
         AnyMeasurement {
             input_domain: AnyDomain::new(self.input_domain),
             function: self.function.into_any(),
@@ -498,14 +489,10 @@ where
     }
 }
 
-/// A trait for turning a Measurement into an AnyMeasurement, when only the output side needs to be wrapped.
+/// Turn a Measurement into an AnyMeasurement, when only the output side needs to be wrapped.
 /// Used for composition.
-pub trait IntoAnyMeasurementOutExt {
-    fn into_any_out(self) -> AnyMeasurement;
-}
-
-impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
-    fn into_any_out(self) -> AnyMeasurement {
+impl<TO: 'static> Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
+    pub fn into_any_out(self) -> AnyMeasurement {
         AnyMeasurement {
             input_domain: self.input_domain,
             function: self.function.into_any_out(),
@@ -520,14 +507,8 @@ impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMet
 /// passed back and forth over FFI.
 pub type AnyTransformation = Transformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
 
-/// A trait for turning a Transformation into an AnyTransformation. We can't used From because it'd conflict
-/// with blanket implementation, and we need an extension trait to add methods to Measurement.
-pub trait IntoAnyTransformationExt {
-    fn into_any(self) -> AnyTransformation;
-}
-
 impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
-    IntoAnyTransformationExt for Transformation<DI, DO, MI, MO>
+    Transformation<DI, DO, MI, MO>
 where
     DI::Carrier: 'static,
     DO::Carrier: 'static,
@@ -536,7 +517,7 @@ where
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    fn into_any(self) -> AnyTransformation {
+    pub fn into_any(self) -> AnyTransformation {
         AnyTransformation {
             input_domain: AnyDomain::new(self.input_domain),
             output_domain: AnyDomain::new(self.output_domain),
@@ -545,6 +526,31 @@ where
             output_metric: AnyMetric::new(self.output_metric),
             stability_map: self.stability_map.into_any(),
         }
+    }
+}
+
+pub type AnyPartialTransformation =
+    PartialTransformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
+
+impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
+    PartialTransformation<DI, DO, MI, MO>
+where
+    DI::Carrier: 'static,
+    DO::Carrier: 'static,
+    MI::Distance: 'static,
+    MO::Distance: 'static,
+    (DI, MI): MetricSpace,
+    (DO, MO): MetricSpace,
+{
+    pub fn into_any(self) -> AnyPartialTransformation {
+        AnyPartialTransformation::new(move |input_domain, input_metric| {
+            Ok(self
+                .fix(
+                    input_domain.downcast::<DI>()?,
+                    input_metric.downcast::<MI>()?,
+                )?
+                .into_any())
+        })
     }
 }
 
@@ -634,7 +640,7 @@ mod tests {
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
-        let t4 = transformations::make_clamp((0.0f64, 10.0))?.into_any();
+        let t4 = transformations::partial_clamp::<_, SymmetricDistance>((0.0f64, 10.0)).into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
         let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
