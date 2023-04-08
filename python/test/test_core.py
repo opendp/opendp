@@ -68,13 +68,18 @@ def test_bisect_edge():
 
 def test_bisect_chain():
     from opendp.mod import binary_search_chain, binary_search_param, enable_features
-    from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
-    from opendp.domains import atom_domain
+    from opendp.transformations import partial_clamp, make_resize, make_sized_bounded_mean
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import symmetric_distance
     from opendp.measurements import make_base_laplace
     enable_features("contrib")
 
+    input_domain = vector_domain(atom_domain(T=float))
+    input_metric = symmetric_distance()
+
     pre = (
-        make_clamp(bounds=(0., 1.)) >>
+        (input_domain, input_metric) >>
+        partial_clamp(bounds=(0., 1.)) >>
         make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
         make_sized_bounded_mean(size=10, bounds=(0., 1.))
     )
@@ -87,7 +92,13 @@ def test_bisect_chain():
 
 def test_supporting_elements():
     from opendp.transformations import make_clamp
-    clamper = make_clamp((0, 2))
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import symmetric_distance
+
+    input_domain = vector_domain(atom_domain(T=int))
+    input_metric = symmetric_distance()
+
+    clamper = make_clamp(input_domain, input_metric, (0, 2))
     print(clamper.input_domain)
     print(clamper.input_domain.carrier_type)
     print(clamper.output_domain)
@@ -118,8 +129,13 @@ def test_function():
 
 
 def test_member():
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import symmetric_distance
+    input_domain = vector_domain(atom_domain(T=int))
+    input_metric = symmetric_distance()
+
     from opendp.transformations import make_clamp
-    clamper = make_clamp((0, 2))
+    clamper = make_clamp(input_domain, input_metric, (0, 2))
     assert clamper.input_domain.member([1])
     assert not clamper.output_domain.member([4, 1])
 

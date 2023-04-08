@@ -35,7 +35,7 @@ def test_make_basic_composition():
             make_base_discrete_laplace(scale=200.)
         ]), 
         make_cast_default(int, bool) >> make_cast_default(bool, int) >> make_count(TIA=int, TO=int) >> make_base_discrete_laplace(scale=2.), 
-        make_cast_default(int, float) >> make_clamp((0., 10.)) >> make_bounded_sum((0., 10.)) >> make_base_laplace(scale=2.), 
+        make_cast_default(int, float) >> partial_clamp((0., 10.)) >> make_bounded_sum((0., 10.)) >> make_base_laplace(scale=2.), 
 
         make_basic_composition([
             make_count(TIA=int, TO=int) >> make_base_discrete_laplace(scale=2.), 

@@ -13,8 +13,11 @@ use super::DatasetMetric;
 
 #[bootstrap(
     features("contrib"),
-    arguments(input_domain(c_type = "AnyDomain *")),
-    generics(TA(example = "$get_first(bounds)"))
+    arguments(
+        input_domain(c_type = "AnyDomain *", hint = "Domain"),
+        input_metric(c_type = "AnyMetric *", hint = "Metric")
+    ),
+    generics(TA(example = "$get_atom(get_type(input_domain))"))
 )]
 /// Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
 ///

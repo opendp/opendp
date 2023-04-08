@@ -39,7 +39,7 @@
 //!
 //! #[cfg(feature = "untrusted")]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, make_cast_default, make_clamp, make_bounded_sum};
+//!     use opendp::transformations::{make_split_lines, make_cast_default, partial_clamp, make_bounded_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
 //!     use opendp::measurements::make_base_laplace;
 //!
@@ -53,31 +53,29 @@
 //!     let split_lines = make_split_lines()?;
 //!     let cast = make_cast_default::<String, f64>()?;
 //!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
+//!      
+//!     // You can use the more convenient `>>` notation to chain instead.
+//!     let load_and_clamp = load_numbers >> partial_clamp(bounds);
+//!     let load_and_sum = (load_and_clamp >> make_bounded_sum(bounds)?)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
-//!     let clamp = make_clamp(bounds)?;
-//!     let bounded_sum = make_bounded_sum(bounds)?;
 //!     let laplace = make_base_laplace(sigma, None)?;
-//!     let intermediate = make_chain_tt(&bounded_sum, &clamp)?;
-//!     let noisy_sum = make_chain_mt(&laplace, &intermediate)?;
+//!     let noisy_sum = make_chain_mt(&laplace, &load_and_sum)?; // or `load_and_sum >> laplace`
 //!
-//!     // Put it all together.
-//!     let pipeline = make_chain_mt(&noisy_sum, &load_numbers)?;
-//!
-//!     // Notice that you can write the same pipeline more succinctly with `>>`.
-//!     let pipeline = (
+//!     // The same measurement, written more succinctly:
+//!     let noisy_sum = (
 //!         make_split_lines()? >>
 //!         make_cast_default::<String, f64>()? >>
-//!         make_clamp(bounds)? >>
+//!         partial_clamp(bounds) >>
 //!         make_bounded_sum(bounds)? >>
 //!         make_base_laplace(sigma, None)?
 //!     )?;
 //!
 //!     // Check that the pipeline is (1, 1.0)-close
-//!     assert!(pipeline.check(&1, &epsilon)?);
+//!     assert!(noisy_sum.check(&1, &epsilon)?);
 //!
 //!     // Make a 1.0-epsilon-DP release
-//!     let release = pipeline.invoke(&data)?;
+//!     let release = noisy_sum.invoke(&data)?;
 //!     println!("release = {}", release);
 //!     Ok(())
 //! }
