@@ -1,5 +1,5 @@
 \documentclass{article}
-\input{../../mod.sty}
+\input{../../lib.sty}
 
 \title{\texttt{fn make\_clamp}}
 \author{S\'ilvia Casacuberta}
@@ -16,24 +16,8 @@ Proves soundness of \texttt{fn make\_clamp} in \asOfCommit{mod.rs}{0db9c6036}.
 \begin{itemize}
     \item \vettingPR{512}
 \end{itemize}
-
-\section{Versions of definitions documents}
-\label{sec:versioned-docs}
-
-When looking for definitions for terms that appear in this document, the following versions of the definitions documents should be used.
-
-\begin{itemize}
-    \item \textbf{Pseudocode definitions document:} This proof file uses the version of the pseudocode definitions document available as of September 6, 2021, which can be found at \href{https://github.com/opendp/whitepapers/blob/f8b279ab249934182f306138fa14e6390ddae3e9/pseudocode-defns/pseudocode_defns.pdf}{this link} (archived \href{https://web.archive.org/web/20210906201546/https://raw.githubusercontent.com/opendp/whitepapers/pseudocode-defns/pseudocode-defns/pseudocode_defns.pdf}{here}).
-    
-    \item \textbf{Proof definitions document:} This file uses the version of the proof definitions document available as of September 6, 2021, which can be found at \href{https://github.com/opendp/whitepapers/blob/d4c24e55cc37878634fec0b7f5c89259a3ad3ded/proof-defns/proof_defns.pdf}{this link} (archived \href{https://web.archive.org/web/20210906201056/https://raw.githubusercontent.com/opendp/whitepapers/proof-defns/proof-defns/proof_defns.pdf}{here}). 
-\end{itemize}
-
 \section{Algorithm implementation}
 
-\subsection{Pseudocode in Python}\label{sec:pseudocode}
-We present a simplified Python-like pseudocode of the Rust implementation below. The necessary definitions for the pseudocode can be found at \href{https://www.overleaf.com/project/60d215bf90b337ac02200a99}{``List of definitions used in the pseudocode"}. 
-
-\emph{The use of \texttt{code}-style parameters in the preconditions section below (for example, \texttt{input\_domain}) means that this information should be passed along to the \texttt{Transformation} constructor.}
 
 \subsubsection*{Preconditions}
 To ensure the correctness of the output, we require the following preconditions:
@@ -45,6 +29,11 @@ To ensure the correctness of the output, we require the following preconditions:
     \end{itemize}
 \end{itemize}
 
+
+\subsection{Pseudocode in Python}\label{sec:pseudocode}
+We present a simplified Python-like pseudocode of the Rust implementation below. The necessary definitions for the pseudocode can be found at \href{https://www.overleaf.com/project/60d215bf90b337ac02200a99}{``List of definitions used in the pseudocode"}. 
+
+\emph{The use of \texttt{code}-style parameters in the preconditions section below (for example, \texttt{input\_domain}) means that this information should be passed along to the \texttt{Transformation} constructor.}
 
 \begin{lstlisting}[language=Python, escapechar=|] 
 def make_clamp((L, U): (T, T)): |\label{line:def}|
@@ -76,7 +65,7 @@ def make_clamp((L, U): (T, T)): |\label{line:def}|
 The necessary definitions for the proof can be found at \href{https://www.overleaf.com/project/60d214e390b337703d200982}{``List of definitions used in the proofs"}.
 
 \subsection{Symmetric distance}
-\transformationTheorem{\texttt{(L, U)}}{\texttt{make\_clamp}}
+\validTransformation{\texttt{(bounds)}}{\texttt{make\_clamp}}
 
 \begin{proof}
 \textbf{(Appropriate output domain).} In the case of \texttt{make\_clamp}, this corresponds to showing that for every vector $v$ of elements of type \texttt{T}, $\function(v)$ is a vector of elements of type \texttt{T} which are contained in the interval \texttt{[L, U]}. For that, we need to show two things: first, that \texttt{function(v)} has type \texttt{Vec[T]}.
