@@ -31,7 +31,7 @@ def test_dp_mean():
         # Impute missing values to 0 Vec<Float>
         make_impute_constant(option_domain(atom_domain(T=float)), impute_constant) >>
         # Clamp values
-        make_clamp(bounds) >>
+        partial_clamp(bounds) >>
         # Resize dataset length
         make_resize(n, atom_domain(bounds), impute_constant) >>
         # Aggregate with mean

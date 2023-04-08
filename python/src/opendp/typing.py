@@ -519,3 +519,6 @@ def get_carrier_type(value):
 
 def get_distance_type(value):
     return value.distance_type
+
+def get_type(value):
+    return value.type

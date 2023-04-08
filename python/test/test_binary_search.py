@@ -4,10 +4,16 @@ dp.enable_features('floating-point', 'contrib')
 
 
 def test_binary_search_overflow():
+
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import symmetric_distance
+    input_domain = vector_domain(atom_domain(T=float))
+    input_metric = symmetric_distance()
+
     d_in = 1
     d_out = 1.01
     bounded_sum = (
-        dp.t.make_clamp(bounds=(0.0, 1.0)) >>
+        dp.t.make_clamp(input_domain, input_metric, bounds=(0.0, 1.0)) >>
         dp.t.make_bounded_sum(bounds=(0.0, 1.0))
     )
     dp.binary_search_param(
@@ -17,10 +23,15 @@ def test_binary_search_overflow():
     )
 
 def test_stuck():
+    from opendp.domains import atom_domain, vector_domain
+    from opendp.metrics import symmetric_distance
+    input_domain = vector_domain(atom_domain(T=float))
+    input_metric = symmetric_distance()
+
     epsilon = 1.3
     sens = 500_000.0 * 500_000.0
     bounded_sum = (
-        dp.t.make_clamp(bounds=(0.0, sens)) >>
+        dp.t.make_clamp(input_domain, input_metric, bounds=(0.0, sens)) >>
         dp.t.make_bounded_sum(bounds=(0.0, sens))
     )
     real_v = sens / epsilon

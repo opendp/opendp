@@ -57,7 +57,11 @@ __all__ = [
     "make_split_records",
     "make_subset_by",
     "make_unordered",
+<<<<<<< HEAD
     "part_clamp"
+=======
+    "partial_clamp"
+>>>>>>> f6415b02 (debug python)
 ]
 
 
@@ -686,8 +690,13 @@ def make_cdf(
 
 @versioned
 def make_clamp(
+<<<<<<< HEAD
     input_domain,
     input_metric,
+=======
+    input_domain: Domain,
+    input_metric: Metric,
+>>>>>>> f6415b02 (debug python)
     bounds: Tuple[Any, Any],
     M: RuntimeTypeDescriptor,
     TA: RuntimeTypeDescriptor = None
@@ -707,7 +716,12 @@ def make_clamp(
     * Output Metric:  `M`
     
     :param input_domain: Domain of input data.
+    :type input_domain: Domain
     :param input_metric: Metric on input domain.
+<<<<<<< HEAD
+=======
+    :type input_metric: Metric
+>>>>>>> f6415b02 (debug python)
     :param bounds: Tuple of inclusive lower and upper bounds.
     :type bounds: Tuple[Any, Any]
     :param TA: Atomic Type
@@ -722,12 +736,21 @@ def make_clamp(
     assert_features("contrib")
     
     # Standardize type arguments.
+<<<<<<< HEAD
     TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_first(bounds))
     M = RuntimeType.parse(type_name=M)
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+=======
+    TA = RuntimeType.parse_or_infer(type_name=TA, public_example=get_atom(get_type(input_domain)))
+    M = RuntimeType.parse_or_infer(type_name=M, public_example=input_metric)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=RuntimeType(origin='VectorDomain', args=[RuntimeType(origin='AtomDomain', args=[TA])]))
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=M)
+>>>>>>> f6415b02 (debug python)
     c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
     c_TA = py_to_c(TA, c_type=ctypes.c_char_p)
     c_M = py_to_c(M, c_type=ctypes.c_char_p)

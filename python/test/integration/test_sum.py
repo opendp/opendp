@@ -1,14 +1,12 @@
 from opendp.mod import enable_features
 enable_features("floating-point", "contrib")
 
-from opendp.typing import InsertDeleteDistance
-
 
 def test_sized_bounded_float_sum():
     """known-n bounded float sum (assuming n is public)"""
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
-        make_clamp, make_resize, make_sized_bounded_sum
+        partial_clamp, make_resize, make_sized_bounded_sum
     from opendp.measurements import make_base_laplace, make_base_gaussian
     from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_chain
@@ -27,7 +25,7 @@ def test_sized_bounded_float_sum():
         # Impute missing values to 0, emit Vec<Float>
         make_impute_constant(option_domain(atom_domain(T=float)), constant=0.) >>
         # Clamp values
-        make_clamp(bounds=bounds) >>
+        partial_clamp(bounds=bounds) >>
         # Resize dataset length
         make_resize(size=size, atom_domain=atom_domain(bounds), constant=0.) >>
         # Aggregate with sum
@@ -55,7 +53,7 @@ def test_sized_bounded_int_sum():
     """known-n bounded int sum (assuming n is public)"""
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
-        make_clamp, make_resize, make_sized_bounded_sum
+        partial_clamp, make_resize, make_sized_bounded_sum
     from opendp.measurements import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
     from opendp.domains import atom_domain, option_domain
@@ -73,7 +71,7 @@ def test_sized_bounded_int_sum():
         # Impute missing values to 0, emit Vec<int>
         make_impute_constant(option_domain(atom_domain(T=int)), constant=0) >>
         # Clamp values
-        make_clamp(bounds=bounds) >>
+        partial_clamp(bounds=bounds) >>
         # Resize dataset length
         make_resize(size=size, atom_domain=atom_domain(bounds), constant=0) >>
         # Aggregate with sum
@@ -95,7 +93,7 @@ def test_bounded_float_sum():
     """bounded float sum (assuming n is unknown)"""
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
-        make_clamp, make_bounded_sum
+        partial_clamp, make_bounded_sum
     from opendp.measurements import make_base_laplace, make_base_gaussian
     from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP
     from opendp.mod import binary_search_chain
@@ -113,7 +111,7 @@ def test_bounded_float_sum():
         # Impute missing values to 0, emit Vec<float>
         make_impute_constant(option_domain(atom_domain(T=float)), constant=0.) >>
         # Clamp values
-        make_clamp(bounds=bounds) >>
+        partial_clamp(bounds=bounds) >>
         # Aggregate with sum. Resize is not necessary with make_bounded_sum, only make_sized_bounded_sum
         make_bounded_sum(bounds=bounds)
     )
@@ -138,7 +136,7 @@ def test_bounded_int_sum():
     """bounded int sum (assuming n is unknown)"""
     from opendp.transformations import make_split_dataframe, make_select_column, \
         make_cast, make_impute_constant, \
-        make_clamp, make_bounded_sum
+        partial_clamp, make_bounded_sum
     from opendp.measurements import make_base_discrete_laplace
     from opendp.mod import binary_search_chain
     from opendp.domains import option_domain, atom_domain
@@ -150,7 +148,7 @@ def test_bounded_int_sum():
         make_select_column("A", TOA=str) >>
         make_cast(TIA=str, TOA=int) >>
         make_impute_constant(option_domain(atom_domain(T=int)), constant=0) >>
-        make_clamp(bounds=bounds) >>
+        partial_clamp(bounds=bounds) >>
         make_bounded_sum(bounds=bounds)
     )
 
