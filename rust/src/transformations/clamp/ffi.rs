@@ -2,11 +2,13 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
+use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckAtom, TotalOrd};
-use crate::transformations::make_clamp;
+use crate::transformations::partial_clamp;
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_clamp(
@@ -20,7 +22,12 @@ pub extern "C" fn opendp_transformations__make_clamp(
         TA: 'static + Clone + TotalOrd + CheckAtom,
     {
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(TA, TA)>()).clone();
-        make_clamp::<TA>(bounds).into_any()
+        partial_clamp::<TA, _>(bounds)
+            .fix(
+                VectorDomain::new(AtomDomain::default()),
+                SymmetricDistance::default(),
+            )
+            .into_any()
     }
     dispatch!(monomorphize_dataset, [
         (TA, @numbers)

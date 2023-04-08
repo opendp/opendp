@@ -272,3 +272,37 @@ where
         })
     }
 }
+
+// Function >> Function
+impl<TI, TX, TO> Shr<Function<TX, TO>> for Function<TI, TX>
+where
+    TI: 'static,
+    TX: 'static,
+    TO: 'static,
+{
+    type Output = Function<TI, TO>;
+
+    fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
+        Function::make_chain(&rhs, &self)
+    }
+}
+
+#[cfg(test)]
+mod tests_shr {
+    use crate::measurements::make_base_discrete_laplace;
+    use crate::transformations::{
+        make_bounded_sum, make_cast_default, make_split_lines, partial_clamp,
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_shr() -> Fallible<()> {
+        (make_split_lines()?
+            >> make_cast_default()?
+            >> partial_clamp((0, 1))
+            >> make_bounded_sum((0, 1))?
+            >> make_base_discrete_laplace(1.)?)
+        .map(|_| ())
+    }
+}
