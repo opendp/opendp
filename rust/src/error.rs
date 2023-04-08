@@ -32,11 +32,7 @@ macro_rules! err {
         (err!($variant, format!($template, $($args,)+)));
 
     // always resolve backtraces in debug mode
-    (@backtrace) => (if cfg!(debug_assertions) {
-        backtrace::Backtrace::new()
-    } else {
-        backtrace::Backtrace::new_unresolved()
-    });
+    (@backtrace) => (backtrace::Backtrace::new_unresolved());
 }
 
 #[derive(thiserror::Error, Debug)]

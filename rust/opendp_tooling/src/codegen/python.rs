@@ -43,6 +43,12 @@ fn generate_module(
     let all = module
         .iter()
         .map(|func| format!("    \"{}\"", func.name))
+        .chain(
+            module
+                .iter()
+                .filter(|func| func.supports_partial)
+                .map(|func| format!("    \"{}\"", func.name.replacen("make_", "partial_", 1))),
+        )
         .collect::<Vec<_>>()
         .join(",\n");
     let functions = module

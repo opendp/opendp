@@ -255,7 +255,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
             return make_chain_tt(other, self)
         
         if isinstance(other, PartialConstructor):
-            return other(self.input_domain, self.input_metric)
+            return self >> other(self.output_domain, self.output_metric)
 
         raise ValueError(f"rshift expected a measurement or transformation, got {other}")
 
