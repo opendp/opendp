@@ -640,7 +640,7 @@ mod tests {
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
-        let t4 = transformations::partial_clamp::<_, SymmetricDistance>((0.0f64, 10.0)).into_any();
+        let t4 = transformations::make_clamp((0.0f64, 10.0))?.into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
         let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
