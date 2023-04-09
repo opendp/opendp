@@ -46,7 +46,6 @@ mod tests {
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util;
-    use crate::ffi::util::ToCharP;
 
     use super::*;
 
