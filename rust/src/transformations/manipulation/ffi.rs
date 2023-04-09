@@ -9,11 +9,11 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation, Downcast};
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::{CheckAtom, DistanceConstant, InherentNull, Primitive};
-use crate::transformations::{make_is_equal, make_is_null};
+use crate::transformations::{make_is_equal, make_is_null, DatasetMetric};
 
 #[bootstrap(features("contrib"))]
 /// Make a Transformation representing the identity function.
@@ -94,19 +94,39 @@ pub extern "C" fn opendp_transformations__make_identity(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_is_equal(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     value: *const AnyObject,
-    TIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let TIA = try_!(Type::try_from(TIA));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let value = try_as_ref!(value);
 
-    fn monomorphize<TIA>(value: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+    let TIA = try_!(input_domain.type_.get_atom());
+    let M = input_metric.type_.clone();
+
+    fn monomorphize<TIA, M>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+        value: &AnyObject,
+    ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: Primitive,
+        M: 'static + DatasetMetric,
+        (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+        (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
     {
-        let value: TIA = try_!(try_as_ref!(value).downcast_ref::<TIA>()).clone();
-        make_is_equal::<TIA>(value).into_any()
+        let input_domain =
+            try_!(try_as_ref!(input_domain).downcast_ref::<VectorDomain<AtomDomain<TIA>>>())
+                .clone();
+        let input_metric = try_!(try_as_ref!(input_metric).downcast_ref::<M>()).clone();
+        let value = try_!(try_as_ref!(value).downcast_ref::<TIA>()).clone();
+        make_is_equal::<TIA, M>(input_domain, input_metric, value).into_any()
     }
-    dispatch!(monomorphize, [(TIA, @primitives)], (value))
+    dispatch!(monomorphize, [
+        (TIA, @primitives),
+        (M, @dataset_metrics)
+    ], (input_domain, input_metric, value))
 }
 
 #[no_mangle]
@@ -180,8 +200,11 @@ mod tests {
     #[test]
     fn test_make_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_is_equal(
+            util::into_raw(AnyDomain::new(VectorDomain::new(
+                AtomDomain::<i32>::default(),
+            ))),
+            util::into_raw(AnyMetric::new(SymmetricDistance::default())),
             util::into_raw(AnyObject::new(1)) as *const AnyObject,
-            "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);

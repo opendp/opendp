@@ -31,7 +31,7 @@ pub trait Downcast {
 pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> {
     pub value: Box<dyn Any>,
     clone_glue: Option<Glue<fn(&Self) -> Self>>,
-    partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+    part_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
     debug_glue: Option<Glue<fn(&Self) -> String>>,
 }
 
@@ -41,13 +41,13 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
     fn new_base<T: 'static>(
         value: T,
         clone_glue: Option<Glue<fn(&Self) -> Self>>,
-        partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+        part_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
         debug_glue: Option<Glue<fn(&Self) -> String>>,
     ) -> Self {
         Self {
             value: Box::new(value),
             clone_glue,
-            partial_eq_glue,
+            part_eq_glue,
             debug_glue,
         }
     }
@@ -60,7 +60,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
                     .unwrap_assert("Failed downcast of AnyBox value")
                     .clone(),
                 self_.clone_glue.clone(),
-                self_.partial_eq_glue.clone(),
+                self_.part_eq_glue.clone(),
                 self_.debug_glue.clone(),
             )
         })
@@ -140,7 +140,7 @@ impl<const PARTIALEQ: bool, const DEBUG: bool> Clone for AnyBoxBase<true, PARTIA
 impl<const CLONE: bool, const DEBUG: bool> PartialEq for AnyBoxBase<CLONE, true, DEBUG> {
     fn eq(&self, other: &Self) -> bool {
         (self
-            .partial_eq_glue
+            .part_eq_glue
             .as_ref()
             .unwrap_assert("eq_glue always exists for PARTIALEQ=true AnyBoxBase"))(
             self, other
@@ -175,7 +175,7 @@ impl AnyBox {
 pub type AnyClonePartialEqDebugBox = AnyBoxBase<true, true, true>;
 
 impl AnyClonePartialEqDebugBox {
-    pub fn new_clone_partial_eq_debug<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
+    pub fn new_clone_part_eq_debug<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
         Self::new_base(
             value,
             Some(Self::make_clone_glue::<T>()),
@@ -273,7 +273,7 @@ impl AnyDomain {
         Self {
             type_: Type::of::<D>(),
             carrier_type: Type::of::<D::Carrier>(),
-            domain: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(domain),
+            domain: AnyClonePartialEqDebugBox::new_clone_part_eq_debug(domain),
             member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
                 let self_ = self_
                     .downcast_ref::<D>()
@@ -281,6 +281,11 @@ impl AnyDomain {
                 self_.member(val.downcast_ref::<D::Carrier>()?)
             }),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Domain>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -319,10 +324,15 @@ pub struct AnyMeasure {
 impl AnyMeasure {
     pub fn new<M: 'static + Measure>(measure: M) -> Self {
         Self {
-            measure: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(measure),
+            measure: AnyClonePartialEqDebugBox::new_clone_part_eq_debug(measure),
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Measure>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -366,8 +376,13 @@ impl AnyMetric {
         Self {
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
-            metric: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(metric),
+            metric: AnyClonePartialEqDebugBox::new_clone_part_eq_debug(metric),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Metric>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -694,11 +709,11 @@ mod tests {
     #[cfg(all(feature = "use-mpfr", feature = "partials"))]
     #[test]
     fn test_any_chain() -> Fallible<()> {
-        use crate::{transformations, measurements};
+        use crate::{measurements, transformations};
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
-        let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
+        let t3 = transformations::part_cast_default::<String, f64, SymmetricDistance>().into_any();
         let t4 = transformations::part_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
         let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();
