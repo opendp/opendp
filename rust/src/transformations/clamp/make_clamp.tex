@@ -12,104 +12,75 @@
 \contrib
 Proves soundness of \texttt{fn make\_clamp} in \asOfCommit{mod.rs}{0db9c6036}.
 
-\section{Vetting history}
+\subsection*{Vetting History}
 \begin{itemize}
     \item \vettingPR{512}
 \end{itemize}
-\section{Algorithm implementation}
 
-
-\subsubsection*{Preconditions}
+\section{Hoare Triple}
+\subsection*{Precondition}
 To ensure the correctness of the output, we require the following preconditions:
 
 \begin{itemize}
-    \item \textbf{User-specified types:}
-    \begin{itemize}
-        \item Type \texttt{T} must have trait \texttt{TotalOrd}.
-    \end{itemize}
+    \item Type \texttt{TA} must have trait \texttt{TotalOrd}.
+    \item Type \texttt{M} must have trait \texttt{DatasetMetric}.
 \end{itemize}
 
-
-\subsection{Pseudocode in Python}\label{sec:pseudocode}
-We present a simplified Python-like pseudocode of the Rust implementation below. The necessary definitions for the pseudocode can be found at \href{https://www.overleaf.com/project/60d215bf90b337ac02200a99}{``List of definitions used in the pseudocode"}. 
-
-\emph{The use of \texttt{code}-style parameters in the preconditions section below (for example, \texttt{input\_domain}) means that this information should be passed along to the \texttt{Transformation} constructor.}
-
+\subsection*{Pseudocode}
 \begin{lstlisting}[language=Python, escapechar=|] 
-def make_clamp((L, U): (T, T)): |\label{line:def}|
-    input_domain = VectorDomain(AllDomain(T))
-    output_domain = VectorDomain(IntervalDomain(L, U)) |\label{line:output}|
-    input_metric = SymmetricDistance()
-    output_metric = SymmetricDistance()
+def make_clamp(
+    input_domain: VectorDomain[AtomDomain[TA]], 
+    input_metric: M, 
+    bounds: (TA, TA)
+): |\label{line:def}|
+    input_domain.element_domain.assert_non_null() |\label{line:assert-non-null}|
+
+    # clone to make it explicit that we are not mutating the input domain
+    output_row_domain = input_domain.element_domain.clone()
+    output_row_domain.bounds = Bounds.new_closed(bounds)
+
+    def clamper(value: TA) -> TA: |\label{line:clamper}|
+        return value.total_clamp(bounds[0], bounds[1])
     
-    def stability_map(d_in: u32) -> bool: |\label{line:map}|
-        return d_in
-    
-    def function(data: Vec[T]) -> Vec[T]: |\label{line:fn}|
-        def clamp(x: T) -> T: |\label{line:clamp}|
-            return x.total_clamp(L, U)
-        return list(map(clamp, data)) |\label{line:fn-map}|
-    
-    return Transformation(
-        input_domain, output_domain, function, 
-        input_metric, output_metric, stability_relation
+    return make_row_by_row_fallible( |\label{line:row-by-row}|
+        input_domain, 
+        input_metric, 
+        output_row_domain, 
+        clamper
     )
 \end{lstlisting}
 
 \subsubsection*{Postconditions}
-\begin{itemize}
-    \item Either a valid \texttt{Transformation} is returned or an error is returned.
-\end{itemize}
+\validTransformation{\texttt{(input\_domain, input\_metric, bounds)}}{\texttt{make\_clamp}}
 
 \section{Proof}
-The necessary definitions for the proof can be found at \href{https://www.overleaf.com/project/60d214e390b337703d200982}{``List of definitions used in the proofs"}.
 
-\subsection{Symmetric distance}
-\validTransformation{\texttt{(bounds)}}{\texttt{make\_clamp}}
+\begin{lemma}
+    The invocation of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row\_fallible} (line \ref{line:row-by-row}) satisfies its preconditions.
+\end{lemma}
 
 \begin{proof}
-\textbf{(Appropriate output domain).} In the case of \texttt{make\_clamp}, this corresponds to showing that for every vector $v$ of elements of type \texttt{T}, $\function(v)$ is a vector of elements of type \texttt{T} which are contained in the interval \texttt{[L, U]}. For that, we need to show two things: first, that \texttt{function(v)} has type \texttt{Vec[T]}.
-Second, that they belong to the interval \texttt{[L, U]}.
+    \label{lemma:row-by-row-precondition}
+    The preconditions of \texttt{make\_clamp} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row\_fallible} are satisfied. 
+    The remaining preconditions of \texttt{make\_row\_by\_row\_fallible} are:
+    \begin{itemize}
+        \item \texttt{row\_function} has no side-effects.
+        \item If the input to \texttt{row\_function} is a member of \texttt{input\_domain}'s row domain, then the output is a member of \texttt{output\_row\_domain}.
+    \end{itemize}
 
-Firstly, that $\function(v)$ has type \texttt{Vec[T]} follows from the assumption that element $v$ is in \texttt{input\_domain} and from the type signature of \texttt{function} in line~\ref{line:fn} of the pseudocode (Section~\ref{sec:pseudocode}), which takes in an element of type \texttt{Vec[T]} and returns an element of type \texttt{Vec[T]}. If the Rust code compiles correctly, then the type correctness follows from the definition of the type signature enforced by Rust. Otherwise, the code raises an exception for incorrect input type. 
+    The first precondition is satisfied by the definition of \texttt{clamper} (line \ref{line:clamper}) in the pseudocode.
 
-Secondly, we need to show that the vector entries belong to the interval \texttt{[L, U]}. For that, it is foremost necessary that \texttt{L} $\leq$ \texttt{U}. This condition is already checked when declaring \texttt{output\_domain = VectorDomain(IntervalDomain(L, U))} in line~\ref{line:output} of the pseudocode. This check already exists via the construction of \texttt{IntervalDomain}, which returns an error if \texttt{L} $>$ \texttt{U}. The rest follows from the definition of \texttt{clamp} in line \ref{line:clamp}. According to line \ref{line:clamp} in the pseudocode, there are 3 possible cases to consider:
-\begin{enumerate}
-    \item \texttt{x} $>$ \texttt{U}: then $\clamp\texttt{(x)}$ returns \texttt{U}.
-    \item \texttt{x} $\in$ \texttt{[L, U]}: then $\clamp\texttt{(x)}$ returns \texttt{x}.
-    \item \texttt{x} $<$ \texttt{L}: then $\clamp\texttt{(x)}$ returns \texttt{L}.
-\end{enumerate}
-In all three cases, the returned value of type \T is contained in the interval \texttt{[L, U]}. Hence, the vector $\function(v)$ returned in line~\ref{line:fn-map} of the pseudocode is an element of \texttt{output\_domain}.
+    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain. 
+    Therefore, by \ref{line:assert-non-null}, the input is non-null.
+    In addition, since \texttt{Bounds.new\_closed} did not raise an exception, then by the definition of \texttt{Bounds.new\_closed}, the bounds are non-null.
+    Thus, by the definition of \rustdoc{traits/trait}{TotalOrd}, the preconditions of \texttt{total\_clamp} are satisfied, so the output is within the bounds.
+    Therefore, the output is a member of \texttt{output\_row\_domain}.
+\end{proof}
 
-Lastly, both \texttt{L} and \texttt{U} have type \texttt{T} by the type signature of \texttt{make\_clamp}. Both the definition of \texttt{IntervalDomain} and that of the \texttt{clamp} function (line~\ref{line:clamp} in the pseudocode, which uses the \texttt{min} and \texttt{max} functions) require that \texttt{T} implements \texttt{TotalOrd}, which holds by the preconditions.
-
-\smallskip
-\textbf{(Domain-metric compatibility).} For \texttt{make\_clamp}, both the input and output cases correspond to showing that \texttt{VectorDomain(T)} is compatible with the symmetric distance metric. This follows directly from the definition of symmetric distance, as stated in \href{https://www.overleaf.com/project/60d215bf90b337ac02200a99}{``List of definitions used in the pseudocode"}.
-
-\smallskip
-\textbf{(Stability guarantee).} Throughout the stability guarantee proof, we can assume that $\function(u)$ and $\function(v)$ are in the correct output domain, by the \textit{appropriate output domain property} shown above. 
-
-Since by assumption $\Map(\din) \leq \dout$, by the \texttt{make\_clamp} stability map (as defined in line~\ref{line:map} in the pseudocode), we have that $\din \leq \dout$. 
-Moreover, $u, v$ are assumed to be $\din$-close. By the definition of the symmetric difference metric, this is equivalent to stating that $d_{Sym}(u, v) = |\MultiSet(u) \Delta \MultiSet(v)| \leq \din$.
-
-Let $\mathcal{X}$ be the domain of all elements of type \texttt{T}. By applying the histogram notation,\footnote{Note that there is a bijection between multisets and histograms, which is why the proof can be carried out with either notion. For further details, please consult \url{https://www.overleaf.com/project/60d214e390b337703d200982}.}  it follows that
-\[
-d_{Sym}(u, v) = \lVert h_{u} - h_{v}\rVert_1 = \sum_{z \in \mathcal{X}} |h_u(z) - h_v(z)| \leq \din \leq \dout.
-\]
-
-By Definition 3.10 in \href{https://www.overleaf.com/project/60d214e390b337703d200982}{``List of definitions used in the proofs"} and the definition of \texttt{clamp} in lines \ref{line:clamp}--\ref{line:fn-map} in the pseudocode, it follows that the \texttt{function} defined in \texttt{make\_clamp}, which maps elements from \texttt{VectorDomain} to \texttt{VectorDomain}, is a row transform. Therefore, by Lemma 3.13 in \href{https://www.overleaf.com/project/60d214e390b337703d200982}{``List of definitions used in the proofs"}, it follows that for every pair of elements $v, w$ in \texttt{input\_domain},
-\[
-    d_{Sym}(\texttt{function}(u), \texttt{function}(v)) \leq d_{Sym}(u, v).
-\]
-Then, by the initial assumptions \texttt{relation(\din, \dout) = True} and $\din \leq \dout$, it follows that
-\[
-    d_{Sym}(\texttt{function}(u), \texttt{function}(v)) \leq d_{Sym}(u, v) \leq \din \leq \dout.
-\]
-Hence,
-\[
-    d_{Sym}(\texttt{function}(u), \texttt{function}(v)) \leq \dout,
-\]
-as we wanted to show.
+We now prove the postcondition of \texttt{make\_clamp}.
+\begin{proof}
+By \ref{lemma:row-by-row-precondition}, the preconditions of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row\_fallible} are satisfied.
+Thus, by the definition of \\\texttt{make\_row\_by\_row\_fallible}, the output is a valid transformation.
 \end{proof}
 
 \end{document}
