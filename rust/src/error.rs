@@ -31,8 +31,8 @@ macro_rules! err {
     ($variant:ident, $template:expr, $($args:expr),+) =>
         (err!($variant, format!($template, $($args,)+)));
 
-    // always resolve backtraces in debug mode
-    (@backtrace) => (if cfg!(debug_assertions) {
+    // only resolve stacktraces in test mode
+    (@backtrace) => (if cfg!(test) {
         backtrace::Backtrace::new()
     } else {
         backtrace::Backtrace::new_unresolved()
