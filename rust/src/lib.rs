@@ -39,7 +39,7 @@
 //!
 //! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, make_cast_default, part_clamp, make_bounded_sum};
+//!     use opendp::transformations::{make_split_lines, part_cast_default, make_cast_default, part_clamp, make_bounded_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
 //!     use opendp::measurements::make_base_laplace;
 //!
@@ -49,13 +49,23 @@
 //!     // remove some epsilon to account for floating-point error
 //!     let sigma = (bounds.1 - bounds.0) / (epsilon - 0.0001);
 //!
-//!     // Construct a Transformation to load the numbers.
+//!     // Construct a Transformation to parse a csv string.
 //!     let split_lines = make_split_lines()?;
-//!     let cast = make_cast_default::<String, f64>()?;
+//!
+//!     // The next transformation wants to conform with the output domain and metric from `split_lines`.
+//!     let cast = make_cast_default::<String, f64, _>(
+//!         split_lines.output_domain.clone(),
+//!         split_lines.output_metric.clone())?;
+//!
+//!     // Since the domain and metric conforms, these two transformations may be chained.
 //!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
 //!      
 //!     // You can use the more convenient `>>` notation to chain instead.
+//!     // When you use the `part_` version of the constructor,
+//!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
 //!     let load_and_clamp = load_numbers >> part_clamp(bounds);
+//!     
+//!     // After chaining, the resulting transformation is wrapped in a `Result`.
 //!     let load_and_sum = (load_and_clamp >> make_bounded_sum(bounds)?)?;
 //!
 //!     // Construct a Measurement to calculate a noisy sum.
@@ -65,7 +75,7 @@
 //!     // The same measurement, written more succinctly:
 //!     let noisy_sum = (
 //!         make_split_lines()? >>
-//!         make_cast_default::<String, f64>()? >>
+//!         part_cast_default() >>
 //!         part_clamp(bounds) >>
 //!         make_bounded_sum(bounds)? >>
 //!         make_base_laplace(sigma, None)?
