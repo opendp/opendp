@@ -24,15 +24,16 @@ Hello, OpenDP!
 --------------
 
 Once you've installed OpenDP, you can write your first program.
-In the example below, we'll construct a clamp :class:`opendp.mod.Transformation`, then invoke it on a dataset of strings.
+In the example below, we'll construct a Laplace mechanism of type :class:`opendp.mod.Measurement`, 
+then invoke it on a scalar aggregate.
 
 .. doctest::
 
-    >>> from opendp.transformations import make_clamp
+    >>> from opendp.measurements import make_base_laplace
     ...
-    >>> clamp = make_clamp(bounds=(0, 10))
-    >>> clamp([-1, 5, 12, -2])
-    [0, 5, 10, 0]
+    >>> base_laplace = make_base_laplace(scale=1.)
+    >>> base_laplace(23.4) # doctest: +SKIP
+    22.74877695423367
 
 If you would like to skip directly to a more complete example, see :ref:`putting-together`.
 

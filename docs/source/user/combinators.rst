@@ -300,7 +300,7 @@ The resulting Transformation may be used interchangeably with those constructed 
     >>> trans = (
     ...     make_cast_default(TIA=str, TOA=int)
     ...     >> make_repeat(2)  # our custom transformation
-    ...     >> make_clamp((1, 2))
+    ...     >> partial_clamp((1, 2))
     ...     >> make_bounded_sum((1, 2))
     ...     >> make_base_discrete_laplace(1.0)
     ... )

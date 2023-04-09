@@ -43,7 +43,7 @@ Our transformation will
     ...     make_select_column(key='Score', TOA=str) >>
     ...     make_cast(TIA=str, TOA=float) >>
     ...     make_impute_constant(option_domain(atom_domain(T=float)), constant=constant) >>
-    ...     make_clamp(bounds) >>
+    ...     partial_clamp(bounds) >>
     ...     make_resize(size, atom_domain(bounds), constant=constant) >>
     ...     make_sized_bounded_mean(size, bounds)
     ... )

@@ -10,21 +10,17 @@ In fact, OpenDP is particular about the bit-depth of data types, as it can impac
 Type Argument
 -------------
 
-You can explicitly set the types that a transformation or measurement work with via type arguments in the constructor.
+You can explicitly set the types via type arguments in the constructor.
 Each constructor has its own set of permissible types, based on the type of computation it is performing.
-For instance, the clamp constructor accepts any numerical type for its type argument `TA`:
-
-.. testsetup::
-
-    from opendp.mod import enable_features
-    enable_features('contrib')
+For instance, the atom domain constructor accepts a type argument `T`:
 
 .. doctest::
 
-    >>> from opendp.transformations import make_clamp
+    >>> from opendp.domains import atom_domain
     >>> from opendp.typing import *
     ...
-    >>> clamper = make_clamp((0, 1), TA=i32)
+    >>> str(atom_domain((0, 1), T=i32))
+    'AtomDomain(bounds=[0, 1], T=i32)'
 
 Many of the API docs indicate that parameters like `TIA` or `D` are type arguments.
 When you want to describe the type of a domain, metric, measure, or other elements, you can do so via a type descriptor.

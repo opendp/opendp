@@ -117,12 +117,17 @@ fn reconcile_generics(
     generics: Vec<String>,
 ) -> Result<Vec<Argument>> {
     (generics.into_iter())
-        .map(|name| {
+        .filter_map(|name| {
             let boot_type = bootstrap_args.remove(&name).unwrap_or_default();
-            if boot_type.c_type.is_some() {
-                return Err(Error::custom("c_type should not be specified on generics"));
+            if boot_type.suppress {
+                return None;
             }
-            Ok(Argument {
+            if boot_type.c_type.is_some() {
+                return Some(Err(Error::custom(
+                    "c_type should not be specified on generics",
+                )));
+            }
+            Some(Ok(Argument {
                 name: Some(name.clone()),
                 description: doc_comments.remove(&name),
                 hint: boot_type.hint,
@@ -131,7 +136,7 @@ fn reconcile_generics(
                 is_type: true,
                 example: boot_type.example,
                 ..Default::default()
-            })
+            }))
         })
         .collect()
 }
