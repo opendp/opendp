@@ -15,9 +15,10 @@ use super::DatasetMetric;
     features("contrib"),
     arguments(
         input_domain(c_type = "AnyDomain *", hint = "Domain"),
-        input_metric(c_type = "AnyMetric *", hint = "Metric")
+        input_metric(c_type = "AnyMetric *", hint = "Metric", rust_type = b"null")
     ),
-    generics(TA(example = "$get_atom(get_type(input_domain))"))
+    generics(TA(suppress), M(suppress)),
+    derived_types(TA = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
 ///
