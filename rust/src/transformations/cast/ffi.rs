@@ -1,13 +1,14 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
-use crate::ffi::any::AnyTransformation;
+use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::RoundCast;
 use crate::traits::{CheckAtom, InherentNull};
-use crate::transformations::{make_cast, make_cast_default, make_cast_inherent};
+use crate::transformations::{make_cast, make_cast_default, make_cast_inherent, DatasetMetric};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cast(
@@ -29,20 +30,37 @@ pub extern "C" fn opendp_transformations__make_cast(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_cast_default(
-    TIA: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     TOA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    let TIA = try_!(Type::try_from(TIA));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let TIA = try_!(input_domain.type_.get_atom());
     let TOA = try_!(Type::try_from(TOA));
+    let M = input_metric.type_.clone();
 
-    fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<TIA, TOA, M>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+    ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
+        M: 'static + DatasetMetric,
+        (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+        (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        make_cast_default::<TIA, TOA>().into_any()
+        let input_domain =
+            try_!(input_domain.downcast_ref::<VectorDomain<AtomDomain<TIA>>>()).clone();
+        let input_metric = try_!(input_metric.downcast_ref::<M>()).clone();
+        make_cast_default::<TIA, TOA, _>(input_domain, input_metric).into_any()
     }
-    dispatch!(monomorphize, [(TIA, @primitives), (TOA, @primitives)], ())
+    dispatch!(monomorphize, [
+        (TIA, @primitives), 
+        (TOA, @primitives), 
+        (M, @dataset_metrics)
+    ], (input_domain, input_metric))
 }
 
 #[no_mangle]
@@ -69,6 +87,7 @@ mod tests {
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util::ToCharP;
+    use crate::metrics::SymmetricDistance;
 
     use super::*;
 
@@ -88,7 +107,8 @@ mod tests {
     #[test]
     fn test_make_cast_default() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_cast_default(
-            "String".to_char_p(),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<String>::default(), None)),
+            AnyMetric::new_raw(SymmetricDistance::default()),
             "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec!["a".to_string(), "1".to_string()]);

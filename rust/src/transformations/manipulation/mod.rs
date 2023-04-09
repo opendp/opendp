@@ -117,7 +117,18 @@ where
     )
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        input_domain(c_type = "AnyDomain *"),
+        input_metric(c_type = "AnyMetric *")
+    ),
+    generics(TIA(suppress), M(suppress)),
+    derived_types(
+        TIA = "$get_atom(get_type(input_domain))",
+        M = "$get_type(input_metric)"
+    )
+)]
 /// Make a Transformation that checks if each element is equal to `value`.
 ///
 /// # Arguments
@@ -125,22 +136,20 @@ where
 ///
 /// # Generics
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
-pub fn make_is_equal<TIA>(
+pub fn make_is_equal<TIA, M>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: M,
     value: TIA,
-) -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<AtomDomain<bool>>,
-        SymmetricDistance,
-        SymmetricDistance,
-    >,
->
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<bool>>, M, M>>
 where
     TIA: 'static + PartialEq + CheckAtom,
+    M: DatasetMetric,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {
     make_row_by_row(
-        VectorDomain::new(AtomDomain::default(), None),
-        SymmetricDistance::default(),
+        input_domain,
+        input_metric,
         AtomDomain::default(),
         move |v| v == &value,
     )
@@ -196,7 +205,9 @@ mod tests {
 
     #[test]
     fn test_is_equal() -> Fallible<()> {
-        let is_equal = make_is_equal("alpha".to_string())?;
+        let input_domain = VectorDomain::new(AtomDomain::default(), None);
+        let input_metric = SymmetricDistance;
+        let is_equal = make_is_equal(input_domain, input_metric, "alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
         let ret = is_equal.invoke(&arg)?;
 

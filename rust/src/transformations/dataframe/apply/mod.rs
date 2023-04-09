@@ -1,13 +1,12 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Function, StabilityMap, Transformation},
+    core::{Function, MetricSpace, StabilityMap, Transformation},
     data::Column,
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::SymmetricDistance,
     traits::{Hashable, Primitive, RoundCast},
-    transformations::{make_cast_default, make_is_equal},
+    transformations::{make_cast_default, make_is_equal, DatasetMetric},
 };
 
 use super::{DataFrame, DataFrameDomain};
@@ -16,22 +15,28 @@ use super::{DataFrame, DataFrameDomain};
 mod ffi;
 
 /// Internal function to map a transformation onto a column of a dataframe.
-fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive>(
+fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive, M>(
+    input_domain: DataFrameDomain<K>,
+    input_metric: M,
     column_name: K,
     transformation: Transformation<
         VectorDomain<AtomDomain<VI>>,
         VectorDomain<AtomDomain<VO>>,
-        SymmetricDistance,
-        SymmetricDistance,
+        M,
+        M,
     >,
-) -> Fallible<
-    Transformation<DataFrameDomain<K>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
-> {
+) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, M, M>>
+where
+    M: DatasetMetric,
+    (DataFrameDomain<K>, M): MetricSpace,
+    (VectorDomain<AtomDomain<VI>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<VO>>, M): MetricSpace,
+{
     let function = transformation.function.clone();
 
     Transformation::new(
-        DataFrameDomain::new(),
-        DataFrameDomain::new(),
+        input_domain.clone(),
+        input_domain,
         Function::new_fallible(move |arg: &DataFrame<K>| {
             let mut data = arg.clone();
             let column = data.remove(&column_name).ok_or_else(|| {
@@ -44,13 +49,24 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
             );
             Ok(data)
         }),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        input_metric.clone(),
+        input_metric,
         StabilityMap::new_from_constant(1),
     )
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        input_domain(c_type = "AnyDomain *"),
+        input_metric(c_type = "AnyMetric *")
+    ),
+    generics(TK(suppress), M(suppress)),
+    derived_types(
+        TK = "$get_atom(get_type(input_domain))",
+        M = "$get_type(input_metric)"
+    )
+)]
 /// Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`.
 /// If cast fails, fill with default.
 ///
@@ -69,20 +85,40 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
 /// * `TK` - Type of the column name
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_df_cast_default<TK, TIA, TOA>(
+pub fn make_df_cast_default<TK, TIA, TOA, M>(
+    input_domain: DataFrameDomain<TK>,
+    input_metric: M,
     column_name: TK,
-) -> Fallible<
-    Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
->
+) -> Fallible<Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, M, M>>
 where
     TK: Hashable,
     TIA: Primitive,
     TOA: Primitive + RoundCast<TIA>,
+    M: DatasetMetric,
+    (DataFrameDomain<TK>, M): MetricSpace,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
-    make_apply_transformation_dataframe(column_name, make_cast_default::<TIA, TOA>()?)
+    make_apply_transformation_dataframe(
+        input_domain,
+        input_metric.clone(),
+        column_name,
+        make_cast_default::<TIA, TOA, _>(Default::default(), input_metric)?,
+    )
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        input_domain(c_type = "AnyDomain *"),
+        input_metric(c_type = "AnyMetric *")
+    ),
+    generics(TK(suppress), M(suppress)),
+    derived_types(
+        TK = "$get_atom(get_type(input_domain))",
+        M = "$get_type(input_metric)"
+    )
+)]
 /// Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
 ///
 /// # Arguments
@@ -92,28 +128,42 @@ where
 /// # Generics
 /// * `TK` - Type of the column name
 /// * `TIA` - Atomic Input Type to cast from
-pub fn make_df_is_equal<TK, TIA>(
+pub fn make_df_is_equal<TK, TIA, M>(
+    input_domain: DataFrameDomain<TK>,
+    input_metric: M,
     column_name: TK,
     value: TIA,
-) -> Fallible<
-    Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
->
+) -> Fallible<Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, M, M>>
 where
     TK: Hashable,
     TIA: Primitive,
+    M: DatasetMetric,
+    (DataFrameDomain<TK>, M): MetricSpace,
+    (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
+    (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {
-    make_apply_transformation_dataframe(column_name, make_is_equal(value)?)
+    let column_input_domain = VectorDomain::new(AtomDomain::default(), None);
+    make_apply_transformation_dataframe(
+        input_domain,
+        input_metric.clone(),
+        column_name,
+        make_is_equal(column_input_domain, input_metric, value)?,
+    )
 }
 
 #[cfg(test)]
 mod test {
-    use crate::error::ExplainUnwrap;
+    use crate::{error::ExplainUnwrap, metrics::SymmetricDistance};
 
     use super::*;
 
     #[test]
     fn test_df_cast_default() -> Fallible<()> {
-        let trans = make_df_cast_default::<String, i32, bool>("filter".to_string())?;
+        let trans = make_df_cast_default::<String, i32, bool, _>(
+            Default::default(),
+            SymmetricDistance::default(),
+            "filter".to_string(),
+        )?;
 
         let mut df = DataFrame::new();
         df.insert("filter".to_string(), vec![0, 1, 3, 0].into());
@@ -133,7 +183,12 @@ mod test {
 
     #[test]
     fn test_df_is_equal() -> Fallible<()> {
-        let trans = make_df_is_equal(0, "true".to_string())?;
+        let trans = make_df_is_equal(
+            Default::default(),
+            SymmetricDistance::default(),
+            0,
+            "true".to_string(),
+        )?;
 
         let mut df = DataFrame::new();
         df.insert(

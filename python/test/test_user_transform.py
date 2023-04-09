@@ -1,4 +1,4 @@
-from opendp.transformations import make_cast_default, partial_clamp, make_bounded_sum
+from opendp.transformations import partial_cast_default, partial_clamp, make_bounded_sum
 from opendp.measurements import make_base_discrete_laplace
 from opendp.combinators import *
 from opendp.mod import enable_features
@@ -31,8 +31,11 @@ def make_duplicate(multiplicity, raises=False):
     )
 
 def test_make_user_transformation():
+    input_domain = vector_domain(atom_domain(T=str))
+    input_metric = symmetric_distance()
     trans = (
-        make_cast_default(TIA=str, TOA=int)
+        (input_domain, input_metric)
+        >> partial_cast_default(TOA=int)
         >> make_duplicate(2)
         >> partial_clamp((1, 2))
         >> make_bounded_sum((1, 2))

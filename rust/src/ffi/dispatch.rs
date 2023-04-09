@@ -91,7 +91,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [u32, u64, i32, i64, usize]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dataset_metrics),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [SymmetricDistance, InsertDeleteDistance, ChangeOneDistance, HammingDistance]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [crate::metrics::SymmetricDistance, crate::metrics::InsertDeleteDistance, crate::metrics::ChangeOneDistance, crate::metrics::HammingDistance]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
@@ -122,7 +122,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dataset_metrics),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [crate::metrics::SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {

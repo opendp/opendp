@@ -46,7 +46,13 @@ def test_impute_constant_inherent():
 
 def test_cast_default():
     from opendp.transformations import make_cast_default
-    caster = make_cast_default(TIA=float, TOA=int)
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+
+    input_domain = vector_domain(atom_domain(T=float))
+    input_metric = symmetric_distance()
+    caster = make_cast_default(
+        input_domain, input_metric, TOA=int)
     assert caster([float('nan'), 2.]) == [0, 2]
 
 
@@ -83,7 +89,11 @@ def test_identity():
 
 def test_is_equal():
     from opendp.transformations import make_is_equal
-    tester = make_is_equal(3)
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+    input_domain = vector_domain(atom_domain(T=int))
+    input_metric = symmetric_distance()
+    tester = make_is_equal(input_domain, input_metric, 3)
     assert tester([1, 2, 3]) == [False, False, True]
 
 
@@ -311,12 +321,12 @@ def test_lipschitz_mul_float():
 
 
 def test_df_cast_default():
-    from opendp.transformations import make_split_dataframe, make_df_cast_default, make_select_column
+    from opendp.transformations import make_split_dataframe, partial_df_cast_default, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        make_df_cast_default(column_name="23", TIA=str, TOA=int) >>
-        make_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
+        partial_df_cast_default(column_name="23", TIA=str, TOA=int) >>
+        partial_df_cast_default(column_name="23", TIA=int, TOA=bool) >>
         make_select_column(key="23", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, True, True, True]
@@ -324,11 +334,11 @@ def test_df_cast_default():
 
 
 def test_df_is_equal():
-    from opendp.transformations import make_split_dataframe, make_df_is_equal, make_select_column
+    from opendp.transformations import make_split_dataframe, partial_df_is_equal, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["23", "17"]) >>
-        make_df_is_equal(column_name="17", value="2.") >>
+        partial_df_is_equal(column_name="17", value="2.") >>
         make_select_column(key="17", TOA=bool)
     )
     assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
@@ -336,11 +346,11 @@ def test_df_is_equal():
 
 
 def test_df_subset():
-    from opendp.transformations import make_split_dataframe, make_df_is_equal, make_select_column
+    from opendp.transformations import make_split_dataframe, partial_df_is_equal, make_select_column
 
     query = (
         make_split_dataframe(separator=",", col_names=["A", "B"]) >>
-        make_df_is_equal(column_name="B", value="2.") >>
+        partial_df_is_equal(column_name="B", value="2.") >>
         make_subset_by(indicator_column="B", keep_columns=["A"]) >>
         make_select_column(key="A", TOA=str)
     )

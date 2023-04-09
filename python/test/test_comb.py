@@ -29,19 +29,23 @@ def test_fix_delta():
 
 
 def test_make_basic_composition():
+    from opendp.domains import vector_domain, atom_domain
+    from opendp.metrics import symmetric_distance
+    input_pair = (vector_domain(atom_domain(T=int)), symmetric_distance())
+
     composed = make_basic_composition([
         make_count(TIA=int, TO=int) >> make_basic_composition([
             make_base_discrete_laplace(scale=2.), 
             make_base_discrete_laplace(scale=200.)
         ]), 
-        make_cast_default(int, bool) >> make_cast_default(bool, int) >> make_count(TIA=int, TO=int) >> make_base_discrete_laplace(scale=2.), 
-        make_cast_default(int, float) >> partial_clamp((0., 10.)) >> make_bounded_sum((0., 10.)) >> make_base_laplace(scale=2.), 
+        input_pair >> partial_cast_default(bool) >> partial_cast_default(int) >> make_count(TIA=int, TO=int) >> make_base_discrete_laplace(scale=2.), 
+        input_pair >> partial_cast_default(float) >> partial_clamp((0., 10.)) >> make_bounded_sum((0., 10.)) >> make_base_laplace(scale=2.), 
 
         make_basic_composition([
             make_count(TIA=int, TO=int) >> make_base_discrete_laplace(scale=2.), 
             make_count(TIA=int, TO=float) >> make_base_laplace(scale=2.),
             (
-                make_cast_default(int, str) >> 
+                input_pair >> partial_cast_default(str) >> 
                 make_count_by_categories(categories=["0", "12", "22"]) >> 
                 make_base_discrete_laplace(scale=2., D=VectorDomain[AtomDomain[int]])
             )

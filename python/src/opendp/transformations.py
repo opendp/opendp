@@ -57,7 +57,11 @@ __all__ = [
     "make_split_records",
     "make_subset_by",
     "make_unordered",
-    "partial_clamp"
+    "partial_cast_default",
+    "partial_clamp",
+    "partial_df_cast_default",
+    "partial_df_is_equal",
+    "partial_is_equal"
 ]
 
 
@@ -534,7 +538,8 @@ def make_cast(
 
 
 def make_cast_default(
-    TIA: RuntimeTypeDescriptor,
+    input_domain,
+    input_metric,
     TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
@@ -554,11 +559,11 @@ def make_cast_default(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
-    :param TIA: Atomic Input Type to cast from
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
+    :param input_domain: 
+    :param input_metric: 
     :param TOA: Atomic Output Type to cast into
     :type TOA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -569,21 +574,32 @@ def make_cast_default(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
+    TIA = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=RuntimeType(origin='VectorDomain', args=[RuntimeType(origin='AtomDomain', args=[TIA])]))
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=M)
     c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_cast_default
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_TIA, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_TOA), Transformation))
     
     return output
+
+def partial_cast_default(
+    TOA: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_cast_default(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        TOA=TOA))
+
 
 
 def make_cast_inherent(
@@ -1051,10 +1067,11 @@ def make_create_dataframe(
 
 
 def make_df_cast_default(
+    input_domain,
+    input_metric,
     column_name: Any,
     TIA: RuntimeTypeDescriptor,
-    TOA: RuntimeTypeDescriptor,
-    TK: RuntimeTypeDescriptor = None
+    TOA: RuntimeTypeDescriptor
 ) -> Transformation:
     """Make a Transformation that casts the elements in a column in a dataframe from type `TIA` to type `TOA`.
     If cast fails, fill with default.
@@ -1073,13 +1090,13 @@ def make_df_cast_default(
     
     * Input Domain:   `DataFrameDomain<TK>`
     * Output Domain:  `DataFrameDomain<TK>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: 
+    :param input_metric: 
     :param column_name: column name to be transformed
     :type column_name: Any
-    :param TK: Type of the column name
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TOA: Atomic Output Type to cast into
@@ -1092,30 +1109,46 @@ def make_df_cast_default(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
     TIA = RuntimeType.parse(type_name=TIA)
     TOA = RuntimeType.parse(type_name=TOA)
+    TK = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=RuntimeType(origin='DataFrameDomain', args=[TK]))
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=M)
     c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
     c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     c_TOA = py_to_c(TOA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_df_cast_default
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_column_name, c_TK, c_TIA, c_TOA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name, c_TIA, c_TOA), Transformation))
     
     return output
 
+def partial_df_cast_default(
+    column_name: Any,
+    TIA: RuntimeTypeDescriptor,
+    TOA: RuntimeTypeDescriptor
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_df_cast_default(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        column_name=column_name,
+        TIA=TIA,
+        TOA=TOA))
+
+
 
 def make_df_is_equal(
+    input_domain,
+    input_metric,
     column_name: Any,
     value: Any,
-    TK: RuntimeTypeDescriptor = None,
     TIA: RuntimeTypeDescriptor = None
 ) -> Transformation:
     """Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
@@ -1126,15 +1159,15 @@ def make_df_is_equal(
     
     * Input Domain:   `DataFrameDomain<TK>`
     * Output Domain:  `DataFrameDomain<TK>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: 
+    :param input_metric: 
     :param column_name: Column name to be transformed
     :type column_name: Any
     :param value: Value to check for equality
     :type value: Any
-    :param TK: Type of the column name
-    :type TK: :py:ref:`RuntimeTypeDescriptor`
     :param TIA: Atomic Input Type to cast from
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
@@ -1145,23 +1178,38 @@ def make_df_is_equal(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TK = RuntimeType.parse_or_infer(type_name=TK, public_example=column_name)
     TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
+    TK = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=RuntimeType(origin='DataFrameDomain', args=[TK]))
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=M)
     c_column_name = py_to_c(column_name, c_type=AnyObjectPtr, type_name=TK)
     c_value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
-    c_TK = py_to_c(TK, c_type=ctypes.c_char_p)
     c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_df_is_equal
-    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr, AnyObjectPtr, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_column_name, c_value, c_TK, c_TIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_column_name, c_value, c_TIA), Transformation))
     
     return output
+
+def partial_df_is_equal(
+    column_name: Any,
+    value: Any,
+    TIA: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_df_is_equal(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        column_name=column_name,
+        value=value,
+        TIA=TIA))
+
 
 
 def make_drop_null(
@@ -1500,8 +1548,9 @@ def make_index(
 
 
 def make_is_equal(
-    value: Any,
-    TIA: RuntimeTypeDescriptor = None
+    input_domain,
+    input_metric,
+    value: Any
 ) -> Transformation:
     """Make a Transformation that checks if each element is equal to `value`.
     
@@ -1511,13 +1560,13 @@ def make_is_equal(
     
     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
     * Output Domain:  `VectorDomain<AtomDomain<bool>>`
-    * Input Metric:   `SymmetricDistance`
-    * Output Metric:  `SymmetricDistance`
+    * Input Metric:   `M`
+    * Output Metric:  `M`
     
+    :param input_domain: 
+    :param input_metric: 
     :param value: value to check against
     :type value: Any
-    :param TIA: Atomic Input Type. Type of elements in the input vector
-    :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Transformation
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -1526,20 +1575,31 @@ def make_is_equal(
     assert_features("contrib")
     
     # Standardize type arguments.
-    TIA = RuntimeType.parse_or_infer(type_name=TIA, public_example=value)
+    TIA = get_atom(get_type(input_domain))
+    M = get_type(input_metric)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=RuntimeType(origin='VectorDomain', args=[RuntimeType(origin='AtomDomain', args=[TIA])]))
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=M)
     c_value = py_to_c(value, c_type=AnyObjectPtr, type_name=TIA)
-    c_TIA = py_to_c(TIA, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_transformations__make_is_equal
-    lib_function.argtypes = [AnyObjectPtr, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_value, c_TIA), Transformation))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_value), Transformation))
     
     return output
+
+def partial_is_equal(
+    value: Any
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_is_equal(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        value=value))
+
 
 
 def make_is_null(

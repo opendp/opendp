@@ -281,6 +281,11 @@ impl AnyDomain {
             }),
         }
     }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Domain>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
+    }
 }
 
 impl Downcast for AnyDomain {
@@ -322,6 +327,11 @@ impl AnyMeasure {
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Measure>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -367,6 +377,11 @@ impl AnyMetric {
             distance_type: Type::of::<M::Distance>(),
             metric: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(metric),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_raw<D: 'static + Metric>(value: D) -> *mut Self {
+        crate::ffi::util::into_raw(Self::new(value))
     }
 }
 
@@ -639,7 +654,11 @@ mod tests {
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
-        let t3 = transformations::make_cast_default::<String, f64>()?.into_any();
+        let t3 = transformations::make_cast_default::<String, f64, _>(
+            Default::default(),
+            SymmetricDistance::default(),
+        )?
+        .into_any();
         let t4 = transformations::partial_clamp::<_, SymmetricDistance>((0.0f64, 10.0)).into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
         let m1 = measurements::make_base_laplace::<AtomDomain<_>>(0.0, None)?.into_any();

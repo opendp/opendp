@@ -2,7 +2,6 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
-use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckAtom, TotalOrd};
 use crate::transformations::{make_clamp, DatasetMetric};
 
@@ -46,6 +45,7 @@ mod tests {
     use crate::error::Fallible;
     use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util;
+    use crate::metrics::SymmetricDistance;
 
     use super::*;
 

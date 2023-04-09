@@ -3,7 +3,7 @@ mod ffi;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{MetricSpace, PartialTransformation, Transformation};
+use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, Bounds, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::{CheckAtom, TotalOrd};
