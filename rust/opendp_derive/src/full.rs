@@ -64,7 +64,6 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
     output.extend(TokenStream::from(item_fn.to_token_stream()));
 
     if let Some(partial_fn) = generate_partial(item_fn.clone()) {
-        println!("Generated partial function: {}", partial_fn.sig.ident);
         output.extend(TokenStream::from(partial_fn.to_token_stream()));
     };
     output
