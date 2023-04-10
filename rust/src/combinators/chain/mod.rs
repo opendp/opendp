@@ -178,11 +178,9 @@ where
     MI: 'static + Metric,
     MO: 'static + Measure,
 {
-    let function1 = postprocess1.function.clone();
-    let function0 = measurement0.function.function.clone();
     Ok(Measurement::new(
         measurement0.input_domain.clone(),
-        Function::new_fallible(move |arg| function1(&function0(arg)?)),
+        Function::make_chain(postprocess1, &measurement0.function),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
         measurement0.privacy_map.clone(),

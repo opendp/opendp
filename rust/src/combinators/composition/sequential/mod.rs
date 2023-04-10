@@ -27,7 +27,7 @@ where
     let input_metric = MI::default();
 
     if d_mids.len() == 0 {
-        return fallible!(MakeMeasurement, "must be at least one d_out");
+        return fallible!(MakeMeasurement, "must be at least one d_mid");
     }
 
     // we'll iteratively pop from the end
@@ -134,8 +134,8 @@ where
         )),
         input_metric,
         output_measure,
-        PrivacyMap::new_fallible(move |d_in_p: &MI::Distance| {
-            if d_in_p.total_gt(&d_in)? {
+        PrivacyMap::new_fallible(move |actual_d_in: &MI::Distance| {
+            if actual_d_in.total_gt(&d_in)? {
                 fallible!(
                     RelationDebug,
                     "input distance must not be greater than d_in"
@@ -164,7 +164,7 @@ mod test {
             AllDomain::new(),
             MaxDivergence::default(),
             1,
-            vec![0.1, 0.1, 0.3, 0.3, 0.5],
+            vec![0.1, 0.1, 0.3, 0.5],
         )?;
 
         // pass dataset in and receive a queryable
@@ -191,26 +191,14 @@ mod test {
         .into_poly();
 
         // both approaches are valid
-        println!("\nAPPROACH A: submit poly queries to a poly queryable");
         println!("\ncreate the sequential composition queryable as a child of the root queryable");
         let mut answer3a = queryable.eval_poly::<Queryable<_, bool>>(&sc_query_3)?;
 
-        println!(
-            "\npass an RR query to the child sequential compositor queryable and get an answer"
-        );
+        println!("\npass an RR query to the child sequential compositor queryable");
         let _answer3a_1: bool = answer3a.eval(&rr_query)?;
 
         println!("\npass a second RR query to the child sequential compositor queryable");
         let _answer3a_2: bool = answer3a.eval(&rr_query)?;
-
-        println!("\nAPPROACH B: downcast the poly queryable and then send normal queries");
-        println!("create the sequential composition queryable as a child of the root queryable, but downcast the queryable itself");
-        let mut answer3b = queryable.eval_poly::<Queryable<_, bool>>(&sc_query_3)?;
-
-        println!("\nsend a normal query without any dyn or poly type-erasure");
-        let _answer3b_1: bool = answer3b.eval(&rr_query)?;
-        println!("\nsend a second normal query without any dyn or poly type-erasure");
-        let _answer3b_2: bool = answer3b.eval(&rr_query)?;
 
         // pass a sequential composition compositor into the original SC compositor
         // This compositor expects all outputs are in PolyDomain, but operates over dyn domains
