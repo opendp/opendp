@@ -138,7 +138,7 @@ where
             if actual_d_in.total_gt(&d_in)? {
                 fallible!(
                     RelationDebug,
-                    "input distance must not be greater than d_in"
+                    "input distance must not be greater than the d_in passed into the constructor"
                 )
             } else {
                 Ok(d_out.clone())
