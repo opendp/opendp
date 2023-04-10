@@ -6,14 +6,35 @@ use std::ops::Shr;
 use crate::core::{
     Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
 };
-use crate::error::Fallible;
+use crate::error::{Error, ErrorVariant, Fallible};
 use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
 
-fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2) -> String {
+macro_rules! assert_components_match {
+    ($variant:ident, $v1:expr, $v2:expr) => {
+        if &$v1 != &$v2 {
+            return Err($crate::combinators::mismatch_error(
+                $crate::error::ErrorVariant::$variant,
+                &$v1,
+                &$v2,
+            ));
+        }
+    };
+}
+pub(crate) use assert_components_match;
+
+pub(crate) fn mismatch_error<T: Debug>(variant: ErrorVariant, struct1: &T, struct2: &T) -> Error {
     let str1 = format!("{:?}", struct1);
     let str2 = format!("{:?}", struct2);
+
+    let mode = match &variant {
+        ErrorVariant::DomainMismatch => "domain",
+        ErrorVariant::MetricMismatch => "metric",
+        ErrorVariant::MeasureMismatch => "measure",
+        _ => unimplemented!("unrecognized error variant"),
+    };
+
     let explanation = if str1 == str2 {
         format!("\n    The structure of the intermediate {mode}s are the same, but the parameters differ.\n    shared_{mode}: {str1}\n", mode=mode, str1=str1)
     } else {
@@ -24,10 +45,15 @@ fn mismatch_message<T1: Debug, T2: Debug>(mode: &str, struct1: &T1, struct2: &T2
             struct2 = str2
         )
     };
-    return format!(
-        "Intermediate {}s don't match. See {}{}",
-        mode, ERROR_URL, explanation
-    );
+
+    Error {
+        variant,
+        message: Some(format!(
+            "Intermediate {}s don't match. See {}{}",
+            mode, ERROR_URL, explanation
+        )),
+        backtrace: err!(@backtrace),
+    }
 }
 
 /// Construct the functional composition (`measurement1` ○ `transformation0`).
@@ -56,26 +82,16 @@ where
     MX: 'static + Metric,
     MO: 'static + Measure,
 {
-    if transformation0.output_domain != measurement1.input_domain {
-        return fallible!(
-            DomainMismatch,
-            mismatch_message(
-                "domain",
-                &transformation0.output_domain,
-                &measurement1.input_domain
-            )
-        );
-    }
-    if transformation0.output_metric != measurement1.input_metric {
-        return fallible!(
-            MetricMismatch,
-            mismatch_message(
-                "metric",
-                &transformation0.output_metric,
-                &measurement1.input_metric
-            )
-        );
-    }
+    assert_components_match!(
+        DomainMismatch,
+        transformation0.output_domain,
+        measurement1.input_domain
+    );
+    assert_components_match!(
+        MetricMismatch,
+        transformation0.output_metric,
+        measurement1.input_metric
+    );
 
     Ok(Measurement::new(
         transformation0.input_domain.clone(),
@@ -112,26 +128,17 @@ where
     MX: 'static + Metric,
     MO: 'static + Metric,
 {
-    if transformation0.output_domain != transformation1.input_domain {
-        return fallible!(
-            DomainMismatch,
-            mismatch_message(
-                "domain",
-                &transformation0.output_domain,
-                &transformation1.input_domain
-            )
-        );
-    }
-    if transformation0.output_metric != transformation1.input_metric {
-        return fallible!(
-            MetricMismatch,
-            mismatch_message(
-                "metric",
-                &transformation0.output_metric,
-                &transformation1.input_metric
-            )
-        );
-    }
+    assert_components_match!(
+        DomainMismatch,
+        transformation0.output_domain,
+        transformation1.input_domain
+    );
+
+    assert_components_match!(
+        MetricMismatch,
+        transformation0.output_metric,
+        transformation1.input_metric
+    );
 
     Ok(Transformation::new(
         transformation0.input_domain.clone(),
@@ -146,22 +153,20 @@ where
     ))
 }
 
-/// Construct the functional composition (`transformation1` ○ `measurement0`).
-/// Returns a Measurement that when invoked, computes `transformation1(measurement0(x))`.
+/// Construct the functional composition (`postprocess1` ○ `measurement0`).
+/// Returns a Measurement that when invoked, computes `postprocess1(measurement0(x))`.
 /// Used to represent non-interactive postprocessing.
 ///
 /// # Arguments
-/// * `transformation1` - outer postprocessing transformation
+/// * `postprocess1` - outer postprocessing transformation
 /// * `measurement0` - inner measurement/mechanism
 ///
 /// # Generics
 /// * `DI` - Input Domain.
-/// * `DX` - Intermediate Domain.
-/// * `DO` - Output Domain.
-/// * `MMI` - Input Measurement Metric.
-/// * `MMO` - Output Measurement Metric.
-/// * `MTI` - Input Transformation Metric.
-/// * `MTO` - Output Transformation Metric.
+/// * `TX` - Intermediate Type.
+/// * `TO` - Output Type.
+/// * `MI` - Input Metric.
+/// * `MO` - Output Measure.
 pub fn make_chain_pm<DI, TX, TO, MI, MO>(
     postprocess1: &Function<TX, TO>,
     measurement0: &Measurement<DI, TX, MI, MO>,
@@ -175,7 +180,7 @@ where
 {
     Ok(Measurement::new(
         measurement0.input_domain.clone(),
-        Function::make_chain(&postprocess1, &measurement0.function),
+        Function::make_chain(postprocess1, &measurement0.function),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
         measurement0.privacy_map.clone(),
@@ -274,7 +279,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_chain_tm() {
+    fn test_make_chain_pm() {
         let input_domain0 = AllDomain::<u8>::new();
         let function0 = Function::new(|a: &u8| (a + 1) as i32);
         let input_metric0 = L1Distance::<i32>::default();

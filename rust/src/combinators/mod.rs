@@ -10,9 +10,7 @@ mod chain;
 #[cfg(feature = "contrib")]
 pub use crate::combinators::chain::*;
 
-#[cfg(feature = "contrib")]
 mod composition;
-#[cfg(feature = "contrib")]
 pub use crate::combinators::composition::*;
 
 #[cfg(feature = "contrib")]
