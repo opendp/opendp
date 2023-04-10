@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, path::PathBuf};
 
 use darling::{Error, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
@@ -8,7 +8,7 @@ use syn::{
     ReturnType, Type, TypePath,
 };
 
-use crate::proven::filesystem::make_proof_link;
+use crate::proven::filesystem::{get_src_dir, make_proof_link};
 
 use super::arguments::BootstrapArguments;
 
@@ -314,7 +314,13 @@ pub fn get_proof_path(
 
 /// add attributes containing the proof link
 pub fn insert_proof_attribute(attributes: &mut Vec<Attribute>, proof_path: String) -> Result<()> {
-    let proof_link = format!(" {}", make_proof_link(&proof_path)?);
+    let source_dir = get_src_dir()?;
+    let proof_path = PathBuf::from(proof_path);
+    let repo_path = PathBuf::from("rust/src");
+    let proof_link = format!(
+        " [(Proof Document)]({}) ",
+        make_proof_link(source_dir, proof_path, repo_path)?
+    );
 
     let position = (attributes.iter())
         .position(|attr| {

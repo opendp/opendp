@@ -50,15 +50,9 @@ def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
 
     if len(path) > 1 and path[1] in generated_dirs:
-        description = []
-        params = []
-        found_param = False
-        for line in lines:
-            found_param |= line.startswith(":")
-            if found_param:
-                params.append(line.replace("`", "``"))
-            else:
-                description.append(line)
+        from opendp.extrinsics._proven import _split_docstring
+        description, params = _split_docstring('\n'.join(lines))
+        params = [line.replace("`", "``") for line in params]
         
         rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')                
         params = "\n".join(params)
