@@ -27,17 +27,6 @@ extensions = [
 ]
 
 # convert markdown to rst when rendering with sphinx
-
-constructor_modules = {
-    "accuracy", 
-    "combinators", 
-    "core",
-    "measurements", 
-    "transformations", 
-}
-import pypandoc
-import re
-py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 markdown_modules = {
     "accuracy", 
     "combinators", 
@@ -48,6 +37,10 @@ markdown_modules = {
     "metrics",
     "measures"
 }
+
+import pypandoc
+import re
+py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
