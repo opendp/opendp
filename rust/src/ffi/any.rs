@@ -228,9 +228,9 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
         self,
     ) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
         let function = self.function;
-        Measurement::new(
-            self.input_domain,
-            Function::new_fallible(
+        Measurement {
+            input_domain: self.input_domain,
+            function: Function::new_fallible(
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
 
@@ -250,10 +250,10 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
                     })
                 },
             ),
-            self.input_metric,
-            self.output_measure,
-            self.privacy_map,
-        )
+            input_metric: self.input_metric,
+            output_measure: self.output_measure,
+            privacy_map: self.privacy_map,
+        }
     }
 }
 
