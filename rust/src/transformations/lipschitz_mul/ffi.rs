@@ -2,7 +2,7 @@ use std::{convert::TryFrom, ffi::c_void, os::raw::c_char};
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     ffi::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
@@ -44,7 +44,7 @@ pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
         let constant = *try_as_ref!(constant as *const T);
         let bounds = try_!(try_as_ref!(bounds).downcast_ref::<(T, T)>());
         dispatch!(monomorphize2, [
-            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (M, [AbsoluteDistance<T>, L1Distance<T>, L2Distance<T>])
         ], (constant, *bounds))
     }

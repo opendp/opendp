@@ -1,6 +1,6 @@
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::{
@@ -55,7 +55,7 @@ pub fn make_bounded_float_checked_sum<S>(
 ) -> Fallible<
     Transformation<
         VectorDomain<BoundedDomain<S::Item>>,
-        AllDomain<S::Item>,
+        AtomDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
     >,
@@ -79,7 +79,7 @@ where
 
     Ok(Transformation::new(
         VectorDomain::new(BoundedDomain::new_closed(bounds)?),
-        AllDomain::new(),
+        AtomDomain::new(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
             if arg.len() > size_limit {
@@ -139,7 +139,7 @@ pub fn make_sized_bounded_float_checked_sum<S>(
 ) -> Fallible<
     Transformation<
         SizedDomain<VectorDomain<BoundedDomain<S::Item>>>,
-        AllDomain<S::Item>,
+        AtomDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
     >,
@@ -161,7 +161,7 @@ where
 
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
-        AllDomain::new(),
+        AtomDomain::new(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
         SymmetricDistance::default(),

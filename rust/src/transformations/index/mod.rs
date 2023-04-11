@@ -7,7 +7,7 @@ use std::iter::FromIterator;
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AllDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::SymmetricDistance;
 use crate::traits::{Hashable, Number, Primitive};
@@ -29,8 +29,8 @@ pub fn make_find<TIA>(
     categories: Vec<TIA>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<OptionNullDomain<AllDomain<usize>>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<OptionDomain<AtomDomain<usize>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -47,8 +47,8 @@ where
     }
 
     make_row_by_row(
-        AllDomain::new(),
-        OptionNullDomain::new(AllDomain::new()),
+        AtomDomain::new(),
+        OptionDomain::new(AtomDomain::new()),
         move |v| indexes.get(v).cloned(),
     )
 }
@@ -73,8 +73,8 @@ pub fn make_find_bin<TIA>(
     edges: Vec<TIA>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<usize>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<usize>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -85,7 +85,7 @@ where
     if !edges.windows(2).all(|pair| pair[0] < pair[1]) {
         return fallible!(MakeTransformation, "edges must be unique and ordered");
     }
-    make_row_by_row(AllDomain::new(), AllDomain::new(), move |v| {
+    make_row_by_row(AtomDomain::new(), AtomDomain::new(), move |v| {
         edges
             .iter()
             .enumerate()
@@ -109,8 +109,8 @@ pub fn make_index<TOA>(
     null: TOA,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<usize>>,
-        VectorDomain<AllDomain<TOA>>,
+        VectorDomain<AtomDomain<usize>>,
+        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -118,7 +118,7 @@ pub fn make_index<TOA>(
 where
     TOA: Primitive,
 {
-    make_row_by_row(AllDomain::new(), AllDomain::new(), move |v| {
+    make_row_by_row(AtomDomain::new(), AtomDomain::new(), move |v| {
         categories.get(*v).unwrap_or(&null).clone()
     })
 }

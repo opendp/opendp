@@ -8,7 +8,7 @@ use crate::{
     ffi::{any::Downcast, util},
 };
 use crate::{
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     ffi::util::Type,
     measurements::{make_base_discrete_laplace_linear, DiscreteLaplaceDomain},
     traits::{samplers::SampleDiscreteLaplaceLinear, Float, InfCast, Integer},
@@ -49,7 +49,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_linear(
             None
         };
         dispatch!(monomorphize2, [
-            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])
         ], (scale, bounds))
     }
@@ -91,7 +91,7 @@ mod tests {
         let measurement = Result::from(opendp_measurements__make_base_discrete_laplace_linear(
             util::into_raw(0.0) as *const c_void,
             std::ptr::null(),
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);
@@ -106,7 +106,7 @@ mod tests {
         let measurement = Result::from(opendp_measurements__make_base_discrete_laplace_linear(
             util::into_raw(0.0) as *const c_void,
             util::into_raw(AnyObject::new((0, 100))),
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);

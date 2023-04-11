@@ -3,7 +3,7 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     data::Column,
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::SymmetricDistance,
     traits::{Hashable, Primitive, RoundCast},
@@ -19,8 +19,8 @@ mod ffi;
 fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive>(
     column_name: K,
     transformation: Transformation<
-        VectorDomain<AllDomain<VI>>,
-        VectorDomain<AllDomain<VO>>,
+        VectorDomain<AtomDomain<VI>>,
+        VectorDomain<AtomDomain<VO>>,
         SymmetricDistance,
         SymmetricDistance,
     >,

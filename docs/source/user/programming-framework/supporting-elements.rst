@@ -20,18 +20,18 @@ Domain
 A domain describes the set of all possible input values of a function, or all possible output values of a function.
 Transformations have both an ``input_domain`` and ``output_domain``, while measurements only have an ``input_domain``.
 
-A commonly-used domain is ``all_domain(T)``, which describes the set of all possible non-null values of type ``T``.
+A commonly-used domain is ``atom_domain(T)``, which describes the set of all possible non-null values of type ``T``.
 The following example creates a domain consisting of all possible non-null 64-bit floats, 
 and checks that 1.0 is a member of the domain, but NaN is not.
 
 .. doctest::
 
-  >>> from opendp.domains import all_domain
-  >>> f64_all_domain = all_domain(float)  # float defaults to f64, a double-precision 64-bit float
-  >>> assert f64_all_domain.member(1.0)
-  >>> assert not f64_all_domain.member(float('nan'))
+  >>> from opendp.domains import atom_domain
+  >>> f64_atom_domain = atom_domain(float)  # float defaults to f64, a double-precision 64-bit float
+  >>> assert f64_atom_domain.member(1.0)
+  >>> assert not f64_atom_domain.member(float('nan'))
 
-Similarly, ``all_domain(u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``,
+Similarly, ``atom_domain(u8)`` consists of all possible non-null unsigned 8-bit integers: ``{0, 1, 2, 3, ..., 127}``,
 and ``bounded_domain((-2, 2))`` consists of all possible 32-bit signed integers bounded between -2 and 2: ``{-2, -1, 0, 1, 2}``.
 
 .. doctest::
@@ -42,16 +42,16 @@ and ``bounded_domain((-2, 2))`` consists of all possible 32-bit signed integers 
   >>> assert not i32_bounded_domain.member(3)
 
 Domains may also be used to construct higher-level domains.
-For instance, ``vector_domain(all_domain(bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
+For instance, ``vector_domain(atom_domain(bool))`` describes the set of all boolean vectors: ``{[], [True], [False], [True, True], [True, False], ...}``.
 
 .. doctest::
 
   >>> from opendp.domains import vector_domain
-  >>> bool_vector_domain = vector_domain(all_domain(bool))
+  >>> bool_vector_domain = vector_domain(atom_domain(bool))
   >>> assert bool_vector_domain.member([])
   >>> assert bool_vector_domain.member([True, False])
 
-``sized_domain(vector_domain(all_domain(bool)), 2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
+``sized_domain(vector_domain(atom_domain(bool)), 2)`` describes the set of boolean vectors of size 2: ``{[True, True], [True, False], [False, True], [False, False]}``.
 
 .. doctest::
 
@@ -78,10 +78,10 @@ The input domain is ``VectorDomain<BoundedDomain<i32>>``, or "the set of all vec
 .. doctest::
 
   >>> bounded_sum.output_domain.type
-  'AllDomain<i32>'
+  'AtomDomain<i32>'
 
 
-The output domain is simply ``AllDomain<i32>``, or "the set of all 32-bit signed integers."
+The output domain is simply ``AtomDomain<i32>``, or "the set of all 32-bit signed integers."
 
 These domains serve two purposes:
 

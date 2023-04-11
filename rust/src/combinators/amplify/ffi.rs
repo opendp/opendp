@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::combinators::{AmplifiableMeasure, IsSizedDomain};
 use crate::core::FfiResult;
-use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::ffi::util::Type;
@@ -73,7 +73,7 @@ impl IsSizedDomain for AnyDomain {
 
             dispatch!(monomorphize2, [(DIA, [
                 SizedDomain<VectorDomain<BoundedDomain<TIA>>>,
-                SizedDomain<VectorDomain<AllDomain<TIA>>>
+                SizedDomain<VectorDomain<AtomDomain<TIA>>>
             ])], (domain))
         }
 

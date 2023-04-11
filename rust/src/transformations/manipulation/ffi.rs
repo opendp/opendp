@@ -6,7 +6,7 @@ use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Metric, Transformation};
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AtomDomain, InherentNullDomain, OptionDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
@@ -22,8 +22,8 @@ use crate::transformations::{make_is_equal, make_is_null};
 /// Make a Transformation representing the identity function.
 ///
 /// # Generics
-/// * `D` - Domain of the identity function. Must be `VectorDomain<AllDomain<T>>` or `AllDomain<T>`
-/// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AllDomain
+/// * `D` - Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
+/// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
 fn make_identity<D, M>() -> Fallible<Transformation<D, D, M, M>>
 where
     D: Domain + Default,
@@ -49,27 +49,27 @@ pub extern "C" fn opendp_transformations__make_identity(
             }
             let atomic_domain = try_!(Type::of_id(&args[0]));
             let T = match atomic_domain.contents {
-                TypeContents::GENERIC { name, args } if name == "AllDomain" => {
+                TypeContents::GENERIC { name, args } if name == "AtomDomain" => {
                     if args.len() != 1 {
-                        return err!(FFI, "AllDomain only accepts one argument.").into();
+                        return err!(FFI, "AtomDomain only accepts one argument.").into();
                     }
                     try_!(Type::of_id(&args[0]))
                 }
-                _ => return err!(FFI, "In FFI, make_identity's VectorDomain may only contain AllDomain<_>").into()
+                _ => return err!(FFI, "In FFI, make_identity's VectorDomain may only contain AtomDomain<_>").into()
             };
             fn monomorphize<M, T>() -> FfiResult<*mut AnyTransformation>
                 where M: 'static + Metric<Distance=IntDistance>,
                       T: 'static + Clone + CheckNull {
-                make_identity::<VectorDomain<AllDomain<T>>, M>().into_any()
+                make_identity::<VectorDomain<AtomDomain<T>>, M>().into_any()
             }
             dispatch!(monomorphize, [
                 (M, [ChangeOneDistance, InsertDeleteDistance, SymmetricDistance, HammingDistance]),
                 (T, @primitives)
             ], ())
         }
-        TypeContents::GENERIC { name, args } if name == &"AllDomain" => {
+        TypeContents::GENERIC { name, args } if name == &"AtomDomain" => {
             if args.len() != 1 {
-                return err!(FFI, "AllDomain only accepts one argument.").into();
+                return err!(FFI, "AtomDomain only accepts one argument.").into();
             }
             let T = try_!(Type::of_id(&args[0]));
 
@@ -78,7 +78,7 @@ pub extern "C" fn opendp_transformations__make_identity(
                 fn monomorphize<M>() -> FfiResult<*mut AnyTransformation>
                     where M: 'static + Metric,
                           M::Distance: CheckNull + DistanceConstant<M::Distance> + One + Clone {
-                    make_identity::<AllDomain<M::Distance>, M>().into_any()
+                    make_identity::<AtomDomain<M::Distance>, M>().into_any()
                 }
                 dispatch!(monomorphize, [
                     (M, [AbsoluteDistance<T>, L1Distance<T>, L2Distance<T>])
@@ -88,7 +88,7 @@ pub extern "C" fn opendp_transformations__make_identity(
                 (T, @numbers)
             ], (M))
         }
-        _ => err!(FFI, "Monomorphizations for the identity function are only available for VectorDomain<AllDomain<_>> and AllDomain<_>").into()
+        _ => err!(FFI, "Monomorphizations for the identity function are only available for VectorDomain<AtomDomain<_>> and AtomDomain<_>").into()
     }
 }
 
@@ -117,12 +117,12 @@ pub extern "C" fn opendp_transformations__make_is_null(
     let TIA = try_!(DIA.get_atom());
 
     match &DIA.contents {
-        TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
+        TypeContents::GENERIC { name, .. } if name == &"OptionDomain" => {
             fn monomorphize<TIA>() -> FfiResult<*mut AnyTransformation>
             where
                 TIA: 'static + CheckNull,
             {
-                make_is_null::<OptionNullDomain<AllDomain<TIA>>>().into_any()
+                make_is_null::<OptionDomain<AtomDomain<TIA>>>().into_any()
             }
             dispatch!(monomorphize, [(TIA, @primitives)], ())
         }
@@ -131,13 +131,13 @@ pub extern "C" fn opendp_transformations__make_is_null(
             where
                 TIA: 'static + InherentNull,
             {
-                make_is_null::<InherentNullDomain<AllDomain<TIA>>>().into_any()
+                make_is_null::<InherentNullDomain<AtomDomain<TIA>>>().into_any()
             }
             dispatch!(monomorphize, [(TIA, [f64, f32])], ())
         }
         _ => err!(
             TypeParse,
-            "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>"
+            "DA must be an OptionDomain<AtomDomain<T>> or an InherentNullDomain<AtomDomain<T>>"
         )
         .into(),
     }
@@ -156,7 +156,7 @@ mod tests {
     #[test]
     fn test_make_identity() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_identity(
-            "VectorDomain<AllDomain<i32>>".to_char_p(),
+            "VectorDomain<AtomDomain<i32>>".to_char_p(),
             "SymmetricDistance".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![123]);

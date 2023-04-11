@@ -5,7 +5,7 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
-    "all_domain",
+    "atom_domain",
     "bounded_domain",
     "domain_carrier_type",
     "domain_debug",
@@ -16,12 +16,12 @@ __all__ = [
 ]
 
 
-def all_domain(
+def atom_domain(
     T: RuntimeTypeDescriptor
 ):
-    """Construct an instance of `AllDomain`.
+    """Construct an instance of `AtomDomain`.
     
-    [all_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.all_domain.html)
+    [atom_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn.atom_domain.html)
     
     :param T: The type of the atom.
     :type T: :py:ref:`RuntimeTypeDescriptor`
@@ -36,7 +36,7 @@ def all_domain(
     c_T = py_to_c(T, c_type=ctypes.c_char_p)
     
     # Call library function.
-    lib_function = lib.opendp_domains__all_domain
+    lib_function = lib.opendp_domains__atom_domain
     lib_function.argtypes = [ctypes.c_char_p]
     lib_function.restype = FfiResult
     

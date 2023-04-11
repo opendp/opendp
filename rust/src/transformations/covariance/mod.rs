@@ -1,6 +1,6 @@
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, SymmetricDistance},
     traits::{ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub},
@@ -23,7 +23,7 @@ pub fn make_sized_bounded_covariance<S>(
 ) -> Fallible<
     Transformation<
         CovarianceDomain<S::Item>,
-        AllDomain<S::Item>,
+        AtomDomain<S::Item>,
         SymmetricDistance,
         AbsoluteDistance<S::Item>,
     >,
@@ -91,7 +91,7 @@ where
             ))?),
             size,
         ),
-        AllDomain::new(),
+        AtomDomain::new(),
         Function::new(enclose!(_size, move |arg: &Vec<(S::Item, S::Item)>| {
             let (l, r): (Vec<S::Item>, Vec<S::Item>) = arg.iter().copied().unzip();
             let (sum_l, sum_r) = (S::unchecked_sum(&l), S::unchecked_sum(&r));

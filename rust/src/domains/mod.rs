@@ -30,20 +30,20 @@ mod poly;
 pub use poly::*;
 
 /// # Proof Definition
-/// `AllDomain(T)` is the domain of all **non-null** values of type `T`.
+/// `AtomDomain(T)` is the domain of all **non-null** values of type `T`.
 ///
 /// # Example
 /// ```
 /// // Create a domain that includes all values `{0, 1, ..., 2^32 - 1}`.
-/// use opendp::domains::AllDomain;
-/// let i32_domain = AllDomain::<i32>::new();
+/// use opendp::domains::AtomDomain;
+/// let i32_domain = AtomDomain::<i32>::new();
 ///
 /// // 1 is a member of the i32_domain
 /// use opendp::core::Domain;
 /// assert!(i32_domain.member(&1)?);
 ///
 /// // Create a domain that includes all non-null 32-bit floats.
-/// let f32_domain = AllDomain::<f32>::new();
+/// let f32_domain = AtomDomain::<f32>::new();
 ///
 /// // 1. is a member of the f32_domain
 /// assert!(f32_domain.member(&1.)?);
@@ -51,40 +51,40 @@ pub use poly::*;
 /// assert!(!f32_domain.member(&f32::NAN)?);
 /// # opendp::error::Fallible::Ok(())
 /// ```
-pub struct AllDomain<T> {
+pub struct AtomDomain<T> {
     _marker: PhantomData<T>,
 }
 
-impl<T> Debug for AllDomain<T> {
+impl<T> Debug for AtomDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "AllDomain({})", type_name!(T))
+        write!(f, "AtomDomain({})", type_name!(T))
     }
 }
-impl<T> Default for AllDomain<T> {
+impl<T> Default for AtomDomain<T> {
     fn default() -> Self {
         Self::new()
     }
 }
-impl<T> AllDomain<T> {
+impl<T> AtomDomain<T> {
     pub fn new() -> Self {
-        AllDomain {
+        AtomDomain {
             _marker: PhantomData,
         }
     }
 }
 // Auto-deriving Clone would put the same trait bound on T, so we implement it manually.
-impl<T> Clone for AllDomain<T> {
+impl<T> Clone for AtomDomain<T> {
     fn clone(&self) -> Self {
         Self::new()
     }
 }
 // Auto-deriving PartialEq would put the same trait bound on T, so we implement it manually.
-impl<T> PartialEq for AllDomain<T> {
+impl<T> PartialEq for AtomDomain<T> {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
 }
-impl<T: CheckNull> Domain for AllDomain<T> {
+impl<T: CheckNull> Domain for AtomDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         Ok(!val.is_null())
@@ -188,10 +188,10 @@ impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
 ///
 /// # Example
 /// ```
-/// use opendp::domains::{MapDomain, AllDomain};
+/// use opendp::domains::{MapDomain, AtomDomain};
 /// // Rust infers the type from the context, at compile-time.
 /// // Members of this domain are of type `HashMap<&str, i32>`.
-/// let domain = MapDomain::new(AllDomain::new(), AllDomain::new());
+/// let domain = MapDomain::new(AtomDomain::new(), AtomDomain::new());
 ///
 /// use opendp::core::Domain;
 /// use std::collections::HashMap;
@@ -203,7 +203,7 @@ impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
 /// // Can build up more complicated domains as needed:
 /// use opendp::domains::{InherentNullDomain, BoundedDomain};
 /// let value_domain = InherentNullDomain::new(BoundedDomain::new_closed((0., 1.))?);
-/// let domain = MapDomain::new(AllDomain::new(), value_domain);
+/// let domain = MapDomain::new(AtomDomain::new(), value_domain);
 ///
 /// // The following is not a member of the hashmap domain, because a value is out-of-range:
 /// let hashmap = HashMap::from_iter([("a", 0.), ("b", 2.)]);
@@ -229,12 +229,12 @@ where
         }
     }
 }
-impl<K: CheckNull, V: CheckNull> MapDomain<AllDomain<K>, AllDomain<V>>
+impl<K: CheckNull, V: CheckNull> MapDomain<AtomDomain<K>, AtomDomain<V>>
 where
     K: Eq + Hash,
 {
     pub fn new_all() -> Self {
-        Self::new(AllDomain::<K>::new(), AllDomain::<V>::new())
+        Self::new(AtomDomain::<K>::new(), AtomDomain::<V>::new())
     }
 }
 impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV>
@@ -259,12 +259,12 @@ where
 ///
 /// # Example
 /// ```
-/// use opendp::domains::{VectorDomain, AllDomain, BoundedDomain};
+/// use opendp::domains::{VectorDomain, AtomDomain, BoundedDomain};
 /// use opendp::core::Domain;
 ///
 /// // Represents the domain of all vectors.
-/// let all_domain = VectorDomain::new(AllDomain::new());
-/// assert!(all_domain.member(&vec![1, 2, 3])?);
+/// let atom_domain = VectorDomain::new(AtomDomain::new());
+/// assert!(atom_domain.member(&vec![1, 2, 3])?);
 ///
 /// // Represents the domain of all bounded vectors.
 /// let bounded_domain = VectorDomain::new(BoundedDomain::new_closed((-10, 10))?);
@@ -294,9 +294,9 @@ impl<D: Domain> VectorDomain<D> {
         VectorDomain { element_domain }
     }
 }
-impl<T: CheckNull> VectorDomain<AllDomain<T>> {
+impl<T: CheckNull> VectorDomain<AtomDomain<T>> {
     pub fn new_all() -> Self {
-        Self::new(AllDomain::<T>::new())
+        Self::new(AtomDomain::<T>::new())
     }
 }
 impl<D: Domain> Domain for VectorDomain<D> {
@@ -317,7 +317,7 @@ impl<D: Domain> Domain for VectorDomain<D> {
 /// `SizedDomain(inner_domain, size, D)` is the domain of `inner_domain` restricted to only elements with size `size`.
 ///
 /// # Example
-/// First let `inner_domain` be `VectorDomain::new(AllDomain::<i32>::new())`.
+/// First let `inner_domain` be `VectorDomain::new(AtomDomain::<i32>::new())`.
 /// `inner_domain` indicates the set of all i32 vectors.
 ///
 /// Then `SizedDomain::new(inner_domain, 3)` indicates the set of all i32 vectors of length 3.
@@ -390,13 +390,13 @@ where
 ///
 /// # Example
 /// ```
-/// use opendp::domains::{InherentNullDomain, AllDomain};
-/// let all_domain = AllDomain::new();
-/// let null_domain = InherentNullDomain::new(all_domain.clone());
+/// use opendp::domains::{InherentNullDomain, AtomDomain};
+/// let atom_domain = AtomDomain::new();
+/// let null_domain = InherentNullDomain::new(atom_domain.clone());
 ///
 /// use opendp::core::Domain;
-/// // f64 NAN is not a member of all_domain, but is a member of null_domain
-/// assert!(!all_domain.member(&f64::NAN)?);
+/// // f64 NAN is not a member of atom_domain, but is a member of null_domain
+/// assert!(!atom_domain.member(&f64::NAN)?);
 /// assert!(null_domain.member(&f64::NAN)?);
 ///
 /// # opendp::error::Fallible::Ok(())
@@ -450,7 +450,7 @@ where
 /// A domain that represents nullity via the Option type.
 ///
 /// # Proof Definition
-/// `OptionNullDomain(element_domain, D)` is the domain of all values of `element_domain` (of type `D`, a domain)
+/// `OptionDomain(element_domain, D)` is the domain of all values of `element_domain` (of type `D`, a domain)
 /// wrapped in `Some`, as well as `None`.
 ///
 /// # Notes
@@ -459,8 +459,8 @@ where
 ///
 /// # Example
 /// ```
-/// use opendp::domains::{OptionNullDomain, AllDomain};
-/// let null_domain = OptionNullDomain::new(AllDomain::new());
+/// use opendp::domains::{OptionDomain, AtomDomain};
+/// let null_domain = OptionDomain::new(AtomDomain::new());
 ///
 /// use opendp::core::Domain;
 /// assert!(null_domain.member(&Some(1))?);
@@ -469,27 +469,27 @@ where
 /// # opendp::error::Fallible::Ok(())
 /// ```
 #[derive(Clone, PartialEq)]
-pub struct OptionNullDomain<D: Domain> {
+pub struct OptionDomain<D: Domain> {
     pub element_domain: D,
 }
-impl<D: Domain + Default> Default for OptionNullDomain<D> {
+impl<D: Domain + Default> Default for OptionDomain<D> {
     fn default() -> Self {
         Self::new(D::default())
     }
 }
-impl<D: Domain> OptionNullDomain<D> {
+impl<D: Domain> OptionDomain<D> {
     pub fn new(member_domain: D) -> Self {
-        OptionNullDomain {
+        OptionDomain {
             element_domain: member_domain,
         }
     }
 }
-impl<D: Domain> Debug for OptionNullDomain<D> {
+impl<D: Domain> Debug for OptionDomain<D> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "OptionNullDomain({:?})", self.element_domain)
+        write!(f, "OptionDomain({:?})", self.element_domain)
     }
 }
-impl<D: Domain> Domain for OptionNullDomain<D> {
+impl<D: Domain> Domain for OptionDomain<D> {
     type Carrier = Option<D::Carrier>;
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         value

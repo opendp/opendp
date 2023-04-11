@@ -1,6 +1,6 @@
 use crate::{
     core::{Function, Metric, StabilityMap, Transformation},
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::LpDistance,
     traits::{InfCast, Integer, Number},
@@ -27,7 +27,7 @@ use opendp_derive::bootstrap;
 pub fn make_b_ary_tree<M, TA>(
     leaf_count: usize,
     branching_factor: usize,
-) -> Fallible<Transformation<VectorDomain<AllDomain<TA>>, VectorDomain<AllDomain<TA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
 where
     TA: Integer,
     M: BAryTreeMetric,

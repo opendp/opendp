@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use opendp_derive::bootstrap;
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{AllDomain, MapDomain};
+use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::measures::{SMDCurve, SmoothedMaxDivergence};
 use crate::metrics::L1Distance;
@@ -47,7 +47,7 @@ pub fn make_base_ptr<TK, TV>(
     k: Option<i32>,
 ) -> Fallible<
     Measurement<
-        MapDomain<AllDomain<TK>, AllDomain<TV>>,
+        MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         HashMap<TK, TV>,
         L1Distance<TV>,
         SmoothedMaxDivergence<TV>,
@@ -61,7 +61,7 @@ where
     let _2 = TV::exact_int_cast(2)?;
     let (k, relaxation) = get_discretization_consts(k)?;
     Ok(Measurement::new(
-        MapDomain::new(AllDomain::new(), AllDomain::new()),
+        MapDomain::new(AtomDomain::new(), AtomDomain::new()),
         Function::new_fallible(move |data: &HashMap<TK, TV>| {
             data.clone()
                 .into_iter()

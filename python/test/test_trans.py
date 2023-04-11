@@ -1,5 +1,5 @@
 from opendp.transformations import make_subset_by, make_quantiles_from_counts
-from opendp.domains import bounded_domain, all_domain
+from opendp.domains import bounded_domain, atom_domain
 from opendp.typing import *
 from opendp.mod import enable_features
 
@@ -21,13 +21,13 @@ def test_cast_impute():
 
 def test_cast_drop_null():
     from opendp.transformations import make_cast, make_drop_null, make_cast_inherent
-    caster = make_cast(TIA=str, TOA=int) >> make_drop_null(DA=OptionNullDomain[AllDomain[int]])
+    caster = make_cast(TIA=str, TOA=int) >> make_drop_null(DA=OptionDomain[AtomDomain[int]])
     assert caster(["A", "2", "3"]) == [2, 3]
 
-    caster = make_cast(TIA=float, TOA=int) >> make_drop_null(DA=OptionNullDomain[AllDomain[int]])
+    caster = make_cast(TIA=float, TOA=int) >> make_drop_null(DA=OptionDomain[AtomDomain[int]])
     assert caster([float('nan'), 2.]) == [2]
 
-    caster = make_cast_inherent(TIA=str, TOA=float) >> make_drop_null(DA=InherentNullDomain[AllDomain[float]])
+    caster = make_cast_inherent(TIA=str, TOA=float) >> make_drop_null(DA=InherentNullDomain[AtomDomain[float]])
     assert caster(["a", "2."]) == [2]
     
 
@@ -58,24 +58,24 @@ def test_impute_uniform():
 
 def test_identity():
     from opendp.transformations import make_identity
-    from opendp.typing import VectorDomain, AllDomain
+    from opendp.typing import VectorDomain, AtomDomain
     # test int
-    transformation = make_identity(VectorDomain[AllDomain[int]], ChangeOneDistance)
+    transformation = make_identity(VectorDomain[AtomDomain[int]], ChangeOneDistance)
     arg = [123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AllDomain[float]], ChangeOneDistance)
+    transformation = make_identity(VectorDomain[AtomDomain[float]], ChangeOneDistance)
     arg = [123.123]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity(VectorDomain[AllDomain[str]], ChangeOneDistance)
+    transformation = make_identity(VectorDomain[AtomDomain[str]], ChangeOneDistance)
     arg = ["hello, world"]
     ret = transformation(arg)
     assert ret == arg
 
-    transformation = make_identity("VectorDomain<AllDomain<i32>>", ChangeOneDistance)
+    transformation = make_identity("VectorDomain<AtomDomain<i32>>", ChangeOneDistance)
     arg = [1, 2, 3]
     ret = transformation(arg)
     assert ret == arg
@@ -92,7 +92,7 @@ def test_is_null():
     tester = (
         make_split_lines() >>
         make_cast_inherent(TIA=str, TOA=float) >>
-        make_is_null(DIA=InherentNullDomain[AllDomain[float]])
+        make_is_null(DIA=InherentNullDomain[AtomDomain[float]])
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
@@ -100,7 +100,7 @@ def test_is_null():
     tester = (
         make_split_lines() >>
         make_cast(TIA=str, TOA=float) >>
-        make_is_null(DIA=OptionNullDomain[AllDomain[float]])
+        make_is_null(DIA=OptionDomain[AtomDomain[float]])
     )
     assert tester("nan\n1.\ninf") == [True, False, False]
 
@@ -122,7 +122,7 @@ def test_split_lines__cast__impute():
 def test_inherent_cast__impute():
     from opendp.transformations import make_split_lines, make_cast_inherent, make_impute_constant
     cast = make_split_lines() >> make_cast_inherent(TIA=str, TOA=float)
-    constant = cast >> make_impute_constant(constant=9., DIA=InherentNullDomain[AllDomain[float]])
+    constant = cast >> make_impute_constant(constant=9., DIA=InherentNullDomain[AtomDomain[float]])
 
     assert constant("a\n23.23\n12") == [9., 23.23, 12.]
     assert constant.check(1, 1)
@@ -264,7 +264,7 @@ def test_resize():
     assert query.check(2, 4)
 
     from opendp.transformations import make_resize
-    query = make_resize(size=4, atom_domain=all_domain(int), constant=0)
+    query = make_resize(size=4, atom_domain=atom_domain(int), constant=0)
     assert sorted(query([-1, 2, 5])) == [-1, 0, 2, 5]
     assert not query.check(1, 1)
     assert query.check(1, 2)
@@ -281,7 +281,7 @@ def test_count_by_categories_str():
 def test_indexing():
     from opendp.transformations import make_find, make_impute_constant, make_find_bin, make_index
 
-    find = make_find(categories=["1", "3", "4"]) >> make_impute_constant(3, DIA=OptionNullDomain[AllDomain["usize"]])
+    find = make_find(categories=["1", "3", "4"]) >> make_impute_constant(3, DIA=OptionDomain[AtomDomain["usize"]])
     assert find(STR_DATA) == [0, 3, 1, 2, 3, 3, 3, 3, 3]
     assert find.check(1, 1)
 
@@ -357,7 +357,7 @@ def test_lipschitz_b_ary_tree():
     meas_base = (
         make_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
         tree_builder >> 
-        make_base_geometric(1., D=VectorDomain[AllDomain[int]]) >> 
+        make_base_geometric(1., D=VectorDomain[AtomDomain[int]]) >> 
         make_consistent_b_ary_tree(branching_factor)
     )
 

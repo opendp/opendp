@@ -3,7 +3,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, Function, Metric, StabilityMap, Transformation},
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, LpDistance},
     traits::{
@@ -22,7 +22,7 @@ mod ffi;
         bounds(rust_type = "(T, T)")
     ),
     generics(
-        D(default = "AllDomain<T>", generics = "T"),
+        D(default = "AtomDomain<T>", generics = "T"),
         M(default = "AbsoluteDistance<T>", generics = "T")
     ),
     derived_types(T = "$get_atom_or_infer(D, constant)")
@@ -36,7 +36,7 @@ mod ffi;
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
 ///
 /// # Generics
-/// * `D` - Domain of the function. Must be `AllDomain<T>` or `VectorDomain<AllDomain<T>>`
+/// * `D` - Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
 /// * `M` - Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
 pub fn make_lipschitz_float_mul<D, M>(
     constant: D::Atom,
@@ -98,7 +98,7 @@ pub trait LipschitzMulFloatDomain: Domain + Default {
     ) -> Fallible<Self::Carrier>;
 }
 
-impl<T> LipschitzMulFloatDomain for AllDomain<T>
+impl<T> LipschitzMulFloatDomain for AtomDomain<T>
 where
     T: 'static + Float,
 {
@@ -137,7 +137,7 @@ pub mod test {
     #[test]
     fn test_lipschitz_mul() -> Fallible<()> {
         let extension =
-            make_lipschitz_float_mul::<AllDomain<f64>, AbsoluteDistance<f64>>(2., (0., 10.))?;
+            make_lipschitz_float_mul::<AtomDomain<f64>, AbsoluteDistance<f64>>(2., (0., 10.))?;
         assert_eq!(extension.invoke(&1.3)?, 2.6);
         println!("{:?}", extension.invoke(&1.3));
         Ok(())
