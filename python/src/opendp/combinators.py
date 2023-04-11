@@ -16,6 +16,7 @@ __all__ = [
     "make_population_amplification",
     "make_pureDP_to_fixed_approxDP",
     "make_pureDP_to_zCDP",
+    "make_sequential_composition",
     "make_user_measurement",
     "make_user_postprocessor",
     "make_user_transformation",
@@ -299,6 +300,51 @@ def make_pureDP_to_zCDP(
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_measurement), Measurement))
+    
+    return output
+
+
+def make_sequential_composition(
+    input_domain,
+    input_metric,
+    output_measure,
+    d_in: Any,
+    d_mids: Any
+) -> Measurement:
+    """Construct a queryable that interactively composes interactive measurements.
+    
+    [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/latest/opendp/combinators/fn.make_sequential_composition.html)
+    
+    :param input_domain: indicates the space of valid input datasets
+    :param input_metric: how distances are measured between members of the input domain
+    :param output_measure: how privacy is measured
+    :param d_in: maximum distance between adjacent input datasets
+    :type d_in: Any
+    :param d_mids: maximum privacy expenditure of each query
+    :type d_mids: Any
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    QO = get_distance_type(output_measure)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=AnyMetric)
+    c_output_measure = py_to_c(output_measure, c_type=Measure, type_name=AnyMeasure)
+    c_d_in = py_to_c(d_in, c_type=AnyObjectPtr, type_name=get_distance_type(input_metric))
+    c_d_mids = py_to_c(d_mids, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Vec', args=[QO]))
+    
+    # Call library function.
+    lib_function = lib.opendp_combinators__make_sequential_composition
+    lib_function.argtypes = [Domain, Metric, Measure, AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_output_measure, c_d_in, c_d_mids), Measurement))
     
     return output
 

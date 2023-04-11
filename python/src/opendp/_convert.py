@@ -2,7 +2,7 @@ from typing import Sequence, Tuple, List, Union, Dict
 
 from opendp._lib import *
 
-from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve
+from opendp.mod import UnknownTypeException, OpenDPException, Transformation, Measurement, SMDCurve, Queryable
 from opendp.typing import RuntimeType, Vec
 
 try:
@@ -120,6 +120,8 @@ def c_to_py(value):
         obj_type = object_type(value)
         if "SMDCurve" in obj_type:
             return SMDCurve(value)
+        if "Queryable" in obj_type:
+            return Queryable(value)
         ffi_slice = object_as_slice(value)
         try:
             return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
@@ -187,6 +189,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     """
     if isinstance(type_name, str) and type_name in ATOM_MAP:
         return _scalar_to_slice(value, type_name)
+    
+    if type_name == "AnyMeasurement":
+        return _wrap_in_slice(value, 1)
 
     if type_name == "String":
         return _string_to_slice(value)

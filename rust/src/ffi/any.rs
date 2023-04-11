@@ -12,8 +12,9 @@ use std::fmt::{Debug, Formatter};
 use crate::core::{
     Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
 };
-use crate::err;
 use crate::error::*;
+use crate::interactive::{Answer, Query, Queryable};
+use crate::{err, fallible};
 
 use super::glue::Glue;
 use super::util::Type;
@@ -29,7 +30,7 @@ pub trait Downcast {
 pub struct AnyBoxBase<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool> {
     pub value: Box<dyn Any>,
     clone_glue: Option<Glue<fn(&Self) -> Self>>,
-    eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+    partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
     debug_glue: Option<Glue<fn(&Self) -> String>>,
 }
 
@@ -39,13 +40,13 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
     fn new_base<T: 'static>(
         value: T,
         clone_glue: Option<Glue<fn(&Self) -> Self>>,
-        eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
+        partial_eq_glue: Option<Glue<fn(&Self, &Self) -> bool>>,
         debug_glue: Option<Glue<fn(&Self) -> String>>,
     ) -> Self {
         Self {
             value: Box::new(value),
             clone_glue,
-            eq_glue,
+            partial_eq_glue,
             debug_glue,
         }
     }
@@ -58,7 +59,7 @@ impl<const CLONE: bool, const PARTIALEQ: bool, const DEBUG: bool>
                     .unwrap_assert("Failed downcast of AnyBox value")
                     .clone(),
                 self_.clone_glue.clone(),
-                self_.eq_glue.clone(),
+                self_.partial_eq_glue.clone(),
                 self_.debug_glue.clone(),
             )
         })
@@ -138,7 +139,7 @@ impl<const PARTIALEQ: bool, const DEBUG: bool> Clone for AnyBoxBase<true, PARTIA
 impl<const CLONE: bool, const DEBUG: bool> PartialEq for AnyBoxBase<CLONE, true, DEBUG> {
     fn eq(&self, other: &Self) -> bool {
         (self
-            .eq_glue
+            .partial_eq_glue
             .as_ref()
             .unwrap_assert("eq_glue always exists for PARTIALEQ=true AnyBoxBase"))(
             self, other
@@ -170,9 +171,9 @@ impl AnyBox {
     }
 }
 
-pub type AnyBoxClonePartialEqDebug = AnyBoxBase<true, true, true>;
+pub type AnyClonePartialEqDebugBox = AnyBoxBase<true, true, true>;
 
-impl AnyBoxClonePartialEqDebug {
+impl AnyClonePartialEqDebugBox {
     pub fn new_clone_partial_eq_debug<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
         Self::new_base(
             value,
@@ -215,11 +216,53 @@ impl Downcast for AnyObject {
     }
 }
 
+#[allow(dead_code)]
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, AnyMeasure> {
+    pub fn into_any_Q(
+        self,
+    ) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
+        let function = self.function;
+        Measurement::new(
+            self.input_domain,
+            Function::new_fallible(
+                move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
+                    let mut inner_qbl = function.eval(arg)?;
+
+                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
+                        Query::External(query) => inner_qbl
+                            .eval(query.downcast_ref::<Q>()?)
+                            .map(Answer::External),
+                        Query::Internal(query) => {
+                            if query.downcast_ref::<QueryType>().is_some() {
+                                return Ok(Answer::internal(Type::of::<Q>()));
+                            }
+                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
+                                    return fallible!(FailedFunction, "internal query returned external answer")
+                                };
+                            Ok(Answer::Internal(a))
+                        }
+                    })
+                },
+            ),
+            self.input_metric,
+            self.output_measure,
+            self.privacy_map,
+        )
+    }
+}
+
+pub struct QueryType;
+
 #[derive(Clone, PartialEq)]
 pub struct AnyDomain {
     pub type_: Type,
     pub carrier_type: Type,
-    pub domain: AnyBoxClonePartialEqDebug,
+    pub domain: AnyClonePartialEqDebugBox,
     member_glue: Glue<fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>>,
 }
 
@@ -228,7 +271,7 @@ impl AnyDomain {
         Self {
             type_: Type::of::<D>(),
             carrier_type: Type::of::<D::Carrier>(),
-            domain: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(domain),
+            domain: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(domain),
             member_glue: Glue::new(|self_: &Self, val: &<Self as Domain>::Carrier| {
                 let self_ = self_
                     .downcast_ref::<D>()
@@ -266,7 +309,7 @@ impl Debug for AnyDomain {
 
 #[derive(Clone, PartialEq)]
 pub struct AnyMeasure {
-    pub measure: AnyBoxClonePartialEqDebug,
+    pub measure: AnyClonePartialEqDebugBox,
     pub type_: Type,
     pub distance_type: Type,
 }
@@ -274,7 +317,7 @@ pub struct AnyMeasure {
 impl AnyMeasure {
     pub fn new<M: 'static + Measure>(measure: M) -> Self {
         Self {
-            measure: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(measure),
+            measure: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(measure),
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
         }
@@ -313,7 +356,7 @@ impl Debug for AnyMeasure {
 pub struct AnyMetric {
     pub type_: Type,
     pub distance_type: Type,
-    pub metric: AnyBoxClonePartialEqDebug,
+    pub metric: AnyClonePartialEqDebugBox,
 }
 
 impl AnyMetric {
@@ -321,7 +364,7 @@ impl AnyMetric {
         Self {
             type_: Type::of::<M>(),
             distance_type: Type::of::<M::Distance>(),
-            metric: AnyBoxClonePartialEqDebug::new_clone_partial_eq_debug(metric),
+            metric: AnyClonePartialEqDebugBox::new_clone_partial_eq_debug(metric),
         }
     }
 }
@@ -360,18 +403,13 @@ pub trait IntoAnyFunctionExt {
     fn into_any(self) -> AnyFunction;
 }
 
-impl<TI, TO> IntoAnyFunctionExt for Function<TI, TO>
-where
-    TI: 'static,
-    TO: 'static,
-{
+impl<TI: 'static, TO: 'static> IntoAnyFunctionExt for Function<TI, TO> {
     fn into_any(self) -> AnyFunction {
-        let function = move |arg: &AnyObject| -> Fallible<AnyObject> {
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyObject> {
             let arg = arg.downcast_ref()?;
             let res = self.eval(arg);
             res.map(AnyObject::new)
-        };
-        Function::new_fallible(function)
+        })
     }
 }
 
@@ -499,14 +537,16 @@ where
     }
 }
 
+/// A Queryable with all generic types filled by Any types.
+/// This is the type of Queryables passed back and forth over FFI.
+pub type AnyQueryable = Queryable<AnyObject, AnyObject>;
+
 #[cfg(test)]
 mod tests {
     use crate::domains::{AllDomain, BoundedDomain};
     use crate::error::*;
-    use crate::measurements;
-    use crate::measures::{MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence};
+    use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
-    use crate::transformations;
 
     use super::*;
 
@@ -573,8 +613,13 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_any_chain() -> Fallible<()> {
+        use crate::measurements;
+        use crate::measures::ZeroConcentratedDivergence;
+        use crate::transformations;
+
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
@@ -587,8 +632,8 @@ mod tests {
         .into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
-        let res = chain.invoke(&arg);
-        let res: f64 = res?.downcast()?;
+        let res = chain.invoke(&arg)?;
+        let res: f64 = res.downcast()?;
         assert_eq!(6.0, res);
 
         Ok(())

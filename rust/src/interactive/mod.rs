@@ -196,7 +196,12 @@ impl<Q: 'static, A: 'static> IntoPolyQueryable for Queryable<Q, A> {
                     })?)?;
                     Answer::External(Box::new(answer))
                 }
-                Query::Internal(q) => Answer::Internal(self.eval_internal(q)?),
+                Query::Internal(q) => {
+                    let Answer::Internal(a) = self.eval_query(Query::Internal(q))? else {
+                        return fallible!(FailedFunction, "internal query returned external answer")
+                    };
+                    Answer::Internal(a)
+                }
             })
         })
     }
@@ -227,7 +232,12 @@ impl<Q: 'static, A: 'static> FromPolyQueryable for Queryable<Q, A> {
                     })?;
                     Answer::External(answer)
                 }
-                Query::Internal(q) => Answer::Internal(self_.eval_internal(q)?),
+                Query::Internal(q) => {
+                    let Answer::Internal(a) = self_.eval_query(Query::Internal(q))? else {
+                        return fallible!(FailedFunction, "internal query returned external answer")
+                    };
+                    Answer::Internal(a)
+                }
             })
         })
     }

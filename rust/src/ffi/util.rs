@@ -11,7 +11,7 @@ use crate::domains::{
     AllDomain, BoundedDomain, InherentNullDomain, OptionNullDomain, SizedDomain, VectorDomain,
 };
 use crate::error::*;
-use crate::ffi::any::AnyObject;
+use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::{
     FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
     ZeroConcentratedDivergence,
@@ -263,7 +263,8 @@ lazy_static! {
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject>],
             // OptionNullDomain<AllDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
-            type_vec![AnyMeasurementPtr, AnyTransformationPtr],
+
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
 
             // sum algorithms
@@ -343,6 +344,10 @@ pub fn into_owned<T>(p: *mut T) -> Fallible<T> {
 
 pub fn as_ref<'a, T>(p: *const T) -> Option<&'a T> {
     (!p.is_null()).then(|| unsafe { &*p })
+}
+
+pub fn as_mut_ref<'a, T>(p: *mut T) -> Option<&'a mut T> {
+    (!p.is_null()).then(|| unsafe { &mut *p })
 }
 
 pub fn into_c_char_p(s: String) -> Fallible<*mut c_char> {

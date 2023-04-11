@@ -7,11 +7,12 @@ use opendp_derive::bootstrap;
 
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
-    AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyTransformation,
-    IntoAnyFunctionExt, IntoAnyMeasurementExt, IntoAnyTransformationExt,
+    AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
+    AnyTransformation, Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt,
+    IntoAnyTransformationExt, QueryType,
 };
 use crate::ffi::util::into_c_char_p;
-use crate::ffi::util::{self, c_bool};
+use crate::ffi::util::{self, c_bool, Type};
 use crate::{try_, try_as_ref};
 
 #[repr(C)]
@@ -701,10 +702,52 @@ pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResu
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(
+    name = "queryable_eval",
+    arguments(
+        queryable(rust_type = b"null"),
+        query(rust_type = "$queryable_query_type(queryable)")
+    )
+)]
+/// Invoke the `queryable` with `query`. Returns a differentially private release.
+///
+/// # Arguments
+/// * `queryable` - Queryable to eval.
+/// * `query` - Input data to supply to the measurement. A member of the measurement's input domain.
+#[no_mangle]
+pub extern "C" fn opendp_core__queryable_eval(
+    queryable: *mut AnyObject,
+    query: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let queryable = try_as_mut_ref!(queryable);
+    let queryable = try_!(queryable.downcast_mut::<AnyQueryable>());
+    let query = try_as_ref!(query);
+    queryable.eval(query).into()
+}
+
+#[bootstrap(
+    name = "queryable_query_type",
+    arguments(this(rust_type = b"null")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Get the query type of `queryable`.
+///
+/// # Arguments
+/// * `this` - The queryable to retrieve the query type from.
+#[no_mangle]
+pub extern "C" fn opendp_core__queryable_query_type(
+    this: *mut AnyObject,
+) -> FfiResult<*mut c_char> {
+    let this = try_as_mut_ref!(this);
+    let this = try_!(this.downcast_mut::<AnyQueryable>());
+    let answer: Type = try_!(this.eval_internal(&QueryType));
+    FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::combinators::tests::{make_test_measurement, make_test_transformation};
-    use crate::ffi::any::{Downcast, IntoAnyMeasurementExt, IntoAnyTransformationExt};
+    use crate::ffi::any::{Downcast, IntoAnyTransformationExt};
     use crate::ffi::util::ToCharP;
 
     use super::*;

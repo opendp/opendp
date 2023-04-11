@@ -6,15 +6,19 @@ use crate::{
     traits::TotalOrd,
 };
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 use super::BasicCompositionMeasure;
 
 pub fn make_sequential_composition<
     DI: Domain + 'static,
     TO: 'static,
-    MI: Metric + Default + 'static,
+    MI: Metric + 'static,
     MO: BasicCompositionMeasure + 'static,
 >(
     input_domain: DI,
+    input_metric: MI,
     output_measure: MO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
@@ -24,8 +28,6 @@ where
     MI::Distance: 'static + TotalOrd + Clone,
     MO::Distance: 'static + TotalOrd + Clone,
 {
-    let input_metric = MI::default();
-
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_mid");
     }
@@ -155,6 +157,7 @@ mod test {
     use super::*;
     use crate::{
         domains::AllDomain, measurements::make_randomized_response_bool, measures::MaxDivergence,
+        metrics::DiscreteDistance,
     };
 
     #[test]
@@ -162,6 +165,7 @@ mod test {
         // construct sequential compositor IM
         let root = make_sequential_composition::<_, Box<dyn Any>, _, _>(
             AllDomain::new(),
+            DiscreteDistance::default(),
             MaxDivergence::default(),
             1,
             vec![0.1, 0.1, 0.3, 0.5],
@@ -184,6 +188,7 @@ mod test {
         // This compositor expects all outputs are concretely-typed (bool)
         let sc_query_3 = make_sequential_composition::<_, bool, _, _>(
             AllDomain::<bool>::new(),
+            DiscreteDistance::default(),
             MaxDivergence::default(),
             1,
             vec![0.1, 0.1],
@@ -205,6 +210,7 @@ mod test {
         println!("\nbuild a dyn sequential composition IM and then convert to poly");
         let sc_query_4 = make_sequential_composition::<_, Box<dyn Any>, _, _>(
             AllDomain::<bool>::new(),
+            DiscreteDistance::default(),
             MaxDivergence::default(),
             1,
             vec![0.2, 0.3],
