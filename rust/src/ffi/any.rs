@@ -12,9 +12,9 @@ use std::fmt::{Debug, Formatter};
 use crate::core::{
     Domain, Function, Measure, Measurement, Metric, PrivacyMap, StabilityMap, Transformation,
 };
-use crate::{err, fallible};
 use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
+use crate::{err, fallible};
 
 use super::glue::Glue;
 use super::util::Type;
@@ -233,22 +233,20 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
 
-                    Queryable::new(
-                        move |_self, query: Query<AnyObject>| match query {
-                            Query::External(query) => inner_qbl
-                                .eval(query.downcast_ref::<Q>()?)
-                                .map(Answer::External),
-                            Query::Internal(query) => {
-                                if query.downcast_ref::<QueryType>().is_some() {
-                                    return Ok(Answer::internal(Type::of::<Q>()));
-                                }
-                                let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
+                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
+                        Query::External(query) => inner_qbl
+                            .eval(query.downcast_ref::<Q>()?)
+                            .map(Answer::External),
+                        Query::Internal(query) => {
+                            if query.downcast_ref::<QueryType>().is_some() {
+                                return Ok(Answer::internal(Type::of::<Q>()));
+                            }
+                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
                                     return fallible!(FailedFunction, "internal query returned external answer")
                                 };
-                                Ok(Answer::Internal(a))
-                            }
-                        },
-                    )
+                            Ok(Answer::Internal(a))
+                        }
+                    })
                 },
             ),
             self.input_metric,

@@ -28,7 +28,6 @@ where
     MI::Distance: 'static + TotalOrd + Clone,
     MO::Distance: 'static + TotalOrd + Clone,
 {
-
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_mid");
     }
@@ -157,7 +156,8 @@ mod test {
 
     use super::*;
     use crate::{
-        domains::AllDomain, measurements::make_randomized_response_bool, measures::MaxDivergence, metrics::DiscreteDistance,
+        domains::AllDomain, measurements::make_randomized_response_bool, measures::MaxDivergence,
+        metrics::DiscreteDistance,
     };
 
     #[test]

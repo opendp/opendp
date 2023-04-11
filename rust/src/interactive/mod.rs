@@ -188,8 +188,8 @@ pub trait IntoPolyQueryable {
 
 impl<Q: 'static, A: 'static> IntoPolyQueryable for Queryable<Q, A> {
     fn into_poly(mut self) -> PolyQueryable {
-        Queryable::new_raw(
-            move |_self: &PolyQueryable, query: Query<dyn Any>| Ok(match query {
+        Queryable::new_raw(move |_self: &PolyQueryable, query: Query<dyn Any>| {
+            Ok(match query {
                 Query::External(q) => {
                     let answer = self.eval(q.downcast_ref::<Q>().ok_or_else(|| {
                         err!(FailedCast, "query must be of type {}", type_name::<Q>())
@@ -202,8 +202,8 @@ impl<Q: 'static, A: 'static> IntoPolyQueryable for Queryable<Q, A> {
                     };
                     Answer::Internal(a)
                 }
-            }),
-        )
+            })
+        })
     }
 }
 
