@@ -31,7 +31,6 @@ macro_rules! err {
     ($variant:ident, $template:expr, $($args:expr),+) =>
         (err!($variant, format!($template, $($args,)+)));
 
-    // only resolve stacktraces in test mode
     (@backtrace) => (std::backtrace::Backtrace::capture());
 }
 
