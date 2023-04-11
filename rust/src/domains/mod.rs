@@ -79,7 +79,7 @@ pub use poly::*;
 #[derive(Clone, PartialEq)]
 pub struct AtomDomain<T: CheckAtom> {
     bounds: Option<Bounds<T>>,
-    nullable: Option<Null<T>>,
+    nullable: bool,
 }
 
 impl<T: CheckAtom> Debug for AtomDomain<T> {
@@ -89,11 +89,7 @@ impl<T: CheckAtom> Debug for AtomDomain<T> {
             .as_ref()
             .map(|b| format!("bounds={:?}, ", b))
             .unwrap_or_default();
-        let nullable = self
-            .nullable
-            .as_ref()
-            .map(|_| "nullable=true, ")
-            .unwrap_or_default();
+        let nullable = self.nullable.then(|| "nullable=true, ").unwrap_or_default();
         write!(f, "AtomDomain({}{}T={})", bounds, nullable, type_name!(T))
     }
 }
@@ -101,20 +97,23 @@ impl<T: CheckAtom> Default for AtomDomain<T> {
     fn default() -> Self {
         AtomDomain {
             bounds: None,
-            nullable: None,
+            nullable: false,
         }
     }
 }
 impl<T: CheckAtom> AtomDomain<T> {
     pub fn new(bounds: Option<Bounds<T>>, nullable: Option<Null<T>>) -> Self {
-        AtomDomain { bounds, nullable }
+        AtomDomain {
+            bounds,
+            nullable: nullable.is_some(),
+        }
     }
 }
 impl<T: CheckAtom + InherentNull> AtomDomain<T> {
     pub fn new_nullable() -> Self {
         AtomDomain {
             bounds: None,
-            nullable: Some(Null::new()),
+            nullable: true,
         }
     }
 }
@@ -122,7 +121,7 @@ impl<T: CheckAtom + TotalOrd> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {
             bounds: Some(Bounds::new_closed(bounds)?),
-            nullable: None,
+            nullable: false,
         })
     }
 }
@@ -130,7 +129,7 @@ impl<T: CheckAtom + TotalOrd> AtomDomain<T> {
 impl<T: CheckAtom> Domain for AtomDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        val.check_member(self.bounds.clone(), self.nullable.is_some())
+        val.check_member(self.bounds.clone(), self.nullable)
     }
 }
 
