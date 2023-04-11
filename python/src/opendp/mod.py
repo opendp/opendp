@@ -613,6 +613,11 @@ def binary_search_param(
     ...     bounds=(1, 1000000))
     1498
     """
+
+    # one might think running scipy.optimize.brent* would be better, but 
+    # 1. benchmarking showed no difference or minor regressions
+    # 2. brentq is more complicated
+
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
 
@@ -624,6 +629,8 @@ def binary_search(
     """Find the closest passing value to the decision boundary of `predicate` within float or integer `bounds`.
 
     If bounds are not passed, conducts an exponential search.
+    
+    This function disables collection of backtraces in Rust for performance reasons.
 
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
@@ -676,6 +683,9 @@ def binary_search(
     ...     bounds = (0, 100))
     3
     """
+    # collecting backtraces is slow, and we don't need them for binary searches
+    predicate = _disable_rust_backtraces(predicate)
+
     if bounds is None:
         bounds = exponential_bounds_search(predicate, T)
 
@@ -815,3 +825,22 @@ def exponential_bounds_search(
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
+
+
+def _disable_rust_backtraces(func):
+    """Decorator to disable rust backtraces for a function call."""
+    import functools
+    import os
+
+    @functools.wraps(func)
+    def func_inner(*args, **kwargs):
+        rust_backtrace = os.environ.get("RUST_BACKTRACE")
+        os.environ["RUST_BACKTRACE"] = "0"
+        try:
+            return func(*args, **kwargs)
+        finally:
+            if rust_backtrace is None:
+                del os.environ["RUST_BACKTRACE"]
+            else:
+                os.environ["RUST_BACKTRACE"] = rust_backtrace
+    return func_inner

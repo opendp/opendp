@@ -3,7 +3,7 @@
 use std::fmt;
 use std::fmt::Debug;
 
-use backtrace::Backtrace as _Backtrace;
+use std::backtrace::Backtrace as _Backtrace;
 
 /// Create an instance of [`Fallible`]
 #[macro_export]
@@ -32,11 +32,7 @@ macro_rules! err {
         (err!($variant, format!($template, $($args,)+)));
 
     // only resolve stacktraces in test mode
-    (@backtrace) => (if cfg!(test) {
-        backtrace::Backtrace::new()
-    } else {
-        backtrace::Backtrace::new_unresolved()
-    });
+    (@backtrace) => (std::backtrace::Backtrace::capture());
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -117,7 +113,7 @@ impl From<ErrorVariant> for Error {
         Self {
             variant,
             message: None,
-            backtrace: _Backtrace::new(),
+            backtrace: std::backtrace::Backtrace::capture(),
         }
     }
 }

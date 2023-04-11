@@ -158,12 +158,18 @@ pub extern "C" fn opendp_domains__atom_domain(
     let T = try_!(Type::try_from(T));
     let nullable = util::to_bool(nullable);
 
-    if let Ok(domain) = dispatch!(monomorphize_float, [(T, @floats)], (bounds, nullable)) {
-        Ok(domain)
-    } else if let Ok(domain) = dispatch!(monomorphize_integer, [(T, @integers)], (bounds, nullable))
-    {
-        Ok(domain)
+    // This is used to check if the type is in a dispatch set,
+    // without constructing an expensive backtrace upon failed match
+    fn in_set<T>() -> Option<()> {
+        Some(())
+    }
+
+    if let Some(_) = dispatch!(in_set, [(T, @floats)]) {
+        dispatch!(monomorphize_float, [(T, @floats)], (bounds, nullable))
+    } else if let Some(_) = dispatch!(in_set, [(T, @integers)]) {
+        dispatch!(monomorphize_integer, [(T, @integers)], (bounds, nullable))
     } else if T == Type::of::<usize>() {
+        // this is a hack to work around the fact that usize is not in the integer dispatch in debug builds
         monomorphize_integer::<usize>(bounds, nullable).into()
     } else {
         dispatch!(
