@@ -1,6 +1,6 @@
 use crate::{
     combinators::assert_components_match,
-    core::{Domain, Function, Measurement, Metric, PrivacyMap, MetricSpace},
+    core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::{Answer, Query, Queryable, WrapFn},
     traits::TotalOrd,
