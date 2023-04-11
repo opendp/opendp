@@ -105,12 +105,12 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
 
     #[test]
     fn test() -> Fallible<()> {
         let trans =
-            make_resize::<_, SymmetricDistance, SymmetricDistance>(3, AllDomain::new(), "x")?;
+            make_resize::<_, SymmetricDistance, SymmetricDistance>(3, AtomDomain::new(), "x")?;
         assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);
         assert_eq!(trans.invoke(&vec!["A"; 3])?, vec!["A"; 3]);
         assert_eq!(trans.invoke(&vec!["A"; 4])?, vec!["A", "A", "A"]);

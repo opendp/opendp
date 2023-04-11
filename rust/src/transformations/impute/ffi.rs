@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain};
+use crate::domains::{AtomDomain, InherentNullDomain, OptionDomain};
 use crate::err;
 use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
@@ -39,31 +39,31 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
     let TA = try_!(DIA.get_atom());
 
     match &DIA.contents {
-        TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
+        TypeContents::GENERIC { name, .. } if name == &"OptionDomain" => {
             fn monomorphize<TA>(constant: *const AnyObject) -> FfiResult<*mut AnyTransformation>
             where
-                OptionNullDomain<AllDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
+                OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + Clone + CheckNull,
             {
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
-                make_impute_constant::<OptionNullDomain<AllDomain<TA>>>(constant).into_any()
+                make_impute_constant::<OptionDomain<AtomDomain<TA>>>(constant).into_any()
             }
             dispatch!(monomorphize, [(TA, @primitives)], (constant))
         }
         TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
             fn monomorphize<TA>(constant: *const AnyObject) -> FfiResult<*mut AnyTransformation>
             where
-                InherentNullDomain<AllDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
+                InherentNullDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone,
             {
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
-                make_impute_constant::<InherentNullDomain<AllDomain<TA>>>(constant).into_any()
+                make_impute_constant::<InherentNullDomain<AtomDomain<TA>>>(constant).into_any()
             }
             dispatch!(monomorphize, [(TA, [f64, f32])], (constant))
         }
         _ => err!(
             TypeParse,
-            "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>"
+            "DA must be an OptionDomain<AtomDomain<T>> or an InherentNullDomain<AtomDomain<T>>"
         )
         .into(),
     }
@@ -77,29 +77,29 @@ pub extern "C" fn opendp_transformations__make_drop_null(
     let TA = try_!(DA.get_atom());
 
     match &DA.contents {
-        TypeContents::GENERIC { name, .. } if name == &"OptionNullDomain" => {
+        TypeContents::GENERIC { name, .. } if name == &"OptionDomain" => {
             fn monomorphize<TA>() -> FfiResult<*mut AnyTransformation>
             where
-                OptionNullDomain<AllDomain<TA>>: DropNullDomain<Imputed = TA>,
+                OptionDomain<AtomDomain<TA>>: DropNullDomain<Imputed = TA>,
                 TA: 'static + Clone + CheckNull,
             {
-                make_drop_null::<OptionNullDomain<AllDomain<TA>>>().into_any()
+                make_drop_null::<OptionDomain<AtomDomain<TA>>>().into_any()
             }
             dispatch!(monomorphize, [(TA, @primitives)], ())
         }
         TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
             fn monomorphize<TA>() -> FfiResult<*mut AnyTransformation>
             where
-                InherentNullDomain<AllDomain<TA>>: DropNullDomain<Imputed = TA>,
+                InherentNullDomain<AtomDomain<TA>>: DropNullDomain<Imputed = TA>,
                 TA: 'static + InherentNull + Clone,
             {
-                make_drop_null::<InherentNullDomain<AllDomain<TA>>>().into_any()
+                make_drop_null::<InherentNullDomain<AtomDomain<TA>>>().into_any()
             }
             dispatch!(monomorphize, [(TA, [f64, f32])], ())
         }
         _ => err!(
             TypeParse,
-            "DA must be an OptionNullDomain<AllDomain<T>> or an InherentNullDomain<AllDomain<T>>"
+            "DA must be an OptionDomain<AtomDomain<T>> or an InherentNullDomain<AtomDomain<T>>"
         )
         .into(),
     }

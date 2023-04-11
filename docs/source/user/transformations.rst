@@ -46,24 +46,24 @@ You need to chain with ``make_select_column`` first.
      - Output Domain
      - Input/Output Metric
    * - :func:`opendp.transformations.make_split_dataframe`
-     - ``AllDomain<String>``
+     - ``AtomDomain<String>``
      - ``DataFrameDomain<K>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_split_lines`
-     - ``AllDomain<String>``
-     - ``VectorDomain<AllDomain<String>>``
+     - ``AtomDomain<String>``
+     - ``VectorDomain<AtomDomain<String>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_split_records`
-     - ``VectorDomain<AllDomain<String>>``
-     - ``VectorDomain<VectorDomain<AllDomain<String>>>``
+     - ``VectorDomain<AtomDomain<String>>``
+     - ``VectorDomain<VectorDomain<AtomDomain<String>>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_create_dataframe`
-     - ``VectorDomain<VectorDomain<AllDomain<String>>>``
+     - ``VectorDomain<VectorDomain<AtomDomain<String>>>``
      - ``DataFrameDomain<K>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_select_column`
      - ``DataFrameDomain<K>``
-     - ``VectorDomain<AllDomain<TOA>>``
+     - ``VectorDomain<AtomDomain<TOA>>``
      - ``SymmetricDistance``
 
 
@@ -109,24 +109,24 @@ Depending on the caster you choose, the output data may be null and you will be 
      - Output Domain
      - Input/Output Metric
    * - :func:`opendp.transformations.make_cast`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``VectorDomain<OptionNullDomain<AllDomain<TOA>>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``VectorDomain<OptionDomain<AtomDomain<TOA>>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_cast_default`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``VectorDomain<AllDomain<TOA>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``VectorDomain<AtomDomain<TOA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_cast_inherent`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``VectorDomain<InherentNullDomain<AllDomain<TOA>>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``VectorDomain<InherentNullDomain<AtomDomain<TOA>>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_is_equal`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``VectorDomain<AllDomain<bool>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``VectorDomain<AtomDomain<bool>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_is_null`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``VectorDomain<AllDomain<bool>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``VectorDomain<AtomDomain<bool>>``
      - ``SymmetricDistance``
 
 
@@ -143,14 +143,14 @@ Therefore, most aggregators must be fed completely non-null data.
 We can ensure data is non-null by imputing.
 
 When you cast with :func:`opendp.transformations.make_cast` or :func:`opendp.transformations.make_cast_default`,
-the cast may fail, so the output domain may include null values (``OptionNullDomain`` and ``InherentNullDomain``).
-We have provided imputation transformations to transform the data domain to the non-null ``VectorDomain<AllDomain<TA>>``.
+the cast may fail, so the output domain may include null values (``OptionDomain`` and ``InherentNullDomain``).
+We have provided imputation transformations to transform the data domain to the non-null ``VectorDomain<AtomDomain<TA>>``.
 
 You may also be in a situation where you want to bypass dataframe loading and casting
 because you already have a vector of floats loaded into memory.
 In this case, you should start your chain with an imputer if the floats are potentially null.
 
-:OptionNullDomain: A representation of nulls using an Option type (``Option<bool>``, ``Option<i32>``, etc).
+:OptionDomain: A representation of nulls using an Option type (``Option<bool>``, ``Option<i32>``, etc).
 :InherentNullDomain: A representation of nulls using the data type itself (``f32`` and ``f64``).
 
 The :func:`opendp.transformations.make_impute_constant` transformation supports imputing on either of these representations of nullity,
@@ -164,24 +164,24 @@ so long as you pass the DA (atomic domain) type argument.
      - Output Domain
      - Input/Output Metric
    * - :func:`opendp.transformations.make_impute_constant`
-     - ``VectorDomain<OptionNullDomain<AllDomain<TA>>>``
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<OptionDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_impute_constant`
-     - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<InherentNullDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_impute_uniform_float`
-     - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<InherentNullDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_drop_null`
-     - ``VectorDomain<OptionNullDomain<AllDomain<TA>>>``
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<OptionDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_drop_null`
-     - ``VectorDomain<InherentNullDomain<AllDomain<TA>>>``
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<InherentNullDomain<AtomDomain<TA>>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
 
 Indexing
@@ -203,7 +203,7 @@ In other words, it transforms a categorical data vector to a vector of numeric i
     >>> finder = (
     ...     make_find(categories=["A", "B", "C"]) >>
     ...     # impute any input datum that are not a part of the categories list as 3
-    ...     make_impute_constant(3, DIA=OptionNullDomain[AllDomain["usize"]])
+    ...     make_impute_constant(3, DIA=OptionDomain[AtomDomain["usize"]])
     ... )
     >>> finder(["A", "B", "C", "A", "D"])
     [0, 1, 2, 0, 3]
@@ -234,16 +234,16 @@ You can use combinations of the indicial transformers to map hashable data to in
      - Output Domain
      - Input/Output Metric
    * - :func:`opendp.transformations.make_find`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``VectorDomain<OptionNullDomain<AllDomain<usize>>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``VectorDomain<OptionDomain<AtomDomain<usize>>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_find_bin`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``VectorDomain<AllDomain<usize>>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``VectorDomain<AtomDomain<usize>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_index`
-     - ``VectorDomain<AllDomain<usize>>``
-     - ``VectorDomain<AllDomain<TOA>>``
+     - ``VectorDomain<AtomDomain<usize>>``
+     - ``VectorDomain<AtomDomain<TOA>>``
      - ``SymmetricDistance``
 
 
@@ -267,12 +267,12 @@ Only chain with a clamp transformation if the aggregator you intend to use needs
      - Output Domain
      - Input/Output Metric
    * - :func:`opendp.transformations.make_clamp`
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``VectorDomain<BoundedDomain<TA>>``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_unclamp`
      - ``VectorDomain<BoundedDomain<TA>>``
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
 
 Dataset Ordering
@@ -295,11 +295,11 @@ to metrics that are sensitive to ordering (``InsertDeleteDistance`` and ``Hammin
      - Input Metric
      - Output Metric
    * - :func:`opendp.transformations.make_ordered_random`
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``SymmetricDistance``
      - ``InsertDeleteDistance``
    * - :func:`opendp.transformations.make_unordered`
-     - ``VectorDomain<AllDomain<TA>>``
+     - ``VectorDomain<AtomDomain<TA>>``
      - ``InsertDeleteDistance``
      - ``SymmetricDistance``
 
@@ -319,19 +319,19 @@ and provide the following constructors to convert to/from "bounded"-dp metrics `
      - Input Metric
      - Output Metric
    * - :func:`opendp.transformations.make_metric_bounded`
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``SymmetricDistance``
      - ``ChangeOneDistance``
    * - :func:`opendp.transformations.make_metric_bounded`
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``InsertDeleteDistance``
      - ``HammingDistance``
    * - :func:`opendp.transformations.make_metric_unbounded`
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``ChangeOneDistance``
      - ``SymmetricDistance``
    * - :func:`opendp.transformations.make_metric_unbounded`
-     - ``SizedDomain<VectorDomain<AllDomain<TA>>>``
+     - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``HammingDistance``
      - ``InsertDeleteDistance``
 
@@ -410,48 +410,48 @@ See the notebooks for code examples and deeper explanations:
      - Input Metric
      - Output Metric
    * - :func:`opendp.transformations.make_count`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``AllDomain<TO>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``AtomDomain<TO>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_count_distinct`
-     - ``VectorDomain<AllDomain<TIA>>``
-     - ``AllDomain<TO>``
+     - ``VectorDomain<AtomDomain<TIA>>``
+     - ``AtomDomain<TO>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_count_by_categories`
      - ``VectorDomain<BoundedDomain<TIA>>``
-     - ``VectorDomain<AllDomain<TOA>>``
+     - ``VectorDomain<AtomDomain<TOA>>``
      - ``SymmetricDistance``
      - ``L1Distance<TOA>/L2Distance<TOA>``
    * - :func:`opendp.transformations.make_count_by`
      - ``VectorDomain<BoundedDomain<TI>>``
-     - ``MapDomain<AllDomain<TI>,AllDomain<TO>>``
+     - ``MapDomain<AtomDomain<TI>,AtomDomain<TO>>``
      - ``SymmetricDistance``
      - ``L1Distance<TO>``
    * - :func:`opendp.transformations.make_bounded_sum`
      - ``VectorDomain<BoundedDomain<T>>``
-     - ``AllDomain<T>``
+     - ``AtomDomain<T>``
      - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_sized_bounded_sum`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
-     - ``AllDomain<T>``
+     - ``AtomDomain<T>``
      - ``SymmetricDistance/InsertDeleteDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_sized_bounded_mean`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
-     - ``AllDomain<T>``
+     - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
    * - :func:`opendp.transformations.make_sized_bounded_variance`
      - ``SizedDomain<VectorDomain<BoundedDomain<T>>>``
-     - ``AllDomain<T>``
+     - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
    * - make_sized_bounded_covariance (Rust only)
      - ``SizedDomain<VectorDomain<BoundedDomain<(T,T)>>>``
-     - ``AllDomain<T>``
+     - ``AtomDomain<T>``
      - ``SymmetricDistance``
      - ``AbsoluteDistance<TO>``
 

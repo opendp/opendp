@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::{Number, SaturatingAdd},
@@ -66,7 +66,7 @@ pub fn make_bounded_int_split_sum<T>(
 ) -> Fallible<
     Transformation<
         VectorDomain<BoundedDomain<T>>,
-        AllDomain<T>,
+        AtomDomain<T>,
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
@@ -78,7 +78,7 @@ where
 
     Ok(Transformation::new(
         VectorDomain::new(BoundedDomain::new_closed(bounds)?),
-        AllDomain::new(),
+        AtomDomain::new(),
         Function::new(|arg: &Vec<T>| T::split_sat_sum(arg)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),
@@ -108,7 +108,7 @@ pub fn make_sized_bounded_int_split_sum<T>(
 ) -> Fallible<
     Transformation<
         SizedDomain<VectorDomain<BoundedDomain<T>>>,
-        AllDomain<T>,
+        AtomDomain<T>,
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
@@ -120,7 +120,7 @@ where
     let range = upper.inf_sub(&lower)?;
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
-        AllDomain::new(),
+        AtomDomain::new(),
         Function::new(|arg: &Vec<T>| T::split_sat_sum(arg)),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),

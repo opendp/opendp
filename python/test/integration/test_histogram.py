@@ -7,7 +7,7 @@ def test_count_by_categories():
     """Compute histogram with known category set"""
     from opendp.transformations import make_count_by_categories, make_split_dataframe, make_select_column
     from opendp.measurements import make_base_discrete_laplace
-    from opendp.typing import L1Distance, VectorDomain, AllDomain
+    from opendp.typing import L1Distance, VectorDomain, AtomDomain
     from opendp.mod import binary_search_chain
     preprocess = (
         make_split_dataframe(",", ['A', 'B']) >>
@@ -16,7 +16,7 @@ def test_count_by_categories():
     )
 
     noisy_histogram_from_dataframe = binary_search_chain(
-        lambda s: preprocess >> make_base_discrete_laplace(s, D=VectorDomain[AllDomain[int]]),
+        lambda s: preprocess >> make_base_discrete_laplace(s, D=VectorDomain[AtomDomain[int]]),
         d_in=1, d_out=1.)
 
     assert noisy_histogram_from_dataframe.check(1, 1.)
@@ -30,14 +30,14 @@ def test_count_by_categories_float():
     """Compute histogram with known category set"""
     from opendp.transformations import make_count_by_categories, make_split_dataframe, make_select_column
     from opendp.measurements import make_base_laplace, make_base_gaussian
-    from opendp.typing import L1Distance, L2Distance, VectorDomain, AllDomain
+    from opendp.typing import L1Distance, L2Distance, VectorDomain, AtomDomain
     from opendp.mod import enable_features
     enable_features("floating-point")
     noisy_float_histogram = (
             make_split_dataframe(",", ['A', 'B']) >>
             make_select_column("A", TOA=str) >>
             make_count_by_categories(categories=["a", "b", "c"], MO=L1Distance[float], TIA=str, TOA=float) >>
-            make_base_laplace(scale=1., D=VectorDomain[AllDomain[float]])
+            make_base_laplace(scale=1., D=VectorDomain[AtomDomain[float]])
     )
     print(noisy_float_histogram("\n".join(["a"] * 5 + ["b"] * 20 + ["c"] * 10 + ["z"] * 5)))
 
@@ -45,7 +45,7 @@ def test_count_by_categories_float():
             make_split_dataframe(",", ['A', 'B']) >>
             make_select_column("A", TOA=str) >>
             make_count_by_categories(categories=["a", "b", "c"], MO=L2Distance[float], TIA=str, TOA=float) >>
-            make_base_gaussian(scale=1., D=VectorDomain[AllDomain[float]])
+            make_base_gaussian(scale=1., D=VectorDomain[AtomDomain[float]])
     )
     print(noisy_float_histogram("\n".join(["a"] * 5 + ["b"] * 20 + ["c"] * 10 + ["z"] * 5)))
 

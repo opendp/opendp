@@ -282,7 +282,7 @@ pub mod test {
     use std::ops::{Mul, Sub};
 
     use super::*;
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
     use crate::error::ExplainUnwrap;
     use crate::measurements::{
         make_base_discrete_gaussian, make_base_discrete_laplace, make_base_gaussian,
@@ -502,7 +502,7 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
-        let base_laplace = make_base_laplace::<AllDomain<f64>>(scale, Some(-100))?;
+        let base_laplace = make_base_laplace::<AtomDomain<f64>>(scale, Some(-100))?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
@@ -521,8 +521,10 @@ pub mod test {
         let accuracy = 1.0;
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-        let base_gaussian =
-            make_base_gaussian::<AllDomain<f64>, ZeroConcentratedDivergence<_>>(scale, Some(-100))?;
+        let base_gaussian = make_base_gaussian::<AtomDomain<f64>, ZeroConcentratedDivergence<_>>(
+            scale,
+            Some(-100),
+        )?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)
@@ -542,7 +544,7 @@ pub mod test {
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_discrete_laplacian_scale(accuracy as f64, theoretical_alpha)?;
         println!("scale: {scale}");
-        let base_dl = make_base_discrete_laplace::<AllDomain<i8>, f64>(scale)?;
+        let base_dl = make_base_discrete_laplace::<AtomDomain<i8>, f64>(scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dl.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
@@ -565,7 +567,7 @@ pub mod test {
 
         println!("scale: {}", scale);
         let base_dg =
-            make_base_discrete_gaussian::<AllDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(
+            make_base_discrete_gaussian::<AtomDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(
                 scale,
             )?;
         let n = 50_000;

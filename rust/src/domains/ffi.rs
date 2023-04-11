@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, FfiResult},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyObject, Downcast},
@@ -84,18 +84,18 @@ pub extern "C" fn opendp_domains__domain_carrier_type(
 }
 
 #[bootstrap(returns(c_type = "FfiResult<AnyDomain *>"))]
-/// Construct an instance of `AllDomain`.
+/// Construct an instance of `AtomDomain`.
 ///
 /// # Generics
 /// * `T` - The type of the atom.
-fn all_domain<T: CheckNull>() -> AllDomain<T> {
-    AllDomain::<T>::new()
+fn atom_domain<T: CheckNull>() -> AtomDomain<T> {
+    AtomDomain::<T>::new()
 }
 
 #[no_mangle]
-pub extern "C" fn opendp_domains__all_domain(T: *const c_char) -> FfiResult<*mut AnyDomain> {
+pub extern "C" fn opendp_domains__atom_domain(T: *const c_char) -> FfiResult<*mut AnyDomain> {
     fn monomorphize<T: 'static + CheckNull>() -> FfiResult<*mut AnyDomain> {
-        Ok(AnyDomain::new(all_domain::<T>())).into()
+        Ok(AnyDomain::new(atom_domain::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
     dispatch!(monomorphize, [(T, @primitives)], ())
@@ -139,7 +139,7 @@ pub extern "C" fn opendp_domains__vector_domain(
     atom_domain: *const AnyDomain,
 ) -> FfiResult<*mut AnyDomain> {
     fn monomorphize_all<T: 'static + CheckNull>(atom_domain: &AnyDomain) -> Fallible<AnyDomain> {
-        let atom_domain = atom_domain.downcast_ref::<AllDomain<T>>()?.clone();
+        let atom_domain = atom_domain.downcast_ref::<AtomDomain<T>>()?.clone();
         Ok(AnyDomain::new(VectorDomain::new(atom_domain)))
     }
     fn monomorphize_bounded<T: 'static + TotalOrd + Clone>(
@@ -153,7 +153,7 @@ pub extern "C" fn opendp_domains__vector_domain(
 
     match atom_domain.type_.contents {
         TypeContents::GENERIC {
-            name: "AllDomain", ..
+            name: "AtomDomain", ..
         } => dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain)),
         TypeContents::GENERIC {
             name: "BoundedDomain",
@@ -161,7 +161,7 @@ pub extern "C" fn opendp_domains__vector_domain(
         } => dispatch!(monomorphize_bounded, [(atom_domain.carrier_type, @numbers)], (atom_domain)),
         _ => fallible!(
             FFI,
-            "VectorDomain constructors only support AllDomain and BoundedDomain atoms"
+            "VectorDomain constructors only support AtomDomain and BoundedDomain atoms"
         ),
     }
     .into()
@@ -183,7 +183,7 @@ pub extern "C" fn opendp_domains__sized_domain(
         size: usize,
     ) -> Fallible<AnyDomain> {
         let inner_domain = inner_domain
-            .downcast_ref::<VectorDomain<AllDomain<T>>>()?
+            .downcast_ref::<VectorDomain<AtomDomain<T>>>()?
             .clone();
         Ok(AnyDomain::new(SizedDomain::new(inner_domain, size)))
     }
@@ -210,7 +210,7 @@ pub extern "C" fn opendp_domains__sized_domain(
             let atom_type = try_!(inner_domain.type_.get_atom());
             match try_!(Type::of_id(&args[0])).contents {
                 TypeContents::GENERIC {
-                    name: "AllDomain", ..
+                    name: "AtomDomain", ..
                 } => dispatch!(monomorphize_all, [(atom_type, @primitives)], (inner_domain, size)),
                 TypeContents::GENERIC {
                     name: "BoundedDomain",
@@ -218,7 +218,7 @@ pub extern "C" fn opendp_domains__sized_domain(
                 } => dispatch!(monomorphize_bounded, [(atom_type, @numbers)], (inner_domain, size)),
                 _ => fallible!(
                     FFI,
-                    "VectorDomain constructors only support AllDomain and BoundedDomain atoms"
+                    "VectorDomain constructors only support AtomDomain and BoundedDomain atoms"
                 ),
             }
         }

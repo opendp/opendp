@@ -4,7 +4,7 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Function, StabilityMap, Transformation};
-use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AtomDomain, InherentNullDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::SymmetricDistance;
 use crate::traits::samplers::SampleUniform;
@@ -23,8 +23,8 @@ pub fn make_impute_uniform_float<TA>(
     bounds: (TA, TA),
 ) -> Fallible<
     Transformation<
-        VectorDomain<InherentNullDomain<AllDomain<TA>>>,
-        VectorDomain<AllDomain<TA>>,
+        VectorDomain<InherentNullDomain<AtomDomain<TA>>>,
+        VectorDomain<AtomDomain<TA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -45,8 +45,8 @@ where
     let scale = upper - lower;
 
     make_row_by_row_fallible(
-        InherentNullDomain::new(AllDomain::new()),
-        AllDomain::new(),
+        InherentNullDomain::new(AtomDomain::new()),
+        AtomDomain::new(),
         move |v| {
             if v.is_null() {
                 TA::sample_standard_uniform(false).map(|v| v * scale + lower)
@@ -63,9 +63,9 @@ pub trait ImputeConstantDomain: Domain {
     ///
     /// On any type `D` for which the `ImputeConstantDomain` trait is implemented,
     /// the syntax `D::Imputed` refers to this associated type.
-    /// For example, consider `D` to be `OptionNullDomain<T>`, the domain of all `Option<T>`.
-    /// The implementation of this trait for `OptionNullDomain<T>` designates that `type Imputed = T`.
-    /// Thus `OptionNullDomain<T>::Imputed` is `T`.
+    /// For example, consider `D` to be `OptionDomain<T>`, the domain of all `Option<T>`.
+    /// The implementation of this trait for `OptionDomain<T>` designates that `type Imputed = T`.
+    /// Thus `OptionDomain<T>::Imputed` is `T`.
     ///
     /// # Proof Definition
     /// `Self::Imputed` can represent the set of possible output values after imputation.
@@ -82,7 +82,7 @@ pub trait ImputeConstantDomain: Domain {
     ) -> &'a Self::Imputed;
 }
 // how to impute, when null represented as Option<T>
-impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: CheckNull> ImputeConstantDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(
         default: &'a Self::Carrier,
@@ -92,7 +92,7 @@ impl<T: CheckNull> ImputeConstantDomain for OptionNullDomain<AllDomain<T>> {
     }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> {
+impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AtomDomain<T>> {
     type Imputed = Self::Carrier;
     fn impute_constant<'a>(
         default: &'a Self::Carrier,
@@ -109,19 +109,19 @@ impl<T: InherentNull> ImputeConstantDomain for InherentNullDomain<AllDomain<T>> 
 #[bootstrap(
     features("contrib"),
     arguments(constant(rust_type = "TA", c_type = "AnyObject *")),
-    generics(DIA(default = "OptionNullDomain<AllDomain<TA>>", generics = "TA")),
+    generics(DIA(default = "OptionDomain<AtomDomain<TA>>", generics = "TA")),
     derived_types(TA = "$get_atom_or_infer(DIA, constant)")
 )]
 /// Make a Transformation that replaces null/None data with `constant`.
 ///
 /// By default, the input type is `Vec<Option<TA>>`, as emitted by make_cast.
-/// Set `DA` to `InherentNullDomain<AllDomain<TA>>` for imputing on types
+/// Set `DA` to `InherentNullDomain<AtomDomain<TA>>` for imputing on types
 /// that have an inherent representation of nullity, like floats.
 ///
 /// | Atom Input Domain `DIA`             |  Input Type       | `DIA::Imputed` |
 /// | ----------------------------------- | ----------------- | -------------- |
-/// | `OptionNullDomain<AllDomain<TA>>`   | `Vec<Option<TA>>` | `TA`           |
-/// | `InherentNullDomain<AllDomain<TA>>` | `Vec<TA>`         | `TA`           |
+/// | `OptionDomain<AtomDomain<TA>>`   | `Vec<Option<TA>>` | `TA`           |
+/// | `InherentNullDomain<AtomDomain<TA>>` | `Vec<TA>`         | `TA`           |
 ///
 /// # Arguments
 /// * `constant` - Value to replace nulls with.
@@ -133,7 +133,7 @@ pub fn make_impute_constant<DIA>(
 ) -> Fallible<
     Transformation<
         VectorDomain<DIA>,
-        VectorDomain<AllDomain<DIA::Imputed>>,
+        VectorDomain<AtomDomain<DIA::Imputed>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -147,7 +147,7 @@ where
         return fallible!(MakeTransformation, "Constant may not be null.");
     }
 
-    make_row_by_row(DIA::default(), AllDomain::new(), move |v| {
+    make_row_by_row(DIA::default(), AtomDomain::new(), move |v| {
         DIA::impute_constant(v, &constant).clone()
     })
 }
@@ -158,7 +158,7 @@ pub trait DropNullDomain: Domain {
     ///
     /// On any type `D` for which the `DropNullDomain` trait is implemented,
     /// the syntax `D::Imputed` refers to this associated type.
-    /// For example, consider `D` to be `OptionNullDomain<T>`, the domain of all `Option<T>`.
+    /// For example, consider `D` to be `OptionDomain<T>`, the domain of all `Option<T>`.
     /// The implementation of this trait for `DropNullDomain<T>` designates that `type Imputed = T`.
     /// Thus `DropNullDomain<T>::Imputed` is `T`.
     type Imputed;
@@ -171,7 +171,7 @@ pub trait DropNullDomain: Domain {
 }
 
 /// how to standardize into an option, when null represented as Option<T>
-impl<T: CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
+impl<T: CheckNull + Clone> DropNullDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() {
@@ -182,7 +182,7 @@ impl<T: CheckNull + Clone> DropNullDomain for OptionNullDomain<AllDomain<T>> {
     }
 }
 /// how to standardize into an option, when null represented as T with internal nullity
-impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>> {
+impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AtomDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() {
@@ -199,15 +199,15 @@ impl<T: InherentNull + Clone> DropNullDomain for InherentNullDomain<AllDomain<T>
 ///
 /// | `DA`                                | `DA::Imputed` |
 /// | ----------------------------------- | ------------- |
-/// | `OptionNullDomain<AllDomain<TA>>`   | `TA`          |
-/// | `InherentNullDomain<AllDomain<TA>>` | `TA`          |
+/// | `OptionDomain<AtomDomain<TA>>`   | `TA`          |
+/// | `InherentNullDomain<AtomDomain<TA>>` | `TA`          |
 ///
 /// # Generics
 /// * `DA` - atomic domain of input data that contains nulls.
 pub fn make_drop_null<DA>() -> Fallible<
     Transformation<
         VectorDomain<DA>,
-        VectorDomain<AllDomain<DA::Imputed>>,
+        VectorDomain<AtomDomain<DA::Imputed>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_impute_constant_option() -> Fallible<()> {
-        let imputer = make_impute_constant::<OptionNullDomain<_>>("IMPUTED".to_string())?;
+        let imputer = make_impute_constant::<OptionDomain<_>>("IMPUTED".to_string())?;
 
         let result = imputer.invoke(&vec![Some("A".to_string()), None])?;
 
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_impute_drop_option() -> Fallible<()> {
-        let imputer = make_drop_null::<OptionNullDomain<_>>()?;
+        let imputer = make_drop_null::<OptionDomain<_>>()?;
 
         let result = imputer.invoke(&vec![Some(f64::NAN), Some(23.), None])?;
 

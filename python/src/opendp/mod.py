@@ -649,7 +649,7 @@ def binary_search(
 
     .. testsetup:: *
 
-        from opendp.typing import L2Distance, VectorDomain, AllDomain
+        from opendp.typing import L2Distance, VectorDomain, AtomDomain
         from opendp.transformations import make_sized_bounded_mean
         from opendp.measurements import make_base_gaussian
         from opendp.combinators import make_fix_delta, make_zCDP_to_approxDP

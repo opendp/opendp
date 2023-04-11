@@ -6,7 +6,7 @@ use num::{Integer, ToPrimitive};
 use rug::{float::Round, ops::AddAssignRound, ops::DivAssignRound, Float};
 
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{AllDomain, MapDomain};
+use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
@@ -26,7 +26,7 @@ const SIZE_FACTOR_DEFAULT: u32 = 50;
 /// Available here: arxiv.org/abs/2106.10068
 
 /// Input domain. The mechanism is designed for settings where the domain of K is huge.
-type SparseDomain<K, C> = MapDomain<AllDomain<K>, AllDomain<C>>;
+type SparseDomain<K, C> = MapDomain<AtomDomain<K>, AtomDomain<C>>;
 
 // Types used to store the DP projection.
 type BitVector = Vec<bool>;
@@ -244,8 +244,8 @@ where
 
     Ok(Measurement::new(
         MapDomain {
-            key_domain: AllDomain::new(),
-            value_domain: AllDomain::new(),
+            key_domain: AtomDomain::new(),
+            value_domain: AtomDomain::new(),
         },
         Function::new_fallible(move |x: &HashMap<K, C>| {
             let z = compute_projection(x, &h, alpha, scale, s)?;

@@ -1,5 +1,5 @@
 from opendp.mod import enable_features
-from opendp.typing import AllDomain
+from opendp.typing import AtomDomain
 
 enable_features('contrib')
 
@@ -62,5 +62,5 @@ def test_float_count():
     k = 40
     data = "\n".join(map(str, range(k)))
 
-    print((preprocess >> make_base_laplace(1., D=AllDomain[float]))(data))
-    print((preprocess >> make_base_gaussian(1., D=AllDomain[float]))(data))
+    print((preprocess >> make_base_laplace(1., D=AtomDomain[float]))(data))
+    print((preprocess >> make_base_gaussian(1., D=AtomDomain[float]))(data))

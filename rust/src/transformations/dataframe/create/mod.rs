@@ -5,7 +5,7 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     data::Column,
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::SymmetricDistance,
     traits::Hashable,
@@ -73,7 +73,7 @@ pub fn make_create_dataframe<K>(
     col_names: Vec<K>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<VectorDomain<AllDomain<String>>>,
+        VectorDomain<VectorDomain<AtomDomain<String>>>,
         DataFrameDomain<K>,
         SymmetricDistance,
         SymmetricDistance,
@@ -119,14 +119,14 @@ pub fn make_split_dataframe<K>(
     separator: Option<&str>,
     col_names: Vec<K>,
 ) -> Fallible<
-    Transformation<AllDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
+    Transformation<AtomDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
 >
 where
     K: Hashable,
 {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
-        AllDomain::new(),
+        AtomDomain::new(),
         DataFrameDomain::new_all(),
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
         SymmetricDistance::default(),
@@ -151,14 +151,14 @@ fn split_lines(s: &str) -> Vec<&str> {
 /// Make a Transformation that takes a string and splits it into a `Vec<String>` of its lines.
 pub fn make_split_lines() -> Fallible<
     Transformation<
-        AllDomain<String>,
-        VectorDomain<AllDomain<String>>,
+        AtomDomain<String>,
+        VectorDomain<AtomDomain<String>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 > {
     Ok(Transformation::new(
-        AllDomain::<String>::new(),
+        AtomDomain::<String>::new(),
         VectorDomain::new_all(),
         Function::new(|arg: &String| -> Vec<String> {
             arg.lines().map(|v| v.to_owned()).collect()
@@ -191,8 +191,8 @@ pub fn make_split_records(
     separator: Option<&str>,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<String>>,
-        VectorDomain<VectorDomain<AllDomain<String>>>,
+        VectorDomain<AtomDomain<String>>,
+        VectorDomain<VectorDomain<AtomDomain<String>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,

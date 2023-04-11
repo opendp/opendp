@@ -8,7 +8,7 @@ use num::One;
 use opendp_derive::bootstrap;
 
 use crate::core::{Function, Metric, StabilityMap, Transformation};
-use crate::domains::{AllDomain, MapDomain, VectorDomain};
+use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, LpDistance, SymmetricDistance};
 use crate::traits::{CollectionSize, Float, Hashable, Number, Primitive};
@@ -24,8 +24,8 @@ use crate::traits::{CollectionSize, Float, Hashable, Number, Primitive};
 /// * `TO` - Output Type. Must be numeric.
 pub fn make_count<TIA, TO>() -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        AllDomain<TO>,
+        VectorDomain<AtomDomain<TIA>>,
+        AtomDomain<TO>,
         SymmetricDistance,
         AbsoluteDistance<TO>,
     >,
@@ -36,7 +36,7 @@ where
 {
     Ok(Transformation::new(
         VectorDomain::new_all(),
-        AllDomain::new(),
+        AtomDomain::new(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
             // get size via the CollectionSize trait
@@ -62,8 +62,8 @@ where
 /// * `TO` - Output Type. Must be numeric.
 pub fn make_count_distinct<TIA, TO>() -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        AllDomain<TO>,
+        VectorDomain<AtomDomain<TIA>>,
+        AtomDomain<TO>,
         SymmetricDistance,
         AbsoluteDistance<TO>,
     >,
@@ -74,7 +74,7 @@ where
 {
     Ok(Transformation::new(
         VectorDomain::new_all(),
-        AllDomain::new(),
+        AtomDomain::new(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
             TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
@@ -126,8 +126,8 @@ pub fn make_count_by_categories<MO, TIA, TOA>(
     null_category: bool,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<TOA>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
         MO,
     >,
@@ -212,8 +212,8 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// The carrier type is `HashMap<TK, TV>`, a hashmap of the count (`TV`) for each unique data input (`TK`).
 pub fn make_count_by<MO, TK, TV>() -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TK>>,
-        MapDomain<AllDomain<TK>, AllDomain<TV>>,
+        VectorDomain<AtomDomain<TK>>,
+        MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         SymmetricDistance,
         MO,
     >,
@@ -226,7 +226,7 @@ where
 {
     Ok(Transformation::new(
         VectorDomain::new_all(),
-        MapDomain::new(AllDomain::new(), AllDomain::new()),
+        MapDomain::new(AtomDomain::new(), AtomDomain::new()),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {

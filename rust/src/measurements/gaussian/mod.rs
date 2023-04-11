@@ -3,7 +3,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Measure, Measurement, Metric, PrivacyMap},
-    domains::{AllDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
     metrics::{AbsoluteDistance, L2Distance},
@@ -19,10 +19,10 @@ mod ffi;
 pub trait GaussianDomain: MappableDomain + Default {
     type InputMetric: Metric<Distance = Self::Atom> + Default;
 }
-impl<T: Clone + CheckNull> GaussianDomain for AllDomain<T> {
+impl<T: Clone + CheckNull> GaussianDomain for AtomDomain<T> {
     type InputMetric = AbsoluteDistance<T>;
 }
-impl<T: Clone + CheckNull> GaussianDomain for VectorDomain<AllDomain<T>> {
+impl<T: Clone + CheckNull> GaussianDomain for VectorDomain<AtomDomain<T>> {
     type InputMetric = L2Distance<T>;
 }
 
@@ -61,7 +61,7 @@ where
         scale(rust_type = "T", c_type = "void *"),
         k(default = -1074, rust_type = "i32", c_type = "uint32_t")),
     generics(
-        D(default = "AllDomain<T>", generics = "T"),
+        D(default = "AtomDomain<T>", generics = "T"),
         MO(default = "ZeroConcentratedDivergence<T>", generics = "T")),
     derived_types(T = "$get_atom_or_infer(D, scale)")
 )]
@@ -72,8 +72,8 @@ where
 ///
 /// | `D`                          | input type   | `D::InputMetric`       |
 /// | ---------------------------- | ------------ | ---------------------- |
-/// | `AllDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AllDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
+/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -84,7 +84,7 @@ where
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
-/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AllDomain<T>>` or `AllDomain<T>`.
+/// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence<T>`.
 pub fn make_base_gaussian<D, MO>(
     scale: D::Atom,
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn test_make_gaussian_mechanism() -> Fallible<()> {
         let measurement =
-            make_base_gaussian::<AllDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
+            make_base_gaussian::<AtomDomain<_>, ZeroConcentratedDivergence<_>>(1.0f64, None)?;
         let arg = 0.0;
         let _ret = measurement.invoke(&arg)?;
 

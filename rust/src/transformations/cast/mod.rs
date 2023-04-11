@@ -4,7 +4,7 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AllDomain, InherentNullDomain, OptionNullDomain, VectorDomain};
+use crate::domains::{AtomDomain, InherentNullDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckNull, InherentNull, RoundCast};
@@ -21,8 +21,8 @@ use crate::transformations::make_row_by_row;
 /// * `TOA` - Atomic Output Type to cast into
 pub fn make_cast<TIA, TOA>() -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<OptionNullDomain<AllDomain<TOA>>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<OptionDomain<AtomDomain<TOA>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -32,8 +32,8 @@ where
     TOA: 'static + RoundCast<TIA> + CheckNull,
 {
     make_row_by_row(
-        AllDomain::new(),
-        OptionNullDomain::new(AllDomain::new()),
+        AtomDomain::new(),
+        OptionDomain::new(AtomDomain::new()),
         |v| {
             TOA::round_cast(v.clone())
                 .ok()
@@ -59,8 +59,8 @@ where
 /// * `TOA` - Atomic Output Type to cast into
 pub fn make_cast_default<TIA, TOA>() -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<TOA>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -69,7 +69,7 @@ where
     TIA: 'static + Clone + CheckNull,
     TOA: 'static + RoundCast<TIA> + Default + CheckNull,
 {
-    make_row_by_row(AllDomain::new(), AllDomain::new(), |v| {
+    make_row_by_row(AtomDomain::new(), AtomDomain::new(), |v| {
         TOA::round_cast(v.clone()).unwrap_or_default()
     })
 }
@@ -87,8 +87,8 @@ where
 /// * `TOA` - Atomic Output Type to cast into
 pub fn make_cast_inherent<TIA, TOA>() -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<InherentNullDomain<AllDomain<TOA>>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<InherentNullDomain<AtomDomain<TOA>>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -98,8 +98,8 @@ where
     TOA: 'static + RoundCast<TIA> + InherentNull + CheckNull,
 {
     make_row_by_row(
-        AllDomain::new(),
-        InherentNullDomain::new(AllDomain::new()),
+        AtomDomain::new(),
+        InherentNullDomain::new(AtomDomain::new()),
         |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
     )
 }

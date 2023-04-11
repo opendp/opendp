@@ -188,10 +188,10 @@ class RuntimeType(object):
                 return closeness
 
             domain = {
-                'AllDomain': AllDomain,
+                'AtomDomain': AtomDomain,
                 'BoundedDomain': BoundedDomain,
                 'VectorDomain': VectorDomain,
-                'OptionNullDomain': OptionNullDomain,
+                'OptionDomain': OptionDomain,
                 'InherentNullDomain': InherentNullDomain,
                 'SizedDomain': SizedDomain
             }.get(origin)
@@ -450,10 +450,10 @@ class DomainDescriptor(RuntimeType):
         return DomainDescriptor(self.origin, [self.parse(type_name=subdomain)])
 
 
-AllDomain = DomainDescriptor('AllDomain')
+AtomDomain = DomainDescriptor('AtomDomain')
 BoundedDomain = DomainDescriptor('BoundedDomain')
 VectorDomain = DomainDescriptor('VectorDomain')
-OptionNullDomain = DomainDescriptor('OptionNullDomain')
+OptionDomain = DomainDescriptor('OptionDomain')
 InherentNullDomain = DomainDescriptor('InherentNullDomain')
 SizedDomain = DomainDescriptor('SizedDomain')
 

@@ -20,7 +20,7 @@ pub trait CollectionSize {
 
 /// Checks if a value is null.
 ///
-/// Since [`crate::domains::AllDomain`] only includes non-null values,
+/// Since [`crate::domains::AtomDomain`] only includes non-null values,
 /// this trait is necessary for its member check.
 pub trait CheckNull {
     /// # Proof Definition

@@ -13,7 +13,7 @@ from opendp.measures import max_divergence
 def test_sequential_composition():
     max_influence = 1
     sc_meas = make_sequential_composition(
-        input_domain=vector_domain(all_domain(int)),
+        input_domain=vector_domain(atom_domain(int)),
         input_metric=symmetric_distance(),
         output_measure=max_divergence(float),
         d_in=max_influence,

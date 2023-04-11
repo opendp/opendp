@@ -73,7 +73,7 @@ mod full;
 ///     // can specify multiple. Everything is optional
 ///     arguments(my_arg1(default = "example"), my_arg2(hint = "int")),
 ///     // can specify multiple. Everything is optional
-///     generics(T(default = "AllDomain<f64>")),
+///     generics(T(default = "AtomDomain<f64>")),
 ///     // same syntax as inside an argument or generic. Optional
 ///     returns(c_type = "FfiResult<AnyTransformation *>")
 /// )]
@@ -106,7 +106,7 @@ mod full;
 /// ```no_run
 /// #[bootstrap(
 ///     generics(
-///         D(default = "AllDomain<T>", generics = "T"),
+///         D(default = "AtomDomain<T>", generics = "T"),
 ///         M(default = "AbsoluteDistance<T>", generics = "T")),
 ///     derived_types(T = "$get_atom_or_infer(D, constant)")
 /// )]

@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::Number,
@@ -36,7 +36,7 @@ pub fn make_sized_bounded_int_checked_sum<T>(
 ) -> Fallible<
     Transformation<
         SizedDomain<VectorDomain<BoundedDomain<T>>>,
-        AllDomain<T>,
+        AtomDomain<T>,
         SymmetricDistance,
         AbsoluteDistance<T>,
     >,
@@ -56,7 +56,7 @@ where
     let range = upper.inf_sub(&lower)?;
     Ok(Transformation::new(
         SizedDomain::new(VectorDomain::new(BoundedDomain::new_closed(bounds)?), size),
-        AllDomain::new(),
+        AtomDomain::new(),
         Function::new(|arg: &Vec<T>| arg.iter().sum()),
         SymmetricDistance::default(),
         AbsoluteDistance::default(),

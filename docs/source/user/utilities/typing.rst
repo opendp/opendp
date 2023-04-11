@@ -81,7 +81,7 @@ OpenDP supports the following atomic data types:
 
 Some types are parameterized by another type, like:
 
-* AllDomain
+* AtomDomain
 * VectorDomain
 * AbsoluteDistance
 * L1Distance
@@ -89,8 +89,8 @@ Some types are parameterized by another type, like:
 
 Examples of these types include:
 
-* AllDomain[bool]
-* VectorDomain[AllDomain[f32]]
+* AtomDomain[bool]
+* VectorDomain[AtomDomain[f32]]
 * L1Distance[u128]
 
 The docstrings on the constructor APIs should typically guide you as to what types are permissible.

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::os::raw::{c_char, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::ffi::any::AnyMeasurement;
 use crate::ffi::util::Type;
 use crate::measurements::{make_base_discrete_laplace, DiscreteLaplaceDomain};
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
-            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])
         ], (scale))
     }
@@ -64,7 +64,7 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace(
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
-            (D, [AllDomain<T>, VectorDomain<AllDomain<T>>]),
+            (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])
         ], (scale))
     }
@@ -91,7 +91,7 @@ mod tests {
     fn test_make_base_discrete_laplace_ffi() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_discrete_laplace(
             util::into_raw(0.0) as *const c_void,
-            "AllDomain<i32>".to_char_p(),
+            "AtomDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);

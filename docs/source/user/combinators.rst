@@ -85,8 +85,8 @@ but the chaining fails because the sum emits floats and the discrete laplace mec
     ... except OpenDPException as err:
     ...     print(err.message[:-1])
     Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
-        output_domain: AllDomain(f64)
-        input_domain:  AllDomain(i32)
+        output_domain: AtomDomain(f64)
+        input_domain:  AtomDomain(i32)
 
 Note that ``noisy_sum``'s input domain and input metric come from ``bounded_sum``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors like :py:func:`make_cast <opendp.transformations.make_cast>`, :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`, :py:func:`make_clamp <opendp.transformations.make_clamp>` and :py:func:`make_resize <opendp.transformations.make_resize>`.
@@ -268,7 +268,7 @@ In this example, we mock the typical API of the OpenDP library:
 .. doctest::
 
     >>> from opendp.combinators import make_user_transformation
-    >>> from opendp.domains import vector_domain, all_domain
+    >>> from opendp.domains import vector_domain, atom_domain
     >>> from opendp.metrics import symmetric_distance
     >>> from opendp.typing import *
     ...
@@ -283,8 +283,8 @@ In this example, we mock the typical API of the OpenDP library:
     ...         return d_in * multiplicity
     ...
     ...     return make_user_transformation(
-    ...         vector_domain(all_domain(int)),
-    ...         vector_domain(all_domain(int)),
+    ...         vector_domain(atom_domain(int)),
+    ...         vector_domain(atom_domain(int)),
     ...         function,
     ...         symmetric_distance(),
     ...         symmetric_distance(),

@@ -6,7 +6,7 @@ use std::collections::Bound;
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AllDomain, BoundedDomain, VectorDomain};
+use crate::domains::{AtomDomain, BoundedDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::SymmetricDistance;
 use crate::traits::{CheckNull, TotalOrd};
@@ -27,14 +27,14 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
     bounds: (TA, TA),
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TA>>,
+        VectorDomain<AtomDomain<TA>>,
         VectorDomain<BoundedDomain<TA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 > {
     make_row_by_row_fallible(
-        AllDomain::new(),
+        AtomDomain::new(),
         BoundedDomain::new_closed(bounds.clone())?,
         move |arg: &TA| arg.clone().total_clamp(bounds.0.clone(), bounds.1.clone()),
     )
@@ -47,7 +47,7 @@ pub fn make_clamp<TA: 'static + Clone + TotalOrd + CheckNull>(
 )]
 /// Make a Transformation that unclamps numeric data in `Vec<T>`.
 ///
-/// Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AllDomain<T>>`.
+/// Used to convert a `VectorDomain<BoundedDomain<T>>` to a `VectorDomain<AtomDomain<T>>`.
 ///
 /// # Arguments
 /// * `bounds` - Tuple of lower and upper bounds.
@@ -59,12 +59,12 @@ pub fn make_unclamp<TA: 'static + Clone + TotalOrd + CheckNull>(
 ) -> Fallible<
     Transformation<
         VectorDomain<BoundedDomain<TA>>,
-        VectorDomain<AllDomain<TA>>,
+        VectorDomain<AtomDomain<TA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 > {
-    make_row_by_row(BoundedDomain::new(bounds)?, AllDomain::new(), |arg| {
+    make_row_by_row(BoundedDomain::new(bounds)?, AtomDomain::new(), |arg| {
         arg.clone()
     })
 }

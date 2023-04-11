@@ -5,7 +5,7 @@ use num::One;
 use opendp_derive::bootstrap;
 
 use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
-use crate::domains::{AllDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, SymmetricDistance};
 use crate::traits::{CheckNull, DistanceConstant};
@@ -86,8 +86,8 @@ pub fn make_is_equal<TIA>(
     value: TIA,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<bool>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<bool>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -95,7 +95,7 @@ pub fn make_is_equal<TIA>(
 where
     TIA: 'static + PartialEq + CheckNull,
 {
-    make_row_by_row(AllDomain::new(), AllDomain::new(), move |v| v == &value)
+    make_row_by_row(AtomDomain::new(), AtomDomain::new(), move |v| v == &value)
 }
 
 #[bootstrap(features("contrib"))]
@@ -106,7 +106,7 @@ where
 pub fn make_is_null<DIA>() -> Fallible<
     Transformation<
         VectorDomain<DIA>,
-        VectorDomain<AllDomain<bool>>,
+        VectorDomain<AtomDomain<bool>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
@@ -115,19 +115,19 @@ where
     DIA: Domain + Default,
     DIA::Carrier: 'static + CheckNull,
 {
-    make_row_by_row(DIA::default(), AllDomain::default(), |v| v.is_null())
+    make_row_by_row(DIA::default(), AtomDomain::default(), |v| v.is_null())
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
-    use crate::domains::{AllDomain, InherentNullDomain};
+    use crate::domains::{AtomDomain, InherentNullDomain};
     use crate::metrics::ChangeOneDistance;
 
     #[test]
     fn test_identity() {
-        let identity = make_identity(AllDomain::new(), ChangeOneDistance).unwrap_test();
+        let identity = make_identity(AtomDomain::new(), ChangeOneDistance).unwrap_test();
         let arg = 99;
         let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_is_null() -> Fallible<()> {
-        let is_equal = make_is_null::<InherentNullDomain<AllDomain<_>>>()?;
+        let is_equal = make_is_null::<InherentNullDomain<AtomDomain<_>>>()?;
         let arg = vec![f64::NAN, 1., 2.];
         let ret = is_equal.invoke(&arg)?;
         assert_eq!(ret, vec![true, false, false]);

@@ -127,10 +127,10 @@ def test_member():
     assert not mechanism.input_domain.member(float("NaN"))
 
 def test_new_domain():
-    from opendp.domains import all_domain, bounded_domain, vector_domain, sized_domain
-    domain = all_domain(i32)
+    from opendp.domains import atom_domain, bounded_domain, vector_domain, sized_domain
+    domain = atom_domain(i32)
     assert domain.member(3)
-    domain = all_domain(f64)
+    domain = atom_domain(f64)
     assert not domain.member(float("nan"))
     print(domain)
 
@@ -139,7 +139,7 @@ def test_new_domain():
     assert not domain.member(3)
     print(domain)
 
-    domain = vector_domain(all_domain(i32))
+    domain = vector_domain(atom_domain(i32))
     assert domain.member([2])
     print(domain)
     domain = vector_domain(bounded_domain((2, 3), i32))
@@ -147,7 +147,7 @@ def test_new_domain():
     assert not domain.member([2, 4])
     print(domain)
     
-    domain = sized_domain(vector_domain(all_domain(i32)), 10)
+    domain = sized_domain(vector_domain(atom_domain(i32)), 10)
     assert domain.member([1] * 10)
     print(domain)
     domain = sized_domain(vector_domain(bounded_domain((2., 7.))), 10)

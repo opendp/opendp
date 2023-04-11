@@ -43,9 +43,9 @@ pub trait Domain: Clone + PartialEq + Debug {
     ///
     /// On any type `D` for which the `Domain` trait is implemented,
     /// the syntax `D::Carrier` refers to this associated type.
-    /// For example, consider `D` to be `AllDomain<T>`, the domain of all non-null values of type `T`.
-    /// The implementation of this trait for `AllDomain<T>` designates that `type Carrier = T`.
-    /// Thus `AllDomain<T>::Carrier` is `T`.
+    /// For example, consider `D` to be `AtomDomain<T>`, the domain of all non-null values of type `T`.
+    /// The implementation of this trait for `AtomDomain<T>` designates that `type Carrier = T`.
+    /// Thus `AtomDomain<T>::Carrier` is `T`.
     ///
     /// # Proof Definition
     /// `Self::Carrier` can represent all values in the set described by `Self`.
@@ -337,7 +337,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
 
 #[cfg(test)]
 mod tests {
-    use crate::domains::AllDomain;
+    use crate::domains::AtomDomain;
     use crate::error::ExplainUnwrap;
     use crate::metrics::L1Distance;
 
@@ -345,8 +345,8 @@ mod tests {
 
     #[test]
     fn test_identity() {
-        let input_domain = AllDomain::<i32>::new();
-        let output_domain = AllDomain::<i32>::new();
+        let input_domain = AtomDomain::<i32>::new();
+        let output_domain = AtomDomain::<i32>::new();
         let function = Function::new(|arg: &i32| arg.clone());
         let input_metric = L1Distance::<i32>::default();
         let output_metric = L1Distance::<i32>::default();

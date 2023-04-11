@@ -9,7 +9,7 @@ pub use float::*;
 use opendp_derive::bootstrap;
 
 use crate::core::{Metric, Transformation};
-use crate::domains::{AllDomain, BoundedDomain, SizedDomain, VectorDomain};
+use crate::domains::{AtomDomain, BoundedDomain, SizedDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{CheckNull, TotalOrd};
@@ -80,7 +80,7 @@ where
 // make_(sized_)?bounded_float_(checked|ordered)_sum
 
 type BoundedSumTrans<MI, T> =
-    Transformation<VectorDomain<BoundedDomain<T>>, AllDomain<T>, MI, AbsoluteDistance<T>>;
+    Transformation<VectorDomain<BoundedDomain<T>>, AtomDomain<T>, MI, AbsoluteDistance<T>>;
 
 #[doc(hidden)]
 pub trait MakeBoundedSum<MI: Metric>: Sized + CheckNull + Clone + TotalOrd {
@@ -156,7 +156,7 @@ impl_make_bounded_sum_float! { f32 f64 }
 
 type SizedBoundedSumTrans<MI, T> = Transformation<
     SizedDomain<VectorDomain<BoundedDomain<T>>>,
-    AllDomain<T>,
+    AtomDomain<T>,
     MI,
     AbsoluteDistance<T>,
 >;
