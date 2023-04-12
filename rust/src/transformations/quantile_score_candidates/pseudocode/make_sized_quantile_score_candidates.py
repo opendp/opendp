@@ -17,8 +17,8 @@ def make_sized_quantile_score_candidates(size: usize, candidates: List[TIA], alp
         return TOA.inf_cast(d_in // 2).inf_mul(4).inf_mul(alpha_den)
 
     return Transformation(
-        input_domain=SizedDomain(VectorDomain(AllDomain(TIA)), size),
-        output_domain=VectorDomain(AllDomain(TOA)),
+        input_domain=SizedDomain(VectorDomain(AtomDomain(TIA)), size),
+        output_domain=VectorDomain(AtomDomain(TOA)),
         function=function,
         input_metric=SymmetricDistance(),
         output_metric=InfDifferenceDistance(),

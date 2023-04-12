@@ -6,8 +6,11 @@ use crate::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
-    traits::{Number},
-    transformations::{make_quantile_score_candidates, make_sized_quantile_score_candidates, quantile_score_candidates::IntoFrac},
+    traits::Number,
+    transformations::{
+        make_quantile_score_candidates, make_sized_quantile_score_candidates,
+        quantile_score_candidates::IntoFrac,
+    },
 };
 
 #[no_mangle]
@@ -23,7 +26,7 @@ pub extern "C" fn opendp_transformations__make_quantile_score_candidates(
     ) -> FfiResult<*mut AnyTransformation>
     where
         TIA: 'static + Number,
-        F: 'static + IntoFrac + Clone
+        F: 'static + IntoFrac + Clone,
     {
         let candidates = try_!(try_as_ref!(candidates).downcast_ref::<Vec<TIA>>()).clone();
         let alpha = try_!(try_as_ref!(alpha).downcast_ref::<F>()).clone();

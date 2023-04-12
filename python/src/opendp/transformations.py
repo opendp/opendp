@@ -1789,8 +1789,8 @@ def make_quantile_score_candidates(
     
     **Supporting Elements:**
     
-    * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-    * Output Domain:  `VectorDomain<AllDomain<usize>>`
+    * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+    * Output Domain:  `VectorDomain<AtomDomain<usize>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `InfDifferenceDistance<usize>`
     
@@ -2599,8 +2599,8 @@ def make_sized_quantile_score_candidates(
     
     **Supporting Elements:**
     
-    * Input Domain:   `SizedDomain<VectorDomain<AllDomain<TIA>>>`
-    * Output Domain:  `VectorDomain<AllDomain<usize>>`
+    * Input Domain:   `SizedDomain<VectorDomain<AtomDomain<TIA>>>`
+    * Output Domain:  `VectorDomain<AtomDomain<usize>>`
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `InfDifferenceDistance<usize>`
     

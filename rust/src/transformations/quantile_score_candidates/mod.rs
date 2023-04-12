@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AllDomain, SizedDomain, VectorDomain},
+    domains::{AtomDomain, SizedDomain, VectorDomain},
     error::Fallible,
     metrics::{InfDifferenceDistance, SymmetricDistance},
     traits::{AlertingMul, ExactIntCast, Float, InfDiv, Number, RoundCast},
@@ -62,8 +62,8 @@ pub fn make_quantile_score_candidates<TIA: Number, F: IntoFrac>(
     alpha: F,
 ) -> Fallible<
     Transformation<
-        VectorDomain<AllDomain<TIA>>,
-        VectorDomain<AllDomain<usize>>,
+        VectorDomain<AtomDomain<TIA>>,
+        VectorDomain<AtomDomain<usize>>,
         SymmetricDistance,
         InfDifferenceDistance<usize>,
     >,
@@ -110,8 +110,8 @@ pub fn make_sized_quantile_score_candidates<TIA: Number, F: IntoFrac>(
     alpha: F,
 ) -> Fallible<
     Transformation<
-        SizedDomain<VectorDomain<AllDomain<TIA>>>,
-        VectorDomain<AllDomain<usize>>,
+        SizedDomain<VectorDomain<AtomDomain<TIA>>>,
+        VectorDomain<AtomDomain<usize>>,
         SymmetricDistance,
         InfDifferenceDistance<usize>,
     >,
@@ -184,7 +184,9 @@ fn score<TIA: PartialOrd>(
         // score function cannot overflow.
         //     lt <= size_limit, so 0 <= alpha_denom * lt <= usize::MAX
         //     n - eq <= size_limit, so 0 <= size_limit - eq
-        .map(|(lt, eq)| (alpha_den * lt.min(size_limit)).abs_diff(alpha_num * (x.len() - eq).min(size_limit)))
+        .map(|(lt, eq)| {
+            (alpha_den * lt.min(size_limit)).abs_diff(alpha_num * (x.len() - eq).min(size_limit))
+        })
         .collect()
 }
 
@@ -400,7 +402,7 @@ mod test_trans {
 
         println!("      map: {:?}", trans.map(&1)?);
         println!("sized map: {:?}", trans_sized.map(&2)?);
-        
+
         Ok(())
     }
 }

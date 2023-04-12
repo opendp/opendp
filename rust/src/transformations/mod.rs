@@ -18,9 +18,9 @@ mod dataframe;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::dataframe::*;
 
-#[cfg(feature="contrib")]
+#[cfg(feature = "contrib")]
 pub mod quantile_score_candidates;
-#[cfg(feature="contrib")]
+#[cfg(feature = "contrib")]
 pub use crate::transformations::quantile_score_candidates::*;
 
 #[cfg(feature = "contrib")]

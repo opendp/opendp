@@ -381,29 +381,35 @@ impl Metric for DiscreteDistance {
 }
 
 /// Distance between score vectors for the exponential mechanism.
-/// 
+///
 /// # Proof Definition
-/// 
+///
 /// ### `d`-closeness
-/// For any two datasets $u, v \in$ `VectorDomain<AllDomain<T>>` and any $d$ of type `T`, 
+/// For any two datasets $u, v \in$ `VectorDomain<AtomDomain<T>>` and any $d$ of type `T`,
 /// we say that $u, v$ are $d$-close under the inf-difference metric (abbreviated as $d_{IDD}$) whenever
-/// 
+///
 /// ```math
 /// d_{IDD}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
 /// ```
-/// 
+///
 /// # Compatible Domains
-/// * VectorDomain<AllDomain<T>> for any numeric `T`.
+/// * VectorDomain<AtomDomain<T>> for any numeric `T`.
 pub struct InfDifferenceDistance<Q>(PhantomData<Q>);
 impl<Q> Default for InfDifferenceDistance<Q> {
-    fn default() -> Self { InfDifferenceDistance(PhantomData) }
+    fn default() -> Self {
+        InfDifferenceDistance(PhantomData)
+    }
 }
 
 impl<Q> Clone for InfDifferenceDistance<Q> {
-    fn clone(&self) -> Self { Self::default() }
+    fn clone(&self) -> Self {
+        Self::default()
+    }
 }
 impl<Q> PartialEq for InfDifferenceDistance<Q> {
-    fn eq(&self, _other: &Self) -> bool { true }
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
 }
 impl<Q> Debug for InfDifferenceDistance<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {

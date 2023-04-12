@@ -21,8 +21,8 @@ def make_quantile_score_candidates(candidates: List[TIA], alpha: TOA):
         return TOA.inf_cast(d_in).alerting_mul(sup_dist_const)
 
     return Transformation(
-        input_domain=VectorDomain(AllDomain(TIA)),
-        output_domain=VectorDomain(AllDomain(TOA)),
+        input_domain=VectorDomain(AtomDomain(TIA)),
+        output_domain=VectorDomain(AtomDomain(TOA)),
         function=function,
         input_metric=SymmetricDistance(),
         output_metric=InfDifferenceDistance(TOA),
