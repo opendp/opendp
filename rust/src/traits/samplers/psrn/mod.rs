@@ -114,7 +114,6 @@ impl GumbelPSRN {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -123,7 +122,12 @@ mod test {
     fn test_sample_gumbel_interval_progression() -> Fallible<()> {
         let mut gumbel = GumbelPSRN::new(Rational::from(0));
         for _ in 0..10 {
-            println!("{:?}, {:?}, {}", gumbel.value(Round::Down)?.to_f64(), gumbel.value(Round::Up)?.to_f64(), gumbel.precision);
+            println!(
+                "{:?}, {:?}, {}",
+                gumbel.value(Round::Down)?.to_f64(),
+                gumbel.value(Round::Up)?.to_f64(),
+                gumbel.precision
+            );
             gumbel.refine()?;
         }
         Ok(())
@@ -131,7 +135,6 @@ mod test {
 
     #[test]
     fn test_gumbel_psrn() -> Fallible<()> {
-
         fn sample_gumbel() -> Fallible<f64> {
             let mut gumbel = GumbelPSRN::new(Rational::from(0));
             for _ in 0..10 {
@@ -139,7 +142,9 @@ mod test {
             }
             Ok(gumbel.value(Round::Down)?.to_f64())
         }
-        let samples = (0..1000).map(|_| sample_gumbel()).collect::<Fallible<Vec<_>>>()?;
+        let samples = (0..1000)
+            .map(|_| sample_gumbel())
+            .collect::<Fallible<Vec<_>>>()?;
         println!("{:?}", samples);
         Ok(())
     }
