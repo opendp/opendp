@@ -330,7 +330,7 @@ impl<T: CheckAtom, const P: usize, Q> MetricSpace
     for (VectorDomain<AtomDomain<T>>, LpDistance<P, Q>)
 {
     fn check(&self) -> bool {
-        !self.0.element_domain.has_null()
+        !self.0.element_domain.nullable()
     }
 }
 impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
@@ -339,7 +339,7 @@ where
     K: Eq + Hash,
 {
     fn check(&self) -> bool {
-        !self.0.value_domain.has_null()
+        !self.0.value_domain.nullable()
     }
 }
 
@@ -395,7 +395,7 @@ impl<Q> Metric for AbsoluteDistance<Q> {
 }
 impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
     fn check(&self) -> bool {
-        !self.0.has_null()
+        !self.0.nullable()
     }
 }
 
