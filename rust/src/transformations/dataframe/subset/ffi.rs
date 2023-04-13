@@ -1,38 +1,41 @@
-use std::convert::TryFrom;
 use std::os::raw::c_char;
 
+use crate::domains::LazyFrameDomain;
 use crate::err;
-use crate::transformations::make_subset_by;
+use crate::transformations::{make_subset_by, DatasetMetric};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::Type;
-use crate::traits::Hashable;
+use crate::ffi::any::{AnyTransformation, Downcast, AnyDomain, AnyMetric};
+use crate::ffi::util;
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_subset_by(
-    indicator_column: *const AnyObject,
-    keep_columns: *const AnyObject,
-    TK: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    indicator_column: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<TK>(
-        indicator_column: *const AnyObject,
-        keep_columns: *const AnyObject,
+    fn monomorphize<M>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
+        indicator_column: &str,
     ) -> FfiResult<*mut AnyTransformation>
     where
-        TK: Hashable,
+        M: DatasetMetric,
     {
-        let indicator_column: TK =
-            try_!(try_as_ref!(indicator_column).downcast_ref::<TK>()).clone();
-        let keep_columns: Vec<TK> =
-            try_!(try_as_ref!(keep_columns).downcast_ref::<Vec<TK>>()).clone();
-        make_subset_by::<TK>(indicator_column, keep_columns).into_any()
+        let input_domain: LazyFrameDomain =
+            try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
+        let input_metric: M =
+            try_!(try_as_ref!(input_metric).downcast_ref::<M>()).clone();
+        make_subset_by::<M>(input_domain, input_metric, indicator_column).into_any()
     }
-    let TK = try_!(Type::try_from(TK));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
+    let indicator_column = try_!(util::to_str(indicator_column));
+    let M = input_metric.type_;
 
     dispatch!(monomorphize, [
-        (TK, @hashable)
-    ], (indicator_column, keep_columns))
+        (M, @dataset_metrics)
+    ], (input_domain, input_metric, indicator_column))
 }
 
 #[cfg(test)]
@@ -40,34 +43,36 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::data::Column;
+    use crate::domains::SeriesDomain;
     use crate::error::{ExplainUnwrap, Fallible};
-    use crate::transformations::DataFrame;
 
     use crate::core;
     use crate::ffi::any::{AnyObject, Downcast};
-    use crate::ffi::util::ToCharP;
 
+    use crate::ffi::util::ToCharP;
+    use crate::metrics::SymmetricDistance;
+
+    use polars::prelude::*;
     use super::*;
 
     fn to_owned(strs: &[&'static str]) -> Vec<String> {
         strs.into_iter().map(|s| s.to_owned().to_owned()).collect()
     }
 
-    fn dataframe(pairs: Vec<(&str, Column)>) -> DataFrame<String> {
-        pairs.into_iter().map(|(k, v)| (k.to_owned(), v)).collect()
-    }
-
     #[test]
     fn test_make_subset_by_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_subset_by(
-            AnyObject::new_raw("A".to_string()),
-            AnyObject::new_raw(vec!["B".to_owned()]),
-            "String".to_char_p(),
+            AnyDomain::new_raw(LazyFrameDomain::new(vec![
+                SeriesDomain::new::<bool>("A"),
+                SeriesDomain::new::<String>("B"),
+            ])?),
+            AnyMetric::new_raw(SymmetricDistance::default()),
+            "A".to_char_p(),
         ))?;
-        let arg = AnyObject::new_raw(dataframe(vec![
-            ("A", Column::new(vec![true, false, false])),
-            ("B", Column::new(to_owned(&["1.0", "2.0", "3.0"]))),
-        ]));
+        let arg = AnyObject::new_raw(df![
+            "A" => [true, false, false],
+            "B" => ["1.0", "2.0", "3.0"]
+        ]?);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
         let res: HashMap<String, Column> = Fallible::from(res)?.downcast()?;
 

@@ -1,17 +1,14 @@
 use std::{cmp::Ordering, iter::repeat};
 
 use opendp_derive::bootstrap;
+use polars::prelude::*;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    data::Column,
-    domains::{AtomDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain, LazyFrameDomain, SeriesDomain},
     error::Fallible,
     metrics::SymmetricDistance,
-    traits::Hashable,
 };
-
-use super::{DataFrame, DataFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -44,21 +41,28 @@ fn conform_records<'a>(len: usize, records: &[Vec<&'a str>]) -> Vec<Vec<&'a str>
         .collect()
 }
 
-fn create_dataframe<K: Hashable>(col_names: Vec<K>, records: &[Vec<&str>]) -> DataFrame<K> {
+fn create_dataframe(col_names: Vec<String>, records: &[Vec<&str>]) -> Fallible<LazyFrame> {
     // make data rectangular
     let records = conform_records(col_names.len(), &records);
 
+    let mut df = LazyFrame::default();
+
     // transpose and collect into dataframe
-    col_names
-        .into_iter()
-        .enumerate()
-        .map(|(i, col_name)| {
-            (
-                col_name,
-                Column::new(records.iter().map(|record| record[i].to_string()).collect()),
-            )
-        })
-        .collect()
+    DataFrame::new(
+        col_names
+            .into_iter()
+            .enumerate()
+            .map(|(i, col_name)| {
+                Series::new(
+                    col_name.as_str(),
+                    records
+                        .iter()
+                        .map(|record| record[i].to_string())
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .collect(),
+    ).map(DataFrame::lazy).map_err(From::from)
 }
 
 #[bootstrap(features("contrib"))]
@@ -66,26 +70,21 @@ fn create_dataframe<K: Hashable>(col_names: Vec<K>, records: &[Vec<&str>]) -> Da
 ///
 /// # Arguments
 /// * `col_names` - Column names for each record entry.
-///
-/// # Generics
-/// * `K` - categorical/hashable data type of column names
-pub fn make_create_dataframe<K>(
-    col_names: Vec<K>,
+pub fn make_create_dataframe(
+    col_names: Vec<String>,
 ) -> Fallible<
     Transformation<
         VectorDomain<VectorDomain<AtomDomain<String>>>,
-        DataFrameDomain<K>,
+        LazyFrameDomain,
         SymmetricDistance,
         SymmetricDistance,
     >,
 >
-where
-    K: Hashable,
 {
     Transformation::new(
         VectorDomain::new(VectorDomain::new(AtomDomain::default(), None), None),
-        DataFrameDomain::new(),
-        Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
+        LazyFrameDomain::new(col_names.iter().map(|name| SeriesDomain::new::<String>(name)).collect())?,
+        Function::new_fallible(move |arg: &Vec<Vec<String>>| -> Fallible<LazyFrame> {
             let arg: Vec<_> = arg.iter().map(|e| vec_string_to_str(e)).collect();
             create_dataframe(col_names.clone(), &arg)
         }),
@@ -95,7 +94,7 @@ where
     )
 }
 
-fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> DataFrame<K> {
+fn split_dataframe(separator: &str, col_names: Vec<String>, s: &str) -> Fallible<LazyFrame> {
     let lines = split_lines(s);
     let records = split_records(separator, &lines);
     let records = conform_records(col_names.len(), &records);
@@ -115,20 +114,17 @@ fn split_dataframe<K: Hashable>(separator: &str, col_names: Vec<K>, s: &str) -> 
 ///
 /// # Generics
 /// * `K` - categorical/hashable data type of column names
-pub fn make_split_dataframe<K>(
+pub fn make_split_dataframe(
     separator: Option<&str>,
-    col_names: Vec<K>,
+    col_names: Vec<String>,
 ) -> Fallible<
-    Transformation<AtomDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
->
-where
-    K: Hashable,
-{
+    Transformation<AtomDomain<String>, LazyFrameDomain, SymmetricDistance, SymmetricDistance>,
+> {
     let separator = separator.unwrap_or(",").to_owned();
     Transformation::new(
         AtomDomain::default(),
-        DataFrameDomain::new(),
-        Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
+        LazyFrameDomain::new(col_names.iter().map(|name| SeriesDomain::new::<String>(name)).collect())?,
+        Function::new_fallible(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
         SymmetricDistance::default(),
         SymmetricDistance::default(),
         StabilityMap::new_from_constant(1),
@@ -249,48 +245,34 @@ mod tests {
     }
 
     #[test]
-    fn test_make_create_dataframe() {
-        let transformation = make_create_dataframe::<u32>(vec![0, 1]).unwrap_test();
+    fn test_make_create_dataframe() -> Fallible<()> {
+        let transformation = make_create_dataframe(vec!["0".to_string(), "1".to_string()]).unwrap_test();
         let arg = vec![
             vec!["ant".to_owned(), "foo".to_owned()],
             vec!["bat".to_owned(), "bar".to_owned()],
             vec!["cat".to_owned(), "baz".to_owned()],
         ];
-        let ret = transformation.invoke(&arg).unwrap_test();
-        let expected: DataFrame<u32> = vec![
-            (
-                0,
-                Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()]),
-            ),
-            (
-                1,
-                Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()]),
-            ),
-        ]
-        .into_iter()
-        .collect();
+        let ret = transformation.invoke(&arg)?.collect()?;
+        let expected = df![
+            "0" => vec!["ant", "bat", "cat"],
+            "1" => vec!["foo", "bar", "baz"]
+        ]?;
         assert_eq!(ret, expected);
+        Ok(())
     }
 
     #[test]
-    fn test_make_split_dataframe() {
+    fn test_make_split_dataframe() -> Fallible<()> {
         let transformation =
-            make_split_dataframe::<String>(None, vec!["0".to_string(), "1".to_string()])
+            make_split_dataframe(None, vec!["0".to_string(), "1".to_string()])
                 .unwrap_test();
         let arg = "ant, foo\nbat, bar\ncat, baz".to_owned();
-        let ret = transformation.invoke(&arg).unwrap_test();
-        let expected: DataFrame<String> = vec![
-            (
-                "0".to_owned(),
-                Column::new(vec!["ant".to_owned(), "bat".to_owned(), "cat".to_owned()]),
-            ),
-            (
-                "1".to_owned(),
-                Column::new(vec!["foo".to_owned(), "bar".to_owned(), "baz".to_owned()]),
-            ),
-        ]
-        .into_iter()
-        .collect();
+        let ret = transformation.invoke(&arg)?.collect()?;
+        let expected = df![
+            "0" => &["ant", "bat", "cat"],
+            "1" => &["foo", "bar", "baz"]
+        ]?;
         assert_eq!(ret, expected);
+        Ok(())
     }
 }

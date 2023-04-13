@@ -1,33 +1,41 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
+use crate::domains::{LazyFrameDomain, VectorDomain, AtomDomain};
 use crate::err;
-use crate::transformations::make_select_column;
+use crate::transformations::{make_select_column, DatasetMetric};
 
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
-use crate::ffi::util::Type;
-use crate::traits::{Hashable, Primitive};
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
+use crate::ffi::any::{AnyTransformation, Downcast, AnyDomain, AnyMetric};
+use crate::ffi::util::{Type, self};
+use crate::traits::Primitive;
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_select_column(
-    key: *const AnyObject,
-    K: *const c_char,
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    key: *const c_char,
     TOA: *const c_char,
+    M: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<K, TOA>(key: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+    fn monomorphize<TOA, M>(input_domain: &AnyDomain, input_metric: &AnyMetric, key: &str) -> FfiResult<*mut AnyTransformation>
     where
-        K: Hashable,
         TOA: Primitive,
+        M: DatasetMetric,
+        (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {
-        let key: K = try_!(try_as_ref!(key).downcast_ref::<K>()).clone();
-        make_select_column::<K, TOA>(key).into_any()
+        let input_domain: LazyFrameDomain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
+        let input_metric: M = try_!(try_as_ref!(input_metric).downcast_ref::<M>()).clone();
+        make_select_column::<TOA, M>(input_domain, input_metric, key).into_any()
     }
-    let K = try_!(Type::try_from(K));
+    let input_domain = try_as_ref!(input_domain);
+    let input_metric = try_as_ref!(input_metric);
     let TOA = try_!(Type::try_from(TOA));
+    let M = try_!(Type::try_from(M));
+    let key = try_!(util::to_str(key));
 
     dispatch!(monomorphize, [
-        (K, @hashable),
-        (TOA, @primitives)
-    ], (key))
+        (TOA, @primitives),
+        (M, @dataset_metrics)
+    ], (input_domain, input_metric, key))
 }

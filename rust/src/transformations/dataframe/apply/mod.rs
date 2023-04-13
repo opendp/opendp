@@ -1,34 +1,32 @@
 use opendp_derive::bootstrap;
+use polars::prelude::*;
 
 use crate::{
     core::{Function, MetricSpace, StabilityMap, Transformation},
-    data::Column,
-    domains::{AtomDomain, VectorDomain},
+    domains::{AtomDomain, VectorDomain, LazyFrameDomain},
     error::Fallible,
-    traits::{Hashable, Primitive, RoundCast},
+    traits::{Primitive, RoundCast},
     transformations::{make_cast_default, make_is_equal, DatasetMetric},
 };
-
-use super::{DataFrame, DataFrameDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 /// Internal function to map a transformation onto a column of a dataframe.
-fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive, M>(
-    input_domain: DataFrameDomain<K>,
+fn make_apply_transformation_dataframe<VI: Primitive, VO: Primitive, M>(
+    input_domain: LazyFrameDomain,
     input_metric: M,
-    column_name: K,
+    column_name: &str,
     transformation: Transformation<
         VectorDomain<AtomDomain<VI>>,
         VectorDomain<AtomDomain<VO>>,
         M,
         M,
     >,
-) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, M, M>>
+) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, M, M>>
 where
     M: DatasetMetric,
-    (DataFrameDomain<K>, M): MetricSpace,
+    (LazyFrameDomain, M): MetricSpace,
     (VectorDomain<AtomDomain<VI>>, M): MetricSpace,
     (VectorDomain<AtomDomain<VO>>, M): MetricSpace,
 {
@@ -37,15 +35,14 @@ where
     Transformation::new(
         input_domain.clone(),
         input_domain,
-        Function::new_fallible(move |arg: &DataFrame<K>| {
+        Function::new_fallible(move |arg: &LazyFrame| {
             let mut data = arg.clone();
-            let column = data.remove(&column_name).ok_or_else(|| {
-                err!(FailedFunction, "{:?} does not exist in the input dataframe")
-            })?;
+            let column = data.select(&[col(column_name)]);
 
-            data.insert(
-                column_name.clone(),
-                Column::new(function.eval(column.as_form::<Vec<VI>>()?)?),
+            data.with_column(
+                // TODO: Lazy API doesn't like arbitrary function execution
+                unimplemented!()
+                // Series::new(column_name.clone(), function.eval(column.as_form::<Vec<VI>>()?)?),
             );
             Ok(data)
         }),
@@ -59,7 +56,8 @@ where
     features("contrib"),
     arguments(
         input_domain(c_type = "AnyDomain *"),
-        input_metric(c_type = "AnyMetric *")
+        input_metric(c_type = "AnyMetric *"),
+        column_name(c_type = "const char *"),
     ),
     generics(TK(suppress), M(suppress)),
     derived_types(
@@ -82,20 +80,18 @@ where
 /// * `column_name` - column name to be transformed
 ///
 /// # Generics
-/// * `TK` - Type of the column name
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_df_cast_default<TK, TIA, TOA, M>(
-    input_domain: DataFrameDomain<TK>,
+pub fn make_df_cast_default<TIA, TOA, M>(
+    input_domain: LazyFrameDomain,
     input_metric: M,
-    column_name: TK,
-) -> Fallible<Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, M, M>>
+    column_name: &str,
+) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, M, M>>
 where
-    TK: Hashable,
     TIA: Primitive,
     TOA: Primitive + RoundCast<TIA>,
     M: DatasetMetric,
-    (DataFrameDomain<TK>, M): MetricSpace,
+    (LazyFrameDomain, M): MetricSpace,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
@@ -111,7 +107,8 @@ where
     features("contrib"),
     arguments(
         input_domain(c_type = "AnyDomain *"),
-        input_metric(c_type = "AnyMetric *")
+        input_metric(c_type = "AnyMetric *"),
+        column_name(c_type = "const char *"),
     ),
     generics(TK(suppress), M(suppress)),
     derived_types(
@@ -126,19 +123,17 @@ where
 /// * `value` - Value to check for equality
 ///
 /// # Generics
-/// * `TK` - Type of the column name
 /// * `TIA` - Atomic Input Type to cast from
-pub fn make_df_is_equal<TK, TIA, M>(
-    input_domain: DataFrameDomain<TK>,
+pub fn make_df_is_equal<TIA, M>(
+    input_domain: LazyFrameDomain,
     input_metric: M,
-    column_name: TK,
+    column_name: &str,
     value: TIA,
-) -> Fallible<Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, M, M>>
+) -> Fallible<Transformation<LazyFrameDomain, LazyFrameDomain, M, M>>
 where
-    TK: Hashable,
     TIA: Primitive,
     M: DatasetMetric,
-    (DataFrameDomain<TK>, M): MetricSpace,
+    (LazyFrameDomain, M): MetricSpace,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {
@@ -153,30 +148,33 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{error::ExplainUnwrap, metrics::SymmetricDistance};
+    use crate::{metrics::SymmetricDistance, domains::SeriesDomain};
 
     use super::*;
 
     #[test]
     fn test_df_cast_default() -> Fallible<()> {
-        let trans = make_df_cast_default::<String, i32, bool, _>(
-            Default::default(),
+        let trans = make_df_cast_default::<i32, bool, _>(
+            LazyFrameDomain::new(vec![
+                SeriesDomain::new::<i32>("filter"), 
+                SeriesDomain::new::<String>("values"),
+            ])?,
             SymmetricDistance::default(),
-            "filter".to_string(),
+            "filter",
         )?;
 
-        let mut df = DataFrame::new();
-        df.insert("filter".to_string(), vec![0, 1, 3, 0].into());
-        df.insert("values".to_string(), vec!["1", "2", "3", "4"].into());
-        let res = trans.invoke(&df)?;
+        let df = DataFrame::new(vec![
+            Series::new("filter", vec![0, 1, 3, 0]),
+            Series::new("values", vec!["1", "2", "3", "4"]),
+        ])?;
+        let res = trans.invoke(&df.lazy())?;
 
-        let filter = res
-            .get("filter")
-            .unwrap_test()
-            .as_form::<Vec<bool>>()?
-            .clone();
+        let filter: Vec<Option<bool>> = res.collect()?
+            .column("filter")?
+            .bool()?
+            .into();
 
-        assert_eq!(filter, vec![false, true, true, false]);
+        assert_eq!(filter, vec![Some(false), Some(true), Some(true), Some(false)]);
 
         Ok(())
     }
@@ -184,29 +182,21 @@ mod test {
     #[test]
     fn test_df_is_equal() -> Fallible<()> {
         let trans = make_df_is_equal(
-            Default::default(),
+            LazyFrameDomain::new(vec![SeriesDomain::new::<String>("0")])?,
             SymmetricDistance::default(),
-            0,
+            "0",
             "true".to_string(),
         )?;
 
-        let mut df = DataFrame::new();
-        df.insert(
-            0,
-            vec![
-                "false".to_string(),
-                "true".to_string(),
-                "true".to_string(),
-                "false".to_string(),
-            ]
-            .into(),
-        );
-        df.insert(1, vec![12., 23., 94., 128.].into());
-        let res = trans.invoke(&df)?;
+        let frame = df!(
+            "0" => vec!["false", "true", "true", "false"],
+            "1" => vec![12., 23., 94., 128.]
+        )?;
+        let res = trans.invoke(&frame.lazy())?;
 
-        let filter = res.get(&0).unwrap_test().as_form::<Vec<bool>>()?.clone();
+        let filter: Vec<Option<bool>> = res.collect()?.column("0")?.bool()?.into();
 
-        assert_eq!(filter, vec![false, true, true, false]);
+        assert_eq!(filter, vec![Some(false), Some(true), Some(true), Some(false)]);
 
         Ok(())
     }

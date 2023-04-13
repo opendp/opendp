@@ -19,9 +19,8 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
-    traits::{CheckAtom, Hashable},
-    transformations::DataFrameDomain,
+    domains::{type_name, AtomDomain, LazyFrameDomain, MapDomain, VectorDomain},
+    traits::CheckAtom, transformations::DatasetMetric,
 };
 use std::fmt::{Debug, Formatter};
 
@@ -90,9 +89,13 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
         true
     }
 }
-impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
+impl<M: DatasetMetric> MetricSpace for (LazyFrameDomain, M) {
     fn check(&self) -> bool {
-        true
+        if M::ORDERED {
+            self.0.len().is_some()
+        } else {
+            true
+        }
     }
 }
 

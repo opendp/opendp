@@ -4,6 +4,7 @@ use std::fmt;
 use std::fmt::Debug;
 
 use backtrace::Backtrace as _Backtrace;
+use polars::prelude::PolarsError;
 
 /// Create an instance of [`Fallible`]
 #[macro_export]
@@ -113,6 +114,16 @@ impl From<ErrorVariant> for Error {
         Self {
             variant,
             message: None,
+            backtrace: _Backtrace::new(),
+        }
+    }
+}
+
+impl From<PolarsError> for Error {
+    fn from(error: PolarsError) -> Self {
+        Self {
+            variant: ErrorVariant::FailedFunction,
+            message: Some(format!("{:?}", error)),
             backtrace: _Backtrace::new(),
         }
     }

@@ -651,9 +651,14 @@ mod tests {
     #[cfg(feature = "use-mpfr")]
     #[test]
     fn test_any_chain() -> Fallible<()> {
+        use crate::domains::{LazyFrameDomain, SeriesDomain};
+
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
             .into_any();
-        let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
+        let t2 = transformations::make_select_column::<String, SymmetricDistance>(
+            LazyFrameDomain::new(vec![SeriesDomain::new::<String>("a")])?,
+            SymmetricDistance::default(),
+            "a")?.into_any();
         let t3 = transformations::make_cast_default::<String, f64, _>(
             Default::default(),
             SymmetricDistance::default(),
