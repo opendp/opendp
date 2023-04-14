@@ -83,7 +83,7 @@ where
     K: Hashable,
 {
     Ok(Transformation::new(
-        VectorDomain::new(VectorDomain::new(AtomDomain::default(), None), None),
+        VectorDomain::new(VectorDomain::new(AtomDomain::default())),
         DataFrameDomain::new(),
         Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
             let arg: Vec<_> = arg.iter().map(|e| vec_string_to_str(e)).collect();
@@ -159,7 +159,7 @@ pub fn make_split_lines() -> Fallible<
 > {
     Ok(Transformation::new(
         AtomDomain::<String>::default(),
-        VectorDomain::new(AtomDomain::default(), None),
+        VectorDomain::new(AtomDomain::default()),
         Function::new(|arg: &String| -> Vec<String> {
             arg.lines().map(|v| v.to_owned()).collect()
         }),
@@ -199,8 +199,8 @@ pub fn make_split_records(
 > {
     let separator = separator.unwrap_or(",").to_owned();
     Ok(Transformation::new(
-        VectorDomain::new(AtomDomain::default(), None),
-        VectorDomain::new(VectorDomain::new(AtomDomain::default(), None), None),
+        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(VectorDomain::new(AtomDomain::default())),
         // move is necessary because it captures `separator`
         Function::new(move |arg: &Vec<String>| -> Vec<Vec<String>> {
             let arg = vec_string_to_str(arg);

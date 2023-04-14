@@ -222,13 +222,12 @@ pub extern "C" fn opendp_domains__vector_domain(
         atom_domain: &AnyDomain,
         size: *const AnyObject,
     ) -> Fallible<AnyDomain> {
-        let size = if let Some(size) = util::as_ref(size) {
-            Some(*try_!(size.downcast_ref::<i32>()) as usize)
-        } else {
-            None
-        };
         let atom_domain = atom_domain.downcast_ref::<AtomDomain<T>>()?.clone();
-        Ok(AnyDomain::new(VectorDomain::new(atom_domain, size)))
+        let mut vector_domain = VectorDomain::new(atom_domain);
+        if let Some(size) = util::as_ref(size) {
+            vector_domain = vector_domain.with_size(*try_!(size.downcast_ref::<i32>()) as usize)
+        };
+        Ok(AnyDomain::new(vector_domain))
     }
     let atom_domain = try_as_ref!(atom_domain);
 

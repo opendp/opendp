@@ -38,7 +38,7 @@ where
 {
     Ok(Transformation::new(
         DataFrameDomain::new(),
-        VectorDomain::new(AtomDomain::default(), None),
+        VectorDomain::new(AtomDomain::default()),
         Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
             // retrieve column from dataframe and handle error
             arg.get(&key)

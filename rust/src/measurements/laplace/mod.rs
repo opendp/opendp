@@ -60,7 +60,6 @@ pub fn make_base_laplace<D>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
 where
     D: LaplaceDomain,
-    D::Carrier: 'static,
     D::Atom: Float + SampleDiscreteLaplaceZ2k,
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
 {

@@ -64,8 +64,8 @@ where
     }
 
     Ok(Transformation::new(
-        VectorDomain::new(atom_domain.clone(), None),
-        VectorDomain::new(atom_domain, Some(size)),
+        VectorDomain::new(atom_domain.clone()),
+        VectorDomain::new(atom_domain).with_size(size),
         Function::new_fallible(move |arg: &Vec<DA::Carrier>| {
             Ok(match arg.len().cmp(&size) {
                 Ordering::Less | Ordering::Equal => {

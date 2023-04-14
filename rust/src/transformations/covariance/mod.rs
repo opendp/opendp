@@ -85,10 +85,11 @@ where
     range_0.inf_mul(&range_1)?.inf_mul(&_size)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(
-            AtomDomain::new_closed(((bounds_0.0, bounds_1.0), (bounds_0.1, bounds_1.1)))?,
-            Some(size),
-        ),
+        VectorDomain::new(AtomDomain::new_closed((
+            (bounds_0.0, bounds_1.0),
+            (bounds_0.1, bounds_1.1),
+        ))?)
+        .with_size(size),
         AtomDomain::default(),
         Function::new(enclose!(_size, move |arg: &Vec<(S::Item, S::Item)>| {
             let (l, r): (Vec<S::Item>, Vec<S::Item>) = arg.iter().copied().unzip();

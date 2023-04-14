@@ -224,8 +224,8 @@ where
     DA::Imputed: CheckAtom,
 {
     Ok(Transformation::new(
-        VectorDomain::new(atom_domain, None),
-        VectorDomain::new(AtomDomain::default(), None),
+        VectorDomain::new(atom_domain),
+        VectorDomain::new(AtomDomain::default()),
         Function::new(|arg: &Vec<DA::Carrier>| arg.iter().filter_map(DA::option).collect()),
         SymmetricDistance::default(),
         SymmetricDistance::default(),

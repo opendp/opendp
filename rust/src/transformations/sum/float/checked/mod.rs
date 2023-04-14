@@ -78,7 +78,7 @@ where
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AtomDomain::new_closed(bounds)?, None),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?),
         AtomDomain::default(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
@@ -160,7 +160,7 @@ where
     let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),

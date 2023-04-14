@@ -68,7 +68,7 @@ where
     let relaxation = S::relaxation(size_limit, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AtomDomain::new_closed(bounds)?, None),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?),
         AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| {
             S::saturating_sum(&arg[..size_limit.min(arg.len())])
@@ -140,7 +140,7 @@ where
     let relaxation = S::relaxation(size, lower, upper)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
         InsertDeleteDistance::default(),

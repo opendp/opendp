@@ -55,7 +55,7 @@ where
     let (lower, upper) = bounds.clone();
     let range = upper.inf_sub(&lower)?;
     Ok(Transformation::new(
-        VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().sum()),
         SymmetricDistance::default(),

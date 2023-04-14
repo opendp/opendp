@@ -94,7 +94,7 @@ where
     range.inf_mul(&range)?.inf_mul(&size_)?;
 
     Ok(Transformation::new(
-        VectorDomain::new(AtomDomain::new_closed(bounds)?, Some(size)),
+        VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         Function::new(move |arg: &Vec<S::Item>| {
             let mean = S::unchecked_sum(arg) / size_;

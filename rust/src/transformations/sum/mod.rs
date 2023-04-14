@@ -137,7 +137,7 @@ macro_rules! impl_make_bounded_sum_float {
 
                 } else {
                     // 2. sum can overflow, so shuffle and use an ordered sum
-                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?, None);
+                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?);
                     make_ordered_random(domain)? >> make_bounded_float_ordered_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
                 }
             }
@@ -149,7 +149,7 @@ macro_rules! impl_make_bounded_sum_float {
                 if !Pairwise::<Self>::float_sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
                     // 1. if the sum can't overflow,
                     //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
-                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?, None);
+                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?);
                     make_unordered(domain)? >> make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
 
                 } else {
@@ -208,7 +208,7 @@ macro_rules! impl_make_sized_bounded_sum_int {
                 if !Self::int_sum_can_overflow(size, bounds)? {
                     // 1. if the sum can't overflow,
                     //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
-                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?, Some(size));
+                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size);
                     make_unordered(domain)? >> make_sized_bounded_int_checked_sum(size, bounds)?
 
                 } else {
@@ -233,7 +233,7 @@ macro_rules! impl_make_sized_bounded_sum_float {
 
                 } else {
                     // 2. fall back to ordered summation
-                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?, Some(size));
+                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size);
                     make_ordered_random(domain)? >> make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)?
                 }
             }
@@ -245,7 +245,7 @@ macro_rules! impl_make_sized_bounded_sum_float {
                 if !Pairwise::<Self>::float_sum_can_overflow(size, bounds)? {
                     // 1. if the sum can't overflow,
                     //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
-                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?, Some(size));
+                    let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size);
                     make_unordered(domain)? >> make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)?
 
                 } else {

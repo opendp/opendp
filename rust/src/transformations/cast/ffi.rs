@@ -5,8 +5,7 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::err;
 use crate::ffi::any::AnyTransformation;
 use crate::ffi::util::Type;
-use crate::traits::RoundCast;
-use crate::traits::{CheckAtom, InherentNull};
+use crate::traits::{CheckAtom, InherentNull, RoundCast};
 use crate::transformations::{make_cast, make_cast_default, make_cast_inherent};
 
 #[no_mangle]

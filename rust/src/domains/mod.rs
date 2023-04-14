@@ -222,7 +222,7 @@ impl<T: Debug> Debug for Bounds<T> {
         let lower = match &self.lower {
             Bound::Included(v) => format!("[{:?}", v),
             Bound::Excluded(v) => format!("({:?}", v),
-            Bound::Unbounded => "(∞".to_string(),
+            Bound::Unbounded => "(-∞".to_string(),
         };
         let upper = match &self.upper {
             Bound::Included(v) => format!("{:?}]", v),
@@ -342,11 +342,11 @@ where
 /// ```
 /// use opendp::domains::{VectorDomain, AtomDomain};
 /// // Create a domain that includes all i32 vectors of length 3.
-/// let sized_domain = VectorDomain::new(AtomDomain::default(), Some(3));
+/// let sized_domain = VectorDomain::new(AtomDomain::<i32>::default(), Some(3));
 ///
 /// // vec![1, 2, 3] is a member of the sized_domain
 /// use opendp::core::Domain;
-/// assert!(sized_domain.member(&vec![1i32, 2, 3])?);
+/// assert!(sized_domain.member(&vec![1, 2, 3])?);
 ///
 /// // vec![1, 2] is not a member of the sized_domain
 /// assert!(!sized_domain.member(&vec![1, 2])?);
@@ -368,15 +368,23 @@ impl<D: Domain> Debug for VectorDomain<D> {
 }
 impl<D: Domain + Default> Default for VectorDomain<D> {
     fn default() -> Self {
-        Self::new(D::default(), None)
+        Self::new(D::default())
     }
 }
 impl<D: Domain> VectorDomain<D> {
-    pub fn new(element_domain: D, size: Option<usize>) -> Self {
+    pub fn new(element_domain: D) -> Self {
         VectorDomain {
             element_domain,
-            size,
+            size: None,
         }
+    }
+    pub fn with_size(mut self, size: usize) -> Self {
+        self.size = Some(size);
+        self
+    }
+    pub fn without_size(mut self) -> Self {
+        self.size = None;
+        self
     }
 }
 impl<D: Domain> Domain for VectorDomain<D> {
