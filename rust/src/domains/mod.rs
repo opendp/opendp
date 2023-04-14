@@ -325,11 +325,11 @@ where
 /// use opendp::core::Domain;
 ///
 /// // Represents the domain of vectors.
-/// let vec_domain = VectorDomain::new(AtomDomain::default(), None);
+/// let vec_domain = VectorDomain::new(AtomDomain::default());
 /// assert!(vec_domain.member(&vec![1, 2, 3])?);
 ///
 /// // Represents the domain of all vectors of bounded elements.
-/// let bounded_domain = VectorDomain::new(AtomDomain::new_closed((-10, 10))?, None);
+/// let bounded_domain = VectorDomain::new(AtomDomain::new_closed((-10, 10))?);
 ///
 /// // vec![0] is a member, but vec![12] is not, because 12 is out of bounds of the inner domain
 /// assert!(bounded_domain.member(&vec![0])?);
@@ -342,7 +342,7 @@ where
 /// ```
 /// use opendp::domains::{VectorDomain, AtomDomain};
 /// // Create a domain that includes all i32 vectors of length 3.
-/// let sized_domain = VectorDomain::new(AtomDomain::<i32>::default(), Some(3));
+/// let sized_domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(3);
 ///
 /// // vec![1, 2, 3] is a member of the sized_domain
 /// use opendp::core::Domain;
