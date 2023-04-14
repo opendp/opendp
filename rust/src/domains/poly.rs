@@ -42,13 +42,16 @@ where
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
     pub fn into_poly(self) -> Measurement<DI, Box<dyn Any>, MI, MO> {
-        Measurement {
-            input_domain: self.input_domain,
-            function: self.function.into_poly(),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+        let (input_domain, function, input_metric, output_measure, privacy_map) =
+            self.destructure();
+        Measurement::new(
+            input_domain,
+            function.into_poly(),
+            input_metric,
+            output_measure,
+            privacy_map,
+        )
+        .expect("invalid input Measurement")
     }
 }
 
@@ -65,9 +68,9 @@ mod tests {
         let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);
         let op_poly = op_plain.into_poly();
-        let res_poly = op_poly.function.eval_poly::<f64>(&arg)?;
+        let res_poly = op_poly.invoke_poly::<f64>(&arg)?;
         assert_eq!(res_poly, arg);
-        let res_bogus = op_poly.function.eval_poly::<i32>(&arg);
+        let res_bogus = op_poly.invoke_poly::<i32>(&arg);
         assert_eq!(
             res_bogus.err().unwrap_test().variant,
             ErrorVariant::FailedCast

@@ -92,8 +92,8 @@ where
     MO: 'static + AmplifiableMeasure,
     (DI, MI): MetricSpace,
 {
-    let mut measurement = measurement.clone();
-    let sample_size = measurement.input_domain.get_size()?;
+    let measurement = measurement.clone();
+    let sample_size = measurement.input_domain().get_size()?;
     if population_size < sample_size {
         return fallible!(
             MakeMeasurement,
@@ -101,14 +101,20 @@ where
         );
     }
 
-    let privacy_map = measurement.privacy_map;
-    let output_measure: MO = measurement.output_measure.clone();
+    let (input_domain, function, input_metric, output_measure, prior_privacy_map) =
+        measurement.destructure();
 
-    measurement.privacy_map = PrivacyMap::new_fallible(move |d_in| {
-        output_measure.amplify(&privacy_map.eval(d_in)?, population_size, sample_size)
-    });
+    let privacy_map = PrivacyMap::new_fallible(enclose!(output_measure, move |d_in| {
+        output_measure.amplify(&prior_privacy_map.eval(d_in)?, population_size, sample_size)
+    }));
 
-    Ok(measurement)
+    Measurement::new(
+        input_domain,
+        function,
+        input_metric,
+        output_measure,
+        privacy_map,
+    )
 }
 
 #[cfg(test)]
@@ -124,7 +130,7 @@ mod test {
         let meas = (make_sized_bounded_mean::<SymmetricDistance, _>(10, (0., 10.))?
             >> make_base_laplace(0.5, None)?)?;
         let amp = make_population_amplification(&meas, 100)?;
-        amp.function.eval(&vec![1.; 10])?;
+        amp.invoke(&vec![1.; 10])?;
         assert!(meas.check(&2, &(2. + 1e-6))?);
         assert!(!meas.check(&2, &2.)?);
         assert!(amp.check(&2, &0.4941)?);

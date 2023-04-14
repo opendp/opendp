@@ -28,19 +28,14 @@ where
     MO: 'static + FixDeltaMeasure,
     (DI, MI): MetricSpace,
 {
-    let Measurement {
-        input_domain,
-        function,
-        input_metric,
-        output_measure,
-        privacy_map,
-    } = measurement.clone();
+    let privacy_map = measurement.privacy_map().clone();
+    let output_measure = measurement.output_measure().clone();
 
     Measurement::new(
-        input_domain,
-        function,
-        input_metric,
-        output_measure.new_fixed_measure()?,
+        measurement.input_domain().clone(),
+        measurement.function().clone(),
+        measurement.input_metric().clone(),
+        measurement.output_measure().new_fixed_measure()?,
         PrivacyMap::new_fallible(move |d_in| {
             // find the smallest epsilon at the given delta
             let curve = privacy_map.eval(d_in)?;

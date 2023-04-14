@@ -227,34 +227,38 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
     pub fn into_any_Q(
         self,
     ) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
-        let function = self.function;
+        let (input_domain, function, input_metric, output_measure, privacy_map) =
+            self.destructure();
 
-        Measurement {
-            input_domain: self.input_domain,
-            function: Function::new_fallible(
-                move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
-                    let mut inner_qbl = function.eval(arg)?;
+        let function = Function::new_fallible(
+            move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
+                let mut inner_qbl = function.eval(arg)?;
 
-                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
-                        Query::External(query) => inner_qbl
-                            .eval(query.downcast_ref::<Q>()?)
-                            .map(Answer::External),
-                        Query::Internal(query) => {
-                            if query.downcast_ref::<QueryType>().is_some() {
-                                return Ok(Answer::internal(Type::of::<Q>()));
-                            }
-                            let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
-                                    return fallible!(FailedFunction, "internal query returned external answer")
-                                };
-                            Ok(Answer::Internal(a))
+                Queryable::new(move |_self, query: Query<AnyObject>| match query {
+                    Query::External(query) => inner_qbl
+                        .eval(query.downcast_ref::<Q>()?)
+                        .map(Answer::External),
+                    Query::Internal(query) => {
+                        if query.downcast_ref::<QueryType>().is_some() {
+                            return Ok(Answer::internal(Type::of::<Q>()));
                         }
-                    })
-                },
-            ),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+                        let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
+                                return fallible!(FailedFunction, "internal query returned external answer")
+                            };
+                        Ok(Answer::Internal(a))
+                    }
+                })
+            },
+        );
+
+        Measurement::new(
+            input_domain,
+            function,
+            input_metric,
+            output_measure,
+            privacy_map,
+        )
+        .expect("invalid input measurement")
     }
 }
 
@@ -489,13 +493,16 @@ where
     (DI, MI): MetricSpace,
 {
     fn into_any(self) -> AnyMeasurement {
-        AnyMeasurement {
-            input_domain: AnyDomain::new(self.input_domain),
-            function: self.function.into_any(),
-            input_metric: AnyMetric::new(self.input_metric),
-            output_measure: AnyMeasure::new(self.output_measure),
-            privacy_map: self.privacy_map.into_any(),
-        }
+        let (input_domain, function, input_metric, output_measure, privacy_map) =
+            self.destructure();
+        AnyMeasurement::new(
+            AnyDomain::new(input_domain),
+            function.into_any(),
+            AnyMetric::new(input_metric),
+            AnyMeasure::new(output_measure),
+            privacy_map.into_any(),
+        )
+        .expect("invalid input measurement")
     }
 }
 
@@ -507,13 +514,16 @@ pub trait IntoAnyMeasurementOutExt {
 
 impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
     fn into_any_out(self) -> AnyMeasurement {
-        AnyMeasurement {
-            input_domain: self.input_domain,
-            function: self.function.into_any_out(),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+        let (input_domain, function, input_metric, output_measure, privacy_map) =
+            self.destructure();
+        AnyMeasurement::new(
+            input_domain,
+            function.into_any(),
+            input_metric,
+            output_measure,
+            privacy_map,
+        )
+        .expect("invalid input measurement")
     }
 }
 
@@ -538,14 +548,17 @@ where
     (DO, MO): MetricSpace,
 {
     fn into_any(self) -> AnyTransformation {
-        AnyTransformation {
-            input_domain: AnyDomain::new(self.input_domain),
-            output_domain: AnyDomain::new(self.output_domain),
-            function: self.function.into_any(),
-            input_metric: AnyMetric::new(self.input_metric),
-            output_metric: AnyMetric::new(self.output_metric),
-            stability_map: self.stability_map.into_any(),
-        }
+        let (input_domain, output_domain, function, input_metric, output_metric, stability_map) =
+            self.destructure();
+        AnyTransformation::new(
+            AnyDomain::new(input_domain),
+            AnyDomain::new(output_domain),
+            function.into_any(),
+            AnyMetric::new(input_metric),
+            AnyMetric::new(output_metric),
+            stability_map.into_any(),
+        )
+        .expect("invalid input transformation")
     }
 }
 

@@ -32,13 +32,7 @@ where
     QO: Float,
     (DI, MI): MetricSpace,
 {
-    let Measurement {
-        input_domain,
-        function,
-        input_metric,
-        privacy_map,
-        ..
-    } = meas;
+    let (input_domain, function, input_metric, _, privacy_map) = meas.destructure();
 
     Measurement::new(
         input_domain,

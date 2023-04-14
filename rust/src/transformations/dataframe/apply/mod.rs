@@ -27,7 +27,7 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
 ) -> Fallible<
     Transformation<DataFrameDomain<K>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
 > {
-    let function = transformation.function.clone();
+    let function = transformation.function().clone();
 
     Transformation::new(
         DataFrameDomain::new(),

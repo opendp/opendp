@@ -331,13 +331,13 @@ where
     AlpState<K, T>: Clone,
     (SparseDomain<K, C>, L1Distance<C>): MetricSpace,
 {
-    let function = m.function.clone();
+    let function = m.function().clone();
     Measurement::new(
-        m.input_domain.clone(),
+        m.input_domain().clone(),
         Function::new_fallible(move |x| function.eval(x).and_then(post_process)),
-        m.input_metric.clone(),
-        m.output_measure.clone(),
-        m.privacy_map.clone(),
+        m.input_metric().clone(),
+        m.output_measure().clone(),
+        m.privacy_map().clone(),
     )
 }
 
@@ -406,11 +406,11 @@ mod tests {
         let mut x = HashMap::new();
         x.insert(42, 10);
 
-        alp.function.eval(&x.clone())?;
+        alp.invoke(&x)?;
 
         // Values exceeding beta is truncated internally
         x.insert(42, 10000);
-        alp.function.eval(&x.clone())?;
+        alp.invoke(&x)?;
 
         Ok(())
     }
@@ -427,7 +427,7 @@ mod tests {
         let mut x = HashMap::new();
         x.insert(42, 3);
 
-        alp.function.eval(&x.clone())?;
+        alp.invoke(&x)?;
 
         Ok(())
     }
@@ -499,7 +499,7 @@ mod tests {
 
         let alp = make_base_alp::<i32, i32, f64>(24, None, None, 2., 24)?;
 
-        let state = alp.function.eval(&x)?;
+        let state = alp.invoke(&x)?;
 
         let mut query = post_process(state)?;
 
@@ -524,7 +524,7 @@ mod tests {
 
         assert_eq!(wrapped.map(&1)?, 2.);
 
-        let mut query = wrapped.function.eval(&x)?;
+        let mut query = wrapped.invoke(&x)?;
 
         query.eval(&0)?;
         query.eval(&42)?;

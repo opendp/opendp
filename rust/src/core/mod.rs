@@ -25,6 +25,7 @@ mod ffi;
 #[cfg(feature = "ffi")]
 pub use ffi::*;
 
+use std::any::type_name;
 use std::rc::Rc;
 
 use crate::error::*;
@@ -228,21 +229,15 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
-pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure>
-where
-    (DI, MI): MetricSpace,
-{
-    pub input_domain: DI,
-    pub function: Function<DI::Carrier, TO>,
-    pub input_metric: MI,
-    pub output_measure: MO,
-    pub privacy_map: PrivacyMap<MI, MO>,
+pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
+    input_domain: DI,
+    function: Function<DI::Carrier, TO>,
+    input_metric: MI,
+    output_measure: MO,
+    privacy_map: PrivacyMap<MI, MO>,
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO>
-where
-    (DI, MI): MetricSpace,
-{
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
     fn clone(&self) -> Self {
         Self {
             input_domain: self.input_domain.clone(),
@@ -289,6 +284,51 @@ where
     {
         d_out.total_ge(&self.map(d_in)?)
     }
+
+    pub fn input_domain(&self) -> &DI {
+        &self.input_domain
+    }
+
+    pub fn function(&self) -> &Function<DI::Carrier, TO> {
+        &self.function
+    }
+
+    pub fn input_metric(&self) -> &MI {
+        &self.input_metric
+    }
+
+    pub fn output_measure(&self) -> &MO {
+        &self.output_measure
+    }
+
+    pub fn privacy_map(&self) -> &PrivacyMap<MI, MO> {
+        &self.privacy_map
+    }
+
+    pub(crate) fn destructure(self) -> (DI, Function<DI::Carrier, TO>, MI, MO, PrivacyMap<MI, MO>) {
+        (
+            self.input_domain,
+            self.function,
+            self.input_metric,
+            self.output_measure,
+            self.privacy_map,
+        )
+    }
+}
+
+impl<DI, MI, MO> Measurement<DI, Box<dyn std::any::Any>, MI, MO>
+where
+    DI: Domain,
+    MI: Metric,
+    MO: Measure,
+    (DI, MI): MetricSpace,
+{
+    pub fn invoke_poly<TO: 'static>(&self, arg: &DI::Carrier) -> Fallible<TO> {
+        match self.invoke(arg)?.downcast::<TO>() {
+            Ok(v) => Ok(*v),
+            Err(_) => fallible!(FailedCast, "failed to downcast to {}", type_name::<TO>()),
+        }
+    }
 }
 
 pub trait MetricSpace {
@@ -313,17 +353,13 @@ pub trait MetricSpace {
 /// * `function` is a mapping from the input domain to the output domain
 /// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
-pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>
-where
-    (DI, MI): MetricSpace,
-    (DO, MO): MetricSpace,
-{
-    pub input_domain: DI,
-    pub output_domain: DO,
-    pub function: Function<DI::Carrier, DO::Carrier>,
-    pub input_metric: MI,
-    pub output_metric: MO,
-    pub stability_map: StabilityMap<MI, MO>,
+pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
+    input_domain: DI,
+    output_domain: DO,
+    function: Function<DI::Carrier, DO::Carrier>,
+    input_metric: MI,
+    output_metric: MO,
+    stability_map: StabilityMap<MI, MO>,
 }
 
 impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO>
@@ -364,6 +400,50 @@ where
         MO::Distance: TotalOrd,
     {
         d_out.total_ge(&self.map(d_in)?)
+    }
+
+    pub fn input_domain(&self) -> &DI {
+        &self.input_domain
+    }
+
+    pub fn output_domain(&self) -> &DO {
+        &self.output_domain
+    }
+
+    pub fn function(&self) -> &Function<DI::Carrier, DO::Carrier> {
+        &self.function
+    }
+
+    pub fn input_metric(&self) -> &MI {
+        &self.input_metric
+    }
+
+    pub fn output_metric(&self) -> &MO {
+        &self.output_metric
+    }
+
+    pub fn stability_map(&self) -> &StabilityMap<MI, MO> {
+        &self.stability_map
+    }
+
+    pub(crate) fn destructure(
+        self,
+    ) -> (
+        DI,
+        DO,
+        Function<DI::Carrier, DO::Carrier>,
+        MI,
+        MO,
+        StabilityMap<MI, MO>,
+    ) {
+        (
+            self.input_domain,
+            self.output_domain,
+            self.function,
+            self.input_metric,
+            self.output_metric,
+            self.stability_map,
+        )
     }
 }
 

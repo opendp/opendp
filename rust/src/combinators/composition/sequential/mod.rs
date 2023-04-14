@@ -69,20 +69,20 @@ where
                     if let Query::External(measurement) = query {
                         assert_components_match!(
                             DomainMismatch,
-                            input_domain,
-                            measurement.input_domain
+                            &input_domain,
+                            measurement.input_domain()
                         );
 
                         assert_components_match!(
                             MetricMismatch,
-                            input_metric,
-                            measurement.input_metric
+                            &input_metric,
+                            measurement.input_metric()
                         );
 
                         assert_components_match!(
                             MeasureMismatch,
-                            output_measure,
-                            measurement.output_measure
+                            &output_measure,
+                            measurement.output_measure()
                         );
 
                         // retrieve the last distance from d_mids, or bubble an error if d_mids is empty

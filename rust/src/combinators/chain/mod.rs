@@ -87,21 +87,21 @@ where
 {
     assert_components_match!(
         DomainMismatch,
-        transformation0.output_domain,
-        measurement1.input_domain
+        transformation0.output_domain(),
+        measurement1.input_domain()
     );
     assert_components_match!(
         MetricMismatch,
-        transformation0.output_metric,
-        measurement1.input_metric
+        transformation0.output_metric(),
+        measurement1.input_metric()
     );
 
     Measurement::new(
-        transformation0.input_domain.clone(),
-        Function::make_chain(&measurement1.function, &transformation0.function),
-        transformation0.input_metric.clone(),
-        measurement1.output_measure.clone(),
-        PrivacyMap::make_chain(&measurement1.privacy_map, &transformation0.stability_map),
+        transformation0.input_domain().clone(),
+        Function::make_chain(measurement1.function(), transformation0.function()),
+        transformation0.input_metric().clone(),
+        measurement1.output_measure().clone(),
+        PrivacyMap::make_chain(measurement1.privacy_map(), transformation0.stability_map()),
     )
 }
 
@@ -136,25 +136,25 @@ where
 {
     assert_components_match!(
         DomainMismatch,
-        transformation0.output_domain,
-        transformation1.input_domain
+        transformation0.output_domain(),
+        transformation1.input_domain()
     );
 
     assert_components_match!(
         MetricMismatch,
-        transformation0.output_metric,
-        transformation1.input_metric
+        transformation0.output_metric(),
+        transformation1.input_metric()
     );
 
     Transformation::new(
-        transformation0.input_domain.clone(),
-        transformation1.output_domain.clone(),
-        Function::make_chain(&transformation1.function, &transformation0.function),
-        transformation0.input_metric.clone(),
-        transformation1.output_metric.clone(),
+        transformation0.input_domain().clone(),
+        transformation1.output_domain().clone(),
+        Function::make_chain(transformation1.function(), transformation0.function()),
+        transformation0.input_metric().clone(),
+        transformation1.output_metric().clone(),
         StabilityMap::make_chain(
-            &transformation1.stability_map,
-            &transformation0.stability_map,
+            transformation1.stability_map(),
+            transformation0.stability_map(),
         ),
     )
 }
@@ -186,11 +186,11 @@ where
     (DI, MI): MetricSpace,
 {
     Measurement::new(
-        measurement0.input_domain.clone(),
-        Function::make_chain(postprocess1, &measurement0.function),
-        measurement0.input_metric.clone(),
-        measurement0.output_measure.clone(),
-        measurement0.privacy_map.clone(),
+        measurement0.input_domain().clone(),
+        Function::make_chain(postprocess1, measurement0.function()),
+        measurement0.input_metric().clone(),
+        measurement0.output_measure().clone(),
+        measurement0.privacy_map().clone(),
     )
 }
 
@@ -444,7 +444,7 @@ where
     type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
-        make_chain_pm(&rhs.function, &self)
+        make_chain_pm(rhs.function(), &self)
     }
 }
 
@@ -465,7 +465,7 @@ where
     type Output = Fallible<Measurement<DI, DO::Carrier, MI, MO>>;
 
     fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
-        make_chain_pm(&rhs.function, &self?)
+        make_chain_pm(rhs.function(), &self?)
     }
 }
 
