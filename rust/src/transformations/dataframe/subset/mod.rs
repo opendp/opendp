@@ -28,8 +28,8 @@ pub fn make_subset_by<TK: Hashable>(
     Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
 > {
     Ok(Transformation::new(
-        DataFrameDomain::new_all(),
-        DataFrameDomain::new_all(),
+        DataFrameDomain::new(),
+        DataFrameDomain::new(),
         Function::new_fallible(move |data: &DataFrame<TK>| {
             // the partition to move each row into
             let indicator = (data.get(&indicator_column))

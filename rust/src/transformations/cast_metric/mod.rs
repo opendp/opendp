@@ -165,14 +165,14 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::domains::{SizedDomain, VectorDomain};
+    use crate::domains::{AtomDomain, VectorDomain};
     use crate::metrics::SymmetricDistance;
 
     use super::*;
 
     #[test]
     fn test_ordering() -> Fallible<()> {
-        let domain = VectorDomain::new_all();
+        let domain = VectorDomain::new(AtomDomain::default());
         let ord_trans = make_ordered_random::<_, SymmetricDistance>(domain.clone())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(ord_trans.invoke(&data)?.len(), 3);
@@ -184,7 +184,7 @@ mod test {
 
     #[test]
     fn test_bounded() -> Fallible<()> {
-        let domain = SizedDomain::new(VectorDomain::new_all(), 3);
+        let domain = VectorDomain::new(AtomDomain::default()).with_size(3);
         let bdd_trans = make_metric_bounded::<_, SymmetricDistance>(domain.clone())?;
         let data = vec![1i32, 2, 3];
         assert_eq!(bdd_trans.invoke(&data)?.len(), 3);

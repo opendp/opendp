@@ -2,12 +2,12 @@ use std::convert::TryFrom;
 use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
-use crate::domains::{AtomDomain, InherentNullDomain, OptionDomain};
+use crate::domains::{AtomDomain, OptionDomain};
 use crate::err;
-use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
+use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::traits::samplers::SampleUniform;
-use crate::traits::{CheckNull, Float, InherentNull};
+use crate::traits::{CheckAtom, Float, InherentNull};
 use crate::transformations::{
     make_drop_null, make_impute_constant, make_impute_uniform_float, DropNullDomain,
     ImputeConstantDomain,
@@ -32,6 +32,7 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_impute_constant(
+    atom_input_domain: *const AnyDomain,
     constant: *const AnyObject,
     DIA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
@@ -40,30 +41,47 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
 
     match &DIA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionDomain" => {
-            fn monomorphize<TA>(constant: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+            fn monomorphize<TA>(
+                atom_input_domain: *const AnyDomain,
+                constant: *const AnyObject,
+            ) -> FfiResult<*mut AnyTransformation>
             where
                 OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
-                TA: 'static + Clone + CheckNull,
+                TA: 'static + Clone + CheckAtom,
             {
+                let atom_input_domain =
+                    try_!(try_as_ref!(atom_input_domain)
+                        .downcast_ref::<OptionDomain<AtomDomain<TA>>>())
+                    .clone();
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
-                make_impute_constant::<OptionDomain<AtomDomain<TA>>>(constant).into_any()
+                make_impute_constant::<OptionDomain<AtomDomain<TA>>>(atom_input_domain, constant)
+                    .into_any()
             }
-            dispatch!(monomorphize, [(TA, @primitives)], (constant))
+            dispatch!(monomorphize, [(TA, @primitives)], (atom_input_domain, constant))
         }
-        TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
-            fn monomorphize<TA>(constant: *const AnyObject) -> FfiResult<*mut AnyTransformation>
+        TypeContents::GENERIC { name, .. } if name == &"AtomDomain" => {
+            fn monomorphize<TA>(
+                atom_input_domain: *const AnyDomain,
+                constant: *const AnyObject,
+            ) -> FfiResult<*mut AnyTransformation>
             where
-                InherentNullDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
-                TA: 'static + InherentNull + Clone,
+                AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
+                TA: 'static + InherentNull + Clone + CheckAtom,
             {
+                let atom_input_domain =
+                    try_!(try_as_ref!(atom_input_domain).downcast_ref::<AtomDomain<TA>>()).clone();
                 let constant: TA = try_!(try_as_ref!(constant).downcast_ref::<TA>()).clone();
-                make_impute_constant::<InherentNullDomain<AtomDomain<TA>>>(constant).into_any()
+                make_impute_constant::<AtomDomain<TA>>(atom_input_domain, constant).into_any()
             }
-            dispatch!(monomorphize, [(TA, [f64, f32])], (constant))
+            dispatch!(
+                monomorphize,
+                [(TA, [f64, f32])],
+                (atom_input_domain, constant)
+            )
         }
         _ => err!(
             TypeParse,
-            "DA must be an OptionDomain<AtomDomain<T>> or an InherentNullDomain<AtomDomain<T>>"
+            "DA must be an OptionDomain<AtomDomain<T>> or an AtomDomain<T>"
         )
         .into(),
     }
@@ -71,6 +89,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_drop_null(
+    atom_domain: *const AnyDomain,
     DA: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
     let DA = try_!(Type::try_from(DA));
@@ -78,28 +97,37 @@ pub extern "C" fn opendp_transformations__make_drop_null(
 
     match &DA.contents {
         TypeContents::GENERIC { name, .. } if name == &"OptionDomain" => {
-            fn monomorphize<TA>() -> FfiResult<*mut AnyTransformation>
+            fn monomorphize<TA: CheckAtom>(
+                atom_domain: *const AnyDomain,
+            ) -> FfiResult<*mut AnyTransformation>
             where
                 OptionDomain<AtomDomain<TA>>: DropNullDomain<Imputed = TA>,
-                TA: 'static + Clone + CheckNull,
+                TA: 'static + Clone + CheckAtom,
             {
-                make_drop_null::<OptionDomain<AtomDomain<TA>>>().into_any()
+                let atom_domain =
+                    try_!(try_as_ref!(atom_domain).downcast_ref::<OptionDomain<AtomDomain<TA>>>())
+                        .clone();
+                make_drop_null(atom_domain).into_any()
             }
-            dispatch!(monomorphize, [(TA, @primitives)], ())
+            dispatch!(monomorphize, [(TA, @primitives)], (atom_domain))
         }
-        TypeContents::GENERIC { name, .. } if name == &"InherentNullDomain" => {
-            fn monomorphize<TA>() -> FfiResult<*mut AnyTransformation>
+        TypeContents::GENERIC { name, .. } if name == &"AtomDomain" => {
+            fn monomorphize<TA: CheckAtom>(
+                atom_domain: *const AnyDomain,
+            ) -> FfiResult<*mut AnyTransformation>
             where
-                InherentNullDomain<AtomDomain<TA>>: DropNullDomain<Imputed = TA>,
-                TA: 'static + InherentNull + Clone,
+                AtomDomain<TA>: DropNullDomain<Imputed = TA>,
+                TA: 'static + InherentNull + Clone + CheckAtom,
             {
-                make_drop_null::<InherentNullDomain<AtomDomain<TA>>>().into_any()
+                let atom_domain =
+                    try_!(try_as_ref!(atom_domain).downcast_ref::<AtomDomain<TA>>()).clone();
+                make_drop_null(atom_domain).into_any()
             }
-            dispatch!(monomorphize, [(TA, [f64, f32])], ())
+            dispatch!(monomorphize, [(TA, [f64, f32])], (atom_domain))
         }
         _ => err!(
             TypeParse,
-            "DA must be an OptionDomain<AtomDomain<T>> or an InherentNullDomain<AtomDomain<T>>"
+            "DA must be an OptionDomain<AtomDomain<T>> or an AtomDomain<T>"
         )
         .into(),
     }

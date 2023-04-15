@@ -47,8 +47,8 @@ where
     }
 
     make_row_by_row(
-        AtomDomain::new(),
-        OptionDomain::new(AtomDomain::new()),
+        AtomDomain::default(),
+        OptionDomain::new(AtomDomain::default()),
         move |v| indexes.get(v).cloned(),
     )
 }
@@ -85,7 +85,7 @@ where
     if !edges.windows(2).all(|pair| pair[0] < pair[1]) {
         return fallible!(MakeTransformation, "edges must be unique and ordered");
     }
-    make_row_by_row(AtomDomain::new(), AtomDomain::new(), move |v| {
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
         edges
             .iter()
             .enumerate()
@@ -118,7 +118,7 @@ pub fn make_index<TOA>(
 where
     TOA: Primitive,
 {
-    make_row_by_row(AtomDomain::new(), AtomDomain::new(), move |v| {
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
         categories.get(*v).unwrap_or(&null).clone()
     })
 }

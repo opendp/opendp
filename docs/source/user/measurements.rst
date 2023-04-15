@@ -167,7 +167,7 @@ See the `Histograms notebook <../examples/histograms.html>`_ for code examples a
      - Input Metric
      - Output Metric/Measure
    * - :func:`opendp.transformations.make_count_by`
-     - ``VectorDomain<BoundedDomain<TK>>``
+     - ``VectorDomain<AtomDomain<TK>>``
      - ``SymmetricDistance``
      - ``L1Distance<TV>``
    * - :func:`opendp.measurements.make_base_ptr`

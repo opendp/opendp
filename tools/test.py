@@ -44,8 +44,6 @@ def main():
     everything = parse_dataframe >> make_basic_composition([noisy_sum_1, noisy_count_2])
     print(everything(arg))
 
-    # TODO: update data unloaders to work recursively, to avoid needing the cast to a string
-
 
 if __name__ == "__main__":
     main()

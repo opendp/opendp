@@ -21,7 +21,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::traits::{CheckNull, CollectionSize, InherentNull, TotalOrd};
+use crate::traits::{CheckAtom, InherentNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
 #[cfg(feature = "contrib")]
@@ -30,20 +30,31 @@ mod poly;
 pub use poly::*;
 
 /// # Proof Definition
-/// `AtomDomain(T)` is the domain of all **non-null** values of type `T`.
+/// `AtomDomain(T)` is the domain of all values of an atomic type `T`.
+/// If bounds are set, then the domain is restricted to the bounds.
+/// If nullable is set, then null value(s) are included in the domain.
+///
+/// # Notes
+/// If nullable is set, a domain may have multiple possible null values,
+/// like in the case of floating-point numbers, which have ~`2^MANTISSA_BITS` null values.
+///
+/// Because domains are defined in terms of a union,
+/// null values need a conceptual definition of equality to uniquely identify them in a set.
+/// In order to construct a well-defined set of members in the domain,
+/// we consider null values to have the same identity if their bit representation is equal.
 ///
 /// # Example
 /// ```
 /// // Create a domain that includes all values `{0, 1, ..., 2^32 - 1}`.
 /// use opendp::domains::AtomDomain;
-/// let i32_domain = AtomDomain::<i32>::new();
+/// let i32_domain = AtomDomain::<i32>::default();
 ///
 /// // 1 is a member of the i32_domain
 /// use opendp::core::Domain;
 /// assert!(i32_domain.member(&1)?);
 ///
 /// // Create a domain that includes all non-null 32-bit floats.
-/// let f32_domain = AtomDomain::<f32>::new();
+/// let f32_domain = AtomDomain::<f32>::default();
 ///
 /// // 1. is a member of the f32_domain
 /// assert!(f32_domain.member(&1.)?);
@@ -51,81 +62,130 @@ pub use poly::*;
 /// assert!(!f32_domain.member(&f32::NAN)?);
 /// # opendp::error::Fallible::Ok(())
 /// ```
-pub struct AtomDomain<T> {
-    _marker: PhantomData<T>,
+///
+/// # Null Example
+/// ```
+/// use opendp::domains::{Null, AtomDomain};
+/// let all_domain = AtomDomain::default();
+/// let null_domain = AtomDomain::new_nullable();
+///
+/// use opendp::core::Domain;
+/// // f64 NAN is not a member of all_domain, but is a member of null_domain
+/// assert!(!all_domain.member(&f64::NAN)?);
+/// assert!(null_domain.member(&f64::NAN)?);
+///
+/// # opendp::error::Fallible::Ok(())
+/// ```
+#[derive(Clone, PartialEq)]
+pub struct AtomDomain<T: CheckAtom> {
+    bounds: Option<Bounds<T>>,
+    nullable: bool,
 }
 
-impl<T> Debug for AtomDomain<T> {
+impl<T: CheckAtom> Debug for AtomDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "AtomDomain({})", type_name!(T))
+        let bounds = self
+            .bounds
+            .as_ref()
+            .map(|b| format!("bounds={:?}, ", b))
+            .unwrap_or_default();
+        let nullable = self.nullable.then(|| "nullable=true, ").unwrap_or_default();
+        write!(f, "AtomDomain({}{}T={})", bounds, nullable, type_name!(T))
     }
 }
-impl<T> Default for AtomDomain<T> {
+impl<T: CheckAtom> Default for AtomDomain<T> {
     fn default() -> Self {
-        Self::new()
-    }
-}
-impl<T> AtomDomain<T> {
-    pub fn new() -> Self {
         AtomDomain {
-            _marker: PhantomData,
+            bounds: None,
+            nullable: false,
         }
     }
 }
-// Auto-deriving Clone would put the same trait bound on T, so we implement it manually.
-impl<T> Clone for AtomDomain<T> {
-    fn clone(&self) -> Self {
-        Self::new()
+impl<T: CheckAtom> AtomDomain<T> {
+    pub fn new(bounds: Option<Bounds<T>>, nullable: Option<Null<T>>) -> Self {
+        AtomDomain {
+            bounds,
+            nullable: nullable.is_some(),
+        }
     }
 }
-// Auto-deriving PartialEq would put the same trait bound on T, so we implement it manually.
-impl<T> PartialEq for AtomDomain<T> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+impl<T: CheckAtom + InherentNull> AtomDomain<T> {
+    pub fn new_nullable() -> Self {
+        AtomDomain {
+            bounds: None,
+            nullable: true,
+        }
     }
 }
-impl<T: CheckNull> Domain for AtomDomain<T> {
+impl<T: CheckAtom + TotalOrd> AtomDomain<T> {
+    pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
+        Ok(AtomDomain {
+            bounds: Some(Bounds::new_closed(bounds)?),
+            nullable: false,
+        })
+    }
+}
+
+impl<T: CheckAtom> Domain for AtomDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        Ok(!val.is_null())
+        val.check_member(self.bounds.clone(), self.nullable)
     }
 }
 
 /// # Proof Definition
-/// `BoundedDomain(lower, upper, T)` is the domain of all **non-null** values of type `T`
+/// `Null(T)` is a marker that can only be constructed by values of `T` that can contain inherent nullity.
+///
+/// The nullity of members in `T` is indicated via the trait [`crate::traits::InherentNull`].
+#[derive(PartialEq)]
+pub struct Null<T> {
+    pub _marker: PhantomData<T>,
+}
+impl<T> Clone for Null<T> {
+    fn clone(&self) -> Self {
+        Self {
+            _marker: self._marker.clone(),
+        }
+    }
+}
+impl<T: InherentNull> Default for Null<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl<T: InherentNull> Null<T> {
+    pub fn new() -> Self {
+        Null {
+            _marker: PhantomData,
+        }
+    }
+}
+impl<T> Debug for Null<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Null({:?})", type_name!(T))
+    }
+}
+
+/// # Proof Definition
+/// `Bounds(lower, upper, T)` is the interval of all **non-null** values of type `T`
 /// between some `lower` bound and `upper` bound.
 ///
 /// # Notes
 /// The bounds may be inclusive, exclusive, or unbounded (for half-open intervals).
 /// For a type `T` to be valid, it must be totally ordered ([`crate::traits::TotalOrd`]).
 ///
-/// It is impossible to construct an instance of `BoundedDomain` with inconsistent bounds.
+/// It is impossible to construct an instance of `Bounds` with inconsistent bounds.
 /// The constructors for this struct return an error if `lower > upper`, or if the bounds both exclude and include a value.
-///
-/// # Example
-/// ```
-/// // Create a domain that includes the values `{1, 2, 3}`.
-/// use opendp::domains::BoundedDomain;
-/// let i32_bounded_domain = BoundedDomain::<i32>::new_closed((1, 3))?;
-///
-/// // 1 is a member of the i32_domain
-/// use opendp::core::Domain;
-/// assert!(i32_bounded_domain.member(&1)?);
-///
-/// // 4 is not a member of the i32_domain
-/// assert!(!i32_bounded_domain.member(&4)?);
-/// # opendp::error::Fallible::Ok(())
-/// ```
 #[derive(Clone, PartialEq)]
-pub struct BoundedDomain<T: TotalOrd> {
+pub struct Bounds<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: TotalOrd> BoundedDomain<T> {
+impl<T: TotalOrd> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
     }
-    /// Construct a new BoundedDomain with the given bounds.
+    /// Checks that the arguments are well-formed.
     pub fn new(bounds: (Bound<T>, Bound<T>)) -> Fallible<Self> {
         let (lower, upper) = bounds;
         fn get<T>(value: &Bound<T>) -> Option<&T> {
@@ -154,24 +214,33 @@ impl<T: TotalOrd> BoundedDomain<T> {
                 }
             }
         }
-        Ok(BoundedDomain { lower, upper })
+        Ok(Bounds { lower, upper })
     }
 }
-impl<T: TotalOrd> Debug for BoundedDomain<T> {
+impl<T: Debug> Debug for Bounds<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "BoundedDomain({})", type_name!(T))
+        let lower = match &self.lower {
+            Bound::Included(v) => format!("[{:?}", v),
+            Bound::Excluded(v) => format!("({:?}", v),
+            Bound::Unbounded => "(-∞".to_string(),
+        };
+        let upper = match &self.upper {
+            Bound::Included(v) => format!("{:?}]", v),
+            Bound::Excluded(v) => format!("{:?})", v),
+            Bound::Unbounded => "∞)".to_string(),
+        };
+        write!(f, "{}, {}", lower, upper)
     }
 }
-impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
-    type Carrier = T;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+impl<T: Clone + TotalOrd> Bounds<T> {
+    pub fn member(&self, val: &T) -> Fallible<bool> {
         Ok(match &self.lower {
-            Bound::Included(bound) => val >= bound,
-            Bound::Excluded(bound) => val > bound,
+            Bound::Included(bound) => val.total_ge(bound)?,
+            Bound::Excluded(bound) => val.total_gt(bound)?,
             Bound::Unbounded => true,
         } && match &self.upper {
-            Bound::Included(bound) => val <= bound,
-            Bound::Excluded(bound) => val < bound,
+            Bound::Included(bound) => val.total_le(bound)?,
+            Bound::Excluded(bound) => val.total_lt(bound)?,
             Bound::Unbounded => true,
         })
     }
@@ -191,7 +260,7 @@ impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
 /// use opendp::domains::{MapDomain, AtomDomain};
 /// // Rust infers the type from the context, at compile-time.
 /// // Members of this domain are of type `HashMap<&str, i32>`.
-/// let domain = MapDomain::new(AtomDomain::new(), AtomDomain::new());
+/// let domain = MapDomain::new(AtomDomain::default(), AtomDomain::default());
 ///
 /// use opendp::core::Domain;
 /// use std::collections::HashMap;
@@ -201,9 +270,8 @@ impl<T: Clone + TotalOrd> Domain for BoundedDomain<T> {
 /// assert!(domain.member(&hashmap)?);
 ///
 /// // Can build up more complicated domains as needed:
-/// use opendp::domains::{InherentNullDomain, BoundedDomain};
-/// let value_domain = InherentNullDomain::new(BoundedDomain::new_closed((0., 1.))?);
-/// let domain = MapDomain::new(AtomDomain::new(), value_domain);
+/// let value_domain = AtomDomain::new_closed((0., 1.))?;
+/// let domain = MapDomain::new(AtomDomain::default(), value_domain);
 ///
 /// // The following is not a member of the hashmap domain, because a value is out-of-range:
 /// let hashmap = HashMap::from_iter([("a", 0.), ("b", 2.)]);
@@ -229,14 +297,7 @@ where
         }
     }
 }
-impl<K: CheckNull, V: CheckNull> MapDomain<AtomDomain<K>, AtomDomain<V>>
-where
-    K: Eq + Hash,
-{
-    pub fn new_all() -> Self {
-        Self::new(AtomDomain::<K>::new(), AtomDomain::<V>::new())
-    }
-}
+
 impl<DK: Domain, DV: Domain> Domain for MapDomain<DK, DV>
 where
     DK::Carrier: Eq + Hash,
@@ -255,19 +316,20 @@ where
 /// A Domain that contains vectors of (homogeneous) values.
 ///
 /// # Proof Definition
-/// `VectorDomain(inner_domain, D)` is the domain of all vectors of elements drawn from domain `inner_domain`.
+/// `VectorDomain(inner_domain, D, Option<size>)` is the domain of all vectors of elements drawn from domain `inner_domain`.
+/// If size is specified, then the domain is further restricted to all vectors of the given size.
 ///
 /// # Example
 /// ```
-/// use opendp::domains::{VectorDomain, AtomDomain, BoundedDomain};
+/// use opendp::domains::{VectorDomain, AtomDomain};
 /// use opendp::core::Domain;
 ///
-/// // Represents the domain of all vectors.
-/// let atom_domain = VectorDomain::new(AtomDomain::new());
-/// assert!(atom_domain.member(&vec![1, 2, 3])?);
+/// // Represents the domain of vectors.
+/// let vec_domain = VectorDomain::new(AtomDomain::default());
+/// assert!(vec_domain.member(&vec![1, 2, 3])?);
 ///
-/// // Represents the domain of all bounded vectors.
-/// let bounded_domain = VectorDomain::new(BoundedDomain::new_closed((-10, 10))?);
+/// // Represents the domain of all vectors of bounded elements.
+/// let bounded_domain = VectorDomain::new(AtomDomain::new_closed((-10, 10))?);
 ///
 /// // vec![0] is a member, but vec![12] is not, because 12 is out of bounds of the inner domain
 /// assert!(bounded_domain.member(&vec![0])?);
@@ -275,13 +337,33 @@ where
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
+///
+/// # Size Example
+/// ```
+/// use opendp::domains::{VectorDomain, AtomDomain};
+/// // Create a domain that includes all i32 vectors of length 3.
+/// let sized_domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(3);
+///
+/// // vec![1, 2, 3] is a member of the sized_domain
+/// use opendp::core::Domain;
+/// assert!(sized_domain.member(&vec![1, 2, 3])?);
+///
+/// // vec![1, 2] is not a member of the sized_domain
+/// assert!(!sized_domain.member(&vec![1, 2])?);
+/// # opendp::error::Fallible::Ok(())
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct VectorDomain<D: Domain> {
     pub element_domain: D,
+    pub size: Option<usize>,
 }
 impl<D: Domain> Debug for VectorDomain<D> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "VectorDomain({:?})", self.element_domain)
+        let size_str = self
+            .size
+            .map(|size| format!(", size={:?}", size))
+            .unwrap_or_default();
+        write!(f, "VectorDomain({:?}{})", self.element_domain, size_str)
     }
 }
 impl<D: Domain + Default> Default for VectorDomain<D> {
@@ -291,12 +373,18 @@ impl<D: Domain + Default> Default for VectorDomain<D> {
 }
 impl<D: Domain> VectorDomain<D> {
     pub fn new(element_domain: D) -> Self {
-        VectorDomain { element_domain }
+        VectorDomain {
+            element_domain,
+            size: None,
+        }
     }
-}
-impl<T: CheckNull> VectorDomain<AtomDomain<T>> {
-    pub fn new_all() -> Self {
-        Self::new(AtomDomain::<T>::new())
+    pub fn with_size(mut self, size: usize) -> Self {
+        self.size = Some(size);
+        self
+    }
+    pub fn without_size(mut self) -> Self {
+        self.size = None;
+        self
     }
 }
 impl<D: Domain> Domain for VectorDomain<D> {
@@ -307,143 +395,12 @@ impl<D: Domain> Domain for VectorDomain<D> {
                 return Ok(false);
             }
         }
+        if let Some(size) = self.size {
+            if size != val.len() {
+                return Ok(false);
+            }
+        }
         Ok(true)
-    }
-}
-
-/// A Domain that specifies the length of the enclosed domain.
-///
-/// # Proof Definition
-/// `SizedDomain(inner_domain, size, D)` is the domain of `inner_domain` restricted to only elements with size `size`.
-///
-/// # Example
-/// First let `inner_domain` be `VectorDomain::new(AtomDomain::<i32>::new())`.
-/// `inner_domain` indicates the set of all i32 vectors.
-///
-/// Then `SizedDomain::new(inner_domain, 3)` indicates the set of all i32 vectors of length 3.
-///
-/// # Example
-/// ```
-/// use opendp::domains::{SizedDomain, VectorDomain};
-/// // Create a domain that includes all i32 vectors.
-/// let vec_domain = VectorDomain::new_all();
-/// // Create a domain that includes all i32 vectors of length 3.
-/// let sized_domain = SizedDomain::new(vec_domain, 3);
-///
-/// // vec![1, 2, 3] is a member of the sized_domain
-/// use opendp::core::Domain;
-/// assert!(sized_domain.member(&vec![1i32, 2, 3])?);
-///
-/// // vec![1, 2] is not a member of the sized_domain
-/// assert!(!sized_domain.member(&vec![1, 2])?);
-/// # opendp::error::Fallible::Ok(())
-/// ```
-#[derive(Clone, PartialEq)]
-pub struct SizedDomain<D: Domain> {
-    pub inner_domain: D,
-    pub size: usize,
-}
-impl<D: Domain> SizedDomain<D> {
-    pub fn new(member_domain: D, size: usize) -> Self {
-        SizedDomain {
-            inner_domain: member_domain,
-            size,
-        }
-    }
-}
-impl<D: Domain> Debug for SizedDomain<D> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "SizedDomain({:?}, size={})",
-            self.inner_domain, self.size
-        )
-    }
-}
-impl<D: Domain> Domain for SizedDomain<D>
-where
-    D::Carrier: CollectionSize,
-{
-    type Carrier = D::Carrier;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        if val.size() != self.size {
-            return Ok(false);
-        }
-        self.inner_domain.member(val)
-    }
-}
-
-/// # Proof Definition
-/// `InherentNullDomain(element_domain, D)` is the domain of all values of `element_domain` (of type `D`, a domain)
-/// unioned with all null members in `D`.
-///
-/// The nullity of members in `D` is indicated via the trait [`crate::traits::InherentNull`].
-///
-/// # Notes
-/// A domain may have multiple possible null values,
-/// like in the case of floating-point numbers, which have ~`2^MANTISSA_BITS` null values.
-///
-/// Because this domain is defined in terms of a union,
-/// null values need a conceptual definition of equality to uniquely identify them in a set.
-/// In order to construct a well-defined set of members in the domain,
-/// we consider null values to have the same identity if their bit representation is equal.
-///
-/// # Example
-/// ```
-/// use opendp::domains::{InherentNullDomain, AtomDomain};
-/// let atom_domain = AtomDomain::new();
-/// let null_domain = InherentNullDomain::new(atom_domain.clone());
-///
-/// use opendp::core::Domain;
-/// // f64 NAN is not a member of atom_domain, but is a member of null_domain
-/// assert!(!atom_domain.member(&f64::NAN)?);
-/// assert!(null_domain.member(&f64::NAN)?);
-///
-/// # opendp::error::Fallible::Ok(())
-/// ```
-#[derive(Clone, PartialEq)]
-pub struct InherentNullDomain<D: Domain>
-where
-    D::Carrier: InherentNull,
-{
-    pub element_domain: D,
-}
-impl<D: Domain + Default> Default for InherentNullDomain<D>
-where
-    D::Carrier: InherentNull,
-{
-    fn default() -> Self {
-        Self::new(D::default())
-    }
-}
-impl<D: Domain> InherentNullDomain<D>
-where
-    D::Carrier: InherentNull,
-{
-    pub fn new(member_domain: D) -> Self {
-        InherentNullDomain {
-            element_domain: member_domain,
-        }
-    }
-}
-impl<D: Domain> Debug for InherentNullDomain<D>
-where
-    D::Carrier: InherentNull,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "InherentNullDomain({:?})", self.element_domain)
-    }
-}
-impl<D: Domain> Domain for InherentNullDomain<D>
-where
-    D::Carrier: InherentNull,
-{
-    type Carrier = D::Carrier;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        if val.is_null() {
-            return Ok(true);
-        }
-        self.element_domain.member(val)
     }
 }
 
@@ -460,7 +417,7 @@ where
 /// # Example
 /// ```
 /// use opendp::domains::{OptionDomain, AtomDomain};
-/// let null_domain = OptionDomain::new(AtomDomain::new());
+/// let null_domain = OptionDomain::new(AtomDomain::default());
 ///
 /// use opendp::core::Domain;
 /// assert!(null_domain.member(&Some(1))?);

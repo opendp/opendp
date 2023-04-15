@@ -189,11 +189,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)):
     >>> assert count.check(1, 1)
     ...
     >>> # chain with more transformations from the trans module
-    >>> from opendp.transformations import make_split_lines, make_cast, make_impute_constant
+    >>> from opendp.transformations import make_split_lines, make_cast_default
     >>> chained = (
     ...     make_split_lines() >>
-    ...     make_cast(TIA=str, TOA=int) >>
-    ...     make_impute_constant(constant=0) >>
+    ...     make_cast_default(TIA=str, TOA=int) >>
     ...     count
     ... )
     ...
@@ -523,13 +522,13 @@ def binary_search_chain(
     >>> from opendp.mod import binary_search_chain, enable_features
     >>> from opendp.transformations import make_clamp, make_resize, make_sized_bounded_mean
     >>> from opendp.measurements import make_base_laplace
-    >>> from opendp.domains import bounded_domain
+    >>> from opendp.domains import atom_domain
     >>> enable_features("floating-point", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     ...     make_clamp(bounds=(0., 1.)) >>
-    ...     make_resize(size=10, atom_domain=bounded_domain((0., 1.)), constant=0.) >>
+    ...     make_resize(size=10, atom_domain=atom_domain((0., 1.)), constant=0.) >>
     ...     make_sized_bounded_mean(size=10, bounds=(0., 1.))
     ... )
     ...

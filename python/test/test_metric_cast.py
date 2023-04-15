@@ -12,7 +12,7 @@ enable_features("contrib")
 
 def test_ordering():
     data = [1, 2, 3]
-    domain = vector_domain(bounded_domain((0, 3)))
+    domain = vector_domain(atom_domain((0, 3)))
     ord_trans = make_ordered_random(domain)
     assert len(ord_trans(data)) == 3
 
@@ -21,7 +21,7 @@ def test_ordering():
 
 def test_sized_ordering():
     data = [1, 2, 3]
-    domain = sized_domain(vector_domain(atom_domain(i32)), 3)
+    domain = vector_domain(atom_domain(T=i32), 3)
     ord_trans = make_ordered_random(domain)
     assert len(ord_trans(data)) == 3
 
@@ -30,7 +30,7 @@ def test_sized_ordering():
 
 def test_sized_bounded_ordering():
     data = [1, 2, 3]
-    domain = sized_domain(vector_domain(bounded_domain((0, 3))), 3)
+    domain = vector_domain(atom_domain((0, 3)), 3)
     ord_trans = make_ordered_random(domain)
     assert len(ord_trans(data)) == 3
 
@@ -40,7 +40,7 @@ def test_sized_bounded_ordering():
 def test_bounded():
     data = [1, 2, 3]
 
-    domain = sized_domain(vector_domain(atom_domain(i32)), 3)
+    domain = vector_domain(atom_domain(T=i32), 3)
     bdd_trans = make_metric_bounded(domain)
     assert len(bdd_trans(data)) == 3
 

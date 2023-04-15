@@ -8,7 +8,7 @@ use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, SymmetricDistance};
-use crate::traits::{CheckNull, DistanceConstant};
+use crate::traits::{CheckAtom, CheckNull, DistanceConstant};
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
 pub(crate) fn make_row_by_row<DIA, DOA, M>(
@@ -93,17 +93,24 @@ pub fn make_is_equal<TIA>(
     >,
 >
 where
-    TIA: 'static + PartialEq + CheckNull,
+    TIA: 'static + PartialEq + CheckAtom,
 {
-    make_row_by_row(AtomDomain::new(), AtomDomain::new(), move |v| v == &value)
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), move |v| {
+        v == &value
+    })
 }
 
-#[bootstrap(features("contrib"))]
+#[bootstrap(
+    features("contrib"),
+    arguments(input_atom_domain(c_type = "AnyDomain *"))
+)]
 /// Make a Transformation that checks if each element in a vector is null.
 ///
 /// # Generics
 /// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
-pub fn make_is_null<DIA>() -> Fallible<
+pub fn make_is_null<DIA>(
+    input_atom_domain: DIA,
+) -> Fallible<
     Transformation<
         VectorDomain<DIA>,
         VectorDomain<AtomDomain<bool>>,
@@ -115,19 +122,19 @@ where
     DIA: Domain + Default,
     DIA::Carrier: 'static + CheckNull,
 {
-    make_row_by_row(DIA::default(), AtomDomain::default(), |v| v.is_null())
+    make_row_by_row(input_atom_domain, AtomDomain::default(), |v| v.is_null())
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
-    use crate::domains::{AtomDomain, InherentNullDomain};
+    use crate::domains::AtomDomain;
     use crate::metrics::ChangeOneDistance;
 
     #[test]
     fn test_identity() {
-        let identity = make_identity(AtomDomain::new(), ChangeOneDistance).unwrap_test();
+        let identity = make_identity(AtomDomain::default(), ChangeOneDistance).unwrap_test();
         let arg = 99;
         let ret = identity.invoke(&arg).unwrap_test();
         assert_eq!(ret, 99);
@@ -138,16 +145,7 @@ mod tests {
         let is_equal = make_is_equal("alpha".to_string())?;
         let arg = vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()];
         let ret = is_equal.invoke(&arg)?;
-        assert_eq!(ret, vec![true, false, false]);
-        assert!(is_equal.check(&1, &1)?);
-        Ok(())
-    }
 
-    #[test]
-    fn test_is_null() -> Fallible<()> {
-        let is_equal = make_is_null::<InherentNullDomain<AtomDomain<_>>>()?;
-        let arg = vec![f64::NAN, 1., 2.];
-        let ret = is_equal.invoke(&arg)?;
         assert_eq!(ret, vec![true, false, false]);
         assert!(is_equal.check(&1, &1)?);
         Ok(())

@@ -30,8 +30,8 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
     let function = transformation.function.clone();
 
     Ok(Transformation::new(
-        DataFrameDomain::new_all(),
-        DataFrameDomain::new_all(),
+        DataFrameDomain::new(),
+        DataFrameDomain::new(),
         Function::new_fallible(move |arg: &DataFrame<K>| {
             let mut data = arg.clone();
             let column = data.remove(&column_name).ok_or_else(|| {

@@ -73,8 +73,14 @@ impl<TI, TO> DistanceConstant<TI> for TO where TO: 'static + InfCast<TI> + InfMu
 ///
 /// test_func(1i8);
 /// ```
-pub trait Primitive: 'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default {}
-impl<T> Primitive for T where T: 'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default {}
+pub trait Primitive:
+    'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default + CheckAtom
+{
+}
+impl<T> Primitive for T where
+    T: 'static + Clone + std::fmt::Debug + CheckNull + PartialEq + Default + CheckAtom
+{
+}
 
 /// The subset of [`Primitive`] types that implement Eq and Hash.
 ///

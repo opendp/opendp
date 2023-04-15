@@ -4,10 +4,10 @@ mod ffi;
 use opendp_derive::bootstrap;
 
 use crate::core::Transformation;
-use crate::domains::{AtomDomain, InherentNullDomain, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::SymmetricDistance;
-use crate::traits::{CheckNull, InherentNull, RoundCast};
+use crate::traits::{CheckAtom, InherentNull, RoundCast};
 use crate::transformations::make_row_by_row;
 
 #[bootstrap(features("contrib"))]
@@ -28,12 +28,12 @@ pub fn make_cast<TIA, TOA>() -> Fallible<
     >,
 >
 where
-    TIA: 'static + Clone + CheckNull,
-    TOA: 'static + RoundCast<TIA> + CheckNull,
+    TIA: 'static + Clone + CheckAtom,
+    TOA: 'static + RoundCast<TIA> + CheckAtom,
 {
     make_row_by_row(
-        AtomDomain::new(),
-        OptionDomain::new(AtomDomain::new()),
+        AtomDomain::default(),
+        OptionDomain::new(AtomDomain::default()),
         |v| {
             TOA::round_cast(v.clone())
                 .ok()
@@ -66,10 +66,10 @@ pub fn make_cast_default<TIA, TOA>() -> Fallible<
     >,
 >
 where
-    TIA: 'static + Clone + CheckNull,
-    TOA: 'static + RoundCast<TIA> + Default + CheckNull,
+    TIA: 'static + Clone + CheckAtom,
+    TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
 {
-    make_row_by_row(AtomDomain::new(), AtomDomain::new(), |v| {
+    make_row_by_row(AtomDomain::default(), AtomDomain::default(), |v| {
         TOA::round_cast(v.clone()).unwrap_or_default()
     })
 }
@@ -88,20 +88,18 @@ where
 pub fn make_cast_inherent<TIA, TOA>() -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<InherentNullDomain<AtomDomain<TOA>>>,
+        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
         SymmetricDistance,
     >,
 >
 where
-    TIA: 'static + Clone + CheckNull,
-    TOA: 'static + RoundCast<TIA> + InherentNull + CheckNull,
+    TIA: 'static + Clone + CheckAtom,
+    TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
 {
-    make_row_by_row(
-        AtomDomain::new(),
-        InherentNullDomain::new(AtomDomain::new()),
-        |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
-    )
+    make_row_by_row(AtomDomain::default(), AtomDomain::new_nullable(), |v| {
+        TOA::round_cast(v.clone()).unwrap_or(TOA::NULL)
+    })
 }
 
 #[cfg(test)]

@@ -5,8 +5,7 @@ use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::err;
 use crate::ffi::any::AnyTransformation;
 use crate::ffi::util::Type;
-use crate::traits::InherentNull;
-use crate::traits::{CheckNull, RoundCast};
+use crate::traits::{CheckAtom, InherentNull, RoundCast};
 use crate::transformations::{make_cast, make_cast_default, make_cast_inherent};
 
 #[no_mangle]
@@ -19,8 +18,8 @@ pub extern "C" fn opendp_transformations__make_cast(
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
     where
-        TIA: 'static + Clone + CheckNull,
-        TOA: 'static + RoundCast<TIA> + CheckNull,
+        TIA: 'static + Clone + CheckAtom,
+        TOA: 'static + RoundCast<TIA> + CheckAtom,
     {
         make_cast::<TIA, TOA>().into_any()
     }
@@ -37,8 +36,8 @@ pub extern "C" fn opendp_transformations__make_cast_default(
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
     where
-        TIA: 'static + Clone + CheckNull,
-        TOA: 'static + RoundCast<TIA> + Default + CheckNull,
+        TIA: 'static + Clone + CheckAtom,
+        TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
     {
         make_cast_default::<TIA, TOA>().into_any()
     }
@@ -55,8 +54,8 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
 
     fn monomorphize<TIA, TOA>() -> FfiResult<*mut AnyTransformation>
     where
-        TIA: 'static + Clone + CheckNull,
-        TOA: 'static + RoundCast<TIA> + InherentNull,
+        TIA: 'static + Clone + CheckAtom,
+        TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
     {
         make_cast_inherent::<TIA, TOA>().into_any()
     }
