@@ -43,6 +43,7 @@ fn parse_crate(
     let mut modules = HashMap::new();
     for entry in std::fs::read_dir(src_dir)? {
         let path = entry?.path();
+        println!("cargo:rerun-if-changed={}", path.display());
 
         let module_name =
             if let Some(name) = path.file_name().expect("paths are canonicalized").to_str() {

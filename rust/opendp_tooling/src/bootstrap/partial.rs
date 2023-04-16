@@ -42,20 +42,20 @@ pub fn generate_partial(mut item_fn: ItemFn) -> Option<ItemFn> {
         return None;
     };
 
-    let operator_ident = &mut path.path.segments.last_mut()?.ident;
-    *operator_ident = syn::Ident::new(
-        format!("Partial{}", operator_ident.clone()).as_str(),
-        operator_ident.span(),
+    let mut operator_type = path.path.segments.last()?.clone();
+    operator_type.ident = syn::Ident::new(
+        format!("Partial{}", operator_type.ident).as_str(),
+        operator_type.ident.span(),
     );
-    item_fn.sig.output = syn::ReturnType::Type(
-        syn::token::RArrow::default(),
-        Box::new(operator_type.clone()),
-    );
+    let ret_type: Type = syn::parse_quote!(crate::core::#operator_type);
+    let body_operator_ident = operator_type.ident.clone();
+    item_fn.sig.output =
+        syn::ReturnType::Type(syn::token::RArrow::default(), Box::new(ret_type.clone()));
 
     let old_block = item_fn.block.clone();
     // update function body
     item_fn.block = syn::parse_quote! {{
-        crate::core::PartialTransformation::new(move |#input_domain_arg, #input_metric_arg| #old_block)
+        crate::core::#body_operator_ident::new(move |#input_domain_arg, #input_metric_arg| #old_block)
     }};
 
     Some(item_fn)
