@@ -499,6 +499,59 @@ impl<D: Domain> Domain for OptionDomain<D> {
     }
 }
 
+/// A domain that represents all values of a given type.
+///
+/// This is a simpler alternative to `AtomDomain`, for when the value is not an atomic/primitive,
+/// and thus the usual descriptors do not apply: no bounds, no nullity.
+///
+/// # Proof Definition
+/// `AllDomain(T)` is the domain of all values of type `T`.
+///
+/// # Example
+/// ```
+/// use opendp::domains::AllDomain;
+/// use opendp::interactive::Queryable;
+/// let all_domain = AllDomain::<Queryable<i32, f64>>::default();
+///
+/// use opendp::core::Domain;
+/// let queryable = Queryable::new_external(move |x: &i32| Ok(*x as f64))?;
+/// assert!(all_domain.member(&queryable)?);
+///
+/// # opendp::error::Fallible::Ok(())
+/// ```
+pub struct AllDomain<T>(PhantomData<T>);
+
+impl<T> Debug for AllDomain<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "AllDomain({})", type_name!(T))
+    }
+}
+
+impl<T> Default for AllDomain<T> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<T> Domain for AllDomain<T> {
+    type Carrier = T;
+    fn member(&self, _value: &Self::Carrier) -> Fallible<bool> {
+        Ok(true)
+    }
+}
+
+impl<T> Clone for AllDomain<T> {
+    fn clone(&self) -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<T> PartialEq for AllDomain<T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
 /// retrieves the type_name for a given type
 macro_rules! type_name {
     ($ty:ty) => {

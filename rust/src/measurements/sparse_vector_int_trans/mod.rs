@@ -30,7 +30,7 @@ where
     MODE: SVMode<T>,
 {
     Ok(Measurement::new(
-        AllDomain::new(),
+        AllDomain::default(),
         Function::new_fallible(enclose!(scale_release, move |arg: &Queryable<
             DI::Carrier,
             T,
