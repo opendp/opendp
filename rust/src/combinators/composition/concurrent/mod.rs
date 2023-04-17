@@ -132,7 +132,7 @@ impl<Q: Clone> ConcurrentCompositionMeasure for SmoothedMaxDivergence<Q> {}
 mod test {
 
     use crate::{
-        domains::AllDomain, measurements::make_randomized_response_bool, metrics::DiscreteDistance,
+        domains::AtomDomain, measurements::make_randomized_response_bool, metrics::DiscreteDistance,
     };
 
     use super::*;
@@ -143,7 +143,7 @@ mod test {
         // construct concurrent compositor IM
         //                                      DI, TO,           MI, MO
         let root = make_concurrent_composition::<_, Box<dyn Any>, _, _>(
-            AllDomain::new(),
+            AtomDomain::default(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
             1,
@@ -166,7 +166,7 @@ mod test {
 
         // pass a concurrent composition compositor into the original CC compositor
         let cc_query_3 = make_concurrent_composition::<_, bool, _, _>(
-            AllDomain::<bool>::new(),
+            AtomDomain::<bool>::default(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
             1,
@@ -186,7 +186,7 @@ mod test {
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are Boxed and type-erased
         let cc_query_4 = make_concurrent_composition::<_, Box<dyn Any>, _, _>(
-            AllDomain::<bool>::new(),
+            AtomDomain::<bool>::default(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
             1,

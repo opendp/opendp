@@ -165,9 +165,7 @@ def make_chain_tt(
     return output
 
 
-<<<<<<< HEAD
 @versioned
-=======
 def make_concurrent_composition(
     input_domain,
     input_metric,
@@ -213,7 +211,7 @@ def make_concurrent_composition(
     return output
 
 
->>>>>>> ad5019aeb0 (concurrent composition)
+@versioned
 def make_fix_delta(
     measurement: Measurement,
     delta: Any
