@@ -518,7 +518,7 @@ impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMet
             self.destructure();
         AnyMeasurement::new(
             input_domain,
-            function.into_any(),
+            function.into_any_out(),
             input_metric,
             output_measure,
             privacy_map,
