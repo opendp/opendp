@@ -190,7 +190,7 @@ mod test {
     use std::any::Any;
 
     use crate::{
-        combinators::make_sequential_composition, core::Measurement, domains::AllDomain,
+        combinators::make_sequential_composition, core::Measurement, domains::AtomDomain,
         measurements::make_randomized_response_bool, measures::MaxDivergence,
         metrics::DiscreteDistance,
     };
@@ -201,7 +201,7 @@ mod test {
     fn test_privacy_odometer() -> Fallible<()> {
         // construct concurrent compositor IM
         let root = make_sequential_odometer::<_, Measurement<_, _, _, _>, _, _>(
-            AllDomain::new(),
+            AtomDomain::default(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
         )?;
@@ -219,7 +219,7 @@ mod test {
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are in AllDomain<bool>
         let cc_query_3 = make_sequential_composition::<_, bool, _, _>(
-            AllDomain::<bool>::new(),
+            AtomDomain::<bool>::default(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
             1,
@@ -239,7 +239,7 @@ mod test {
         // pass a concurrent composition compositor into the original CC compositor
         // This compositor expects all outputs are Boxed and type-erased
         let cc_query_4 = make_sequential_composition::<_, Box<dyn Any>, _, _>(
-            AllDomain::<bool>::new(),
+            AtomDomain::<bool>::default(),
             DiscreteDistance::default(),
             MaxDivergence::default(),
             1,
