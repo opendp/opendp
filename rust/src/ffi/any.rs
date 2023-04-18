@@ -227,11 +227,11 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
     pub fn into_any_Q(
         self,
     ) -> Measurement<AnyDomain, Queryable<AnyObject, A>, AnyMetric, AnyMeasure> {
-        let function = self.function;
+        let function = self.function.clone();
 
-        Measurement {
-            input_domain: self.input_domain,
-            function: Function::new_fallible(
+        Measurement::new(
+            self.input_domain.clone(),
+            Function::new_fallible(
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
 
@@ -251,10 +251,10 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
                     })
                 },
             ),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        ).expect("AnyDomain is not checked for compatibility")
     }
 }
 
@@ -489,13 +489,14 @@ where
     (DI, MI): MetricSpace,
 {
     fn into_any(self) -> AnyMeasurement {
-        AnyMeasurement {
-            input_domain: AnyDomain::new(self.input_domain),
-            function: self.function.into_any(),
-            input_metric: AnyMetric::new(self.input_metric),
-            output_measure: AnyMeasure::new(self.output_measure),
-            privacy_map: self.privacy_map.into_any(),
-        }
+        AnyMeasurement::new(
+            AnyDomain::new(self.input_domain.clone()),
+            self.function.clone().into_any(),
+            AnyMetric::new(self.input_metric.clone()),
+            AnyMeasure::new(self.output_measure.clone()),
+            self.privacy_map.clone().into_any(),
+        )
+        .expect("AnyDomain is not checked for compatibility")
     }
 }
 
@@ -507,13 +508,14 @@ pub trait IntoAnyMeasurementOutExt {
 
 impl<TO: 'static> IntoAnyMeasurementOutExt for Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
     fn into_any_out(self) -> AnyMeasurement {
-        AnyMeasurement {
-            input_domain: self.input_domain,
-            function: self.function.into_any_out(),
-            input_metric: self.input_metric,
-            output_measure: self.output_measure,
-            privacy_map: self.privacy_map,
-        }
+        Measurement::new(
+            self.input_domain.clone(),
+            self.function.clone().into_any_out(),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
+            self.privacy_map.clone(),
+        )
+        .expect("AnyDomain is not checked for compatibility")
     }
 }
 
@@ -538,14 +540,15 @@ where
     (DO, MO): MetricSpace,
 {
     fn into_any(self) -> AnyTransformation {
-        AnyTransformation {
-            input_domain: AnyDomain::new(self.input_domain),
-            output_domain: AnyDomain::new(self.output_domain),
-            function: self.function.into_any(),
-            input_metric: AnyMetric::new(self.input_metric),
-            output_metric: AnyMetric::new(self.output_metric),
-            stability_map: self.stability_map.into_any(),
-        }
+        AnyTransformation::new(
+            AnyDomain::new(self.input_domain.clone()),
+            AnyDomain::new(self.output_domain.clone()),
+            self.function.clone().into_any(),
+            AnyMetric::new(self.input_metric.clone()),
+            AnyMetric::new(self.output_metric.clone()),
+            self.stability_map.clone().into_any(),
+        )
+        .expect("AnyDomain is not checked")
     }
 }
 

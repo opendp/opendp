@@ -32,18 +32,11 @@ where
     QO: Float,
     (DI, MI): MetricSpace,
 {
-    let Measurement {
-        input_domain,
-        function,
-        input_metric,
-        privacy_map,
-        ..
-    } = meas;
-
+    let privacy_map = meas.privacy_map.clone();
     Measurement::new(
-        input_domain,
-        function,
-        input_metric,
+        meas.input_domain.clone(),
+        meas.function.clone(),
+        meas.input_metric.clone(),
         SmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let rho = privacy_map.eval(d_in)?;

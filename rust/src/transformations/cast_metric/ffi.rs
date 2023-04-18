@@ -38,12 +38,12 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
         let trans = try_!(super::make_ordered_random::<AnyDomain, MI>(domain));
 
         Transformation::new(
-            trans.input_domain,
-            trans.output_domain,
-            trans.function,
-            AnyMetric::new(trans.input_metric),
-            AnyMetric::new(trans.output_metric),
-            trans.stability_map.into_any(),
+            trans.input_domain.clone(),
+            trans.output_domain.clone(),
+            trans.function.clone(),
+            AnyMetric::new(trans.input_metric.clone()),
+            AnyMetric::new(trans.output_metric.clone()),
+            trans.stability_map.clone().into_any(),
         )
         .into()
     }
@@ -81,12 +81,12 @@ pub extern "C" fn opendp_transformations__make_unordered(
         let trans = try_!(super::make_unordered::<AnyDomain, MI>(domain));
 
         Transformation::new(
-            trans.input_domain,
-            trans.output_domain,
-            trans.function,
-            AnyMetric::new(trans.input_metric),
-            AnyMetric::new(trans.output_metric),
-            trans.stability_map.into_any(),
+            trans.input_domain.clone(),
+            trans.output_domain.clone(),
+            trans.function.clone(),
+            AnyMetric::new(trans.input_metric.clone()),
+            AnyMetric::new(trans.output_metric.clone()),
+            trans.stability_map.clone().into_any(),
         )
         .into()
     }
@@ -124,12 +124,12 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
         let trans = try_!(super::make_metric_bounded::<AnyDomain, MI>(domain));
 
         Transformation::new(
-            trans.input_domain,
-            trans.output_domain,
-            trans.function,
-            AnyMetric::new(trans.input_metric),
-            AnyMetric::new(trans.output_metric),
-            trans.stability_map.into_any(),
+            trans.input_domain.clone(),
+            trans.output_domain.clone(),
+            trans.function.clone(),
+            AnyMetric::new(trans.input_metric.clone()),
+            AnyMetric::new(trans.output_metric.clone()),
+            trans.stability_map.clone().into_any(),
         )
         .into()
     }
@@ -166,12 +166,12 @@ pub extern "C" fn opendp_transformations__make_metric_unbounded(
         let trans = try_!(super::make_metric_unbounded::<AnyDomain, MI>(domain));
 
         Transformation::new(
-            trans.input_domain,
-            trans.output_domain,
-            trans.function,
-            AnyMetric::new(trans.input_metric),
-            AnyMetric::new(trans.output_metric),
-            trans.stability_map.into_any(),
+            trans.input_domain.clone(),
+            trans.output_domain.clone(),
+            trans.function.clone(),
+            AnyMetric::new(trans.input_metric.clone()),
+            AnyMetric::new(trans.output_metric.clone()),
+            trans.stability_map.clone().into_any(),
         )
         .into()
     }

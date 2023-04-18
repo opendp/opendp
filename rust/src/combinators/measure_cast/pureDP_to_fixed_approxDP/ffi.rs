@@ -15,44 +15,31 @@ use crate::{
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
 fn make_pureDP_to_fixed_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-    fn monomorphize<QO: Float>(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
-        let AnyMeasurement {
-            input_domain,
-            function,
-            input_metric,
-            output_measure,
-            privacy_map,
-        } = measurement.clone();
+    fn monomorphize<QO: Float>(m: &AnyMeasurement) -> Fallible<AnyMeasurement> {
+        let privacy_map = m.privacy_map.clone();
 
-        let measurement = Measurement {
-            input_domain,
-            function,
-            input_metric,
-            output_measure: try_!(output_measure.downcast::<MaxDivergence<QO>>()),
-            privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| {
+        let measurement = Measurement::new(
+            m.input_domain.clone(),
+            m.function.clone(),
+            m.input_metric.clone(),
+            try_!(m.output_measure.clone().downcast::<MaxDivergence<QO>>()),
+            PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 privacy_map.eval(d_in)?.downcast::<QO>()
             }),
-        };
+        )?;
 
-        let measurement = super::make_pureDP_to_fixed_approxDP(measurement)?;
+        let m = super::make_pureDP_to_fixed_approxDP(measurement)?;
 
-        let Measurement {
-            input_domain,
-            function,
-            input_metric,
-            output_measure,
-            privacy_map,
-        } = measurement;
-
-        Ok(AnyMeasurement {
-            input_domain,
-            function,
-            input_metric,
-            output_measure: AnyMeasure::new(output_measure),
-            privacy_map: PrivacyMap::new_fallible(move |d_in: &AnyObject| {
+        let privacy_map = m.privacy_map.clone();
+        AnyMeasurement::new(
+            m.input_domain.clone(),
+            m.function.clone(),
+            m.input_metric.clone(),
+            AnyMeasure::new(m.output_measure.clone()),
+            PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 privacy_map.eval(d_in).map(AnyObject::new)
             }),
-        })
+        )
     }
 
     let Q = measurement.output_measure.distance_type.clone();
