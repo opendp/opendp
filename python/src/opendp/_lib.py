@@ -40,7 +40,8 @@ else:
 # This enables backtraces in Rust by default.
 # It can be disabled by setting RUST_BACKTRACE=0.
 # Binary searches disable backtraces for performance reasons.
-os.environ["RUST_BACKTRACE"] = "1"
+if "RUST_BACKTRACE" not in os.environ:
+    os.environ["RUST_BACKTRACE"] = "1"
 
 
 class FfiSlice(ctypes.Structure):

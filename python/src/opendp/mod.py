@@ -630,8 +630,6 @@ def binary_search(
 
     If bounds are not passed, conducts an exponential search.
     
-    This function disables collection of backtraces in Rust for performance reasons.
-
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
     :param T: type of argument to `predicate`, one of {float, int}
@@ -683,9 +681,6 @@ def binary_search(
     ...     bounds = (0, 100))
     3
     """
-    # collecting backtraces is slow, and we don't need them for binary searches
-    predicate = _disable_rust_backtraces(predicate)
-
     if bounds is None:
         bounds = exponential_bounds_search(predicate, T)
 
@@ -826,21 +821,3 @@ def exponential_bounds_search(
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
 
-
-def _disable_rust_backtraces(func):
-    """Decorator to disable rust backtraces for a function call."""
-    import functools
-    import os
-
-    @functools.wraps(func)
-    def func_inner(*args, **kwargs):
-        rust_backtrace = os.environ.get("RUST_BACKTRACE")
-        os.environ["RUST_BACKTRACE"] = "0"
-        try:
-            return func(*args, **kwargs)
-        finally:
-            if rust_backtrace is None:
-                del os.environ["RUST_BACKTRACE"]
-            else:
-                os.environ["RUST_BACKTRACE"] = rust_backtrace
-    return func_inner
