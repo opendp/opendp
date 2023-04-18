@@ -56,21 +56,14 @@ impl FfiError {
 }
 
 impl From<Error> for FfiError {
-    fn from(mut error: Error) -> Self {
+    fn from(error: Error) -> Self {
         Self {
             variant: try_!(util::into_c_char_p(format!("{:?}", error.variant))),
             message: try_!(error.message.map_or(
                 Ok(ptr::null::<c_char>() as *mut c_char),
                 util::into_c_char_p
             )),
-            backtrace: try_!(util::into_c_char_p(
-                if let ErrorVariant::RelationDebug = error.variant {
-                    String::default()
-                } else {
-                    error.backtrace.resolve();
-                    format!("{:?}", error.backtrace)
-                }
-            )),
+            backtrace: try_!(util::into_c_char_p(format!("{:?}", error.backtrace))),
         }
     }
 }
@@ -202,7 +195,7 @@ impl From<FfiError> for Error {
             message: util::to_option_str(val.message)
                 .unwrap_test()
                 .map(|s| s.to_owned()),
-            backtrace: backtrace::Backtrace::new_unresolved(),
+            backtrace: std::backtrace::Backtrace::capture(),
         }
     }
 }
