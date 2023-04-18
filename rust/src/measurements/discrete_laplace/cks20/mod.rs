@@ -5,7 +5,7 @@ use opendp_derive::bootstrap;
 use rug::{Complete, Integer, Rational};
 
 use crate::{
-    core::{Measurement, PrivacyMap},
+    core::{Measurement, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
     traits::{samplers::sample_discrete_laplace, InfCast},
@@ -47,6 +47,7 @@ pub fn make_base_discrete_laplace_cks20<D, QO>(
 where
     D: DiscreteLaplaceDomain,
     D::Atom: crate::traits::Integer,
+    (D, D::InputMetric): MetricSpace,
     QO: crate::traits::Float + InfCast<D::Atom>,
     Rational: TryFrom<QO>,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
@@ -57,7 +58,7 @@ where
     let scale_rational =
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         if scale.is_zero() {
             D::new_map_function(move |arg: &D::Atom| Ok(*arg))
@@ -84,7 +85,7 @@ where
             // d_in / scale
             d_in.inf_div(&scale)
         }),
-    ))
+    )
 }
 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
@@ -110,12 +111,13 @@ pub fn make_base_discrete_laplace_cks20_rug<D>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<Rational>>>
 where
     D: DiscreteLaplaceDomain<Atom = Integer>,
+    (D, D::InputMetric): MetricSpace,
 {
     if scale <= 0 {
         return fallible!(MakeMeasurement, "scale must be positive");
     }
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(enclose!(scale, move |arg: &Integer| {
             sample_discrete_laplace(scale.clone()).map(|n| arg + n)
@@ -123,7 +125,7 @@ where
         D::InputMetric::default(),
         MaxDivergence::default(),
         PrivacyMap::new(move |d_in: &Integer| (d_in / &scale).complete()),
-    ))
+    )
 }
 
 #[cfg(test)]

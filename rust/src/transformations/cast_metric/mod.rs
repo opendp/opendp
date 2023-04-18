@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     combinators::IsSizedDomain,
-    core::{Domain, Function, StabilityMap, Transformation},
+    core::{Domain, Function, MetricSpace, StabilityMap, Transformation},
     error::Fallible,
     metrics::IntDistance,
     traits::samplers::Shuffle,
@@ -37,8 +37,10 @@ where
     D: Domain,
     D::Carrier: Clone + Shuffle,
     MI: UnorderedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::OrderedMetric): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         domain.clone(),
         domain,
         Function::new_fallible(|arg: &D::Carrier| {
@@ -49,7 +51,7 @@ where
         MI::default(),
         MI::OrderedMetric::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[bootstrap(
@@ -73,15 +75,17 @@ where
     D: Domain,
     D::Carrier: Clone,
     MI: OrderedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::UnorderedMetric): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         domain.clone(),
         domain,
         Function::new(|val: &D::Carrier| val.clone()),
         MI::default(),
         MI::UnorderedMetric::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 #[bootstrap(
@@ -110,16 +114,18 @@ where
     D: IsSizedDomain,
     D::Carrier: Clone,
     MI: BoundedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::UnboundedMetric): MetricSpace,
 {
     domain.get_size()?;
-    Ok(Transformation::new(
+    Transformation::new(
         domain.clone(),
         domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
         MI::default(),
         MI::UnboundedMetric::default(),
         StabilityMap::new(|d_in| d_in * 2),
-    ))
+    )
 }
 
 #[bootstrap(
@@ -151,16 +157,18 @@ where
     D: IsSizedDomain,
     D::Carrier: Clone,
     MI: UnboundedMetric<Distance = IntDistance>,
+    (D, MI): MetricSpace,
+    (D, MI::BoundedMetric): MetricSpace,
 {
     domain.get_size()?;
-    Ok(Transformation::new(
+    Transformation::new(
         domain.clone(),
         domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
         MI::default(),
         MI::BoundedMetric::default(),
         StabilityMap::new(|d_in| d_in / 2),
-    ))
+    )
 }
 
 #[cfg(test)]

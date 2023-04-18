@@ -1,5 +1,5 @@
 use crate::{
-    core::{Function, Metric, StabilityMap, Transformation},
+    core::{Function, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::LpDistance,
@@ -32,6 +32,7 @@ where
     TA: Integer,
     M: BAryTreeMetric,
     M::Distance: Number,
+    (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
 {
     if leaf_count == 0 {
         return fallible!(MakeTransformation, "leaf_count must be at least 1");
@@ -45,7 +46,7 @@ where
     let num_leaves = branching_factor.pow(num_layers as u32 - 1);
     // leaf_count is the number of leaves in the final layer of a complete tree
 
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(AtomDomain::default()),
         VectorDomain::new(AtomDomain::default()),
         Function::new(move |arg: &Vec<TA>| {
@@ -80,7 +81,7 @@ where
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(M::Distance::inf_cast(num_layers)?),
-    ))
+    )
 }
 
 // find i such that b^i >= x

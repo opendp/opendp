@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
@@ -44,6 +44,7 @@ pub fn make_randomized_response_bool<QO>(
 where
     bool: SampleBernoulli<QO>,
     QO: Float,
+    (AtomDomain<bool>, DiscreteDistance): MetricSpace,
 {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(QO::exact_int_cast(2)?.recip()..QO::one()).contains(&prob) {
@@ -55,7 +56,7 @@ where
     //       = min(d_in, 1) * ln(p / (1 - p))
     let privacy_constant = prob.inf_div(&QO::one().neg_inf_sub(&prob)?)?.inf_ln()?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         AtomDomain::default(),
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !bool::sample_bernoulli(prob, constant_time)?)
@@ -69,7 +70,7 @@ where
                 privacy_constant
             }
         }),
-    ))
+    )
 }
 
 #[bootstrap(
@@ -127,7 +128,7 @@ where
         .inf_mul(&num_categories.inf_sub(&QO::one())?)?
         .inf_ln()?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         AtomDomain::default(),
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None
@@ -160,7 +161,7 @@ where
                 privacy_constant
             }
         }),
-    ))
+    )
 }
 
 #[cfg(test)]

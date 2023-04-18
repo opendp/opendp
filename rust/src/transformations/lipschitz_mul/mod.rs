@@ -2,7 +2,7 @@ use num::One;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Domain, Function, Metric, StabilityMap, Transformation},
+    core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, LpDistance},
@@ -45,6 +45,7 @@ pub fn make_lipschitz_float_mul<D, M>(
 where
     D: LipschitzMulFloatDomain,
     M: LipschitzMulFloatMetric<Distance = D::Atom>,
+    (D, M): MetricSpace,
 {
     let mantissa_bits = D::Atom::exact_int_cast(D::Atom::MANTISSA_BITS)?;
     let exponent_bias = D::Atom::exact_int_cast(D::Atom::EXPONENT_BIAS)?;
@@ -76,7 +77,7 @@ where
     // greatest possible error is the ulp of the greatest possible output
     let output_ulp = _2.inf_pow(&max_unbiased_exponent.inf_sub(&mantissa_bits)?)?;
 
-    Ok(Transformation::new(
+    Transformation::new(
         D::default(),
         D::default(),
         Function::new_fallible(move |arg: &D::Carrier| D::transform(&constant, &bounds, arg)),
@@ -85,7 +86,7 @@ where
         StabilityMap::new_fallible(move |d_in| {
             constant.alerting_abs()?.inf_mul(d_in)?.inf_add(&output_ulp)
         }),
-    ))
+    )
 }
 
 /// Implemented for any domain that supports multiplication lipschitz extensions

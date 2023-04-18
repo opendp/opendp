@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Measure, Measurement, Metric, PrivacyMap},
+    core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::{FixedSmoothedMaxDivergence, SmoothedMaxDivergence},
 };
@@ -26,6 +26,7 @@ where
     DI: Domain,
     MI: 'static + Metric,
     MO: 'static + FixDeltaMeasure,
+    (DI, MI): MetricSpace,
 {
     let Measurement {
         input_domain,
@@ -35,7 +36,7 @@ where
         privacy_map,
     } = measurement.clone();
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         function,
         input_metric,
@@ -45,7 +46,7 @@ where
             let curve = privacy_map.eval(d_in)?;
             output_measure.fix_delta(&curve, &delta)
         }),
-    ))
+    )
 }
 
 pub trait FixDeltaMeasure: Measure {

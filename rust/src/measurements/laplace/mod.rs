@@ -4,7 +4,7 @@ mod ffi;
 use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
-use crate::core::{Measurement, Metric, PrivacyMap};
+use crate::core::{Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::measures::MaxDivergence;
@@ -60,6 +60,7 @@ pub fn make_base_laplace<D>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<D::Atom>>>
 where
     D: LaplaceDomain,
+    (D, D::InputMetric): MetricSpace,
     D::Atom: Float + SampleDiscreteLaplaceZ2k,
     i32: ExactIntCast<<D::Atom as FloatBits>::Bits>,
 {
@@ -69,7 +70,7 @@ where
 
     let (k, relaxation) = get_discretization_consts(k)?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(move |arg: &D::Atom| {
             D::Atom::sample_discrete_laplace_Z2k(*arg, scale, k)
@@ -90,7 +91,7 @@ where
             // d_in / scale
             d_in.inf_div(&scale)
         }),
-    ))
+    )
 }
 
 // proof should show that the return is always a valid (k, relaxation) pairing

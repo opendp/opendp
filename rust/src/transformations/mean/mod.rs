@@ -4,7 +4,7 @@ mod ffi;
 use num::Float;
 use opendp_derive::bootstrap;
 
-use crate::core::{Metric, Transformation};
+use crate::core::{Metric, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
@@ -40,6 +40,7 @@ where
     T: 'static + MakeSizedBoundedSum<MI> + ExactIntCast<usize> + Float + InfMul,
     AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
     AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
+    (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
 {
     if size == 0 {
         return fallible!(MakeTransformation, "dataset size must be positive");
@@ -48,7 +49,7 @@ where
     // don't loosen the bounds by the relaxation term because any value greater than nU is pure error
     let sum_bounds = (size_.neg_inf_mul(&bounds.0)?, size_.inf_mul(&bounds.1)?);
     make_sized_bounded_sum::<MI, T>(size, bounds)?
-        >> make_lipschitz_float_mul(size_.recip(), sum_bounds)?
+        >> make_lipschitz_float_mul::<AtomDomain<T>, _>(size_.recip(), sum_bounds)?
 }
 
 #[cfg(test)]

@@ -6,7 +6,7 @@ use opendp_derive::bootstrap;
 use rug::{Integer, Rational};
 
 use crate::{
-    core::{Measure, Measurement, Metric, PrivacyMap},
+    core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measures::ZeroConcentratedDivergence,
@@ -102,6 +102,7 @@ pub fn make_base_discrete_gaussian<D, MO, QI>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MO>>
 where
     D: DiscreteGaussianDomain<QI>,
+    (D, D::InputMetric): MetricSpace,
     Integer: From<D::Atom> + SaturatingCast<D::Atom>,
 
     MO: DiscreteGaussianMeasure<D, QI>,
@@ -113,7 +114,7 @@ where
     let scale_rational =
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         if scale.is_zero() {
             D::new_map_function(move |arg: &D::Atom| Ok(arg.clone()))
@@ -131,7 +132,7 @@ where
         D::InputMetric::default(),
         MO::default(),
         MO::new_forward_map(scale)?,
-    ))
+    )
 }
 
 pub fn make_base_discrete_gaussian_rug<D>(
@@ -139,12 +140,13 @@ pub fn make_base_discrete_gaussian_rug<D>(
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, ZeroConcentratedDivergence<Rational>>>
 where
     D: DiscreteGaussianDomain<Rational, Atom = Integer>,
+    (D, D::InputMetric): MetricSpace,
 {
     if scale <= 0 {
         return fallible!(MakeMeasurement, "scale must be positive");
     }
 
-    Ok(Measurement::new(
+    Measurement::new(
         D::default(),
         D::new_map_function(enclose!(scale, move |arg: &Integer| {
             sample_discrete_gaussian(scale.clone()).map(|n| arg + n)
@@ -152,7 +154,7 @@ where
         D::InputMetric::default(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new(move |d_in: &Rational| (d_in.clone() / &scale).pow(2) / 2),
-    ))
+    )
 }
 
 #[cfg(test)]

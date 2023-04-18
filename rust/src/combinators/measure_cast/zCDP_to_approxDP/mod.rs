@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Measurement, Metric, PrivacyMap},
+    core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::{SMDCurve, SmoothedMaxDivergence, ZeroConcentratedDivergence},
     traits::Float,
@@ -30,6 +30,7 @@ where
     DI: Domain,
     MI: 'static + Metric,
     QO: Float,
+    (DI, MI): MetricSpace,
 {
     let Measurement {
         input_domain,
@@ -39,7 +40,7 @@ where
         ..
     } = meas;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         function,
         input_metric,
@@ -49,5 +50,5 @@ where
 
             Ok(SMDCurve::new(move |&delta: &QO| cdp_epsilon(rho, delta)))
         }),
-    ))
+    )
 }

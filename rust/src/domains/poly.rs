@@ -1,7 +1,7 @@
 use std::any;
 use std::any::Any;
 
-use crate::core::{Domain, Function, Measure, Measurement, Metric};
+use crate::core::{Domain, Function, Measure, Measurement, Metric, MetricSpace};
 use crate::error::*;
 
 impl<TI: 'static, TO: 'static> Function<TI, TO> {
@@ -37,17 +37,18 @@ where
     TO: 'static,
     MI: 'static + Metric,
     MO: 'static + Measure,
+    (DI, MI): MetricSpace,
 {
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
     pub fn into_poly(self) -> Measurement<DI, Box<dyn Any>, MI, MO> {
-        Measurement::new(
-            self.input_domain,
-            self.function.into_poly(),
-            self.input_metric,
-            self.output_measure,
-            self.privacy_map,
-        )
+        Measurement {
+            input_domain: self.input_domain,
+            function: self.function.into_poly(),
+            input_metric: self.input_metric,
+            output_measure: self.output_measure,
+            privacy_map: self.privacy_map,
+        }
     }
 }
 

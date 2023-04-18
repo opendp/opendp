@@ -4,7 +4,7 @@ mod ffi;
 use num::One;
 use opendp_derive::bootstrap;
 
-use crate::core::{Domain, Function, Metric, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, SymmetricDistance};
@@ -21,15 +21,17 @@ where
     DOA: Domain,
     DIA::Carrier: 'static,
     M: Metric<Distance = IntDistance>,
+    (VectorDomain<DIA>, M): MetricSpace,
+    (VectorDomain<DOA>, M): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(atom_input_domain),
         VectorDomain::new(atom_output_domain),
         Function::new(move |arg: &Vec<DIA::Carrier>| arg.iter().map(&atom_function).collect()),
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
@@ -43,8 +45,10 @@ where
     DOA: Domain,
     DIA::Carrier: 'static,
     M: Metric<Distance = IntDistance>,
+    (VectorDomain<DIA>, M): MetricSpace,
+    (VectorDomain<DOA>, M): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         VectorDomain::new(atom_input_domain),
         VectorDomain::new(atom_output_domain),
         Function::new_fallible(move |arg: &Vec<DIA::Carrier>| {
@@ -53,7 +57,7 @@ where
         M::default(),
         M::default(),
         StabilityMap::new_from_constant(1),
-    ))
+    )
 }
 
 /// Constructs a [`Transformation`] representing the identity function.
@@ -63,15 +67,16 @@ where
     D::Carrier: Clone,
     M: Metric,
     M::Distance: DistanceConstant<M::Distance> + One + Clone,
+    (D, M): MetricSpace,
 {
-    Ok(Transformation::new(
+    Transformation::new(
         domain.clone(),
         domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
         metric.clone(),
         metric,
         StabilityMap::new_from_constant(M::Distance::one()),
-    ))
+    )
 }
 
 #[bootstrap(features("contrib"))]
@@ -130,14 +135,17 @@ mod tests {
 
     use super::*;
     use crate::domains::AtomDomain;
-    use crate::metrics::ChangeOneDistance;
 
     #[test]
     fn test_identity() {
-        let identity = make_identity(AtomDomain::default(), ChangeOneDistance).unwrap_test();
-        let arg = 99;
+        let identity = make_identity(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance,
+        )
+        .unwrap_test();
+        let arg = vec![99];
         let ret = identity.invoke(&arg).unwrap_test();
-        assert_eq!(ret, 99);
+        assert_eq!(ret, arg);
     }
 
     #[test]
