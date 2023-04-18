@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Function, Measure, Measurement, PrivacyMap},
+    core::{Domain, Function, Measure, Measurement, MetricSpace, PrivacyMap},
     domains::AllDomain,
     error::Fallible,
     interactive::Queryable,
@@ -28,8 +28,9 @@ where
     MaxDivergence<T>: Measure<Distance = T>,
     QI: Clone,
     MODE: SVMode<T>,
+    (AllDomain<Queryable<DI::Carrier, T>>, AbsoluteDistance<QI>): MetricSpace,
 {
-    Ok(Measurement::new(
+    Measurement::new(
         AllDomain::default(),
         Function::new_fallible(enclose!(scale_release, move |arg: &Queryable<
             DI::Carrier,
@@ -81,7 +82,7 @@ where
 
             eps_threshold.inf_add(&eps_aggregate)?.inf_add(&eps_release)
         }),
-    ))
+    )
 }
 
 pub trait SVMode<T> {

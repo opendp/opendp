@@ -21,6 +21,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
+use crate::metrics::AbsoluteDistance;
 use crate::traits::{CheckAtom, InherentNull, TotalOrd};
 use std::fmt::{Debug, Formatter};
 
@@ -548,6 +549,17 @@ impl<T> Clone for AllDomain<T> {
 
 impl<T> PartialEq for AllDomain<T> {
     fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<Q: ?Sized, A, QD> crate::core::MetricSpace
+    for (
+        AllDomain<crate::interactive::Queryable<Q, A>>,
+        AbsoluteDistance<QD>,
+    )
+{
+    fn check(&self) -> bool {
         true
     }
 }
