@@ -23,9 +23,6 @@ mod odometer;
 #[cfg(feature = "contrib")]
 pub use crate::combinators::odometer::*;
 
-#[cfg(all(feature = "contrib", feature = "ffi"))]
-mod user_defined;
-
 #[cfg(feature = "contrib")]
 mod fix_delta;
 #[cfg(feature = "contrib")]

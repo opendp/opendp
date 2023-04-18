@@ -4,7 +4,7 @@ pub mod sequential;
 use std::any::Any;
 
 use crate::{
-    core::{Domain, Measure, Measurement, Metric, Odometer, PrivacyMap},
+    core::{Domain, Measure, Measurement, Metric, MetricSpace, Odometer, PrivacyMap},
     error::Fallible,
     interactive::{wrap, Answer, PolyQueryable, Query, Queryable, WrapFn},
 };
@@ -72,8 +72,9 @@ pub trait Invokable<DI: Domain, MI: Metric, MO: Measure> {
     fn output_measure(&self) -> MO;
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Invokable<DI, MI, MO>
-    for Measurement<DI, TO, MI, MO>
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Invokable<DI, MI, MO> for Measurement<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
 {
     type Output = TO;
     fn invoke_wrap_and_map(
@@ -106,6 +107,7 @@ impl<DI: Domain + 'static, Q: 'static, A: 'static, MI: Metric + 'static, MO: Mea
     for Odometer<DI, OdometerQueryable<Q, A, MI::Distance, MO::Distance>, MI, MO>
 where
     MI::Distance: Clone,
+    (DI, MI): MetricSpace,
 {
     type Output = OdometerQueryable<Q, A, MI::Distance, MO::Distance>;
     fn invoke_wrap_and_map(

@@ -421,19 +421,23 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Odometer<DI, TO, MI, MO>
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO> {
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
     pub fn new(
         input_domain: DI,
         function: Function<DI::Carrier, TO>,
         input_metric: MI,
         output_measure: MO,
-    ) -> Self {
-        Self {
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        Ok(Self {
             input_domain,
             function,
             input_metric,
             output_measure,
-        }
+        })
     }
 
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {

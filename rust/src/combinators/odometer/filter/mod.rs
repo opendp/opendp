@@ -1,5 +1,5 @@
 use crate::{
-    core::{Domain, Function, Measure, Measurement, Metric, Odometer, PrivacyMap},
+    core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, PrivacyMap},
     error::Fallible,
     interactive::{wrap, Answer, IntoPolyQueryable, Query, Queryable, WrapFn},
     traits::TotalOrd,
@@ -21,6 +21,7 @@ where
     MI::Distance: 'static + Clone + TotalOrd,
     DI::Carrier: Clone,
     MO::Distance: Clone + TotalOrd,
+    (DI, MI): MetricSpace,
 {
     let Odometer {
         input_domain,
@@ -29,7 +30,7 @@ where
         output_measure,
     } = odometer;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain,
         Function::new_fallible(enclose!((d_in, d_out), move |arg: &DI::Carrier| {
             let d_in = d_in.clone();
@@ -62,5 +63,5 @@ where
                 Ok(d_out.clone())
             }
         }),
-    ))
+    )
 }

@@ -2,7 +2,7 @@ use crate::{
     combinators::{
         assert_components_match, odometer::GetId, BasicCompositionMeasure, OdometerAnswer,
     },
-    core::{Domain, Function, Metric, Odometer, PrivacyMap},
+    core::{Domain, Function, Metric, MetricSpace, Odometer, PrivacyMap},
     error::Fallible,
     interactive::{Answer, Query, Queryable, WrapFn},
 };
@@ -29,8 +29,9 @@ where
     MI::Distance: 'static + Clone,
     DI::Carrier: Clone,
     MO::Distance: Clone,
+    (DI, MI): MetricSpace,
 {
-    Ok(Odometer::new(
+    Odometer::new(
         input_domain.clone(),
         Function::new_fallible(enclose!(
             (input_domain, input_metric, output_measure),
@@ -181,7 +182,7 @@ where
         )),
         input_metric,
         output_measure,
-    ))
+    )
 }
 
 #[cfg(test)]

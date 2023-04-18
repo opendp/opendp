@@ -104,7 +104,10 @@ where
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO> {
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
     pub fn invoke_wrap(
         &self,
         arg: &DI::Carrier,
