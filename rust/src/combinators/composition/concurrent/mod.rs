@@ -1,6 +1,6 @@
 use crate::{
     combinators::assert_components_match,
-    core::{Domain, Function, Measure, Measurement, Metric, PrivacyMap},
+    core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::Queryable,
     measures::{MaxDivergence, SmoothedMaxDivergence},
@@ -37,6 +37,7 @@ where
     TO: 'static,
     MI::Distance: 'static + TotalOrd + Clone,
     MO::Distance: 'static + TotalOrd + Clone,
+    (DI, MI): MetricSpace,
 {
     if d_mids.len() == 0 {
         return fallible!(MakeMeasurement, "must be at least one d_mid");
@@ -47,7 +48,7 @@ where
 
     let d_out = output_measure.compose(d_mids.clone())?;
 
-    Ok(Measurement::new(
+    Measurement::new(
         input_domain.clone(),
         Function::new_fallible(enclose!(
             (d_in, input_metric, output_measure),
@@ -117,7 +118,7 @@ where
                 Ok(d_out.clone())
             }
         }),
-    ))
+    )
 }
 
 /// A trait that is only implemented for measures that support concurrent composition
