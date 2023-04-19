@@ -13,6 +13,10 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
         return Ok(Q::zero());
     }
 
+    if rho.is_infinite() {
+        return Ok(Q::infinity());
+    }
+
     let _1 = Q::one();
     let _2 = _1 + _1;
 

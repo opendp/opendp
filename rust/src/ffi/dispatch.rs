@@ -1,5 +1,7 @@
 // DISPATCH MACROS
 
+use crate::{core::FfiResult, err, error::Fallible, fallible};
+
 // MAIN ENTRY POINT
 /*
 ONE TYPE ARG:
@@ -42,6 +44,9 @@ AND SO ON...
 macro_rules! dispatch {
     ($function:ident, [$($rt_dispatch_types:tt),+], $args:tt) => {
         disp!($function, [$($rt_dispatch_types),+], (), $args)
+    };
+    ($function:ident, [$($rt_dispatch_types:tt),+]) => {
+        dispatch!($function, [$($rt_dispatch_types),+], ())
     };
 }
 
@@ -93,7 +98,7 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => crate::err!(FFI, "No match for concrete type {}. See https://github.com/opendp/opendp/discussions/451.", $rt_type.descriptor).into()
+            _ => crate::ffi::dispatch::FailedDispatch::failed_dispatch($rt_type.descriptor.as_str())
         }
     };
 }
@@ -121,9 +126,39 @@ macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, [$($dispatch_type:ty),+]), $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         match $rt_type.id {
             $(x if x == std::any::TypeId::of::<$dispatch_type>() => disp_1!($function, $rt_dispatch_types, $type_args, $dispatch_type, $args)),+,
-            _ => err!(FFI, "No match for concrete type {}. You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/latest/contributor/development-environment.html#build-opendp", $rt_type.descriptor).into()
+            _ => crate::ffi::dispatch::FailedDispatch::failed_dispatch($rt_type.descriptor.as_str())
         }
     };
+}
+
+pub trait FailedDispatch {
+    fn failed_dispatch(type_: &str) -> Self;
+}
+
+impl<T> FailedDispatch for Fallible<T> {
+    fn failed_dispatch(type_: &str) -> Self {
+        let debug_message = if cfg!(debug_assertions) {
+            "You've got a debug binary! Debug binaries support fewer types. Consult https://docs.opendp.org/en/latest/contributor/development-environment.html#build-opendp"
+        } else {
+            "See https://github.com/opendp/opendp/discussions/451."
+        };
+        fallible!(
+            FFI,
+            "No match for concrete type {}. {}",
+            type_,
+            debug_message
+        )
+    }
+}
+impl<T> FailedDispatch for FfiResult<*mut T> {
+    fn failed_dispatch(type_: &str) -> Self {
+        Fallible::<T>::failed_dispatch(type_).into()
+    }
+}
+impl<T> FailedDispatch for Option<T> {
+    fn failed_dispatch(_: &str) -> Self {
+        None
+    }
 }
 
 // BUILDING BLOCK, could be moved inside dispatch! with @prefix trick.

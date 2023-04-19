@@ -37,6 +37,13 @@ else:
     raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
 
 
+# This enables backtraces in Rust by default.
+# It can be disabled by setting RUST_BACKTRACE=0.
+# Binary searches disable backtraces for performance reasons.
+if "RUST_BACKTRACE" not in os.environ:
+    os.environ["RUST_BACKTRACE"] = "1"
+
+
 class FfiSlice(ctypes.Structure):
     _fields_ = [
         ("ptr", ctypes.c_void_p),
