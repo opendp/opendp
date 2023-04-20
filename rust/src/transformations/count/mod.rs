@@ -58,7 +58,7 @@ where
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Generics
-/// * `TIA` - Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+/// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
 pub fn make_count_distinct<TIA, TO>() -> Fallible<
     Transformation<

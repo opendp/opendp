@@ -81,7 +81,7 @@ pub trait ImputeConstantDomain: Domain {
         constant: &'a Self::Imputed,
     ) -> &'a Self::Imputed;
 }
-// how to impute, when null represented as Option<T>
+// how to impute, when null represented as `Option<T>`
 impl<T: CheckAtom> ImputeConstantDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn impute_constant<'a>(
@@ -175,7 +175,7 @@ pub trait DropNullDomain: Domain {
     fn option(value: &Self::Carrier) -> Option<Self::Imputed>;
 }
 
-/// how to standardize into an option, when null represented as Option<T>
+/// how to standardize into an option, when null represented as `Option<T>`
 impl<T: CheckAtom + Clone> DropNullDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
