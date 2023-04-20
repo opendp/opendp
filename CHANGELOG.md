@@ -10,7 +10,7 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ### Added
 - FFI and Python interfaces for creating and accessing Domains, Metrics, and Measures ([#637](https://github.com/opendp/opendp/pull/637))
-- Queryables and supporting infrastructure for interactive Measurements ([#618](https://github.com/opendp/opendp/pull/675)), ([#675](https://github.com/opendp/opendp/pull/675))
+- Queryables and supporting infrastructure for interactive Measurements ([#618](https://github.com/opendp/opendp/pull/618)), ([#675](https://github.com/opendp/opendp/pull/675))
 - Constructor for sequential compostion interactive Measurement ([#674](https://github.com/opendp/opendp/pull/674))
 - Checks for compatibility between pairings of Domains and Metrics/Measures ([#604](https://github.com/opendp/opendp/pull/604))
 - Python `opendp.extrinsics` module for code contributions and proofs outside of Rust ([#693](https://github.com/opendp/opendp/pull/693))
@@ -33,6 +33,7 @@ Please keep this up to date, following the [instructions](#instructions) below.
 - The `output_domain` field of Measurement struct ([#647](https://github.com/opendp/opendp/pull/647))
 
 ### Fixed
+- Switched to from `backtrace` crate to `std::backtrace`, and fixed some corner cases, for much faster backtrace resolution ([#691](https://github.com/opendp/opendp/pull/691))
 - Whole-codebase reformat using `rustfmt` to minimize spurious churn in the future ([#669](https://github.com/opendp/opendp/pull/669))
 
 
