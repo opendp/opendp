@@ -20,9 +20,10 @@ use std::marker::PhantomData;
 use crate::{
     core::{Domain, Metric, MetricSpace},
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
-    traits::{CheckAtom, Hashable},
-    transformations::DataFrameDomain,
+    traits::CheckAtom,
 };
+#[cfg(feature = "contrib")]
+use crate::{traits::Hashable, transformations::DataFrameDomain};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -90,6 +91,8 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
         true
     }
 }
+
+#[cfg(feature = "contrib")]
 impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
     fn check(&self) -> bool {
         true
