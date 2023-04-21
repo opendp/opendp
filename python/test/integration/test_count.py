@@ -50,7 +50,7 @@ def test_count_distinct():
 
 def test_float_count():
     from opendp.transformations import make_count, make_split_dataframe, make_select_column
-    from opendp.measurements import make_base_laplace, make_base_gaussian
+    from opendp.measurements import part_base_laplace, make_base_gaussian
     from opendp.mod import enable_features
     enable_features("floating-point")
     preprocess = (
@@ -62,5 +62,5 @@ def test_float_count():
     k = 40
     data = "\n".join(map(str, range(k)))
 
-    print((preprocess >> make_base_laplace(1., D=AtomDomain[float]))(data))
+    print((preprocess >> part_base_laplace(1.))(data))
     print((preprocess >> make_base_gaussian(1., D=AtomDomain[float]))(data))
