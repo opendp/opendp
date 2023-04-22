@@ -103,6 +103,8 @@ def py_to_c(value: Any, c_type, type_name: Union[RuntimeType, str] = None):
         value = value.encode()
 
     if not isinstance(value, c_type):
+        if hasattr(value, "_type_"):
+            raise ValueError(f"Cannot convert {value} to {c_type}")
         value = c_type(value)
 
     return value
