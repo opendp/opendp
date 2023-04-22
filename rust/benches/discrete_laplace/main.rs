@@ -2,6 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use opendp::{
     domains::{AtomDomain, VectorDomain},
     measurements::{make_base_discrete_laplace_cks20, make_base_discrete_laplace_linear},
+    metrics::L1Distance,
 };
 
 pub fn collect(c: &mut Criterion) {
@@ -9,8 +10,11 @@ pub fn collect(c: &mut Criterion) {
         let scale = v as f64;
         c.bench_function(format!("{} linear", scale).as_str(), |b| {
             b.iter(|| {
-                let meas = make_base_discrete_laplace_linear::<VectorDomain<AtomDomain<i32>>, _>(
-                    scale, None,
+                let meas = make_base_discrete_laplace_linear(
+                    VectorDomain::new(AtomDomain::default()),
+                    L1Distance::default(),
+                    scale,
+                    None,
                 )
                 .unwrap();
                 meas.invoke(&vec![0; 1000]).unwrap();
@@ -19,9 +23,12 @@ pub fn collect(c: &mut Criterion) {
 
         c.bench_function(format!("{} cks20", scale).as_str(), |b| {
             b.iter(|| {
-                let meas =
-                    make_base_discrete_laplace_cks20::<VectorDomain<AtomDomain<i32>>, _>(scale)
-                        .unwrap();
+                let meas = make_base_discrete_laplace_cks20(
+                    VectorDomain::new(AtomDomain::default()),
+                    L1Distance::default(),
+                    scale,
+                )
+                .unwrap();
                 meas.invoke(&vec![0; 1000]).unwrap();
             })
         });

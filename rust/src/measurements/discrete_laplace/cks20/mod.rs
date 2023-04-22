@@ -19,18 +19,17 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(scale(c_type = "void *")),
-    generics(D(default = "AtomDomain<int>"))
+    generics(D(suppress))
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
 /// using an efficient algorithm on rational bignums.
 ///
-/// Set `D` to change the input data type and input metric:
+/// Valid inputs for `input_domain` and `input_metric` are:
 ///
-///
-/// | `D`                          | input type   | `D::InputMetric`       |
-/// | ---------------------------- | ------------ | ---------------------- |
-/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// | `input_domain`                  | input type   | `input_metric`         |
+/// | ------------------------------- | ------------ | ---------------------- |
+/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+/// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
 ///
 /// # Citations
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
@@ -42,6 +41,8 @@ mod ffi;
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the output distance and scale.
 pub fn make_base_discrete_laplace_cks20<D, QO>(
+    input_domain: D,
+    input_metric: D::InputMetric,
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
@@ -59,7 +60,7 @@ where
         Rational::try_from(scale).map_err(|_| err!(MakeMeasurement, "scale must be finite"))?;
 
     Measurement::new(
-        D::default(),
+        input_domain,
         if scale.is_zero() {
             D::new_map_function(move |arg: &D::Atom| Ok(*arg))
         } else {
@@ -69,7 +70,7 @@ where
                 Ok((arg + noise).saturating_as())
             })
         },
-        D::InputMetric::default(),
+        input_metric,
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
             let d_in = QO::inf_cast(*d_in)?;
@@ -133,22 +134,34 @@ mod test {
     use num::{One, Zero};
 
     use super::*;
-    use crate::{domains::AtomDomain, error::ExplainUnwrap};
+    use crate::{domains::AtomDomain, error::ExplainUnwrap, metrics::AbsoluteDistance};
 
     // there is a distributional test in the accuracy module
 
     #[test]
     fn test_make_base_discrete_laplace_cks20() -> Fallible<()> {
-        let meas = make_base_discrete_laplace_cks20::<AtomDomain<_>, _>(1e30f64)?;
+        let meas = make_base_discrete_laplace_cks20(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            1e30f64,
+        )?;
         println!("{:?}", meas.invoke(&0)?);
         assert!(meas.check(&1, &1e30f64)?);
 
-        let meas = make_base_discrete_laplace_cks20::<AtomDomain<_>, _>(0.)?;
+        let meas = make_base_discrete_laplace_cks20(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            0.,
+        )?;
         assert_eq!(meas.invoke(&0)?, 0);
         assert_eq!(meas.map(&0)?, 0.);
         assert_eq!(meas.map(&1)?, f64::INFINITY);
 
-        let meas = make_base_discrete_laplace_cks20::<AtomDomain<_>, _>(f64::MAX)?;
+        let meas = make_base_discrete_laplace_cks20(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            f64::MAX,
+        )?;
         println!("{:?} {:?}", meas.invoke(&0)?, i32::MAX);
 
         Ok(())

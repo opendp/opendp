@@ -15,6 +15,10 @@ __all__ = [
     "make_base_ptr",
     "make_randomized_response",
     "make_randomized_response_bool",
+    "part_base_discrete_laplace",
+    "part_base_discrete_laplace_cks20",
+    "part_base_discrete_laplace_linear",
+    "part_base_geometric",
     "part_base_laplace"
 ]
 
@@ -83,18 +87,19 @@ def make_base_discrete_gaussian(
 
 @versioned
 def make_base_discrete_laplace(
+    input_domain,
+    input_metric,
     scale,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input.
     
-    Set `D` to change the input data type and input metric:
+    Valid inputs for `input_domain` and `input_metric` are:
     
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    | `input_domain`                  | input type   | `input_metric`         |
+    | ------------------------------- | ------------ | ---------------------- |
+    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
@@ -112,9 +117,9 @@ def make_base_discrete_laplace(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the output distance and scale. `f32` or `f64`.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -125,40 +130,51 @@ def make_base_discrete_laplace(
     assert_features("contrib")
     
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_discrete_laplace
-    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_D, c_QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_QO), Measurement))
     
     return output
+
+def part_base_discrete_laplace(
+    scale,
+    QO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        QO=QO))
+
 
 
 @versioned
 def make_base_discrete_laplace_cks20(
+    input_domain,
+    input_metric,
     scale,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using an efficient algorithm on rational bignums.
     
-    Set `D` to change the input data type and input metric:
+    Valid inputs for `input_domain` and `input_metric` are:
     
-    
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    | `input_domain`                  | input type   | `input_metric`         |
+    | ------------------------------- | ------------ | ---------------------- |
+    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
     
     [make_base_discrete_laplace_cks20 in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_cks20.html)
     
@@ -173,9 +189,9 @@ def make_base_discrete_laplace_cks20(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
+    :param input_domain: 
+    :param input_metric: 
     :param scale: Noise scale parameter for the laplace distribution. `scale` == sqrt(2) * standard_deviation.
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the output distance and scale.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -186,42 +202,53 @@ def make_base_discrete_laplace_cks20(
     assert_features("contrib")
     
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_discrete_laplace_cks20
-    lib_function.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_D, c_QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_QO), Measurement))
     
     return output
+
+def part_base_discrete_laplace_cks20(
+    scale,
+    QO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace_cks20(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        QO=QO))
+
 
 
 @versioned
 def make_base_discrete_laplace_linear(
+    input_domain,
+    input_metric,
     scale,
     bounds: Any = None,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
     using a linear-time algorithm on finite data types.
     
     This algorithm can be executed in constant time if bounds are passed.
-    Set `D` to change the input data type and input metric:
+    Valid inputs for `input_domain` and `input_metric` are:
     
-    
-    | `D`                          | input type   | `D::InputMetric`       |
-    | ---------------------------- | ------------ | ---------------------- |
-    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+    | `input_domain`                  | input type   | `input_metric`         |
+    | ------------------------------- | ------------ | ---------------------- |
+    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
     
     [make_base_discrete_laplace_linear in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_linear.html)
     
@@ -236,11 +263,11 @@ def make_base_discrete_laplace_linear(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
+    :param input_domain: Domain of the data type to be privatized.
+    :param input_metric: Metric of the data type to be privatized.
     :param scale: Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
     :param bounds: Set bounds on the count to make the algorithm run in constant-time.
     :type bounds: Any
-    :param D: Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
-    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: Data type of the scale and output distance.
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -251,25 +278,38 @@ def make_base_discrete_laplace_linear(
     assert_features("contrib")
     
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    T = get_atom(D)
+    T = get_atom(get_carrier_type(input_domain))
     OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
     c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_discrete_laplace_linear
-    lib_function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_bounds, c_D, c_QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_bounds, c_QO), Measurement))
     
     return output
+
+def part_base_discrete_laplace_linear(
+    scale,
+    bounds: Any = None,
+    QO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_discrete_laplace_linear(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        bounds=bounds,
+        QO=QO))
+
 
 
 @versioned
@@ -341,13 +381,13 @@ def make_base_gaussian(
 
 @versioned
 def make_base_geometric(
+    input_domain,
+    input_metric,
     scale,
     bounds: Any = None,
-    D: RuntimeTypeDescriptor = "AtomDomain<int>",
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
-    """Deprecated.
-    Use `make_base_discrete_laplace` instead (more efficient).
+    """Use `make_base_discrete_laplace` instead (more efficient).
     `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
     
     [make_base_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_geometric.html)
@@ -359,11 +399,11 @@ def make_base_geometric(
     * Input Metric:   `D::InputMetric`
     * Output Measure: `MaxDivergence<QO>`
     
+    :param input_domain: 
+    :param input_metric: 
     :param scale: 
     :param bounds: 
     :type bounds: Any
-    :param D: 
-    :type D: :py:ref:`RuntimeTypeDescriptor`
     :param QO: 
     :type QO: :py:ref:`RuntimeTypeDescriptor`
     :rtype: Measurement
@@ -374,25 +414,38 @@ def make_base_geometric(
     assert_features("contrib")
     
     # Standardize type arguments.
-    D = RuntimeType.parse(type_name=D)
     QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
-    T = get_atom(D)
+    T = get_atom(get_carrier_type(input_domain))
     OptionT = RuntimeType(origin='Option', args=[RuntimeType(origin='Tuple', args=[T, T])])
     
     # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
     c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
     c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=OptionT)
-    c_D = py_to_c(D, c_type=ctypes.c_char_p)
     c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
     
     # Call library function.
     lib_function = lib.opendp_measurements__make_base_geometric
-    lib_function.argtypes = [ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p, ctypes.c_char_p]
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, AnyObjectPtr, ctypes.c_char_p]
     lib_function.restype = FfiResult
     
-    output = c_to_py(unwrap(lib_function(c_scale, c_bounds, c_D, c_QO), Measurement))
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_bounds, c_QO), Measurement))
     
     return output
+
+def part_base_geometric(
+    scale,
+    bounds: Any = None,
+    QO: RuntimeTypeDescriptor = None
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_base_geometric(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        bounds=bounds,
+        QO=QO))
+
 
 
 @versioned

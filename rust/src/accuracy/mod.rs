@@ -547,10 +547,12 @@ pub mod test {
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_discrete_laplacian_scale(accuracy as f64, theoretical_alpha)?;
         println!("scale: {scale}");
-        let base_dl = make_base_discrete_laplace::<AtomDomain<i8>, f64>(scale)?;
+        let input_domain = AtomDomain::<i32>::default();
+        let input_metric = AbsoluteDistance::default();
+        let base_dl = make_base_discrete_laplace(input_domain, input_metric, scale)?;
         let n = 50_000;
         let empirical_alpha = (0..n)
-            .filter(|_| base_dl.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
+            .filter(|_| base_dl.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)
             .count() as f64
             / n as f64;
 

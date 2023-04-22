@@ -1,5 +1,5 @@
 from opendp.transformations import part_cast_default, part_clamp, make_bounded_sum
-from opendp.measurements import make_base_discrete_laplace
+from opendp.measurements import part_base_discrete_laplace
 from opendp.combinators import *
 from opendp.mod import enable_features
 
@@ -39,7 +39,7 @@ def test_make_user_transformation():
         >> make_duplicate(2)
         >> part_clamp((1, 2))
         >> make_bounded_sum((1, 2))
-        >> make_base_discrete_laplace(1.0)
+        >> part_base_discrete_laplace(1.0)
     )
 
     print(trans(["0", "1", "2", "3"]))

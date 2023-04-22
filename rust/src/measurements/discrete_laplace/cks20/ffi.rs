@@ -4,7 +4,7 @@ use std::os::raw::{c_char, c_void};
 use az::SaturatingCast;
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
-use crate::ffi::any::AnyMeasurement;
+use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::{
     domains::{AtomDomain, VectorDomain},
     ffi::util::Type,
@@ -14,11 +14,14 @@ use crate::{
 
 #[no_mangle]
 pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
     scale: *const c_void,
-    D: *const c_char,
     QO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<T, QO>(
+        input_domain: &AnyDomain,
+        input_metric: &AnyMetric,
         scale: *const c_void,
         D: Type,
         QO: Type,
@@ -29,7 +32,11 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
         rug::Rational: TryFrom<QO>,
         rug::Integer: From<T> + SaturatingCast<T>,
     {
-        fn monomorphize2<D, QO>(scale: QO) -> FfiResult<*mut AnyMeasurement>
+        fn monomorphize2<D, QO>(
+            input_domain: &AnyDomain,
+            input_metric: &AnyMetric,
+            scale: QO,
+        ) -> FfiResult<*mut AnyMeasurement>
         where
             D: 'static + DiscreteLaplaceDomain,
             D::Atom: crate::traits::Integer,
@@ -38,21 +45,25 @@ pub extern "C" fn opendp_measurements__make_base_discrete_laplace_cks20(
             rug::Rational: TryFrom<QO>,
             rug::Integer: From<D::Atom> + SaturatingCast<D::Atom>,
         {
-            make_base_discrete_laplace_cks20::<D, QO>(scale).into_any()
+            let input_domain = try_!(input_domain.downcast_ref::<D>()).clone();
+            let input_metric = try_!(input_metric.downcast_ref::<D::InputMetric>()).clone();
+            make_base_discrete_laplace_cks20::<D, QO>(input_domain, input_metric, scale).into_any()
         }
         let scale = *try_as_ref!(scale as *const QO);
         dispatch!(monomorphize2, [
             (D, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (QO, [QO])
-        ], (scale))
+        ], (input_domain, input_metric, scale))
     }
-    let D = try_!(Type::try_from(D));
+    let input_metric = try_as_ref!(input_metric);
+    let input_domain = try_as_ref!(input_domain);
+    let D = input_domain.type_.clone();
     let T = try_!(D.get_atom());
     let QO = try_!(Type::try_from(QO));
     dispatch!(monomorphize, [
         (T, @integers),
         (QO, @floats)
-    ], (scale, D, QO))
+    ], (input_domain, input_metric, scale, D, QO))
 }
 
 #[cfg(test)]
@@ -62,28 +73,16 @@ mod tests {
     use crate::ffi::any::{AnyObject, Downcast};
     use crate::ffi::util;
     use crate::ffi::util::ToCharP;
+    use crate::metrics::AbsoluteDistance;
 
     use super::*;
 
     #[test]
     fn test_make_base_discrete_laplace_cks20_ffi() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_discrete_laplace_cks20(
+            util::into_raw(AnyDomain::new(AtomDomain::<i32>::default())),
+            util::into_raw(AnyMetric::new(AbsoluteDistance::<i32>::default())),
             util::into_raw(0.0) as *const c_void,
-            "AtomDomain<i32>".to_char_p(),
-            "f64".to_char_p(),
-        ))?;
-        let arg = AnyObject::new_raw(99);
-        let res = core::opendp_core__measurement_invoke(&measurement, arg);
-        let res: i32 = Fallible::from(res)?.downcast()?;
-        assert_eq!(res, 99);
-        Ok(())
-    }
-
-    #[test]
-    fn test_constant_time_make_base_discrete_laplace_cks20_ffi() -> Fallible<()> {
-        let measurement = Result::from(opendp_measurements__make_base_discrete_laplace_cks20(
-            util::into_raw(0.0) as *const c_void,
-            "AtomDomain<i32>".to_char_p(),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);

@@ -14,13 +14,12 @@ def test_sequential_composition():
     sc_qbl: dp.Queryable = sc_meas([1] * 200)
 
     print("SeqComp IM:", sc_qbl)
-    sum_query = dp.t.make_clamp(sc_meas.input_domain, sc_meas.input_metric, (0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+    sum_query = dp.t.make_clamp(sc_meas.input_domain, sc_meas.input_metric, (0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.part_base_discrete_laplace(100.)
 
     print("evaluating")
     print(sc_qbl(sum_query))
 
-    noise_query = dp.m.make_base_discrete_laplace(200.)
-    exact_sum = dp.t.make_clamp(sc_meas.input_domain, sc_meas.input_metric, (0, 10)) >> dp.t.make_bounded_sum((0, 10))
+    exact_sum = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10))
     print("exact sum:", exact_sum)
     exact_sum_sc_qbl = sc_qbl(exact_sum >> dp.c.make_sequential_composition(
         input_domain=exact_sum.output_domain,
@@ -29,6 +28,7 @@ def test_sequential_composition():
         d_in=exact_sum.map(max_influence),
         d_mids=[0.2, 0.09]
     ))
+    noise_query = dp.m.make_base_discrete_laplace(exact_sum.output_domain, exact_sum.output_metric, 200.)
 
     print("child release:", exact_sum_sc_qbl(noise_query))
     print("child release:", exact_sum_sc_qbl(noise_query))

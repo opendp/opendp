@@ -17,26 +17,30 @@ use super::DiscreteLaplaceDomain;
         scale(c_type = "void *"),
         bounds(rust_type = "OptionT", default = b"null")
     ),
-    generics(D(default = "AtomDomain<int>")),
-    derived_types(T = "$get_atom(D)", OptionT = "Option<(T, T)>")
+    generics(D(suppress)),
+    derived_types(
+        T = "$get_atom(get_carrier_type(input_domain))",
+        OptionT = "Option<(T, T)>"
+    )
 )]
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,
 /// using a linear-time algorithm on finite data types.
 ///
 /// This algorithm can be executed in constant time if bounds are passed.
-/// Set `D` to change the input data type and input metric:
+/// Valid inputs for `input_domain` and `input_metric` are:
 ///
-///
-/// | `D`                          | input type   | `D::InputMetric`       |
-/// | ---------------------------- | ------------ | ---------------------- |
-/// | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
-/// | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
+/// | `input_domain`                  | input type   | `input_metric`         |
+/// | ------------------------------- | ------------ | ---------------------- |
+/// | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |
+/// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |
 ///
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Arguments
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
 /// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
@@ -44,6 +48,8 @@ use super::DiscreteLaplaceDomain;
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance.
 pub fn make_base_discrete_laplace_linear<D, QO>(
+    input_domain: D,
+    input_metric: D::InputMetric,
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
@@ -65,11 +71,11 @@ where
     }
 
     Measurement::new(
-        D::default(),
+        input_domain,
         D::new_map_function(move |v: &D::Atom| {
             D::Atom::sample_discrete_laplace_linear(*v, scale, bounds)
         }),
-        D::InputMetric::default(),
+        input_metric,
         MaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &D::Atom| {
             let d_in = QO::inf_cast(*d_in)?;
@@ -94,25 +100,27 @@ where
         scale(c_type = "void *"),
         bounds(rust_type = "OptionT", default = b"null")
     ),
-    generics(D(default = "AtomDomain<int>")),
-    derived_types(T = "$get_atom(D)", OptionT = "Option<(T, T)>")
+    generics(D(suppress)),
+    derived_types(
+        T = "$get_atom(get_carrier_type(input_domain))",
+        OptionT = "Option<(T, T)>"
+    )
 )]
-/// Deprecated.
 /// Use `make_base_discrete_laplace` instead (more efficient).
 /// `make_base_discrete_laplace_linear` has a similar interface with the optional constant-time bounds.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of the data type to be privatized.
+/// * `input_metric` - Metric of the data type to be privatized.
 /// * `scale` - Noise scale parameter for the distribution. `scale` == sqrt(2) * standard_deviation.
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Arguments
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `QO` - Data type of the scale and output distance
-#[deprecated(
-    since = "0.5.0",
-    note = "Use `make_base_discrete_laplace` instead. For a constant-time algorithm, pass bounds into `make_base_discrete_laplace_linear`."
-)]
 pub fn make_base_geometric<D, QO>(
+    input_domain: D,
+    input_metric: D::InputMetric,
     scale: QO,
     bounds: Option<(D::Atom, D::Atom)>,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
@@ -122,32 +130,43 @@ where
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
-    make_base_discrete_laplace_linear(scale, bounds)
+    make_base_discrete_laplace_linear(input_domain, input_metric, scale, bounds)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::domains::{AtomDomain, VectorDomain};
+    use crate::{
+        domains::{AtomDomain, VectorDomain},
+        metrics::AbsoluteDistance,
+    };
 
     use super::*;
 
     #[test]
-    fn test_make_discrete_laplace_mechanism_bounded() {
-        let measurement =
-            make_base_discrete_laplace_linear::<AtomDomain<_>, f64>(10.0, Some((200, 210)))
-                .unwrap_test();
+    fn test_make_discrete_laplace_mechanism_bounded() -> Fallible<()> {
+        let measurement = make_base_discrete_laplace_linear(
+            AtomDomain::<i32>::default(),
+            AbsoluteDistance::<i32>::default(),
+            10.0,
+            Some((200, 210)),
+        )?;
         let arg = 205;
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke(&arg)?;
         println!("{:?}", _ret);
 
-        assert!(measurement.check(&1, &0.5).unwrap_test());
+        assert!(measurement.check(&1, &0.5)?);
+        Ok(())
     }
 
     #[test]
     fn test_make_vector_discrete_laplace_mechanism_bounded() {
-        let measurement =
-            make_base_discrete_laplace_linear::<VectorDomain<_>, f64>(10.0, Some((200, 210)))
-                .unwrap_test();
+        let measurement = make_base_discrete_laplace_linear(
+            VectorDomain::new(AtomDomain::default()),
+            Default::default(),
+            10.0,
+            Some((200, 210)),
+        )
+        .unwrap_test();
         let arg = vec![1, 2, 3, 4];
         let _ret = measurement.invoke(&arg).unwrap_test();
         println!("{:?}", _ret);
@@ -156,24 +175,34 @@ mod tests {
     }
 
     #[test]
-    fn test_make_discrete_laplace_mechanism() {
-        let measurement =
-            make_base_discrete_laplace_linear::<AtomDomain<_>, f64>(10.0, None).unwrap_test();
+    fn test_make_discrete_laplace_mechanism() -> Fallible<()> {
+        let measurement = make_base_discrete_laplace_linear(
+            AtomDomain::default(),
+            Default::default(),
+            10.0,
+            None,
+        )?;
         let arg = 205;
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke(&arg)?;
         println!("{:?}", _ret);
 
-        assert!(measurement.check(&1, &0.5).unwrap_test());
+        assert!(measurement.check(&1, &0.5)?);
+        Ok(())
     }
 
     #[test]
-    fn test_make_vector_discrete_laplace_mechanism() {
-        let measurement =
-            make_base_discrete_laplace_linear::<VectorDomain<_>, f64>(10.0, None).unwrap_test();
+    fn test_make_vector_discrete_laplace_mechanism() -> Fallible<()> {
+        let measurement = make_base_discrete_laplace_linear(
+            VectorDomain::new(AtomDomain::default()),
+            Default::default(),
+            10.0,
+            None,
+        )?;
         let arg = vec![1, 2, 3, 4];
-        let _ret = measurement.invoke(&arg).unwrap_test();
+        let _ret = measurement.invoke(&arg)?;
         println!("{:?}", _ret);
 
-        assert!(measurement.check(&1, &0.5).unwrap_test());
+        assert!(measurement.check(&1, &0.5)?);
+        Ok(())
     }
 }
