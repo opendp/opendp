@@ -21,14 +21,16 @@ def run_command(description, args, capture_output=True, shell=True):
 
 def rust(args):
     log(f"*** PUBLISHING RUST LIBRARY ***")
-    if args.dry_run:
-        raise NotImplementedError("dry runs aren't supported on workspaces")
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
-    run_command("Publishing opendp_tooling crate", f"cargo publish --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
-    run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-    run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
-    run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-    run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
+    # We can't do a dry run of everything, because dependencies won't be available for later crates,
+    # but we can at least do any leaf notes (i.e. opendp_tooling).
+    dry_run_arg = " --dry-run" if args.dry_run else ""
+    run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
+    if not args.dry_run:
+        run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
+        run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
+        run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
+        run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
 
 
 def python(args):

@@ -73,8 +73,8 @@ def get_cached_version():
     return cached_version
 
 
-def get_branch(version):
-    branch = f"release/{version.major}.{version.minor}.x"
+def get_branch(prefix, version):
+    branch = f"{prefix}{version.major}.{version.minor}.x"
     return branch
 
 
@@ -131,7 +131,7 @@ def init(args):
         fetch_repo(args.repo_dir)
     base_version = get_base_version(args.base_version)
     target_version = get_target_version(base_version, args.type)
-    branch = get_branch(target_version)
+    branch = get_branch(args.branch_prefix, target_version)
     tag = get_tag(target_version)
     args.ref = args.ref or "main"
     write_conf(args.type, base_version, target_version, branch, tag, args.ref)
@@ -312,6 +312,7 @@ def _main(argv):
     subparser.add_argument("-nc", "--no-clone", dest="clone", action="store_false")
     subparser.add_argument("-b", "--base-version")
     subparser.add_argument("-t", "--type", choices=["major", "minor", "patch"], required=True)
+    subparser.add_argument("-i", "--branch-prefix", default="release/", help="Release branch prefix")
     subparser.add_argument("-r", "--ref")
     subparser.add_argument("-f", "--force", dest="force", action="store_true", default=False)
     subparser.add_argument("-nf", "--no-force", dest="force", action="store_false")
