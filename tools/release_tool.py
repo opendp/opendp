@@ -106,6 +106,7 @@ def read_conf(args):
 
 def create_branch(type, branch, ref, force=False):
     create_arg = "-C" if force else "-c"
+    run_command(f"Fetching ref {ref}", f"git fetch origin {ref}:{ref}")
     run_command(f"Creating {type} branch {branch} -> {ref}", f"git switch {create_arg} {branch} {ref}")
 
 
@@ -114,7 +115,7 @@ def switch_branch(type, branch):
 
 
 def commit(what, files, message=None):
-    message = message or f"Updated {what}."
+    message = message or f"Update {what}."
     run_command(f"Committing {what}", f"git add {' '.join(files)} && git commit -m '{message}'")
 
 
@@ -173,7 +174,7 @@ def changelog(args):
     substitution_arg = f"-e 's|{heading_regex}|{replacement}|'"
     inplace_arg = "-i ''" if platform.system() == "Darwin" else "-i"
     run_command("Updating CHANGELOG", f"sed {inplace_arg} {substitution_arg} CHANGELOG.md")
-    commit("CHANGELOG", ["CHANGELOG.md"], f"RELEASE_TOOL: Updated CHANGELOG.md for {conf.target_version}.")
+    commit("CHANGELOG", ["CHANGELOG.md"], f"RELEASE_TOOL: Update CHANGELOG.md for {conf.target_version}.")
 
 
 def version(args):
@@ -271,7 +272,7 @@ def reconcile(args):
     reconciled_files = ["CHANGELOG.md"]
     create_branch("reconciliation", reconciliation_branch, "main", args.force)
     run_command("Copying reconciled files from release branch", f"git restore -s {conf.branch} -- {' '.join(reconciled_files)}")
-    commit("reconciled files", reconciled_files, f"RELEASE_TOOL: Reconciled files from {conf.target_version}.")
+    commit("reconciled files", reconciled_files, f"RELEASE_TOOL: Reconcile files from {conf.target_version}.")
     push("reconciled files", args.force)
     draft_arg = " -d" if args.draft else ""
     run_command("Creating reconciliation PR", f"gh pr create -B main -f{draft_arg}")
