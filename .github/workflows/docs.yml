@@ -33,26 +33,6 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: bash test
-        run: |
-          for X in ant bat cat; do
-            echo $X
-            FOO=bar
-            echo set FOO
-
-            if [ x = y ]; then
-              echo in first if
-              BAR=baz
-
-              if [ a = b]; then
-                echo in second if
-                EAT="my shorts"
-                echo $EAT
-              fi
-            fi
-          done
-          exit 1
-
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -146,18 +126,29 @@ jobs:
         with:
           repository: 'opendp/artifacts'
           path: ./artifacts
-      
+
       - name: Populate docs site with pdfs
         run: |
+          # get the hash of the stable branch
+          stable_hash=$(git rev-parse origin/stable 2>/dev/null || true)
+
           # copy each folder over
           for folder in en/*; do
-            source=artifacts/release/$(basename $folder)
+            release=$(basename $folder)
+            source=artifacts/release/$release
             target=$folder/proofs
 
             if [ -d "$source" ]; then
-              mkdir -p "$target";
-              mv "$source"/* "$target";
-            fi;
+              mkdir -p "$target"
+              mv "$source"/* "$target"
+
+              # if this release is the stable branch, duplicate it
+              release_hash=$(git rev-parse origin/$release 2>/dev/null || true)
+              if [[ "$release_hash" == "$stable_hash" ]]; then
+                mkdir -p en/stable/proofs
+                cp -rp "$target"/* en/stable/proofs
+              fi
+            fi
           done
           
           # discard unused pdfs
