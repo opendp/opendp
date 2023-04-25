@@ -6,6 +6,14 @@ on:
   workflow_run:
     workflows: ["Sync Branches"]
     types: [completed]
+  # Allows us to regenerate proofs for a previous release
+  workflow_dispatch:
+    inputs:
+      # We need the option of choosing a different ref, rather than just using the ref that the workflow is manually
+      # started on, because this version of the workflow may not be available on the desired branch.
+      override_ref:
+        description: Branch or tag to use as basis
+        type: string
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -18,14 +26,38 @@ jobs:
     env:
       # don't attempt to load binaries when sourcing the library
       OPENDP_HEADLESS: true
+      # Use the explicit ref if any, otherwise use the branch of the triggering workflow.
+      SOURCE_REF: ${{ inputs.override_ref || github.event.workflow_run.head_branch }}
 
-    # Run only if sync-branches workflow succeeded.
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Run only if sync-branches workflow succeeded, or if manually launched.
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      - name: bash test
+        run: |
+          for X in ant bat cat; do
+            echo $X
+            FOO=bar
+            echo set FOO
+
+            if [ x = y ]; then
+              echo in first if
+              BAR=baz
+
+              if [ a = b]; then
+                echo in second if
+                EAT="my shorts"
+                echo $EAT
+              fi
+            fi
+          done
+          exit 1
+
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
+          # Point to the correct ref (for proofs only)
+          ref: ${{ env.SOURCE_REF }}
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
         

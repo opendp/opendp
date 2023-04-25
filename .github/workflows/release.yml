@@ -28,7 +28,7 @@ jobs:
       # If we're on a test branch, make sure this is a dry run.
       - name: Check branch / dry run compatibility
         env:
-          BRANCH_DRY_RUN_OK: ${{ (startsWith(github.ref, 'release/') || inputs.dry_run) && 'true' || 'false' }}
+          BRANCH_DRY_RUN_OK: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.dry_run) && 'true' || 'false' }}
         run: if [[ $BRANCH_DRY_RUN_OK == true ]]; then echo OK; else echo 'Disabled dry run on non-release branch!'; exit 1; fi
 
       - name: Checkout repository
