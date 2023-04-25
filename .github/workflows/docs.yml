@@ -40,7 +40,7 @@ jobs:
           ref: ${{ env.SOURCE_REF }}
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
-        
+
       - name: Collect file listing
         id: "collect"
         run: |
@@ -139,14 +139,17 @@ jobs:
             target=$folder/proofs
 
             if [ -d "$source" ]; then
+              echo "moving $source/* to $target"
               mkdir -p "$target"
               mv "$source"/* "$target"
 
               # if this release is the stable branch, duplicate it
-              release_hash=$(git rev-parse origin/$release 2>/dev/null || true)
+              release_hash=$(git rev-parse $release 2>/dev/null || true)
               if [[ "$release_hash" == "$stable_hash" ]]; then
-                mkdir -p en/stable/proofs
-                cp -rp "$target"/* en/stable/proofs
+                stable_target=en/stable/proofs
+                echo "copying $target/* to $stable_target"
+                mkdir -p "$stable_target"
+                cp -rp "$target"/* "$stable_target"
               fi
             fi
           done
