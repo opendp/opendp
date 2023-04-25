@@ -147,6 +147,8 @@ where
 
 #[cfg(not(feature = "use-mpfr"))]
 pub fn make_base_discrete_laplace<D, QO>(
+    input_domain: D,
+    input_metric: D::InputMetric,
     scale: QO,
 ) -> Fallible<Measurement<D, D::Carrier, D::InputMetric, MaxDivergence<QO>>>
 where
@@ -155,7 +157,7 @@ where
     D::Atom: Integer + SampleDiscreteLaplaceLinear<QO>,
     QO: Float + InfCast<D::Atom>,
 {
-    make_base_discrete_laplace_linear(scale, None)
+    make_base_discrete_laplace_linear(input_domain, input_metric, scale, None)
 }
 
 #[cfg(test)]

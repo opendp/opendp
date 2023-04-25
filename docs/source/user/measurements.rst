@@ -147,8 +147,7 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
 
 Geometric Noise
 ***************
-The geometric mechanism (:func:`make_base_geometric <opendp.measurements.make_base_geometric>`) has been deprecated in favor of the discrete laplace (:func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>`).
-:func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>` is overall more computationally efficient than the previous algorithm.
+The geometric mechanism (:func:`make_base_geometric <opendp.measurements.make_base_geometric>`) is an alias for the discrete laplace (:func:`make_base_discrete_laplace <opendp.measurements.make_base_discrete_laplace>`).
 If you need constant-time execution to protect against timing side-channels, use :func:`opendp.measurements.make_base_discrete_laplace_linear`, which is equivalent to the previous algorithm.
 
 
