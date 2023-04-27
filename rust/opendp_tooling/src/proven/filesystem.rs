@@ -101,12 +101,14 @@ pub fn make_proof_link(
             .unwrap_or_else(|_| "https://docs.opendp.org".to_string());
 
         // find the version
-        let mut version = env!("CARGO_PKG_VERSION");
-        if version == "0.0.0+development" {
-            version = "latest";
+        let version = env!("CARGO_PKG_VERSION");
+        let version_segment = if version == "0.0.0+development" {
+            "latest".to_string()
+        } else {
+            format!("v{version}")
         };
 
-        format!("{docs_uri}/en/{version}")
+        format!("{docs_uri}/en/{version_segment}")
     };
 
     Ok(format!(

@@ -60,6 +60,7 @@ __all__ = [
 ]
 
 
+@versioned
 def choose_branching_factor(
     size_guess: int
 ) -> int:
@@ -94,6 +95,7 @@ def choose_branching_factor(
     return output
 
 
+@versioned
 def make_b_ary_tree(
     leaf_count: int,
     branching_factor: int,
@@ -147,6 +149,7 @@ def make_b_ary_tree(
     return output
 
 
+@versioned
 def make_bounded_float_checked_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
@@ -215,6 +218,7 @@ def make_bounded_float_checked_sum(
     return output
 
 
+@versioned
 def make_bounded_float_ordered_sum(
     size_limit: int,
     bounds: Tuple[Any, Any],
@@ -284,6 +288,7 @@ def make_bounded_float_ordered_sum(
     return output
 
 
+@versioned
 def make_bounded_int_monotonic_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
@@ -333,6 +338,7 @@ def make_bounded_int_monotonic_sum(
     return output
 
 
+@versioned
 def make_bounded_int_ordered_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
@@ -382,6 +388,7 @@ def make_bounded_int_ordered_sum(
     return output
 
 
+@versioned
 def make_bounded_int_split_sum(
     bounds: Tuple[Any, Any],
     T: RuntimeTypeDescriptor = None
@@ -431,6 +438,7 @@ def make_bounded_int_split_sum(
     return output
 
 
+@versioned
 def make_bounded_sum(
     bounds: Tuple[Any, Any],
     MI: RuntimeTypeDescriptor = "SymmetricDistance",
@@ -485,6 +493,7 @@ def make_bounded_sum(
     return output
 
 
+@versioned
 def make_cast(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
@@ -532,6 +541,7 @@ def make_cast(
     return output
 
 
+@versioned
 def make_cast_default(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
@@ -585,6 +595,7 @@ def make_cast_default(
     return output
 
 
+@versioned
 def make_cast_inherent(
     TIA: RuntimeTypeDescriptor,
     TOA: RuntimeTypeDescriptor
@@ -634,6 +645,7 @@ def make_cast_inherent(
     return output
 
 
+@versioned
 def make_cdf(
     TA: RuntimeTypeDescriptor = "float"
 ) -> Function:
@@ -671,6 +683,7 @@ def make_cdf(
     return output
 
 
+@versioned
 def make_clamp(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
@@ -717,6 +730,7 @@ def make_clamp(
     return output
 
 
+@versioned
 def make_consistent_b_ary_tree(
     branching_factor: int,
     TIA: RuntimeTypeDescriptor = "int",
@@ -774,6 +788,7 @@ def make_consistent_b_ary_tree(
     return output
 
 
+@versioned
 def make_count(
     TIA: RuntimeTypeDescriptor,
     TO: RuntimeTypeDescriptor = "int"
@@ -826,6 +841,7 @@ def make_count(
     return output
 
 
+@versioned
 def make_count_by(
     MO: SensitivityMetric,
     TK: RuntimeTypeDescriptor,
@@ -881,6 +897,7 @@ def make_count_by(
     return output
 
 
+@versioned
 def make_count_by_categories(
     categories: Any,
     null_category: bool = True,
@@ -945,6 +962,7 @@ def make_count_by_categories(
     return output
 
 
+@versioned
 def make_count_distinct(
     TIA: RuntimeTypeDescriptor,
     TO: RuntimeTypeDescriptor = "int"
@@ -993,6 +1011,7 @@ def make_count_distinct(
     return output
 
 
+@versioned
 def make_create_dataframe(
     col_names: Any,
     K: RuntimeTypeDescriptor = None
@@ -1036,6 +1055,7 @@ def make_create_dataframe(
     return output
 
 
+@versioned
 def make_df_cast_default(
     column_name: Any,
     TIA: RuntimeTypeDescriptor,
@@ -1098,6 +1118,7 @@ def make_df_cast_default(
     return output
 
 
+@versioned
 def make_df_is_equal(
     column_name: Any,
     value: Any,
@@ -1150,6 +1171,7 @@ def make_df_is_equal(
     return output
 
 
+@versioned
 def make_drop_null(
     atom_domain,
     DA: RuntimeTypeDescriptor = None
@@ -1198,6 +1220,7 @@ def make_drop_null(
     return output
 
 
+@versioned
 def make_find(
     categories: Any,
     TIA: RuntimeTypeDescriptor = None
@@ -1245,6 +1268,7 @@ def make_find(
     return output
 
 
+@versioned
 def make_find_bin(
     edges: Any,
     TIA: RuntimeTypeDescriptor = None
@@ -1296,6 +1320,7 @@ def make_find_bin(
     return output
 
 
+@versioned
 def make_identity(
     D: RuntimeTypeDescriptor,
     M: RuntimeTypeDescriptor
@@ -1340,6 +1365,7 @@ def make_identity(
     return output
 
 
+@versioned
 def make_impute_constant(
     atom_domain,
     constant: Any,
@@ -1395,6 +1421,7 @@ def make_impute_constant(
     return output
 
 
+@versioned
 def make_impute_uniform_float(
     bounds: Tuple[Any, Any],
     TA: RuntimeTypeDescriptor = None
@@ -1438,6 +1465,7 @@ def make_impute_uniform_float(
     return output
 
 
+@versioned
 def make_index(
     categories: Any,
     null: Any,
@@ -1485,6 +1513,7 @@ def make_index(
     return output
 
 
+@versioned
 def make_is_equal(
     value: Any,
     TIA: RuntimeTypeDescriptor = None
@@ -1528,6 +1557,7 @@ def make_is_equal(
     return output
 
 
+@versioned
 def make_is_null(
     input_atom_domain,
     DIA: RuntimeTypeDescriptor = None
@@ -1570,6 +1600,7 @@ def make_is_null(
     return output
 
 
+@versioned
 def make_lipschitz_float_mul(
     constant,
     bounds: Tuple[Any, Any],
@@ -1626,6 +1657,7 @@ def make_lipschitz_float_mul(
     return output
 
 
+@versioned
 def make_metric_bounded(
     domain,
     D: RuntimeTypeDescriptor = None,
@@ -1682,6 +1714,7 @@ def make_metric_bounded(
     return output
 
 
+@versioned
 def make_metric_unbounded(
     domain,
     D: RuntimeTypeDescriptor = None,
@@ -1735,6 +1768,7 @@ def make_metric_unbounded(
     return output
 
 
+@versioned
 def make_ordered_random(
     domain,
     D: RuntimeTypeDescriptor = None,
@@ -1788,6 +1822,7 @@ def make_ordered_random(
     return output
 
 
+@versioned
 def make_quantiles_from_counts(
     bin_edges: Any,
     alphas: Any,
@@ -1842,6 +1877,7 @@ def make_quantiles_from_counts(
     return output
 
 
+@versioned
 def make_resize(
     size: int,
     atom_domain: Domain,
@@ -1905,6 +1941,7 @@ def make_resize(
     return output
 
 
+@versioned
 def make_select_column(
     key: Any,
     TOA: RuntimeTypeDescriptor,
@@ -1953,6 +1990,7 @@ def make_select_column(
     return output
 
 
+@versioned
 def make_sized_bounded_float_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2020,6 +2058,7 @@ def make_sized_bounded_float_checked_sum(
     return output
 
 
+@versioned
 def make_sized_bounded_float_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2089,6 +2128,7 @@ def make_sized_bounded_float_ordered_sum(
     return output
 
 
+@versioned
 def make_sized_bounded_int_checked_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2142,6 +2182,7 @@ def make_sized_bounded_int_checked_sum(
     return output
 
 
+@versioned
 def make_sized_bounded_int_monotonic_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2195,6 +2236,7 @@ def make_sized_bounded_int_monotonic_sum(
     return output
 
 
+@versioned
 def make_sized_bounded_int_ordered_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2250,6 +2292,7 @@ def make_sized_bounded_int_ordered_sum(
     return output
 
 
+@versioned
 def make_sized_bounded_int_split_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2305,6 +2348,7 @@ def make_sized_bounded_int_split_sum(
     return output
 
 
+@versioned
 def make_sized_bounded_mean(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2360,6 +2404,7 @@ def make_sized_bounded_mean(
     return output
 
 
+@versioned
 def make_sized_bounded_sum(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2420,6 +2465,7 @@ def make_sized_bounded_sum(
     return output
 
 
+@versioned
 def make_sized_bounded_sum_of_squared_deviations(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2488,6 +2534,7 @@ def make_sized_bounded_sum_of_squared_deviations(
     return output
 
 
+@versioned
 def make_sized_bounded_variance(
     size: int,
     bounds: Tuple[Any, Any],
@@ -2548,6 +2595,7 @@ def make_sized_bounded_variance(
     return output
 
 
+@versioned
 def make_split_dataframe(
     separator: str,
     col_names: Any,
@@ -2596,6 +2644,7 @@ def make_split_dataframe(
     return output
 
 
+@versioned
 def make_split_lines(
     
 ) -> Transformation:
@@ -2630,6 +2679,7 @@ def make_split_lines(
     return output
 
 
+@versioned
 def make_split_records(
     separator: str
 ) -> Transformation:
@@ -2667,6 +2717,7 @@ def make_split_records(
     return output
 
 
+@versioned
 def make_subset_by(
     indicator_column: Any,
     keep_columns: Any,
@@ -2714,6 +2765,7 @@ def make_subset_by(
     return output
 
 
+@versioned
 def make_unordered(
     domain,
     D: RuntimeTypeDescriptor = None,

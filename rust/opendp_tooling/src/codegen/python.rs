@@ -103,6 +103,7 @@ fn generate_function(
 
     format!(
         r#"
+@versioned
 def {func_name}(
 {args}
 ){sig_return}:

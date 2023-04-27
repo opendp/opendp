@@ -373,36 +373,6 @@ pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()
     util::into_owned(this).map(|_| ()).into()
 }
 
-#[cfg(feature = "derive")]
-#[bootstrap(
-    name = "make_proof_link",
-    arguments(
-        source_dir(rust_type = b"null"),
-        relative_path(rust_type = b"null"),
-        repo_path(rust_type = b"null")
-    ),
-    returns(c_type = "FfiResult<char *>")
-)]
-/// Internal function. Make a proof link, for use in extrinsics documentation.
-#[no_mangle]
-pub extern "C" fn opendp_data__make_proof_link(
-    source_dir: *const c_char,
-    relative_path: *const c_char,
-    repo_path: *const c_char,
-) -> FfiResult<*const c_char> {
-    use opendp_tooling::proven::filesystem::make_proof_link;
-    let source_dir = PathBuf::from(try_!(util::to_str(source_dir)));
-    let relative_path = PathBuf::from(try_!(util::to_str(relative_path)));
-    let repo_path = PathBuf::from(try_!(util::to_str(repo_path)));
-    let proof_link = try_!(make_proof_link(source_dir, relative_path, repo_path)
-        .map_err(|e| err!(FailedFunction, e.to_string())));
-
-    match util::into_c_char_p(proof_link) {
-        Ok(v) => FfiResult::Ok(v),
-        Err(e) => e.into(),
-    }
-}
-
 impl std::fmt::Debug for AnyObject {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         fn monomorphize<T: 'static + std::fmt::Debug>(this: &AnyObject) -> Fallible<String> {

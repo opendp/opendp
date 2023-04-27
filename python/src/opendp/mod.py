@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union, Tuple, Callable, Optional
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyQueryable, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):

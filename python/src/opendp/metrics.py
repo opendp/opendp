@@ -19,6 +19,7 @@ __all__ = [
 ]
 
 
+@versioned
 def absolute_distance(
     T: RuntimeTypeDescriptor
 ):
@@ -48,6 +49,7 @@ def absolute_distance(
     return output
 
 
+@versioned
 def change_one_distance(
     
 ):
@@ -72,6 +74,7 @@ def change_one_distance(
     return output
 
 
+@versioned
 def discrete_distance(
     
 ):
@@ -96,6 +99,7 @@ def discrete_distance(
     return output
 
 
+@versioned
 def hamming_distance(
     
 ):
@@ -120,6 +124,7 @@ def hamming_distance(
     return output
 
 
+@versioned
 def insert_delete_distance(
     
 ):
@@ -144,6 +149,7 @@ def insert_delete_distance(
     return output
 
 
+@versioned
 def l1_distance(
     T: RuntimeTypeDescriptor
 ):
@@ -173,6 +179,7 @@ def l1_distance(
     return output
 
 
+@versioned
 def l2_distance(
     T: RuntimeTypeDescriptor
 ):
@@ -202,6 +209,7 @@ def l2_distance(
     return output
 
 
+@versioned
 def metric_debug(
     this
 ) -> str:
@@ -229,6 +237,7 @@ def metric_debug(
     return output
 
 
+@versioned
 def metric_distance_type(
     this
 ) -> str:
@@ -256,6 +265,7 @@ def metric_distance_type(
     return output
 
 
+@versioned
 def metric_type(
     this
 ) -> str:
@@ -283,6 +293,7 @@ def metric_type(
     return output
 
 
+@versioned
 def symmetric_distance(
     
 ):
