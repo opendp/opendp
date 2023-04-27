@@ -223,7 +223,7 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          echo python tools/publish_tool.py python $DRY_RUN_FLAG
+          python tools/publish_tool.py python $DRY_RUN_FLAG
 
 
   rust-publish:
@@ -246,4 +246,4 @@ jobs:
           DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          echo python tools/publish_tool.py rust $DRY_RUN_FLAG
+          python tools/publish_tool.py rust $DRY_RUN_FLAG
