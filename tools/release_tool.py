@@ -239,7 +239,8 @@ def create(args):
     # Just in case, clear out any existing tag, so a new one will be created by GitHub.
     run_command("Clearing tag", f"git push origin :refs/tags/{resolved_tag}")
     title = f"OpenDP {cached_version}"
-    notes = f"[Changelog](https://github.com/opendp/opendp/blob/main/CHANGELOG.md#{conf.target_version}---{conf.date})"
+    stripped_target_version = str(conf.target_version).replace(".", "")
+    notes = f"[CHANGELOG](https://github.com/opendp/opendp/blob/main/CHANGELOG.md#{stripped_target_version}---{conf.date})"
     prerelease_arg = " -p" if cached_version.prerelease else ""
     draft_arg = " -d" if args.draft else ""
     run_command("Creating GitHub Release", f"gh release create {resolved_tag} --target {conf.branch} -t '{title}' -n '{notes}'{prerelease_arg}{draft_arg}")
