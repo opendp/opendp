@@ -36,6 +36,7 @@ __all__ = [
 ]
 
 
+@versioned
 def _error_free(
     this: FfiError
 ) -> bool:
@@ -64,6 +65,7 @@ def _error_free(
     return output
 
 
+@versioned
 def _function_free(
     this: Function
 ):
@@ -91,6 +93,7 @@ def _function_free(
     return output
 
 
+@versioned
 def _measurement_free(
     this: Measurement
 ):
@@ -118,6 +121,7 @@ def _measurement_free(
     return output
 
 
+@versioned
 def _transformation_free(
     this: Transformation
 ):
@@ -145,6 +149,7 @@ def _transformation_free(
     return output
 
 
+@versioned
 def function_eval(
     this: Function,
     arg: Any,
@@ -181,6 +186,7 @@ def function_eval(
     return output
 
 
+@versioned
 def measurement_check(
     measurement: Measurement,
     distance_in: Any,
@@ -217,6 +223,7 @@ def measurement_check(
     return output
 
 
+@versioned
 def measurement_function(
     this: Measurement
 ) -> Function:
@@ -245,6 +252,7 @@ def measurement_function(
     return output
 
 
+@versioned
 def measurement_input_carrier_type(
     this: Measurement
 ) -> str:
@@ -273,6 +281,7 @@ def measurement_input_carrier_type(
     return output
 
 
+@versioned
 def measurement_input_distance_type(
     this: Measurement
 ) -> str:
@@ -301,6 +310,7 @@ def measurement_input_distance_type(
     return output
 
 
+@versioned
 def measurement_input_domain(
     this: Measurement
 ):
@@ -328,6 +338,7 @@ def measurement_input_domain(
     return output
 
 
+@versioned
 def measurement_input_metric(
     this: Measurement
 ):
@@ -355,6 +366,7 @@ def measurement_input_metric(
     return output
 
 
+@versioned
 def measurement_invoke(
     this: Measurement,
     arg: Any
@@ -387,6 +399,7 @@ def measurement_invoke(
     return output
 
 
+@versioned
 def measurement_map(
     measurement: Measurement,
     distance_in: Any
@@ -419,6 +432,7 @@ def measurement_map(
     return output
 
 
+@versioned
 def measurement_output_distance_type(
     this: Measurement
 ) -> str:
@@ -447,6 +461,7 @@ def measurement_output_distance_type(
     return output
 
 
+@versioned
 def measurement_output_measure(
     this: Measurement
 ):
@@ -474,6 +489,7 @@ def measurement_output_measure(
     return output
 
 
+@versioned
 def queryable_eval(
     queryable: Any,
     query: Any
@@ -506,6 +522,7 @@ def queryable_eval(
     return output
 
 
+@versioned
 def queryable_query_type(
     this: Any
 ) -> str:
@@ -534,6 +551,7 @@ def queryable_query_type(
     return output
 
 
+@versioned
 def transformation_check(
     transformation: Transformation,
     distance_in: Any,
@@ -570,6 +588,7 @@ def transformation_check(
     return output
 
 
+@versioned
 def transformation_function(
     this: Transformation
 ) -> Function:
@@ -598,6 +617,7 @@ def transformation_function(
     return output
 
 
+@versioned
 def transformation_input_carrier_type(
     this: Transformation
 ) -> str:
@@ -626,6 +646,7 @@ def transformation_input_carrier_type(
     return output
 
 
+@versioned
 def transformation_input_distance_type(
     this: Transformation
 ) -> str:
@@ -654,6 +675,7 @@ def transformation_input_distance_type(
     return output
 
 
+@versioned
 def transformation_input_domain(
     this: Transformation
 ):
@@ -681,6 +703,7 @@ def transformation_input_domain(
     return output
 
 
+@versioned
 def transformation_input_metric(
     this: Transformation
 ):
@@ -708,6 +731,7 @@ def transformation_input_metric(
     return output
 
 
+@versioned
 def transformation_invoke(
     this: Transformation,
     arg: Any
@@ -740,6 +764,7 @@ def transformation_invoke(
     return output
 
 
+@versioned
 def transformation_map(
     transformation: Transformation,
     distance_in: Any
@@ -772,6 +797,7 @@ def transformation_map(
     return output
 
 
+@versioned
 def transformation_output_distance_type(
     this: Transformation
 ) -> str:
@@ -800,6 +826,7 @@ def transformation_output_distance_type(
     return output
 
 
+@versioned
 def transformation_output_domain(
     this: Transformation
 ):
@@ -827,6 +854,7 @@ def transformation_output_domain(
     return output
 
 
+@versioned
 def transformation_output_metric(
     this: Transformation
 ):

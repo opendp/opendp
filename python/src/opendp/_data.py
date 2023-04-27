@@ -7,7 +7,6 @@ from opendp.typing import *
 __all__ = [
     "bool_free",
     "ffislice_of_anyobjectptrs",
-    "make_proof_link",
     "object_as_slice",
     "object_free",
     "object_type",
@@ -19,6 +18,7 @@ __all__ = [
 ]
 
 
+@versioned
 def bool_free(
     this
 ):
@@ -46,6 +46,7 @@ def bool_free(
     return output
 
 
+@versioned
 def ffislice_of_anyobjectptrs(
     raw: Any
 ) -> Any:
@@ -74,42 +75,7 @@ def ffislice_of_anyobjectptrs(
     return output
 
 
-def make_proof_link(
-    source_dir: str,
-    relative_path: str,
-    repo_path: str
-) -> str:
-    """Internal function. Make a proof link, for use in extrinsics documentation.
-    
-    [make_proof_link in Rust documentation.](https://docs.rs/opendp/latest/opendp/data/fn.make_proof_link.html)
-    
-    :param source_dir: 
-    :type source_dir: str
-    :param relative_path: 
-    :type relative_path: str
-    :param repo_path: 
-    :type repo_path: str
-    :rtype: str
-    :raises TypeError: if an argument's type differs from the expected type
-    :raises UnknownTypeError: if a type argument fails to parse
-    :raises OpenDPException: packaged error from the core OpenDP library
-    """
-    # No type arguments to standardize.
-    # Convert arguments to c types.
-    c_source_dir = py_to_c(source_dir, c_type=ctypes.c_char_p, type_name=None)
-    c_relative_path = py_to_c(relative_path, c_type=ctypes.c_char_p, type_name=None)
-    c_repo_path = py_to_c(repo_path, c_type=ctypes.c_char_p, type_name=None)
-    
-    # Call library function.
-    lib_function = lib.opendp_data__make_proof_link
-    lib_function.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-    lib_function.restype = FfiResult
-    
-    output = c_to_py(unwrap(lib_function(c_source_dir, c_relative_path, c_repo_path), ctypes.c_char_p))
-    
-    return output
-
-
+@versioned
 def object_as_slice(
     obj: Any
 ) -> Any:
@@ -139,6 +105,7 @@ def object_as_slice(
     return output
 
 
+@versioned
 def object_free(
     this: Any
 ):
@@ -166,6 +133,7 @@ def object_free(
     return output
 
 
+@versioned
 def object_type(
     this: Any
 ) -> str:
@@ -194,6 +162,7 @@ def object_type(
     return output
 
 
+@versioned
 def slice_as_object(
     raw: FfiSlicePtr,
     T: str
@@ -230,6 +199,7 @@ def slice_as_object(
     return output
 
 
+@versioned
 def slice_free(
     this: Any
 ):
@@ -259,6 +229,7 @@ def slice_free(
     return output
 
 
+@versioned
 def smd_curve_epsilon(
     curve: Any,
     delta: Any
@@ -292,6 +263,7 @@ def smd_curve_epsilon(
     return output
 
 
+@versioned
 def str_free(
     this: str
 ):
@@ -320,6 +292,7 @@ def str_free(
     return output
 
 
+@versioned
 def to_string(
     this: Any
 ) -> str:

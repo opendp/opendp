@@ -15,6 +15,7 @@ __all__ = [
 ]
 
 
+@versioned
 def fixed_smoothed_max_divergence(
     T: RuntimeTypeDescriptor
 ):
@@ -44,6 +45,7 @@ def fixed_smoothed_max_divergence(
     return output
 
 
+@versioned
 def max_divergence(
     T: RuntimeTypeDescriptor
 ):
@@ -73,6 +75,7 @@ def max_divergence(
     return output
 
 
+@versioned
 def measure_debug(
     this
 ) -> str:
@@ -100,6 +103,7 @@ def measure_debug(
     return output
 
 
+@versioned
 def measure_distance_type(
     this
 ) -> str:
@@ -127,6 +131,7 @@ def measure_distance_type(
     return output
 
 
+@versioned
 def measure_type(
     this
 ) -> str:
@@ -154,6 +159,7 @@ def measure_type(
     return output
 
 
+@versioned
 def smoothed_max_divergence(
     T: RuntimeTypeDescriptor
 ):
@@ -183,6 +189,7 @@ def smoothed_max_divergence(
     return output
 
 
+@versioned
 def zero_concentrated_divergence(
     T: RuntimeTypeDescriptor
 ):

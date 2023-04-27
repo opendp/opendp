@@ -18,6 +18,7 @@ __all__ = [
 ]
 
 
+@versioned
 def make_base_discrete_gaussian(
     scale,
     D: RuntimeTypeDescriptor = "AtomDomain<int>",
@@ -79,6 +80,7 @@ def make_base_discrete_gaussian(
     return output
 
 
+@versioned
 def make_base_discrete_laplace(
     scale,
     D: RuntimeTypeDescriptor = "AtomDomain<int>",
@@ -140,6 +142,7 @@ def make_base_discrete_laplace(
     return output
 
 
+@versioned
 def make_base_discrete_laplace_cks20(
     scale,
     D: RuntimeTypeDescriptor = "AtomDomain<int>",
@@ -200,6 +203,7 @@ def make_base_discrete_laplace_cks20(
     return output
 
 
+@versioned
 def make_base_discrete_laplace_linear(
     scale,
     bounds: Any = None,
@@ -267,6 +271,7 @@ def make_base_discrete_laplace_linear(
     return output
 
 
+@versioned
 def make_base_gaussian(
     scale,
     k: int = -1074,
@@ -333,6 +338,7 @@ def make_base_gaussian(
     return output
 
 
+@versioned
 def make_base_geometric(
     scale,
     bounds: Any = None,
@@ -388,6 +394,7 @@ def make_base_geometric(
     return output
 
 
+@versioned
 def make_base_laplace(
     scale,
     k: int = -1074,
@@ -448,6 +455,7 @@ def make_base_laplace(
     return output
 
 
+@versioned
 def make_base_ptr(
     scale,
     threshold,
@@ -506,6 +514,7 @@ def make_base_ptr(
     return output
 
 
+@versioned
 def make_randomized_response(
     categories: Any,
     prob,
@@ -561,6 +570,7 @@ def make_randomized_response(
     return output
 
 
+@versioned
 def make_randomized_response_bool(
     prob,
     constant_time: bool = False,

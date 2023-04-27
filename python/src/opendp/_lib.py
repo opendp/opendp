@@ -2,6 +2,8 @@ import ctypes
 import os
 import sys
 from typing import Optional, Any
+import re
+
 
 # list all acceptable alternative types for each default type
 ATOM_EQUIVALENCE_CLASSES = {
@@ -157,3 +159,102 @@ def unwrap(result, type_) -> Any:
 
     # Rust stack traces follow from here:
     raise OpenDPException(variant, message, backtrace)
+
+
+def versioned(function):
+    """Decorator to update version numbers in docstrings.
+    This is shown in the help(*) and Sphinx documentation (like docs.opendp.org)."""
+
+    version = get_opendp_version()
+
+    if version != "0.0.0+development":
+        function.__doc__ = function.__doc__.replace(
+            "https://docs.rs/opendp/latest/", f"https://docs.rs/opendp/{version}/"
+        )
+
+        function.__doc__ = function.__doc__.replace(
+            "https://docs.opendp.org/en/latest/",
+            f"https://docs.opendp.org/en/v{version}/",
+        )
+
+    return function
+
+
+proof_doc_re = re.compile(r"\[\(Proof Document\)\]\(([^)]+)\)")
+
+
+def proven(function):
+    """Decorator for functions that have an associated proof document.
+    Locates the proof document and edits the docstring with a link.
+    """
+    import inspect
+
+    for match in proof_doc_re.finditer(function.__doc__):
+        a, b = match.span(1)
+
+        # extract the path to the proof document
+        matched_path = function.__doc__[a:b]
+        source_dir = os.path.dirname(inspect.getfile(function))
+        absolute_proof_path = os.path.abspath(os.path.join(source_dir, matched_path))
+
+
+        # split the path at the extrinsics directory
+        extrinsics_path = os.path.join(os.path.dirname(__file__), "extrinsics")
+        relative_proof_path = os.path.relpath(absolute_proof_path, extrinsics_path)
+
+        # create the link
+        proof_url = make_proof_link(
+            extrinsics_path,
+            relative_path=relative_proof_path,
+            repo_path="python/src/opendp/extrinsics",
+        )
+
+        # replace the path with the link
+        function.__doc__ = function.__doc__[:a] + proof_url + function.__doc__[b:]
+
+    return function
+
+
+def make_proof_link(
+    source_dir,
+    relative_path,
+    repo_path,
+) -> str:
+    # construct absolute path
+    absolute_path = os.path.join(source_dir, relative_path)
+
+    if not os.path.exists(absolute_path):
+        raise ValueError(f"{absolute_path} does not exist!")
+
+    # link to the pdf, not the tex
+    relative_path = relative_path.replace(".tex", ".pdf")
+
+    # link from sphinx and rustdoc to latex
+    sphinx_port = os.environ.get("OPENDP_SPHINX_PORT", None)
+    if sphinx_port is not None:
+        proof_uri = f"http://localhost:{sphinx_port}"
+
+    else:
+        # find the docs uri
+        docs_uri = os.environ.get("OPENDP_REMOTE_SPHINX_URI", "https://docs.opendp.org")
+
+        # find the version
+        version = get_opendp_version()
+        version_segment = "latest" if version == "0.0.0+development" else "v" + version
+
+        proof_uri = f"{docs_uri}/en/{version_segment}"
+
+    return f"{proof_uri}/proofs/{repo_path}/{relative_path}"
+
+
+def get_opendp_version():
+    import sys
+
+    if sys.version_info >= (3, 8):
+        import importlib.metadata
+
+        return importlib.metadata.version("opendp")
+    else:
+        import pkg_resources
+
+        return pkg_resources.get_distribution("opendp").version
