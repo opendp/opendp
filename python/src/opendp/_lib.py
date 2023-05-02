@@ -253,8 +253,30 @@ def get_opendp_version():
     if sys.version_info >= (3, 8):
         import importlib.metadata
 
-        return importlib.metadata.version("opendp")
+        try:
+            return unmangle_py_version(importlib.metadata.version("opendp"))
+        except importlib.metadata.PackageNotFoundError:
+            return get_opendp_version_from_file()
     else:
         import pkg_resources
 
-        return pkg_resources.get_distribution("opendp").version
+        try:
+            return unmangle_py_version(pkg_resources.get_distribution("opendp").version)
+        except pkg_resources.DistributionNotFound:
+            return get_opendp_version_from_file()
+
+def unmangle_py_version(version):
+    import re
+
+    # Python mangles pre-release versions like "X.Y.Z-rc.N" into "X.Y.ZrcN", but the docs use the correct format,
+    # so we need to unmangle so the links will work.
+    match = re.match(r"^(\d+\.\d+\.\d+)rc(\d+)$", version)
+    if match:
+        version = f"{match.group(1)}-rc.{match.group(2)}"
+    return version
+
+def get_opendp_version_from_file():
+    # If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
+    # so fall back to the version file.
+    version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), *['..'] * 3, 'VERSION')
+    return open(version_file, 'r').read().strip()
