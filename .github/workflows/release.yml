@@ -177,7 +177,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
     env:
-      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
