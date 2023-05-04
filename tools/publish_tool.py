@@ -25,12 +25,12 @@ def rust(args):
     # We can't do a dry run of everything, because dependencies won't be available for later crates,
     # but we can at least do any leaf notes (i.e. opendp_tooling).
     dry_run_arg = " --dry-run" if args.dry_run else ""
-    run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
+    run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml", capture_output=False)
     if not args.dry_run:
         run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-        run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")
+        run_command("Publishing opendp_derive crate", f"cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml", capture_output=False)
         run_command("Letting crates.io index settle", f"sleep {args.settle_time}")
-        run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml")
+        run_command("Publishing opendp crate", f"cargo publish --verbose --manifest-path=rust/Cargo.toml", capture_output=False)
 
 
 def python(args):
@@ -39,7 +39,7 @@ def python(args):
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
     dry_run_arg = " --repository testpypi" if args.dry_run else ""
-    run_command("Publishing opendp package", f"python3 -m twine upload{dry_run_arg} --verbose --skip-existing python/wheelhouse/*")
+    run_command("Publishing opendp package", f"python3 -m twine upload{dry_run_arg} --verbose --skip-existing python/wheelhouse/*", capture_output=False)
 
 
 def meta(args):
