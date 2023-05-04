@@ -265,15 +265,15 @@ def get_opendp_version():
         except pkg_resources.DistributionNotFound:
             return get_opendp_version_from_file()
 
-def unmangle_py_version(version):
-    import re
 
+def unmangle_py_version(version):
     # Python mangles pre-release versions like "X.Y.Z-rc.N" into "X.Y.ZrcN", but the docs use the correct format,
     # so we need to unmangle so the links will work.
     match = re.match(r"^(\d+\.\d+\.\d+)rc(\d+)$", version)
     if match:
         version = f"{match.group(1)}-rc.{match.group(2)}"
     return version
+
 
 def get_opendp_version_from_file():
     # If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
