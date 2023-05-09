@@ -1,0 +1,11 @@
+Package: opendp
+Version: 0.0.16
+Title: OpenDP R bindings
+Author: S. M. Iacus
+Maintainer: Stefano M. Iacus <siacus@iq.harvard.edu>
+Description: Testing opendp calls.
+License: GPL (>= 2)
+NeedsCompilation: yes
+
+
+
