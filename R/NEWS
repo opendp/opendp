@@ -1,0 +1,97 @@
+v 0.0.16 20230305
+* fixed domain input in measurement
+* all tests in test_comb.py passed
+
+v 0.0.15 20230221
+* fixed int to uint casting
+* make_population_amplification implemented
+
+v 0.0.14 20230218
+* added SMDCurve object
+* implemented epsilon method for SMDCurve
+* implemented check method
+
+v 0.0.13 20230216
+* implemented make_basic_composition
+* fixed int_object_as_slice to catch u32
+
+v 0.0.12 20230214
+* fixed an ad-hoc case for tranformation's map
+  expecting u32 that does not exists as type in R
+  we should think at some method for SEXP2AnyObject
+* separated .Rd pages for measurements, transformations
+  and chainings (combinations)
+* simplified C code. Info is now embdded in the external
+  pointer but built in R, no need to build these infos in C. 
+  Much easier to extend, in vie of codegen.
+* added getInfo() for measurements and transformations
+* print method after chain needs fixing (recursive print)
+* some memory glitches still happening
+
+v 0.0.11 20230210
+* SEX2AnyObject supports tuples
+* added return_error to simplify C code
+* added print method for Transformations
+* some glitches in memory freeing yet (try gc)
+
+v 0.0.10 20230209
+* created hashmaps objects as enviroments
+  so you can access key, values and have
+  $get(key) functionality. These are passed
+  to C as is and converted via SEXP2AnyObject
+  to the propoer rust object
+* Measurements and Transformations converted to
+  environments so that newly defined objects
+  can call $invoke(data) directly
+* SEX2AnyObject and object_as_slice support
+  hashmaps. 
+  
+  
+v 0.0.9 - 20230205
+* rewrote user interface, now input is R objects
+  that are internally transformed in C level
+* removed make_randomized_response2
+* added combinators:
+   make_chain_mt, make_chain_tm, make_chain_tt
+   make_pureDP_to_fixed_approxDP
+   make_zCDP_to_approxDP
+   make_fix_delta
+* added measruements:
+   export(make_base_laplace)
+* added transformations:
+   make_bounded_sum
+   make_clamp
+* added SEXP2 AnyObject and R2C
+
+v 0.0.8 - 20230130
+* added R_to_C to mimic python bindings
+* added make_randomized_response2 to test R_to_C approach
+
+v 0.0.7 - 20230130
+* added make_randomized_response
+* added object_to_slice
+* reorganized man pages and examples
+  for measurement and data
+
+v 0.0.6 - 20230129
+* added support for String ans <Vec>String
+
+v 0.0.5 - 20230128
+* added proper finalizers for AnyMeasurement and AnyObject
+* reorganized a bit the .c files for mdata, measurement and lib load
+* fixed the issue with crashing when in R Studio
+  related to pointer tag install()-ation
+* implemented make_base_gaussian
+* changed Measurement class def
+
+v 0.0.3 - 20230110
+* first version to support opendp.dylib loading
+
+v 0.0.2 - 20230102
+* first version with basic external pointers handling
+* createODP, setODP, getODP functions added
+* changed package name, dash "-" not allowed in pkg names
+
+v 0.0.1
+* simple skeleton
+ 
