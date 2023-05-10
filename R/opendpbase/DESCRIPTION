@@ -1,6 +1,6 @@
-Package: opendp
+Package: opendpbase
 Version: 0.0.16
-Title: OpenDP R bindings
+Title: OpenDP Base R bindings
 Author: S. M. Iacus
 Maintainer: Stefano M. Iacus <siacus@iq.harvard.edu>
 Description: Testing opendp calls.
