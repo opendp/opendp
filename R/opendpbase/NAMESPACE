@@ -1,4 +1,4 @@
-useDynLib(opendp, .registration = TRUE)
+useDynLib(opendpbase, .registration = TRUE)
 
 # data managing
 export(resolve_type)
