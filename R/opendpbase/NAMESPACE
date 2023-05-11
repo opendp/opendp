@@ -39,14 +39,11 @@ export(make_fix_delta)
 export(make_basic_composition)
 #accessor functions
 export(nodmalizeDomain)
+#mod
+export(binary_search_chain)
 # print methods
 S3method(print, Measurement)
 S3method(print, Transformation)
 S3method(print, AnyObject)
 S3method(print, hashmap)
-# the following are for testing only
-export(applyFun)
-export(squareIt)
-export(createXPtr)
-export(setXPtr)
-export(getXPtr)
+

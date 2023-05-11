@@ -117,7 +117,7 @@ R_to_C <- function(value, c_type=NULL, type_name=NULL){
     tmp <- resolve_type(value)
     type_name <- tmp[,"type_name"]
     c_type <- tmp[,"c_type"]
-    retval <- .Call("odp_R_to_C", value, c_type, type_name, PACKAGE = 'opendp')
+    retval <- .Call("odp_R_to_C", value, c_type, type_name, PACKAGE = 'opendpbase')
     # class(retval) <- c(class(retval))
     # attr(retval, "type") <- tmp
     return(retval)
@@ -130,14 +130,14 @@ R_to_C <- function(value, c_type=NULL, type_name=NULL){
   if(is.array(tmp)){
     type_name <- tmp[,"type_name"]
     c_type <- tmp[,"c_type"]
-    retval <- .Call("odp_R_to_C", value, c_type, type_name, PACKAGE = 'opendp')
+    retval <- .Call("odp_R_to_C", value, c_type, type_name, PACKAGE = 'opendpbase')
     class(retval) <- c(class(retval))
     attr(retval, "type") <- tmp
   } else {
     type_name <- tmp["type_name"]
     c_type <- tmp["c_type"]
   }
-  retval <- .Call("odp_R_to_C", value, c_type, type_name, PACKAGE = 'opendp')
+  retval <- .Call("odp_R_to_C", value, c_type, type_name, PACKAGE = 'opendpbase')
   class(retval) <- c(class(retval))
   attr(retval, "type") <- tmp
   return(retval)
@@ -147,12 +147,12 @@ object_as_slice <- function(obj){
   if(!inherits(obj, "AnyObject")){
     stop("Not an object of class 'AnyObject'")
   }
-  retval <- .Call("odp_object_as_slice", obj$AnyObjectPtr, PACKAGE = 'opendp')
+  retval <- .Call("odp_object_as_slice", obj$AnyObjectPtr, PACKAGE = 'opendpbase')
   return(retval)
 }
 
 slice_as_object <- function(data) {
-  retval <- .Call("odp_slice_as_object", data, PACKAGE = 'opendp')
+  retval <- .Call("odp_slice_as_object", data, PACKAGE = 'opendpbase')
   class(retval) <- "AnyObject"
   return(retval)
 }

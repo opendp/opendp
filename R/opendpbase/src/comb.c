@@ -310,7 +310,7 @@ SEXP odp_make_chain_tm(SEXP tran, SEXP meas, SEXP info){
   AnyTransformation *tran_ptr = (AnyTransformation *) R_ExternalPtrAddr(tran);
   AnyMeasurement *meas_ptr = (AnyMeasurement *) R_ExternalPtrAddr(meas);
   
-  FfiResult_____AnyMeasurement result = opendp_combinators__make_chain_tm(tran_ptr,meas_ptr);
+  FfiResult_____AnyMeasurement result = opendp_combinators__make_chain_pm(tran_ptr,meas_ptr);
   
   UNPROTECT(2);
   

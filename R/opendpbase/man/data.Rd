@@ -29,7 +29,7 @@ object_as_slice(obj)
 }
 \author{S. M. Iacus}
 \examples{
-require(opendp)
+require(opendpbase)
 # create new data
 x <- slice_as_object(10L) # integer 'i32'
 x
