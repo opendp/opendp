@@ -22,7 +22,7 @@ use super::{Bounds, Null, OptionDomain};
 )]
 /// Internal function. Free the memory associated with `this`.
 #[no_mangle]
-pub extern "C" fn opendp_core___domain_free(this: *mut AnyDomain) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
