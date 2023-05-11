@@ -37,7 +37,7 @@ def test_make_basic_composition():
             (
                 dp.t.make_cast_default(int, str) >> 
                 dp.t.make_count_by_categories(categories=["0", "12", "22"]) >> 
-                dp.t.make_base_discrete_laplace(scale=2., D=dp.VectorDomain[dp.AtomDomain[int]])
+                dp.m.make_base_discrete_laplace(scale=2., D=dp.VectorDomain[dp.AtomDomain[int]])
             )
         ])
     ])
