@@ -14,6 +14,16 @@ use crate::{
 use super::{
     ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, SymmetricDistance,
 };
+#[bootstrap(
+    name = "_metric_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`.
+#[no_mangle]
+pub extern "C" fn opendp_core___metric_free(this: *mut AnyMetric) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
+}
 
 #[bootstrap(
     name = "metric_debug",

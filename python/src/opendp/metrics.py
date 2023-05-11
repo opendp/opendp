@@ -5,6 +5,7 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
+    "_metric_free",
     "absolute_distance",
     "change_one_distance",
     "discrete_distance",
@@ -17,6 +18,33 @@ __all__ = [
     "metric_type",
     "symmetric_distance"
 ]
+
+
+@versioned
+def _metric_free(
+    this
+):
+    """Internal function. Free the memory associated with `this`.
+    
+    [_metric_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/metrics/fn._metric_free.html)
+    
+    :param this: 
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = this
+    
+    # Call library function.
+    lib_function = lib.opendp_metrics___metric_free
+    lib_function.argtypes = [Metric]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 @versioned

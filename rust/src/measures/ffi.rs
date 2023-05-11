@@ -6,12 +6,23 @@ use crate::{
     core::FfiResult,
     ffi::{
         any::AnyMeasure,
-        util::{into_c_char_p, Type},
+        util::{into_c_char_p, Type, self},
     },
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
 };
 
 use super::SmoothedMaxDivergence;
+
+#[bootstrap(
+    name = "_measure_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`.
+#[no_mangle]
+pub extern "C" fn opendp_core___measure_free(this: *mut AnyMeasure) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
+}
 
 #[bootstrap(
     name = "measure_debug",

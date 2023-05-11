@@ -5,6 +5,7 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
+    "_measure_free",
     "fixed_smoothed_max_divergence",
     "max_divergence",
     "measure_debug",
@@ -13,6 +14,33 @@ __all__ = [
     "smoothed_max_divergence",
     "zero_concentrated_divergence"
 ]
+
+
+@versioned
+def _measure_free(
+    this
+):
+    """Internal function. Free the memory associated with `this`.
+    
+    [_measure_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/measures/fn._measure_free.html)
+    
+    :param this: 
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = this
+    
+    # Call library function.
+    lib_function = lib.opendp_measures___measure_free
+    lib_function.argtypes = [Measure]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 @versioned

@@ -390,6 +390,10 @@ class Domain(ctypes.POINTER(AnyDomain)):
     def __str__(self):
         from opendp.domains import domain_debug
         return domain_debug(self)
+    
+    def __del__(self):
+        from opendp.domains import _domain_free
+        _domain_free(self)
 
 
 class Metric(ctypes.POINTER(AnyMetric)):
@@ -408,6 +412,10 @@ class Metric(ctypes.POINTER(AnyMetric)):
     def __str__(self):
         from opendp.metrics import metric_debug
         return metric_debug(self)
+    
+    def __del__(self):
+        from opendp.metrics import _metric_free
+        _metric_free(self)
 
 
 class Measure(ctypes.POINTER(AnyMeasure)):
@@ -426,6 +434,11 @@ class Measure(ctypes.POINTER(AnyMeasure)):
     def __str__(self):
         from opendp.measures import measure_debug
         return measure_debug(self)
+    
+    def __del__(self):
+        from opendp.measures import _measure_free
+        _measure_free(self)
+
 
 class SMDCurve(object):
     def __init__(self, curve):

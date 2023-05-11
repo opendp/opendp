@@ -16,6 +16,17 @@ use crate::{
 use super::{Bounds, Null, OptionDomain};
 
 #[bootstrap(
+    name = "_domain_free",
+    arguments(this(do_not_convert = true)),
+    returns(c_type = "FfiResult<void *>")
+)]
+/// Internal function. Free the memory associated with `this`.
+#[no_mangle]
+pub extern "C" fn opendp_core___domain_free(this: *mut AnyDomain) -> FfiResult<*mut ()> {
+    util::into_owned(this).map(|_| ()).into()
+}
+
+#[bootstrap(
     name = "member",
     arguments(this(hint = "Domain"), val(rust_type = "$domain_carrier_type(this)")),
     returns(c_type = "FfiResult<bool *>", hint = "bool")
