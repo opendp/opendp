@@ -34,7 +34,7 @@ make_fix_delta <- function(meas, delta)
 }
 \author{S. M. Iacus}
 \examples{
-require(opendp)
+require(opendpbase)
 
 # chaining
 aggregator = make_bounded_sum(bounds=c(0L, 10L))
@@ -176,7 +176,7 @@ fixed_base_gaussian$map(1.) # (0.42994146883694945, 1e-06)
 #            (
 #                make_cast_default(int, str) >> 
 #                make_count_by_categories(categories=["0", "12", "22"]) >> 
-#                make_base_discrete_laplace(scale=2., D=VectorDomain[AllDomain[int]])
+#                make_base_discrete_laplace(scale=2., D=VectorDomain[AtomDomain[int]])
 #            )
 #        ])
 #    ])
@@ -212,11 +212,11 @@ ch8 <- make_chain_mt(  make_base_laplace(scale=2.), make_count(TIA="int", TO="fl
 
 # make_cast_default(int, str) >> 
 #                make_count_by_categories(categories=["0", "12", "22"]) >> 
-#                make_base_discrete_laplace(scale=2., D=VectorDomain[AllDomain[int]])
+#                make_base_discrete_laplace(scale=2., D=VectorDomain[AtomDomain[int]])
 
 
 ch9 <- make_chain_tt(make_count_by_categories(categories=c("0", "12", "22")), make_cast_default("int", "str"))
-chA <-  make_chain_mt(make_base_discrete_laplace(scale=2., D="VectorDomain[AllDomain[int]]"), ch9)
+chA <-  make_chain_mt(make_base_discrete_laplace(scale=2., D="VectorDomain[AtomDomain[int]]"), ch9)
 
 bc3 <- make_basic_composition(ch7,ch8, chA)
 

@@ -124,7 +124,7 @@ struct AnyObject *SEXP2AnyObjectWithType(SEXP data, char *destType) {
   SEXP retvals;
   
   PROTECT(data);
-  printf("\nSEXP2AnyObjectWithType: start, TYPEOF = %d, destType=%s\n", TYPEOF(data), destType);
+  //printf("\nSEXP2AnyObjectWithType: start, TYPEOF = %d, destType=%s\n", TYPEOF(data), destType);
   
   if(TYPEOF(data) != ENVSXP){
     len = LENGTH(data);

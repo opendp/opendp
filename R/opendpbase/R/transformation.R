@@ -27,9 +27,9 @@ check <- function(this, distance_in, distance_out){
   # distance_out <- getInfo(this)$output_distance
   retval <- FALSE
   if(inherits(this,"Measurement"))
-    retval <- .Call("odp_measurement_check", this$MeasurementPtr, distance_in, distance_out, PACKAGE = 'opendp')
+    retval <- .Call("odp_measurement_check", this$MeasurementPtr, distance_in, distance_out, PACKAGE = 'opendpbase')
   if(inherits(this,"Transformation"))
-    retval <- .Call("odp_transformation_check", this$TransformationPtr, distance_in, distance_out, PACKAGE = 'opendp')
+    retval <- .Call("odp_transformation_check", this$TransformationPtr, distance_in, distance_out, PACKAGE = 'opendpbase')
   return(retval)
 }
 
@@ -48,7 +48,7 @@ make_cast_default <- function(TIA, TOA){
   TOA <- toRust(as.character(TOA))
   
   info <- list(name="make_cast_default", TIA=TIA, TOA=TOA)
-  retval <- .Call("odp_make_cast_default", TIA, TOA, info, PACKAGE = 'opendp')
+  retval <- .Call("odp_make_cast_default", TIA, TOA, info, PACKAGE = 'opendpbase')
   returnTran(retval)
 }
   
@@ -59,7 +59,7 @@ make_count_by_categories <- function(categories, null_category=TRUE, MO="L1Dista
   
   info <- list(name="make_count_by_categories", categories=categories, null_category=null_category, MO=MO, TIA=TIA, TOA=TOA)
   print(str(info))
-  retval <- .Call("odp_make_count_by_categories", categories, null_category, MO, TIA, TOA, info, PACKAGE = 'opendp')
+  retval <- .Call("odp_make_count_by_categories", categories, null_category, MO, TIA, TOA, info, PACKAGE = 'opendpbase')
   returnTran(retval)
   
 }  
@@ -82,8 +82,8 @@ make_count_by_categories <- function(categories, null_category=TRUE, MO="L1Dista
 #     
 #     **Supporting Elements:**
 #     
-#     * Input Domain:   `VectorDomain<AllDomain<TIA>>`
-#     * Output Domain:  `VectorDomain<AllDomain<TOA>>`
+#     * Input Domain:   `VectorDomain<AtomDomain<TIA>>`
+#     * Output Domain:  `VectorDomain<AtomDomain<TOA>>`
 #     * Input Metric:   `SymmetricDistance`
 #     * Output Metric:  `MO`
 #     
@@ -131,7 +131,7 @@ make_clamp <- function(bounds, TA="None") {
   TA <- rust_type(bounds[1])
   bounds <- as.list(bounds) 
   info <- list(name="make_clamp", bounds=bounds, TA=TA)
-  retval <- .Call("odp_make_clamp", bounds, TA, info, PACKAGE = 'opendp')
+  retval <- .Call("odp_make_clamp", bounds, TA, info, PACKAGE = 'opendpbase')
   returnTran(retval)
 }
 
@@ -139,7 +139,7 @@ make_count <- function(TIA = "int", TO = "int"){
   TIA <- toRust(as.character(TIA))
   TO = toRust(as.character(TO))
   info <- list(name="make_count", TIA = TIA, TO = TO)
-  retval <- .Call("odp_make_count", TIA, TO, info, PACKAGE = 'opendp')
+  retval <- .Call("odp_make_count", TIA, TO, info, PACKAGE = 'opendpbase')
   returnTran(retval)
   
 }
@@ -148,7 +148,7 @@ make_bounded_sum <- function(bounds, MI="SymmetricDistance", T="None") {
   T <- rust_type(bounds[1])
   bounds <- as.list(bounds) 
   info <- list(name="make_bounded_sum", bounds=bounds, MI=MI, T=T)
-  retval <- .Call("odp_make_bounded_sum", bounds, MI, T, info, PACKAGE = 'opendp')
+  retval <- .Call("odp_make_bounded_sum", bounds, MI, T, info, PACKAGE = 'opendpbase')
   returnTran(retval)
 }
 
@@ -157,7 +157,7 @@ make_sized_bounded_mean <- function(size, bounds, MI="SymmetricDistance", T="Non
   T <- rust_type(bounds[1])
   bounds <- as.list(bounds) 
   info <- list(name="make_sized_bounded_mean", size=size, bounds=bounds, MI=MI, T=T)
-  retval <- .Call("odp_make_sized_bounded_mean", size, bounds, MI, T, info, PACKAGE = 'opendp')
+  retval <- .Call("odp_make_sized_bounded_mean", size, bounds, MI, T, info, PACKAGE = 'opendpbase')
   returnTran(retval)
 }
 

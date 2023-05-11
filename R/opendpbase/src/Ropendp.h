@@ -6,7 +6,6 @@
 #include <Rinternals.h>
 #include <R_ext/Complex.h>
 
-#include "opendp_base.h"
 #include "opendp.h"
 
 // tag for external pointer objects

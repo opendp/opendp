@@ -36,7 +36,7 @@ make_bounded_sum(bounds, MI="SymmetricDistance", T="None")
 }
 \author{S. M. Iacus}
 \examples{
-require(opendp)
+require(opendpbase)
 bounded_sum = make_bounded_sum(bounds=c(0., 5.))
 bounded_mock_dataset = c(1.3, 3.8, 0., 5.)
 invoke(bounded_sum, bounded_mock_dataset)

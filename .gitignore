@@ -172,8 +172,8 @@ Cargo.lock
 out/
 
 /python/wheelhouse
-R/.Rproj.user
-.Rproj.user
-R/.Rhistory
-R/.Rproj.user/
-
+.Rhistory
+.Rproj/
+.Rproj.user/
+.Rbuildignore
+opendpbase.Rproj
