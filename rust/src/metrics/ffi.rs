@@ -21,7 +21,7 @@ use super::{
 )]
 /// Internal function. Free the memory associated with `this`.
 #[no_mangle]
-pub extern "C" fn opendp_core___metric_free(this: *mut AnyMetric) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_metrics___metric_free(this: *mut AnyMetric) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 

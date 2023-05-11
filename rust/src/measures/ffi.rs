@@ -20,7 +20,7 @@ use super::SmoothedMaxDivergence;
 )]
 /// Internal function. Free the memory associated with `this`.
 #[no_mangle]
-pub extern "C" fn opendp_core___measure_free(this: *mut AnyMeasure) -> FfiResult<*mut ()> {
+pub extern "C" fn opendp_measures___measure_free(this: *mut AnyMeasure) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
 
