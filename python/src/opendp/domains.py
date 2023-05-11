@@ -5,6 +5,7 @@ from opendp.mod import *
 from opendp.typing import *
 
 __all__ = [
+    "_domain_free",
     "atom_domain",
     "domain_carrier_type",
     "domain_debug",
@@ -13,6 +14,33 @@ __all__ = [
     "option_domain",
     "vector_domain"
 ]
+
+
+@versioned
+def _domain_free(
+    this
+):
+    """Internal function. Free the memory associated with `this`.
+    
+    [_domain_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/domains/fn._domain_free.html)
+    
+    :param this: 
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = this
+    
+    # Call library function.
+    lib_function = lib.opendp_domains___domain_free
+    lib_function.argtypes = [Domain]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
 
 
 @versioned
