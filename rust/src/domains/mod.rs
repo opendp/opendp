@@ -11,6 +11,9 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+mod polars;
+pub use crate::domains::polars::*;
+
 // Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.
 #[cfg(feature = "contrib")]
 use std::any::Any;

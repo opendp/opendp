@@ -7,7 +7,7 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, OptionDomain, VectorDomain, SeriesDomain, LazyFrameDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::{
@@ -20,7 +20,7 @@ use crate::metrics::{
 };
 use crate::{err, fallible};
 
-use super::any::{AnyMeasurement, AnyTransformation};
+use super::any::{AnyMeasurement, AnyTransformation, AnyDomain};
 
 // If untrusted is not enabled, then these structs don't exist.
 #[cfg(feature = "untrusted")]
@@ -245,6 +245,7 @@ macro_rules! type_vec {
 
 pub type AnyMeasurementPtr = *const AnyMeasurement;
 pub type AnyTransformationPtr = *const AnyTransformation;
+pub type AnyDomainPtr = *const AnyDomain;
 
 lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
@@ -263,7 +264,7 @@ lazy_static! {
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
-            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, SeriesDomain>],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],
@@ -273,6 +274,7 @@ lazy_static! {
             type_vec![AtomDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
+            type_vec![SeriesDomain, LazyFrameDomain],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],

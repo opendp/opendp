@@ -4,7 +4,6 @@ use std::ffi::{c_void, CString};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
-use std::path::PathBuf;
 use std::slice;
 
 use opendp_derive::bootstrap;
@@ -13,7 +12,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice};
 use crate::data::Column;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, into_c_char_p};
+use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::SMDCurve;
 use crate::traits::samplers::Shuffle;
@@ -136,6 +135,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "String" => raw_to_vec_string(raw),
                 "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
                 "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
+                "SeriesDomain" => raw_to_vec::<AnyDomainPtr>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }

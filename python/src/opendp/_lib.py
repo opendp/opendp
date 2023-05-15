@@ -12,6 +12,7 @@ ATOM_EQUIVALENCE_CLASSES = {
     'bool': ['bool'],
     'AnyMeasurementPtr': ['AnyMeasurementPtr', 'AnyMeasurement'],
     'AnyTransformationPtr': ['AnyTransformationPtr'],
+    'String': ['String', 'char'],
 }
 
 lib_dir = os.environ.get("OPENDP_LIB_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "lib"))

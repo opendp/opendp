@@ -453,8 +453,11 @@ usize = 'usize'
 f32 = 'f32'
 f64 = 'f64'
 String = 'String'
+char = 'char'
 AnyMeasurementPtr = "AnyMeasurementPtr"
 AnyTransformationPtr = "AnyTransformationPtr"
+AnyDomainPtr = "AnyDomainPtr"
+SeriesDomain = "SeriesDomain"
 
 
 class DomainDescriptor(RuntimeType):

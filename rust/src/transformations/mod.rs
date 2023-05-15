@@ -49,6 +49,11 @@ mod mean;
 pub use crate::transformations::mean::*;
 
 #[cfg(feature = "contrib")]
+mod polars;
+#[cfg(feature = "contrib")]
+pub use crate::transformations::polars::*;
+
+#[cfg(feature = "contrib")]
 mod variance;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::variance::*;
