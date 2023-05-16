@@ -81,6 +81,16 @@ pub extern "C" fn opendp_data__slice_as_object(
         let vec = slice.to_vec();
         Ok(AnyObject::new(vec))
     }
+    fn raw_to_vec_obj<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
+        let vec = slice.iter()
+            .map(|v| util::as_ref(*v)
+                .ok_or_else(|| err!(FFI, "null pointer"))
+                .and_then(|v| v.downcast_ref::<T>())
+                .map(Clone::clone))
+            .collect::<Fallible<Vec<T>>>()?;
+        Ok(AnyObject::new(vec))
+    }
     fn raw_to_tuple<T0: 'static + Clone, T1: 'static + Clone>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
@@ -136,6 +146,8 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "String" => raw_to_vec_string(raw),
                 "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
                 "AnyTransformationPtr" => raw_to_vec::<AnyTransformationPtr>(raw),
+                "(f32, f32)" => raw_to_vec_obj::<(f32, f32)>(raw),
+                "(f64, f64)" => raw_to_vec_obj::<(f64, f64)>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }

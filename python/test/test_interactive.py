@@ -8,7 +8,7 @@ from opendp.combinators import make_sequential_composition
 
 from opendp.domains import *
 from opendp.metrics import symmetric_distance
-from opendp.measures import max_divergence
+from opendp.measures import max_divergence, fixed_smoothed_max_divergence
 
 def test_sequential_composition():
     max_influence = 1
@@ -42,3 +42,16 @@ def test_sequential_composition():
     print("child release:", exact_sum_sc_qbl(noise_query))
     print("child release:", exact_sum_sc_qbl(noise_query))
     print("root release: ", sc_qbl(sum_query))
+
+
+def test_sequential_composition_approxdp():
+    max_influence = 1
+    sc_meas = make_sequential_composition(
+        input_domain=vector_domain(atom_domain(T=int)),
+        input_metric=symmetric_distance(),
+        output_measure=fixed_smoothed_max_divergence(float),
+        d_in=max_influence,
+        d_mids=[(1., 1e-6), (1., 1e-6)]
+    )
+
+    _sc_qbl: Queryable = sc_meas([1] * 200)

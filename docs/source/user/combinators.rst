@@ -95,25 +95,28 @@ See the section on :ref:`transformation-constructors` for more information on ho
 Composition
 -----------
 
-OpenDP has a basic composition combinator for composing a list of measurements into a new measurement:
-:func:`opendp.combinators.make_basic_composition`.
+OpenDP has several compositors for making multiple releases on the same dataset:
 
-.. doctest::
+.. list-table::
+   :header-rows: 1
 
-    >>> from opendp.combinators import make_basic_composition
-    >>> noisy_sum_pair = make_basic_composition([noisy_sum, noisy_sum])
-    >>> release_1, release_2 = noisy_sum_pair(dataset)
+   * - Function
+     - Description
+   * - :func:`make_basic_composition <opendp.combinators.make_basic_composition>`
+     - Non-interactive
+   * - :func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
+     - Interactive
 
-This kind of composition primitive gives a structural guarantee that all statistics are computed together in a batch.
-Thus the privacy map simply sums the constituent output distances.
+Composition combinators can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures,
+and arbitrary input metrics and domains.
 
-.. doctest::
+See the notebook for code examples and more thorough explanations:
 
-    >>> noisy_sum_pair.map(1)
-    2.0
+.. toctree::
+   :glob:
+   :titlesonly:
 
-This combinator can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures.
-More sophisticated and adaptive composition will come with interactive measurements, which are underway.
+   combinators/composition
 
 .. _measure-casting:
 
