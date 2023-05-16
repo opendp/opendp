@@ -7,14 +7,7 @@ mod discrete_gaussian;
 #[cfg(all(feature = "use-mpfr", feature = "contrib"))]
 pub use crate::measurements::discrete_gaussian::*;
 
-#[cfg(feature = "contrib")]
-mod discrete_laplace;
-#[cfg(feature = "contrib")]
-pub use crate::measurements::discrete_laplace::*;
-
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod laplace;
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub use crate::measurements::laplace::*;
 
 #[cfg(all(feature = "floating-point", feature = "contrib", feature = "use-mpfr"))]

@@ -13,13 +13,15 @@ __all__ = [
     "make_base_geometric",
     "make_base_laplace",
     "make_base_ptr",
+    "make_laplace",
     "make_randomized_response",
     "make_randomized_response_bool",
     "part_base_discrete_laplace",
     "part_base_discrete_laplace_cks20",
     "part_base_discrete_laplace_linear",
     "part_base_geometric",
-    "part_base_laplace"
+    "part_base_laplace",
+    "part_laplace"
 ]
 
 
@@ -577,6 +579,64 @@ def make_base_ptr(
     output = c_to_py(unwrap(lib_function(c_scale, c_threshold, c_k, c_TK, c_TV), Measurement))
     
     return output
+
+
+@versioned
+def make_laplace(
+    input_domain,
+    input_metric,
+    scale,
+    QO: RuntimeTypeDescriptor = "float"
+) -> Measurement:
+    """[make_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace.html)
+    
+    **Supporting Elements:**
+    
+    * Input Domain:   `D`
+    * Output Type:    `D::Carrier`
+    * Input Metric:   `D::InputMetric`
+    * Output Measure: `MaxDivergence<QO>`
+    
+    :param input_domain: 
+    :param input_metric: 
+    :param scale: 
+    :param QO: 
+    :type QO: :py:ref:`RuntimeTypeDescriptor`
+    :rtype: Measurement
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    assert_features("contrib")
+    
+    # Standardize type arguments.
+    QO = RuntimeType.parse_or_infer(type_name=QO, public_example=scale)
+    
+    # Convert arguments to c types.
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
+    c_scale = py_to_c(scale, c_type=ctypes.c_void_p, type_name=QO)
+    c_QO = py_to_c(QO, c_type=ctypes.c_char_p)
+    
+    # Call library function.
+    lib_function = lib.opendp_measurements__make_laplace
+    lib_function.argtypes = [Domain, Metric, ctypes.c_void_p, ctypes.c_char_p]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_input_domain, c_input_metric, c_scale, c_QO), Measurement))
+    
+    return output
+
+def part_laplace(
+    scale,
+    QO: RuntimeTypeDescriptor = "float"
+):
+    return PartialConstructor(lambda input_domain, input_metric: make_laplace(
+        input_domain=input_domain,
+        input_metric=input_metric,
+        scale=scale,
+        QO=QO))
+
 
 
 @versioned
