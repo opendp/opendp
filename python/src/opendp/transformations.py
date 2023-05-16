@@ -756,7 +756,7 @@ def make_clamp(
     TA = get_atom(get_type(input_domain))
     
     # Convert arguments to c types.
-    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=RuntimeType(origin='VectorDomain', args=[RuntimeType(origin='AtomDomain', args=[TA])]))
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=None)
     c_input_metric = py_to_c(input_metric, c_type=Metric, type_name=None)
 >>>>>>> 623185bb (fix doctests)
     c_bounds = py_to_c(bounds, c_type=AnyObjectPtr, type_name=RuntimeType(origin='Tuple', args=[TA, TA]))
