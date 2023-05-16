@@ -407,7 +407,8 @@ class Metric(ctypes.POINTER(AnyMetric)):
     @property
     def distance_type(self):
         from opendp.metrics import metric_distance_type
-        return metric_distance_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(metric_distance_type(self))
 
     def __str__(self):
         from opendp.metrics import metric_debug
@@ -429,7 +430,8 @@ class Measure(ctypes.POINTER(AnyMeasure)):
     @property
     def distance_type(self):
         from opendp.measures import measure_distance_type
-        return measure_distance_type(self)
+        from opendp.typing import RuntimeType
+        return RuntimeType.parse(measure_distance_type(self))
 
     def __str__(self):
         from opendp.measures import measure_debug

@@ -6,7 +6,7 @@ use crate::{
     core::FfiResult,
     ffi::{
         any::AnyMeasure,
-        util::{into_c_char_p, Type, self},
+        util::{self, into_c_char_p, Type},
     },
     measures::{FixedSmoothedMaxDivergence, MaxDivergence, ZeroConcentratedDivergence},
 };

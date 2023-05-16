@@ -25,7 +25,7 @@ try:
     ELEMENTARY_TYPES.update({
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
         np.str_: 'String',  # np.unicode_
-        np.bool8: 'bool',  # np.bool_
+        np.bool_: 'bool',  # np.bool_
         np.int8: 'i8',  # np.byte
         np.int16: 'i16',  # np.short
         np.int32: 'i32',  # np.intc

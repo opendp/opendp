@@ -69,8 +69,12 @@ pub extern "C" fn opendp_combinators__make_sequential_composition(
             .collect())
     }
 
-    let QO = try_!(output_measure.type_.get_atom());
-    let d_mids = try_!(dispatch!(repack_vec, [(QO, @numbers)], (d_mids)));
+    let QO = output_measure.distance_type.clone();
+    let d_mids = try_!(dispatch!(
+        repack_vec,
+        [(QO, [f32, f64, (f32, f32), (f64, f64)])],
+        (d_mids)
+    ));
 
     make_sequential_composition(input_domain, input_metric, output_measure, d_in, d_mids).into()
 }
