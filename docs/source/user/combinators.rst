@@ -116,7 +116,7 @@ See the notebook for code examples and more thorough explanations:
    :glob:
    :titlesonly:
 
-   combinators/composition
+   combinators/compositors
 
 .. _measure-casting:
 
