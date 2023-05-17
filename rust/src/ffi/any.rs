@@ -718,7 +718,13 @@ mod tests {
         let t3 = transformations::part_cast_default::<String, f64, SymmetricDistance>().into_any();
         let t4 = transformations::part_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
         let t5 = transformations::make_bounded_sum::<SymmetricDistance, _>((0.0, 10.0))?.into_any();
-        let m1 = measurements::make_base_laplace(AtomDomain::default(), AbsoluteDistance::default(), 0.0, None)?.into_any();
+        let m1 = measurements::make_base_laplace(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            0.0,
+            None,
+        )?
+        .into_any();
         let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg)?;

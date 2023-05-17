@@ -35,7 +35,7 @@ impl<T: Clone + CheckAtom> LaplaceDomain for VectorDomain<AtomDomain<T>> {
     derived_types(T = "$get_atom_or_infer(get_carrier_type(input_domain), scale)")
 )]
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to a scalar value.
-/// 
+///
 /// Valid inputs for `input_domain` and `input_metric` are:
 ///
 /// | `input_domain`                  | input type   | `input_metric`         |
@@ -134,14 +134,24 @@ mod tests {
 
     #[test]
     fn test_big_laplace() -> Fallible<()> {
-        let chain = make_base_laplace(AtomDomain::default(), AbsoluteDistance::default(), f64::MAX, None)?;
+        let chain = make_base_laplace(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            f64::MAX,
+            None,
+        )?;
         println!("{:?}", chain.invoke(&f64::MAX)?);
         Ok(())
     }
 
     #[test]
     fn test_make_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace(AtomDomain::default(), AbsoluteDistance::default(), 1.0, None)?;
+        let measurement = make_base_laplace(
+            AtomDomain::default(),
+            AbsoluteDistance::default(),
+            1.0,
+            None,
+        )?;
         let _ret = measurement.invoke(&0.0)?;
 
         assert!(measurement.check(&1., &1.)?);
@@ -150,7 +160,12 @@ mod tests {
 
     #[test]
     fn test_make_vector_laplace_mechanism() -> Fallible<()> {
-        let measurement = make_base_laplace(VectorDomain::new(AtomDomain::default()), L1Distance::default(), 1.0, None)?;
+        let measurement = make_base_laplace(
+            VectorDomain::new(AtomDomain::default()),
+            L1Distance::default(),
+            1.0,
+            None,
+        )?;
         let arg = vec![1.0, 2.0, 3.0];
         let _ret = measurement.invoke(&arg)?;
 

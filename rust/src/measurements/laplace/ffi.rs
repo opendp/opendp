@@ -2,7 +2,7 @@ use std::os::raw::{c_long, c_void};
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::ffi::any::{AnyMeasurement, AnyDomain, AnyMetric, Downcast};
+use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::measurements::{make_base_laplace, LaplaceDomain};
 use crate::traits::samplers::SampleDiscreteLaplaceZ2k;
 use crate::traits::{ExactIntCast, Float, FloatBits};
@@ -16,10 +16,10 @@ pub extern "C" fn opendp_measurements__make_base_laplace(
     k: c_long,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<D>(
-        input_domain: &AnyDomain, 
+        input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        scale: *const c_void, 
-        k: i32
+        scale: *const c_void,
+        k: i32,
     ) -> FfiResult<*mut AnyMeasurement>
     where
         D: 'static + LaplaceDomain,
@@ -69,7 +69,9 @@ mod tests {
     #[test]
     fn test_make_base_laplace_vec() -> Fallible<()> {
         let measurement = Result::from(opendp_measurements__make_base_laplace(
-            util::into_raw(AnyDomain::new(VectorDomain::new(AtomDomain::<f64>::default()))),
+            util::into_raw(AnyDomain::new(VectorDomain::new(
+                AtomDomain::<f64>::default(),
+            ))),
             util::into_raw(AnyMetric::new(L1Distance::<f64>::default())),
             util::into_raw(0.0) as *const c_void,
             -1078,
