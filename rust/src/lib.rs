@@ -41,7 +41,7 @@
 //! pub fn example() -> Fallible<()> {
 //!     use opendp::transformations::{make_split_lines, part_cast_default, make_cast_default, part_clamp, make_bounded_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
-//!     use opendp::measurements::partial_base_laplace;
+//!     use opendp::measurements::part_base_laplace;
 //!
 //!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
 //!     let bounds = (0.0, 100.0);
@@ -77,7 +77,7 @@
 //!         part_cast_default() >>
 //!         part_clamp(bounds) >>
 //!         make_bounded_sum(bounds)? >>
-//!         partial_base_laplace(sigma, None)
+//!         part_base_laplace(sigma, None)
 //!     )?;
 //!
 //!     // Check that the pipeline is (1, 1.0)-close
