@@ -12,12 +12,13 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
 
     :example:
 
-    >>> from opendp.mod import Measurement, enable_features
-    >>> enable_features("contrib")
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
     ...
     >>> # create an instance of Measurement using a constructor from the meas module
-    >>> from opendp.measurements import make_base_discrete_laplace
-    >>> base_dl: Measurement = make_base_discrete_laplace(scale=2.)
+    >>> base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(
+    ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),
+    ...     scale=2.)
     ...
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
@@ -28,9 +29,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     >>> assert base_dl.check(1, 0.5)
     ...
     >>> # chain with a transformation from the trans module
-    >>> from opendp.transformations import make_count
     >>> chained = (
-    ...     make_count(TIA=int) >>
+    ...     dp.t.make_count(TIA=int) >>
     ...     base_dl
     ... )
     ...
@@ -594,7 +594,7 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> def make_sum(b):
-    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.make_base_discrete_laplace(100.)
+    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.partial_base_discrete_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
     >>> meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))

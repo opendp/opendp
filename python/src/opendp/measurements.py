@@ -388,7 +388,7 @@ def make_base_geometric(
     QO: RuntimeTypeDescriptor = None
 ) -> Measurement:
     """An alias for `make_base_discrete_laplace_linear`.
-    If you don't need timing side-channel protections via `bounds`, 
+    If you don't need timing side-channel protections via `bounds`,
     `make_base_discrete_laplace` is more efficient.
     
     [make_base_geometric in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_geometric.html)

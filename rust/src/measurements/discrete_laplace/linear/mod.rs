@@ -107,7 +107,7 @@ where
     )
 )]
 /// An alias for `make_base_discrete_laplace_linear`.
-/// If you don't need timing side-channel protections via `bounds`, 
+/// If you don't need timing side-channel protections via `bounds`,
 /// `make_base_discrete_laplace` is more efficient.
 ///
 /// # Arguments
