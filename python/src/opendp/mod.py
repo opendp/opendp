@@ -594,7 +594,7 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> def make_sum(b):
-    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.partial_base_discrete_laplace(100.)
+    ...     return dp.t.make_sized_bounded_sum(10_000, (-b, b)) >> dp.m.part_base_discrete_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
     >>> meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))
