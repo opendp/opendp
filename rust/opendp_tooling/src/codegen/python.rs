@@ -227,7 +227,7 @@ fn generate_docstring(func: &Function, hierarchy: &HashMap<String, Vec<String>>)
         doc_args = doc_args,
         ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
         raises = raises
-    ).replace("|", "\\|")
+    )
 }
 
 /// generate the part of a docstring corresponding to an argument

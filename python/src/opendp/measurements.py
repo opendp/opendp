@@ -29,10 +29,10 @@ def make_base_discrete_gaussian(
     
     Set `D` to change the input data type and input metric:
     
-    \| `D`                          \| input type   \| `D::InputMetric`        \|
-    \| ---------------------------- \| ------------ \| ----------------------- \|
-    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<QI>`  \|
-    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L2Distance<QI>`        \|
+    | `D`                          | input type   | `D::InputMetric`        |
+    | ---------------------------- | ------------ | ----------------------- |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<QI>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<QI>`        |
     
     [make_base_discrete_gaussian in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_gaussian.html)
     
@@ -90,10 +90,10 @@ def make_base_discrete_laplace(
     
     Set `D` to change the input data type and input metric:
     
-    \| `D`                          \| input type   \| `D::InputMetric`       \|
-    \| ---------------------------- \| ------------ \| ---------------------- \|
-    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
-    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     This uses `make_base_discrete_laplace_cks20` if scale is greater than 10, otherwise it uses `make_base_discrete_laplace_linear`.
     
@@ -154,10 +154,10 @@ def make_base_discrete_laplace_cks20(
     Set `D` to change the input data type and input metric:
     
     
-    \| `D`                          \| input type   \| `D::InputMetric`       \|
-    \| ---------------------------- \| ------------ \| ---------------------- \|
-    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
-    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     [make_base_discrete_laplace_cks20 in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_cks20.html)
     
@@ -217,10 +217,10 @@ def make_base_discrete_laplace_linear(
     Set `D` to change the input data type and input metric:
     
     
-    \| `D`                          \| input type   \| `D::InputMetric`       \|
-    \| ---------------------------- \| ------------ \| ---------------------- \|
-    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
-    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     [make_base_discrete_laplace_linear in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_base_discrete_laplace_linear.html)
     
@@ -283,10 +283,10 @@ def make_base_gaussian(
     Set `D` to change the input data type and input metric:
     
     
-    \| `D`                          \| input type   \| `D::InputMetric`       \|
-    \| ---------------------------- \| ------------ \| ---------------------- \|
-    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
-    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L2Distance<T>`        \|
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L2Distance<T>`        |
     
     This function takes a noise granularity in terms of 2^k.
     Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -404,10 +404,10 @@ def make_base_laplace(
     
     Set `D` to change the input data type and input metric:
     
-    \| `D`                          \| input type   \| `D::InputMetric`       \|
-    \| ---------------------------- \| ------------ \| ---------------------- \|
-    \| `AtomDomain<T>` (default)     \| `T`          \| `AbsoluteDistance<T>`  \|
-    \| `VectorDomain<AtomDomain<T>>` \| `Vec<T>`     \| `L1Distance<T>`        \|
+    | `D`                          | input type   | `D::InputMetric`       |
+    | ---------------------------- | ------------ | ---------------------- |
+    | `AtomDomain<T>` (default)     | `T`          | `AbsoluteDistance<T>`  |
+    | `VectorDomain<AtomDomain<T>>` | `Vec<T>`     | `L1Distance<T>`        |
     
     
     This function takes a noise granularity in terms of 2^k.
