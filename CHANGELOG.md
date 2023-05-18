@@ -8,6 +8,10 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+
+## [0.7.0] - 2023-05-18
+[0.7.0]: https://github.com/opendp/opendp/compare/v0.6.2...v0.7.0
+
 ### Added
 - FFI and Python interfaces for creating and accessing Domains, Metrics, and Measures ([#637](https://github.com/opendp/opendp/pull/637))
 - Queryables and supporting infrastructure for interactive Measurements ([#618](https://github.com/opendp/opendp/pull/618)), ([#675](https://github.com/opendp/opendp/pull/675))
