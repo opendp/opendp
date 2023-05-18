@@ -202,10 +202,10 @@ def make_bounded_float_checked_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
     
-    \| S (summation algorithm) \| input type     \|
-    \| ----------------------- \| -------------- \|
-    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
-    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -272,10 +272,10 @@ def make_bounded_float_ordered_sum(
     You may need to use `make_ordered_random` to impose an ordering on the data.
     The utility loss from overestimating the `size_limit` is small.
     
-    \| S (summation algorithm) \| input type     \|
-    \| ----------------------- \| -------------- \|
-    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
-    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -550,12 +550,12 @@ def make_cast_default(
     Any element that fails to cast is filled with default.
     
     
-    \| `TIA`  \| `TIA::default()` \|
-    \| ------ \| ---------------- \|
-    \| float  \| `0.`             \|
-    \| int    \| `0`              \|
-    \| string \| `""`             \|
-    \| bool   \| `false`          \|
+    | `TIA`  | `TIA::default()` |
+    | ------ | ---------------- |
+    | float  | `0.`             |
+    | int    | `0`              |
+    | string | `""`             |
+    | bool   | `false`          |
     
     [make_cast_default in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_cast_default.html)
     
@@ -617,9 +617,9 @@ def make_cast_inherent(
     r"""Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`.
     If cast fails, fill with `TOA`'s null value.
     
-    \| `TIA`  \| `TIA::default()` \|
-    \| ------ \| ---------------- \|
-    \| float  \| NaN              \|
+    | `TIA`  | `TIA::default()` |
+    | ------ | ---------------- |
+    | float  | NaN              |
     
     [make_cast_inherent in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_cast_inherent.html)
     
@@ -1166,12 +1166,12 @@ def make_df_cast_default(
     If cast fails, fill with default.
     
     
-    \| `TIA`  \| `TIA::default()` \|
-    \| ------ \| ---------------- \|
-    \| float  \| `0.`             \|
-    \| int    \| `0`              \|
-    \| string \| `""`             \|
-    \| bool   \| `false`          \|
+    | `TIA`  | `TIA::default()` |
+    | ------ | ---------------- |
+    | float  | `0.`             |
+    | int    | `0`              |
+    | string | `""`             |
+    | bool   | `false`          |
     
     [make_df_cast_default in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_df_cast_default.html)
     
@@ -1314,10 +1314,10 @@ def make_drop_null(
     r"""Make a Transformation that drops null values.
     
     
-    \| input_domain                                    \|
-    \| ----------------------------------------------- \|
-    \| `vector_domain(option_domain(atom_domain(TA)))` \|
-    \| `vector_domain(atom_domain(TA))`                \|
+    | input_domain                                    |
+    | ----------------------------------------------- |
+    | `vector_domain(option_domain(atom_domain(TA)))` |
+    | `vector_domain(atom_domain(TA))`                |
     
     [make_drop_null in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_drop_null.html)
     
@@ -1554,10 +1554,10 @@ def make_impute_constant(
     If chaining after a `make_cast`, the input type is `Option<Vec<TA>>`.
     If chaining after a `make_cast_inherent`, the input type is `Vec<TA>`, where `TA` may take on float NaNs.
     
-    \| input_domain                                    \|  Input Data Type  \|
-    \| ----------------------------------------------- \| ----------------- \|
-    \| `vector_domain(option_domain(atom_domain(TA)))` \| `Vec<Option<TA>>` \|
-    \| `vector_domain(atom_domain(TA))`                \| `Vec<TA>`         \|
+    | input_domain                                    |  Input Data Type  |
+    | ----------------------------------------------- | ----------------- |
+    | `vector_domain(option_domain(atom_domain(TA)))` | `Vec<Option<TA>>` |
+    | `vector_domain(atom_domain(TA))`                | `Vec<TA>`         |
     
     [make_impute_constant in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_impute_constant.html)
     
@@ -1965,10 +1965,10 @@ def make_metric_bounded(
     The constructor enforces that the input domain has known size,
     because it must have known size to be valid under a bounded dataset metric.
     
-    \| `MI`                 \| `MI::BoundedMetric` \|
-    \| -------------------- \| ------------------- \|
-    \| SymmetricDistance    \| ChangeOneDistance   \|
-    \| InsertDeleteDistance \| HammingDistance     \|
+    | `MI`                 | `MI::BoundedMetric` |
+    | -------------------- | ------------------- |
+    | SymmetricDistance    | ChangeOneDistance   |
+    | InsertDeleteDistance | HammingDistance     |
     
     [make_metric_bounded in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_metric_bounded.html)
     
@@ -2021,10 +2021,10 @@ def make_metric_unbounded(
     r"""Make a Transformation that converts the bounded dataset metric `MI`
     to the respective unbounded dataset metric with a no-op.
     
-    \| `MI`              \| `MI::UnboundedMetric` \|
-    \| ----------------- \| --------------------- \|
-    \| ChangeOneDistance \| SymmetricDistance     \|
-    \| HammingDistance   \| InsertDeleteDistance  \|
+    | `MI`              | `MI::UnboundedMetric` |
+    | ----------------- | --------------------- |
+    | ChangeOneDistance | SymmetricDistance     |
+    | HammingDistance   | InsertDeleteDistance  |
     
     [make_metric_unbounded in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_metric_unbounded.html)
     
@@ -2077,10 +2077,10 @@ def make_ordered_random(
     r"""Make a Transformation that converts the unordered dataset metric `SymmetricDistance`
     to the respective ordered dataset metric `InsertDeleteDistance` by assigning a random permutation.
     
-    \| `MI`              \| `MI::OrderedMetric`  \|
-    \| ----------------- \| -------------------- \|
-    \| SymmetricDistance \| InsertDeleteDistance \|
-    \| ChangeOneDistance \| HammingDistance      \|
+    | `MI`              | `MI::OrderedMetric`  |
+    | ----------------- | -------------------- |
+    | SymmetricDistance | InsertDeleteDistance |
+    | ChangeOneDistance | HammingDistance      |
     
     [make_ordered_random in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_ordered_random.html)
     
@@ -2377,10 +2377,10 @@ def make_sized_bounded_float_checked_sum(
     
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     
-    \| S (summation algorithm) \| input type     \|
-    \| ----------------------- \| -------------- \|
-    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
-    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -2447,10 +2447,10 @@ def make_sized_bounded_float_ordered_sum(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size for better utility.
     You may need to use `make_ordered_random` to impose an ordering on the data.
     
-    \| S (summation algorithm) \| input type     \|
-    \| ----------------------- \| -------------- \|
-    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
-    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -2964,10 +2964,10 @@ def make_sum_of_squared_deviations(
     This uses a restricted-sensitivity proof that takes advantage of known dataset size.
     Use `make_clamp` to bound data and `make_resize` to establish dataset size.
     
-    \| S (summation algorithm) \| input type     \|
-    \| ----------------------- \| -------------- \|
-    \| `Sequential<S::Item>`   \| `Vec<S::Item>` \|
-    \| `Pairwise<S::Item>`     \| `Vec<S::Item>` \|
+    | S (summation algorithm) | input type     |
+    | ----------------------- | -------------- |
+    | `Sequential<S::Item>`   | `Vec<S::Item>` |
+    | `Pairwise<S::Item>`     | `Vec<S::Item>` |
     
     `S::Item` is the type of all of the following:
     each bound, each element in the input data, the output data, and the output sensitivity.
@@ -3039,10 +3039,10 @@ def make_unordered(
     r"""Make a Transformation that converts the ordered dataset metric `MI`
     to the respective ordered dataset metric with a no-op.
     
-    \| `MI`                 \| `MI::UnorderedMetric` \|
-    \| -------------------- \| --------------------- \|
-    \| InsertDeleteDistance \| SymmetricDistance     \|
-    \| HammingDistance      \| ChangeOneDistance     \|
+    | `MI`                 | `MI::UnorderedMetric` |
+    | -------------------- | --------------------- |
+    | InsertDeleteDistance | SymmetricDistance     |
+    | HammingDistance      | ChangeOneDistance     |
     
     [make_unordered in Rust documentation.](https://docs.rs/opendp/latest/opendp/transformations/fn.make_unordered.html)
     

@@ -223,7 +223,7 @@ def discrete_laplacian_scale_to_accuracy(
 ) -> Any:
     r"""Convert a discrete Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
     
-    $\alpha = P[Y \ge accuracy]$, where $Y = \|X - z\|$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
+    $\alpha = P[Y \ge accuracy]$, where $Y = | X - z |$, and $X \sim \mathcal{L}_{Z}(0, scale)$.
     That is, $X$ is a discrete Laplace random variable and $Y$ is the distribution of the errors.
     
     This function returns a float accuracy.
