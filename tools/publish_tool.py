@@ -23,7 +23,7 @@ def rust(args):
     log(f"*** PUBLISHING RUST LIBRARY ***")
     os.environ["CARGO_REGISTRY_TOKEN"] = os.environ["CRATES_IO_API_TOKEN"]
     # We can't do a dry run of everything, because dependencies won't be available for later crates,
-    # but we can at least do any leaf notes (i.e. opendp_tooling).
+    # but we can at least do any leaf nodes (i.e. opendp_tooling).
     dry_run_arg = " --dry-run" if args.dry_run else ""
     run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml", capture_output=False)
     if not args.dry_run:

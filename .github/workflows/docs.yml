@@ -129,9 +129,6 @@ jobs:
 
       - name: Populate docs site with pdfs
         run: |
-          # get the hash of the stable branch
-          stable_hash=$(git rev-parse origin/stable 2>/dev/null || true)
-
           # copy each folder over
           for folder in en/*; do
             release=$(basename $folder)
@@ -142,15 +139,6 @@ jobs:
               echo "moving $source/* to $target"
               mkdir -p "$target"
               mv "$source"/* "$target"
-
-              # if this release is the stable branch, duplicate it
-              release_hash=$(git rev-parse $release 2>/dev/null || true)
-              if [[ "$release_hash" == "$stable_hash" ]]; then
-                stable_target=en/stable/proofs
-                echo "copying $target/* to $stable_target"
-                mkdir -p "$stable_target"
-                cp -rp "$target"/* "$stable_target"
-              fi
             fi
           done
           
