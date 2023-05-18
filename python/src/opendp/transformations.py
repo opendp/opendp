@@ -982,7 +982,7 @@ def make_count_distinct(
     * Input Metric:   `SymmetricDistance`
     * Output Metric:  `AbsoluteDistance<TO>`
     
-    :param TIA: Atomic Input Type. Input data is expected to be of the form Vec<TIA>.
+    :param TIA: Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
     :type TIA: :py:ref:`RuntimeTypeDescriptor`
     :param TO: Output Type. Must be numeric.
     :type TO: :py:ref:`RuntimeTypeDescriptor`

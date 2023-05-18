@@ -13,8 +13,8 @@ use crate::metrics::{
 use crate::traits::{CheckAtom, CheckNull, DistanceConstant};
 
 /// A [`Domain`] representing a dataset.
-/// 
-/// This is distinguished from other domains 
+///
+/// This is distinguished from other domains
 /// because each element in the dataset corresponds to an individual.
 pub trait DatasetDomain: Domain {
     /// The domain of each element in the dataset.
@@ -90,7 +90,9 @@ pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     input_metric: M,
     output_row_domain: DO::ElementDomain,
     row_function: impl 'static
-        + Fn(&<DI::ElementDomain as Domain>::Carrier) -> Fallible<<DO::ElementDomain as Domain>::Carrier>,
+        + Fn(
+            &<DI::ElementDomain as Domain>::Carrier,
+        ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>,
 ) -> Fallible<Transformation<DI, DO, M, M>>
 where
     DI: RowByRowDomain<DO>,
