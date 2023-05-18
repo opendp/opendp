@@ -8,13 +8,43 @@ Please keep this up to date, following the [instructions](#instructions) below.
 
 ## [Unreleased](https://github.com/opendp/opendp/compare/stable...HEAD)
 
+### Added
+- FFI and Python interfaces for creating and accessing Domains, Metrics, and Measures ([#637](https://github.com/opendp/opendp/pull/637))
+- Queryables and supporting infrastructure for interactive Measurements ([#618](https://github.com/opendp/opendp/pull/618)), ([#675](https://github.com/opendp/opendp/pull/675))
+- Constructor for sequential composition of Measurements ([#674](https://github.com/opendp/opendp/pull/674))
+- Checks for compatibility between pairings of Domains and Metrics/Measures ([#604](https://github.com/opendp/opendp/pull/604))
+- Python `opendp.extrinsics` module for code contributions and proofs outside of Rust ([#693](https://github.com/opendp/opendp/pull/693))
+- Docs: [First Look at DP](https://docs.opendp.org/en/v0.7.0/user/first-look-at-DP.html) notebook ([#666](https://github.com/opendp/opendp/pull/666))
+- Docs: [Compositors](https://docs.opendp.org/en/v0.7.0/user/combinators/compositors.html) notebook, with usage of interactive Measurements ([#735](https://github.com/opendp/opendp/pull/735))
+
+### Changed
+- Incorporated Domain instances into some constructor signatures ([#650](https://github.com/opendp/opendp/pull/650))
+- Simplified postprocessors to Function (from previous full Transformation) ([#648](https://github.com/opendp/opendp/pull/648))
+- Moved some Domain logic from type-inherent constraints to runtime checks of more general types ([#645](https://github.com/opendp/opendp/pull/645)), ([#696](https://github.com/opendp/opendp/pull/696))
+  - Remove SizedDomain in favor of a runtime size descriptor on VectorDomain
+  - Remove BoundedDomain in favor of a runtime bounds descriptor on AtomDomain
+  - Remove InherentNullDomain in favor of a runtime nullity descriptor on AtomDomain
+- Removed the default Domain limitation on [user-defined callbacks](https://docs.opendp.org/en/v0.7.0/user/combinators.html#user-defined-callbacks),
+  and renamed constructors from `make_default_user_XXX()` to `make_user_XXX` ([#650](https://github.com/opendp/opendp/pull/650))
+- Docs: Improved the clarity of the [User Guide](https://docs.opendp.org/en/v0.7.0/user/index.html) based on feedback ([#639](https://github.com/opendp/opendp/pull/639))
+- Docs: Renamed the Developer Guide to [Contributor Guide](https://docs.opendp.org/en/v0.7.0/contributor/index.html) ([#639](https://github.com/opendp/opendp/pull/639))
+
+### Deprecated
+- AllDomain in the Python bindings, with a warning to switch to AtomDomain ([#645](https://github.com/opendp/opendp/pull/645))
+
+### Removed
+- The `output_domain` field of Measurement struct ([#647](https://github.com/opendp/opendp/pull/647))
+
+### Fixed
+- Switched to from `backtrace` crate to `std::backtrace`, and fixed some corner cases, for much faster backtrace resolution ([#691](https://github.com/opendp/opendp/pull/691))
+- Whole-codebase reformat using `rustfmt` to minimize spurious churn in the future ([#669](https://github.com/opendp/opendp/pull/669))
+
 
 ## [0.6.2] - 2023-02-06
 [0.6.2]: https://github.com/opendp/opendp/compare/v0.6.1...v0.6.2
 
 ### Added
-
-- [support for user-defined callbacks under explicit opt-in](https://docs.opendp.org/en/latest/user/combinators.html#user-defined-callbacks)
+- [support for user-defined callbacks under explicit opt-in](https://docs.opendp.org/en/v0.6.2/user/combinators.html#user-defined-callbacks)
     - researchers may construct their own transformations, measurements and postprocessors in Python
     - these "custom" components may be interleaved with other components in the library
 - expanded docs.opendp.org User Guide with more explanatory notebooks

@@ -1,5 +1,12 @@
 name: Release
 on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (DISABLE WITH CARE)
+        required: true
+        type: boolean
+        default: true
   release:
     types:
       - published
@@ -17,6 +24,12 @@ jobs:
           permission: admin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # If we're on a test branch, make sure this is a dry run.
+      - name: Check branch / dry run compatibility
+        env:
+          BRANCH_DRY_RUN_OK: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.dry_run) && 'true' || 'false' }}
+        run: if [[ $BRANCH_DRY_RUN_OK == true ]]; then echo OK; else echo 'Disabled dry run on non-release branch!'; exit 1; fi
 
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -164,7 +177,7 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [ python-pre-publish-windows, python-pre-publish-mac, python-pre-publish-linux ]
     env:
-      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -206,9 +219,11 @@ jobs:
         run: bash tools/python_build.sh -i
 
       - name: Publish Python package
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py python
+          python tools/publish_tool.py python $DRY_RUN_FLAG
 
 
   rust-publish:
@@ -227,6 +242,8 @@ jobs:
           cache: pip
 
       - name: Publish Rust crate
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '-n' || '-nn' }}
         run: |
           pip install -r tools/requirements-publish_tool.txt
-          python tools/publish_tool.py rust
+          python tools/publish_tool.py rust $DRY_RUN_FLAG

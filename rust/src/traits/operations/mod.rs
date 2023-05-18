@@ -7,6 +7,7 @@ use num::{One, Zero};
 
 use crate::domains::Bounds;
 use crate::error::Fallible;
+#[cfg(feature = "contrib")]
 use crate::interactive::Queryable;
 
 use super::ExactIntCast;
@@ -297,6 +298,7 @@ impl CheckNull for rug::Integer {
         false
     }
 }
+#[cfg(feature = "contrib")]
 impl<Q, A> CheckNull for Queryable<Q, A> {
     #[inline]
     fn is_null(&self) -> bool {

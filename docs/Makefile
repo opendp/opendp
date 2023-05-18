@@ -42,7 +42,7 @@ doctest: doctest-rust doctest-python
 	@echo "Doctest finished. The output is in $(BUILDDIR)/doctest/output.txt."
 
 doctest-rust:
-	cd ../rust && $(CARGO) test --doc
+	cd ../rust && $(CARGO) test --doc --features untrusted,ffi
 
 doctest-python: html
 	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest

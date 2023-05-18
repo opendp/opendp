@@ -20,9 +20,10 @@ use std::marker::PhantomData;
 use crate::{
     core::{Domain, Metric, MetricSpace},
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
-    traits::{CheckAtom, Hashable},
-    transformations::DataFrameDomain,
+    traits::CheckAtom,
 };
+#[cfg(feature = "contrib")]
+use crate::{traits::Hashable, transformations::DataFrameDomain};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -52,7 +53,6 @@ pub type IntDistance = u32;
 /// # Compatible Domains
 ///
 /// * `VectorDomain<D>` for any valid `D`
-/// * `SizedDomain<VectorDomain<D>>` for any valid `D`
 ///
 /// When this metric is paired with a `VectorDomain`, we instead consider the multisets corresponding to $u, v \in \texttt{D}$.
 #[derive(Clone)]
@@ -90,6 +90,8 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
         true
     }
 }
+
+#[cfg(feature = "contrib")]
 impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
     fn check(&self) -> bool {
         true
@@ -123,7 +125,6 @@ impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
 /// # Compatible Domains
 ///
 /// * `VectorDomain<D>` for any valid `D`
-/// * `SizedDomain<VectorDomain<D>>` for any valid `D`
 #[derive(Clone)]
 pub struct InsertDeleteDistance;
 
@@ -160,7 +161,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
 /// it is a bounded metric (for bounded DP).
 ///
 /// Since this metric is bounded, the dataset size must be fixed.
-/// Thus we only consider neighboring datasets with the same fixed size: [`crate::domains::SizedDomain`].
+/// Thus we only consider neighboring datasets with the same fixed size: [`crate::domains::VectorDomain::size`].
 ///
 /// # Proof Definition
 ///
@@ -188,7 +189,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
 ///
 /// # Compatible Domains
 ///
-/// * `SizedDomain<D>` for any valid `D`
+/// * `VectorDomain<D>` for any valid `D`, when `VectorDomain::size.is_some()`.
 #[derive(Clone)]
 pub struct ChangeOneDistance;
 
@@ -225,7 +226,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, ChangeOneDistance) {
 /// it is a bounded metric (for bounded DP).
 ///
 /// Since this metric is bounded, the dataset size must be fixed.
-/// Thus we only consider neighboring datasets with the same fixed size: [`crate::domains::SizedDomain`].
+/// Thus we only consider neighboring datasets with the same fixed size: [`crate::domains::VectorDomain::size`].
 ///
 /// # Proof Definition
 ///
@@ -248,7 +249,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, ChangeOneDistance) {
 ///
 /// # Compatible Domains
 ///
-/// * `SizedDomain<D>` for any valid `D`
+/// * `VectorDomain<D>` for any valid `D`, when `VectorDomain::size.is_some()`.
 #[derive(Clone)]
 pub struct HammingDistance;
 
@@ -297,9 +298,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
 /// # Compatible Domains
 ///
 /// * `VectorDomain<D>` for any valid `D`
-/// * `SizedDomain<VectorDomain<D>>` for any valid `D`
 /// * `MapDomain<D>` for any valid `D`
-/// * `SizedDomain<MapDomain<D>>` for any valid `D`
 pub struct LpDistance<const P: usize, Q>(PhantomData<Q>);
 impl<const P: usize, Q> Default for LpDistance<P, Q> {
     fn default() -> Self {
@@ -419,7 +418,7 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 /// 1 is the expected argument on measurements that use this distance.
 ///
 /// # Compatible Domains
-/// * AtomDomain<T> for any valid `T`.
+/// * `AtomDomain<T>` for any valid `T`.
 #[derive(Clone)]
 pub struct DiscreteDistance;
 
