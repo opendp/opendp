@@ -59,7 +59,6 @@ mid=`date +%s`
 echo "  🦀 cargo build         ($((mid-start)) s) $LOG_DIR/cargo_build.ans"
 
 # all tasks below this line run in parallel and are compared against the `mid` timestamp
-(trap 'kill 0' SIGINT;
 
 # check that rust code is formatted (use -- --check to get nonzero exit code)
 if ! cargo fmt --manifest-path=./rust/Cargo.toml -- --check > $LOG_DIR/cargo_fmt.ans 2>&1
@@ -70,6 +69,15 @@ then
 fi && echo "  🧹 cargo fmt --check   ($((`date +%s`-mid)) s) $LOG_DIR/cargo_fmt.ans" &
 pid_cargo_fmt=$!
 
+# check that windows build works
+if ! cargo check --color=always --manifest-path=./rust/Cargo.toml --no-default-features --features untrusted,ffi > $LOG_DIR/cargo_check_windows.ans 2>&1
+then
+    echo "cargo check windows failed"
+    cat $LOG_DIR/cargo_check_windows.ans
+    false
+fi && echo "  🪟  cargo check windows ($((`date +%s`-mid)) s) $LOG_DIR/cargo_check_windows.ans" &
+pid_cargo_check_windows=$!
+
 # python tests
 if ! pytest --color=yes python/test > $LOG_DIR/pytest.ans
 then    
@@ -79,8 +87,8 @@ then
 fi && echo "  🐍 pytest              ($((`date +%s`-mid)) s) $LOG_DIR/pytest.ans" &
 pid_pytest=$!
 
-# build html
-if ! make -C docs html > $LOG_DIR/make_html.ans 2>&1 
+# build html (sleep to avoid https://github.com/sphinx-doc/sphinx/issues/10111)
+if ! (sleep 1 && make -C docs html) > $LOG_DIR/make_html.ans 2>&1 
 then
     echo "make html failed ($((`date +%s`-mid)) s)"
     cat $LOG_DIR/make_html.ans
@@ -96,15 +104,6 @@ then
     false
 fi && echo "  📖 make doctest-python ($((`date +%s`-mid)) s) $LOG_DIR/make_doctest-python.ans" &
 pid_make_doctest_python=$!
-
-# check that windows build works
-if ! cargo check --color=always --manifest-path=./rust/Cargo.toml --no-default-features --features untrusted,ffi > $LOG_DIR/cargo_check_windows.ans 2>&1
-then
-    echo "cargo check windows failed"
-    cat $LOG_DIR/cargo_check_windows.ans
-    false
-fi && echo "  🪟  cargo check windows ($((`date +%s`-mid)) s) $LOG_DIR/cargo_check_windows.ans" &
-pid_cargo_check_windows=$!
 
 # type-check python notebooks
 if (nbqa pyright docs/source || true) 2>&1 | grep -E "Argument missing for parameter| is not defined" --color=always > $LOG_DIR/nbqa_pyright.ans 2>&1
@@ -136,13 +135,12 @@ pid_cargo_test=$!
 # separate lines so that exit codes are not ignored
 wait $pid_cargo_fmt 
 wait $pid_pytest 
-wait $pid_make_doctest_python 
-wait $pid_make_html 
 wait $pid_cargo_check_windows 
+wait $pid_make_html
+wait $pid_make_doctest_python 
 wait $pid_nbqa_pyright 
 wait $pid_cargo_test 
 # wait $pid_pytest_nbmake
-)
 
 echo `last_modified_timestamp` > $LOG_DIR/last_modified.ans
 echo "done                     ($((`date +%s`-start)) s) $LOG_DIR/last_modified.ans"
