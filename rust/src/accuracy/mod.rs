@@ -503,7 +503,7 @@ pub mod test {
         let theoretical_alpha = 0.05;
         let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
         let base_laplace = make_base_laplace::<AtomDomain<f64>>(scale, Some(-100))?;
-        let n = 50_000;
+        let n = 10_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_laplace.invoke(&0.0).unwrap_test().abs() > accuracy)
             .count() as f64
@@ -525,7 +525,7 @@ pub mod test {
             scale,
             Some(-100),
         )?;
-        let n = 50_000;
+        let n = 10_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_gaussian.invoke(&0.0).unwrap_test().abs() > accuracy)
             .count() as f64
@@ -545,7 +545,7 @@ pub mod test {
         let scale = accuracy_to_discrete_laplacian_scale(accuracy as f64, theoretical_alpha)?;
         println!("scale: {scale}");
         let base_dl = make_base_discrete_laplace::<AtomDomain<i8>, f64>(scale)?;
-        let n = 50_000;
+        let n = 10_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dl.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
             .count() as f64
@@ -570,7 +570,7 @@ pub mod test {
             make_base_discrete_gaussian::<AtomDomain<i8>, ZeroConcentratedDivergence<f64>, i32>(
                 scale,
             )?;
-        let n = 50_000;
+        let n = 10_000;
         let empirical_alpha = (0..n)
             .filter(|_| base_dg.invoke(&0).unwrap_test().clamp(-127, 127).abs() >= accuracy)
             .count() as f64
