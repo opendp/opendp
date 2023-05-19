@@ -150,7 +150,10 @@ Cargo.lock
 
 # IDE projects
 .idea
-.vscode
+
+.vscode/*
+!.vscode/settings.default.json
+!.vscode/tasks.default.json
 
 .DS_Store
 

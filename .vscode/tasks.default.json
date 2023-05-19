@@ -1,0 +1,443 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "🔥 local-smoke-test",
+            "detail": "    run the equivalent of the CI smoke-test",
+            "type": "shell",
+            "command": "bash .vscode/local-smoke-test.sh",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "base": "$rustc",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/rust"
+                    ]
+                },
+                {
+                    "owner": "rust-fmt",
+                    "pattern": {
+                        "regexp": "^(Diff) in (.*) at line (\\d+):$",
+                        "message": 1,
+                        "file": 2,
+                        "line": 3
+                    },
+                    "fileLocation": [
+                        "absolute"
+                    ]
+                },
+                {
+                    "owner": "pytest",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}"
+                    ],
+                    "pattern": {
+                        "regexp": "^(.*\\.py):(\\d+): (.*)$",
+                        "file": 1,
+                        "line": 2,
+                        "message": 3
+                    }
+                },
+                {
+                    "owner": "make html",
+                    "fileLocation": [
+                        "absolute"
+                    ],
+                    "pattern": {
+                        "regexp": "^(.*\\.rst):([0-9]+): (WARNING|ERROR):(.*)$",
+                        "file": 1,
+                        "line": 2,
+                        "severity": 3,
+                        "message": 4
+                    }
+                },
+                {
+                    "owner": "make doctest-python",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/docs/source"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^File \"(.*\\.rst)\", line (\\d+), in (.*)$",
+                            "file": 1,
+                            "line": 2
+                        },
+                        {
+                            "regexp": "Failed example:"
+                        },
+                        {
+                            "regexp": "^ *(.*)",
+                            "message": 1
+                        }
+                    ]
+                },
+                {
+                    "owner": "make doctest-python",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/docs/source"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^File \"(.*\\.rst)\", line (\\d+), in (.*)$",
+                            "file": 1,
+                            "line": 2
+                        },
+                        {
+                            "regexp": "Failed example:"
+                        },
+                        {
+                            "regexp": "^ *(.*)",
+                            "message": 1
+                        }
+                    ]
+                },
+                {
+                    "owner": "pyright",
+                    "fileLocation": [
+                        "absolute"
+                    ],
+                    "pattern": {
+                        "regexp": "^  (.*):(\\d+):(\\d+) - (warning|error): (.*)",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                }
+            ]
+        },
+        {
+            "label": "🦀 cargo build --features untrusted,bindings-python",
+            "detail": "    run before testing in Python",
+            "type": "cargo",
+            "command": "build",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "untrusted bindings-python"
+            ],
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "rust/ cargo fmt (format)",
+            "detail": "    format all Rust code",
+            "type": "cargo",
+            "command": "fmt",
+            "problemMatcher": {
+                "owner": "rust-fmt",
+                "pattern": {
+                    "regexp": "^(Diff) in (.*) at line (\\d+):$",
+                    "message": 1,
+                    "file": 2,
+                    "line": 3
+                },
+                "fileLocation": [
+                    "absolute"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "rust/ cargo check --features untrusted",
+            "detail": "    gives more detailed compiler errors than problems tab",
+            "type": "cargo",
+            "command": "check",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "untrusted"
+            ],
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "rust/ cargo test --no-default-features --features untrusted,bindings-python",
+            "detail": "    test a build without GMP/MPFR/OpenSSL (Windows)",
+            "type": "cargo",
+            "command": "test",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--no-default-features",
+                "--features",
+                "bindings-python untrusted"
+            ],
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "rust/ cargo test --features untrusted,ffi",
+            "detail": "    run all Rust tests, including ffi",
+            "type": "cargo",
+            "command": "test",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "bindings-python untrusted"
+            ],
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "rust/ cargo clippy --features ffi",
+            "detail": "    more detailed linting and style suggestions",
+            "type": "cargo",
+            "command": "clippy",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ],
+                "source": "clippy"
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "bindings-python untrusted"
+            ],
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "rust/ cargo rustdoc",
+            "detail": "    build rust documentation",
+            "type": "cargo",
+            "command": "rustdoc",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "derive untrusted ffi",
+                "${input:rustdoc-open}",
+                "--",
+                "--html-in-header",
+                "katex.html"
+            ],
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "rust/ cargo fix",
+            "detail": "    apply cargo fixes",
+            "type": "cargo",
+            "command": "fix",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--features",
+                "derive untrusted ffi"
+            ],
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "python/ pyright",
+            "detail": "    python static analysis",
+            "options": {
+                "cwd": "./python"
+            },
+            "type": "shell",
+            "command": "workon opendp; pyright",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "owner": "pyright",
+                    "fileLocation": [
+                        "absolute"
+                    ],
+                    "pattern": {
+                        "regexp": "^  (.*):(\\d+):(\\d+) - (warning|error): (.*)",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                }
+            ]
+        },
+        {
+            "label": "docs/ make html",
+            "type": "shell",
+            "options": {
+                "cwd": "./docs"
+            },
+            "command": "workon opendp && make html && ${input:sphinx-open} '${workspaceFolder}/docs/build/html/index.html'",
+            "group": "build",
+            "problemMatcher": [
+                {
+                    "owner": "make html",
+                    "fileLocation": [
+                        "absolute"
+                    ],
+                    "pattern": {
+                        "regexp": "^(.*\\.rst):([0-9]+): (WARNING|ERROR):(.*)$",
+                        "file": 1,
+                        "line": 2,
+                        "severity": 3,
+                        "message": 4
+                    }
+                }
+            ]
+        },
+        {
+            "label": "docs/ make doctest-python",
+            "type": "shell",
+            "options": {
+                "cwd": "./docs"
+            },
+            "command": "workon opendp; make doctest-python",
+            "group": "build",
+            "problemMatcher": [
+                {
+                    "owner": "doctest-python",
+                    "fileLocation": [
+                        "relative",
+                        "${workspaceFolder}/docs/source"
+                    ],
+                    "pattern": [
+                        {
+                            "regexp": "^File \"(.*\\.rst)\", line (\\d+), in (.*)$",
+                            "file": 1,
+                            "line": 2
+                        },
+                        {
+                            "regexp": "Failed example:"
+                        },
+                        {
+                            "regexp": "^ *(.*)",
+                            "message": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "label": "docs/ make doctest-notebooks",
+            "type": "shell",
+            "options": {
+                "cwd": "./docs"
+            },
+            "command": "workon opendp; make doctest-notebooks",
+            "group": "build"
+        },
+        {
+            "label": "docs/ nbmake current notebook",
+            "type": "shell",
+            "command": "workon opendp; pytest --nbmake ${file}",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        }
+    ],
+    "inputs": [
+        {
+          "id": "rustdoc-open",
+          "description": "Open in browser? (default is no)",
+          "type": "pickString",
+          "options": [
+              "--color=auto",
+              "--open"
+          ],
+          "default": "--color=auto"
+        },
+        {
+            "id": "sphinx-open",
+            "description": "Open in browser? (default is no)",
+            "type": "pickString",
+            "options": [
+                "echo",
+                "open",
+                "xdg-open"
+            ],
+            "default": "echo"
+          }
+      ]
+}

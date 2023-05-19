@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
-SPHINXOPTS    = -W --keep-going
+SPHINXOPTS    = -W --keep-going -n
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
@@ -49,6 +49,9 @@ doctest-rust:
 
 doctest-python: apidoc
 	$(SPHINXBUILD) $(SPHINXOPTS) -b doctest source $(BUILDDIR)/doctest
+
+doctest-notebooks:
+	bash -c "shopt -s globstar && pytest -x --nbmake source/**/*.ipynb -n=auto"
 
 versions:
 	# "/en" is the default, but someday we might have translations
