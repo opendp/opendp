@@ -707,7 +707,8 @@ where
             self.function.into_any(),
             AnyMetric::new(self.input_metric),
             AnyMeasure::new(self.output_measure),
-        ).expect("compatibility check already passed")
+        )
+        .expect("compatibility check already passed")
     }
 }
 
@@ -724,7 +725,8 @@ impl<TO: 'static> IntoAnyOdometerOutExt for Odometer<AnyDomain, TO, AnyMetric, A
             self.function.into_any_out(),
             self.input_metric,
             self.output_measure,
-        ).expect("compatibility check already passed")
+        )
+        .expect("compatibility check already passed")
     }
 }
 
