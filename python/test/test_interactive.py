@@ -60,7 +60,7 @@ def test_sequential_odometer():
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
         output_measure=dp.max_divergence(float),
-        Q="AnyMeasurement"
+        Q=dp.Measurement
     )
 
     sc_qbl: Queryable = sc_odo([1] * 200)
@@ -86,4 +86,4 @@ def test_sequential_odometer():
     print("child release:", exact_sum_sc_qbl(noise_query))
     print("root release: ", sc_qbl(sum_query))
 
-test_sequential_odometer()
+    print("privacy usage", sc_qbl.map(1))

@@ -180,36 +180,31 @@ class Odometer(ctypes.POINTER(AnyOdometer)):
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
     ...
-    >>> base_rr = dp.m.make_randomized_response(prob=0.75)
+    >>> base_rr = dp.m.make_randomized_response_bool(prob=0.6)
     ...
     >>> # create an instance of Odometer using a sequential odometer constructor
-    >>> sc_odo = dp.make_sequential_odometer(
+    >>> so_odo = dp.c.make_sequential_odometer(
     ...     input_domain=base_rr.input_domain,
     ...     input_metric=base_rr.input_metric,
-    ...     output_measure=base_rr.output_measure
+    ...     output_measure=base_rr.output_measure,
+    ...     Q=dp.Measurement # indicates that queries will be measurements (as opposed to odometers)
     ... )
     ...
-    >>> # invoke the odometer (invoke and __call__ are equivalent)
-    >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
-    >>> base_dl(100)  # -> 99           # doctest: +SKIP
+    >>> # invoke the odometer to get a queryable
+    >>> so_qbl = so_odo(True)
     ...
-    >>> # check the measurement's relation at
-    >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
-    >>> assert base_dl.check(1, 0.5)
+    >>> # evaluate the queryable (eval and __call__ are equivalent)
+    >>> _ = so_qbl(base_rr) # -> True wp 0.6
     ...
-    >>> # chain with a transformation from the trans module
-    >>> from opendp.transformations import make_count
-    >>> chained = (
-    ...     make_count(TIA=int) >>
-    ...     base_dl
-    ... )
+    >>> # pass a second query to the same queryable and get a second release
+    >>> _ = so_qbl(base_rr) # -> True wp 0.6
     ...
-    >>> # the resulting measurement has the same features
-    >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
-    >>> # check the chained measurement's relation at
-    >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
-    >>> assert chained.check(1, 0.5)
+    >>> # determine the odometer's privacy consumption (in terms of ε)
+    >>> # when the input dataset may differ by discrete distance 1
+    >>> so_qbl.map(1)
+    0.8109302162163288
     """
+
     _type_ = AnyMeasurement
 
     def __call__(self, arg):
@@ -484,12 +479,19 @@ class Queryable(object):
         self.value = value
 
     def __call__(self, query):
-        from opendp.core import queryable_eval
+        from opendp.core import queryable_eval, odometer_queryable_invoke
+        
+        if self.query_type == "AnyOdometerQuery":
+            return odometer_queryable_invoke(self.value, query)
+        
         return queryable_eval(self.value, query)
     
     def eval(self, query):
-        from opendp.core import queryable_eval
-        return queryable_eval(self.value, query)
+        return self(query)
+    
+    def map(self, d_in):
+        from opendp.core import odometer_queryable_map
+        return odometer_queryable_map(self.value, d_in)
 
     @property
     def query_type(self):

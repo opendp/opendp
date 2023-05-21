@@ -1,6 +1,9 @@
 pub mod filter;
 pub mod sequential;
 
+#[cfg(feature = "ffi")]
+pub(crate) mod ffi;
+
 use std::any::Any;
 
 use crate::{

@@ -7,8 +7,9 @@ use opendp_derive::bootstrap;
 
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
-    AnyFunction, AnyMeasurement, AnyObject, AnyOdometerQueryable, AnyQueryable, AnyTransformation,
-    Downcast, IntoAnyFunctionExt, IntoAnyMeasurementExt, IntoAnyTransformationExt, QueryType,
+    AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, AnyTransformation, Downcast,
+    IntoAnyFunctionExt, IntoAnyMeasurementExt, IntoAnyTransformationExt, QueryOdometerInvokeType,
+    QueryOdometerMapType, QueryType,
 };
 use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, Type};
@@ -309,87 +310,41 @@ pub extern "C" fn opendp_core__queryable_query_type(
 }
 
 #[bootstrap(
-    name = "odometer_queryable_invoke",
-    arguments(
-        queryable(rust_type = b"null"),
-        query(rust_type = "$odometer_queryable_invoke_query_type(queryable)")
-    )
-)]
-/// Eval the odometer `queryable` with an invoke `query`. Returns a differentially private release.
-///
-/// # Arguments
-/// * `queryable` - Queryable to eval.
-/// * `query` - Invoke query to supply to the queryable.
-#[no_mangle]
-pub extern "C" fn opendp_core__odometer_queryable_invoke(
-    queryable: *mut AnyObject,
-    query: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let queryable = try_as_mut_ref!(queryable);
-    let queryable = try_!(queryable.downcast_mut::<AnyOdometerQueryable>());
-    let query = try_as_ref!(query).clone();
-    queryable.eval_invoke(query).into()
-}
-
-#[bootstrap(
-    name = "odometer_queryable_map",
-    arguments(
-        queryable(rust_type = b"null"),
-        query(rust_type = "$odometer_queryable_map_query_type(queryable)")
-    )
-)]
-/// Eval the odometer `queryable` with a map `query`. Returns the current d_out.
-///
-/// # Arguments
-/// * `queryable` - Queryable to eval.
-/// * `query` - Map query to supply to the queryable.
-#[no_mangle]
-pub extern "C" fn opendp_core__odometer_queryable_map(
-    queryable: *mut AnyObject,
-    query: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let queryable = try_as_mut_ref!(queryable);
-    let queryable = try_!(queryable.downcast_mut::<AnyOdometerQueryable>());
-    let query = try_as_ref!(query).clone();
-    queryable.eval_map(query).into()
-}
-
-#[bootstrap(
-    name = "odometer_queryable_invoke_query_type",
+    name = "queryable_query_odometer_invoke_type",
     arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<char *>")
 )]
-/// Get the invoke type of an odometer `queryable`.
+/// Get the query odometer invoke type of `queryable`.
 ///
 /// # Arguments
-/// * `this` - The odometer queryable to retrieve the invoke query type from.
+/// * `this` - The queryable to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__odometer_queryable_invoke_query_type(
+pub extern "C" fn opendp_core__queryable_query_odometer_invoke_type(
     this: *mut AnyObject,
 ) -> FfiResult<*mut c_char> {
     let this = try_as_mut_ref!(this);
-    let this = try_!(this.downcast_mut::<AnyOdometerQueryable>());
-    let (invoke_type, _map_type): (Type, Type) = try_!(this.eval_internal(&QueryType));
-    FfiResult::Ok(try_!(into_c_char_p(invoke_type.descriptor.to_string())))
+    let this = try_!(this.downcast_mut::<AnyQueryable>());
+    let answer: Type = try_!(this.eval_internal(&QueryOdometerInvokeType));
+    FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
 }
 
 #[bootstrap(
-    name = "odometer_queryable_map_query_type",
+    name = "queryable_query_odometer_map_type",
     arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<char *>")
 )]
-/// Get the map type of an odometer `queryable`.
+/// Get the query odometer map type of `queryable`.
 ///
 /// # Arguments
-/// * `this` - The odometer queryable to retrieve the map query type from.
+/// * `this` - The queryable to retrieve the type from.
 #[no_mangle]
-pub extern "C" fn opendp_core__odometer_queryable_map_query_type(
+pub extern "C" fn opendp_core__queryable_query_odometer_map_type(
     this: *mut AnyObject,
 ) -> FfiResult<*mut c_char> {
     let this = try_as_mut_ref!(this);
-    let this = try_!(this.downcast_mut::<AnyOdometerQueryable>());
-    let (invoke_type, _map_type): (Type, Type) = try_!(this.eval_internal(&QueryType));
-    FfiResult::Ok(try_!(into_c_char_p(invoke_type.descriptor.to_string())))
+    let this = try_!(this.downcast_mut::<AnyQueryable>());
+    let answer: Type = try_!(this.eval_internal(&QueryOdometerMapType));
+    FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
 }
 
 #[cfg(test)]

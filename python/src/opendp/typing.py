@@ -231,7 +231,6 @@ class RuntimeType(object):
                     return ELEMENTARY_TYPES[float]
                 return type_name
 
-        print("type name", type_name)
         if isinstance(type_name, Hashable) and type_name in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type_name]
 

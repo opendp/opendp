@@ -1,8 +1,14 @@
 use opendp_derive::bootstrap;
 
-use crate::ffi::{
-    any::{AnyDomain, AnyFunction, AnyMeasure, AnyMetric, AnyObject, AnyOdometer},
-    util,
+use crate::{
+    combinators::ffi::{AnyOdometerAnswer, AnyOdometerQuery},
+    ffi::{
+        any::{
+            AnyDomain, AnyFunction, AnyMeasure, AnyMetric, AnyObject, AnyOdometer, AnyQueryable,
+            Downcast,
+        },
+        util,
+    },
 };
 
 use super::FfiResult;
@@ -104,14 +110,68 @@ pub extern "C" fn opendp_core___odometer_free(this: *mut AnyOdometer) -> FfiResu
     util::into_owned(this).map(|_| ()).into()
 }
 
+#[bootstrap(
+    name = "odometer_queryable_invoke",
+    arguments(
+        queryable(rust_type = b"null"),
+        query(rust_type = "$queryable_query_odometer_invoke_type(queryable)")
+    )
+)]
+/// Eval the odometer `queryable` with an invoke `query`. Returns a differentially private release.
+///
+/// # Arguments
+/// * `queryable` - Queryable to eval.
+/// * `query` - Invoke query to supply to the queryable.
+#[no_mangle]
+pub extern "C" fn opendp_core__odometer_queryable_invoke(
+    queryable: *mut AnyObject,
+    query: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let queryable = try_!(try_as_mut_ref!(queryable).downcast_mut::<AnyQueryable>());
+    let query = AnyObject::new(AnyOdometerQuery::Invoke(try_as_ref!(query).clone()));
+    let answer = try_!(try_!(queryable.eval(&query)).downcast::<AnyOdometerAnswer>());
+    if let AnyOdometerAnswer::Invoke(answer) = answer {
+        Ok(answer).into()
+    } else {
+        fallible!(FailedCast, "return type is a d_out").into()
+    }
+}
+
+#[bootstrap(
+    name = "odometer_queryable_map",
+    arguments(
+        queryable(rust_type = b"null"),
+        query(rust_type = "$queryable_query_odometer_map_type(queryable)")
+    )
+)]
+/// Eval the odometer `queryable` with a map `query`. Returns the current d_out.
+///
+/// # Arguments
+/// * `queryable` - Queryable to eval.
+/// * `query` - Map query to supply to the queryable.
+#[no_mangle]
+pub extern "C" fn opendp_core__odometer_queryable_map(
+    queryable: *mut AnyObject,
+    query: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let queryable = try_!(try_as_mut_ref!(queryable).downcast_mut::<AnyQueryable>());
+    let query = AnyObject::new(AnyOdometerQuery::Map(try_as_ref!(query).clone()));
+    let answer = try_!(try_!(queryable.eval(&query)).downcast::<AnyOdometerAnswer>());
+    if let AnyOdometerAnswer::Map(answer) = answer {
+        Ok(answer).into()
+    } else {
+        fallible!(FailedCast, "return type is not d_out").into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
-        combinators::{OdometerAnswer, OdometerQuery},
+        combinators::{ffi::AnyOdometerQuery, OdometerAnswer, OdometerQuery},
         core::{Function, Odometer},
         domains::{AtomDomain, VectorDomain},
         error::{ErrorVariant, Fallible},
-        ffi::any::{AnyOdometerQueryable, Downcast, IntoAnyOdometerOutExt},
+        ffi::any::{AnyQueryable, Downcast},
         interactive::Queryable,
         measures::MaxDivergence,
         metrics::{IntDistance, SymmetricDistance},
@@ -142,17 +202,23 @@ mod tests {
             AnyMetric::new(SymmetricDistance::default()),
             AnyMeasure::new(MaxDivergence::<f64>::default()),
         )
+        .map(Odometer::into_any_queryable)
         .map(Odometer::into_any_out)
     }
 
     #[test]
     fn test_odometer_invoke() -> Fallible<()> {
         let odometer = util::into_raw(make_test_any_odometer()?);
-
-        let arg = AnyObject::new_raw(vec![999]);
+        let arg = util::into_raw(AnyObject::new(vec![999]));
         let res = opendp_core__odometer_invoke(odometer, arg);
-        let mut res: AnyOdometerQueryable = Fallible::from(res)?.downcast()?;
-        let res: i32 = res.eval_invoke(AnyObject::new(0usize))?.downcast()?;
+
+        let mut res: AnyQueryable = Fallible::from(res)?.downcast()?;
+
+        let query = AnyObject::new(AnyOdometerQuery::Invoke(AnyObject::new(0usize)));
+        let AnyOdometerAnswer::Invoke(res) = res.eval(&query)?.downcast()? else {
+            panic!("expecting invoke")
+        };
+        let res: i32 = res.downcast()?;
         assert_eq!(res, 999);
         Ok(())
     }
@@ -160,9 +226,9 @@ mod tests {
     #[test]
     fn test_odometer_invoke_wrong_type() -> Fallible<()> {
         let odometer = util::into_raw(make_test_any_odometer()?);
-
-        let arg = AnyObject::new_raw(vec![999.0]);
+        let arg = util::into_raw(AnyObject::new(vec![999.0]));
         let res = Fallible::from(opendp_core__odometer_invoke(odometer, arg));
+
         assert_eq!(res.err().unwrap().variant, ErrorVariant::FailedCast);
         Ok(())
     }
