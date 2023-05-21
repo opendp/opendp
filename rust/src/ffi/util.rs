@@ -9,7 +9,7 @@ use std::str::Utf8Error;
 
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::*;
-use crate::ffi::any::{AnyObject, AnyQueryable};
+use crate::ffi::any::{AnyObject, AnyOdometerQueryable, AnyQueryable};
 use crate::measures::{
     FixedSmoothedMaxDivergence, MaxDivergence, SMDCurve, SmoothedMaxDivergence,
     ZeroConcentratedDivergence,
@@ -264,7 +264,7 @@ lazy_static! {
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![Vec, <(f32, f32), (f64, f64)>],
 
-            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement, AnyOdometerQueryable],
             type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
 
             // sum algorithms

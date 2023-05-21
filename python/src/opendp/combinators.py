@@ -364,7 +364,7 @@ def make_sequential_odometer(
     input_domain,
     input_metric,
     output_measure,
-    Q: RuntimeTypeDescriptor
+    Q: RuntimeTypeDescriptor = None
 ):
     """Construct a sequential odometer queryable that interactively composes odometers or interactive measurements.
     
@@ -373,7 +373,7 @@ def make_sequential_odometer(
     :param input_domain: indicates the space of valid input datasets
     :param input_metric: how distances are measured between members of the input domain
     :param output_measure: how privacy is measured
-    :param Q: 
+    :param Q: either `Odometer` or `Measurement`
     :type Q: :py:ref:`RuntimeTypeDescriptor`
     :raises TypeError: if an argument's type differs from the expected type
     :raises UnknownTypeError: if a type argument fails to parse
@@ -382,7 +382,7 @@ def make_sequential_odometer(
     assert_features("contrib")
     
     # Standardize type arguments.
-    Q = RuntimeType.parse(type_name=Q)
+    Q = RuntimeType.parse_or_infer(type_name=Q, public_example=get_atom(get_type(output_measure)))
     
     # Convert arguments to c types.
     c_input_domain = py_to_c(input_domain, c_type=Domain, type_name=AnyDomain)

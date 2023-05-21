@@ -1,7 +1,7 @@
 import ctypes
 from typing import Union, Tuple, Callable, Optional
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer
 
 
 class Measurement(ctypes.POINTER(AnyMeasurement)):
@@ -167,6 +167,138 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):
     
     def __str__(self) -> str:
         return f"Measurement(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)"
+
+
+class Odometer(ctypes.POINTER(AnyOdometer)):
+    """A differentially private unit of computation with no privacy limit.
+    An odometer contains a function that returns a queryable with a function and a relation.
+    Differentially private queries may be passed to the queryable,
+    as well as queries to check the current privacy usage.
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
+    ...
+    >>> base_rr = dp.m.make_randomized_response(prob=0.75)
+    ...
+    >>> # create an instance of Odometer using a sequential odometer constructor
+    >>> sc_odo = dp.make_sequential_odometer(
+    ...     input_domain=base_rr.input_domain,
+    ...     input_metric=base_rr.input_metric,
+    ...     output_measure=base_rr.output_measure
+    ... )
+    ...
+    >>> # invoke the odometer (invoke and __call__ are equivalent)
+    >>> base_dl.invoke(100)  # -> 101   # doctest: +SKIP
+    >>> base_dl(100)  # -> 99           # doctest: +SKIP
+    ...
+    >>> # check the measurement's relation at
+    >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
+    >>> assert base_dl.check(1, 0.5)
+    ...
+    >>> # chain with a transformation from the trans module
+    >>> from opendp.transformations import make_count
+    >>> chained = (
+    ...     make_count(TIA=int) >>
+    ...     base_dl
+    ... )
+    ...
+    >>> # the resulting measurement has the same features
+    >>> chained([1, 2, 3])  # -> 4     # doctest: +SKIP
+    >>> # check the chained measurement's relation at
+    >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
+    >>> assert chained.check(1, 0.5)
+    """
+    _type_ = AnyMeasurement
+
+    def __call__(self, arg):
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    def invoke(self, arg):
+        """Create a differentially-private release with `arg`.
+
+        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release. 
+        
+        :param arg: Input to the measurement.
+        :return: differentially-private release
+        :raises OpenDPException: packaged error from the core OpenDP library
+        """
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    # def __rshift__(self, other: Union["Function", "Transformation"]):
+    #     if isinstance(other, Transformation):
+    #         other = other.function
+
+    #     if isinstance(other, Function):
+    #         from opendp.combinators import make_chain_pm
+    #         return make_chain_pm(other, self)
+
+    #     raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
+
+    @property
+    def input_domain(self) -> "Domain":
+        from opendp.core import odometer_input_domain
+        return odometer_input_domain(self)
+    
+    @property
+    def input_metric(self) -> "Metric":
+        from opendp.core import odometer_input_metric
+        return odometer_input_metric(self)
+    
+    @property
+    def output_measure(self) -> "Measure":
+        from opendp.core import odometer_output_measure
+        return odometer_output_measure(self)
+    
+    @property
+    def function(self) -> "Function":
+        from opendp.core import odometer_function
+        return odometer_function(self)
+    
+    @property
+    def input_distance_type(self):
+        """Retrieve the distance type of the input metric.
+        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
+        
+        :return: distance type
+        """
+        return self.input_metric.distance_type
+
+    @property
+    def output_distance_type(self):
+        """Retrieve the distance type of the output measure.
+        This is the type that the budget is expressed in.
+        
+        :return: distance type
+        """
+        return self.output_measure.distance_type
+
+    @property
+    def input_carrier_type(self):
+        """Retrieve the carrier type of the input domain.
+        Any member of the input domain is a member of the carrier type.
+        
+        :return: carrier type
+        """
+        self.input_domain.carrier_type
+
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
+
+    def __del__(self):
+        try:
+            from opendp.core import _odometer_free
+            _odometer_free(self)
+        except (ImportError, TypeError):
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            pass
+    
+    def __str__(self) -> str:
+        return f"Odometer(\n    input_domain   = {self.input_domain}, \n    input_metric   = {self.input_metric}, \n    output_measure = {self.output_measure}\n)"
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)):

@@ -8,6 +8,7 @@ __all__ = [
     "_error_free",
     "_function_free",
     "_measurement_free",
+    "_odometer_free",
     "_transformation_free",
     "function_eval",
     "measurement_check",
@@ -20,6 +21,15 @@ __all__ = [
     "measurement_map",
     "measurement_output_distance_type",
     "measurement_output_measure",
+    "odometer_function",
+    "odometer_input_domain",
+    "odometer_input_metric",
+    "odometer_invoke",
+    "odometer_output_measure",
+    "odometer_queryable_invoke",
+    "odometer_queryable_invoke_query_type",
+    "odometer_queryable_map",
+    "odometer_queryable_map_query_type",
     "queryable_eval",
     "queryable_query_type",
     "transformation_check",
@@ -114,6 +124,33 @@ def _measurement_free(
     # Call library function.
     lib_function = lib.opendp_core___measurement_free
     lib_function.argtypes = [Measurement]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
+    
+    return output
+
+
+@versioned
+def _odometer_free(
+    this
+):
+    """Internal function. Free the memory associated with `this`.
+    
+    [_odometer_free in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn._odometer_free.html)
+    
+    :param this: 
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = this
+    
+    # Call library function.
+    lib_function = lib.opendp_core___odometer_free
+    lib_function.argtypes = [Odometer]
     lib_function.restype = FfiResult
     
     output = c_to_py(unwrap(lib_function(c_this), ctypes.c_void_p))
@@ -490,17 +527,282 @@ def measurement_output_measure(
 
 
 @versioned
+def odometer_function(
+    this
+) -> Function:
+    """Get the function from a odometer.
+    
+    [odometer_function in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_function.html)
+    
+    :param this: The odometer to retrieve the value from.
+    :rtype: Function
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=Odometer, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_function
+    lib_function.argtypes = [Odometer]
+    lib_function.restype = FfiResult
+    
+    output = unwrap(lib_function(c_this), Function)
+    
+    return output
+
+
+@versioned
+def odometer_input_domain(
+    this
+):
+    """Get the input domain from a `odometer`.
+    
+    [odometer_input_domain in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_input_domain.html)
+    
+    :param this: The odometer to retrieve the value from.
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=Odometer, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_input_domain
+    lib_function.argtypes = [Odometer]
+    lib_function.restype = FfiResult
+    
+    output = unwrap(lib_function(c_this), Domain)
+    
+    return output
+
+
+@versioned
+def odometer_input_metric(
+    this
+):
+    """Get the input domain from a `odometer`.
+    
+    [odometer_input_metric in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_input_metric.html)
+    
+    :param this: The odometer to retrieve the value from.
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=Odometer, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_input_metric
+    lib_function.argtypes = [Odometer]
+    lib_function.restype = FfiResult
+    
+    output = unwrap(lib_function(c_this), Metric)
+    
+    return output
+
+
+@versioned
+def odometer_invoke(
+    this,
+    arg: Any
+) -> Any:
+    """Invoke the `odometer` with `arg`. Returns a differentially private release.
+    
+    [odometer_invoke in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_invoke.html)
+    
+    :param this: Odometer to invoke.
+    :param arg: Input data to supply to the odometer. A member of the odometer's input domain.
+    :type arg: Any
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=Odometer, type_name=None)
+    c_arg = py_to_c(arg, c_type=AnyObjectPtr, type_name=get_carrier_type(get_input_domain(this)))
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_invoke
+    lib_function.argtypes = [Odometer, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this, c_arg), AnyObjectPtr))
+    
+    return output
+
+
+@versioned
+def odometer_output_measure(
+    this
+):
+    """Get the output domain from a `odometer`.
+    
+    [odometer_output_measure in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_output_measure.html)
+    
+    :param this: The odometer to retrieve the value from.
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=Odometer, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_output_measure
+    lib_function.argtypes = [Odometer]
+    lib_function.restype = FfiResult
+    
+    output = unwrap(lib_function(c_this), Measure)
+    
+    return output
+
+
+@versioned
+def odometer_queryable_invoke(
+    queryable: Any,
+    query: Any
+) -> Any:
+    """Eval the odometer `queryable` with an invoke `query`. Returns a differentially private release.
+    
+    [odometer_queryable_invoke in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_queryable_invoke.html)
+    
+    :param queryable: Queryable to eval.
+    :type queryable: Any
+    :param query: Invoke query to supply to the queryable.
+    :type query: Any
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_queryable = py_to_c(queryable, c_type=AnyObjectPtr, type_name=None)
+    c_query = py_to_c(query, c_type=AnyObjectPtr, type_name=odometer_queryable_invoke_query_type(queryable))
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_queryable_invoke
+    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_queryable, c_query), AnyObjectPtr))
+    
+    return output
+
+
+@versioned
+def odometer_queryable_invoke_query_type(
+    this: Any
+) -> str:
+    """Get the invoke type of an odometer `queryable`.
+    
+    [odometer_queryable_invoke_query_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_queryable_invoke_query_type.html)
+    
+    :param this: The odometer queryable to retrieve the invoke query type from.
+    :type this: Any
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_queryable_invoke_query_type
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
+
+
+@versioned
+def odometer_queryable_map(
+    queryable: Any,
+    query: Any
+) -> Any:
+    """Eval the odometer `queryable` with a map `query`. Returns the current d_out.
+    
+    [odometer_queryable_map in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_queryable_map.html)
+    
+    :param queryable: Queryable to eval.
+    :type queryable: Any
+    :param query: Map query to supply to the queryable.
+    :type query: Any
+    :rtype: Any
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_queryable = py_to_c(queryable, c_type=AnyObjectPtr, type_name=None)
+    c_query = py_to_c(query, c_type=AnyObjectPtr, type_name=odometer_queryable_map_query_type(queryable))
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_queryable_map
+    lib_function.argtypes = [AnyObjectPtr, AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_queryable, c_query), AnyObjectPtr))
+    
+    return output
+
+
+@versioned
+def odometer_queryable_map_query_type(
+    this: Any
+) -> str:
+    """Get the map type of an odometer `queryable`.
+    
+    [odometer_queryable_map_query_type in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.odometer_queryable_map_query_type.html)
+    
+    :param this: The odometer queryable to retrieve the map query type from.
+    :type this: Any
+    :rtype: str
+    :raises TypeError: if an argument's type differs from the expected type
+    :raises UnknownTypeError: if a type argument fails to parse
+    :raises OpenDPException: packaged error from the core OpenDP library
+    """
+    # No type arguments to standardize.
+    # Convert arguments to c types.
+    c_this = py_to_c(this, c_type=AnyObjectPtr, type_name=None)
+    
+    # Call library function.
+    lib_function = lib.opendp_core__odometer_queryable_map_query_type
+    lib_function.argtypes = [AnyObjectPtr]
+    lib_function.restype = FfiResult
+    
+    output = c_to_py(unwrap(lib_function(c_this), ctypes.c_char_p))
+    
+    return output
+
+
+@versioned
 def queryable_eval(
     queryable: Any,
     query: Any
 ) -> Any:
-    """Invoke the `queryable` with `query`. Returns a differentially private release.
+    """Eval the `queryable` with `query`. Returns a differentially private release.
     
     [queryable_eval in Rust documentation.](https://docs.rs/opendp/latest/opendp/core/fn.queryable_eval.html)
     
     :param queryable: Queryable to eval.
     :type queryable: Any
-    :param query: Input data to supply to the measurement. A member of the measurement's input domain.
+    :param query: The input to the queryable.
     :type query: Any
     :rtype: Any
     :raises TypeError: if an argument's type differs from the expected type

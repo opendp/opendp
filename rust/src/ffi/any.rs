@@ -267,37 +267,38 @@ impl<Q: 'static + Clone, A: 'static>
         AnyMeasure,
     >
 {
-    pub fn into_any_QA(
-        self,
-    ) -> Odometer<AnyDomain, Queryable<AnyObject, AnyObject>, AnyMetric, AnyMeasure> {
+    pub fn into_any_QA(self) -> Odometer<AnyDomain, AnyOdometerQueryable, AnyMetric, AnyMeasure> {
         let function = self.function;
+        let UI = self.input_metric.type_.clone();
         Odometer::new(
             self.input_domain,
             Function::new_fallible(
-                move |arg: &AnyObject| -> Fallible<Queryable<AnyObject, AnyObject>> {
+                move |arg: &AnyObject| -> Fallible<AnyOdometerQueryable> {
                     let mut inner_qbl = function.eval(arg)?;
+                    let UI = UI.clone();
 
-                    Queryable::new(move |_self, query: Query<AnyObject>| match query {
-                        Query::External(query) => inner_qbl
-                            .eval(&match query
-                                .downcast_ref::<OdometerQuery<AnyObject, AnyObject>>()?
-                            {
-                                OdometerQuery::Invoke(invokable) => {
-                                    OdometerQuery::Invoke(invokable.downcast_ref::<Q>()?.clone())
-                                }
-                                OdometerQuery::Map(d_in) => OdometerQuery::Map(d_in.clone()),
-                            })
-                            .map(|answer| match answer {
-                                OdometerAnswer::Invoke(answer) => {
-                                    OdometerAnswer::Invoke(AnyObject::new(answer))
-                                }
-                                OdometerAnswer::Map(d_in) => OdometerAnswer::Map(d_in),
-                            })
-                            .map(AnyObject::new)
-                            .map(Answer::External),
+                    // make a new queryable that has AnyObject Q and A:
+                    Queryable::new(move |_self, query: Query<OdometerQuery<AnyObject, AnyObject>>| match query {
+
+                        // if the query is external invoke, we need to downcast the query and answer to the original types
+                        Query::External(OdometerQuery::Invoke(query_invoke)) => {
+                            inner_qbl
+                                .eval_invoke(query_invoke.downcast_ref::<Q>()?.clone())
+                                .map(|answer| OdometerAnswer::Invoke(AnyObject::new(answer)))
+                                .map(Answer::External)
+                        }
+                        // if the query is external map, downcasting not necessary, 
+                        //   but the d_in needs to be cloned into the typed version of the enum
+                        Query::External(OdometerQuery::Map(query_map)) => {
+                            inner_qbl
+                                .eval_map(query_map.clone())
+                                .map(|answer| OdometerAnswer::Map(answer))
+                                .map(Answer::External)
+                        }
+                        // 
                         Query::Internal(query) => {
                             if query.downcast_ref::<QueryType>().is_some() {
-                                return Ok(Answer::internal(Type::of::<Q>()));
+                                return Ok(Answer::internal((Type::of::<Q>(), UI.clone())));
                             }
                             let Answer::Internal(a) = inner_qbl.eval_query(Query::Internal(query))? else {
                                     return fallible!(FailedFunction, "internal query returned external answer")
@@ -718,7 +719,7 @@ pub trait IntoAnyOdometerOutExt {
     fn into_any_out(self) -> AnyOdometer;
 }
 
-impl<TO: 'static> IntoAnyOdometerOutExt for Odometer<AnyDomain, TO, AnyMetric, AnyMeasure> {
+impl IntoAnyOdometerOutExt for Odometer<AnyDomain, AnyOdometerQueryable, AnyMetric, AnyMeasure> {
     fn into_any_out(self) -> AnyOdometer {
         AnyOdometer::new(
             self.input_domain,
@@ -733,6 +734,9 @@ impl<TO: 'static> IntoAnyOdometerOutExt for Odometer<AnyDomain, TO, AnyMetric, A
 /// A Queryable with all generic types filled by Any types.
 /// This is the type of Queryables passed back and forth over FFI.
 pub type AnyQueryable = Queryable<AnyObject, AnyObject>;
+
+pub type AnyOdometerQueryable =
+    Queryable<OdometerQuery<AnyObject, AnyObject>, OdometerAnswer<AnyObject, AnyObject>>;
 
 #[cfg(test)]
 mod tests {

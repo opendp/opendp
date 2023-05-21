@@ -52,3 +52,38 @@ def test_sequential_composition_approxdp():
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
     sum_meas = input_space >> dp.t.part_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> gauss_meas
     sc_qbl(sum_meas)
+
+
+def test_sequential_odometer():
+    max_influence = 1
+    sc_odo = dp.c.make_sequential_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(float),
+        Q="AnyMeasurement"
+    )
+
+    sc_qbl: Queryable = sc_odo([1] * 200)
+
+    print("SeqComp IM:", sc_qbl)
+    sum_query = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+
+    print("evaluating")
+    print(sc_qbl(sum_query))
+
+    noise_query = dp.m.make_base_discrete_laplace(200.)
+    exact_sum = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10))
+    print("exact sum:", exact_sum)
+    exact_sum_sc_qbl = sc_qbl(exact_sum >> dp.c.make_sequential_composition(
+        input_domain=exact_sum.output_domain,
+        input_metric=exact_sum.output_metric,
+        output_measure=dp.max_divergence(float),
+        d_in=exact_sum.map(max_influence),
+        d_mids=[0.2, 0.09]
+    ))
+
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("root release: ", sc_qbl(sum_query))
+
+test_sequential_odometer()

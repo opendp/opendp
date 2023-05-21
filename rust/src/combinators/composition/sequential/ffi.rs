@@ -43,6 +43,11 @@ fn make_sequential_composition(
             d_mids,
         )?;
 
+    // 1. Measurement<AnyDomain, Queryable<AnyMeasurement, AnyObject>, AnyMetric, AnyMeasure>
+    //    -> into_any_Q() ->
+    // 2. Measurement<AnyDomain, Queryable<AnyObject, AnyObject>, AnyMetric, AnyMeasure>
+    //    -> into_any_out() ->
+    // 3. Measurement<AnyDomain, AnyObject, AnyMetric, AnyObject>
     Ok(compositor.into_any_Q().into_any_out())
 }
 

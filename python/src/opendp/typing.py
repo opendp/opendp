@@ -231,6 +231,7 @@ class RuntimeType(object):
                     return ELEMENTARY_TYPES[float]
                 return type_name
 
+        print("type name", type_name)
         if isinstance(type_name, Hashable) and type_name in ELEMENTARY_TYPES:
             return ELEMENTARY_TYPES[type_name]
 
@@ -522,3 +523,12 @@ def get_distance_type(value):
 
 def get_type(value):
     return value.type
+
+def get_input_domain(value):
+    return value.input_domain
+
+def get_input_metric(value):
+    return value.input_metric
+
+def get_output_metric(value):
+    return value.output_metric
