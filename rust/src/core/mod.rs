@@ -27,7 +27,9 @@ pub use ffi::*;
 
 use std::rc::Rc;
 
+use crate::combinators::{OdometerAnswer, OdometerQuery};
 use crate::error::*;
+use crate::interactive::Queryable;
 use crate::traits::{DistanceConstant, InfCast, InfMul, TotalOrd};
 use std::fmt::Debug;
 
@@ -421,13 +423,17 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Odometer<DI, TO, MI, MO>
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO>
+impl<DI: Domain, Q, A, MI: Metric, MO: Measure>
+    Odometer<DI, Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A, MO::Distance>>, MI, MO>
 where
     (DI, MI): MetricSpace,
 {
     pub fn new(
         input_domain: DI,
-        function: Function<DI::Carrier, TO>,
+        function: Function<
+            DI::Carrier,
+            Queryable<OdometerQuery<Q, MI::Distance>, OdometerAnswer<A, MO::Distance>>,
+        >,
         input_metric: MI,
         output_measure: MO,
     ) -> Fallible<Self> {
@@ -439,7 +445,9 @@ where
             output_measure,
         })
     }
+}
 
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO> {
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval(arg)
     }
