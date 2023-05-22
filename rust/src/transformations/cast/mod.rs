@@ -32,7 +32,8 @@ where
     TOA: 'static + RoundCast<TIA> + CheckAtom,
 {
     make_row_by_row(
-        AtomDomain::default(),
+        VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance::default(),
         OptionDomain::new(AtomDomain::default()),
         |v| {
             TOA::round_cast(v.clone())
@@ -69,9 +70,12 @@ where
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
 {
-    make_row_by_row(AtomDomain::default(), AtomDomain::default(), |v| {
-        TOA::round_cast(v.clone()).unwrap_or_default()
-    })
+    make_row_by_row(
+        VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance::default(),
+        AtomDomain::default(),
+        |v| TOA::round_cast(v.clone()).unwrap_or_default(),
+    )
 }
 
 #[bootstrap(features("contrib"))]
@@ -97,9 +101,12 @@ where
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
 {
-    make_row_by_row(AtomDomain::default(), AtomDomain::new_nullable(), |v| {
-        TOA::round_cast(v.clone()).unwrap_or(TOA::NULL)
-    })
+    make_row_by_row(
+        VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance::default(),
+        AtomDomain::new_nullable(),
+        |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
+    )
 }
 
 #[cfg(test)]

@@ -45,7 +45,8 @@ where
     let scale = upper - lower;
 
     make_row_by_row_fallible(
-        AtomDomain::new_nullable(),
+        VectorDomain::new(AtomDomain::new_nullable()),
+        SymmetricDistance::default(),
         AtomDomain::default(),
         move |v| {
             if v.is_null() {
@@ -152,9 +153,12 @@ where
         return fallible!(MakeTransformation, "Constant may not be null.");
     }
 
-    make_row_by_row(atom_domain, AtomDomain::default(), move |v| {
-        DIA::impute_constant(v, &constant).clone()
-    })
+    make_row_by_row(
+        VectorDomain::new(atom_domain),
+        SymmetricDistance::default(),
+        AtomDomain::default(),
+        move |v| DIA::impute_constant(v, &constant).clone(),
+    )
 }
 
 /// Utility trait to drop null values from a dataset, regardless of the representation of nullity.
