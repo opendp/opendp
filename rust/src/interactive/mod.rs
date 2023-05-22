@@ -79,7 +79,7 @@ pub(crate) fn wrap<T>(wrapper: Wrapper, f: impl FnOnce() -> T) -> T {
     let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
 
     let new_wrapper = Some(if let Some(prev) = prev_wrapper.clone() {
-        Rc::new(move |qbl| (wrapper)((prev)(qbl)?)) as Rc<_>
+        Rc::new(move |qbl| (prev)((wrapper)(qbl)?)) as Rc<_>
     } else {
         wrapper.0
     });
