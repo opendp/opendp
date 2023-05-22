@@ -1,7 +1,7 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{FfiResult, Measurement, PrivacyMap},
+    core::{FfiResult, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
     measures::MaxDivergence,
@@ -18,9 +18,7 @@ fn make_pureDP_to_fixed_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMe
     fn monomorphize<QO: Float>(m: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let privacy_map = m.privacy_map.clone();
 
-        let measurement = Measurement::new(
-            m.input_domain.clone(),
-            m.function.clone(),
+        let measurement = m.with_map(
             m.input_metric.clone(),
             try_!(m.output_measure.clone().downcast::<MaxDivergence<QO>>()),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
@@ -31,9 +29,7 @@ fn make_pureDP_to_fixed_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMe
         let m = super::make_pureDP_to_fixed_approxDP(measurement)?;
 
         let privacy_map = m.privacy_map.clone();
-        AnyMeasurement::new(
-            m.input_domain.clone(),
-            m.function.clone(),
+        m.with_map(
             m.input_metric.clone(),
             AnyMeasure::new(m.output_measure.clone()),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {

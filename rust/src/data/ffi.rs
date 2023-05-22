@@ -4,8 +4,6 @@ use std::ffi::{c_void, CString};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
-#[cfg(feature = "derive")]
-use std::path::PathBuf;
 use std::slice;
 
 use opendp_derive::bootstrap;

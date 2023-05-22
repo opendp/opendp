@@ -34,9 +34,7 @@ where
     let _2 = QO::one() + QO::one();
 
     let privacy_map = m.privacy_map.clone();
-    Measurement::new(
-        m.input_domain.clone(),
-        m.function.clone(),
+    m.with_map(
         m.input_metric.clone(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {

@@ -31,9 +31,7 @@ where
     let privacy_map = m.privacy_map.clone();
     let output_measure: MO = m.output_measure.clone();
 
-    Measurement::new(
-        m.input_domain.clone(),
-        m.function.clone(),
+    m.with_map(
         m.input_metric.clone(),
         m.output_measure.new_fixed_measure()?,
         PrivacyMap::new_fallible(move |d_in| {

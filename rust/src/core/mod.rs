@@ -269,6 +269,24 @@ where
             privacy_map,
         })
     }
+
+    pub(crate) fn with_map<MI2: Metric, MO2: Measure>(
+        &self,
+        input_metric: MI2,
+        output_metric: MO2,
+        privacy_map: PrivacyMap<MI2, MO2>,
+    ) -> Fallible<Measurement<DI, TO, MI2, MO2>>
+    where
+        (DI, MI2): MetricSpace,
+    {
+        Measurement::new(
+            self.input_domain.clone(),
+            self.function.clone(),
+            input_metric,
+            output_metric,
+            privacy_map,
+        )
+    }
 }
 
 impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
@@ -343,6 +361,26 @@ where
             output_metric,
             stability_map,
         })
+    }
+
+    pub(crate) fn with_map<MI2: Metric, MO2: Metric>(
+        &self,
+        input_metric: MI2,
+        output_metric: MO2,
+        privacy_map: StabilityMap<MI2, MO2>,
+    ) -> Fallible<Transformation<DI, DO, MI2, MO2>>
+    where
+        (DI, MI2): MetricSpace,
+        (DO, MO2): MetricSpace,
+    {
+        Transformation::new(
+            self.input_domain.clone(),
+            self.output_domain.clone(),
+            self.function.clone(),
+            input_metric,
+            output_metric,
+            privacy_map,
+        )
     }
 }
 
