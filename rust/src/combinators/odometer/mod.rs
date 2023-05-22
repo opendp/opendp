@@ -1,6 +1,8 @@
 pub mod filter;
 pub mod sequential;
 
+pub mod concurrent;
+
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 

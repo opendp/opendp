@@ -87,3 +87,38 @@ def test_sequential_odometer():
     print("root release: ", sc_qbl(sum_query))
 
     print("privacy usage", sc_qbl.map(1))
+
+
+
+def test_concurrent_odometer():
+    max_influence = 1
+    sc_odo = dp.c.make_concurrent_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(float)
+    )
+
+    sc_qbl: Queryable = sc_odo([1] * 200)
+
+    print("SeqComp IM:", sc_qbl)
+    sum_query = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+
+    print("evaluating")
+    print(sc_qbl(sum_query))
+
+    noise_query = dp.m.make_base_discrete_laplace(200.)
+    exact_sum = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10))
+    print("exact sum:", exact_sum)
+    exact_sum_sc_qbl = sc_qbl(exact_sum >> dp.c.make_sequential_composition(
+        input_domain=exact_sum.output_domain,
+        input_metric=exact_sum.output_metric,
+        output_measure=dp.max_divergence(float),
+        d_in=exact_sum.map(max_influence),
+        d_mids=[0.2, 0.09]
+    ))
+
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("child release:", exact_sum_sc_qbl(noise_query))
+    print("root release: ", sc_qbl(sum_query))
+
+    print("privacy usage", sc_qbl.map(1))
