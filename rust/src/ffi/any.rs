@@ -265,7 +265,7 @@ impl<Q: 'static, A: 'static> Measurement<AnyDomain, Queryable<Q, A>, AnyMetric, 
 impl Odometer<AnyDomain, Queryable<AnyOdometerQuery, AnyOdometerAnswer>, AnyMetric, AnyMeasure> {
     pub fn into_any_queryable(self) -> Odometer<AnyDomain, AnyQueryable, AnyMetric, AnyMeasure> {
         let function = self.function;
-        Odometer::new(
+        Odometer::new_ffi(
             self.input_domain,
             Function::new_fallible(
                 move |arg: &AnyObject| -> Fallible<AnyQueryable> {
@@ -731,33 +731,9 @@ pub use partials::*;
 /// passed back and forth over FFI.
 pub type AnyOdometer = Odometer<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
 
-/// A trait for turning a Measurement into an AnyMeasurement. We can't used From because it'd conflict
-/// with blanket implementation, and we need an extension trait to add methods to Measurement.
-pub trait IntoAnyOdometerExt {
-    fn into_any(self) -> AnyOdometer;
-}
-
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-    IntoAnyOdometerExt for Odometer<DI, TO, MI, MO>
-where
-    DI::Carrier: 'static,
-    MI::Distance: 'static,
-    MO::Distance: 'static,
-{
-    fn into_any(self) -> AnyOdometer {
-        AnyOdometer::new(
-            AnyDomain::new(self.input_domain),
-            self.function.into_any(),
-            AnyMetric::new(self.input_metric),
-            AnyMeasure::new(self.output_measure),
-        )
-        .expect("compatibility check already passed")
-    }
-}
-
 impl Odometer<AnyDomain, AnyQueryable, AnyMetric, AnyMeasure> {
     pub(crate) fn into_any_out(self) -> AnyOdometer {
-        AnyOdometer::new(
+        AnyOdometer::new_ffi(
             self.input_domain,
             self.function.into_any_out(),
             self.input_metric,

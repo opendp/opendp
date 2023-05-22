@@ -8,10 +8,30 @@ use crate::{
             Downcast,
         },
         util,
-    },
+    }, core::{Domain, Metric, Measure, Odometer, MetricSpace, Function}, error::Fallible,
 };
 
 use super::FfiResult;
+
+impl<DI: Domain, TO, MI: Metric, MO: Measure> Odometer<DI, TO, MI, MO>
+where
+    (DI, MI): MetricSpace,
+{
+    pub(crate) fn new_ffi(
+        input_domain: DI,
+        function: Function<DI::Carrier, TO>,
+        input_metric: MI,
+        output_measure: MO,
+    ) -> Fallible<Self> {
+        (input_domain.clone(), input_metric.clone()).assert_compatible()?;
+        Ok(Self {
+            input_domain,
+            function,
+            input_metric,
+            output_measure,
+        })
+    }
+}
 
 #[bootstrap(
     name = "odometer_input_domain",
