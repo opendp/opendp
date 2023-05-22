@@ -1,9 +1,12 @@
 use opendp_derive::bootstrap;
 
-use crate::core::FfiResult;
-
+use crate::core::{AnyOdometerQuery, FfiResult, Function, Odometer};
 use crate::error::Fallible;
-use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyTransformation};
+use crate::ffi::any::{
+    AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyOdometerQueryable, AnyTransformation,
+    QueryOdometerMapType,
+};
+use crate::interactive::{Answer, Query, Queryable};
 
 #[bootstrap(
     features("contrib"),
@@ -33,6 +36,53 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
     let transformation0 = try_as_ref!(transformation0);
     let measurement1 = try_as_ref!(measurement1);
     make_chain_mt(measurement1, transformation0).into()
+}
+
+#[bootstrap(
+    name = "make_chain_ot",
+    features("contrib"),
+    arguments(odometer1(rust_type = b"null"), transformation0(rust_type = b"null"))
+)]
+/// Construct the functional composition (`odometer1` ○ `transformation0`).
+/// Returns a Measurement that when invoked, computes `odometer1(transformation0(x))`.
+///
+/// # Arguments
+/// * `odometer1` - outer odometer
+/// * `transformation0` - inner transformation
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_combinators__make_chain_ot(
+    odometer1: *const AnyOdometer,
+    transformation0: *const AnyTransformation,
+) -> FfiResult<*mut AnyOdometer> {
+    let transformation0 = try_as_ref!(transformation0);
+    let odometer1 = try_as_ref!(odometer1);
+
+    let odometer2 = try_!(super::make_chain_ot(odometer1, transformation0));
+
+    let function = odometer2.function.clone();
+    let QI = transformation0.input_metric.distance_type.clone();
+
+    Odometer::new(
+        odometer2.input_domain.clone(),
+        odometer2.input_metric.clone(),
+        odometer2.output_measure.clone(),
+        Function::new_fallible(move |arg: &AnyObject| -> Fallible<AnyOdometerQueryable> {
+            let QI = QI.clone();
+            let mut inner_qbl = function.eval(arg)?;
+
+            Ok(Queryable::new_raw(
+                move |_self, query: Query<AnyOdometerQuery>| {
+                    if let Query::Internal(query) = &query {
+                        if query.downcast_ref::<QueryOdometerMapType>().is_some() {
+                            return Ok(Answer::internal(QI.clone()));
+                        }
+                    }
+                    inner_qbl.eval_query(query)
+                },
+            ))
+        }),
+    )
+    .into()
 }
 
 #[bootstrap(
