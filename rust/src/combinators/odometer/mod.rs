@@ -24,6 +24,7 @@ pub type OdometerCompositor<DI, TO, MI, MO> = OdometerQueryable<
     <MO as Measure>::Distance,
 >;
 
+#[derive(Clone)]
 pub enum OdometerQuery<QI, QM> {
     Invoke(QI),
     Map(QM),
