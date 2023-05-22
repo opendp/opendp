@@ -261,15 +261,15 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         from opendp.core import odometer_invoke
         return odometer_invoke(self, arg)
 
-    # def __rshift__(self, other: Union["Function", "Transformation"]):
-    #     if isinstance(other, Transformation):
-    #         other = other.function
+    def __rshift__(self, other: Union["Function", "Transformation"]):
+        if isinstance(other, Transformation):
+            other = other.function
 
-    #     if isinstance(other, Function):
-    #         from opendp.combinators import make_chain_pm
-    #         return make_chain_pm(other, self)
+        if isinstance(other, Function):
+            from opendp.combinators import make_chain_po
+            return make_chain_po(other, self)
 
-    #     raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
+        raise ValueError(f"rshift expected a postprocessing transformation, got {other}")
 
     @property
     def input_domain(self) -> "Domain":
@@ -316,6 +316,10 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         :return: carrier type
         """
         return self.input_domain.carrier_type
+
+    def _depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        setattr(self, "_dependencies", args)
 
     def __del__(self):
         try:
@@ -444,10 +448,18 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
+    @overload
+    def __rshift__(self, other: "Odometer") -> "Odometer":
+        ...
+
+    def __rshift__(self, other: Union["Measurement", "Transformation", "Odometer", "PartialConstructor", "PartialChain"]) -> Union["Measurement", "Transformation", "Odometer", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
+        
+        if isinstance(other, Odometer):
+            from opendp.combinators import make_chain_ot
+            return make_chain_ot(other, self)
 
         if isinstance(other, Transformation):
             from opendp.combinators import make_chain_tt
@@ -460,7 +472,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         if isinstance(other, PartialChain):
             return PartialChain(lambda x: self >> other.partial(x))
 
-        raise ValueError(f"rshift expected a measurement or transformation, got {other}")
+        raise ValueError(f"rshift expected a measurement, odometer or transformation, got {other}")
 
 
     @property

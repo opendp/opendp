@@ -1,3 +1,4 @@
+from opendp.mod import Queryable
 import opendp.prelude as dp
 import pytest
 
@@ -160,3 +161,46 @@ def test_odometer_supporting_elements():
     assert sc_odo.input_carrier_type == dp.Vec[dp.i32]
 
     
+def test_odometer_chain_ot():
+    sc_odo = dp.c.make_sequential_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(float),
+        Q=dp.Measurement
+    )
+
+    sc_odo2 = dp.t.make_cast_default(TIA=str, TOA=int) >> sc_odo
+
+    sc_qbl2: Queryable = sc_odo2(["1"] * 200)
+
+
+    print("SeqComp IM:", sc_qbl2)
+    sum_query = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+
+    print("evaluating")
+    print(sc_qbl2(sum_query))
+
+    print("privacy usage", sc_qbl2.map(1))
+
+
+
+def test_odometer_chain_po():
+    sc_odo = dp.c.make_sequential_odometer(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(float),
+        Q=dp.Measurement
+    )
+
+    sc_odo2 = sc_odo >> dp.c.make_user_postprocessor(lambda x: str(x + 10_000), str)
+
+    sc_qbl2: Queryable = sc_odo2([1] * 200)
+
+    print("SeqComp IM:", sc_qbl2)
+    sum_query = dp.t.make_clamp((0, 10)) >> dp.t.make_bounded_sum((0, 10)) >> dp.m.make_base_discrete_laplace(100.)
+
+    print("evaluating")
+    print(sc_qbl2(sum_query))
+
+    print("privacy usage", sc_qbl2.map(1))
+
